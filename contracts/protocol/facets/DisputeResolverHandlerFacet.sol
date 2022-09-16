@@ -95,13 +95,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 ] == 0,
                 DUPLICATE_DISPUTE_RESOLVER_FEES
             );
-            disputeResolverFees.push(
-                DisputeResolverFee(
-                    _disputeResolverFees[i].tokenAddress,
-                    _disputeResolverFees[i].tokenName,
-                    _disputeResolverFees[i].feeAmount
-                )
-            );
+            disputeResolverFees.push(_disputeResolverFees[i]);
+
             protocolLookups().disputeResolverFeeTokenIndex[_disputeResolver.id][
                 _disputeResolverFees[i].tokenAddress
             ] = disputeResolverFees.length; // Set index mapping. Should be index in disputeResolverFees array + 1
@@ -258,13 +253,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 ] == 0,
                 DUPLICATE_DISPUTE_RESOLVER_FEES
             );
-            disputeResolverFees.push(
-                DisputeResolverFee(
-                    _disputeResolverFees[i].tokenAddress,
-                    _disputeResolverFees[i].tokenName,
-                    _disputeResolverFees[i].feeAmount
-                )
-            );
+            disputeResolverFees.push(_disputeResolverFees[i]);
             protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][
                 _disputeResolverFees[i].tokenAddress
             ] = disputeResolverFees.length; // Set index mapping. Should be index in disputeResolverFees array + 1
