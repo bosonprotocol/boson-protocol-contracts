@@ -36,6 +36,10 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
     function createBundleInternal(Bundle memory _bundle) internal {
+        // Cache protocol lookups and limits for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        ProtocolLib.ProtocolLimits storage limits = protocolLimits();
+
         // get message sender
         address sender = msgSender();
 
@@ -50,10 +54,10 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         );
 
         // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_bundle.offerIds.length <= protocolLimits().maxOffersPerBundle, TOO_MANY_OFFERS);
+        require(_bundle.offerIds.length <= limits.maxOffersPerBundle, TOO_MANY_OFFERS);
 
         // limit maximum number of twins to avoid running into block gas limit in a loop
-        require(_bundle.twinIds.length <= protocolLimits().maxTwinsPerBundle, TOO_MANY_TWINS);
+        require(_bundle.twinIds.length <= limits.maxTwinsPerBundle, TOO_MANY_TWINS);
 
         // Get the next bundle and increment the counter
         uint256 bundleId = protocolCounters().nextBundleId++;
@@ -74,7 +78,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             require(!exchangeIdsForOfferExists, EXCHANGE_FOR_OFFER_EXISTS);
 
             // Add to bundleIdByOffer mapping
-            protocolLookups().bundleIdByOffer[offerId] = bundleId;
+            lookups.bundleIdByOffer[offerId] = bundleId;
         }
 
         for (uint256 i = 0; i < _bundle.twinIds.length; i++) {
@@ -89,7 +93,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             }
 
             // Push to bundleIdsByTwin mapping
-            protocolLookups().bundleIdByTwin[_bundle.twinIds[i]] = bundleId;
+            lookups.bundleIdByTwin[_bundle.twinIds[i]] = bundleId;
         }
 
         // Get storage location for bundle

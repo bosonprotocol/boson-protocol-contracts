@@ -295,11 +295,14 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
             AuthToken storage authToken
         )
     {
+        // Cache protocol entities for reference
+        ProtocolLib.ProtocolEntities storage entities = protocolEntities();
+
         // Get the seller's slot
-        seller = protocolEntities().sellers[_sellerId];
+        seller = entities.sellers[_sellerId];
 
         //Get the seller's auth token's slot
-        authToken = protocolEntities().authTokens[_sellerId];
+        authToken = entities.authTokens[_sellerId];
 
         // Determine existence
         exists = (_sellerId > 0 && seller.id == _sellerId);
@@ -337,11 +340,14 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
             BosonTypes.DisputeResolverFee[] storage disputeResolverFees
         )
     {
+        // Cache protocol entities for reference
+        ProtocolLib.ProtocolEntities storage entities = protocolEntities();
+
         // Get the dispute resolver's slot
-        disputeResolver = protocolEntities().disputeResolvers[_disputeResolverId];
+        disputeResolver = entities.disputeResolvers[_disputeResolverId];
 
         //Get dispute resolver's fee list slot
-        disputeResolverFees = protocolEntities().disputeResolverFees[_disputeResolverId];
+        disputeResolverFees = entities.disputeResolverFees[_disputeResolverId];
 
         // Determine existence
         exists = (_disputeResolverId > 0 && disputeResolver.id == _disputeResolverId);
@@ -486,11 +492,14 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
             DisputeDates storage disputeDates
         )
     {
+        // Cache protocol entities for reference
+        ProtocolLib.ProtocolEntities storage entities = protocolEntities();
+
         // Get the dispute's slot
-        dispute = protocolEntities().disputes[_exchangeId];
+        dispute = entities.disputes[_exchangeId];
 
         // Get the disputeDates's slot
-        disputeDates = protocolEntities().disputeDates[_exchangeId];
+        disputeDates = entities.disputeDates[_exchangeId];
 
         // Determine existence
         exists = (_exchangeId > 0 && dispute.exchangeId == _exchangeId);
