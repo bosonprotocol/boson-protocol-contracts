@@ -28,6 +28,9 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * @param _condition - the fully populated condition struct
      */
     function createGroupInternal(Group memory _group, Condition calldata _condition) internal {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
         // get message sender
         address sender = msgSender();
 
@@ -53,10 +56,10 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
             require(!exist, OFFER_MUST_BE_UNIQUE);
 
             // add to groupIdByOffer mapping
-            protocolLookups().groupIdByOffer[_group.offerIds[i]] = groupId;
+            lookups.groupIdByOffer[_group.offerIds[i]] = groupId;
 
             // Set index mapping. Should be index in offerIds + 1
-            protocolLookups().offerIdIndexByGroup[groupId][_group.offerIds[i]] = i + 1;
+            lookups.offerIdIndexByGroup[groupId][_group.offerIds[i]] = i + 1;
         }
 
         // Get storage location for group
@@ -137,6 +140,9 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * @param _offerIds - array of offer ids to be added to the group
      */
     function addOffersToGroupInternal(uint256 _groupId, uint256[] memory _offerIds) internal {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
         // check if group can be updated
         (uint256 sellerId, Group storage group) = preUpdateChecks(_groupId, _offerIds);
 
@@ -150,13 +156,13 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
             require(!exist, OFFER_MUST_BE_UNIQUE);
 
             // add to groupIdByOffer mapping
-            protocolLookups().groupIdByOffer[offerId] = _groupId;
+            lookups.groupIdByOffer[offerId] = _groupId;
 
             // add to group struct
             group.offerIds.push(offerId);
 
             // Set index mapping. Should be index in offerIds + 1
-            protocolLookups().offerIdIndexByGroup[_groupId][offerId] = group.offerIds.length;
+            lookups.offerIdIndexByGroup[_groupId][offerId] = group.offerIds.length;
         }
 
         // Get the condition
