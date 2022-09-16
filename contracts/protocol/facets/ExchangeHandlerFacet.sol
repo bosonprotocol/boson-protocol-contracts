@@ -12,16 +12,9 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
 import { Address } from "../../ext_libs/Address.sol";
-
-interface Token {
-    function balanceOf(address account) external view returns (uint256); //ERC-721 and ERC-20
-
-    function ownerOf(uint256 _tokenId) external view returns (address); //ERC-721
-}
-
-interface MultiToken {
-    function balanceOf(address account, uint256 id) external view returns (uint256);
-}
+import { IERC1155 } from "../../interfaces/IERC1155.sol";
+import { IERC721 } from "../../interfaces/IERC721.sol";
+import { IERC20 } from "../../interfaces/IERC20.sol";
 
 /**
  * @title ExchangeHandlerFacet
@@ -839,12 +832,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @return bool - true if buyer meets the condition
      */
     function holdsThreshold(address _buyer, Condition storage _condition) internal view returns (bool) {
-        return
-            (
-                (_condition.tokenType == TokenType.MultiToken)
-                    ? MultiToken(_condition.tokenAddress).balanceOf(_buyer, _condition.tokenId)
-                    : Token(_condition.tokenAddress).balanceOf(_buyer)
-            ) >= _condition.threshold;
+        uint256 balance;
+
+        if (_condition.tokenType == TokenType.MultiToken) {
+            balance = IERC1155(_condition.tokenAddress).balanceOf(_buyer, _condition.tokenId);
+        } else if (_condition.tokenType == TokenType.NonFungibleToken) {
+            balance = IERC721(_condition.tokenAddress).balanceOf(_buyer);
+        } else {
+            balance = IERC20(_condition.tokenAddress).balanceOf(_buyer);
+        }
+        return balance >= _condition.threshold;
     }
 
     /**
@@ -856,7 +853,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @return bool - true if buyer meets the condition
      */
     function holdsSpecificToken(address _buyer, Condition storage _condition) internal view returns (bool) {
-        return (Token(_condition.tokenAddress).ownerOf(_condition.tokenId) == _buyer);
+        return (IERC721(_condition.tokenAddress).ownerOf(_condition.tokenId) == _buyer);
     }
 
     /**

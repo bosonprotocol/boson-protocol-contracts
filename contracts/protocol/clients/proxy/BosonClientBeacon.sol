@@ -15,5 +15,5 @@ contract BosonClientBeacon is ClientExternalAddressesBase {
         address _accessController,
         address _protocolAddress,
         address _impl
-    ) payable ClientExternalAddressesBase(_accessController, _protocolAddress, _impl) {}
+    ) ClientExternalAddressesBase(_accessController, _protocolAddress, _impl) {}
 }
