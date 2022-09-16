@@ -655,14 +655,19 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Sets the access controller address.
      *
      * Emits an AccessControllerAddressChanged event.
-     * 
+     *
      * Reverts if _accessControllerAddress is the zero address
      *
      * @dev Caller must have ADMIN role.
      *
      * @param _accessControllerAddress - access controller address
      */
-    function setAccessControllerAddress(address _accessControllerAddress) external override onlyRole(ADMIN) nonReentrant {
+    function setAccessControllerAddress(address _accessControllerAddress)
+        external
+        override
+        onlyRole(ADMIN)
+        nonReentrant
+    {
         require(_accessControllerAddress != address(0), INVALID_ADDRESS);
         DiamondLib.diamondStorage().accessController = IAccessControlUpgradeable(_accessControllerAddress);
         emit AccessControllerAddressChanged(_accessControllerAddress, msgSender());

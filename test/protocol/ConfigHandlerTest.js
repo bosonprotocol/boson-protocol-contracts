@@ -1021,16 +1021,16 @@ describe("IBosonConfigHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new value, expecting revert
-            await expect(configHandler.connect(rando).setAccessControllerAddress(newAccessController.address)).to.revertedWith(
-              RevertReasons.ACCESS_DENIED
-            );
+            await expect(
+              configHandler.connect(rando).setAccessControllerAddress(newAccessController.address)
+            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
           });
 
           it("_accessControllerAddress is the zero address", async function () {
             // Attempt to set new value, expecting revert
-            await expect(configHandler.connect(deployer).setAccessControllerAddress(ethers.constants.AddressZero)).to.revertedWith(
-              RevertReasons.INVALID_ADDRESS
-            );
+            await expect(
+              configHandler.connect(deployer).setAccessControllerAddress(ethers.constants.AddressZero)
+            ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
           });
         });
       });

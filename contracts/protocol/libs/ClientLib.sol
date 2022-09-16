@@ -52,7 +52,9 @@ library ClientLib {
      */
     function hasRole(bytes32 role) internal view returns (bool) {
         ProxyStorage storage ps = proxyStorage();
-        IAccessControlUpgradeable accessController = IAccessControlUpgradeable(IBosonConfigHandler(ps.protocolDiamond).getAccessControllerAddress());
+        IAccessControlUpgradeable accessController = IAccessControlUpgradeable(
+            IBosonConfigHandler(ps.protocolDiamond).getAccessControllerAddress()
+        );
         return accessController.hasRole(role, EIP712Lib.msgSender());
     }
 }

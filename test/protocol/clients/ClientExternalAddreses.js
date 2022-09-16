@@ -23,10 +23,10 @@ describe("IClientExternalAddresses", function () {
 
     // Deploy accessController
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
-    
+
     // grant upgrader role
     await accessController.grantRole(Role.UPGRADER, deployer.address);
-  
+
     // Deploy client
     const protocolClientArgs = [protocolDiamond.address];
     const [, beacons] = await deployProtocolClients(protocolClientArgs, gasLimit);
@@ -72,9 +72,6 @@ describe("IClientExternalAddresses", function () {
     ];
 
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
-
-    //Cast Diamond to IBosonConfigHandler
-    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
   });
 
   // Interface support
