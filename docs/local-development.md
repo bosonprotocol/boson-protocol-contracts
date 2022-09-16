@@ -83,8 +83,8 @@ If you want to perform any of the following:
 
 you need to set up the admin account. To do it
 - specify admin's address in the `.env` file (refer to the explanation of `ADMIN_ADDRESS_LOCAL` in section [Configure Environment](#configure-Environment)))
-- update `scripts/config/contract-addresses.js` with the address of `AccessController` and `ProtocolDiamond`. You need to update the values in the block `localhost`. You can get the correct values either from the output that was printed during the deployment or from the file `addresses/31337-localhost.json` (search for `AccessController` and `ProtocolDiamond` and copy the corresponding addresses)
-- run `npm run manage-roles:local`. This grants `ADMIN` and `UPGRADER` role to the address, specified in `.env`. The output of this command is saved to `logs/localhost.manage.roles.txt`
+- optionally, edit scripts/config/role-assignments.js. The defaults will suffice for enabling the above-mentioned functionality.
+- run `npm run manage-roles:local`. This grants the `ADMIN` and `UPGRADER` roles to the admin address specified in `.env` and the `PROTOCOL` role to the `ProtocolDiamond` contract The output of this command is saved to `logs/localhost.manage.roles.txt`
 
 To get the examples how to use the admin to perform actions, refer to unit test in files:
 - `test/protocol/ConfigHandlerTest.js`
