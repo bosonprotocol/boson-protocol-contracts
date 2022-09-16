@@ -100,15 +100,15 @@ describe("BuyerHandler", function () {
       },
       // Protocol limits
       {
-        maxExchangesPerBatch: 0,
-        maxOffersPerGroup: 0,
-        maxTwinsPerBundle: 0,
-        maxOffersPerBundle: 0,
-        maxOffersPerBatch: 0,
-        maxTokensPerWithdrawal: 0,
+        maxExchangesPerBatch: 1,
+        maxOffersPerGroup: 1,
+        maxTwinsPerBundle: 1,
+        maxOffersPerBundle: 1,
+        maxOffersPerBatch: 1,
+        maxTokensPerWithdrawal: 1,
         maxFeesPerDisputeResolver: 100,
         maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 0,
+        maxDisputesPerBatch: 1,
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
