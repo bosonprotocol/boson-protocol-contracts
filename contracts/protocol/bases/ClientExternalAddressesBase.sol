@@ -37,7 +37,7 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
         address _accessController,
         address _protocolAddress,
         address _impl
-    ) payable {
+    ) {
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 

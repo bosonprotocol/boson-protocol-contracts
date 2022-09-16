@@ -57,6 +57,9 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      * @param _twinId - the id of the twin to check
      */
     function removeTwin(uint256 _twinId) external override twinsNotPaused nonReentrant {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
         // Get storage location for twin
         (bool exists, Twin memory twin) = fetchTwin(_twinId);
         require(exists, NO_SUCH_TWIN);
@@ -78,10 +81,10 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
 
         // Also remove from twinRangesBySeller mapping
         if (twin.tokenType == TokenType.NonFungibleToken) {
-            TokenRange[] storage twinRanges = protocolLookups().twinRangesBySeller[sellerId][twin.tokenAddress];
-            uint256[] storage twinIdsByTokenAddressAndBySeller = protocolLookups().twinIdsByTokenAddressAndBySeller[
-                sellerId
-            ][twin.tokenAddress];
+            TokenRange[] storage twinRanges = lookups.twinRangesBySeller[sellerId][twin.tokenAddress];
+            uint256[] storage twinIdsByTokenAddressAndBySeller = lookups.twinIdsByTokenAddressAndBySeller[sellerId][
+                twin.tokenAddress
+            ];
             uint256 lastIndex = twinRanges.length - 1;
             for (uint256 index = 0; index <= lastIndex; index++) {
                 if (twinRanges[index].start == twin.tokenId) {

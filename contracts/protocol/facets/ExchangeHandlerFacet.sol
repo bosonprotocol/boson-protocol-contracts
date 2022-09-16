@@ -8,6 +8,7 @@ import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
 import { Address } from "../../ext_libs/Address.sol";
@@ -83,6 +84,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         require(block.timestamp < offerDates.validUntil, OFFER_HAS_EXPIRED);
         require(offer.quantityAvailable > 0, OFFER_SOLD_OUT);
 
+        // Get next exchange id
         uint256 exchangeId = protocolCounters().nextExchangeId++;
 
         // Authorize the buyer to commit if offer is in a conditional group
@@ -105,29 +107,35 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         Voucher storage voucher = protocolEntities().vouchers[exchangeId];
         voucher.committedDate = block.timestamp;
 
-        // Determine the time after which the voucher can be redeemed
-        uint256 startDate = (block.timestamp >= offerDates.voucherRedeemableFrom)
-            ? block.timestamp
-            : offerDates.voucherRedeemableFrom;
+        // Operate in a block to avoid "stack too deep" error
+        {
+            // Cache protocol lookups for reference
+            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        // Determine the time after which the voucher can no longer be redeemed
-        voucher.validUntilDate = (offerDates.voucherRedeemableUntil > 0)
-            ? offerDates.voucherRedeemableUntil
-            : startDate + fetchOfferDurations(_offerId).voucherValid;
+            // Determine the time after which the voucher can be redeemed
+            uint256 startDate = (block.timestamp >= offerDates.voucherRedeemableFrom)
+                ? block.timestamp
+                : offerDates.voucherRedeemableFrom;
 
-        // Map the offerId to the exchangeId as one-to-many
-        protocolLookups().exchangeIdsByOffer[_offerId].push(exchangeId);
+            // Determine the time after which the voucher can no longer be redeemed
+            voucher.validUntilDate = (offerDates.voucherRedeemableUntil > 0)
+                ? offerDates.voucherRedeemableUntil
+                : startDate + fetchOfferDurations(_offerId).voucherValid;
 
-        // Shoudn't decrement if offer is unlimited
-        if (offer.quantityAvailable != type(uint256).max) {
-            // Decrement offer's quantity available
-            offer.quantityAvailable--;
+            // Map the offerId to the exchangeId as one-to-many
+            lookups.exchangeIdsByOffer[_offerId].push(exchangeId);
+
+            // Shoudn't decrement if offer is unlimited
+            if (offer.quantityAvailable != type(uint256).max) {
+                // Decrement offer's quantity available
+                offer.quantityAvailable--;
+            }
+
+            // Issue voucher
+            lookups.voucherCount[buyerId]++;
+            IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);
+            bosonVoucher.issueVoucher(exchangeId, _buyer);
         }
-
-        // Issue voucher
-        protocolLookups().voucherCount[buyerId]++;
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
-        bosonVoucher.issueVoucher(exchangeId, _buyer);
 
         // Notify watchers of state change
         emit BuyerCommitted(_offerId, buyerId, exchangeId, exchange, voucher, msgSender());
@@ -408,6 +416,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         buyersNotPaused
         nonReentrant
     {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
         // Get the exchange, should be in committed state
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -417,10 +428,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Make sure that the voucher was issued on the clone that is making a call
-        require(msg.sender == protocolLookups().cloneAddress[offer.sellerId], ACCESS_DENIED);
+        require(msg.sender == lookups.cloneAddress[offer.sellerId], ACCESS_DENIED);
 
         // Decrease voucher counter for old buyer
-        protocolLookups().voucherCount[exchange.buyerId]--;
+        lookups.voucherCount[exchange.buyerId]--;
 
         // Fetch or create buyer
         uint256 buyerId = getValidBuyer(_newBuyer);
@@ -429,7 +440,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         exchange.buyerId = buyerId;
 
         // Increase voucher counter for new buyer
-        protocolLookups().voucherCount[buyerId]++;
+        lookups.voucherCount[buyerId]++;
 
         // Notify watchers of state change
         emit VoucherTransferred(exchange.offerId, _exchangeId, buyerId, msgSender());
@@ -576,12 +587,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchange - the pointer to the exchange for which voucher should be burned
      */
     function burnVoucher(Exchange storage _exchange) internal {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
         // Decrease the voucher count
-        protocolLookups().voucherCount[_exchange.buyerId]--;
+        lookups.voucherCount[_exchange.buyerId]--;
 
         // Burn the voucher
         (, Offer storage offer) = fetchOffer(_exchange.offerId);
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
+        IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);
         bosonVoucher.burnVoucher(_exchange.id);
     }
 
@@ -769,6 +783,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         Offer storage _offer,
         uint256 exchangeId
     ) internal returns (bool) {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
         // Allow by default
         bool allow = true;
 
@@ -781,7 +798,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // If a condition is set, investigate, otherwise all buyers are allowed
             if (condition.method != EvaluationMethod.None) {
                 // How many times has this address committed to offers in the group?
-                uint256 commitCount = protocolLookups().conditionalCommitsByAddress[_buyer][groupId];
+                uint256 commitCount = lookups.conditionalCommitsByAddress[_buyer][groupId];
 
                 // Evaluate condition if buyer hasn't exhausted their allowable commits, otherwise disallow
                 if (commitCount < condition.maxCommits) {
@@ -792,9 +809,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
                     if (allow) {
                         // Increment number of commits to the group for this address if they are allowed to commit
-                        protocolLookups().conditionalCommitsByAddress[_buyer][groupId] = ++commitCount;
+                        lookups.conditionalCommitsByAddress[_buyer][groupId] = ++commitCount;
                         // Store the condition to be returned afterward on getReceipt function
-                        protocolLookups().exchangeCondition[exchangeId] = condition;
+                        lookups.exchangeCondition[exchangeId] = condition;
                     }
                 } else {
                     // Buyer has exhausted their allowable commits
