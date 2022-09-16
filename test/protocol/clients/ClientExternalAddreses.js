@@ -14,14 +14,14 @@ const { oneWeek, oneMonth } = require("../../utils/constants.js");
 
 describe("IClientExternalAddresses", function () {
   let accessController, protocolDiamond;
-  let deployer, rando, other1, other3, proxy;
+  let deployer, rando, other1, other3, proxy, protocolTreasury, bosonToken;
   let beacon;
   let voucherImplementation, protocolAddress;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
 
   beforeEach(async function () {
     // Set signers
-    [deployer, rando, other1, other3, proxy] = await ethers.getSigners();
+    [deployer, rando, other1, other3, proxy, protocolTreasury, bosonToken] = await ethers.getSigners();
 
     // Deploy accessController
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -43,8 +43,8 @@ describe("IClientExternalAddresses", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasury: ethers.constants.AddressZero,
-        token: ethers.constants.AddressZero,
+        treasury: protocolTreasury.address,
+        token: bosonToken.address,
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,
       },
