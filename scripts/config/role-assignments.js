@@ -1,69 +1,67 @@
-const environments = require("../../environments");
-const { ContractAddresses } = require("./contract-addresses");
 const Role = require("../domain/Role");
 
 /**
  * Role assignments for access control in the Boson Protocol contract suite
  *
  * Process:
- *  1.  Edit scripts/config/role-assignments.js
- *  1a. Add new address / role assignments following existing config
- *  1b. Remove an existing role assignment, delete role from addresses' role array
- *  1b. If removing all roles from a previously roled-address,
- *      - remove roles from addresses' role array but not address configuration.
- *      = the script will only act on addresses listed in RoleAssignments
+ *  1.  Edit scripts/config/role-assignments.js. Addresses will be pulled from /addresses/<chainId>-<network>.json or environments file
+ *  1a. Add role assignments following existing config
+ *  1b. To remove an existing role assignment, delete role from entry's role array
+ *  1b. If removing all roles from a previously-roled entry,
+ *      - Remove roles from an entry's role array. Do not remove the entry's config from this file.
+ *      - The script will only act on entries listed in RoleAssignments
  *  2. Run the appropriate npm script in package.json to manage roles for a given network
  *  3. Save changes to the repo as a record of who has what roles
  */
 exports.RoleAssignments = {
   mumbai: {
-    "Deployer / role admin address": {
-      address: environments.mumbai.adminAddress,
+    AdminAddress: {
+      // do not change name
       roles: [Role.ADMIN, Role.UPGRADER],
     },
 
     // For minting vouchers
-    "ProtocolDiamond contract": {
-      address: ContractAddresses.mumbai.ProtocolDiamond,
+    ProtocolDiamond: {
+      // contract name must match name in /addresses/<chainId>-<network>.json
       roles: [Role.PROTOCOL],
     },
   },
 
   mainnet: {
-    "Deployer / role admin address": {
-      address: environments.mainnet.adminAddress,
+    AdminAddress: {
+      // do not change name
       roles: [Role.ADMIN, Role.UPGRADER],
     },
 
     // For minting vouchers
-    "ProtocolDiamond contract": {
-      address: ContractAddresses.mainnet.ProtocolDiamond,
+    ProtocolDiamond: {
+      // contract name must match name in /addresses/<chainId>-<network>.json
       roles: [Role.PROTOCOL],
     },
   },
 
   test: {
-    "Deployer / role admin address": {
-      address: environments.test.adminAddress,
+    AdminAddress: {
+      // do not change name
       roles: [Role.ADMIN, Role.UPGRADER],
     },
 
     // For minting vouchers
-    "ProtocolDiamond contract": {
-      address: ContractAddresses.test.ProtocolDiamond,
+    ProtocolDiamond: {
+      // contract name must match name in /addresses/<chainId>-<network>.json
       roles: [Role.PROTOCOL],
     },
   },
 
   localhost: {
-    "Deployer / role admin address": {
-      address: environments.localhost.adminAddress,
+    AdminAddress: {
+      // do not change name
       roles: [Role.ADMIN, Role.UPGRADER],
     },
 
     // For minting vouchers
-    "ProtocolDiamond contract": {
-      address: ContractAddresses.localhost.ProtocolDiamond,
+    ProtocolDiamond: {
+      // contract name must match name in /addresses/<chainId>-<network>.json
       roles: [Role.PROTOCOL],
     },
   },
