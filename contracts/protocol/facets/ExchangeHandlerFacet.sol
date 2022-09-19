@@ -631,13 +631,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // Get seller account
             (, Seller storage seller, ) = fetchSeller(bundle.sellerId);
 
-            address sender = msgSender();
             // Variable to track whether some twin transfer failed
             bool transferFailed;
 
             uint256 exchangeId = _exchange.id;
 
             ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+            address sender = msgSender();
 
             // Visit the twins
             for (uint256 i = 0; i < twinIds.length; i++) {
