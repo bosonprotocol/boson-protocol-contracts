@@ -4,6 +4,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const environments = require("../../environments");
 const confirmations = environments.confirmations;
+const upgrades = hre.upgrades;
 
 /**
  * Deploy the ProtocolDiamond
@@ -22,11 +23,8 @@ async function deployProtocolDiamond(gasLimit) {
 
   // Deploy the AccessController contract
   const AccessController = await ethers.getContractFactory("AccessController");
-  const accessController = await AccessController.deploy({ gasLimit });
-  await accessController.deployTransaction.wait(confirmations);
-  // initialize. If another address called initialize after the deployment, this will fail
-  const accessControllerInitialize = await accessController.initialize({ gasLimit });
-  await accessControllerInitialize.wait(confirmations);
+  const accessController = await upgrades.deployProxy(AccessController, [], { gasLimit });
+  await accessController.deployed(confirmations);
 
   // Diamond Loupe Facet
   const DiamondLoupeFacet = await ethers.getContractFactory("DiamondLoupeFacet");

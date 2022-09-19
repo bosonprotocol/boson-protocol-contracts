@@ -9,6 +9,7 @@ require("@nomiclabs/hardhat-web3");
 require('hardhat-contract-sizer');
 require("hardhat-gas-reporter");
 require("solidity-coverage");
+require('@openzeppelin/hardhat-upgrades');
 
 const lazyImport = async (module) => {
 	return await require(module);

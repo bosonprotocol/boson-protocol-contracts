@@ -1,5 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const upgrades = hre.upgrades;
 const { expect } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const { RevertReasons } = require("../../scripts/config/revert-reasons");
@@ -18,9 +19,8 @@ describe("AccessController", function () {
 
     // Deploy the contract
     AccessController = await ethers.getContractFactory("AccessController");
-    accessController = await AccessController.deploy();
+    accessController = await upgrades.deployProxy(AccessController, []);
     await accessController.deployed();
-    await accessController.initialize();
   });
 
   context("📋 Initialization", async function () {
