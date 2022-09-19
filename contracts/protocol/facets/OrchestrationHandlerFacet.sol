@@ -153,7 +153,6 @@ contract OrchestrationHandlerFacet is
         // - group id is 0, and it is ignored
         // - note that _offer fields are updated during createOfferInternal, so they represent correct values
         Group memory _group;
-        _group.id = 0;
         _group.sellerId = _offer.sellerId;
         _group.offerIds = new uint256[](1);
         _group.offerIds[0] = _offer.id;
@@ -671,7 +670,6 @@ contract OrchestrationHandlerFacet is
         // - bundle id is 0, and it is ignored
         // - note that _twin fields are updated during createTwinInternal, so they represent correct values
         Bundle memory _bundle;
-        _bundle.id = 0;
         _bundle.sellerId = _sellerId;
         _bundle.offerIds = new uint256[](1);
         _bundle.offerIds[0] = _offerId;

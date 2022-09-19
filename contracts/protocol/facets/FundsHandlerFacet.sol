@@ -187,7 +187,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             // Add entry to the return variable
             availableFunds[i].tokenAddress = tokenAddress;
             availableFunds[i].tokenName = tokenName;
-            availableFunds[i].availableAmount = protocolLookups().availableFunds[_entityId][tokenAddress];
+            availableFunds[i].availableAmount = lookups.availableFunds[_entityId][tokenAddress];
         }
     }
 

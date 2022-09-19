@@ -637,6 +637,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             uint256 exchangeId = _exchange.id;
 
+            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
             // Visit the twins
             for (uint256 i = 0; i < twinIds.length; i++) {
                 // Get the twin
@@ -704,15 +706,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     transferFailed = true;
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 } else {
-                    TwinReceipt memory twinReceipt;
+                    // Store twin receipt on twinReceiptsByExchange
+                    TwinReceipt storage twinReceipt = lookups.twinReceiptsByExchange[exchangeId].push();
                     twinReceipt.twinId = twin.id;
                     twinReceipt.tokenAddress = twin.tokenAddress;
                     twinReceipt.tokenId = tokenId;
                     twinReceipt.amount = twin.amount;
                     twinReceipt.tokenType = twin.tokenType;
-
-                    // Store twin receipt on twinReceiptsByExchange
-                    protocolLookups().twinReceiptsByExchange[exchangeId].push(twinReceipt);
 
                     emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 }
@@ -747,9 +747,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         if (!exists) {
             // Create the buyer account
-
             Buyer memory newBuyer;
-            newBuyer.id = 0;
             newBuyer.wallet = _buyer;
             newBuyer.active = true;
 
