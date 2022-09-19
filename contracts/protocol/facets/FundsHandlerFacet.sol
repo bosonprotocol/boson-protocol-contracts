@@ -168,6 +168,9 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         address[] storage tokenList = lookups.tokenList[_entityId];
         availableFunds = new Funds[](tokenList.length);
 
+        // Get entity's availableFunds storage pointer
+        mapping(address => uint256) storage entityFunds = lookups.availableFunds[_entityId];
+
         for (uint256 i = 0; i < tokenList.length; i++) {
             address tokenAddress = tokenList[i];
             string memory tokenName;
@@ -185,7 +188,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             }
 
             // Retrieve available amount from the stroage
-            uint256 availableAmount = lookups.availableFunds[_entityId][tokenAddress];
+            uint256 availableAmount = entityFunds[tokenAddress];
 
             // Add entry to the return variable
             availableFunds[i] = Funds(tokenAddress, tokenName, availableAmount);
@@ -239,15 +242,21 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             // Make sure that tokenList is not too long
             uint256 len = maxTokensPerWithdrawal <= tokenList.length ? maxTokensPerWithdrawal : tokenList.length;
 
+            // Get entity's availableFunds storage pointer
+            mapping(address => uint256) storage entityFunds = lookups.availableFunds[_entityId];
+
+            // Transfer funds
             for (uint256 i = 0; i < len; i++) {
                 // Get available funds from storage
-                uint256 availableFunds = lookups.availableFunds[_entityId][tokenList[i]];
+                uint256 availableFunds = entityFunds[tokenList[i]];
                 FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], _destinationAddress, availableFunds);
             }
         } else {
             for (uint256 i = 0; i < _tokenList.length; i++) {
                 // Make sure that at least something will be withdrawn
                 require(_tokenAmounts[i] > 0, NOTHING_TO_WITHDRAW);
+
+                // Transfer funds
                 FundsLib.transferFundsFromProtocol(_entityId, _tokenList[i], _destinationAddress, _tokenAmounts[i]);
             }
         }
