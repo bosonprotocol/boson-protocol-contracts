@@ -116,7 +116,7 @@ describe("After facet upgrade, everything is still operational", function () {
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const protocolClientArgs = [protocolDiamond.address];
     const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
     const [beacon] = beacons;
     const [proxy] = proxies;
