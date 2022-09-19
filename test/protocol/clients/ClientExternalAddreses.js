@@ -6,30 +6,74 @@ const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol
 const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolClientImpls } = require("../../../scripts/util/deploy-protocol-client-impls.js");
 const { deployProtocolClientBeacons } = require("../../../scripts/util/deploy-protocol-client-beacons.js");
+const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const Role = require("../../../scripts/domain/Role");
 const { expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
+const { oneWeek, oneMonth } = require("../../utils/constants.js");
 
 describe("IClientExternalAddresses", function () {
-  let accessController;
-  let deployer, protocol, rando, other1, other2, other3;
+  let accessController, protocolDiamond;
+  let deployer, rando, other1, other3, proxy, protocolTreasury, bosonToken;
   let beacon;
   let voucherImplementation, protocolAddress;
+  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
 
   beforeEach(async function () {
     // Set signers
-    [deployer, protocol, rando, other1, other2, other3] = await ethers.getSigners();
+    [deployer, rando, other1, other3, proxy, protocolTreasury, bosonToken] = await ethers.getSigners();
 
     // Deploy accessController
-    [, , , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
 
     // grant upgrader role
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
     // Deploy client
-    const protocolClientArgs = [accessController.address, protocol.address];
+    const protocolClientArgs = [protocolDiamond.address];
     const [, beacons] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [beacon] = beacons;
+
+    // set protocolFees
+    protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    buyerEscalationDepositPercentage = "1000"; // 10%
+
+    // Add config Handler, so ids start at 1, and so voucher address can be found
+    const protocolConfig = [
+      // Protocol addresses
+      {
+        treasury: protocolTreasury.address,
+        token: bosonToken.address,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
+      },
+      // Protocol limits
+      {
+        maxExchangesPerBatch: 0,
+        maxOffersPerGroup: 0,
+        maxTwinsPerBundle: 0,
+        maxOffersPerBundle: 0,
+        maxOffersPerBatch: 0,
+        maxTokensPerWithdrawal: 0,
+        maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
+        maxDisputesPerBatch: 0,
+        maxAllowedSellers: 100,
+        maxTotalOfferFeePercentage: 4000, //40%
+        maxRoyaltyPecentage: 1000, //10%
+        maxResolutionPeriod: oneMonth,
+        minFulfillmentPeriod: oneWeek,
+      },
+      // Protocol fees
+      {
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
+      },
+      buyerEscalationDepositPercentage,
+    ];
+
+    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
   });
 
   // Interface support
@@ -40,7 +84,7 @@ describe("IClientExternalAddresses", function () {
         voucherImplementation = other1.address; // random address, just for test
       });
 
-      it("should emit a Upgraded event", async function () {
+      it("should emit an Upgraded event", async function () {
         // Set new implementation, testing for the event
         await expect(beacon.connect(deployer).setImplementation(voucherImplementation))
           .to.emit(beacon, "Upgraded")
@@ -59,37 +103,6 @@ describe("IClientExternalAddresses", function () {
         it("caller is not the admin", async function () {
           // Attempt to set new implementation, expecting revert
           await expect(beacon.connect(rando).setImplementation(voucherImplementation)).to.revertedWith(
-            RevertReasons.ACCESS_DENIED
-          );
-        });
-      });
-    });
-
-    context("👉 setAccessController()", async function () {
-      beforeEach(async function () {
-        // set new value for access controller
-        accessController = other2.address; // random address, just for test
-      });
-
-      it("should emit a AccessControllerAddressChanged event", async function () {
-        // Set new access controller, testing for the event
-        await expect(beacon.connect(deployer).setAccessController(accessController))
-          .to.emit(beacon, "AccessControllerAddressChanged")
-          .withArgs(accessController, deployer.address);
-      });
-
-      it("should update state", async function () {
-        // Set new access controller
-        await beacon.connect(deployer).setAccessController(accessController);
-
-        // Verify that new value is stored
-        expect(await beacon.connect(rando).getAccessController()).to.equal(accessController);
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("caller is not the admin", async function () {
-          // Attempt to set new access controller, expecting revert
-          await expect(beacon.connect(rando).setAccessController(accessController)).to.revertedWith(
             RevertReasons.ACCESS_DENIED
           );
         });
@@ -134,7 +147,7 @@ describe("IClientExternalAddresses", function () {
           const protocolClientImpls = await deployProtocolClientImpls(gasLimit);
 
           // Deploy Protocol Client beacon contracts
-          const protocolClientArgs = [accessController.address, ethers.constants.AddressZero];
+          const protocolClientArgs = [ethers.constants.AddressZero];
           await expect(deployProtocolClientBeacons(protocolClientImpls, protocolClientArgs, gasLimit)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
@@ -142,7 +155,7 @@ describe("IClientExternalAddresses", function () {
 
         it("_impl address is the zero address", async function () {
           // Client args
-          const protocolClientArgs = [accessController.address, protocol.address];
+          const protocolClientArgs = [protocolDiamond.address];
 
           // Deploy the ClientBeacon for BosonVoucher
           const ClientBeacon = await ethers.getContractFactory("BosonClientBeacon");
