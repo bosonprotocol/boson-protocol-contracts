@@ -131,6 +131,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a MaxOffersPerBatchChanged event.
      *
+     * Reverts if _maxOffersPerBatch is zero.
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
@@ -148,6 +150,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Sets the maximum numbers of offers that can be added to a group in a single transaction.
      *
      * Emits a MaxOffersPerGroupChanged event.
+     *
+     * Reverts if _maxOffersPerGroup is zero.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -167,6 +171,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a MaxTwinsPerBundleChanged event.
      *
+     * Reverts if _maxTwinsPerBundle is zero.
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _maxTwinsPerBundle - the maximum length of {BosonTypes.Bundle.twinIds}
@@ -184,6 +190,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Sets the maximum numbers of offers that can be added to a bundle in a single transaction.
      *
      * Emits a MaxOffersPerBundleChanged event.
+     *
+     * Reverts if _maxOffersPerBundle is zero.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -203,6 +211,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a MaxTokensPerWithdrawalChanged event.
      *
+     * Reverts if _maxTokensPerWithdrawal is zero.
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _maxTokensPerWithdrawal - the maximum length of token list when calling {FundsHandlerFacet.withdraw}
@@ -220,6 +230,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Sets the maximum number of dispute resolver fee structs that can be processed in a single transaction.
      *
      * Emits a MaxFeesPerDisputeResolverChanged event.
+     *
+     * Reverts if _maxFeesPerDisputeResolver is zero.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -239,6 +251,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a MaxEscalationResponsePeriodChanged event.
      *
+     * Reverts if _maxEscalationResponsePeriod is zero.
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _maxEscalationResponsePeriod - the maximum escalation response period that a {BosonTypes.DisputeResolver} can specify
@@ -256,6 +270,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Sets the maximum number of disputes that can be expired in a single transaction.
      *
      * Emits a MaxDisputesPerBatchChanged event.
+     *
+     * Reverts if _maxDisputesPerBatch is zero.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -275,7 +291,9 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a MaxTotalOfferFeePercentageChanged event.
      *
-     * Reverts if the _maxTotalOfferFeePercentage is greater than 10000.
+     * Reverts if:
+     * - The _maxTotalOfferFeePercentage is zero.
+     * - The _maxTotalOfferFeePercentage is greater than 10000.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -297,6 +315,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Sets the maximum number of seller ids that can be added to or removed from dispute resolver seller allow list in a single transaction.
      *
      * Emits a MaxAllowedSellersChanged event.
+     *
+     * Reverts if _maxAllowedSellers is zero.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -362,6 +382,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a MaxExchangesPerBatchChanged event.
      *
+     * Reverts if _maxExchangesPerBatch is zero.
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _maxExchangesPerBatch - the maximum length of {BosonTypes.Exchange[]}
@@ -380,7 +402,9 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a MaxRoyaltyPercentageChanged event.
      *
-     * Reverts if the _maxRoyaltyPecentage is greater than 10000.
+     * Reverts if:
+     * - The _maxRoyaltyPercentage is zero.
+     * - The _maxRoyaltyPecentage is greater than 10000.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -403,6 +427,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a MaxResolutionPeriodChanged event.
      *
+     * Reverts if _maxResolutionPeriod is zero.
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _maxResolutionPeriod - the maximum resolution period that a {BosonTypes.Seller} can specify
@@ -420,6 +446,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Sets the minimum fulfillment period a seller can specify.
      *
      * Emits a MinFulfillmentPeriodChanged event.
+     *
+     * Reverts if _minFulfillmentPeriod is zero.
      *
      * @param _minFulfillmentPeriod - the minimum resolution period that a {BosonTypes.Seller} can specify
      */

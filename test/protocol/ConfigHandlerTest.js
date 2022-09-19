@@ -328,7 +328,7 @@ describe("IBosonConfigHandler", function () {
           it("maxTwinsPerBundle is zero", async function () {
             maxTwinsPerBundle = 0;
 
-            await expect(configHandler.connect(deployer).setMaxOffersPerGroup(maxTwinsPerBundle)).to.revertedWith(
+            await expect(configHandler.connect(deployer).setMaxTwinsPerBundle(maxTwinsPerBundle)).to.revertedWith(
               RevertReasons.VALUE_ZERO_NOT_ALLOWED
             );
           });
@@ -406,7 +406,7 @@ describe("IBosonConfigHandler", function () {
           it("maxOffersPerBatch is zero", async function () {
             maxOffersPerBatch = 0;
 
-            await expect(configHandler.connect(deployer).setMaxOffersPerGroup(maxOffersPerBatch)).to.revertedWith(
+            await expect(configHandler.connect(deployer).setMaxOffersPerBatch(maxOffersPerBatch)).to.revertedWith(
               RevertReasons.VALUE_ZERO_NOT_ALLOWED
             );
           });
@@ -445,9 +445,9 @@ describe("IBosonConfigHandler", function () {
           it("maxTokensPerWithdrawal is zero", async function () {
             maxTokensPerWithdrawal = 0;
 
-            await expect(configHandler.connect(deployer).setMaxOffersPerGroup(maxTokensPerWithdrawal)).to.revertedWith(
-              RevertReasons.VALUE_ZERO_NOT_ALLOWED
-            );
+            await expect(
+              configHandler.connect(deployer).setMaxTokensPerWithdrawal(maxTokensPerWithdrawal)
+            ).to.revertedWith(RevertReasons.VALUE_ZERO_NOT_ALLOWED);
           });
         });
       });
@@ -612,14 +612,6 @@ describe("IBosonConfigHandler", function () {
               configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage)
             ).to.revertedWith(RevertReasons.FEE_PERCENTAGE_INVALID);
           });
-
-          it("protocolFeePercentage is zero", async function () {
-            protocolFeePercentage = 0;
-
-            await expect(configHandler.connect(deployer).setMaxOffersPerGroup(protocolFeePercentage)).to.revertedWith(
-              RevertReasons.VALUE_ZERO_NOT_ALLOWED
-            );
-          });
         });
       });
 
@@ -649,14 +641,6 @@ describe("IBosonConfigHandler", function () {
             // Attempt to set new voucher address, expecting revert
             await expect(configHandler.connect(rando).setProtocolFeeFlatBoson(protocolFeeFlatBoson)).to.revertedWith(
               RevertReasons.ACCESS_DENIED
-            );
-          });
-
-          it("protocolFeeFlatBoson is zero", async function () {
-            protocolFeeFlatBoson = 0;
-
-            await expect(configHandler.connect(deployer).setMaxOffersPerGroup(protocolFeeFlatBoson)).to.revertedWith(
-              RevertReasons.VALUE_ZERO_NOT_ALLOWED
             );
           });
         });
@@ -694,7 +678,7 @@ describe("IBosonConfigHandler", function () {
           it("maxDisputesPerBatch is zero", async function () {
             maxDisputesPerBatch = 0;
 
-            await expect(configHandler.connect(deployer).setMaxOffersPerGroup(maxDisputesPerBatch)).to.revertedWith(
+            await expect(configHandler.connect(deployer).setMaxDisputesPerBatch(maxDisputesPerBatch)).to.revertedWith(
               RevertReasons.VALUE_ZERO_NOT_ALLOWED
             );
           });
@@ -733,7 +717,7 @@ describe("IBosonConfigHandler", function () {
           it("maxFeesPerDisputeResolver is zero", async function () {
             maxFeesPerDisputeResolver = 0;
             await expect(
-              configHandler.connect(deployer).setMaxOffersPerGroup(maxFeesPerDisputeResolver)
+              configHandler.connect(deployer).setMaxFeesPerDisputeResolver(maxFeesPerDisputeResolver)
             ).to.revertedWith(RevertReasons.VALUE_ZERO_NOT_ALLOWED);
           });
         });
@@ -773,7 +757,7 @@ describe("IBosonConfigHandler", function () {
           it("maxEscalationResponsePeriod is zero", async function () {
             maxEscalationResponsePeriod = 0;
             await expect(
-              configHandler.connect(deployer).setMaxOffersPerGroup(maxEscalationResponsePeriod)
+              configHandler.connect(deployer).setMaxEscalationResponsePeriod(maxEscalationResponsePeriod)
             ).to.revertedWith(RevertReasons.VALUE_ZERO_NOT_ALLOWED);
           });
         });
@@ -819,13 +803,6 @@ describe("IBosonConfigHandler", function () {
               configHandler.connect(deployer).setBuyerEscalationDepositPercentage(buyerEscalationDepositPercentage)
             ).to.revertedWith(RevertReasons.FEE_PERCENTAGE_INVALID);
           });
-
-          it("protocolFeePercentage is zero", async function () {
-            protocolFeePercentage = 0;
-            await expect(configHandler.connect(deployer).setMaxOffersPerGroup(protocolFeePercentage)).to.revertedWith(
-              RevertReasons.VALUE_ZERO_NOT_ALLOWED
-            );
-          });
         });
       });
 
@@ -860,7 +837,7 @@ describe("IBosonConfigHandler", function () {
 
           it("maxAllowedSellers is zero", async function () {
             maxAllowedSellers = 0;
-            await expect(configHandler.connect(deployer).setMaxOffersPerGroup(maxAllowedSellers)).to.revertedWith(
+            await expect(configHandler.connect(deployer).setMaxAllowedSellers(maxAllowedSellers)).to.revertedWith(
               RevertReasons.VALUE_ZERO_NOT_ALLOWED
             );
           });
@@ -909,7 +886,7 @@ describe("IBosonConfigHandler", function () {
           it("maxTotalOfferFeePercentage is zero", async function () {
             maxTotalOfferFeePercentage = 0;
             await expect(
-              configHandler.connect(deployer).setMaxOffersPerGroup(maxTotalOfferFeePercentage)
+              configHandler.connect(deployer).setMaxTotalOfferFeePercentage(maxTotalOfferFeePercentage)
             ).to.revertedWith(RevertReasons.VALUE_ZERO_NOT_ALLOWED);
           });
         });
@@ -954,7 +931,7 @@ describe("IBosonConfigHandler", function () {
 
           it("maxRoyaltyPecentage is zero", async function () {
             maxRoyaltyPecentage = 0;
-            await expect(configHandler.connect(deployer).setMaxOffersPerGroup(maxRoyaltyPecentage)).to.revertedWith(
+            await expect(configHandler.connect(deployer).setMaxRoyaltyPecentage(maxRoyaltyPecentage)).to.revertedWith(
               RevertReasons.VALUE_ZERO_NOT_ALLOWED
             );
           });
@@ -1041,7 +1018,7 @@ describe("IBosonConfigHandler", function () {
 
           it("maxExchangesPerBatch is zero", async function () {
             maxExchangesPerBatch = 0;
-            await expect(configHandler.connect(deployer).setMaxOffersPerGroup(maxExchangesPerBatch)).to.revertedWith(
+            await expect(configHandler.connect(deployer).setMaxExchangesPerBatch(maxExchangesPerBatch)).to.revertedWith(
               RevertReasons.VALUE_ZERO_NOT_ALLOWED
             );
           });
@@ -1079,7 +1056,7 @@ describe("IBosonConfigHandler", function () {
 
           it("maxResolutionPeriod is zero", async function () {
             maxResolutionPeriod = 0;
-            await expect(configHandler.connect(deployer).setMaxOffersPerGroup(maxResolutionPeriod)).to.revertedWith(
+            await expect(configHandler.connect(deployer).setMaxResolutionPeriod(maxResolutionPeriod)).to.revertedWith(
               RevertReasons.VALUE_ZERO_NOT_ALLOWED
             );
           });
@@ -1112,6 +1089,13 @@ describe("IBosonConfigHandler", function () {
             // Attempt to set new value, expecting revert
             await expect(configHandler.connect(rando).setMinFulfillmentPeriod(minFulfillmentPeriod)).to.revertedWith(
               RevertReasons.ACCESS_DENIED
+            );
+          });
+
+          it("minFulfillmentPeriod is zero", async function () {
+            minFulfillmentPeriod = 0;
+            await expect(configHandler.connect(deployer).setMinFulfillmentPeriod(minFulfillmentPeriod)).to.revertedWith(
+              RevertReasons.VALUE_ZERO_NOT_ALLOWED
             );
           });
         });

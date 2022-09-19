@@ -226,6 +226,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxOffersPerGroupChanged event.
      *
+     * Reverts if the _maxOffersPerGroup is zero.
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _maxOffersPerGroup - the maximum length of {BosonTypes.Group.offerIds}
@@ -278,6 +280,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxOffersPerBundleChanged event.
      *
+     * Reverts if the _maxOffersPerBundle is zero.
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _maxOffersPerBundle - the maximum length of {BosonTypes.Bundle.offerIds}
@@ -303,6 +307,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Sets the maximum numbers of offers that can be created in a single transaction.
      *
      * Emits a MaxOffersPerBatchChanged event.
+     *
+     * Reverts if the _maxOffersPerBatch is zero.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -330,6 +336,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxTokensPerWithdrawalChanged event.
      *
+     * Reverts if the _maxTokensPerWithdrawal is zero.
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _maxTokensPerWithdrawal - the maximum length of token list when calling {FundsHandlerFacet.withdraw}
@@ -355,6 +363,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Sets the maximum number of dispute resolver fee structs that can be processed in a single transaction.
      *
      * Emits a MaxFeesPerDisputeResolverChanged event.
+     *
+     * Reverts if the _maxFeesPerDisputeResolver is zero.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -387,6 +397,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxEscalationResponsePeriodChanged event.
      *
+     * Reverts if the _maxEscalationResponsePeriod is zero.
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _maxEscalationResponsePeriod - the maximum escalation response period that a {BosonTypes.DisputeResolver} can specify
@@ -418,6 +430,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxDisputesPerBatchChanged event.
      *
+     * Reverts if the _maxDisputesPerBatch is zero.
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _maxDisputesPerBatch - the maximum number of disputes that can be expired
@@ -444,7 +458,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxTotalOfferFeePercentageChanged event.
      *
-     * Reverts if the _maxTotalOfferFeePercentage is greater than 10000.
+     * Reverts if:
+     * - The _maxTotalOfferFeePercentage is zero.
+     * - The _maxTotalOfferFeePercentage is greater than 10000.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -486,7 +502,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxRoyaltyPercentageChanged event.
      *
-     * Reverts if the _maxRoyaltyPecentage is greater than 10000.
+     * Reverts if:
+     * - The _maxRoyaltyPercentage is zero.
+     * - The _maxRoyaltyPecentage is greater than 10000.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -522,6 +540,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Sets the maximum number of seller ids that can be added to or removed from dispute resolver seller allow list in a single transaction.
      *
      * Emits a MaxAllowedSellersChanged event.
+     *
+     * Reverts if the _maxAllowedSellers is zero.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -564,9 +584,6 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         onlyRole(ADMIN)
         nonReentrant
     {
-        // Make sure percentage is greater than 0
-        require(_buyerEscalationDepositPercentage > 0, VALUE_ZERO_NOT_ALLOWED);
-
         // Make sure percentage is less than 10000
         require(_buyerEscalationDepositPercentage <= 10000, FEE_PERCENTAGE_INVALID);
 
@@ -591,8 +608,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits an AuthTokenContractChanged event.
      *
-     * Reverts if _authTokenType is None
-     * Reverts if _authTokenContract is the zero address
+     * Reverts if:
+     * - _authTokenType is None.
+     * - _authTokenContract is the zero address.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -626,6 +644,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxExchangesPerBatchChanged event.
      *
+     * Reverts if the _maxExchangesPerBatch is zero.
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _maxExchangesPerBatch - the maximum length of {BosonTypes.Exchange[]}
@@ -651,6 +671,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Sets the maximum resolution period a seller can specify.
      *
      * Emits a MaxResolutionPeriodChanged event.
+     *
+     * Reverts if the _maxResolutionPeriod is zero.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -678,9 +700,14 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MinFulfillmentPeriodChanged event.
      *
+     * Reverts if the _minFulfillmentPeriod is zero.
+     *
      * @param _minFulfillmentPeriod - the minimum resolution period that a {BosonTypes.Seller} can specify
      */
     function setMinFulfillmentPeriod(uint256 _minFulfillmentPeriod) public override onlyRole(ADMIN) nonReentrant {
+        // Make sure _minFulfillmentPeriod is greater than 0
+        require(_minFulfillmentPeriod > 0, VALUE_ZERO_NOT_ALLOWED);
+
         protocolLimits().minFulfillmentPeriod = _minFulfillmentPeriod;
         emit MinFulfillmentPeriodChanged(_minFulfillmentPeriod, msgSender());
     }
