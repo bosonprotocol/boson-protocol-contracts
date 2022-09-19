@@ -33,7 +33,20 @@ const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-uti
  */
 describe("After facet upgrade, everything is still operational", function () {
   // Common vars
-  let deployer, pauser, operator, admin, clerk, treasury, rando, buyer, operatorDR, adminDR, clerkDR, treasuryDR;
+  let deployer,
+    pauser,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    rando,
+    buyer,
+    operatorDR,
+    adminDR,
+    clerkDR,
+    treasuryDR,
+    protocolTreasury,
+    bosonToken;
   let protocolDiamond,
     accessController,
     accountHandler,
@@ -60,8 +73,22 @@ describe("After facet upgrade, everything is still operational", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, pauser, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR] =
-      await ethers.getSigners();
+    [
+      deployer,
+      pauser,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      buyer,
+      rando,
+      operatorDR,
+      adminDR,
+      clerkDR,
+      treasuryDR,
+      protocolTreasury,
+      bosonToken,
+    ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -103,8 +130,8 @@ describe("After facet upgrade, everything is still operational", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasury: ethers.constants.AddressZero,
-        token: ethers.constants.AddressZero,
+        treasury: protocolTreasury.address,
+        token: bosonToken.address,
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,
       },
