@@ -3037,6 +3037,13 @@ describe("IBosonExchangeHandler", function () {
         );
       });
 
+      it("Should not be triggered when from and to addresses are the same", async function () {
+        // Transfer voucher, expecting event
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(buyer.address, buyer.address, exchange.id)
+        ).to.not.emit(exchangeHandler, "VoucherTransferred");
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The buyers region of protocol is paused", async function () {
           // Pause the buyers region of the protocol
