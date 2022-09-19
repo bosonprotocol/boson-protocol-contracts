@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "../domain/BosonConstants.sol";
 import { IAccessControlUpgradeable } from "../interfaces/IAccessControlUpgradeable.sol";
 import { IDiamondLoupe } from "../interfaces/diamond/IDiamondLoupe.sol";
 import { IDiamondCut } from "../interfaces/diamond/IDiamondCut.sol";
@@ -36,7 +37,9 @@ contract ProtocolDiamond {
         IAccessControlUpgradeable _accessController,
         IDiamondCut.FacetCut[] memory _facetCuts,
         bytes4[] memory _interfaceIds
-    ) payable {
+    ) {
+        require(address(_accessController) != address(0), INVALID_ADDRESS);
+
         // Get the DiamondStorage struct
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 

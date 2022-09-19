@@ -15,6 +15,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
@@ -34,7 +35,19 @@ const {
 describe("IBosonGroupHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, pauser, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
+  let accounts,
+    deployer,
+    pauser,
+    rando,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    operatorDR,
+    adminDR,
+    clerkDR,
+    treasuryDR,
+    protocolTreasury;
   let erc165, protocolDiamond, accessController, accountHandler, offerHandler, groupHandler, pauseHandler;
   let bosonToken, key, value;
   let offer, support, expected, exists;
@@ -59,8 +72,20 @@ describe("IBosonGroupHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, pauser, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] =
-      await ethers.getSigners();
+    [
+      deployer,
+      pauser,
+      rando,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      operatorDR,
+      adminDR,
+      clerkDR,
+      treasuryDR,
+      protocolTreasury,
+    ] = await ethers.getSigners();
     accounts = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
@@ -81,6 +106,12 @@ describe("IBosonGroupHandler", function () {
       "PauseHandlerFacet",
     ]);
 
+    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
+    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [beacon] = beacons;
+    const [proxy] = proxies;
+
     // Deploy the boson token
     [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
 
@@ -93,10 +124,10 @@ describe("IBosonGroupHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasury: ethers.constants.AddressZero,
+        treasury: protocolTreasury.address,
         token: bosonToken.address,
-        voucherBeacon: ethers.constants.AddressZero,
-        beaconProxy: ethers.constants.AddressZero,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
       },
       // Protocol limits
       {

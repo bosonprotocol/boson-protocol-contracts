@@ -1,12 +1,13 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const network = hre.network.name;
-const { ContractAddresses } = require("./config/contract-addresses");
 const { RoleAssignments } = require("./config/role-assignments");
+const { readContracts } = require("./util/utils");
+const environments = require("../environments");
 const Role = require("./domain/Role");
 
 /**
- * Manage roles for access control in the Boson Protocol contract suite
+ * Manage roles for access control in the Boson Protocol contract suite.
  *
  * This script:
  *   - is idempotent, i.e., running twice with same assignment config
@@ -16,19 +17,22 @@ const Role = require("./domain/Role");
  *     fewest number of transactions to make granted roles match
  *     the assignments.
  *
- * Preparation:
- *  1.  Edit scripts/config/role-assignments.js
- *  1a. Add new address / role assignments following existing config
- *  1b. To remove an existing role assignment, delete role from addresses' roles array
- *  1b. If removing all roles from a previously roled address,
- *      - remove roles from addresses' role array but not the address configuration.
- *      = the script will only act on addresses listed in RoleAssignments
- *  2. Run this script with the appropriate npm script in package.json to log the output
+ * Process:
+ *  1.  Edit scripts/config/role-assignments.js. Addresses will be pulled from /addresses/<chainId>-<network>.json or environments file
+ *  1a. Add role assignments following existing config
+ *  1b. To remove an existing role assignment, delete role from entry's role array
+ *  1b. If removing all roles from a previously-roled entry,
+ *      - Remove roles from an entry's role array. Do not remove the entry's config from this file.
+ *      - The script will only act on entries listed in RoleAssignments
+ *  2. Run the appropriate npm script in package.json to manage roles for a given network
  *  3. Save changes to the repo as a record of who has what roles
  */
 async function main() {
-  // Bail now if local network
+  // Bail now if hardhat network
   if (network === "hardhat") process.exit();
+
+  const chainId = (await hre.ethers.provider.getNetwork()).chainId;
+  const contractsFile = readContracts(chainId, network);
 
   const divider = "-".repeat(80);
   console.log(`${divider}\nBoson Protocol Contract Suite Role Manager\n${divider}`);
@@ -42,16 +46,25 @@ async function main() {
 
   console.log(`🔑 Confirming roles...`);
 
+  const accessControllerInfo = contractsFile.contracts.find((i) => i.name === "AccessController");
+
   // Get AccessController abstraction
-  const accessController = await ethers.getContractAt("AccessController", ContractAddresses[network].AccessController);
+  const accessController = await ethers.getContractAt("AccessController", accessControllerInfo.address);
 
   // Loop through assignments for this network
   const assignments = Object.entries(RoleAssignments[network]);
+
   for (let i = 0; i < assignments.length; i++) {
     // Get the assignment and break into name / config
     const assignment = assignments[i];
     const [name, config] = assignment;
+
     console.log(`\n🔍 ${name}`);
+
+    let contractInfo;
+    contractInfo = contractsFile.contracts.find((i) => i.name === name);
+    config.address = name === "AdminAddress" ? environments[network].adminAddress : contractInfo.address;
+
     console.log(`   👉 ${config.address}`);
 
     // Loop through assigned roles for address
@@ -71,6 +84,7 @@ async function main() {
 
     // Make sure previously assigned but now unassigned roles are removed
     const unassigned = Role.Names.filter((name) => !config.roles.includes(Role[name]));
+
     for (let j = 0; j < unassigned.length; j++) {
       // Check if role currently assigned
       const role = Role[unassigned[j]];
