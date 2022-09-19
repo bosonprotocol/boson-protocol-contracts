@@ -147,7 +147,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         uint256 tokenId
     ) internal override {
         // Only act when transferring, not minting or burning
-        if (from != address(0) && to != address(0)) {
+        if (from != address(0) && to != address(0) && from != to) {
             onVoucherTransferred(tokenId, payable(to));
         }
     }
