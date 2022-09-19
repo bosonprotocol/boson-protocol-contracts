@@ -119,7 +119,10 @@ library EIP712Lib {
 
         // Get sender from the storage if this is a meta transaction
         if (isItAMetaTransaction) {
-            return getCurrentSenderAddress();
+            address sender = getCurrentSenderAddress();
+            require(sender != address(0), INVALID_ADDRESS);
+
+            return sender;
         } else {
             return msg.sender;
         }
