@@ -28,7 +28,19 @@ const {
  */
 describe("BuyerHandler", function () {
   // Common vars
-  let deployer, pauser, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
+  let deployer,
+    pauser,
+    rando,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    other1,
+    other2,
+    other3,
+    other4,
+    protocolTreasury,
+    bosonToken;
   let protocolDiamond,
     accessController,
     accountHandler,
@@ -51,8 +63,21 @@ describe("BuyerHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, pauser, operator, admin, clerk, treasury, rando, other1, other2, other3, other4] =
-      await ethers.getSigners();
+    [
+      deployer,
+      pauser,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      rando,
+      other1,
+      other2,
+      other3,
+      other4,
+      protocolTreasury,
+      bosonToken,
+    ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -93,8 +118,8 @@ describe("BuyerHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasury: ethers.constants.AddressZero,
-        token: ethers.constants.AddressZero,
+        treasury: protocolTreasury.address,
+        token: bosonToken.address,
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,
       },

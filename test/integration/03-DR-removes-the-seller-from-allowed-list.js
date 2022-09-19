@@ -25,7 +25,7 @@ const {
 /**
  *  Integration test case - the disputes can be resolved even when approved sellers are removed from the allow list
  */
-describe("DR removes sellers from the approved seller list", function () {
+describe("[@skip-on-coverage] DR removes sellers from the approved seller list", function () {
   // Common vars
   let deployer,
     pauser,
@@ -39,7 +39,8 @@ describe("DR removes sellers from the approved seller list", function () {
     operatorDR,
     adminDR,
     clerkDR,
-    treasuryDR;
+    treasuryDR,
+    protocolTreasury;
   let protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, disputeHandler;
   let offer, seller;
   let offerDates, offerDurations;
@@ -66,6 +67,7 @@ describe("DR removes sellers from the approved seller list", function () {
       adminDR,
       clerkDR,
       treasuryDR,
+      protocolTreasury,
     ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
@@ -110,7 +112,7 @@ describe("DR removes sellers from the approved seller list", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasury: ethers.constants.AddressZero,
+        treasury: protocolTreasury.address,
         token: bosonToken.address,
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,

@@ -44,30 +44,29 @@ string constant NO_SUCH_SELLER = "No such seller";
 string constant MUST_BE_ACTIVE = "Account must be active";
 string constant SELLER_ADDRESS_MUST_BE_UNIQUE = "Seller address cannot be assigned to another seller Id";
 string constant BUYER_ADDRESS_MUST_BE_UNIQUE = "Buyer address cannot be assigned to another buyer Id";
-string constant DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE = "Dispute Resolver address cannot be assigned to another dispute resolver Id";
+string constant DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE = "Dispute resolver address cannot be assigned to another dispute resolver Id";
 string constant AGENT_ADDRESS_MUST_BE_UNIQUE = "Agent address cannot be assigned to another agent Id";
 string constant NO_SUCH_BUYER = "No such buyer";
 string constant NO_SUCH_AGENT = "No such agent";
 string constant WALLET_OWNS_VOUCHERS = "Wallet address owns vouchers";
 string constant NO_SUCH_DISPUTE_RESOLVER = "No such dispute resolver";
 string constant INVALID_ESCALATION_PERIOD = "Invalid escalation period";
-string constant INVALID_AMOUNT_DISPUTE_RESOLVER_FEES = "Dispute resolver fees are not present or exceeds maximum dispute resolver fees in a single transaction";
+string constant INVALID_AMOUNT_DISPUTE_RESOLVER_FEES = "Dispute resolver fees are not present or exceed maximum dispute resolver fees in a single transaction";
 string constant DUPLICATE_DISPUTE_RESOLVER_FEES = "Duplicate dispute resolver fee";
 string constant DISPUTE_RESOLVER_FEE_NOT_FOUND = "Dispute resolver fee not found";
 string constant SELLER_ALREADY_APPROVED = "Seller id is approved already";
 string constant SELLER_NOT_APPROVED = "Seller id is not approved";
-string constant INVALID_AMOUNT_ALLOWED_SELLERS = "Allowed sellers not present or exceeds maximum allowed sellers in a single transaction";
+string constant INVALID_AMOUNT_ALLOWED_SELLERS = "Allowed sellers are not present or exceed maximum allowed sellers in a single transaction";
 string constant INVALID_AUTH_TOKEN_TYPE = "Invalid AuthTokenType";
 string constant ADMIN_OR_AUTH_TOKEN = "An admin address or an auth token is required";
 string constant AUTH_TOKEN_MUST_BE_UNIQUE = "Auth token cannot be assigned to another entity of the same type";
-string constant INVALID_AGENT_FEE_PERCENTAGE = "Sum of Agent fee percentage and protocol fee percentage should be <= max fee percentage limit";
+string constant INVALID_AGENT_FEE_PERCENTAGE = "Sum of agent fee percentage and protocol fee percentage should be <= max fee percentage limit";
 
 // Revert Reasons: Offer related
 string constant NO_SUCH_OFFER = "No such offer";
 string constant OFFER_PERIOD_INVALID = "Offer period invalid";
 string constant OFFER_PENALTY_INVALID = "Offer penalty invalid";
 string constant OFFER_MUST_BE_ACTIVE = "Offer must be active";
-string constant OFFER_NOT_UPDATEABLE = "Offer not updateable";
 string constant OFFER_MUST_BE_UNIQUE = "Offer must be unique to a group";
 string constant OFFER_HAS_BEEN_VOIDED = "Offer has been voided";
 string constant OFFER_HAS_EXPIRED = "Offer has expired";
@@ -82,7 +81,7 @@ string constant INVALID_DISPUTE_DURATION = "Invalid dispute duration";
 string constant INVALID_DISPUTE_RESOLVER = "Invalid dispute resolver";
 string constant INVALID_QUANTITY_AVAILABLE = "Invalid quantity available";
 string constant DR_UNSUPPORTED_FEE = "Dispute resolver does not accept this token";
-string constant AGENT_FEE_AMOUNT_TOO_HIGH = "Sum of Agent fee amount and protocol fee amount should be <= offer fee limit";
+string constant AGENT_FEE_AMOUNT_TOO_HIGH = "Sum of agent fee amount and protocol fee amount should be <= offer fee limit";
 
 // Revert Reasons: Group related
 string constant NO_SUCH_GROUP = "No such group";
@@ -110,7 +109,7 @@ string constant BUNDLE_FOR_TWIN_EXISTS = "Bundle for twin exists";
 string constant INVALID_SUPPLY_AVAILABLE = "supplyAvailable can't be zero";
 string constant INVALID_AMOUNT = "Invalid twin amount";
 string constant INVALID_TWIN_PROPERTY = "Invalid property for selected token type";
-string constant INVALID_TWIN_TOKEN_RANGE = "Token range is already being used in another Twin";
+string constant INVALID_TWIN_TOKEN_RANGE = "Token range is already being used in another twin";
 string constant INVALID_TOKEN_ADDRESS = "Token address is a contract that doesn't implement the interface for selected token type";
 
 // Revert Reasons: Bundle related

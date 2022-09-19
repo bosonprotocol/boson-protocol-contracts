@@ -17,6 +17,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a TokenAddressChanged event.
      *
+     * Reverts if _tokenAddress is the zero address
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _tokenAddress - the Boson Token (ERC-20 contract) address
@@ -34,6 +36,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Sets the Boson Protocol multi-sig wallet address.
      *
      * Emits a TreasuryAddressChanged event.
+     *
+     * Reverts if _treasuryAddress is the zero address
      *
      * @dev Caller must have ADMIN role.
      *
@@ -53,6 +57,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a VoucherBeaconAddressChanged event.
      *
+     * Reverts if _voucherBeaconAddress is the zero address
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _voucherBeaconAddress - the Boson Voucher beacon contract address
@@ -70,6 +76,8 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Sets the Boson Voucher reference proxy implementation address.
      *
      * Emits a BeaconProxyAddressChanged event.
+     *
+     * Reverts if _beaconProxyAddress is the zero address
      *
      * @dev Caller must have ADMIN role.
      *

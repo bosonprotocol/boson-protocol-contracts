@@ -31,10 +31,22 @@ const {
  *  Integration test case - exchange and offer operations should remain possible even when token fees are removed from the DR fee list 
 
  */
-describe("DR removes fee", function () {
+describe("[@skip-on-coverage] DR removes fee", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
   let expectedCloneAddress, emptyAuthToken, voucherInitValues;
-  let deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR;
+  let deployer,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    buyer,
+    rando,
+    operatorDR,
+    adminDR,
+    clerkDR,
+    treasuryDR,
+    protocolTreasury,
+    bosonToken;
   let buyerEscalationDepositPercentage;
   let buyerAccount, seller, disputeResolver;
   let offer, offerDates, offerDurations, disputeResolverId;
@@ -43,8 +55,21 @@ describe("DR removes fee", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR] =
-      await ethers.getSigners();
+    [
+      deployer,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      buyer,
+      rando,
+      operatorDR,
+      adminDR,
+      clerkDR,
+      treasuryDR,
+      protocolTreasury,
+      bosonToken,
+    ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     const [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -83,8 +108,8 @@ describe("DR removes fee", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasury: ethers.constants.AddressZero,
-        token: ethers.constants.AddressZero,
+        treasury: protocolTreasury.address,
+        token: bosonToken.address,
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,
       },
