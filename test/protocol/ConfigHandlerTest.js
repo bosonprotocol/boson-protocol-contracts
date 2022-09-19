@@ -367,7 +367,7 @@ describe("IBosonConfigHandler", function () {
           it("maxOffersPerBundle is zero", async function () {
             maxOffersPerBundle = 0;
 
-            await expect(configHandler.connect(deployer).setMaxOffersPerGroup(maxOffersPerBundle)).to.revertedWith(
+            await expect(configHandler.connect(deployer).setMaxOffersPerBundle(maxOffersPerBundle)).to.revertedWith(
               RevertReasons.VALUE_ZERO_NOT_ALLOWED
             );
           });

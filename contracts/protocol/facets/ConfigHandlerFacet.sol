@@ -266,6 +266,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxTwinsPerBundleChanged event.
      *
+     * Reverts if the _maxTwinsPerBundle is zero.
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _maxTwinsPerBundle - the maximum length of {BosonTypes.Bundle.twinIds}
