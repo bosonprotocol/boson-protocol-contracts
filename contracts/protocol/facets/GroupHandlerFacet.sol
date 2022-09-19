@@ -94,6 +94,9 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         groupsNotPaused
         nonReentrant
     {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
         // Check if group can be updated
         (uint256 sellerId, Group storage group) = preUpdateChecks(_groupId, _offerIds);
 
@@ -105,11 +108,11 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
             require(_groupId == groupId, OFFER_NOT_IN_GROUP);
 
             // Remove groupIdByOffer mapping
-            delete protocolLookups().groupIdByOffer[offerId];
+            delete lookups.groupIdByOffer[offerId];
 
             uint256 len = group.offerIds.length;
             // Get the index in the offerIds array, which is 1 less than the offerIdIndexByGroup index
-            uint256 index = protocolLookups().offerIdIndexByGroup[groupId][offerId] - 1;
+            uint256 index = lookups.offerIdIndexByGroup[groupId][offerId] - 1;
 
             if (index != len - 1) {
                 // If index == len - 1 then only pop and delete are needed
@@ -118,12 +121,12 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
                 // Copy the last token in the array to this index to fill the gap
                 group.offerIds[index] = offerIdToMove;
                 // Reset index mapping. Should be index in offerIds array + 1
-                protocolLookups().offerIdIndexByGroup[groupId][offerIdToMove] = index + 1;
+                lookups.offerIdIndexByGroup[groupId][offerIdToMove] = index + 1;
             }
             // Delete last offer id in the array, which was just moved to fill the gap
             group.offerIds.pop();
             // Delete from index mapping
-            delete protocolLookups().offerIdIndexByGroup[groupId][offerId];
+            delete lookups.offerIdIndexByGroup[groupId][offerId];
         }
 
         // Get the condition

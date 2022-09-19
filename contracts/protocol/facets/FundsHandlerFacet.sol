@@ -92,26 +92,28 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         address[] calldata _tokenList,
         uint256[] calldata _tokenAmounts
     ) external override fundsNotPaused nonReentrant {
+        address payable sender = payable(msgSender());
+
         // Address that will receive the funds
         address payable destinationAddress;
 
         // First check if the caller is a buyer
-        (bool exists, uint256 callerId) = getBuyerIdByWallet(msgSender());
+        (bool exists, uint256 callerId) = getBuyerIdByWallet(sender);
         if (exists && callerId == _entityId) {
             // Caller is a buyer
-            destinationAddress = payable(msgSender());
+            destinationAddress = sender;
         } else {
             // Check if the caller is a clerk
-            (exists, callerId) = getSellerIdByClerk(msgSender());
+            (exists, callerId) = getSellerIdByClerk(sender);
             if (exists && callerId == _entityId) {
                 // Caller is a clerk. In this case funds are transferred to the treasury address
                 (, Seller storage seller, ) = fetchSeller(callerId);
                 destinationAddress = seller.treasury;
             } else {
-                (exists, callerId) = getAgentIdByWallet(msgSender());
+                (exists, callerId) = getAgentIdByWallet(sender);
                 if (exists && callerId == _entityId) {
                     // Caller is an agent
-                    destinationAddress = payable(msgSender());
+                    destinationAddress = sender;
                 } else {
                     // In this branch, caller is neither buyer, clerk or agent or does not match the _entityId
                     revert(NOT_AUTHORIZED);
@@ -159,8 +161,11 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
      */
     function getAvailableFunds(uint256 _entityId) external view override returns (Funds[] memory availableFunds) {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
         // get list of token addresses for the entity
-        address[] storage tokenList = protocolLookups().tokenList[_entityId];
+        address[] storage tokenList = lookups.tokenList[_entityId];
         availableFunds = new Funds[](tokenList.length);
 
         for (uint256 i = 0; i < tokenList.length; i++) {
@@ -180,7 +185,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             }
 
             // Retrieve available amount from the stroage
-            uint256 availableAmount = protocolLookups().availableFunds[_entityId][tokenAddress];
+            uint256 availableAmount = lookups.availableFunds[_entityId][tokenAddress];
 
             // Add entry to the return variable
             availableFunds[i] = Funds(tokenAddress, tokenName, availableAmount);
@@ -211,6 +216,9 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         address[] calldata _tokenList,
         uint256[] calldata _tokenAmounts
     ) internal {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
         // Make sure that the data is complete
         require(_tokenList.length == _tokenAmounts.length, TOKEN_AMOUNT_MISMATCH);
 
@@ -223,7 +231,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             // Withdraw everything
 
             // Get list of all user's tokens
-            address[] memory tokenList = protocolLookups().tokenList[_entityId];
+            address[] memory tokenList = lookups.tokenList[_entityId];
 
             // Make sure that at least something will be withdrawn
             require(tokenList.length != 0, NOTHING_TO_WITHDRAW);
@@ -233,7 +241,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
 
             for (uint256 i = 0; i < len; i++) {
                 // Get available funds from storage
-                uint256 availableFunds = protocolLookups().availableFunds[_entityId][tokenList[i]];
+                uint256 availableFunds = lookups.availableFunds[_entityId][tokenList[i]];
                 FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], _destinationAddress, availableFunds);
             }
         } else {

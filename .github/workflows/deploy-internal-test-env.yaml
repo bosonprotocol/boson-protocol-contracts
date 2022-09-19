@@ -13,6 +13,7 @@ jobs:
       DEPLOYER_TEST_TXNODE: ${{ secrets.DEPLOYER_TEST_TXNODE }}
       DEPLOYER_TEST_KEY: ${{ secrets.DEPLOYER_TEST_KEY }}
       CONFIRMATIONS: ${{ secrets.CONFIRMATIONS }}
+      ADMIN_ADDRESS_TEST: ${{ secrets.ADMIN_ADDRESS_TEST }}
     name: test_deploy
     steps:
       - uses: webfactory/ssh-agent@v0.5.4
@@ -61,3 +62,4 @@ jobs:
             -m "[Test Environment] New deployed addresses" \
             -m "This is an auto-generated commit. This commit contains addresses generated after deploy to the internal test environment."
           git push
+       
