@@ -30,7 +30,6 @@ exports.RevertReasons = {
   OFFER_PERIOD_INVALID: "Offer period invalid",
   OFFER_PENALTY_INVALID: "Offer penalty invalid",
   OFFER_MUST_BE_ACTIVE: "Offer must be active",
-  OFFER_NOT_UPDATEABLE: "Offer not updateable",
   OFFER_MUST_BE_UNIQUE: "Offer must be unique to a group",
   CANNOT_COMMIT: "Caller cannot commit",
   EXCHANGE_FOR_OFFER_EXISTS: "Exchange for offer exists",
@@ -41,7 +40,7 @@ exports.RevertReasons = {
   INVALID_DISPUTE_RESOLVER: "Invalid dispute resolver",
   INVALID_QUANTITY_AVAILABLE: "Invalid quantity available",
   DR_UNSUPPORTED_FEE: "Dispute resolver does not accept this token",
-  AGENT_FEE_AMOUNT_TOO_HIGH: "Sum of Agent fee amount and protocol fee amount should be <= offer fee limit",
+  AGENT_FEE_AMOUNT_TOO_HIGH: "Sum of agent fee amount and protocol fee amount should be <= offer fee limit",
   OFFER_NOT_AVAILABLE: "Offer is not yet available",
   OFFER_HAS_EXPIRED: "Offer has expired",
   OFFER_SOLD_OUT: "Offer has sold out",
@@ -58,7 +57,7 @@ exports.RevertReasons = {
   NO_SUCH_SELLER: "No such seller",
   SELLER_ADDRESS_MUST_BE_UNIQUE: "Seller address cannot be assigned to another seller Id",
   BUYER_ADDRESS_MUST_BE_UNIQUE: "Buyer address cannot be assigned to another buyer Id",
-  DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE: "Dispute Resolver address cannot be assigned to another dispute resolver Id",
+  DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE: "Dispute resolver address cannot be assigned to another dispute resolver Id",
   AGENT_ADDRESS_MUST_BE_UNIQUE: "Agent address cannot be assigned to another agent Id",
   NOT_ADMIN: "Not admin",
   NOT_BUYER_WALLET: "Not buyer's wallet address",
@@ -70,7 +69,7 @@ exports.RevertReasons = {
   NO_SUCH_DISPUTE_RESOLVER: "No such dispute resolver",
   INVALID_ESCALATION_PERIOD: "Invalid escalation period",
   INVALID_AMOUNT_DISPUTE_RESOLVER_FEES:
-    "Dispute resolver fees are not present or exceeds maximum dispute resolver fees in a single transaction",
+    "Dispute resolver fees are not present or exceed maximum dispute resolver fees in a single transaction",
   DUPLICATE_DISPUTE_RESOLVER_FEES: "Duplicate dispute resolver fee",
   DISPUTE_RESOLVER_FEE_NOT_FOUND: "Dispute resolver fee not found",
   INVALID_AUTH_TOKEN_TYPE: "Invalid AuthTokenType",
@@ -79,9 +78,9 @@ exports.RevertReasons = {
   SELLER_ALREADY_APPROVED: "Seller id is approved already",
   SELLER_NOT_APPROVED: "Seller id is not approved",
   INVALID_AMOUNT_ALLOWED_SELLERS:
-    "Allowed sellers not present or exceeds maximum allowed sellers in a single transaction",
+    "Allowed sellers are not present or exceed maximum allowed sellers in a single transaction",
   INVALID_AGENT_FEE_PERCENTAGE:
-    "Sum of Agent fee percentage and protocol fee percentage should be <= max fee percentage limit",
+    "Sum of agent fee percentage and protocol fee percentage should be <= max fee percentage limit",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",
@@ -91,7 +90,7 @@ exports.RevertReasons = {
   INVALID_SUPPLY_AVAILABLE: "supplyAvailable can't be zero",
   INVALID_AMOUNT: "Invalid twin amount",
   INVALID_TWIN_PROPERTY: "Invalid property for selected token type",
-  INVALID_TWIN_TOKEN_RANGE: "Token range is already being used in another Twin",
+  INVALID_TWIN_TOKEN_RANGE: "Token range is already being used in another twin",
   INVALID_TOKEN_ADDRESS: "Token address is a contract that doesn't implement the interface for selected token type",
 
   // Bundle related
