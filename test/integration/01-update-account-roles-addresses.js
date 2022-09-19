@@ -31,7 +31,7 @@ const {
 /**
  *  Integration test case - operations should remain possible after updating account roles addresses.
  */
-describe("Update account roles addresses", function () {
+describe("[@skip-on-coverage] Update account roles addresses", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
   let deployer,
     operator,

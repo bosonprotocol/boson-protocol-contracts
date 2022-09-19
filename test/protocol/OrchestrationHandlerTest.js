@@ -1653,7 +1653,7 @@ describe("IBosonOrchestrationHandler", function () {
             ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
           });
 
-          it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
+          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "3"; // argument sent to contract for createAgent will be ignored
 
@@ -2406,7 +2406,7 @@ describe("IBosonOrchestrationHandler", function () {
             ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
           });
 
-          it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
+          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
 
@@ -3187,7 +3187,7 @@ describe("IBosonOrchestrationHandler", function () {
             ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
           });
 
-          it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
+          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
 
@@ -4029,7 +4029,7 @@ describe("IBosonOrchestrationHandler", function () {
             ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
           });
 
-          it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
+          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
 
@@ -4691,7 +4691,7 @@ describe("IBosonOrchestrationHandler", function () {
             ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
           });
 
-          it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
+          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
 
@@ -5260,7 +5260,7 @@ describe("IBosonOrchestrationHandler", function () {
             ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
           });
 
-          it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
+          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "3"; // argument sent to contract for createAgent will be ignored
 
@@ -5887,7 +5887,7 @@ describe("IBosonOrchestrationHandler", function () {
             ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
           });
 
-          it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
+          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "3"; // argument sent to contract for createAgent will be ignored
 
@@ -6754,7 +6754,7 @@ describe("IBosonOrchestrationHandler", function () {
             ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
           });
 
-          it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
+          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "3"; // argument sent to contract for createAgent will be ignored
 
