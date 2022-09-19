@@ -24,6 +24,9 @@ async function deployProtocolDiamond(gasLimit) {
   const AccessController = await ethers.getContractFactory("AccessController");
   const accessController = await AccessController.deploy({ gasLimit });
   await accessController.deployTransaction.wait(confirmations);
+  // initialize. If another address called initialize after the deployment, this will fail
+  const accessControllerInitialize = await accessController.initialize({ gasLimit });
+  await accessControllerInitialize.wait(confirmations);
 
   // Diamond Loupe Facet
   const DiamondLoupeFacet = await ethers.getContractFactory("DiamondLoupeFacet");

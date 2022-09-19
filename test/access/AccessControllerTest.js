@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const Role = require("../../scripts/domain/Role");
+const { RevertReasons } = require("../../scripts/config/revert-reasons");
 
 /**
  *  Test the AccessController contract
@@ -19,6 +20,14 @@ describe("AccessController", function () {
     AccessController = await ethers.getContractFactory("AccessController");
     accessController = await AccessController.deploy();
     await accessController.deployed();
+    await accessController.initialize();
+  });
+
+  context("📋 Initialization", async function () {
+    it("Contract can be initialized only once", async function () {
+      // Check role
+      await expect(accessController.initialize()).to.be.revertedWith(RevertReasons.INITIALIZABLE_ALREADY_INITIALIZED);
+    });
   });
 
   context("📋 Deployer is limited to initial ADMIN role", async function () {
@@ -55,7 +64,7 @@ describe("AccessController", function () {
       ).is.false;
     });
 
-    it("Deployer should not have any un managed value as role", async function () {
+    it("Deployer should not have any unmanaged value as role", async function () {
       // Random unknown role
       let role = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("random"));
 

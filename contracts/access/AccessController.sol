@@ -11,12 +11,16 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
  */
 contract AccessController is AccessControlUpgradeable {
     /**
-     * @notice Constructor
+     * @notice Initializer
+     *
+     * Not using a constructur since AccessController is upgradeable
      *
      * Grants ADMIN role to deployer.
      * Sets ADMIN as role admin for all other roles.
      */
-    constructor() {
+    function initialize() external initializer {
+        __AccessControl_init_unchained();
+
         _setupRole(ADMIN, msg.sender);
         _setRoleAdmin(ADMIN, ADMIN);
         _setRoleAdmin(PAUSER, ADMIN);
