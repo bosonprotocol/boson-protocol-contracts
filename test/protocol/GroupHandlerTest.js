@@ -690,9 +690,19 @@ describe("IBosonGroupHandler", function () {
           );
         });
 
-        it("Adding too many offers", async function () {
+        it("Number of offers to add exceeds max", async function () {
           // Try to add the more than 100 offers
           offerIdsToAdd = [...Array(101).keys()];
+
+          // Attempt to add offers to a group, expecting revert
+          await expect(groupHandler.connect(operator).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.TOO_MANY_OFFERS
+          );
+        });
+
+        it("Current number of offers plus number of offers to add exceeds max", async function () {
+          // Try to add offers to that total is more than 100. Group currently has 3.
+          offerIdsToAdd = [...Array(98).keys()];
 
           // Attempt to add offers to a group, expecting revert
           await expect(groupHandler.connect(operator).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
