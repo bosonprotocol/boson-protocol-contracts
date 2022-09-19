@@ -31,7 +31,7 @@ const {
  *  Integration test case - exchange and offer operations should remain possible even when token fees are removed from the DR fee list 
 
  */
-describe("DR removes fee", function () {
+describe("[@skip-on-coverage] DR removes fee", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
   let expectedCloneAddress, emptyAuthToken, voucherInitValues;
   let deployer,

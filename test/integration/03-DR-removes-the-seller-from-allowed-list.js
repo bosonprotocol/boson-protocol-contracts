@@ -25,7 +25,7 @@ const {
 /**
  *  Integration test case - the disputes can be resolved even when approved sellers are removed from the allow list
  */
-describe("DR removes sellers from the approved seller list", function () {
+describe("[@skip-on-coverage] DR removes sellers from the approved seller list", function () {
   // Common vars
   let deployer,
     pauser,
