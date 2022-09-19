@@ -75,7 +75,7 @@ contract OrchestrationHandlerFacet is
      *   - Buyer cancel penalty is greater than price
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
+     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _seller - the fully populated seller struct
@@ -129,7 +129,7 @@ contract OrchestrationHandlerFacet is
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
+     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -192,7 +192,7 @@ contract OrchestrationHandlerFacet is
      *   - Caller is not the operator of the group
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
+     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -255,7 +255,7 @@ contract OrchestrationHandlerFacet is
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
+     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -319,7 +319,7 @@ contract OrchestrationHandlerFacet is
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
+     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -392,7 +392,7 @@ contract OrchestrationHandlerFacet is
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
+     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -475,7 +475,7 @@ contract OrchestrationHandlerFacet is
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
+     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -560,7 +560,7 @@ contract OrchestrationHandlerFacet is
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
+     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *

@@ -47,7 +47,8 @@ describe("IBosonOfferHandler", function () {
     clerkDR,
     treasuryDR,
     other,
-    protocolAdmin;
+    protocolAdmin,
+    protocolTreasury;
   let erc165,
     protocolDiamond,
     accessController,
@@ -117,6 +118,7 @@ describe("IBosonOfferHandler", function () {
       treasuryDR,
       other,
       protocolAdmin,
+      protocolTreasury,
     ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
@@ -162,7 +164,7 @@ describe("IBosonOfferHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasury: ethers.constants.AddressZero,
+        treasury: protocolTreasury.address,
         token: bosonToken.address,
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,
@@ -963,7 +965,7 @@ describe("IBosonOfferHandler", function () {
             ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
           });
 
-          it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
+          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create a valid agent, then set fields in tests directly
             agent = mockAgent(operator.address);
             agent.id = "4";
@@ -2404,7 +2406,7 @@ describe("IBosonOfferHandler", function () {
             ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
           });
 
-          it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
+          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
 

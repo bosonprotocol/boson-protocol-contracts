@@ -36,7 +36,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Buyer cancel penalty is greater than price
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
+     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -96,7 +96,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Buyer cancel penalty is greater than price
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
+     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -218,7 +218,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
             uint256 totalOfferFeeLimit = (protocolLimits().maxTotalOfferFeePercentage * offerPrice) / 10000;
 
-            // Sum of Agent fee amount and protocol fee amount should be <= offer fee limit
+            // Sum of agent fee amount and protocol fee amount should be <= offer fee limit
             require((agentFeeAmount + protocolFee) <= totalOfferFeeLimit, AGENT_FEE_AMOUNT_TOO_HIGH);
 
             //Set offer fees props individually since calldata structs can't be copied to storage

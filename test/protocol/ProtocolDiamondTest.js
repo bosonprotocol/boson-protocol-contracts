@@ -1004,6 +1004,23 @@ describe("ProtocolDiamond", async function () {
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, deployer.address, initCallData, { gasLimit })
         ).to.revertedWith(RevertReasons.INIT_ADDRESS_WITH_NO_CODE);
       });
+
+      it("should revert if _accessController is the zero address", async () => {
+        // Core interfaces that will be supported at the Diamond address
+        const interfaces = [InterfaceIds.IDiamondLoupe, InterfaceIds.IDiamondCut, InterfaceIds.IERC165];
+
+        // Arguments for Diamond constructor
+        const diamondArgs = [
+          ethers.constants.AddressZero,
+          [getFacetAddCut(diamondLoupe), getFacetAddCut(diamondCut), getFacetAddCut(erc165)],
+          interfaces,
+        ];
+
+        // Attempt to deploy Protocol Diamond
+        const ProtocolDiamond = await ethers.getContractFactory("ProtocolDiamond");
+
+        await expect(ProtocolDiamond.deploy(...diamondArgs)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+      });
     });
   });
 

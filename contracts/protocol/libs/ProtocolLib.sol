@@ -6,7 +6,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 /**
  * @title ProtocolLib
  *
- * @notice Provides access to the Protocol Storage, Counters, and Initializer slots for Facets
+ * @notice Provides access to the protocol addresses, limits, entities, fees, counters, initializers and  metaTransactions slots for Facets
  */
 library ProtocolLib {
     bytes32 internal constant PROTOCOL_ADDRESSES_POSITION = keccak256("boson.protocol.addresses");
@@ -56,7 +56,7 @@ library ProtocolLib {
         uint16 maxDisputesPerBatch;
         // limit how many sellers can be added to or removed from an allow list in a single transaction
         uint16 maxAllowedSellers;
-        // limit the sum of (Protocol Fee percentage + Agent Fee perpercentagecent) of an offer fee
+        // limit the sum of (protocol fee percentage + agent fee percentage) of an offer fee
         uint16 maxTotalOfferFeePercentage;
         // limit the max royalty percentage that can be set by the seller
         uint16 maxRoyaltyPecentage;
@@ -156,7 +156,7 @@ library ProtocolLib {
         mapping(address => mapping(uint256 => uint256)) conditionalCommitsByAddress;
         // buyer escalation deposit percentage
         uint16 buyerEscalationDepositPercentage;
-        //AuthTokenType => Auth NFT contract address.
+        // AuthTokenType => Auth NFT contract address.
         mapping(BosonTypes.AuthTokenType => address) authTokenContracts;
         // AuthTokenType => tokenId => sellerId
         mapping(BosonTypes.AuthTokenType => mapping(uint256 => uint256)) sellerIdByAuthToken;
