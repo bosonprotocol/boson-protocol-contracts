@@ -31,7 +31,7 @@ const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-uti
 /**
  *  Integration test case - After Exchange handler facet upgrade, everything is still operational
  */
-describe("After facet upgrade, everything is still operational", function () {
+describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
   let deployer,
     pauser,
