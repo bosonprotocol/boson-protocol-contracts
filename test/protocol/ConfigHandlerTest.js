@@ -16,7 +16,7 @@ const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
-  let accounts, deployer, rando, token, treasury, beacon, proxy;
+  let accounts, deployer, rando, token, treasury, beacon, proxy, newAccessController;
   let maxOffersPerGroup,
     maxTwinsPerBundle,
     maxOffersPerBundle,
@@ -1125,6 +1125,44 @@ describe("IBosonConfigHandler", function () {
             await expect(configHandler.connect(deployer).setMinFulfillmentPeriod(minFulfillmentPeriod)).to.revertedWith(
               RevertReasons.VALUE_ZERO_NOT_ALLOWED
             );
+          });
+        });
+      });
+
+      context("👉 setAccessControllerAddress()", async function () {
+        beforeEach(async function () {
+          // set new value
+          newAccessController = accounts[9];
+        });
+
+        it("should emit an AccessControllerAddressChanged event", async function () {
+          // Set new access controller address
+          await expect(configHandler.connect(deployer).setAccessControllerAddress(newAccessController.address))
+            .to.emit(configHandler, "AccessControllerAddressChanged")
+            .withArgs(newAccessController.address, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new access controller address
+          await configHandler.connect(deployer).setAccessControllerAddress(newAccessController.address);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getAccessControllerAddress()).to.equal(newAccessController.address);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new value, expecting revert
+            await expect(
+              configHandler.connect(rando).setAccessControllerAddress(newAccessController.address)
+            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          });
+
+          it("_accessControllerAddress is the zero address", async function () {
+            // Attempt to set new value, expecting revert
+            await expect(
+              configHandler.connect(deployer).setAccessControllerAddress(ethers.constants.AddressZero)
+            ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
           });
         });
       });

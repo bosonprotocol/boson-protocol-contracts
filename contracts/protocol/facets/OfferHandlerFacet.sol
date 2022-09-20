@@ -105,7 +105,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         OfferDurations[] calldata _offerDurations,
         uint256[] calldata _disputeResolverIds,
         uint256[] calldata _agentIds
-    ) external override offersNotPaused {
+    ) external override offersNotPaused nonReentrant {
         // Limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offers.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
         // Number of offer dates structs, offer durations structs and _disputeResolverIds must match the number of offers
