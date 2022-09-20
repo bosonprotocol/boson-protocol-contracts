@@ -68,6 +68,8 @@ library ProtocolLib {
         uint256 percentage; // 1.75% = 175, 100% = 10000
         // Flat fee taken for exchanges in $BOSON
         uint256 flatBoson;
+        // buyer escalation deposit percentage
+        uint256 buyerEscalationDepositPercentage;
     }
 
     // Protocol entities storage
@@ -114,8 +116,6 @@ library ProtocolLib {
 
     // Protocol lookups storage
     struct ProtocolLookups {
-        // buyer escalation deposit percentage
-        uint256 buyerEscalationDepositPercentage;
         // offer id => exchange ids
         mapping(uint256 => uint256[]) exchangeIdsByOffer;
         // offer id => bundle id

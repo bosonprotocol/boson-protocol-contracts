@@ -548,7 +548,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         require(_buyerEscalationDepositPercentage <= 10000, FEE_PERCENTAGE_INVALID);
 
         // Store fee percentage
-        protocolLookups().buyerEscalationDepositPercentage = _buyerEscalationDepositPercentage;
+        protocolFees().buyerEscalationDepositPercentage = _buyerEscalationDepositPercentage;
 
         // Notify watchers of state change
         emit BuyerEscalationFeePercentageChanged(_buyerEscalationDepositPercentage, msgSender());
@@ -560,7 +560,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @return the percentage of the DR fee that will be charged to buyer if they want to escalate the dispute
      */
     function getBuyerEscalationDepositPercentage() external view override returns (uint256) {
-        return protocolLookups().buyerEscalationDepositPercentage;
+        return protocolFees().buyerEscalationDepositPercentage;
     }
 
     /**
