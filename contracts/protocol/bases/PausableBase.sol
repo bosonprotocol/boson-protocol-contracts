@@ -19,7 +19,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier offersNotPaused() {
-        paused(PausableRegion.Offers);
+        revertIfPaused(PausableRegion.Offers);
         _;
     }
 
@@ -31,7 +31,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier twinsNotPaused() {
-        paused(PausableRegion.Twins);
+        revertIfPaused(PausableRegion.Twins);
         _;
     }
 
@@ -43,7 +43,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier bundlesNotPaused() {
-        paused(PausableRegion.Bundles);
+        revertIfPaused(PausableRegion.Bundles);
         _;
     }
 
@@ -55,7 +55,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier groupsNotPaused() {
-        paused(PausableRegion.Groups);
+        revertIfPaused(PausableRegion.Groups);
         _;
     }
 
@@ -67,7 +67,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier sellersNotPaused() {
-        paused(PausableRegion.Sellers);
+        revertIfPaused(PausableRegion.Sellers);
         _;
     }
 
@@ -79,7 +79,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier buyersNotPaused() {
-        paused(PausableRegion.Buyers);
+        revertIfPaused(PausableRegion.Buyers);
         _;
     }
 
@@ -91,7 +91,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier agentsNotPaused() {
-        paused(PausableRegion.Agents);
+        revertIfPaused(PausableRegion.Agents);
         _;
     }
 
@@ -103,7 +103,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier disputeResolversNotPaused() {
-        paused(PausableRegion.DisputeResolvers);
+        revertIfPaused(PausableRegion.DisputeResolvers);
         _;
     }
 
@@ -115,7 +115,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier exchangesNotPaused() {
-        paused(PausableRegion.Exchanges);
+        revertIfPaused(PausableRegion.Exchanges);
         _;
     }
 
@@ -127,7 +127,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier disputesNotPaused() {
-        paused(PausableRegion.Disputes);
+        revertIfPaused(PausableRegion.Disputes);
         _;
     }
 
@@ -139,7 +139,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier fundsNotPaused() {
-        paused(PausableRegion.Funds);
+        revertIfPaused(PausableRegion.Funds);
         _;
     }
 
@@ -151,7 +151,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier orchestrationNotPaused() {
-        paused(PausableRegion.Orchestration);
+        revertIfPaused(PausableRegion.Orchestration);
         _;
     }
 
@@ -163,7 +163,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier metaTransactionsNotPaused() {
-        paused(PausableRegion.MetaTransaction);
+        revertIfPaused(PausableRegion.MetaTransaction);
         _;
     }
 
@@ -174,7 +174,7 @@ contract PausableBase is BosonTypes {
      *
      * @param _region the region to check pause status for
      */
-    function paused(PausableRegion _region) internal view {
+    function revertIfPaused(PausableRegion _region) internal view {
         // Region enum value must be used as the exponent in a power of 2
         uint256 powerOfTwo = 2**uint256(_region);
         require((ProtocolLib.protocolStatus().pauseScenario & powerOfTwo) != powerOfTwo, REGION_PAUSED);
