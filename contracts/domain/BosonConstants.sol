@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.0;
+pragma solidity 0.8.17;
 
 // Access Control Roles
 bytes32 constant ADMIN = keccak256("ADMIN"); // Role Admin
