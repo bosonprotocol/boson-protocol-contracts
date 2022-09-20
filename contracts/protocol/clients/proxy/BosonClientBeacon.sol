@@ -11,9 +11,5 @@ import { ClientExternalAddressesBase } from "./../../bases/ClientExternalAddress
  * to implementations behind the beacon proxy
  */
 contract BosonClientBeacon is ClientExternalAddressesBase {
-    constructor(
-        address _accessController,
-        address _protocolAddress,
-        address _impl
-    ) ClientExternalAddressesBase(_accessController, _protocolAddress, _impl) {}
+    constructor(address _protocolAddress, address _impl) ClientExternalAddressesBase(_protocolAddress, _impl) {}
 }
