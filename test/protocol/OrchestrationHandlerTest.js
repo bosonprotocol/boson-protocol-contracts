@@ -162,7 +162,7 @@ describe("IBosonOrchestrationHandler", function () {
     buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const protocolClientArgs = [protocolDiamond.address];
     const [, [beacon], [proxy]] = await deployProtocolClients(protocolClientArgs, gasLimit);
 
     // Add config Handler, so offer id starts at 1
