@@ -106,14 +106,14 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setProtocolFeePercentage(uint16 _protocolFeePercentage) external;
+    function setProtocolFeePercentage(uint256 _protocolFeePercentage) external;
 
     /**
      * @notice Gets the protocol fee percentage.
      *
      * @return the protocol fee percentage
      */
-    function getProtocolFeePercentage() external view returns (uint16);
+    function getProtocolFeePercentage() external view returns (uint256);
 
     /**
      * @notice Sets the flat protocol fee for exchanges in $BOSON.
@@ -333,14 +333,14 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setBuyerEscalationDepositPercentage(uint16 _buyerEscalationDepositPercentage) external;
+    function setBuyerEscalationDepositPercentage(uint256 _buyerEscalationDepositPercentage) external;
 
     /**
      * @notice Gets the buyer escalation fee percentage.
      *
      * @return the percentage of the DR fee that will be charged to buyer if they want to escalate the dispute
      */
-    function getBuyerEscalationDepositPercentage() external view returns (uint16);
+    function getBuyerEscalationDepositPercentage() external view returns (uint256);
 
     /**
      * @notice Sets the contract address for the given AuthTokenType.
