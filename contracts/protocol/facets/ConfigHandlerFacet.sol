@@ -26,8 +26,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function initialize(
         ProtocolLib.ProtocolAddresses calldata _addresses,
         ProtocolLib.ProtocolLimits calldata _limits,
-        ProtocolLib.ProtocolFees calldata _fees,
-        uint16 _buyerEscalationDepositPercentage
+        ProtocolLib.ProtocolFees calldata _fees
     ) public onlyUnInitialized(type(IBosonConfigHandler).interfaceId) {
         // Register supported interfaces
         DiamondLib.addSupportedInterface(type(IBosonConfigHandler).interfaceId);
@@ -49,7 +48,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
         setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);
         setMaxAllowedSellers(_limits.maxAllowedSellers);
-        setBuyerEscalationDepositPercentage(_buyerEscalationDepositPercentage);
+        setBuyerEscalationDepositPercentage(_fees.buyerEscalationDepositPercentage);
         setMaxTotalOfferFeePercentage(_limits.maxTotalOfferFeePercentage);
         setMaxRoyaltyPecentage(_limits.maxRoyaltyPecentage);
         setMaxResolutionPeriod(_limits.maxResolutionPeriod);

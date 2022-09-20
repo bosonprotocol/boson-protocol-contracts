@@ -184,13 +184,13 @@ describe("DisputeResolverHandler", function () {
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
         minFulfillmentPeriod: oneWeek,
+        buyerEscalationDepositPercentage,
       },
       // Protocol fees
       {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
       },
-      buyerEscalationDepositPercentage,
     ];
 
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);

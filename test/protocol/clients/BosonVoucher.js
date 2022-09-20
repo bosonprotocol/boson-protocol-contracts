@@ -135,8 +135,8 @@ describe("IBosonVoucher", function () {
       {
         percentage: 200, // 2%
         flatBoson: protocolFeeFlatBoson,
+        buyerEscalationDepositPercentage,
       },
-      buyerEscalationDepositPercentage,
     ];
 
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);

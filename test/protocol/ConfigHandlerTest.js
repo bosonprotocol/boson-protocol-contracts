@@ -115,8 +115,8 @@ describe("IBosonConfigHandler", function () {
           {
             percentage: protocolFeePercentage,
             flatBoson: protocolFeeFlatBoson,
+            buyerEscalationDepositPercentage,
           },
-          buyerEscalationDepositPercentage,
         ];
 
         const { cutTransaction } = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
