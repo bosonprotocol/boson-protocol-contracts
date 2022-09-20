@@ -98,7 +98,7 @@ jobs:
              test/protocol/AgentHandlerTest.js test/protocol/BuyerHandlerTest.js test/protocol/ConfigHandlerTest.js test/protocol/ProtocolDiamondTest.js \
              test/protocol/TwinHandlerTest.js
 
-    test-group-3:
+  test-group-3:
     needs: build
     runs-on: ubuntu-latest
     if: ${{ !github.event.pull_request.draft }}
