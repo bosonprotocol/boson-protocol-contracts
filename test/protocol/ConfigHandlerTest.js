@@ -910,13 +910,6 @@ describe("IBosonConfigHandler", function () {
               configHandler.connect(deployer).setMaxTotalOfferFeePercentage(maxTotalOfferFeePercentage)
             ).to.revertedWith(RevertReasons.FEE_PERCENTAGE_INVALID);
           });
-
-          it("maxTotalOfferFeePercentage is zero", async function () {
-            maxTotalOfferFeePercentage = 0;
-            await expect(
-              configHandler.connect(deployer).setMaxTotalOfferFeePercentage(maxTotalOfferFeePercentage)
-            ).to.revertedWith(RevertReasons.VALUE_ZERO_NOT_ALLOWED);
-          });
         });
       });
 

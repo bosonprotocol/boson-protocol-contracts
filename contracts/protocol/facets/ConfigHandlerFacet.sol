@@ -472,9 +472,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxTotalOfferFeePercentageChanged event.
      *
-     * Reverts if:
-     * - The _maxTotalOfferFeePercentage is zero.
-     * - The _maxTotalOfferFeePercentage is greater than 10000.
+     * Reverts if _maxTotalOfferFeePercentage is greater than 10000.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -489,9 +487,6 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         onlyRole(ADMIN)
         nonReentrant
     {
-        // Make sure percentage is greater than 0
-        require(_maxTotalOfferFeePercentage > 0, VALUE_ZERO_NOT_ALLOWED);
-
         // Make sure percentage is less than 10000
         require(_maxTotalOfferFeePercentage <= 10000, FEE_PERCENTAGE_INVALID);
 
