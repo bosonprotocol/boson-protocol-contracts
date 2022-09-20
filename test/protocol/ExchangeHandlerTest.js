@@ -163,7 +163,7 @@ describe("IBosonExchangeHandler", function () {
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const protocolClientArgs = [protocolDiamond.address];
     const [implementations, beacons, proxies, clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [bosonVoucher] = clients;
     const [beacon] = beacons;
@@ -3035,6 +3035,13 @@ describe("IBosonExchangeHandler", function () {
           exchangeHandler,
           "VoucherTransferred"
         );
+      });
+
+      it("Should not be triggered when from and to addresses are the same", async function () {
+        // Transfer voucher, expecting event
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(buyer.address, buyer.address, exchange.id)
+        ).to.not.emit(exchangeHandler, "VoucherTransferred");
       });
 
       context("💔 Revert Reasons", async function () {

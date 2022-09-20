@@ -31,7 +31,7 @@ const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-uti
 /**
  *  Integration test case - After Exchange handler facet upgrade, everything is still operational
  */
-describe("After facet upgrade, everything is still operational", function () {
+describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
   let deployer,
     pauser,
@@ -116,7 +116,7 @@ describe("After facet upgrade, everything is still operational", function () {
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const protocolClientArgs = [protocolDiamond.address];
     const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
     const [beacon] = beacons;
     const [proxy] = proxies;

@@ -31,7 +31,7 @@ const {
 /**
  *  Integration test case - operations should remain possible after updating account roles addresses.
  */
-describe("Update account roles addresses", function () {
+describe("[@skip-on-coverage] Update account roles addresses", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
   let deployer,
     operator,
@@ -91,7 +91,7 @@ describe("Update account roles addresses", function () {
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const protocolClientArgs = [protocolDiamond.address];
     const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
     const [beacon] = beacons;
     const [proxy] = proxies;

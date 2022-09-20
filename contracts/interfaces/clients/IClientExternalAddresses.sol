@@ -11,7 +11,7 @@ import { IClientExternalAddressesEvents } from "../events/IClientExternalAddress
  * by protocol client
  *
  *
- * The ERC-165 identifier for this interface is: 0xc4c6c36b
+ * The ERC-165 identifier for this interface is: 0x344552b3
  */
 interface IClientExternalAddresses is IClientExternalAddressesEvents {
     /**
@@ -27,15 +27,6 @@ interface IClientExternalAddresses is IClientExternalAddressesEvents {
      * @return the implementation address
      */
     function getImplementation() external view returns (address);
-
-    /**
-     * @notice Sets the Boson Protocol AccessController.
-     *
-     * Emits an AccessControllerAddressChanged event.
-     *
-     * @param _accessController - the Boson Protocol AccessController address
-     */
-    function setAccessController(address _accessController) external;
 
     /**
      * @notice Gets the address of the Boson Protocol AccessController contract.
