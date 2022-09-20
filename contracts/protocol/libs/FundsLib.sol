@@ -269,7 +269,7 @@ library FundsLib {
         uint256 _amount
     ) internal {
         // first decrease the amount to prevent the reentrancy attack
-        FundsLib.decreaseAvailableFunds(_entityId, _tokenAddress, _amount);
+        decreaseAvailableFunds(_entityId, _tokenAddress, _amount);
 
         // try to transfer the funds
         if (_tokenAddress == address(0)) {
