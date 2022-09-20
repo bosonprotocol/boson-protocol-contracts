@@ -96,7 +96,7 @@ describe("IBosonVoucher", function () {
       "FundsHandlerFacet",
     ]);
 
-    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const protocolClientArgs = [protocolDiamond.address];
     const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [bosonVoucher] = bv;
     const [beacon] = beacons;

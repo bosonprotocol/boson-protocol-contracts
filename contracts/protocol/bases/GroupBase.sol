@@ -129,7 +129,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * Reverts if:
      * - Caller is not the seller
      * - Offer ids param is an empty list
-     * - Number of offers exceeds maximum allowed number per group
+     * - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - Group does not exist
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
@@ -145,6 +145,10 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
         // check if group can be updated
         (uint256 sellerId, Group storage group) = preUpdateChecks(_groupId, _offerIds);
+
+        // limit maximum number of total offers to avoid running into block gas limit in a loop
+        // and make sure total number of offers in group does not exceed max
+        require(group.offerIds.length + _offerIds.length <= protocolLimits().maxOffersPerGroup, TOO_MANY_OFFERS);
 
         for (uint256 i = 0; i < _offerIds.length; i++) {
             uint256 offerId = _offerIds[i];
@@ -194,9 +198,6 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
     {
         // make sure that at least something will be updated
         require(_offerIds.length != 0, NOTHING_UPDATED);
-
-        // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_offerIds.length <= protocolLimits().maxOffersPerGroup, TOO_MANY_OFFERS);
 
         // Get storage location for group
         bool exists;

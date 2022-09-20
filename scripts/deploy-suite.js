@@ -139,7 +139,7 @@ async function main() {
   console.log(`\n⧉ Deploying Protocol Client implementation/proxy pairs...`);
 
   // Deploy the Protocol Client implementation/proxy pairs
-  const protocolClientArgs = [accessController.address, protocolDiamond.address];
+  const protocolClientArgs = [protocolDiamond.address];
   const [impls, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
   const [bosonVoucherImpl] = impls;
   const [bosonClientBeacon] = beacons;
