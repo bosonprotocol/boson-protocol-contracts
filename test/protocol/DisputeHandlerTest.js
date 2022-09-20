@@ -1504,7 +1504,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to commit to an offer, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
-              RevertReasons.EOA_FUNCTION_CALL
+              RevertReasons.RETURNDATA_SIZE_ERROR
             );
           });
 

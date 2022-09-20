@@ -131,7 +131,7 @@ exports.RevertReasons = {
   ERC20_EXCEEDS_BALANCE: "ERC20: transfer amount exceeds balance",
   ERC20_INSUFFICIENT_ALLOWANCE: "ERC20: insufficient allowance",
   ERC20_PAUSED: "ERC20Pausable: token transfer while paused",
-  EOA_FUNCTION_CALL: "Transaction reverted: function call to a non-contract account",
+  RETURNDATA_SIZE_ERROR: "Transaction reverted: function returned an unexpected amount of data",
   EOA_FUNCTION_CALL_SAFE_ERC20: "Address: call to non-contract",
   ERC721_NON_EXISTENT: "ERC721: invalid token ID",
   OWNABLE_NOT_OWNER: "Ownable: caller is not the owner",

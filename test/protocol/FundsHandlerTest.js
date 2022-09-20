@@ -1918,7 +1918,7 @@ describe("IBosonFundsHandler", function () {
 
           // Attempt to commit to an offer, expecting revert
           await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
-            RevertReasons.EOA_FUNCTION_CALL
+            RevertReasons.RETURNDATA_SIZE_ERROR
           );
         });
 
