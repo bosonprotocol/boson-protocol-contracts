@@ -9,7 +9,7 @@ import { IBosonMetaTransactionsEvents } from "../events/IBosonMetaTransactionsEv
  *
  * @notice Manages incoming meta-transactions in the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x369a01ef
+ * The ERC-165 identifier for this interface is: 0xd25fcdc1
  */
 interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
     /**
