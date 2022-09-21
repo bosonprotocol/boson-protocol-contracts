@@ -25,20 +25,9 @@ library EIP712Lib {
                     keccak256(bytes(_name)),
                     keccak256(bytes(_version)),
                     address(this),
-                    getChainID()
+                    block.chainid
                 )
             );
-    }
-
-    /**
-     * @notice Gets the chain id
-     *
-     * @return id - the chain id, 1 for Ethereum mainnet, > 1 for public testnets.
-     */
-    function getChainID() internal view returns (uint256 id) {
-        assembly {
-            id := chainid()
-        }
     }
 
     /**
