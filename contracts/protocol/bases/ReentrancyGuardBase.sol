@@ -35,7 +35,7 @@ abstract contract ReentrancyGuardBase {
      */
     modifier nonReentrant() {
         ProtocolLib.ProtocolStatus storage ps = ProtocolLib.protocolStatus();
-        // On the first call to nonReentrant, _notEntered will be true
+        // On the first call to nonReentrant, ps.reentrancyStatus will be NOT_ENTERED
         require(ps.reentrancyStatus != ENTERED, REENTRANCY_GUARD);
 
         // Any calls to nonReentrant after this point will fail
@@ -43,8 +43,6 @@ abstract contract ReentrancyGuardBase {
 
         _;
 
-        // By storing the original value once again, a refund is triggered (see
-        // https://eips.ethereum.org/EIPS/eip-2200)
         ps.reentrancyStatus = NOT_ENTERED;
     }
 }
