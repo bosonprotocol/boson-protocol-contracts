@@ -247,7 +247,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setMaxOffersPerGroup(uint16 _maxOffersPerGroup) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxOffersPerGroup is greater than 0
-        require(_maxOffersPerGroup > 0, VALUE_ZERO_NOT_ALLOWED);
+        checkNonZero(_maxOffersPerGroup);
 
         protocolLimits().maxOffersPerGroup = _maxOffersPerGroup;
         emit MaxOffersPerGroupChanged(_maxOffersPerGroup, msgSender());
@@ -275,7 +275,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setMaxTwinsPerBundle(uint16 _maxTwinsPerBundle) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxTwinsPerBundle is greater than 0
-        require(_maxTwinsPerBundle > 0, VALUE_ZERO_NOT_ALLOWED);
+        checkNonZero(_maxTwinsPerBundle);
 
         protocolLimits().maxTwinsPerBundle = _maxTwinsPerBundle;
         emit MaxTwinsPerBundleChanged(_maxTwinsPerBundle, msgSender());
@@ -303,7 +303,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setMaxOffersPerBundle(uint16 _maxOffersPerBundle) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxOffersPerBundle is greater than 0
-        require(_maxOffersPerBundle > 0, VALUE_ZERO_NOT_ALLOWED);
+        checkNonZero(_maxOffersPerBundle);
 
         protocolLimits().maxOffersPerBundle = _maxOffersPerBundle;
         emit MaxOffersPerBundleChanged(_maxOffersPerBundle, msgSender());
@@ -331,7 +331,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setMaxOffersPerBatch(uint16 _maxOffersPerBatch) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxOffersPerBatch is greater than 0
-        require(_maxOffersPerBatch > 0, VALUE_ZERO_NOT_ALLOWED);
+        checkNonZero(_maxOffersPerBatch);
 
         protocolLimits().maxOffersPerBatch = _maxOffersPerBatch;
         emit MaxOffersPerBatchChanged(_maxOffersPerBatch, msgSender());
@@ -359,7 +359,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setMaxTokensPerWithdrawal(uint16 _maxTokensPerWithdrawal) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxTokensPerWithdrawal is greater than 0
-        require(_maxTokensPerWithdrawal > 0, VALUE_ZERO_NOT_ALLOWED);
+        checkNonZero(_maxTokensPerWithdrawal);
 
         protocolLimits().maxTokensPerWithdrawal = _maxTokensPerWithdrawal;
         emit MaxTokensPerWithdrawalChanged(_maxTokensPerWithdrawal, msgSender());
@@ -392,7 +392,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         nonReentrant
     {
         // Make sure _maxFeesPerDisputeResolver is greater than 0
-        require(_maxFeesPerDisputeResolver > 0, VALUE_ZERO_NOT_ALLOWED);
+        checkNonZero(_maxFeesPerDisputeResolver);
 
         protocolLimits().maxFeesPerDisputeResolver = _maxFeesPerDisputeResolver;
         emit MaxFeesPerDisputeResolverChanged(_maxFeesPerDisputeResolver, msgSender());
@@ -425,7 +425,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         nonReentrant
     {
         // Make sure _maxEscalationResponsePeriod is greater than 0
-        require(_maxEscalationResponsePeriod > 0, VALUE_ZERO_NOT_ALLOWED);
+        checkNonZero(_maxEscalationResponsePeriod);
 
         protocolLimits().maxEscalationResponsePeriod = _maxEscalationResponsePeriod;
         emit MaxEscalationResponsePeriodChanged(_maxEscalationResponsePeriod, msgSender());
@@ -445,15 +445,13 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxDisputesPerBatchChanged event.
      *
-     * Reverts if the _maxDisputesPerBatch is zero.
-     *
      * @dev Caller must have ADMIN role.
      *
      * @param _maxDisputesPerBatch - the maximum number of disputes that can be expired
      */
     function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxDisputesPerBatch is greater than 0
-        require(_maxDisputesPerBatch > 0, VALUE_ZERO_NOT_ALLOWED);
+        checkNonZero(_maxDisputesPerBatch);
 
         protocolLimits().maxDisputesPerBatch = _maxDisputesPerBatch;
         emit MaxDisputesPerBatchChanged(_maxDisputesPerBatch, msgSender());
@@ -525,7 +523,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setMaxRoyaltyPecentage(uint16 _maxRoyaltyPecentage) public override onlyRole(ADMIN) nonReentrant {
         // Make sure percentage is greater than 0
-        require(_maxRoyaltyPecentage > 0, VALUE_ZERO_NOT_ALLOWED);
+        checkNonZero(_maxRoyaltyPecentage);
 
         // Make sure percentage is less than 10000
         require(_maxRoyaltyPecentage <= 10000, FEE_PERCENTAGE_INVALID);
@@ -559,7 +557,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setMaxAllowedSellers(uint16 _maxAllowedSellers) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxAllowedSellers  greater than 0
-        require(_maxAllowedSellers > 0, VALUE_ZERO_NOT_ALLOWED);
+        checkNonZero(_maxAllowedSellers);
 
         protocolLimits().maxAllowedSellers = _maxAllowedSellers;
         emit MaxAllowedSellersChanged(_maxAllowedSellers, msgSender());
@@ -662,7 +660,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setMaxExchangesPerBatch(uint16 _maxExchangesPerBatch) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxExchangePerBatch is greater than 0
-        require(_maxExchangesPerBatch > 0, VALUE_ZERO_NOT_ALLOWED);
+        checkNonZero(_maxExchangesPerBatch);
 
         protocolLimits().maxExchangesPerBatch = _maxExchangesPerBatch;
         emit MaxExchangesPerBatchChanged(_maxExchangesPerBatch, msgSender());
@@ -690,7 +688,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setMaxResolutionPeriod(uint256 _maxResolutionPeriod) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxResolutionPeriod is greater than 0
-        require(_maxResolutionPeriod > 0, VALUE_ZERO_NOT_ALLOWED);
+        checkNonZero(_maxResolutionPeriod);
 
         protocolLimits().maxResolutionPeriod = _maxResolutionPeriod;
         emit MaxResolutionPeriodChanged(_maxResolutionPeriod, msgSender());
@@ -716,7 +714,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setMinFulfillmentPeriod(uint256 _minFulfillmentPeriod) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _minFulfillmentPeriod is greater than 0
-        require(_minFulfillmentPeriod > 0, VALUE_ZERO_NOT_ALLOWED);
+        checkNonZero(_minFulfillmentPeriod);
 
         protocolLimits().minFulfillmentPeriod = _minFulfillmentPeriod;
         emit MinFulfillmentPeriodChanged(_minFulfillmentPeriod, msgSender());
@@ -758,5 +756,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getAccessControllerAddress() external view returns (address) {
         return address(DiamondLib.diamondStorage().accessController);
+    }
+
+    function checkNonZero(uint256 _value) internal pure {
+        require(_value != 0, VALUE_ZERO_NOT_ALLOWED);
     }
 }

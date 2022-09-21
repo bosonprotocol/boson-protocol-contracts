@@ -299,9 +299,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a MaxTotalOfferFeePercentageChanged event.
      *
-     * Reverts if:
-     * - The _maxTotalOfferFeePercentage is zero.
-     * - The _maxTotalOfferFeePercentage is greater than 10000.
+     * Reverts if the _maxTotalOfferFeePercentage is greater than 10000.
      *
      * @dev Caller must have ADMIN role.
      *
