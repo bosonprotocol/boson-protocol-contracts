@@ -176,7 +176,7 @@ contract PausableBase is BosonTypes {
      */
     function revertIfPaused(PausableRegion _region) internal view {
         // Region enum value must be used as the exponent in a power of 2
-        uint256 powerOfTwo = 2**uint256(_region);
+        uint256 powerOfTwo = 1 << uint256(_region);
         require((ProtocolLib.protocolStatus().pauseScenario & powerOfTwo) != powerOfTwo, REGION_PAUSED);
     }
 }
