@@ -117,11 +117,11 @@ describe("IBosonVoucher", function () {
       // Protocol limits
       {
         maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 0,
-        maxTwinsPerBundle: 0,
-        maxOffersPerBundle: 0,
-        maxOffersPerBatch: 0,
-        maxTokensPerWithdrawal: 0,
+        maxOffersPerGroup: 100,
+        maxTwinsPerBundle: 100,
+        maxOffersPerBundle: 100,
+        maxOffersPerBatch: 100,
+        maxTokensPerWithdrawal: 100,
         maxFeesPerDisputeResolver: 100,
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
