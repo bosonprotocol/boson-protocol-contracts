@@ -29,6 +29,8 @@ const {
   mockExchange,
 } = require("../utils/mock");
 const { oneWeek, oneMonth } = require("../utils/constants");
+const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
+
 /**
  *  Test the Boson Meta transactions Handler interface
  */
@@ -60,7 +62,8 @@ describe("IBosonMetaTransactionsHandler", function () {
     pauseHandler,
     bosonToken,
     support,
-    result;
+    result,
+    mockMetaTransactionsHandler;
   let metaTransactionsHandler, nonce, functionSignature;
   let seller, offerId, buyerId;
   let validOfferDetails,
@@ -230,6 +233,43 @@ describe("IBosonMetaTransactionsHandler", function () {
     // Deploy the mock tokens
     [bosonToken, mockToken] = await deployMockTokens(gasLimit, ["BosonToken", "Foreign20"]);
   });
+
+  async function upgradeMetaTransactionsHandlerFacet() {
+    // Upgrade the ExchangeHandlerFacet functions
+    // DiamondCutFacet
+    const cutFacetViaDiamond = await ethers.getContractAt("DiamondCutFacet", protocolDiamond.address);
+
+    // Deploy MockMetaTransactionsHandlerFacet
+    const MockMetaTransactionsHandlerFacet = await ethers.getContractFactory("MockMetaTransactionsHandlerFacet");
+    const mockMetaTransactionsHandlerFacet = await MockMetaTransactionsHandlerFacet.deploy();
+    await mockMetaTransactionsHandlerFacet.deployed();
+
+    // Define the facet cut
+    const facetCuts = [
+      {
+        facetAddress: mockMetaTransactionsHandlerFacet.address,
+        action: FacetCutAction.Add,
+        functionSelectors: getSelectors(mockMetaTransactionsHandlerFacet),
+      },
+    ];
+
+    // Send the DiamondCut transaction
+    const tx = await cutFacetViaDiamond
+      .connect(deployer)
+      .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+
+    // Wait for transaction to confirm
+    const receipt = await tx.wait();
+
+    // Be certain transaction was successful
+    assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
+
+    // Cast Diamond to MockMetaTransactionsHandlerFacet
+    mockMetaTransactionsHandler = await ethers.getContractAt(
+      "MockMetaTransactionsHandlerFacet",
+      protocolDiamond.address
+    );
+  }
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
   context("📋 Interfaces", async function () {
@@ -419,6 +459,45 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Verify that nonce is used. Expect true.
           let expectedResult = true;
           result = await metaTransactionsHandler.connect(operator).isUsedNonce(deployer.address, nonce);
+          assert.equal(result, expectedResult, "Nonce is unused");
+        });
+
+        it("Should build a new domain separator if cachedChainId does not match with chain id used in signature", async function () {
+          await upgradeMetaTransactionsHandlerFacet();
+
+          // update the cached chain id
+          await mockMetaTransactionsHandler.setCachedChainId(123456);
+
+          // Prepare the function signature for the facet function.
+          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+            seller,
+            emptyAuthToken,
+            voucherInitValues,
+          ]);
+
+          message.functionSignature = functionSignature;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // send a meta transaction, does not revert
+          await expect(
+            metaTransactionsHandler
+              .connect(deployer)
+              .executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
+          )
+            .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+            .withArgs(operator.address, deployer.address, message.functionName, nonce);
+
+          // Verify that nonce is used. Expect true.
+          let expectedResult = true;
+          result = await metaTransactionsHandler.connect(operator).isUsedNonce(nonce);
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 

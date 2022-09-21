@@ -17,7 +17,7 @@ library EIP712Lib {
      * @param _version -  The version of the protocol
      * @return the domain separator hash
      */
-    function domainSeparator(string memory _name, string memory _version) internal view returns (bytes32) {
+    function buildDomainSeparator(string memory _name, string memory _version) internal view returns (bytes32) {
         return
             keccak256(
                 abi.encode(
@@ -75,7 +75,7 @@ library EIP712Lib {
         if (address(this) == cachedThis && block.chainid == cachedChainId) {
             return ProtocolLib.protocolMetaTxInfo().domainSeparator;
         } else {
-            return domainSeparator(PROTOCOL_NAME, PROTOCOL_VERSION);
+            return buildDomainSeparator(PROTOCOL_NAME, PROTOCOL_VERSION);
         }
     }
 

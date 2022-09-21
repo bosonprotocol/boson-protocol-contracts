@@ -159,8 +159,8 @@ string constant FEE_PERCENTAGE_INVALID = "Percentage representation must be less
 string constant VALUE_ZERO_NOT_ALLOWED = "Value must be greater than 0";
 
 // EIP712Lib
-string constant PROTOCOL_NAME = "BosonProtocolDiamond";
-string constant PROTOCOL_VERSION = "V1";
+string constant PROTOCOL_NAME = "Boson Protocol";
+string constant PROTOCOL_VERSION = "V2";
 bytes32 constant EIP712_DOMAIN_TYPEHASH = keccak256(
     bytes("EIP712Domain(string name,string version,address verifyingContract,bytes32 salt)")
 );
