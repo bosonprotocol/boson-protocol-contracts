@@ -201,7 +201,7 @@ library ProtocolLib {
         // The domain Separator of the protocol
         bytes32 domainSeparator;
         // address => nonce => nonce used indicator
-        mapping(address => mapping(uint256 => bool) ) usedNonce;
+        mapping(address => mapping(uint256 => bool)) usedNonce;
         // map function name to input type
         mapping(string => BosonTypes.MetaTxInputType) inputType;
         // map input type => hash info

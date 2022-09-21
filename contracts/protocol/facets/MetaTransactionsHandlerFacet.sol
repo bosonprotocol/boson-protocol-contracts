@@ -11,8 +11,6 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title MetaTransactionsHandlerFacet
  *
@@ -283,10 +281,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes32 _sigS,
         uint8 _sigV
     ) external payable override metaTransactionsNotPaused returns (bytes memory) {
-        console.log("msg.sender in executeMetaTransaction ", msg.sender);
-        console.log("_userAddress in executeMetaTransaction ", _userAddress);
-        console.log("_nonce in executeMetaTransaction ", _nonce);
-
         // Make sure that protocol is not reentered throught meta transactions
         // Cannot use modifier `nonReentrant` since it also changes reentrancyStatus to `ENTERED`,
         // but that then breaks meta transaction functionality
@@ -301,13 +295,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             functionName: _functionName,
             functionSignature: isSpecialFunction(_functionName) ? bytes(_functionSignature[4:]) : _functionSignature
         });
-
-        console.log("metaTx.nonce in executeMetaTransaction ", metaTx.nonce);
-        console.log("metaTx.from in executeMetaTransaction ", metaTx.from);
-        console.log("metaTx.contractAddress in executeMetaTransaction ", metaTx.contractAddress);
-        console.log("metaTx.functionName in executeMetaTransaction ", metaTx.functionName);
-        console.log("metaTx.functionSignature in executeMetaTransaction ");
-        console.logBytes( metaTx.functionSignature);
 
         require(
             EIP712Lib.verify(_userAddress, hashMetaTransaction(metaTx), _sigR, _sigS, _sigV),

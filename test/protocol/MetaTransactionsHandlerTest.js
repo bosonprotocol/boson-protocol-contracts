@@ -458,12 +458,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
 
-        it.only("Should allow different msg.sender to use same nonce", async () => {
-          console.log("operatorDR.address", operatorDR.address);
-          console.log("operator.address", operator.address);
-          console.log("deployer.address", deployer.address);
-          console.log("rando.address", rando.address);
-
+        it("Should allow different msg.sender to use same nonce", async () => {
           let r, s, v;
 
           // Prepare the function signature for the facet function.
@@ -476,7 +471,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.functionSignature = functionSignature;
 
           // Collect the signature components
-          ({r, s, v } = await prepareDataSignatureParameters(
+          ({ r, s, v } = await prepareDataSignatureParameters(
             operator,
             customTransactionType,
             "MetaTransaction",
@@ -496,8 +491,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Verify that nonce is used. Expect true.
           let expectedResult = true;
           result = await metaTransactionsHandler.connect(operator).isUsedNonce(deployer.address, nonce);
-          assert.equal(result, expectedResult, "Nonce is unused"); 
-   
+          assert.equal(result, expectedResult, "Nonce is unused");
 
           // send a meta transaction again, check for event
           seller.operator = operatorDR.address;
@@ -505,7 +499,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           seller.clerk = clerkDR.address;
           seller.treasury = treasuryDR.address;
 
- 
+          message.from = operatorDR.address;
+
           // Prepare the function signature for the facet function.
           functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
             seller,
@@ -516,22 +511,13 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.functionSignature = functionSignature;
 
           // Collect the signature components
-          ({r, s, v } = await prepareDataSignatureParameters(
+          ({ r, s, v } = await prepareDataSignatureParameters(
             operatorDR,
             customTransactionType,
             "MetaTransaction",
             message,
             metaTransactionsHandler.address
           ));
-
-       
-          console.log("message.functionName ", message.functionName);
-          console.log("functionSignature ", functionSignature);
-          console.log("nonce ", nonce);
-          //console.log("r2 ", r);
-          //console.log("s2 ", s);
-          //console.log("v2 ", v);
-         
 
           await expect(
             metaTransactionsHandler
@@ -541,13 +527,10 @@ describe("IBosonMetaTransactionsHandler", function () {
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
             .withArgs(operatorDR.address, rando.address, message.functionName, nonce);
 
-          console.log("3"); 
-
           // Verify that nonce is used. Expect true.
           expectedResult = true;
           result = await metaTransactionsHandler.connect(operatorDR).isUsedNonce(rando.address, nonce);
           assert.equal(result, expectedResult, "Nonce is unused");
-  
         });
 
         context("💔 Revert Reasons", async function () {
@@ -3190,7 +3173,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Verify that nonce is used. Expect true.
             let expectedResult = true;
-            result = await metaTransactionsHandler.connect(buyer).isUsedNonce(deployer.address,nonce);
+            result = await metaTransactionsHandler.connect(buyer).isUsedNonce(deployer.address, nonce);
             assert.equal(result, expectedResult, "Nonce is unused");
           });
 

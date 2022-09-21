@@ -4,8 +4,6 @@ pragma solidity ^0.8.0;
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title EIP712Lib
  *
@@ -72,10 +70,6 @@ library EIP712Lib {
         );
 
         address signer = ecrecover(toTypedMessageHash(_hashedMetaTx), _sigV, _sigR, _sigS);
-
-        console.log("_user in verify ", _user);
-        console.log("signer in verify ", signer);
-
         require(signer != address(0), INVALID_SIGNATURE);
         return signer == _user;
     }
