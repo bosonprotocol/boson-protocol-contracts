@@ -336,8 +336,8 @@ library FundsLib {
 
             // make sure that seller has enough funds in the pool and reduce the available funds
             require(entityFunds >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
-            
-            // Use unchecked to optimize execution cost. The math is safe because of the require above. 
+
+            // Use unchecked to optimize execution cost. The math is safe because of the require above.
             unchecked {
                 availableFunds[_tokenAddress] = entityFunds - _amount;
             }
