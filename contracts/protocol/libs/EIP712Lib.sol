@@ -64,12 +64,19 @@ library EIP712Lib {
     }
 
     /**
-     * @notice Gets the domain separator from storage.
+     * @notice Gets the domain separator from storage if matches with the chain id and diamond address, else, build new domain separator.
      *
-     * @return the domain separator from storage
+     * @return the domain separator
      */
     function getDomainSeparator() private view returns (bytes32) {
-        return ProtocolLib.protocolMetaTxInfo().domainSeparator;
+        address cachedThis = ProtocolLib.protocolMetaTxInfo().cachedThis;
+        uint256 cachedChainId = ProtocolLib.protocolMetaTxInfo().cachedChainId;
+
+        if (address(this) == cachedThis && block.chainid == cachedChainId) {
+            return ProtocolLib.protocolMetaTxInfo().domainSeparator;
+        } else {
+            return domainSeparator(PROTOCOL_NAME, PROTOCOL_VERSION);
+        }
     }
 
     /**
