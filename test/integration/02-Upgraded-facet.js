@@ -156,8 +156,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
+        buyerEscalationDepositPercentage,
       },
-      buyerEscalationDepositPercentage,
     ];
 
     // Deploy the Config facet, initializing the protocol config

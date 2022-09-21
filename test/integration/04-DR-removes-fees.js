@@ -134,8 +134,8 @@ describe("[@skip-on-coverage] DR removes fee", function () {
       {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
+        buyerEscalationDepositPercentage,
       },
-      buyerEscalationDepositPercentage,
     ];
 
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
