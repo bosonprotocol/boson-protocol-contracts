@@ -11,6 +11,8 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title MetaTransactionsHandlerFacet
  *
@@ -155,20 +157,21 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     }
 
     /**
-     * @notice Checks nonce and returns true if used already.
+     * @notice Checks nonce and returns true if used already for a specific address.
      *
+     * @param _associatedAddress the address for which the nonce should be checked
      * @param _nonce - the nonce that we want to check.
      * @return true if nonce has already been used
      */
-    function isUsedNonce(uint256 _nonce) external view override returns (bool) {
-        return protocolMetaTxInfo().usedNonce[_nonce];
+    function isUsedNonce(address _associatedAddress, uint256 _nonce) external view override returns (bool) {
+        return protocolMetaTxInfo().usedNonce[_associatedAddress][_nonce];
     }
 
     /**
      * @notice Validates the nonce and function signature.
      *
      * Reverts if:
-     * - Nonce is already used by another transaction
+     * - Nonce is already used by the msg.sender for another transaction
      * - Function signature matches executeMetaTransaction
      * - Function name does not match the bytes4 version of the function signature
      *
@@ -181,7 +184,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes calldata _functionSignature,
         uint256 _nonce
     ) internal view {
-        require(!protocolMetaTxInfo().usedNonce[_nonce], NONCE_USED_ALREADY);
+        require(!protocolMetaTxInfo().usedNonce[msg.sender][_nonce], NONCE_USED_ALREADY);
 
         bytes4 destinationFunctionSig = convertBytesToBytes4(_functionSignature);
         require(destinationFunctionSig != msg.sig, INVALID_FUNCTION_SIGNATURE);
@@ -230,7 +233,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         ProtocolLib.ProtocolMetaTxInfo storage metaTxInfo = protocolMetaTxInfo();
 
         // Store the nonce provided to avoid playback of the same tx
-        metaTxInfo.usedNonce[_nonce] = true;
+        metaTxInfo.usedNonce[msg.sender][_nonce] = true;
 
         // Set the current transaction signer and transaction type.
         setCurrentSenderAddress(_userAddress);
@@ -256,7 +259,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      *
      * Reverts if:
      * - The meta-transactions region of protocol is paused
-     * - Nonce is already used by another transaction
+     * - Nonce is already used by the msg.sender for another transaction
      * - Function signature matches executeMetaTransaction
      * - Function name does not match the bytes4 version of the function signature
      * - sender does not match the recovered signer
@@ -280,6 +283,10 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes32 _sigS,
         uint8 _sigV
     ) external payable override metaTransactionsNotPaused returns (bytes memory) {
+        console.log("msg.sender in executeMetaTransaction ", msg.sender);
+        console.log("_userAddress in executeMetaTransaction ", _userAddress);
+        console.log("_nonce in executeMetaTransaction ", _nonce);
+
         // Make sure that protocol is not reentered throught meta transactions
         // Cannot use modifier `nonReentrant` since it also changes reentrancyStatus to `ENTERED`,
         // but that then breaks meta transaction functionality
@@ -294,6 +301,13 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             functionName: _functionName,
             functionSignature: isSpecialFunction(_functionName) ? bytes(_functionSignature[4:]) : _functionSignature
         });
+
+        console.log("metaTx.nonce in executeMetaTransaction ", metaTx.nonce);
+        console.log("metaTx.from in executeMetaTransaction ", metaTx.from);
+        console.log("metaTx.contractAddress in executeMetaTransaction ", metaTx.contractAddress);
+        console.log("metaTx.functionName in executeMetaTransaction ", metaTx.functionName);
+        console.log("metaTx.functionSignature in executeMetaTransaction ");
+        console.logBytes( metaTx.functionSignature);
 
         require(
             EIP712Lib.verify(_userAddress, hashMetaTransaction(metaTx), _sigR, _sigS, _sigV),

@@ -111,6 +111,7 @@ async function prepareDataSignatureParameters(
   message,
   metaTransactionsHandlerAddress
 ) {
+  console.log("inside prepareDataSignatureParameters");
   // Initialize data
   const domainType = [
     { name: "name", type: "string" },
@@ -140,11 +141,15 @@ async function prepareDataSignatureParameters(
     message: message,
   });
 
+  console.log("dataToSign ", dataToSign);
+
   // Sign the data
   const signature = await ethers.provider.send("eth_signTypedData_v4", [user.address, dataToSign]);
 
   // Collect the Signature components
   const { r, s, v } = getSignatureParameters(signature);
+
+  console.log("return values r %s, s %s, v %s ", r,s,v);
 
   return {
     r: r,

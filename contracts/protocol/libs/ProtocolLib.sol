@@ -200,8 +200,8 @@ library ProtocolLib {
         bool isMetaTransaction;
         // The domain Separator of the protocol
         bytes32 domainSeparator;
-        // nonce => existance of nonce in the mapping
-        mapping(uint256 => bool) usedNonce;
+        // address => nonce => nonce used indicator
+        mapping(address => mapping(uint256 => bool) ) usedNonce;
         // map function name to input type
         mapping(string => BosonTypes.MetaTxInputType) inputType;
         // map input type => hash info
