@@ -288,13 +288,14 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
 
         validateTx(_functionName, _functionSignature, _nonce);
 
-        MetaTransaction memory metaTx = MetaTransaction({
-            nonce: _nonce,
-            from: _userAddress,
-            contractAddress: address(this),
-            functionName: _functionName,
-            functionSignature: isSpecialFunction(_functionName) ? bytes(_functionSignature[4:]) : _functionSignature
-        });
+        MetaTransaction memory metaTx;
+        metaTx.nonce = _nonce;
+        metaTx.from = _userAddress;
+        metaTx.contractAddress = address(this);
+        metaTx.functionName = _functionName;
+        metaTx.functionSignature = isSpecialFunction(_functionName)
+            ? bytes(_functionSignature[4:])
+            : _functionSignature;
 
         require(
             EIP712Lib.verify(_userAddress, hashMetaTransaction(metaTx), _sigR, _sigS, _sigV),

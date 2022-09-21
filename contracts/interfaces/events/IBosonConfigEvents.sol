@@ -35,4 +35,5 @@ interface IBosonConfigEvents {
     event MaxRoyaltyPercentageChanged(uint16 maxRoyaltyPecentage, address indexed executedBy);
     event MaxResolutionPeriodChanged(uint256 maxResolutionPeriod, address indexed executedBy);
     event MinFulfillmentPeriodChanged(uint256 minFulfillmentPeriod, address indexed executedBy);
+    event AccessControllerAddressChanged(address indexed accessControllerAddress, address indexed executedBy);
 }
