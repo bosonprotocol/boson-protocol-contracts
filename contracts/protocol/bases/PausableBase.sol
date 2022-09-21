@@ -175,7 +175,7 @@ contract PausableBase is BosonTypes {
      */
     function paused(PausableRegion _region) internal view returns (bool) {
         // Region enum value must be used as the exponent in a power of 2
-        uint256 powerOfTwo = 2**uint256(_region);
+        uint256 powerOfTwo = 1 << uint256(_region);
         return (ProtocolLib.protocolStatus().pauseScenario & powerOfTwo) == powerOfTwo;
     }
 }
