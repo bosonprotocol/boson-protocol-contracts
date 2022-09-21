@@ -152,7 +152,9 @@ contract OrchestrationHandlerFacet is
         // Construct new group
         // - group id is 0, and it is ignored
         // - note that _offer fields are updated during createOfferInternal, so they represent correct values
-        Group memory _group = Group(0, _offer.sellerId, new uint256[](1));
+        Group memory _group;
+        _group.sellerId = _offer.sellerId;
+        _group.offerIds = new uint256[](1);
         _group.offerIds[0] = _offer.id;
 
         // Create group and update structs values to represent true state
@@ -188,6 +190,7 @@ contract OrchestrationHandlerFacet is
      * - When adding to the group if:
      *   - Group does not exists
      *   - Caller is not the operator of the group
+     *   - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -667,8 +670,11 @@ contract OrchestrationHandlerFacet is
         // Construct new bundle
         // - bundle id is 0, and it is ignored
         // - note that _twin fields are updated during createTwinInternal, so they represent correct values
-        Bundle memory _bundle = Bundle(0, _sellerId, new uint256[](1), new uint256[](1));
+        Bundle memory _bundle;
+        _bundle.sellerId = _sellerId;
+        _bundle.offerIds = new uint256[](1);
         _bundle.offerIds[0] = _offerId;
+        _bundle.twinIds = new uint256[](1);
         _bundle.twinIds[0] = _twin.id;
 
         // create bundle and update structs values to represent true state
