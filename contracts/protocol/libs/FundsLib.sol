@@ -352,7 +352,6 @@ library FundsLib {
 
                 // if target is last index then only pop and delete are needed
                 // otherwise, we overwrite the target with the last token first
-
                 if (index != lastTokenIndex) {
                     // Need to fill gap caused by delete if more than one element in storage array
                     address tokenToMove = tokenList[lastTokenIndex];
