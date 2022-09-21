@@ -19,7 +19,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier offersNotPaused() {
-        require(!paused(PausableRegion.Offers), REGION_PAUSED);
+        revertIfPaused(PausableRegion.Offers);
         _;
     }
 
@@ -31,7 +31,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier twinsNotPaused() {
-        require(!paused(PausableRegion.Twins), REGION_PAUSED);
+        revertIfPaused(PausableRegion.Twins);
         _;
     }
 
@@ -43,7 +43,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier bundlesNotPaused() {
-        require(!paused(PausableRegion.Bundles), REGION_PAUSED);
+        revertIfPaused(PausableRegion.Bundles);
         _;
     }
 
@@ -55,7 +55,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier groupsNotPaused() {
-        require(!paused(PausableRegion.Groups), REGION_PAUSED);
+        revertIfPaused(PausableRegion.Groups);
         _;
     }
 
@@ -67,7 +67,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier sellersNotPaused() {
-        require(!paused(PausableRegion.Sellers), REGION_PAUSED);
+        revertIfPaused(PausableRegion.Sellers);
         _;
     }
 
@@ -79,7 +79,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier buyersNotPaused() {
-        require(!paused(PausableRegion.Buyers), REGION_PAUSED);
+        revertIfPaused(PausableRegion.Buyers);
         _;
     }
 
@@ -91,7 +91,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier agentsNotPaused() {
-        require(!paused(PausableRegion.Agents), REGION_PAUSED);
+        revertIfPaused(PausableRegion.Agents);
         _;
     }
 
@@ -103,7 +103,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier disputeResolversNotPaused() {
-        require(!paused(PausableRegion.DisputeResolvers), REGION_PAUSED);
+        revertIfPaused(PausableRegion.DisputeResolvers);
         _;
     }
 
@@ -115,7 +115,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier exchangesNotPaused() {
-        require(!paused(PausableRegion.Exchanges), REGION_PAUSED);
+        revertIfPaused(PausableRegion.Exchanges);
         _;
     }
 
@@ -127,7 +127,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier disputesNotPaused() {
-        require(!paused(PausableRegion.Disputes), REGION_PAUSED);
+        revertIfPaused(PausableRegion.Disputes);
         _;
     }
 
@@ -139,7 +139,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier fundsNotPaused() {
-        require(!paused(PausableRegion.Funds), REGION_PAUSED);
+        revertIfPaused(PausableRegion.Funds);
         _;
     }
 
@@ -151,7 +151,7 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier orchestrationNotPaused() {
-        require(!paused(PausableRegion.Orchestration), REGION_PAUSED);
+        revertIfPaused(PausableRegion.Orchestration);
         _;
     }
 
@@ -163,19 +163,20 @@ contract PausableBase is BosonTypes {
      * See: {BosonTypes.PausableRegion}
      */
     modifier metaTransactionsNotPaused() {
-        require(!paused(PausableRegion.MetaTransaction), REGION_PAUSED);
+        revertIfPaused(PausableRegion.MetaTransaction);
         _;
     }
 
     /**
      * @notice Checks if a region of the protocol is paused.
      *
+     * Reverts if region is paused
+     *
      * @param _region the region to check pause status for
-     * @return true if the given region is paused
      */
-    function paused(PausableRegion _region) internal view returns (bool) {
+    function revertIfPaused(PausableRegion _region) internal view {
         // Region enum value must be used as the exponent in a power of 2
         uint256 powerOfTwo = 2**uint256(_region);
-        return (ProtocolLib.protocolStatus().pauseScenario & powerOfTwo) == powerOfTwo;
+        require((ProtocolLib.protocolStatus().pauseScenario & powerOfTwo) != powerOfTwo, REGION_PAUSED);
     }
 }

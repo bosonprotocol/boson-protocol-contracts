@@ -80,6 +80,6 @@ library DiamondLib {
         DiamondStorage storage ds = diamondStorage();
 
         // Return the value
-        return ds.supportedInterfaces[_interfaceId] || false;
+        return ds.supportedInterfaces[_interfaceId];
     }
 }

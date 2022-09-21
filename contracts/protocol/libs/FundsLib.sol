@@ -269,7 +269,7 @@ library FundsLib {
         uint256 _amount
     ) internal {
         // first decrease the amount to prevent the reentrancy attack
-        FundsLib.decreaseAvailableFunds(_entityId, _tokenAddress, _amount);
+        decreaseAvailableFunds(_entityId, _tokenAddress, _amount);
 
         // try to transfer the funds
         if (_tokenAddress == address(0)) {
@@ -336,7 +336,11 @@ library FundsLib {
 
             // make sure that seller has enough funds in the pool and reduce the available funds
             require(entityFunds >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
-            availableFunds[_tokenAddress] = entityFunds - _amount;
+            
+            // Use unchecked to optimize execution cost. The math is safe because of the require above. 
+            unchecked {
+                availableFunds[_tokenAddress] = entityFunds - _amount;
+            }
 
             // if available funds are totally emptied, the token address is removed from the seller's tokenList
             if (entityFunds == _amount) {
@@ -348,6 +352,7 @@ library FundsLib {
 
                 // if target is last index then only pop and delete are needed
                 // otherwise, we overwrite the target with the last token first
+
                 if (index != lastTokenIndex) {
                     // Need to fill gap caused by delete if more than one element in storage array
                     address tokenToMove = tokenList[lastTokenIndex];
