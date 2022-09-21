@@ -75,16 +75,16 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             if (twinIdsLength > 0) {
                 uint256 maxInt = type(uint256).max;
                 uint256 supplyAvailable = _twin.supplyAvailable;
-                address tokenAddress = _twin.tokenAddress;
 
                 for (uint256 i = 0; i < twinIdsLength; i++) {
                     // Get storage location for looped twin
                     (, Twin storage currentTwin) = fetchTwin(twinIds[i]);
 
+                    //  Make sure no twins have unlimited supply, otherwise ranges would overlap
                     require(
                         currentTwin.supplyAvailable != maxInt || supplyAvailable != maxInt,
                         INVALID_TWIN_TOKEN_RANGE
-                    ); // reverts if any of the twins has unlimited supply, otherwise ranges would overlap
+                    );
                 }
             }
 
