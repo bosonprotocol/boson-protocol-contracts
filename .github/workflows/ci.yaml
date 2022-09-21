@@ -126,7 +126,6 @@ jobs:
         run: npm run size
       - name: Unit Tests Group 3
         run: npx hardhat test test/protocol/FundsHandlerTest.js test/protocol/clients/*.js test/protocol/MetaTransactionsHandlerTest.js test/protocol/BundleHandlerTest.js test/protocol/DisputeResolverHandlerTest.js test/protocol/GroupHandlerTest.js test/protocol/SellerHandlerTest.js
-             
 
   integration-test:
     needs: build
