@@ -12,11 +12,6 @@ import { BundleBase } from "../bases/BundleBase.sol";
  * @notice Handles bundling of offers with twins within the protocol
  */
 contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
-    enum BundleUpdateAttribute {
-        TWIN,
-        OFFER
-    }
-
     /**
      * @notice Initializes facet.
      * This function is callable only once.
