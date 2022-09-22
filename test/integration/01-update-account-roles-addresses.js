@@ -112,15 +112,15 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       },
       // Protocol limits
       {
-        maxExchangesPerBatch: 0,
-        maxOffersPerGroup: 0,
-        maxTwinsPerBundle: 0,
-        maxOffersPerBundle: 0,
-        maxOffersPerBatch: 0,
-        maxTokensPerWithdrawal: 1,
+        maxExchangesPerBatch: 100,
+        maxOffersPerGroup: 100,
+        maxTwinsPerBundle: 100,
+        maxOffersPerBundle: 100,
+        maxOffersPerBatch: 100,
+        maxTokensPerWithdrawal: 100,
         maxFeesPerDisputeResolver: 100,
         maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 0,
+        maxDisputesPerBatch: 100,
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
