@@ -26,7 +26,7 @@ import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHa
  */
 contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
     string private _contractURI;
-    uint96 private _royaltyPercentage;
+    uint256 private _royaltyPercentage;
 
     /**
      * @notice Initializes the voucher.
@@ -246,7 +246,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      *
      * @param _newRoyaltyPercentage - new royalty percentage
      */
-    function _setRoyaltyPercentage(uint96 _newRoyaltyPercentage) internal {
+    function _setRoyaltyPercentage(uint256 _newRoyaltyPercentage) internal {
         // get max royalty percentage from the protocol
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
         uint16 maxRoyaltyPecentage = IBosonConfigHandler(protocolDiamond).getMaxRoyaltyPecentage();
