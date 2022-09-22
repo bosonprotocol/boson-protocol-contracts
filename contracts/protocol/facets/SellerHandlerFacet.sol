@@ -102,38 +102,38 @@ contract SellerHandlerFacet is SellerBase {
 
         // Check that the passed in addresses are unique to one seller id across all roles -- not used or are used by this seller id.
         // Checking this seller id is necessary because one or more addresses may not change
-        require(
-            (lookups.sellerIdByOperator[_seller.operator] == 0 ||
-                lookups.sellerIdByOperator[_seller.operator] == _seller.id) &&
-                (lookups.sellerIdByOperator[_seller.clerk] == 0 ||
-                    lookups.sellerIdByOperator[_seller.clerk] == _seller.id) &&
-                (lookups.sellerIdByAdmin[_seller.operator] == 0 ||
-                    lookups.sellerIdByAdmin[_seller.operator] == _seller.id) &&
-                (lookups.sellerIdByAdmin[_seller.clerk] == 0 || lookups.sellerIdByAdmin[_seller.clerk] == _seller.id) &&
-                (lookups.sellerIdByClerk[_seller.operator] == 0 ||
-                    lookups.sellerIdByClerk[_seller.operator] == _seller.id) &&
-                (lookups.sellerIdByClerk[_seller.clerk] == 0 || lookups.sellerIdByClerk[_seller.clerk] == _seller.id),
-            SELLER_ADDRESS_MUST_BE_UNIQUE
-        );
+        {
+            uint256 check1 = lookups.sellerIdByOperator[_seller.operator];
+            uint256 check2 = lookups.sellerIdByOperator[_seller.clerk];
+            uint256 check3 = lookups.sellerIdByAdmin[_seller.operator];
+            uint256 check4 = lookups.sellerIdByAdmin[_seller.clerk];
+            uint256 check5 = lookups.sellerIdByClerk[_seller.operator];
+            uint256 check6 = lookups.sellerIdByClerk[_seller.clerk];
+            require(
+                (check1 == 0 || check1 == _seller.id) &&
+                    (check2 == 0 || check2 == _seller.id) &&
+                    (check3 == 0 || check3 == _seller.id) &&
+                    (check4 == 0 || check4 == _seller.id) &&
+                    (check5 == 0 || check5 == _seller.id) &&
+                    (check6 == 0 || check6 == _seller.id),
+                SELLER_ADDRESS_MUST_BE_UNIQUE
+            );
+        }
 
         // Admin address or AuthToken data must be present in parameters. A seller can have one or the other. Check passed in parameters
         if (_seller.admin == address(0)) {
             // Check that auth token is unique to this seller
-            require(
-                lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0 ||
-                    lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == _seller.id,
-                AUTH_TOKEN_MUST_BE_UNIQUE
-            );
+            uint256 check = lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId];
+            require(check == 0 || check == _seller.id, AUTH_TOKEN_MUST_BE_UNIQUE);
         } else {
             // Check that the admin address is unique to one seller id across all roles -- not used or is used by this seller id.
-
+            uint256 check1 = lookups.sellerIdByOperator[_seller.admin];
+            uint256 check2 = lookups.sellerIdByAdmin[_seller.admin];
+            uint256 check3 = lookups.sellerIdByClerk[_seller.admin];
             require(
-                (lookups.sellerIdByOperator[_seller.admin] == 0 ||
-                    lookups.sellerIdByOperator[_seller.admin] == _seller.id) &&
-                    (lookups.sellerIdByAdmin[_seller.admin] == 0 ||
-                        lookups.sellerIdByAdmin[_seller.admin] == _seller.id) &&
-                    (lookups.sellerIdByClerk[_seller.admin] == 0 ||
-                        lookups.sellerIdByClerk[_seller.admin] == _seller.id),
+                (check1 == 0 || check1 == _seller.id) &&
+                    (check2 == 0 || check2 == _seller.id) &&
+                    (check3 == 0 || check3 == _seller.id),
                 SELLER_ADDRESS_MUST_BE_UNIQUE
             );
         }
