@@ -308,7 +308,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         message.from = operator.address;
         message.contractAddress = accountHandler.address;
         message.functionName =
-          "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
+          "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint256))";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -385,7 +385,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.from = operator.address;
           message.contractAddress = accountHandler.address;
           message.functionName =
-            "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
+            "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint256))";
         });
 
         it("Should emit MetaTransactionExecuted event and update state", async () => {
