@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonDisputeEvents } from "../events/IBosonDisputeEvents.sol";
@@ -236,7 +236,8 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @return exists - true if the dispute exists
      * @return timeout - the end of resolution period
      */
-    function getDisputeTimeout(uint256 _exchangeId) external view returns (bool exists, uint256 timeout);
+    function getDisputeTimeout(uint256 _exchangeId) external view returns 
+    (bool exists, uint256 timeout);
 
     /**
      * @notice Checks if the given dispute in a Finalized state.
