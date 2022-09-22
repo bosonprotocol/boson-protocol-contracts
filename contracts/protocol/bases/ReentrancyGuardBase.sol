@@ -43,6 +43,8 @@ abstract contract ReentrancyGuardBase {
 
         _;
 
+        // By storing the original value once again, a refund is triggered (see
+        // https://eips.ethereum.org/EIPS/eip-2200)
         ps.reentrancyStatus = NOT_ENTERED;
     }
 }
