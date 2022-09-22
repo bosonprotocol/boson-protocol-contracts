@@ -631,11 +631,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // Get seller account
             (, Seller storage seller, ) = fetchSeller(bundle.sellerId);
 
-            address sender = msgSender();
             // Variable to track whether some twin transfer failed
             bool transferFailed;
 
             uint256 exchangeId = _exchange.id;
+
+            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+            address sender = msgSender();
 
             // Visit the twins
             for (uint256 i = 0; i < twinIds.length; i++) {
@@ -705,9 +708,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 } else {
                     // Store twin receipt on twinReceiptsByExchange
-                    protocolLookups().twinReceiptsByExchange[exchangeId].push(
-                        TwinReceipt(twin.id, tokenId, twin.amount, twin.tokenAddress, twin.tokenType)
-                    );
+                    TwinReceipt storage twinReceipt = lookups.twinReceiptsByExchange[exchangeId].push();
+                    twinReceipt.twinId = twin.id;
+                    twinReceipt.tokenAddress = twin.tokenAddress;
+                    twinReceipt.tokenId = tokenId;
+                    twinReceipt.amount = twin.amount;
+                    twinReceipt.tokenType = twin.tokenType;
 
                     emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 }
@@ -742,7 +748,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         if (!exists) {
             // Create the buyer account
-            Buyer memory newBuyer = Buyer(0, _buyer, true);
+            Buyer memory newBuyer;
+            newBuyer.wallet = _buyer;
+            newBuyer.active = true;
+
             createBuyerInternal(newBuyer);
             buyerId = newBuyer.id;
         } else {

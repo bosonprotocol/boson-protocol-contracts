@@ -269,7 +269,7 @@ library FundsLib {
         uint256 _amount
     ) internal {
         // first decrease the amount to prevent the reentrancy attack
-        FundsLib.decreaseAvailableFunds(_entityId, _tokenAddress, _amount);
+        decreaseAvailableFunds(_entityId, _tokenAddress, _amount);
 
         // try to transfer the funds
         if (_tokenAddress == address(0)) {
@@ -334,7 +334,10 @@ library FundsLib {
 
             // make sure that seller has enough funds in the pool and reduce the available funds
             require(availableFunds >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
-            pl.availableFunds[_entityId][_tokenAddress] = availableFunds - _amount;
+            // The math is safe because of the require above. Uses unchecked to optimize execution cost.
+            unchecked {
+                pl.availableFunds[_entityId][_tokenAddress] = availableFunds - _amount;
+            }
 
             // if availableFunds are totally emptied, the token address is removed from the seller's tokenList
             if (availableFunds == _amount) {

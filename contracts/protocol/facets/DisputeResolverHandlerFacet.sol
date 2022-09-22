@@ -96,16 +96,12 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 lookups.disputeResolverFeeTokenIndex[_disputeResolver.id][_disputeResolverFees[i].tokenAddress] == 0,
                 DUPLICATE_DISPUTE_RESOLVER_FEES
             );
-            disputeResolverFees.push(
-                DisputeResolverFee(
-                    _disputeResolverFees[i].tokenAddress,
-                    _disputeResolverFees[i].tokenName,
-                    _disputeResolverFees[i].feeAmount
-                )
-            );
+            disputeResolverFees.push(_disputeResolverFees[i]);
+
+            // Set index mapping. Should be index in disputeResolverFees array + 1
             lookups.disputeResolverFeeTokenIndex[_disputeResolver.id][
                 _disputeResolverFees[i].tokenAddress
-            ] = disputeResolverFees.length; // Set index mapping. Should be index in disputeResolverFees array + 1
+            ] = disputeResolverFees.length;
         }
 
         // Ignore supplied active flag and set to false. Dispute resolver must be activated by protocol.
@@ -263,13 +259,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_disputeResolverFees[i].tokenAddress] == 0,
                 DUPLICATE_DISPUTE_RESOLVER_FEES
             );
-            disputeResolverFees.push(
-                DisputeResolverFee(
-                    _disputeResolverFees[i].tokenAddress,
-                    _disputeResolverFees[i].tokenName,
-                    _disputeResolverFees[i].feeAmount
-                )
-            );
+            disputeResolverFees.push(_disputeResolverFees[i]);
             lookups.disputeResolverFeeTokenIndex[_disputeResolverId][
                 _disputeResolverFees[i].tokenAddress
             ] = disputeResolverFees.length; // Set index mapping. Should be index in disputeResolverFees array + 1

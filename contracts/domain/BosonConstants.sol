@@ -156,6 +156,7 @@ string constant ESCALATION_NOT_ALLOWED = "Disputes without dispute resolver cann
 
 // Revert Reasons: Config related
 string constant FEE_PERCENTAGE_INVALID = "Percentage representation must be less than 10000";
+string constant VALUE_ZERO_NOT_ALLOWED = "Value must be greater than 0";
 
 // EIP712Lib
 bytes32 constant EIP712_DOMAIN_TYPEHASH = keccak256(

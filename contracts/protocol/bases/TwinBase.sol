@@ -70,22 +70,31 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
             // Get all seller twin ids that belong to the same token address of the new twin to validate if they have not unlimited supply since ranges can overlaps each other
             uint256[] storage twinIds = lookups.twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress];
+            uint256 twinIdsLength = twinIds.length;
 
-            for (uint256 i = 0; i < twinIds.length; i++) {
-                // Get storage location for looped twin
-                (, Twin storage currentTwin) = fetchTwin(twinIds[i]);
+            if (twinIdsLength > 0) {
+                uint256 maxInt = type(uint256).max;
+                uint256 supplyAvailable = _twin.supplyAvailable;
 
-                // The protocol cannot allow two twins with unlimited supply and with the same token address because range overlaps with each other
-                if (currentTwin.supplyAvailable == type(uint256).max || _twin.supplyAvailable == type(uint256).max) {
-                    require(currentTwin.tokenAddress != _twin.tokenAddress, INVALID_TWIN_TOKEN_RANGE);
+                for (uint256 i = 0; i < twinIdsLength; i++) {
+                    // Get storage location for looped twin
+                    (, Twin storage currentTwin) = fetchTwin(twinIds[i]);
+
+                    //  Make sure no twins have unlimited supply, otherwise ranges would overlap
+                    require(
+                        currentTwin.supplyAvailable != maxInt || supplyAvailable != maxInt,
+                        INVALID_TWIN_TOKEN_RANGE
+                    );
                 }
             }
 
             // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
             TokenRange[] storage twinRanges = lookups.twinRangesBySeller[sellerId][_twin.tokenAddress];
 
+            uint256 twinRangesLength = twinRanges.length;
+
             // Checks if token range isn't being used in any other twin of seller
-            for (uint256 i = 0; i < twinRanges.length; i++) {
+            for (uint256 i = 0; i < twinRangesLength; i++) {
                 // A valid range has:
                 // - the first id of range greater than the last token id (tokenId + initialSupply - 1) of the looped twin or
                 // - the last id of range lower than the looped twin tokenId (beginning of range)
@@ -93,7 +102,10 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             }
 
             // Add range to twinRangesBySeller mapping
-            lookups.twinRangesBySeller[sellerId][_twin.tokenAddress].push(TokenRange(tokenId, lastTokenId));
+            TokenRange storage tokenRange = lookups.twinRangesBySeller[sellerId][_twin.tokenAddress].push();
+            tokenRange.start = tokenId;
+            tokenRange.end = lastTokenId;
+
             // Add twin id to twinIdsByTokenAddressAndBySeller mapping
             lookups.twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress].push(_twin.id);
         } else if (_twin.tokenType == TokenType.MultiToken) {
