@@ -155,20 +155,21 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     }
 
     /**
-     * @notice Checks nonce and returns true if used already.
+     * @notice Checks nonce and returns true if used already for a specific address.
      *
+     * @param _associatedAddress the address for which the nonce should be checked
      * @param _nonce - the nonce that we want to check.
      * @return true if nonce has already been used
      */
-    function isUsedNonce(uint256 _nonce) external view override returns (bool) {
-        return protocolMetaTxInfo().usedNonce[_nonce];
+    function isUsedNonce(address _associatedAddress, uint256 _nonce) external view override returns (bool) {
+        return protocolMetaTxInfo().usedNonce[_associatedAddress][_nonce];
     }
 
     /**
      * @notice Validates the nonce and function signature.
      *
      * Reverts if:
-     * - Nonce is already used by another transaction
+     * - Nonce is already used by the msg.sender for another transaction
      * - Function signature matches executeMetaTransaction
      * - Function name does not match the bytes4 version of the function signature
      *
@@ -181,7 +182,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes calldata _functionSignature,
         uint256 _nonce
     ) internal view {
-        require(!protocolMetaTxInfo().usedNonce[_nonce], NONCE_USED_ALREADY);
+        require(!protocolMetaTxInfo().usedNonce[msg.sender][_nonce], NONCE_USED_ALREADY);
 
         bytes4 destinationFunctionSig = convertBytesToBytes4(_functionSignature);
         require(destinationFunctionSig != msg.sig, INVALID_FUNCTION_SIGNATURE);
@@ -230,7 +231,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         ProtocolLib.ProtocolMetaTxInfo storage metaTxInfo = protocolMetaTxInfo();
 
         // Store the nonce provided to avoid playback of the same tx
-        metaTxInfo.usedNonce[_nonce] = true;
+        metaTxInfo.usedNonce[msg.sender][_nonce] = true;
 
         // Set the current transaction signer and transaction type.
         setCurrentSenderAddress(_userAddress);
@@ -256,7 +257,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      *
      * Reverts if:
      * - The meta-transactions region of protocol is paused
-     * - Nonce is already used by another transaction
+     * - Nonce is already used by the msg.sender for another transaction
      * - Function signature matches executeMetaTransaction
      * - Function name does not match the bytes4 version of the function signature
      * - sender does not match the recovered signer
