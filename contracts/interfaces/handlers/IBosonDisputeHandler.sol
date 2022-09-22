@@ -236,8 +236,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @return exists - true if the dispute exists
      * @return timeout - the end of resolution period
      */
-    function getDisputeTimeout(uint256 _exchangeId) external view returns 
-    (bool exists, uint256 timeout);
+    function getDisputeTimeout(uint256 _exchangeId) external view returns (bool exists, uint256 timeout);
 
     /**
      * @notice Checks if the given dispute in a Finalized state.
