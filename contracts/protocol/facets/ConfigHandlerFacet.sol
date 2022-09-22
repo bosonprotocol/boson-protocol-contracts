@@ -64,6 +64,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         pc.nextOfferId = 1;
         pc.nextTwinId = 1;
 
+        // Initialize reentrancyStatus
+        protocolStatus().reentrancyStatus = NOT_ENTERED;
+
         // Initialize protocol meta-transaction config params
         ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
         pmti.domainSeparator = EIP712Lib.domainSeparator("BosonProtocolDiamond", "V1");
