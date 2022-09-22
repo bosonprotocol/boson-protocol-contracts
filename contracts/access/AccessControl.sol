@@ -106,14 +106,14 @@ abstract contract AccessControl is IAccessControl, IERC165 {
     function _checkRole(bytes32 role, address account) internal view virtual {
         if (!hasRole(role, account)) {
             revert(
-            string(
-                abi.encodePacked(
-                    "AccessControl: account ",
-                    Strings.toHexString(account),
-                    " is missing role ",
-                    Strings.toHexString(uint256(role), 32)
+                string(
+                    abi.encodePacked(
+                        "AccessControl: account ",
+                        Strings.toHexString(account),
+                        " is missing role ",
+                        Strings.toHexString(uint256(role), 32)
+                    )
                 )
-            )
             );
         }
     }
