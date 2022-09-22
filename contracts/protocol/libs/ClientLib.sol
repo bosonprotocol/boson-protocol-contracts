@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { IAccessControlUpgradeable } from "../../interfaces/IAccessControlUpgradeable.sol";
+import { IAccessControl } from "../../interfaces/IAccessControl.sol";
 import { IBosonConfigHandler } from "../../interfaces/handlers/IBosonConfigHandler.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
@@ -52,7 +52,7 @@ library ClientLib {
      */
     function hasRole(bytes32 role) internal view returns (bool) {
         ProxyStorage storage ps = proxyStorage();
-        IAccessControlUpgradeable accessController = IAccessControlUpgradeable(
+        IAccessControl accessController = IAccessControl(
             IBosonConfigHandler(ps.protocolDiamond).getAccessControllerAddress()
         );
         return accessController.hasRole(role, EIP712Lib.msgSender());

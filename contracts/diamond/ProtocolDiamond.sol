@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "../domain/BosonConstants.sol";
-import { IAccessControlUpgradeable } from "../interfaces/IAccessControlUpgradeable.sol";
+import { IAccessControl } from "../interfaces/IAccessControl.sol";
 import { IDiamondLoupe } from "../interfaces/diamond/IDiamondLoupe.sol";
 import { IDiamondCut } from "../interfaces/diamond/IDiamondCut.sol";
 import { DiamondLib } from "./DiamondLib.sol";
@@ -34,7 +34,7 @@ contract ProtocolDiamond {
      * @param _interfaceIds - the initially supported ERC-165 interface ids
      */
     constructor(
-        IAccessControlUpgradeable _accessController,
+        IAccessControl _accessController,
         IDiamondCut.FacetCut[] memory _facetCuts,
         bytes4[] memory _interfaceIds
     ) {

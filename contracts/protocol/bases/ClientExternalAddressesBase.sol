@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "../../domain/BosonConstants.sol";
-import { IAccessControlUpgradeable } from "../../interfaces/IAccessControlUpgradeable.sol";
+import { IAccessControl } from "../../interfaces/IAccessControl.sol";
 import { IClientExternalAddresses } from "../../interfaces/clients/IClientExternalAddresses.sol";
 import { IBosonConfigHandler } from "../../interfaces/handlers/IBosonConfigHandler.sol";
 import { ClientLib } from "../libs/ClientLib.sol";
@@ -90,12 +90,12 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
      *
      * @return the address of the AccessController contract
      */
-    function getAccessController() public view override returns (IAccessControlUpgradeable) {
+    function getAccessController() public view override returns (IAccessControl) {
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 
         // Return the current AccessController address
-        return IAccessControlUpgradeable(IBosonConfigHandler(ps.protocolDiamond).getAccessControllerAddress());
+        return IAccessControl(IBosonConfigHandler(ps.protocolDiamond).getAccessControllerAddress());
     }
 
     /**

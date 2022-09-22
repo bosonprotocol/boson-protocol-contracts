@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { IAccessControlUpgradeable } from "../interfaces/IAccessControlUpgradeable.sol";
+import { IAccessControl } from "../interfaces/IAccessControl.sol";
 import { IDiamondCut } from "../interfaces/diamond/IDiamondCut.sol";
 
 /**
@@ -40,7 +40,7 @@ library DiamondLib {
         // Used to implement ERC-165.
         mapping(bytes4 => bool) supportedInterfaces;
         // The Boson Protocol AccessController
-        IAccessControlUpgradeable accessController;
+        IAccessControl accessController;
     }
 
     /**
