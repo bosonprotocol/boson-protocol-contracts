@@ -120,8 +120,8 @@ async function prepareDataSignatureParameters(
   ];
 
   const domainData = {
-    name: "BosonProtocolDiamond",
-    version: "V1",
+    name: "Boson Protocol",
+    version: "V2",
     verifyingContract: metaTransactionsHandlerAddress,
     salt: ethers.utils.hexZeroPad(ethers.BigNumber.from(31337).toHexString(), 32), //hardhat default chain id is 31337
   };

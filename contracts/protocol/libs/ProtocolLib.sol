@@ -202,6 +202,8 @@ library ProtocolLib {
         bytes32 domainSeparator;
         // address => nonce => nonce used indicator
         mapping(address => mapping(uint256 => bool)) usedNonce;
+        // The cached chain id
+        uint256 cachedChainId;
         // map function name to input type
         mapping(string => BosonTypes.MetaTxInputType) inputType;
         // map input type => hash info
