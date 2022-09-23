@@ -130,7 +130,7 @@ describe("Dispute", function () {
       };
 
       // Struct representation
-      struct = [exchangeId, state, buyerPercent];
+      struct = [exchangeId, buyerPercent, state];
     });
 
     context("👉 Static", async function () {

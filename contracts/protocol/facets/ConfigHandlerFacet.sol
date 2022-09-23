@@ -26,8 +26,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function initialize(
         ProtocolLib.ProtocolAddresses calldata _addresses,
         ProtocolLib.ProtocolLimits calldata _limits,
-        ProtocolLib.ProtocolFees calldata _fees,
-        uint16 _buyerEscalationDepositPercentage
+        ProtocolLib.ProtocolFees calldata _fees
     ) public onlyUnInitialized(type(IBosonConfigHandler).interfaceId) {
         // Register supported interfaces
         DiamondLib.addSupportedInterface(type(IBosonConfigHandler).interfaceId);
@@ -49,7 +48,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
         setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);
         setMaxAllowedSellers(_limits.maxAllowedSellers);
-        setBuyerEscalationDepositPercentage(_buyerEscalationDepositPercentage);
+        setBuyerEscalationDepositPercentage(_fees.buyerEscalationDepositPercentage);
         setMaxTotalOfferFeePercentage(_limits.maxTotalOfferFeePercentage);
         setMaxRoyaltyPecentage(_limits.maxRoyaltyPecentage);
         setMaxResolutionPeriod(_limits.maxResolutionPeriod);
@@ -191,7 +190,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setProtocolFeePercentage(uint16 _protocolFeePercentage) public override onlyRole(ADMIN) nonReentrant {
+    function setProtocolFeePercentage(uint256 _protocolFeePercentage) public override onlyRole(ADMIN) nonReentrant {
         // Make sure percentage is less than 10000
         require(_protocolFeePercentage <= 10000, FEE_PERCENTAGE_INVALID);
 
@@ -207,7 +206,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @return the protocol fee percentage
      */
-    function getProtocolFeePercentage() external view override returns (uint16) {
+    function getProtocolFeePercentage() external view override returns (uint256) {
         return protocolFees().percentage;
     }
 
@@ -590,7 +589,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setBuyerEscalationDepositPercentage(uint16 _buyerEscalationDepositPercentage)
+    function setBuyerEscalationDepositPercentage(uint256 _buyerEscalationDepositPercentage)
         public
         override
         onlyRole(ADMIN)
@@ -600,7 +599,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         require(_buyerEscalationDepositPercentage <= 10000, FEE_PERCENTAGE_INVALID);
 
         // Store fee percentage
-        protocolLookups().buyerEscalationDepositPercentage = _buyerEscalationDepositPercentage;
+        protocolFees().buyerEscalationDepositPercentage = _buyerEscalationDepositPercentage;
 
         // Notify watchers of state change
         emit BuyerEscalationFeePercentageChanged(_buyerEscalationDepositPercentage, msgSender());
@@ -611,8 +610,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @return the percentage of the DR fee that will be charged to buyer if they want to escalate the dispute
      */
-    function getBuyerEscalationDepositPercentage() external view override returns (uint16) {
-        return protocolLookups().buyerEscalationDepositPercentage;
+    function getBuyerEscalationDepositPercentage() external view override returns (uint256) {
+        return protocolFees().buyerEscalationDepositPercentage;
     }
 
     /**

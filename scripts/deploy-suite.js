@@ -41,7 +41,6 @@ function getConfig() {
     },
     protocolConfig.limits,
     protocolConfig.fees,
-    protocolConfig.buyerEscalationDepositPercentage,
   ];
 }
 

@@ -110,8 +110,8 @@ describe("IBosonAccountHandler", function () {
       {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
+        buyerEscalationDepositPercentage,
       },
-      buyerEscalationDepositPercentage,
     ];
 
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
