@@ -151,7 +151,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         nonReentrant
     {
         // Withdraw the funds
-        withdrawFundsInternal(payable(msgSender()), 0, _tokenList, _tokenAmounts);
+        withdrawFundsInternal(protocolAddresses().treasury, 0, _tokenList, _tokenAmounts);
     }
 
     /**
