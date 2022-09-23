@@ -14,7 +14,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
  */
 interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     event ContractURIChanged(string contractURI);
-    event RoyaltyPercentageChanged(uint96 royaltyPercentage);
+    event RoyaltyPercentageChanged(uint256 royaltyPercentage);
 
     /**
      * @notice Issues a voucher to a buyer.

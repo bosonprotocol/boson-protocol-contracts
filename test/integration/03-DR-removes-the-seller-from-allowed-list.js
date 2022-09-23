@@ -138,8 +138,8 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
+        buyerEscalationDepositPercentage,
       },
-      buyerEscalationDepositPercentage,
     ];
 
     // Deploy the Config facet, initializing the protocol config

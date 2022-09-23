@@ -210,8 +210,8 @@ describe("IBosonExchangeHandler", function () {
       {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
+        buyerEscalationDepositPercentage,
       },
-      buyerEscalationDepositPercentage,
     ];
 
     // Deploy the Config facet, initializing the protocol config

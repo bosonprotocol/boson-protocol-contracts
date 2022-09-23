@@ -37,15 +37,13 @@ class Dispute {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let exchangeId, state, buyerPercent;
-
     // destructure struct
-    [exchangeId, state, buyerPercent] = struct;
+    let [exchangeId, buyerPercent, state] = struct;
 
     return Dispute.fromObject({
       exchangeId: exchangeId.toString(),
-      state,
       buyerPercent: buyerPercent.toString(),
+      state,
     });
   }
 

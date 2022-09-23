@@ -178,8 +178,8 @@ contract BosonTypes {
 
     struct Dispute {
         uint256 exchangeId;
-        DisputeState state;
         uint256 buyerPercent;
+        DisputeState state;
     }
 
     struct DisputeDates {
@@ -268,6 +268,6 @@ contract BosonTypes {
 
     struct VoucherInitValues {
         string contractURI;
-        uint96 royaltyPercentage;
+        uint256 royaltyPercentage;
     }
 }

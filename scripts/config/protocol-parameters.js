@@ -12,6 +12,7 @@ module.exports = {
   fees: {
     percentage: "150", // 1.5%  : 150
     flatBoson: "0",
+    buyerEscalationDepositPercentage: "100", // 1%
   },
   limits: {
     maxExchangesPerBatch: "100",
@@ -29,7 +30,6 @@ module.exports = {
     maxResolutionPeriod: oneMonth,
     minFulfillmentPeriod: oneWeek,
   },
-  buyerEscalationDepositPercentage: "100", // 1%
 
   // Boson Token (ERC-20) contract address
   TOKEN: {

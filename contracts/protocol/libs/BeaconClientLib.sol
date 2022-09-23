@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import { IAccessControlUpgradeable } from "../../interfaces/IAccessControlUpgradeable.sol";
+import { IAccessControl } from "../../interfaces/IAccessControl.sol";
 import { IClientExternalAddresses } from "../../interfaces/clients/IClientExternalAddresses.sol";
 
 /**
@@ -57,7 +57,7 @@ library BeaconClientLib {
      */
     function hasRole(bytes32 role) internal view returns (bool) {
         // retrieve accessController from Beacon
-        IAccessControlUpgradeable accessController = IClientExternalAddresses(_beacon()).getAccessController();
+        IAccessControl accessController = IClientExternalAddresses(_beacon()).getAccessController();
 
         // forward the check to accessController
         return accessController.hasRole(role, msg.sender);

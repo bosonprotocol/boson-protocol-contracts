@@ -65,9 +65,11 @@ library ProtocolLib {
     // Protocol fees storage
     struct ProtocolFees {
         // Percentage that will be taken as a fee from the net of a Boson Protocol exchange
-        uint16 percentage; // 1.75% = 175, 100% = 10000
+        uint256 percentage; // 1.75% = 175, 100% = 10000
         // Flat fee taken for exchanges in $BOSON
         uint256 flatBoson;
+        // buyer escalation deposit percentage
+        uint256 buyerEscalationDepositPercentage;
     }
 
     // Protocol entities storage
@@ -154,8 +156,6 @@ library ProtocolLib {
         mapping(uint256 => uint256) voucherCount;
         // buyer address => groupId => commit count (addresses that have committed to conditional offers)
         mapping(address => mapping(uint256 => uint256)) conditionalCommitsByAddress;
-        // buyer escalation deposit percentage
-        uint16 buyerEscalationDepositPercentage;
         // AuthTokenType => Auth NFT contract address.
         mapping(BosonTypes.AuthTokenType => address) authTokenContracts;
         // AuthTokenType => tokenId => sellerId
