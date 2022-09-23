@@ -3,7 +3,7 @@ pragma solidity 0.8.9;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonConfigHandler } from "../../interfaces/handlers/IBosonConfigHandler.sol";
-import { IAccessControlUpgradeable } from "../../interfaces/IAccessControlUpgradeable.sol";
+import { IAccessControl } from "../../interfaces/IAccessControl.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -748,7 +748,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         nonReentrant
     {
         require(_accessControllerAddress != address(0), INVALID_ADDRESS);
-        DiamondLib.diamondStorage().accessController = IAccessControlUpgradeable(_accessControllerAddress);
+        DiamondLib.diamondStorage().accessController = IAccessControl(_accessControllerAddress);
         emit AccessControllerAddressChanged(_accessControllerAddress, msgSender());
     }
 

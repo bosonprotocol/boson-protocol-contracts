@@ -24,7 +24,7 @@ contract TestInitializableDiamond is ProtocolDiamond {
      * @param _interfaceIds - the initially supported ERC-165 interface ids
      */
     constructor(
-        IAccessControlUpgradeable _accessController,
+        IAccessControl _accessController,
         IDiamondCut.FacetCut[] memory _facetCuts,
         bytes4[] memory _interfaceIds
     ) payable ProtocolDiamond(_accessController, _facetCuts, _interfaceIds) {}

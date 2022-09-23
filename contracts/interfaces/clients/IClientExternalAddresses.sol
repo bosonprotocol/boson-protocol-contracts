@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
-import { IAccessControlUpgradeable } from "../IAccessControlUpgradeable.sol";
+import { IAccessControl } from "../IAccessControl.sol";
 import { IClientExternalAddressesEvents } from "../events/IClientExternalAddressesEvents.sol";
 
 /**
@@ -33,7 +33,7 @@ interface IClientExternalAddresses is IClientExternalAddressesEvents {
      *
      * @return the address of the AccessController contract
      */
-    function getAccessController() external view returns (IAccessControlUpgradeable);
+    function getAccessController() external view returns (IAccessControl);
 
     /**
      * @notice Set the ProtocolDiamond address.

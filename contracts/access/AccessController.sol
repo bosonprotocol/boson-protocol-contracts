@@ -2,14 +2,14 @@
 pragma solidity 0.8.9;
 
 import "../domain/BosonConstants.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "./AccessControl.sol";
 
 /**
  * @title AccessController
  *
  * @notice Implements centralized role-based access for Boson Protocol contracts.
  */
-contract AccessController is AccessControlUpgradeable {
+contract AccessController is AccessControl {
     /**
      * @notice Constructor
      *
