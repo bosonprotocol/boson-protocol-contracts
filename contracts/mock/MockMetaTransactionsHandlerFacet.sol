@@ -18,4 +18,13 @@ contract MockMetaTransactionsHandlerFacet is ProtocolBase {
         protocolMetaTxInfo().isMetaTransaction = true;
         protocolMetaTxInfo().currentSenderAddress = _signerAddress;
     }
+
+    /**
+     * @notice Sets the cached chain id value.
+     *
+     * @param _chainId - chain id
+     */
+    function setCachedChainId(uint256 _chainId) public {
+        protocolMetaTxInfo().cachedChainId = _chainId;
+    }
 }

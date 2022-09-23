@@ -68,7 +68,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
 
         // Initialize protocol meta-transaction config params
         ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
-        pmti.domainSeparator = EIP712Lib.domainSeparator("BosonProtocolDiamond", "V1");
+        pmti.domainSeparator = EIP712Lib.buildDomainSeparator(PROTOCOL_NAME, PROTOCOL_VERSION);
+        pmti.cachedChainId = block.chainid;
     }
 
     /**
