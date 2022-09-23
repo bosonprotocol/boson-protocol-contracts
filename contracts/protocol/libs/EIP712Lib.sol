@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -12,12 +12,15 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 library EIP712Lib {
     /**
      * @notice Generates the domain separator hash.
+     * @dev Using the chainId as the salt enables the client to be active on one chain
+     * while a metatx is signed for a contract on another chain. That could happen if the client is,
+     * for instance, a metaverse scene that runs on one chain while the contracts it interacts with are deployed on another chain.
      *
      * @param _name - the name of the protocol
      * @param _version -  The version of the protocol
      * @return the domain separator hash
      */
-    function domainSeparator(string memory _name, string memory _version) internal view returns (bytes32) {
+    function buildDomainSeparator(string memory _name, string memory _version) internal view returns (bytes32) {
         return
             keccak256(
                 abi.encode(
@@ -49,7 +52,7 @@ library EIP712Lib {
         bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV
-    ) internal view returns (bool) {
+    ) internal returns (bool) {
         // Ensure signature is unique
         // See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/04695aecbd4d17dddfd55de766d10e3805d6f42f/contracts/cryptography/ECDSA.sol#63
         require(
@@ -57,18 +60,30 @@ library EIP712Lib {
                 (_sigV == 27 || _sigV == 28),
             INVALID_SIGNATURE
         );
+
         address signer = ecrecover(toTypedMessageHash(_hashedMetaTx), _sigV, _sigR, _sigS);
         require(signer != address(0), INVALID_SIGNATURE);
         return signer == _user;
     }
 
     /**
-     * @notice Gets the domain separator from storage.
+     * @notice Gets the domain separator from storage if matches with the chain id and diamond address, else, build new domain separator.
      *
-     * @return the domain separator from storage
+     * @return the domain separator
      */
-    function getDomainSeparator() private view returns (bytes32) {
-        return ProtocolLib.protocolMetaTxInfo().domainSeparator;
+    function getDomainSeparator() private returns (bytes32) {
+        ProtocolLib.ProtocolMetaTxInfo storage pmti = ProtocolLib.protocolMetaTxInfo();
+        uint256 cachedChainId = pmti.cachedChainId;
+
+        if (block.chainid == cachedChainId) {
+            return pmti.domainSeparator;
+        } else {
+            bytes32 domainSeparator = buildDomainSeparator(PROTOCOL_NAME, PROTOCOL_VERSION);
+            pmti.domainSeparator = domainSeparator;
+            pmti.cachedChainId = block.chainid;
+
+            return domainSeparator;
+        }
     }
 
     /**
@@ -83,7 +98,7 @@ library EIP712Lib {
      * @param _messageHash  - the message hash
      * @return the EIP712 compatible message hash
      */
-    function toTypedMessageHash(bytes32 _messageHash) internal view returns (bytes32) {
+    function toTypedMessageHash(bytes32 _messageHash) internal returns (bytes32) {
         return keccak256(abi.encodePacked("\x19\x01", getDomainSeparator(), _messageHash));
     }
 

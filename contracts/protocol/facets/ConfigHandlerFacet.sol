@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonConfigHandler } from "../../interfaces/handlers/IBosonConfigHandler.sol";
@@ -64,9 +64,13 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         pc.nextOfferId = 1;
         pc.nextTwinId = 1;
 
+        // Initialize reentrancyStatus
+        protocolStatus().reentrancyStatus = NOT_ENTERED;
+
         // Initialize protocol meta-transaction config params
         ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
-        pmti.domainSeparator = EIP712Lib.domainSeparator("BosonProtocolDiamond", "V1");
+        pmti.domainSeparator = EIP712Lib.buildDomainSeparator(PROTOCOL_NAME, PROTOCOL_VERSION);
+        pmti.cachedChainId = block.chainid;
     }
 
     /**

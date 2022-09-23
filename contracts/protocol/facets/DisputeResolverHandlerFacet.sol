@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
@@ -65,17 +65,20 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Get the next account id and increment the counter
         uint256 disputeResolverId = protocolCounters().nextAccountId++;
 
-        //check that the addresses are unique to one dispute resolver id, across all rolls
+        // Check that the addresses are unique to one dispute resolver id, across all rolls
+        mapping(address => uint256) storage disputeResolverIdByOperator = lookups.disputeResolverIdByOperator;
+        mapping(address => uint256) storage disputeResolverIdByAdmin = lookups.disputeResolverIdByAdmin;
+        mapping(address => uint256) storage disputeResolverIdByClerk = lookups.disputeResolverIdByClerk;
         require(
-            lookups.disputeResolverIdByOperator[_disputeResolver.operator] == 0 &&
-                lookups.disputeResolverIdByOperator[_disputeResolver.admin] == 0 &&
-                lookups.disputeResolverIdByOperator[_disputeResolver.clerk] == 0 &&
-                lookups.disputeResolverIdByAdmin[_disputeResolver.admin] == 0 &&
-                lookups.disputeResolverIdByAdmin[_disputeResolver.operator] == 0 &&
-                lookups.disputeResolverIdByAdmin[_disputeResolver.clerk] == 0 &&
-                lookups.disputeResolverIdByClerk[_disputeResolver.clerk] == 0 &&
-                lookups.disputeResolverIdByClerk[_disputeResolver.operator] == 0 &&
-                lookups.disputeResolverIdByClerk[_disputeResolver.admin] == 0,
+            disputeResolverIdByOperator[_disputeResolver.operator] == 0 &&
+                disputeResolverIdByOperator[_disputeResolver.admin] == 0 &&
+                disputeResolverIdByOperator[_disputeResolver.clerk] == 0 &&
+                disputeResolverIdByAdmin[_disputeResolver.admin] == 0 &&
+                disputeResolverIdByAdmin[_disputeResolver.operator] == 0 &&
+                disputeResolverIdByAdmin[_disputeResolver.clerk] == 0 &&
+                disputeResolverIdByClerk[_disputeResolver.clerk] == 0 &&
+                disputeResolverIdByClerk[_disputeResolver.operator] == 0 &&
+                disputeResolverIdByClerk[_disputeResolver.admin] == 0,
             DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
         );
 
@@ -91,17 +94,18 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         (, , DisputeResolverFee[] storage disputeResolverFees) = fetchDisputeResolver(_disputeResolver.id);
 
         // Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
+        mapping(address => uint256) storage disputeResolverFeeTokens = lookups.disputeResolverFeeTokenIndex[
+            _disputeResolver.id
+        ];
         for (uint256 i = 0; i < _disputeResolverFees.length; i++) {
             require(
-                lookups.disputeResolverFeeTokenIndex[_disputeResolver.id][_disputeResolverFees[i].tokenAddress] == 0,
+                disputeResolverFeeTokens[_disputeResolverFees[i].tokenAddress] == 0,
                 DUPLICATE_DISPUTE_RESOLVER_FEES
             );
             disputeResolverFees.push(_disputeResolverFees[i]);
 
             // Set index mapping. Should be index in disputeResolverFees array + 1
-            lookups.disputeResolverFeeTokenIndex[_disputeResolver.id][
-                _disputeResolverFees[i].tokenAddress
-            ] = disputeResolverFees.length;
+            disputeResolverFeeTokens[_disputeResolverFees[i].tokenAddress] = disputeResolverFees.length;
         }
 
         // Ignore supplied active flag and set to false. Dispute resolver must be activated by protocol.

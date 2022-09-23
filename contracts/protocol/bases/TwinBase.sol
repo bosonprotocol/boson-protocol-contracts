@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonTwinEvents } from "../../interfaces/events/IBosonTwinEvents.sol";
@@ -102,12 +102,12 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             }
 
             // Add range to twinRangesBySeller mapping
-            TokenRange storage tokenRange = lookups.twinRangesBySeller[sellerId][_twin.tokenAddress].push();
+            TokenRange storage tokenRange = twinRanges.push();
             tokenRange.start = tokenId;
             tokenRange.end = lastTokenId;
 
             // Add twin id to twinIdsByTokenAddressAndBySeller mapping
-            lookups.twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress].push(_twin.id);
+            twinIds.push(_twin.id);
         } else if (_twin.tokenType == TokenType.MultiToken) {
             // If token is Fungible or MultiToken amount should not be zero
             // Also, tthe amount of tokens should not be more than the available token supply.

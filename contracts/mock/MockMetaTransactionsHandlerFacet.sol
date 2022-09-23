@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 import { ProtocolBase } from "../protocol/bases/ProtocolBase.sol";
 
@@ -17,5 +17,14 @@ contract MockMetaTransactionsHandlerFacet is ProtocolBase {
     function setAsMetaTransactionAndCurrentSenderAs(address _signerAddress) public {
         protocolMetaTxInfo().isMetaTransaction = true;
         protocolMetaTxInfo().currentSenderAddress = _signerAddress;
+    }
+
+    /**
+     * @notice Sets the cached chain id value.
+     *
+     * @param _chainId - chain id
+     */
+    function setCachedChainId(uint256 _chainId) public {
+        protocolMetaTxInfo().cachedChainId = _chainId;
     }
 }
