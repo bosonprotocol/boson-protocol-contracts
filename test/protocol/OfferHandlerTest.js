@@ -333,9 +333,14 @@ describe("IBosonOfferHandler", function () {
 
       it("should update state", async function () {
         // Create an offer
-        await offerHandler
-          .connect(operator)
-          .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+        for (let i = 0; i < 30; i++) {
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+        }
+        // await offerHandler
+        //   .connect(operator)
+        //   .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
         // Get the offer as a struct
         [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct, offerFeesStruct] =

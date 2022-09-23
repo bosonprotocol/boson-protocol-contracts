@@ -49,10 +49,19 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         uint256 _amount
     ) external payable override fundsNotPaused nonReentrant {
         // Check seller exists in sellers mapping
-        (bool exists, , ) = fetchSeller(_sellerId);
+        (bool exists, Seller storage seller, ) = fetchSeller(_sellerId);
 
         // Seller must exist
         require(exists, NO_SUCH_SELLER);
+
+        
+        
+        ProtocolLib.ProtocolLookups storage lookups = ProtocolLib.protocolLookups();
+
+        if(!lookups.acceptsToken[_sellerId][_tokenAddress]){
+            require(msgSender() == seller.operator , "TOKEN NOT ACCEPTED");
+            lookups.acceptsToken[_sellerId][_tokenAddress] = true;
+        }
 
         if (msg.value != 0) {
             // Receiving native currency

@@ -191,6 +191,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             }
         }
 
+            protocolLookups().acceptsToken[_offer.sellerId][_offer.exchangeToken] = true;
+
         // Get storage location for offer fees
         OfferFees storage offerFees = fetchOfferFees(_offer.id);
 

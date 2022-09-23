@@ -124,6 +124,8 @@ library ProtocolLib {
         mapping(uint256 => uint256) groupIdByOffer;
         // offer id => agent id
         mapping(uint256 => uint256) agentIdByOffer;
+        // seller id => token address => acceptsToken
+        mapping(uint256 => mapping(address => bool)) acceptsToken;
         // seller operator address => sellerId
         mapping(address => uint256) sellerIdByOperator;
         // seller admin address => sellerId

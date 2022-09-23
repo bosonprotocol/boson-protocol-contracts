@@ -270,7 +270,7 @@ describe("IBosonFundsHandler", function () {
       accountId.next(true);
     });
 
-    context("👉 depositFunds()", async function () {
+    context.only("👉 depositFunds()", async function () {
       it("should emit a FundsDeposited event", async function () {
         // Deposit funds, testing for the event
         // Deposit token
@@ -281,11 +281,11 @@ describe("IBosonFundsHandler", function () {
         // Deposit native currency
         await expect(
           fundsHandler
-            .connect(rando)
+            .connect(operator)
             .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount, { value: depositAmount })
         )
           .to.emit(fundsHandler, "FundsDeposited")
-          .withArgs(seller.id, rando.address, ethers.constants.AddressZero, depositAmount);
+          .withArgs(seller.id, operator.address, ethers.constants.AddressZero, depositAmount);
       });
 
       it("should update state", async function () {
@@ -301,7 +301,7 @@ describe("IBosonFundsHandler", function () {
 
         // Deposit native currency to the same seller id
         await fundsHandler
-          .connect(rando)
+          .connect(operator)
           .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount, { value: depositAmount });
 
         // Get new on chain state
@@ -334,6 +334,31 @@ describe("IBosonFundsHandler", function () {
         expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
       });
 
+      it("Rando can deposit after operator has deposited", async function () {
+        // Deposit native currency
+        await expect(
+          fundsHandler
+            .connect(operator)
+            .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount, { value: depositAmount })
+        )
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(seller.id, operator.address, ethers.constants.AddressZero, depositAmount);
+
+        // Rando can deposit only after operator has deposited, meaning the seller accepts token
+        await expect(
+          fundsHandler
+            .connect(rando)
+            .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount, { value: depositAmount })
+        )
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(seller.id, rando.address, ethers.constants.AddressZero, depositAmount);
+
+        // Deposit token
+        await expect(fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount))
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(seller.id, operator.address, mockToken.address, depositAmount);
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The funds region of protocol is paused", async function () {
           // Pause the funds region of the protocol
@@ -349,7 +374,7 @@ describe("IBosonFundsHandler", function () {
           // Attempt to deposit the funds, expecting revert
           seller.id = "555";
           await expect(
-            fundsHandler.connect(rando).depositFunds(seller.id, mockToken.address, depositAmount)
+            fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount)
           ).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
         });
 
@@ -357,7 +382,7 @@ describe("IBosonFundsHandler", function () {
           // Attempt to deposit the funds, expecting revert
           await expect(
             fundsHandler
-              .connect(rando)
+              .connect(operator)
               .depositFunds(seller.id, mockToken.address, depositAmount, { value: depositAmount })
           ).to.revertedWith(RevertReasons.NATIVE_WRONG_ADDRESS);
         });
@@ -366,7 +391,7 @@ describe("IBosonFundsHandler", function () {
           // Attempt to deposit the funds, expecting revert
           await expect(
             fundsHandler
-              .connect(rando)
+              .connect(operator)
               .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount * 2, { value: depositAmount })
           ).to.revertedWith(RevertReasons.NATIVE_WRONG_AMOUNT);
         });
@@ -384,17 +409,17 @@ describe("IBosonFundsHandler", function () {
         it("Token address is not a contract", async function () {
           // Attempt to deposit the funds, expecting revert
           await expect(
-            fundsHandler.connect(rando).depositFunds(seller.id, admin.address, depositAmount)
+            fundsHandler.connect(operator).depositFunds(seller.id, admin.address, depositAmount)
           ).to.revertedWith("");
         });
 
         it("Token contract revert for another reason", async function () {
           // insufficient funds
           // approve more than account actually have
-          await mockToken.connect(rando).approve(protocolDiamond.address, depositAmount);
+          await mockToken.connect(operator).approve(protocolDiamond.address, depositAmount);
           // Attempt to deposit the funds, expecting revert
           await expect(
-            fundsHandler.connect(rando).depositFunds(seller.id, mockToken.address, depositAmount)
+            fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount)
           ).to.revertedWith(RevertReasons.ERC20_EXCEEDS_BALANCE);
 
           // not approved
