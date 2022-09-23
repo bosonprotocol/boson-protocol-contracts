@@ -9,23 +9,24 @@ import { IBosonMetaTransactionsEvents } from "../events/IBosonMetaTransactionsEv
  *
  * @notice Manages incoming meta-transactions in the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x369a01ef
+ * The ERC-165 identifier for this interface is: 0xd25fcdc1
  */
 interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
     /**
-     * @notice Checks nonce and returns true if used already.
+     * @notice Checks nonce and returns true if used already for a specific address.
      *
+     * @param _associatedAddress the address for which the nonce should be checked
      * @param _nonce - the nonce that we want to check.
      * @return true if nonce has already been used
      */
-    function isUsedNonce(uint256 _nonce) external view returns (bool);
+    function isUsedNonce(address _associatedAddress, uint256 _nonce) external view returns (bool);
 
     /**
      * @notice Handles the incoming meta transaction.
      *
      * Reverts if:
      * - The meta-transactions region of protocol is paused
-     * - Nonce is already used by another transaction
+     * - Nonce is already used by the msg.sender for another transaction
      * - Function signature matches executeMetaTransaction
      * - Function name does not match the bytes4 version of the function signature
      * - sender does not match the recovered signer

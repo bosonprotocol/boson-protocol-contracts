@@ -35,7 +35,7 @@ abstract contract ReentrancyGuardBase {
      */
     modifier nonReentrant() {
         ProtocolLib.ProtocolStatus storage ps = ProtocolLib.protocolStatus();
-        // On the first call to nonReentrant, _notEntered will be true
+        // On the first call to nonReentrant, ps.reentrancyStatus will be NOT_ENTERED
         require(ps.reentrancyStatus != ENTERED, REENTRANCY_GUARD);
 
         // Any calls to nonReentrant after this point will fail

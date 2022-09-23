@@ -57,6 +57,7 @@ library EIP712Lib {
                 (_sigV == 27 || _sigV == 28),
             INVALID_SIGNATURE
         );
+
         address signer = ecrecover(toTypedMessageHash(_hashedMetaTx), _sigV, _sigR, _sigS);
         require(signer != address(0), INVALID_SIGNATURE);
         return signer == _user;

@@ -292,7 +292,6 @@ library FundsLib {
      * @param _tokenAddress - funds contract address or zero address for native currency
      * @param _amount - amount to be credited
      */
-
     function increaseAvailableFunds(
         uint256 _entityId,
         address _tokenAddress,
@@ -301,14 +300,16 @@ library FundsLib {
         ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
 
         // if the current amount of token is 0, the token address must be added to the token list
-        if (pl.availableFunds[_entityId][_tokenAddress] == 0) {
-            pl.tokenList[_entityId].push(_tokenAddress);
+        mapping(address => uint256) storage availableFunds = pl.availableFunds[_entityId];
+        if (availableFunds[_tokenAddress] == 0) {
+            address[] storage tokenList = pl.tokenList[_entityId];
+            tokenList.push(_tokenAddress);
             //Set index mapping. Should be index in tokenList array + 1
-            pl.tokenIndexByAccount[_entityId][_tokenAddress] = pl.tokenList[_entityId].length;
+            pl.tokenIndexByAccount[_entityId][_tokenAddress] = tokenList.length;
         }
 
         // update the available funds
-        pl.availableFunds[_entityId][_tokenAddress] += _amount;
+        availableFunds[_tokenAddress] += _amount;
     }
 
     /**
@@ -330,33 +331,39 @@ library FundsLib {
             ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
 
             // get available funds from storage
-            uint256 availableFunds = pl.availableFunds[_entityId][_tokenAddress];
+            mapping(address => uint256) storage availableFunds = pl.availableFunds[_entityId];
+            uint256 entityFunds = availableFunds[_tokenAddress];
 
             // make sure that seller has enough funds in the pool and reduce the available funds
-            require(availableFunds >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
-            // The math is safe because of the require above. Uses unchecked to optimize execution cost.
+            require(entityFunds >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
+
+            // Use unchecked to optimize execution cost. The math is safe because of the require above.
             unchecked {
-                pl.availableFunds[_entityId][_tokenAddress] = availableFunds - _amount;
+                availableFunds[_tokenAddress] = entityFunds - _amount;
             }
 
-            // if availableFunds are totally emptied, the token address is removed from the seller's tokenList
-            if (availableFunds == _amount) {
-                uint256 lastTokenIndex = pl.tokenList[_entityId].length - 1;
-                //Get the index in the tokenList array, which is 1 less than the tokenIndexByAccount index
-                uint256 index = pl.tokenIndexByAccount[_entityId][_tokenAddress] - 1;
+            // if available funds are totally emptied, the token address is removed from the seller's tokenList
+            if (entityFunds == _amount) {
+                // Get the index in the tokenList array, which is 1 less than the tokenIndexByAccount index
+                address[] storage tokenList = pl.tokenList[_entityId];
+                uint256 lastTokenIndex = tokenList.length - 1;
+                mapping(address => uint256) storage entityTokens = pl.tokenIndexByAccount[_entityId];
+                uint256 index = entityTokens[_tokenAddress] - 1;
+
+                // if target is last index then only pop and delete are needed
+                // otherwise, we overwrite the target with the last token first
                 if (index != lastTokenIndex) {
-                    // if index == len - 1 then only pop and delete are needed
                     // Need to fill gap caused by delete if more than one element in storage array
-                    address tokenToMove = pl.tokenList[_entityId][lastTokenIndex];
+                    address tokenToMove = tokenList[lastTokenIndex];
                     // Copy the last token in the array to this index to fill the gap
-                    pl.tokenList[_entityId][index] = tokenToMove;
+                    tokenList[index] = tokenToMove;
                     // Reset index mapping. Should be index in tokenList array + 1
-                    pl.tokenIndexByAccount[_entityId][tokenToMove] = index + 1;
+                    entityTokens[tokenToMove] = index + 1;
                 }
                 // Delete last token address in the array, which was just moved to fill the gap
-                pl.tokenList[_entityId].pop();
-                //Delete from index mapping
-                delete pl.tokenIndexByAccount[_entityId][_tokenAddress];
+                tokenList.pop();
+                // Delete from index mapping
+                delete entityTokens[_tokenAddress];
             }
         }
     }
