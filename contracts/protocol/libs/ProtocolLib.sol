@@ -204,8 +204,6 @@ library ProtocolLib {
         mapping(address => mapping(uint256 => bool)) usedNonce;
         // The cached chain id
         uint256 cachedChainId;
-        // The cached address of the diamond
-        address cachedThis;
         // map function name to input type
         mapping(string => BosonTypes.MetaTxInputType) inputType;
         // map input type => hash info

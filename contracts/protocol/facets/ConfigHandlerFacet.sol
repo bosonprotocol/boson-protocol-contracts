@@ -71,7 +71,6 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
         pmti.domainSeparator = EIP712Lib.buildDomainSeparator(PROTOCOL_NAME, PROTOCOL_VERSION);
         pmti.cachedChainId = block.chainid;
-        pmti.cachedThis = address(this);
     }
 
     /**

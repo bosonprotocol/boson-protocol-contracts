@@ -12,6 +12,8 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 library EIP712Lib {
     /**
      * @notice Generates the domain separator hash.
+     * @dev Using chainId as the salt allows you that your client is active on one chain,
+     * while you sign metaTx for another chain.
      *
      * @param _name - the name of the protocol
      * @param _version -  The version of the protocol
@@ -49,7 +51,7 @@ library EIP712Lib {
         bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV
-    ) internal view returns (bool) {
+    ) internal returns (bool) {
         // Ensure signature is unique
         // See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/04695aecbd4d17dddfd55de766d10e3805d6f42f/contracts/cryptography/ECDSA.sol#63
         require(
@@ -68,13 +70,14 @@ library EIP712Lib {
      *
      * @return the domain separator
      */
-    function getDomainSeparator() private view returns (bytes32) {
-        address cachedThis = ProtocolLib.protocolMetaTxInfo().cachedThis;
-        uint256 cachedChainId = ProtocolLib.protocolMetaTxInfo().cachedChainId;
+    function getDomainSeparator() private returns (bytes32) {
+        ProtocolLib.ProtocolMetaTxInfo storage pmti = ProtocolLib.protocolMetaTxInfo();
+        uint256 cachedChainId = pmti.cachedChainId;
 
-        if (address(this) == cachedThis && block.chainid == cachedChainId) {
+        if (block.chainid == cachedChainId) {
             return ProtocolLib.protocolMetaTxInfo().domainSeparator;
         } else {
+            pmti.cachedChainId = block.chainid;
             return buildDomainSeparator(PROTOCOL_NAME, PROTOCOL_VERSION);
         }
     }
@@ -91,7 +94,7 @@ library EIP712Lib {
      * @param _messageHash  - the message hash
      * @return the EIP712 compatible message hash
      */
-    function toTypedMessageHash(bytes32 _messageHash) internal view returns (bytes32) {
+    function toTypedMessageHash(bytes32 _messageHash) internal returns (bytes32) {
         return keccak256(abi.encodePacked("\x19\x01", getDomainSeparator(), _messageHash));
     }
 
