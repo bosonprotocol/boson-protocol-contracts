@@ -78,8 +78,11 @@ library EIP712Lib {
         if (block.chainid == cachedChainId) {
             return ProtocolLib.protocolMetaTxInfo().domainSeparator;
         } else {
+            bytes32 domainSeparator = buildDomainSeparator(PROTOCOL_NAME, PROTOCOL_VERSION);
+            pmti.domainSeparator = domainSeparator;
             pmti.cachedChainId = block.chainid;
-            return buildDomainSeparator(PROTOCOL_NAME, PROTOCOL_VERSION);
+
+            return domainSeparator;
         }
     }
 
