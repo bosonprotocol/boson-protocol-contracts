@@ -12,8 +12,9 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 library EIP712Lib {
     /**
      * @notice Generates the domain separator hash.
-     * @dev Using chainId as the salt allows you that your client is active on one chain,
-     * while you sign metaTx for another chain.
+     * @dev Using the chainId as the salt enables the client to be active on one chain
+     * while a metatx is signed for a contract on another chain. That could happen if the client is,
+     * for instance, a metaverse scene that runs on one chain while the contracts it interacts with are deployed on another chain.
      *
      * @param _name - the name of the protocol
      * @param _version -  The version of the protocol
