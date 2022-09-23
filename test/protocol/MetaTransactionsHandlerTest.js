@@ -497,7 +497,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Verify that nonce is used. Expect true.
           let expectedResult = true;
-          result = await metaTransactionsHandler.connect(operator).isUsedNonce(nonce);
+          result = await metaTransactionsHandler.connect(operator).isUsedNonce(deployer.address, nonce);
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
