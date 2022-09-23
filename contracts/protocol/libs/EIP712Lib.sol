@@ -76,7 +76,7 @@ library EIP712Lib {
         uint256 cachedChainId = pmti.cachedChainId;
 
         if (block.chainid == cachedChainId) {
-            return ProtocolLib.protocolMetaTxInfo().domainSeparator;
+            return pmti.domainSeparator;
         } else {
             bytes32 domainSeparator = buildDomainSeparator(PROTOCOL_NAME, PROTOCOL_VERSION);
             pmti.domainSeparator = domainSeparator;
