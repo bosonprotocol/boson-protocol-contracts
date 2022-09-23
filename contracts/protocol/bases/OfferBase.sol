@@ -184,7 +184,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                 disputeResolutionTerms.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
                 disputeResolutionTerms.feeAmount = feeAmount;
                 disputeResolutionTerms.buyerEscalationDeposit =
-                    (feeAmount * lookups.buyerEscalationDepositPercentage) /
+                    (feeAmount * protocolFees().buyerEscalationDepositPercentage) /
                     10000;
 
                 protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
