@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 
@@ -200,8 +200,8 @@ library ProtocolLib {
         bool isMetaTransaction;
         // The domain Separator of the protocol
         bytes32 domainSeparator;
-        // nonce => existance of nonce in the mapping
-        mapping(uint256 => bool) usedNonce;
+        // address => nonce => nonce used indicator
+        mapping(address => mapping(uint256 => bool)) usedNonce;
         // map function name to input type
         mapping(string => BosonTypes.MetaTxInputType) inputType;
         // map input type => hash info

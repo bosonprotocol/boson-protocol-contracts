@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonBundleHandler } from "../../interfaces/handlers/IBosonBundleHandler.sol";
@@ -12,11 +12,6 @@ import { BundleBase } from "../bases/BundleBase.sol";
  * @notice Handles bundling of offers with twins within the protocol
  */
 contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
-    enum BundleUpdateAttribute {
-        TWIN,
-        OFFER
-    }
-
     /**
      * @notice Initializes facet.
      * This function is callable only once.

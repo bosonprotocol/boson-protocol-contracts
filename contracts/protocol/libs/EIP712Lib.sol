@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -25,20 +25,9 @@ library EIP712Lib {
                     keccak256(bytes(_name)),
                     keccak256(bytes(_version)),
                     address(this),
-                    getChainID()
+                    block.chainid
                 )
             );
-    }
-
-    /**
-     * @notice Gets the chain id
-     *
-     * @return id - the chain id, 1 for Ethereum mainnet, > 1 for public testnets.
-     */
-    function getChainID() internal view returns (uint256 id) {
-        assembly {
-            id := chainid()
-        }
     }
 
     /**
@@ -68,6 +57,7 @@ library EIP712Lib {
                 (_sigV == 27 || _sigV == 28),
             INVALID_SIGNATURE
         );
+
         address signer = ecrecover(toTypedMessageHash(_hashedMetaTx), _sigV, _sigR, _sigS);
         require(signer != address(0), INVALID_SIGNATURE);
         return signer == _user;
@@ -119,7 +109,10 @@ library EIP712Lib {
 
         // Get sender from the storage if this is a meta transaction
         if (isItAMetaTransaction) {
-            return getCurrentSenderAddress();
+            address sender = getCurrentSenderAddress();
+            require(sender != address(0), INVALID_ADDRESS);
+
+            return sender;
         } else {
             return msg.sender;
         }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
@@ -95,13 +95,12 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
         require(agent.wallet == sender, NOT_AGENT_WALLET);
 
         // Check that the wallet address is not associated with another agent or is already associated with the agent passed in
-        require(
-            lookups.agentIdByWallet[_agent.wallet] == 0 || lookups.agentIdByWallet[_agent.wallet] == _agent.id,
-            AGENT_ADDRESS_MUST_BE_UNIQUE
-        );
+        mapping(address => uint256) storage agentIds = lookups.agentIdByWallet;
+        uint256 check1 = agentIds[_agent.wallet];
+        require(check1 == 0 || check1 == _agent.id, AGENT_ADDRESS_MUST_BE_UNIQUE);
 
         // Delete current mappings
-        delete lookups.agentIdByWallet[sender];
+        delete agentIds[sender];
 
         // Ignore active flag passed in by caller and set to value in storage.
         _agent.active = agent.active;

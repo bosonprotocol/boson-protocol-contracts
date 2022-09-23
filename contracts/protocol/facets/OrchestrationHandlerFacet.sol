@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonOrchestrationHandler } from "../../interfaces/handlers/IBosonOrchestrationHandler.sol";
@@ -340,7 +340,7 @@ contract OrchestrationHandlerFacet is
         Condition calldata _condition,
         Twin memory _twin,
         uint256 _agentId
-    ) public override offersNotPaused groupsNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused {
+    ) public override twinsNotPaused bundlesNotPaused {
         // Create offer with condition first
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
         // Create twin and pack everything into a bundle
@@ -417,7 +417,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override sellersNotPaused offersNotPaused groupsNotPaused orchestrationNotPaused {
+    ) external override sellersNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
     }
@@ -500,7 +500,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override sellersNotPaused offersNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused {
+    ) external override sellersNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
     }
@@ -587,16 +587,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    )
-        external
-        override
-        sellersNotPaused
-        offersNotPaused
-        groupsNotPaused
-        twinsNotPaused
-        bundlesNotPaused
-        orchestrationNotPaused
-    {
+    ) external override sellersNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferWithConditionAndTwinAndBundle(
             _offer,

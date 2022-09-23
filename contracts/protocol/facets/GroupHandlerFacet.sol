@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 import { IBosonGroupHandler } from "../../interfaces/handlers/IBosonGroupHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
@@ -115,7 +115,8 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
 
             uint256 len = group.offerIds.length;
             // Get the index in the offerIds array, which is 1 less than the offerIdIndexByGroup index
-            uint256 index = lookups.offerIdIndexByGroup[groupId][offerId] - 1;
+            mapping(uint256 => uint256) storage offerIdIndexes = lookups.offerIdIndexByGroup[groupId];
+            uint256 index = offerIdIndexes[offerId] - 1;
 
             if (index != len - 1) {
                 // If index == len - 1 then only pop and delete are needed
@@ -124,12 +125,12 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
                 // Copy the last token in the array to this index to fill the gap
                 group.offerIds[index] = offerIdToMove;
                 // Reset index mapping. Should be index in offerIds array + 1
-                lookups.offerIdIndexByGroup[groupId][offerIdToMove] = index + 1;
+                offerIdIndexes[offerIdToMove] = index + 1;
             }
             // Delete last offer id in the array, which was just moved to fill the gap
             group.offerIds.pop();
             // Delete from index mapping
-            delete lookups.offerIdIndexByGroup[groupId][offerId];
+            delete offerIdIndexes[offerId];
         }
 
         // Get the condition

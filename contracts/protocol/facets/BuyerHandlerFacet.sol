@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 import "../../domain/BosonConstants.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
@@ -82,13 +82,12 @@ contract BuyerHandlerFacet is BuyerBase {
         }
 
         // Check that the wallet address is unique to one buyer id if new
-        require(
-            lookups.buyerIdByWallet[_buyer.wallet] == 0 || lookups.buyerIdByWallet[_buyer.wallet] == _buyer.id,
-            BUYER_ADDRESS_MUST_BE_UNIQUE
-        );
+        mapping(address => uint256) storage buyerIds = lookups.buyerIdByWallet;
+        uint256 check1 = buyerIds[_buyer.wallet];
+        require(check1 == 0 || check1 == _buyer.id, BUYER_ADDRESS_MUST_BE_UNIQUE);
 
         // Delete current mappings
-        delete lookups.buyerIdByWallet[sender];
+        delete buyerIds[sender];
 
         // Ignore active flag passed in by caller and set to value in storage.
         _buyer.active = buyer.active;
