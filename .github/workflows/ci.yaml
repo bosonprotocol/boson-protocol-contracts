@@ -10,8 +10,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.draft }}
+    # if: ${{ !github.event.pull_request.draft }}
     name: build
+    # strategy:
+    #   matrix:
+    #     node-version: [16.14.x]
+    outputs: 
+      test-chunks:  ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
+      test-chunk-ids: ${{ steps['set-test-chunk-ids'].outputs['test-chunk-ids'] }}
     steps:
       - uses: webfactory/ssh-agent@v0.5.4
         with:
@@ -31,16 +37,28 @@ jobs:
       - run: npm run build
       - run: npm run check:contracts
       - run: npm run check:scripts
-      - name: verify interface ids
+      - name: Verify interface ids
         run: npm run natspec-interface-id
-
+      - id: set-test-chunks
+        run: echo "::set-output name=test-chunks::$(node scripts/util/find-unit-test-files.js | jq -cM '[_nwise(length / 3 | ceil)]')"
+        name: Set Chunks
+      - id: set-test-chunk-ids
+        name: Set Chunk IDs
+        run: |
+          echo "::set-output name=test-chunk-ids::$(echo $CHUNKS | jq -cM 'to_entries | map(.key)')"
+          echo $CHUNKS
+        env:
+          CHUNKS: ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
   test:
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.draft }}
+    # if: ${{ !github.event.pull_request.draft }}
     env:
       GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
-    name: "test"
+    name: Test (chunk ${{ matrix.chunk }})
+    strategy:
+      matrix:
+        chunk: ${{ fromJson(needs.build.outputs['test-chunk-ids']) }}
     steps:
       - uses: webfactory/ssh-agent@v0.5.4
         with:
@@ -50,7 +68,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v2.5.1
         with:
-          node-version: "16.14.x"
+          node-version: 16.14.x
           cache: "npm"
       - name: Install Dependencies
         run: npm install
@@ -63,59 +81,61 @@ jobs:
       - name: Contract Sizing
         run: npm run size
       - name: Unit Tests 
-        run: npm run test
+        run: echo $CHUNKS | jq '.[${{ matrix.chunk }}] | .[] | @text' | xargs npx hardhat test 
+        env:
+          CHUNKS: ${{ needs.build.outputs['test-chunks'] }}
 
-  integration-test:
-    needs: build
-    runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.draft }}
-    env:
-      GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
-    name: "test:integration"
-    steps:
-      - uses: webfactory/ssh-agent@v0.5.4
-        with:
-          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
-      - name: Checkout repository
-        uses: actions/checkout@v2.4.0
-      - name: Setup node
-        uses: actions/setup-node@v2.5.1
-        with:
-          node-version: '16.14.x'
-          cache: 'npm'
-      - name: Install Dependencies
-        run: npm install
-      - name: Prepare Environment
-        shell: bash
-        run: |
-          cp .env.example .env
-      - name: Integration tests
-        run: npm run test:integration
+  # integration-test:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   # if: ${{ !github.event.pull_request.draft }}
+  #   env:
+  #     GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
+  #   name: "test:integration"
+  #   steps:
+  #     - uses: webfactory/ssh-agent@v0.5.4
+  #       with:
+  #         ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v2.4.0
+  #     - name: Setup node
+  #       uses: actions/setup-node@v2.5.1
+  #       with:
+  #         node-version: '16.14.x'
+  #         cache: 'npm'
+  #     - name: Install Dependencies
+  #       run: npm install
+  #     - name: Prepare Environment
+  #       shell: bash
+  #       run: |
+  #         cp .env.example .env
+  #     - name: Integration tests
+  #       run: npx hardhat test test/integration/** 
 
-  deploy-dry-run:
-    needs: build
-    runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.draft }}
-    name: "deploy: dry run"
-    steps:
-      - uses: webfactory/ssh-agent@v0.5.4
-        with:
-          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
-      - name: Checkout repository
-        uses: actions/checkout@v2.4.0
-      - name: Setup node
-        uses: actions/setup-node@v2.5.1
-        with:
-          node-version: "16.14.x"
-          cache: "npm"
-      - name: Install Dependencies
-        run: npm install
-      - name: Prepare Environment
-        shell: bash
-        run: |
-          cp .env.example .env
-      - name: Deploy suite locally
-        run: npm run deploy-suite:hardhat
-      - name: Cancelling tests in case of failure
-        if: failure()
-        uses: andymckay/cancel-action@0.2
+  # deploy-dry-run:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   if: ${{ !github.event.pull_request.draft }}
+  #   name: "deploy: dry run"
+  #   steps:
+  #     - uses: webfactory/ssh-agent@v0.5.4
+  #       with:
+  #         ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v2.4.0
+  #     - name: Setup node
+  #       uses: actions/setup-node@v2.5.1
+  #       with:
+  #         node-version: "16.14.x"
+  #         cache: "npm"
+  #     - name: Install Dependencies
+  #       run: npm install
+  #     - name: Prepare Environment
+  #       shell: bash
+  #       run: |
+  #         cp .env.example .env
+  #     - name: Deploy suite locally
+  #       run: npm run deploy-suite:hardhat
+  #     - name: Cancelling tests in case of failure
+  #       if: failure()
+  #       uses: andymckay/cancel-action@0.2
