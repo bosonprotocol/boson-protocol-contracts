@@ -63,7 +63,7 @@ jobs:
       - name: Contract Sizing
         run: npm run size
       - name: Unit Tests Group 1
-        run: npx hardhat test test/protocol/OrchestrationHandlerTest.js test/domain/*.js test/protocol/PauseHandlerTest.js test/protocol/DisputeHandlerTest.js
+        run: npx hardhat test test/protocol/OrchestrationHandlerTest.js test/domain/*.js test/protocol/PauseHandlerTest.js test/protocol/DisputeHandlerTest.js --parallel
 
   test-group-2:
     needs: build
@@ -94,7 +94,7 @@ jobs:
       - name: Contract Sizing
         run: npm run size
       - name: Unit Tests Group 2
-        run: npx hardhat test test/protocol/ExchangeHandlerTest.js test/access/AccessControllerTest.js test/protocol/OfferHandlerTest.js test/protocol/AccountHandlerTest.js test/protocol/AgentHandlerTest.js test/protocol/BuyerHandlerTest.js test/protocol/ConfigHandlerTest.js test/protocol/ProtocolDiamondTest.js test/protocol/TwinHandlerTest.js
+        run: npx hardhat test test/protocol/ExchangeHandlerTest.js test/access/AccessControllerTest.js test/protocol/OfferHandlerTest.js test/protocol/AccountHandlerTest.js test/protocol/AgentHandlerTest.js test/protocol/BuyerHandlerTest.js test/protocol/ConfigHandlerTest.js test/protocol/ProtocolDiamondTest.js test/protocol/TwinHandlerTest.js --parallel
 
   test-group-3:
     needs: build
@@ -125,7 +125,7 @@ jobs:
       - name: Contract Sizing
         run: npm run size
       - name: Unit Tests Group 3
-        run: npx hardhat test test/protocol/FundsHandlerTest.js test/protocol/clients/*.js test/protocol/MetaTransactionsHandlerTest.js test/protocol/BundleHandlerTest.js test/protocol/DisputeResolverHandlerTest.js test/protocol/GroupHandlerTest.js test/protocol/SellerHandlerTest.js
+        run: npx hardhat test test/protocol/FundsHandlerTest.js test/protocol/clients/*.js test/protocol/MetaTransactionsHandlerTest.js test/protocol/BundleHandlerTest.js test/protocol/DisputeResolverHandlerTest.js test/protocol/GroupHandlerTest.js test/protocol/SellerHandlerTest.js --parallel
              
   integration-test:
     needs: build
