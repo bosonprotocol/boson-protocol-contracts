@@ -2,7 +2,7 @@
 
 <h1 align="center">Boson Protocol V2</h1>
 
-## [Intro](../README.md) | Setup | [Tasks](tasks.md) | [Local development](local-development.md) | [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md)
+### [Intro](../README.md) | Setup | [Tasks](tasks.md) | [Local Development](local-development.md) | [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md) | [Happy Path Exchange](happy-path-exchange.md)
 
 ## Developer Setup
 The stack is a simple one:
