@@ -69,6 +69,7 @@ async function splitTestIntoChunks(chunks = 1, chunkWeights = []) {
 
 // Execute the script
 // The first chunk has the highest weight because tests inside the domain folder don't involve EVM calls so they run faster
-splitTestIntoChunks(4, [50, 15, 15, 20]).then((result) => {
+// The second chunk has the lowest weight because files inside it are the slowest to run
+splitTestIntoChunks(3, [50, 20, 30]).then((result) => {
   console.log(JSON.stringify(result));
 });
