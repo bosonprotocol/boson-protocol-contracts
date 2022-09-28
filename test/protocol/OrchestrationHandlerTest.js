@@ -2024,6 +2024,61 @@ describe("IBosonOrchestrationHandler", function () {
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
 
+      context("When offers have non zero agent ids", async function () {
+        beforeEach(async function () {
+          // Required constructor params
+          agentId = "3"; // argument sent to contract for createAgent will be ignored
+
+          // Create a valid agent, then set fields in tests directly
+          agent = mockAgent(other1.address);
+          agent.id = agentId;
+          expect(agent.isValid()).is.true;
+
+          // Create an agent
+          await accountHandler.connect(rando).createAgent(agent);
+
+          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+          offerFees.agentFee = agentFee;
+          offerFeesStruct = offerFees.toStruct();
+        });
+
+        it("should emit an OfferCreated and GroupCreated events", async function () {
+          // Create an offer with condition, testing for the events
+          const tx = await orchestrationHandler
+            .connect(operator)
+            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId);
+
+          // OfferCreated event
+          await expect(tx)
+            .to.emit(orchestrationHandler, "OfferCreated")
+            .withArgs(
+              nextOfferId,
+              seller.id,
+              offerStruct,
+              offerDatesStruct,
+              offerDurationsStruct,
+              disputeResolutionTermsStruct,
+              offerFeesStruct,
+              agentId,
+              operator.address
+            );
+
+          // Events with structs that contain arrays must be tested differently
+          const txReceipt = await tx.wait();
+
+          // GroupCreated event
+          const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
+          const groupInstance = Group.fromStruct(eventGroupCreated.group);
+          // Validate the instance
+          expect(groupInstance.isValid()).to.be.true;
+
+          assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
+          assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+          assert.equal(eventGroupCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
+          assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+        });
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The orchestration region of protocol is paused", async function () {
           // Pause the orchestration region of the protocol
@@ -2079,230 +2134,6 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
-        it("Valid from date is greater than valid until date", async function () {
-          // Reverse the from and until dates
-          offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
-          offerDates.validUntil = ethers.BigNumber.from(Date.now()).toString(); // now
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
-        });
-
-        it("Valid until date is not in the future", async function () {
-          // Set until date in the past
-          offerDates.validUntil = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
-        });
-
-        it("Buyer cancel penalty is less than item price", async function () {
-          // Set buyer cancel penalty higher than offer price
-          offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
-        });
-
-        it("Offer cannot be voided at the time of the creation", async function () {
-          // Set voided flag to true
-          offer.voided = true;
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
-        });
-
-        it("Both voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both voucherRedeemableUntil and voucherValid
-          offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) + oneMonth).toString();
-          offerDurations.voucherValid = oneMonth.toString();
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
-        });
-
-        it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both voucherRedeemableUntil and voucherValid to "0"
-          offerDates.voucherRedeemableUntil = "0";
-          offerDurations.voucherValid = "0";
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
-        });
-
-        it("Voucher redeemable period is fixed, but it ends before it starts", async function () {
-          // Set both voucherRedeemableUntil that is less than voucherRedeemableFrom
-          offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) - 10).toString();
-          offerDurations.voucherValid = "0";
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
-        });
-
-        it("Voucher redeemable period is fixed, but it ends before offer expires", async function () {
-          // Set both voucherRedeemableUntil that is more than voucherRedeemableFrom but less than validUntil
-          offerDates.voucherRedeemableFrom = "0";
-          offerDates.voucherRedeemableUntil = (Number(offerDates.validUntil) - 10).toString();
-          offerDurations.voucherValid = "0";
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
-        });
-
-        it("Fulfillment period is less than minimum fulfillment period", async function () {
-          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
-          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
-        });
-
-        it("Resolution period is set to zero", async function () {
-          // Set dispute duration period to 0
-          offerDurations.resolutionPeriod = "0";
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
-        });
-
-        it("Available quantity is set to zero", async function () {
-          // Set available quantity to 0
-          offer.quantityAvailable = "0";
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_QUANTITY_AVAILABLE);
-        });
-
-        it("Dispute resolver wallet is not registered", async function () {
-          // Set some address that is not registered as a dispute resolver
-          disputeResolver.id = "16";
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
-        });
-
-        it("Dispute resolver is not active", async function () {
-          // create another dispute resolver, but don't activate it
-          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
-          await accountHandler
-            .connect(rando)
-            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
-        });
-
-        it("For absolute zero offer, specified dispute resolver is not registered", async function () {
-          // Prepare an absolute zero offer, but specify dispute resolver
-          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
-          disputeResolver.id = "16";
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
-        });
-
-        it("For absolute zero offer, specified dispute resolver is not active", async function () {
-          // create another dispute resolver, but don't activate it
-          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
-          await accountHandler
-            .connect(rando)
-            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-
-          // Prepare an absolute zero offer, but specify dispute resolver
-          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
-        });
-
-        it("Seller is not on dispute resolver's seller allow list", async function () {
-          // Create new seller so sellerAllowList can have an entry
-          const newSeller = mockSeller(rando.address, rando.address, rando.address, rando.address);
-          await accountHandler.connect(rando).createSeller(newSeller, emptyAuthToken, voucherInitValues);
-
-          allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
-          await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd);
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
-        });
-
-        it("Dispute resolver does not accept fees in the exchange token", async function () {
-          // Set some address that is not part of dispute resolver fees
-          offer.exchangeToken = rando.address;
-
-          // Attempt to create an offer with condition, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
-        });
-
         it("Condition 'None' has some values in other fields", async function () {
           condition.method = EvaluationMethod.None;
 
@@ -2336,99 +2167,6 @@ describe("IBosonOrchestrationHandler", function () {
               .connect(operator)
               .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
-        });
-      });
-
-      context("When offers have non zero agent ids", async function () {
-        beforeEach(async function () {
-          // Required constructor params
-          agentId = "3"; // argument sent to contract for createAgent will be ignored
-
-          // Create a valid agent, then set fields in tests directly
-          agent = mockAgent(other1.address);
-          agent.id = agentId;
-          expect(agent.isValid()).is.true;
-
-          // Create an agent
-          await accountHandler.connect(rando).createAgent(agent);
-
-          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
-          offerFees.agentFee = agentFee;
-          offerFeesStruct = offerFees.toStruct();
-        });
-
-        it("should emit an OfferCreated and GroupCreated events", async function () {
-          // Create an offer with condition, testing for the events
-          const tx = await orchestrationHandler
-            .connect(operator)
-            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId);
-
-          // OfferCreated event
-          await expect(tx)
-            .to.emit(orchestrationHandler, "OfferCreated")
-            .withArgs(
-              nextOfferId,
-              seller.id,
-              offerStruct,
-              offerDatesStruct,
-              offerDurationsStruct,
-              disputeResolutionTermsStruct,
-              offerFeesStruct,
-              agentId,
-              operator.address
-            );
-
-          // Events with structs that contain arrays must be tested differently
-          const txReceipt = await tx.wait();
-
-          // GroupCreated event
-          const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
-          const groupInstance = Group.fromStruct(eventGroupCreated.group);
-          // Validate the instance
-          expect(groupInstance.isValid()).to.be.true;
-
-          assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
-          assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
-          assert.equal(eventGroupCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
-          assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
-        });
-
-        context("💔 Revert Reasons", async function () {
-          it("Agent does not exist", async function () {
-            // Set an agent id that does not exist
-            let agentId = "16";
-
-            // Attempt to Create an offer, expecting revert
-            await expect(
-              orchestrationHandler
-                .connect(operator)
-                .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-            ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
-          });
-
-          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
-            // Create new agent
-            let id = "4"; // argument sent to contract for createAgent will be ignored
-
-            // Create a valid agent, then set fields in tests directly
-            agent = mockAgent(operator.address);
-            agent.id = id;
-            agent.feePercentage = "3000"; //30%;
-            expect(agent.isValid()).is.true;
-
-            // Create an agent
-            await accountHandler.connect(rando).createAgent(agent);
-
-            //Change protocol fee after creating agent
-            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
-
-            // Attempt to Create an offer, expecting revert
-            await expect(
-              orchestrationHandler
-                .connect(operator)
-                .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agent.id)
-            ).to.revertedWith(RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
-          });
         });
       });
     });
@@ -2813,314 +2551,6 @@ describe("IBosonOrchestrationHandler", function () {
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
 
-      context("💔 Revert Reasons", async function () {
-        it("The orchestration region of protocol is paused", async function () {
-          // Pause the orchestration region of the protocol
-          await pauseHandler.connect(pauser).pause([PausableRegion.Orchestration]);
-
-          // Attempt to orchestrate expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
-        });
-
-        it("The offers region of protocol is paused", async function () {
-          // Pause the offers region of the protocol
-          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
-
-          // Attempt to create a offer expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
-        });
-
-        it("The groups region of protocol is paused", async function () {
-          // Pause the groups region of the protocol
-          await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
-
-          // Attempt to create a group expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
-        });
-
-        it("Caller not operator of any seller", async function () {
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(rando)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.NOT_OPERATOR);
-        });
-
-        it("Valid from date is greater than valid until date", async function () {
-          // Reverse the from and until dates
-          offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
-          offerDates.validUntil = ethers.BigNumber.from(Date.now()).toString(); // now
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
-        });
-
-        it("Valid until date is not in the future", async function () {
-          // Set until date in the past
-          offerDates.validUntil = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
-        });
-
-        it("Buyer cancel penalty is less than item price", async function () {
-          // Set buyer cancel penalty higher than offer price
-          offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
-        });
-
-        it("Offer cannot be voided at the time of the creation", async function () {
-          // Set voided flag to true
-          offer.voided = true;
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
-        });
-
-        it("Both voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both voucherRedeemableUntil and voucherValid
-          offerDates.voucherRedeemableUntil = ethers.BigNumber.from(offerDates.voucherRedeemableFrom)
-            .add(oneMonth)
-            .toString();
-          offerDurations.voucherValid = oneMonth.toString();
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
-        });
-
-        it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both voucherRedeemableUntil and voucherValid to "0"
-          offerDates.voucherRedeemableUntil = "0";
-          offerDurations.voucherValid = "0";
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
-        });
-
-        it("Voucher redeemable period is fixed, but it ends before it starts", async function () {
-          // Set both voucherRedeemableUntil that is less than voucherRedeemableFrom
-          offerDates.voucherRedeemableUntil = ethers.BigNumber.from(offerDates.voucherRedeemableFrom)
-            .sub(10)
-            .toString();
-          offerDurations.voucherValid = "0";
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
-        });
-
-        it("Voucher redeemable period is fixed, but it ends before offer expires", async function () {
-          // Set both voucherRedeemableUntil that is more than voucherRedeemableFrom but less than validUntil
-          offerDates.voucherRedeemableFrom = "0";
-          offerDates.voucherRedeemableUntil = (Number(offerDates.validUntil) - 10).toString();
-          offerDurations.voucherValid = "0";
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
-        });
-
-        it("Fulfillment period is less than minimum fulfillment period", async function () {
-          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
-          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
-        });
-
-        it("Resolution period is set to zero", async function () {
-          // Set dispute duration period to 0
-          offerDurations.resolutionPeriod = "0";
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
-        });
-
-        it("Available quantity is set to zero", async function () {
-          // Set available quantity to 0
-          offer.quantityAvailable = "0";
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_QUANTITY_AVAILABLE);
-        });
-
-        it("Dispute resolver wallet is not registered", async function () {
-          // Set some address that is not registered as a dispute resolver
-          disputeResolver.id = "16";
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
-        });
-
-        it("Dispute resolver is not active", async function () {
-          // create another dispute resolver, but don't activate it
-          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
-          disputeResolver.id = "2"; // mock id is 3 because seller was mocked first but here we are creating dispute resolver first
-          await accountHandler
-            .connect(rando)
-            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
-        });
-
-        it("For absolute zero offer, specified dispute resolver is not registered", async function () {
-          // Prepare an absolute zero offer, but specify dispute resolver
-          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
-          disputeResolver.id = "16";
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
-        });
-
-        it("For absolute zero offer, specified dispute resolver is not active", async function () {
-          // create another dispute resolver, but don't activate it
-          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
-          await accountHandler
-            .connect(rando)
-            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-
-          // Prepare an absolute zero offer, but specify dispute resolver
-          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
-        });
-
-        it("Seller is not on dispute resolver's seller allow list", async function () {
-          // Create new seller so sellerAllowList can have an entry
-          const newSeller = mockSeller(rando.address, rando.address, rando.address, rando.address);
-
-          await accountHandler.connect(rando).createSeller(newSeller, emptyAuthToken, voucherInitValues);
-
-          allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
-          await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd);
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
-        });
-
-        it("Dispute resolver does not accept fees in the exchange token", async function () {
-          // Set some address that is not part of dispute resolver fees
-          offer.exchangeToken = rando.address;
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
-        });
-
-        it("Group does not exist", async function () {
-          // Set invalid id
-          let invalidGroupId = "444";
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, invalidGroupId, agentId)
-          ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
-
-          // Set invalid id
-          invalidGroupId = "0";
-
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, invalidGroupId, agentId)
-          ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
-        });
-
-        it("Caller is not the seller of the group", async function () {
-          // Attempt to create an offer and add it to the group, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(rando)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.NOT_OPERATOR);
-        });
-      });
-
       context("When offers have non zero agent ids", async function () {
         beforeEach(async function () {
           // Required constructor params
@@ -3173,43 +2603,74 @@ describe("IBosonOrchestrationHandler", function () {
           assert.equal(eventGroupUpdated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
           assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
         });
+      });
 
-        context("💔 Revert Reasons", async function () {
-          it("Agent does not exist", async function () {
-            // Set an agent id that does not exist
-            let agentId = "16";
+      context("💔 Revert Reasons", async function () {
+        it("The orchestration region of protocol is paused", async function () {
+          // Pause the orchestration region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Orchestration]);
 
-            // Attempt to Create an offer, expecting revert
-            await expect(
-              orchestrationHandler
-                .connect(operator)
-                .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-            ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
-          });
+          // Attempt to orchestrate expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
 
-          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
-            // Create new agent
-            let id = "4"; // argument sent to contract for createAgent will be ignored
+        it("The offers region of protocol is paused", async function () {
+          // Pause the offers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
-            // Create a valid agent, then set fields in tests directly
-            agent = mockAgent(operator.address);
-            agent.id = id;
-            agent.feePercentage = "3000"; // 30%
-            expect(agent.isValid()).is.true;
+          // Attempt to create a offer expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
 
-            // Create an agent
-            await accountHandler.connect(rando).createAgent(agent);
+        it("The groups region of protocol is paused", async function () {
+          // Pause the groups region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
-            //Change protocol fee after creating agent
-            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
+          // Attempt to create a group expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
 
-            // Attempt to Create an offer, expecting revert
-            await expect(
-              orchestrationHandler
-                .connect(operator)
-                .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agent.id)
-            ).to.revertedWith(RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
-          });
+        it("Group does not exist", async function () {
+          // Set invalid id
+          let invalidGroupId = "444";
+
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, invalidGroupId, agentId)
+          ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
+
+          // Set invalid id
+          invalidGroupId = "0";
+
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, invalidGroupId, agentId)
+          ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
+        });
+
+        it("Caller is not the seller of the group", async function () {
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(rando)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+          ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
       });
     });
@@ -3601,6 +3062,70 @@ describe("IBosonOrchestrationHandler", function () {
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
 
+      context("When offers have non zero agent ids", async function () {
+        beforeEach(async function () {
+          // Required constructor params
+          agentId = "3"; // argument sent to contract for createAgent will be ignored
+
+          // Create a valid agent, then set fields in tests directly
+          agent = mockAgent(other1.address);
+          agent.id = agentId;
+          expect(agent.isValid()).is.true;
+
+          // Create an agent
+          await accountHandler.connect(rando).createAgent(agent);
+
+          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+          offerFees.agentFee = agentFee;
+          offerFeesStruct = offerFees.toStruct();
+        });
+
+        it("should emit an OfferCreated, a TwinCreated and a BundleCreated events", async function () {
+          // Create an offer, a twin and a bundle, testing for the events
+          const tx = await orchestrationHandler
+            .connect(operator)
+            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId);
+
+          // OfferCreated event
+          await expect(tx)
+            .to.emit(orchestrationHandler, "OfferCreated")
+            .withArgs(
+              nextOfferId,
+              seller.id,
+              offerStruct,
+              offerDatesStruct,
+              offerDurationsStruct,
+              disputeResolutionTermsStruct,
+              offerFeesStruct,
+              agentId,
+              operator.address
+            );
+
+          // Events with structs that contain arrays must be tested differently
+          const txReceipt = await tx.wait();
+
+          // TwinCreated event
+          const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
+          const twinInstance = Twin.fromStruct(eventTwinCreated.twin);
+          // Validate the instance
+          expect(twinInstance.isValid()).to.be.true;
+
+          assert.equal(eventTwinCreated.twinId.toString(), twin.id, "Twin Id is incorrect");
+          assert.equal(eventTwinCreated.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
+          assert.equal(twinInstance.toString(), twin.toString(), "Twin struct is incorrect");
+
+          // BundleCreated event
+          const eventBundleCreated = getEvent(txReceipt, orchestrationHandler, "BundleCreated");
+          const bundleInstance = Bundle.fromStruct(eventBundleCreated.bundle);
+          // Validate the instance
+          expect(bundleInstance.isValid()).to.be.true;
+
+          assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
+          assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+          assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+        });
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The orchestration region of protocol is paused", async function () {
           // Pause the orchestration region of the protocol
@@ -3648,240 +3173,6 @@ describe("IBosonOrchestrationHandler", function () {
               .connect(operator)
               .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
-        });
-
-        it("Caller not operator of any seller", async function () {
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(rando)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.NOT_OPERATOR);
-        });
-
-        it("Valid from date is greater than valid until date", async function () {
-          // Reverse the from and until dates
-          offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
-          offerDates.validUntil = ethers.BigNumber.from(Date.now()).toString(); // now
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
-        });
-
-        it("Valid until date is not in the future", async function () {
-          // Set until date in the past
-          offerDates.validUntil = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
-        });
-
-        it("Buyer cancel penalty is less than item price", async function () {
-          // Set buyer cancel penalty higher than offer price
-          offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
-        });
-
-        it("Offer cannot be voided at the time of the creation", async function () {
-          // Set voided flag to true
-          offer.voided = true;
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
-        });
-
-        it("Both voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both voucherRedeemableUntil and voucherValid
-          offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) + oneMonth).toString();
-          offerDurations.voucherValid = oneMonth.toString();
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
-        });
-
-        it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both voucherRedeemableUntil and voucherValid to "0"
-          offerDates.voucherRedeemableUntil = "0";
-          offerDurations.voucherValid = "0";
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
-        });
-
-        it("Voucher redeemable period is fixed, but it ends before it starts", async function () {
-          // Set both voucherRedeemableUntil that is less than voucherRedeemableFrom
-          offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) - 10).toString();
-          offerDurations.voucherValid = "0";
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
-        });
-
-        it("Voucher redeemable period is fixed, but it ends before offer expires", async function () {
-          // Set both voucherRedeemableUntil that is more than voucherRedeemableFrom but less than validUntil
-          offerDates.voucherRedeemableFrom = "0";
-          offerDates.voucherRedeemableUntil = (Number(offerDates.validUntil) - 10).toString();
-          offerDurations.voucherValid = "0";
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
-        });
-
-        it("Fulfillment period is less than minimum fulfillment period", async function () {
-          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
-          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
-        });
-
-        it("Resolution period is set to zero", async function () {
-          // Set dispute duration period to 0
-          offerDurations.resolutionPeriod = "0";
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
-        });
-
-        it("Available quantity is set to zero", async function () {
-          // Set available quantity to 0
-          offer.quantityAvailable = "0";
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_QUANTITY_AVAILABLE);
-        });
-
-        it("Dispute resolver wallet is not registered", async function () {
-          // Set some address that is not registered as a dispute resolver
-          disputeResolver.id = "16";
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
-        });
-
-        it("Dispute resolver is not active", async function () {
-          // create another dispute resolver, but don't activate it
-          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
-          await accountHandler
-            .connect(rando)
-            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
-        });
-
-        it("For absolute zero offer, specified dispute resolver is not registered", async function () {
-          // Prepare an absolute zero offer, but specify dispute resolver
-          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
-          disputeResolver.id = "16";
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
-        });
-
-        it("For absolute zero offer, specified dispute resolver is not active", async function () {
-          // create another dispute resolver, but don't activate it
-          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
-          await accountHandler
-            .connect(rando)
-            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-
-          // Prepare an absolute zero offer, but specify dispute resolver
-          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
-        });
-
-        it("Seller is not on dispute resolver's seller allow list", async function () {
-          // Create new seller so sellerAllowList can have an entry
-          const newSeller = mockSeller(rando.address, rando.address, rando.address, rando.address);
-
-          await accountHandler.connect(rando).createSeller(newSeller, emptyAuthToken, voucherInitValues);
-
-          allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
-          await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd);
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
-        });
-
-        it("Dispute resolver does not accept fees in the exchange token", async function () {
-          // Set some address that is not part of dispute resolver fees
-          offer.exchangeToken = rando.address;
-
-          // Attempt to create an offer, twin and bundle, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-          ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
         });
 
         it("should revert if protocol is not approved to transfer the ERC20 token", async function () {
@@ -3949,108 +3240,6 @@ describe("IBosonOrchestrationHandler", function () {
                 .connect(operator)
                 .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
             ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
-          });
-        });
-      });
-
-      context("When offers have non zero agent ids", async function () {
-        beforeEach(async function () {
-          // Required constructor params
-          agentId = "3"; // argument sent to contract for createAgent will be ignored
-
-          // Create a valid agent, then set fields in tests directly
-          agent = mockAgent(other1.address);
-          agent.id = agentId;
-          expect(agent.isValid()).is.true;
-
-          // Create an agent
-          await accountHandler.connect(rando).createAgent(agent);
-
-          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
-          offerFees.agentFee = agentFee;
-          offerFeesStruct = offerFees.toStruct();
-        });
-
-        it("should emit an OfferCreated, a TwinCreated and a BundleCreated events", async function () {
-          // Create an offer, a twin and a bundle, testing for the events
-          const tx = await orchestrationHandler
-            .connect(operator)
-            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId);
-
-          // OfferCreated event
-          await expect(tx)
-            .to.emit(orchestrationHandler, "OfferCreated")
-            .withArgs(
-              nextOfferId,
-              seller.id,
-              offerStruct,
-              offerDatesStruct,
-              offerDurationsStruct,
-              disputeResolutionTermsStruct,
-              offerFeesStruct,
-              agentId,
-              operator.address
-            );
-
-          // Events with structs that contain arrays must be tested differently
-          const txReceipt = await tx.wait();
-
-          // TwinCreated event
-          const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
-          const twinInstance = Twin.fromStruct(eventTwinCreated.twin);
-          // Validate the instance
-          expect(twinInstance.isValid()).to.be.true;
-
-          assert.equal(eventTwinCreated.twinId.toString(), twin.id, "Twin Id is incorrect");
-          assert.equal(eventTwinCreated.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
-          assert.equal(twinInstance.toString(), twin.toString(), "Twin struct is incorrect");
-
-          // BundleCreated event
-          const eventBundleCreated = getEvent(txReceipt, orchestrationHandler, "BundleCreated");
-          const bundleInstance = Bundle.fromStruct(eventBundleCreated.bundle);
-          // Validate the instance
-          expect(bundleInstance.isValid()).to.be.true;
-
-          assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
-          assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
-          assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
-        });
-
-        context("💔 Revert Reasons", async function () {
-          it("Agent does not exist", async function () {
-            // Set an agent id that does not exist
-            let agentId = "16";
-
-            // Attempt to Create an offer, expecting revert
-            await expect(
-              orchestrationHandler
-                .connect(operator)
-                .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
-            ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
-          });
-
-          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
-            // Create new agent
-            let id = "4"; // argument sent to contract for createAgent will be ignored
-
-            // Create a valid agent, then set fields in tests directly
-            agent = mockAgent(operator.address);
-            agent.id = id;
-            agent.feePercentage = "3000"; //30%
-            expect(agent.isValid()).is.true;
-
-            // Create an agent
-            await accountHandler.connect(rando).createAgent(agent);
-
-            //Change protocol fee after creating agent
-            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
-
-            // Attempt to Create an offer, expecting revert
-            await expect(
-              orchestrationHandler
-                .connect(operator)
-                .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agent.id)
-            ).to.revertedWith(RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
           });
         });
       });
@@ -4669,60 +3858,6 @@ describe("IBosonOrchestrationHandler", function () {
           assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
           assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
         });
-
-        context("💔 Revert Reasons", async function () {
-          it("Agent does not exist", async function () {
-            // Set an agent id that does not exist
-            let agentId = "16";
-
-            // Attempt to Create an offer, expecting revert
-            await expect(
-              orchestrationHandler
-                .connect(operator)
-                .createOfferWithConditionAndTwinAndBundle(
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  disputeResolver.id,
-                  condition,
-                  twin,
-                  agentId
-                )
-            ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
-          });
-
-          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
-            // Create new agent
-            let id = "4"; // argument sent to contract for createAgent will be ignored
-
-            // Create a valid agent, then set fields in tests directly
-            agent = mockAgent(operator.address);
-            agent.id = id;
-            agent.feePercentage = "3000"; //30%
-            expect(agent.isValid()).is.true;
-
-            // Create an agent
-            await accountHandler.connect(rando).createAgent(agent);
-
-            //Change protocol fee after creating agent
-            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
-
-            // Attempt to Create an offer, expecting revert
-            await expect(
-              orchestrationHandler
-                .connect(operator)
-                .createOfferWithConditionAndTwinAndBundle(
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  disputeResolver.id,
-                  condition,
-                  twin,
-                  agent.id
-                )
-            ).to.revertedWith(RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
-          });
-        });
       });
 
       context("💔 Revert Reasons", async function () {
@@ -5235,64 +4370,6 @@ describe("IBosonOrchestrationHandler", function () {
           assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
           assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
           assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
-        });
-
-        context("💔 Revert Reasons", async function () {
-          it("Agent does not exist", async function () {
-            // Set an agent id that does not exist
-            let agentId = "16";
-
-            // Attempt to Create an offer, expecting revert
-            await expect(
-              orchestrationHandler
-                .connect(operator)
-                .createSellerAndOfferWithCondition(
-                  seller,
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  disputeResolver.id,
-                  condition,
-                  emptyAuthToken,
-                  voucherInitValues,
-                  agentId
-                )
-            ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
-          });
-
-          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
-            // Create new agent
-            let id = "3"; // argument sent to contract for createAgent will be ignored
-
-            // Create a valid agent, then set fields in tests directly
-            agent = mockAgent(operator.address);
-            agent.id = id;
-            agent.feePercentage = "3000"; //30%
-            expect(agent.isValid()).is.true;
-
-            // Create an agent
-            await accountHandler.connect(rando).createAgent(agent);
-
-            //Change protocol fee after creating agent
-            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
-
-            // Attempt to Create an offer, expecting revert
-            await expect(
-              orchestrationHandler
-                .connect(operator)
-                .createSellerAndOfferWithCondition(
-                  seller,
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  disputeResolver.id,
-                  condition,
-                  emptyAuthToken,
-                  voucherInitValues,
-                  agent.id
-                )
-            ).to.revertedWith(RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
-          });
         });
       });
 
@@ -5863,64 +4940,6 @@ describe("IBosonOrchestrationHandler", function () {
           assert.equal(eventBundleCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
           assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
         });
-
-        context("💔 Revert Reasons", async function () {
-          it("Agent does not exist", async function () {
-            // Set an agent id that does not exist
-            let agentId = "16";
-
-            // Attempt to Create an offer, expecting revert
-            await expect(
-              orchestrationHandler
-                .connect(operator)
-                .createSellerAndOfferAndTwinWithBundle(
-                  seller,
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  disputeResolver.id,
-                  twin,
-                  emptyAuthToken,
-                  voucherInitValues,
-                  agentId
-                )
-            ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
-          });
-
-          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
-            // Create new agent
-            let id = "3"; // argument sent to contract for createAgent will be ignored
-
-            // Create a valid agent, then set fields in tests directly
-            agent = mockAgent(operator.address);
-            agent.id = id;
-            agent.feePercentage = "3000"; //30%;
-            expect(agent.isValid()).is.true;
-
-            // Create an agent
-            await accountHandler.connect(rando).createAgent(agent);
-
-            //Change protocol fee after creating agent
-            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
-
-            // Attempt to Create an offer, expecting revert
-            await expect(
-              orchestrationHandler
-                .connect(operator)
-                .createSellerAndOfferAndTwinWithBundle(
-                  seller,
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  disputeResolver.id,
-                  twin,
-                  emptyAuthToken,
-                  voucherInitValues,
-                  agent.id
-                )
-            ).to.revertedWith(RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
-          });
-        });
       });
 
       context("💔 Revert Reasons", async function () {
@@ -6475,6 +5494,122 @@ describe("IBosonOrchestrationHandler", function () {
         );
       });
 
+      context("When offers have non zero agent ids", async function () {
+        beforeEach(async function () {
+          seller.id = "3";
+          offer.sellerId = seller.id;
+          twin.sellerId = seller.id;
+          group.sellerId = seller.id;
+          bundle.sellerId = seller.id;
+          sellerStruct = seller.toStruct();
+          offerStruct = offer.toStruct();
+
+          // Required constructor params
+          agentId = "2"; // argument sent to contract for createAgent will be ignored
+
+          // Create a valid agent, then set fields in tests directly
+          agent = mockAgent(other1.address);
+          agent.id = agentId;
+          expect(agent.isValid()).is.true;
+
+          // Create an agent
+          await accountHandler.connect(rando).createAgent(agent);
+
+          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+          offerFees.agentFee = agentFee;
+          offerFeesStruct = offerFees.toStruct();
+        });
+
+        it("should emit a SellerCreated, an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event", async function () {
+          // Approving the twinHandler contract to transfer seller's tokens
+          await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
+          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+
+          // Create a seller, an offer with condition, twin and bundle
+          const tx = await orchestrationHandler
+            .connect(operator)
+            .createSellerAndOfferWithConditionAndTwinAndBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              condition,
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId
+            );
+
+          // SellerCreated and OfferCreated events
+          await expect(tx)
+            .to.emit(orchestrationHandler, "SellerCreated")
+            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+
+          await expect(tx)
+            .to.emit(orchestrationHandler, "OfferCreated")
+            .withArgs(
+              nextOfferId,
+              seller.id,
+              offerStruct,
+              offerDatesStruct,
+              offerDurationsStruct,
+              disputeResolutionTermsStruct,
+              offerFeesStruct,
+              agentId,
+              operator.address
+            );
+
+          // Events with structs that contain arrays must be tested differently
+          const txReceipt = await tx.wait();
+
+          // GroupCreated event
+          const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
+          const groupInstance = Group.fromStruct(eventGroupCreated.group);
+          // Validate the instance
+          expect(groupInstance.isValid()).to.be.true;
+
+          assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
+          assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+          assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+
+          // TwinCreated event
+          const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
+          const twinInstance = Twin.fromStruct(eventTwinCreated.twin);
+          // Validate the instance
+          expect(twinInstance.isValid()).to.be.true;
+
+          assert.equal(eventTwinCreated.twinId.toString(), twin.id, "Twin Id is incorrect");
+          assert.equal(eventTwinCreated.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
+          assert.equal(twinInstance.toString(), twin.toString(), "Twin struct is incorrect");
+
+          // BundleCreated event
+          const eventBundleCreated = getEvent(txReceipt, orchestrationHandler, "BundleCreated");
+          const bundleInstance = Bundle.fromStruct(eventBundleCreated.bundle);
+          // Validate the instance
+          expect(bundleInstance.isValid()).to.be.true;
+
+          assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
+          assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+          assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+
+          // Voucher clone contract
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+          await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+          await expect(tx)
+            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
+            .withArgs(voucherInitValues.royaltyPercentage);
+
+          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+          await expect(tx)
+            .to.emit(bosonVoucher, "OwnershipTransferred")
+            .withArgs(ethers.constants.AddressZero, operator.address);
+        });
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The orchestration region of protocol is paused", async function () {
           // Pause the orchestration region of the protocol
@@ -6612,182 +5747,6 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
-        });
-      });
-
-      context("When offers have non zero agent ids", async function () {
-        beforeEach(async function () {
-          seller.id = "3";
-          offer.sellerId = seller.id;
-          twin.sellerId = seller.id;
-          group.sellerId = seller.id;
-          bundle.sellerId = seller.id;
-          sellerStruct = seller.toStruct();
-          offerStruct = offer.toStruct();
-
-          // Required constructor params
-          agentId = "2"; // argument sent to contract for createAgent will be ignored
-
-          // Create a valid agent, then set fields in tests directly
-          agent = mockAgent(other1.address);
-          agent.id = agentId;
-          expect(agent.isValid()).is.true;
-
-          // Create an agent
-          await accountHandler.connect(rando).createAgent(agent);
-
-          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
-          offerFees.agentFee = agentFee;
-          offerFeesStruct = offerFees.toStruct();
-        });
-
-        it("should emit a SellerCreated, an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event", async function () {
-          // Approving the twinHandler contract to transfer seller's tokens
-          await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
-
-          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-
-          // Create a seller, an offer with condition, twin and bundle
-          const tx = await orchestrationHandler
-            .connect(operator)
-            .createSellerAndOfferWithConditionAndTwinAndBundle(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              disputeResolver.id,
-              condition,
-              twin,
-              emptyAuthToken,
-              voucherInitValues,
-              agentId
-            );
-
-          // SellerCreated and OfferCreated events
-          await expect(tx)
-            .to.emit(orchestrationHandler, "SellerCreated")
-            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
-
-          await expect(tx)
-            .to.emit(orchestrationHandler, "OfferCreated")
-            .withArgs(
-              nextOfferId,
-              seller.id,
-              offerStruct,
-              offerDatesStruct,
-              offerDurationsStruct,
-              disputeResolutionTermsStruct,
-              offerFeesStruct,
-              agentId,
-              operator.address
-            );
-
-          // Events with structs that contain arrays must be tested differently
-          const txReceipt = await tx.wait();
-
-          // GroupCreated event
-          const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
-          const groupInstance = Group.fromStruct(eventGroupCreated.group);
-          // Validate the instance
-          expect(groupInstance.isValid()).to.be.true;
-
-          assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
-          assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
-          assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
-
-          // TwinCreated event
-          const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
-          const twinInstance = Twin.fromStruct(eventTwinCreated.twin);
-          // Validate the instance
-          expect(twinInstance.isValid()).to.be.true;
-
-          assert.equal(eventTwinCreated.twinId.toString(), twin.id, "Twin Id is incorrect");
-          assert.equal(eventTwinCreated.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
-          assert.equal(twinInstance.toString(), twin.toString(), "Twin struct is incorrect");
-
-          // BundleCreated event
-          const eventBundleCreated = getEvent(txReceipt, orchestrationHandler, "BundleCreated");
-          const bundleInstance = Bundle.fromStruct(eventBundleCreated.bundle);
-          // Validate the instance
-          expect(bundleInstance.isValid()).to.be.true;
-
-          assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
-          assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
-          assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
-
-          // Voucher clone contract
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
-
-          await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-          await expect(tx)
-            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-            .withArgs(voucherInitValues.royaltyPercentage);
-
-          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
-
-          await expect(tx)
-            .to.emit(bosonVoucher, "OwnershipTransferred")
-            .withArgs(ethers.constants.AddressZero, operator.address);
-        });
-
-        context("💔 Revert Reasons", async function () {
-          it("Agent does not exist", async function () {
-            // Set an agent id that does not exist
-            let agentId = "16";
-
-            // Attempt to Create an offer, expecting revert
-            await expect(
-              orchestrationHandler
-                .connect(operator)
-                .createSellerAndOfferWithConditionAndTwinAndBundle(
-                  seller,
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  disputeResolver.id,
-                  condition,
-                  twin,
-                  emptyAuthToken,
-                  voucherInitValues,
-                  agentId
-                )
-            ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
-          });
-
-          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
-            // Create new agent
-            let id = "3"; // argument sent to contract for createAgent will be ignored
-
-            // Create a valid agent, then set fields in tests directly
-            agent = mockAgent(operator.address);
-            agent.id = id;
-            agent.feePercentage = "3000"; //30%
-            expect(agent.isValid()).is.true;
-
-            // Create an agent
-            await accountHandler.connect(rando).createAgent(agent);
-
-            //Change protocol fee after creating agent
-            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
-
-            // Attempt to Create an offer, expecting revert
-            await expect(
-              orchestrationHandler
-                .connect(operator)
-                .createSellerAndOfferWithConditionAndTwinAndBundle(
-                  seller,
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  disputeResolver.id,
-                  condition,
-                  twin,
-                  emptyAuthToken,
-                  voucherInitValues,
-                  agent.id
-                )
-            ).to.revertedWith(RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
-          });
         });
       });
     });
