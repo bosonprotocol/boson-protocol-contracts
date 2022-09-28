@@ -12,9 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     # if: ${{ !github.event.pull_request.draft }}
     name: build
-    # strategy:
-    #   matrix:
-    #     node-version: [16.14.x]
     outputs: 
       test-chunks:  ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
       test-chunk-ids: ${{ steps['set-test-chunk-ids'].outputs['test-chunk-ids'] }}
@@ -40,13 +37,11 @@ jobs:
       - name: Verify interface ids
         run: npm run natspec-interface-id
       - id: set-test-chunks
-        run: echo "::set-output name=test-chunks::$(node scripts/util/find-unit-test-files.js | jq -cM '[_nwise(length / 3 | ceil)]')"
+        run: echo "::set-output name=test-chunks::$(node scripts/util/split-tests-into-chunks.js | jq -cM '.')"
         name: Set Chunks
       - id: set-test-chunk-ids
         name: Set Chunk IDs
-        run: |
-          echo "::set-output name=test-chunk-ids::$(echo $CHUNKS | jq -cM 'to_entries | map(.key)')"
-          echo $CHUNKS
+        run: echo "::set-output name=test-chunk-ids::$(echo $CHUNKS | jq -cM 'to_entries | map(.key)')"
         env:
           CHUNKS: ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
   test:
