@@ -164,7 +164,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
      *
      * @param _exchangeId - the id of the exchange
      */
-    function cancelVoucher(uint256 _exchangeId) external exchangesNotPaused nonReentrant {
+    function cancelVoucher(uint256 _exchangeId) external virtual exchangesNotPaused nonReentrant {
         // Get the exchange, should be in committed state
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -493,5 +493,32 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
                 }
             }
         }
+    }
+}
+
+contract MockExchangeHandlerFacetWithDefect is MockExchangeHandlerFacet {
+    /**
+     * @notice Cancels a voucher without finalizing the exchange. Hence introduces a defect.
+     *
+     * Emits a VoucherCanceled2 event if successful.
+     *
+     * Reverts if
+     * - The exchanges region of protocol is paused
+     * - Exchange does not exist
+     * - Caller does not own voucher
+     *
+     * @param _exchangeId - the id of the exchange
+     */
+    function cancelVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
+        // Get the exchange, should be in committed state
+        (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Committed);
+
+        // Make sure the caller is buyer associated with the exchange
+        checkBuyer(exchange.buyerId);
+
+        // finalizeExchange() is not executed.
+
+        // Notify watchers of state change
+        emit VoucherCanceled2(exchange.offerId, _exchangeId, msgSender());
     }
 }
