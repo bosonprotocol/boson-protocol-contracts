@@ -383,7 +383,16 @@ describe("IBosonDisputeHandler", function () {
 
           it("exchange is not in a redeemed state - completed", async function () {
             // Set time forward to run out the fulfillment period
+            const blockNumber = await ethers.provider.getBlockNumber();
+            const block = await ethers.provider.getBlock(blockNumber);
+            const currentTime = block.timestamp;
+
             newTime = Number((voucherRedeemableFrom + Number(fulfillmentPeriod) + 1).toString().substring(0, 11));
+
+            if (newTime <= currentTime) {
+              newTime += currentTime;
+            }
+
             await setNextBlockTimestamp(newTime);
 
             // Complete exchange
