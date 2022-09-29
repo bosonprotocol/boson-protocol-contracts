@@ -35,6 +35,7 @@ fs.readFile(filePath, "utf8", (_, data) => {
     const sum = currentChunkTime + item.time;
     if (sum > timePerChunk && currentChunk < chunks - 1) {
       currentChunk++;
+
       currentChunkTime = item.time;
     } else {
       currentChunkTime += item.time;
@@ -44,5 +45,5 @@ fs.readFile(filePath, "utf8", (_, data) => {
 
   console.log("Chunks", filesByChunk);
 
-  fs.writeFileSync("./test-chunks.txt", JSON.stringify(filesByChunk));
+  fs.writeFileSync("./test-chunks.txt", JSON.stringify(filesByChunk, null, 2));
 });

@@ -37,7 +37,7 @@ jobs:
       - name: Verify interface ids
         run: npm run natspec-interface-id
       - id: set-test-chunks
-        run: echo "::set-output name=test-chunks::$(cat test-chunks.txt)"
+        run: echo "::set-output name=test-chunks::$(cat test-chunks.txt | jq -cM '.')"
         name: Set Chunks
       - id: set-test-chunk-ids
         name: Set Chunk IDs
