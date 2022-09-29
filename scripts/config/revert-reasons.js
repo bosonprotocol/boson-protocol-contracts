@@ -35,8 +35,8 @@ exports.RevertReasons = {
   EXCHANGE_FOR_OFFER_EXISTS: "Exchange for offer exists",
   AMBIGUOUS_VOUCHER_EXPIRY: "Exactly one of voucherRedeemableUntil and voucherValid must be non zero",
   REDEMPTION_PERIOD_INVALID: "Redemption period invalid",
-  INVALID_FULFILLMENT_PERIOD: "Invalid fulfillemnt period",
-  INVALID_DISPUTE_DURATION: "Invalid dispute duration",
+  INVALID_DISPUTE_PERIOD: "Invalid dispute period",
+  INVALID_RESOLUTION_PERIOD: "Invalid resolution period",
   INVALID_DISPUTE_RESOLVER: "Invalid dispute resolver",
   INVALID_QUANTITY_AVAILABLE: "Invalid quantity available",
   DR_UNSUPPORTED_FEE: "Dispute resolver does not accept this token",
@@ -106,7 +106,7 @@ exports.RevertReasons = {
 
   // Exchange related
   NO_SUCH_EXCHANGE: "No such exchange",
-  FULFILLMENT_PERIOD_NOT_ELAPSED: "Fulfillment period has not yet elapsed",
+  DISPUTE_PERIOD_NOT_ELAPSED: "Dispute period has not yet elapsed",
   EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS: "Exchange for the bundled offers exists",
   VOUCHER_NOT_REDEEMABLE: "Voucher not yet valid or already expired",
   VOUCHER_EXTENSION_NOT_VALID: "Proposed date is not later than the current one",
@@ -148,7 +148,7 @@ exports.RevertReasons = {
   INVALID_FUNCTION_NAME: "Invalid function name",
 
   // Dispute related
-  FULFILLMENT_PERIOD_HAS_ELAPSED: "Fulfillment period has already elapsed",
+  DISPUTE_PERIOD_HAS_ELAPSED: "Dispute period has already elapsed",
   DISPUTE_HAS_EXPIRED: "Dispute has expired",
   INVALID_BUYER_PERCENT: "Invalid buyer percent",
   DISPUTE_STILL_VALID: "Dispute still valid",

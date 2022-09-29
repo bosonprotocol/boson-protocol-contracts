@@ -8,11 +8,11 @@ const { oneWeek, oneMonth } = require("../utils/constants");
 describe("OfferDurations", function () {
   // Suite-wide scope
   let offerDurations, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let fulfillmentPeriod, voucherValid, resolutionPeriod;
+  let disputePeriod, voucherValid, resolutionPeriod;
 
   beforeEach(async function () {
     // Required constructor params
-    fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
+    disputePeriod = oneMonth.toString(); // dispute period is one month
     voucherValid = oneMonth.toString(); // offers valid for one month
     resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
   });
@@ -20,8 +20,8 @@ describe("OfferDurations", function () {
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated OfferDurations instance", async function () {
       // Create a valid offerDurations, then set fields in tests directly
-      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
-      expect(offerDurations.fulfillmentPeriodIsValid()).is.true;
+      offerDurations = new OfferDurations(disputePeriod, voucherValid, resolutionPeriod);
+      expect(offerDurations.disputePeriodIsValid()).is.true;
       expect(offerDurations.voucherValidIsValid()).is.true;
       expect(offerDurations.resolutionPeriodIsValid()).is.true;
       expect(offerDurations.isValid()).is.true;
@@ -31,34 +31,34 @@ describe("OfferDurations", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid offerDurations, then set fields in tests directly
-      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+      offerDurations = new OfferDurations(disputePeriod, voucherValid, resolutionPeriod);
       expect(offerDurations.isValid()).is.true;
     });
 
-    it("Always present, fulfillmentPeriod must be the string representation of a BigNumber", async function () {
+    it("Always present, disputePeriod must be the string representation of a BigNumber", async function () {
       // Invalid field value
-      offerDurations.fulfillmentPeriod = "zedzdeadbaby";
-      expect(offerDurations.fulfillmentPeriodIsValid()).is.false;
+      offerDurations.disputePeriod = "zedzdeadbaby";
+      expect(offerDurations.disputePeriodIsValid()).is.false;
       expect(offerDurations.isValid()).is.false;
 
       // Invalid field value
-      offerDurations.fulfillmentPeriod = new Date();
-      expect(offerDurations.fulfillmentPeriodIsValid()).is.false;
+      offerDurations.disputePeriod = new Date();
+      expect(offerDurations.disputePeriodIsValid()).is.false;
       expect(offerDurations.isValid()).is.false;
 
       // Invalid field value
-      offerDurations.fulfillmentPeriod = 12;
-      expect(offerDurations.fulfillmentPeriodIsValid()).is.false;
+      offerDurations.disputePeriod = 12;
+      expect(offerDurations.disputePeriodIsValid()).is.false;
       expect(offerDurations.isValid()).is.false;
 
       // Valid field value
-      offerDurations.fulfillmentPeriod = "0";
-      expect(offerDurations.fulfillmentPeriodIsValid()).is.true;
+      offerDurations.disputePeriod = "0";
+      expect(offerDurations.disputePeriodIsValid()).is.true;
       expect(offerDurations.isValid()).is.true;
 
       // Valid field value
-      offerDurations.fulfillmentPeriod = "126";
-      expect(offerDurations.fulfillmentPeriodIsValid()).is.true;
+      offerDurations.disputePeriod = "126";
+      expect(offerDurations.disputePeriodIsValid()).is.true;
       expect(offerDurations.isValid()).is.true;
     });
 
@@ -120,12 +120,12 @@ describe("OfferDurations", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid offerDurations, then set fields in tests directly
-      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+      offerDurations = new OfferDurations(disputePeriod, voucherValid, resolutionPeriod);
       expect(offerDurations.isValid()).is.true;
 
       // Create plain object
       object = {
-        fulfillmentPeriod,
+        disputePeriod,
         voucherValid,
         resolutionPeriod,
       };
@@ -146,7 +146,7 @@ describe("OfferDurations", function () {
       });
 
       it("OfferDurations.fromStruct() should return a OfferDurations instance with the same values as the given struct", async function () {
-        struct = [offerDurations.fulfillmentPeriod, offerDurations.voucherValid, offerDurations.resolutionPeriod];
+        struct = [offerDurations.disputePeriod, offerDurations.voucherValid, offerDurations.resolutionPeriod];
 
         // Get struct
         offerDurations = OfferDurations.fromStruct(struct);

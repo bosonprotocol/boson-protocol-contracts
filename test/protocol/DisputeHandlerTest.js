@@ -66,7 +66,7 @@ describe("IBosonDisputeHandler", function () {
   let buyerId, offer, offerId, seller;
   let block, blockNumber, tx;
   let support, newTime;
-  let price, quantityAvailable, resolutionPeriod, fulfillmentPeriod, sellerDeposit;
+  let price, quantityAvailable, resolutionPeriod, disputePeriod, sellerDeposit;
   let voucherRedeemableFrom, offerDates, offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let exchangeStruct, voucherStruct, finalizedDate, exchangeId;
@@ -176,7 +176,7 @@ describe("IBosonDisputeHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
-        minFulfillmentPeriod: oneWeek,
+        minDisputePeriod: oneWeek,
       },
       // Protocol fees
       {
@@ -281,7 +281,7 @@ describe("IBosonDisputeHandler", function () {
       sellerDeposit = offer.sellerDeposit;
       voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
       resolutionPeriod = offerDurations.resolutionPeriod;
-      fulfillmentPeriod = offerDurations.fulfillmentPeriod;
+      disputePeriod = offerDurations.disputePeriod;
       escalationPeriod = disputeResolver.escalationResponsePeriod;
 
       // Deposit seller funds so the commit will succeed
@@ -382,12 +382,12 @@ describe("IBosonDisputeHandler", function () {
           });
 
           it("exchange is not in a redeemed state - completed", async function () {
-            // Set time forward to run out the fulfillment period
             const blockNumber = await ethers.provider.getBlockNumber();
             const block = await ethers.provider.getBlock(blockNumber);
             const currentTime = block.timestamp;
 
-            newTime = Number((voucherRedeemableFrom + Number(fulfillmentPeriod) + 1).toString().substring(0, 11));
+            // Set time forward to run out the dispute period
+            newTime = Number((voucherRedeemableFrom + Number(disputePeriod) + 1).toString().substring(0, 11));
 
             if (newTime <= currentTime) {
               newTime += currentTime;
@@ -414,17 +414,17 @@ describe("IBosonDisputeHandler", function () {
             );
           });
 
-          it("The fulfilment period has already elapsed", async function () {
+          it("The dispute period has already elapsed", async function () {
             // Get the redemption date
             [, , voucherStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
             const voucherRedeemedDate = voucherStruct.redeemedDate;
 
-            // Set time forward past the dispute resolution period
-            await setNextBlockTimestamp(voucherRedeemedDate.add(fulfillmentPeriod).add(1).toNumber());
+            // Set time forward past the dispute period
+            await setNextBlockTimestamp(voucherRedeemedDate.add(disputePeriod).add(1).toNumber());
 
             // Attempt to raise a dispute, expecting revert
             await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWith(
-              RevertReasons.FULFILLMENT_PERIOD_HAS_ELAPSED
+              RevertReasons.DISPUTE_PERIOD_HAS_ELAPSED
             );
           });
         });
