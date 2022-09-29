@@ -13,7 +13,7 @@ for (( i=0; i<$LENGTH; i++ )); do
 
 done
 
-node scripts/util/estimate-test-chunk-time.js 3 $TIME_REPORT_PATH $TEST_FILES
+node scripts/util/split-tests-into-chunks.js 3 $TIME_REPORT_PATH $TEST_FILES
 
-
+rm $TIME_REPORT_PATH
 
