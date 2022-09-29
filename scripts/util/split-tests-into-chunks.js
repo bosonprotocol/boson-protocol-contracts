@@ -1,75 +1,48 @@
-const fs = require("fs").promises;
+const fs = require("fs");
 
-const files = [];
-let count = 0;
+const chunks = process.argv[2];
+const filePath = process.argv[3];
+const files = JSON.parse(process.argv[4]);
 
-// Counts the number of unit tests in a file
-async function countTests(file) {
-  const data = await fs.readFile(file, "utf8");
-  return data.split('it("').length - 1;
-}
+fs.readFile(filePath, "utf8", (_, data) => {
+  const lines = data.split("\n");
 
-// Find all files in a directory and its subdirectories
-async function findFiles(directory, foldersToIgnore = []) {
-  const directories = await fs.readdir(directory);
+  let result = files.map((file, index) => {
+    const line = lines[index];
 
-  for (const file of directories) {
-    const filePath = `${directory}/${file}`;
-
-    if (foldersToIgnore.includes(file)) {
-      continue;
+    if (line) {
+      const time = Number(line.split(" ")[5].replace("s", ""));
+      return { name: file, time };
     }
+  });
 
-    const isDirectory = (await fs.stat(filePath)).isDirectory();
+  result = result.filter((result) => !!result).sort((a, b) => a.time - b.time);
 
-    if (isDirectory) {
-      await findFiles(filePath, foldersToIgnore);
+  const timeTotal = result.reduce((acc, result) => {
+    return acc + parseFloat(result.time);
+  }, 0);
+
+  console.log(`Total time: ${timeTotal}s`);
+
+  const timePerChunk = timeTotal / chunks;
+
+  const filesByChunk = [...Array(Number(chunks))].map(() => []);
+
+  let currentChunk = 0;
+  let currentChunkTime = 0;
+
+  for (const item of result) {
+    const sum = currentChunkTime + item.time;
+    if (sum > timePerChunk && currentChunk < chunks - 1) {
+      currentChunk++;
+      currentChunkTime = item.time;
     } else {
-      files.push(filePath);
-      count += await countTests(filePath);
+      currentChunkTime += item.time;
     }
-  }
-}
-
-/**
- * Split the files into chunks of different or equal sizes
- * @param {number} chunks - The number of chunks to split the files into
- * @param {number} chunkWeights - The weight of each chunk, used to determine the size of each chunk
- * @returns {array} - An array of arrays, where each array is a chunk of files
- */
-async function splitTestIntoChunks(chunks = 1, chunkWeights = []) {
-  await findFiles("test", ["integration", "utils"]);
-
-  let currentGroup = 0;
-  let currentGroupCount = 0;
-
-  const filesByChunk = [...Array(chunks)].map(() => []);
-
-  let numOfTestsByGroup;
-  // If weights are provided, calculate the number of tests for each group based on the weights
-  if (chunkWeights.length) {
-    numOfTestsByGroup = chunkWeights.map((weight) => Math.ceil((weight / 100) * count));
-  } else {
-    const quantityByGroup = Math.ceil(count / chunks);
-    numOfTestsByGroup = [...Array(chunks)].map(() => quantityByGroup);
+    filesByChunk[currentChunk].push(item.name);
   }
 
-  for (const file of files) {
-    currentGroupCount += await countTests(file);
+  console.log("Chunks", filesByChunk);
 
-    if (currentGroupCount > numOfTestsByGroup[currentGroup] && currentGroup < chunks - 1) {
-      currentGroup++;
-      currentGroupCount = 0;
-    }
-
-    filesByChunk[currentGroup].push(file);
-  }
-  return filesByChunk;
-}
-
-// Execute the script
-// The first chunk has the highest weight because tests inside the domain folder don't involve EVM calls so they run faster
-// The second chunk has the lowest weight because files inside it are the slowest to run
-splitTestIntoChunks(3, [50, 20, 30]).then((result) => {
-  console.log(JSON.stringify(result));
+  fs.writeFileSync("./test-chunks.txt", JSON.stringify(filesByChunk));
 });
