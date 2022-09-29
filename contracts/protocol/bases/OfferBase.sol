@@ -25,8 +25,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Neither of voucher expiration date and voucher expiraton period are defined
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
-     * - Fulfillment period is less than minimum fulfillment period
-     * - Resolution period is set to zero
+     * - Dispute period is less than minimum dispute period
+     * - Resolution period is set to zero or above the maximum resolution period
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -85,8 +85,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Neither of fixed voucher expiration date and voucher redemption duration are defined
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
-     * - Fulfillment period is less than minimum fulfillment period
-     * - Resolution period is set to zero
+     * - Dispute period is less than minimum dispute period
+     * - Resolution period is set to zero or above the maximum resolution period
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -132,13 +132,13 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             // Cache protocol limits for reference
             ProtocolLib.ProtocolLimits storage limits = protocolLimits();
 
-            // fulfillment period must be greater than or equal to the minimum fulfillment period
-            require(_offerDurations.fulfillmentPeriod >= limits.minFulfillmentPeriod, INVALID_FULFILLMENT_PERIOD);
+            // dispute period must be greater than or equal to the minimum dispute period
+            require(_offerDurations.disputePeriod >= limits.minDisputePeriod, INVALID_DISPUTE_PERIOD);
 
             // dispute duration must be greater than zero
             require(
                 _offerDurations.resolutionPeriod > 0 && _offerDurations.resolutionPeriod <= limits.maxResolutionPeriod,
-                INVALID_DISPUTE_DURATION
+                INVALID_RESOLUTION_PERIOD
             );
         }
 
@@ -256,7 +256,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         OfferDurations storage offerDurations = fetchOfferDurations(_offer.id);
 
         // Set offer durations props individually since calldata structs can't be copied to storage
-        offerDurations.fulfillmentPeriod = _offerDurations.fulfillmentPeriod;
+        offerDurations.disputePeriod = _offerDurations.disputePeriod;
         offerDurations.voucherValid = _offerDurations.voucherValid;
         offerDurations.resolutionPeriod = _offerDurations.resolutionPeriod;
 

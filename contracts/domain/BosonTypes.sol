@@ -141,7 +141,7 @@ contract BosonTypes {
     }
 
     struct OfferDurations {
-        uint256 fulfillmentPeriod;
+        uint256 disputePeriod;
         uint256 voucherValid;
         uint256 resolutionPeriod;
     }

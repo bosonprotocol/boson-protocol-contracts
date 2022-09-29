@@ -37,7 +37,7 @@ library ProtocolLib {
         // limit on the escalation response period that a dispute resolver can specify
         uint256 maxEscalationResponsePeriod;
         // lower limit for fulfullment period
-        uint256 minFulfillmentPeriod;
+        uint256 minDisputePeriod;
         // limit how many exchanges can be processed in single batch transaction
         uint16 maxExchangesPerBatch;
         // limit how many offers can be added to the group
