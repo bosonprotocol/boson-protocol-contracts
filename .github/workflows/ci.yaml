@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # if: ${{ !github.event.pull_request.draft }}
+    if: ${{ !github.event.pull_request.draft }}
     name: build
     outputs: 
       test-chunks:  ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
@@ -47,7 +47,7 @@ jobs:
   test:
     needs: build
     runs-on: ubuntu-latest
-    # if: ${{ !github.event.pull_request.draft }}
+    if: ${{ !github.event.pull_request.draft }}
     env:
       GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
     name: Test (chunk ${{ matrix.chunk }})
@@ -80,57 +80,57 @@ jobs:
         env:
           CHUNKS: ${{ needs.build.outputs['test-chunks'] }}
 
-  # integration-test:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   # if: ${{ !github.event.pull_request.draft }}
-  #   env:
-  #     GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
-  #   name: "test:integration"
-  #   steps:
-  #     - uses: webfactory/ssh-agent@v0.5.4
-  #       with:
-  #         ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v2.4.0
-  #     - name: Setup node
-  #       uses: actions/setup-node@v2.5.1
-  #       with:
-  #         node-version: '16.14.x'
-  #         cache: 'npm'
-  #     - name: Install Dependencies
-  #       run: npm install
-  #     - name: Prepare Environment
-  #       shell: bash
-  #       run: |
-  #         cp .env.example .env
-  #     - name: Integration tests
-  #       run: npx hardhat test test/integration/** 
+  integration-test:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    env:
+      GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
+    name: "test:integration"
+    steps:
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
+      - name: Checkout repository
+        uses: actions/checkout@v2.4.0
+      - name: Setup node
+        uses: actions/setup-node@v2.5.1
+        with:
+          node-version: '16.14.x'
+          cache: 'npm'
+      - name: Install Dependencies
+        run: npm install
+      - name: Prepare Environment
+        shell: bash
+        run: |
+          cp .env.example .env
+      - name: Integration tests
+        run: npx hardhat test test/integration/** 
 
-  # deploy-dry-run:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   if: ${{ !github.event.pull_request.draft }}
-  #   name: "deploy: dry run"
-  #   steps:
-  #     - uses: webfactory/ssh-agent@v0.5.4
-  #       with:
-  #         ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v2.4.0
-  #     - name: Setup node
-  #       uses: actions/setup-node@v2.5.1
-  #       with:
-  #         node-version: "16.14.x"
-  #         cache: "npm"
-  #     - name: Install Dependencies
-  #       run: npm install
-  #     - name: Prepare Environment
-  #       shell: bash
-  #       run: |
-  #         cp .env.example .env
-  #     - name: Deploy suite locally
-  #       run: npm run deploy-suite:hardhat
-  #     - name: Cancelling tests in case of failure
-  #       if: failure()
-  #       uses: andymckay/cancel-action@0.2
+  deploy-dry-run:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    name: "deploy: dry run"
+    steps:
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
+      - name: Checkout repository
+        uses: actions/checkout@v2.4.0
+      - name: Setup node
+        uses: actions/setup-node@v2.5.1
+        with:
+          node-version: "16.14.x"
+          cache: "npm"
+      - name: Install Dependencies
+        run: npm install
+      - name: Prepare Environment
+        shell: bash
+        run: |
+          cp .env.example .env
+      - name: Deploy suite locally
+        run: npm run deploy-suite:hardhat
+      - name: Cancelling tests in case of failure
+        if: failure()
+        uses: andymckay/cancel-action@0.2

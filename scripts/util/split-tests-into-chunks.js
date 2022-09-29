@@ -43,7 +43,7 @@ async function splitTestIntoChunks(chunks = 1, chunkWeights = []) {
   let currentGroup = 0;
   let currentGroupCount = 0;
 
-  const filesByGroup = [...Array(chunks)].map(() => []);
+  const filesByChunk = [...Array(chunks)].map(() => []);
 
   let numOfTestsByGroup;
   // If weights are provided, calculate the number of tests for each group based on the weights
@@ -57,14 +57,14 @@ async function splitTestIntoChunks(chunks = 1, chunkWeights = []) {
   for (const file of files) {
     currentGroupCount += await countTests(file);
 
-    if (currentGroupCount >= numOfTestsByGroup[currentGroup] && currentGroup < chunks - 1) {
+    if (currentGroupCount > numOfTestsByGroup[currentGroup] && currentGroup < chunks - 1) {
       currentGroup++;
       currentGroupCount = 0;
     }
 
-    filesByGroup[currentGroup].push(file);
+    filesByChunk[currentGroup].push(file);
   }
-  return filesByGroup;
+  return filesByChunk;
 }
 
 // Execute the script
