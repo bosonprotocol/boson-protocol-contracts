@@ -50,7 +50,7 @@ jobs:
     if: ${{ !github.event.pull_request.draft }}
     env:
       GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
-    name: Test (chunk ${{ matrix.chunk }})
+    name: test (chunk ${{ matrix.chunk }})
     strategy:
       matrix:
         chunk: ${{ fromJson(needs.build.outputs['test-chunk-ids']) }}
