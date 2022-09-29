@@ -189,7 +189,7 @@ describe("IBosonOrchestrationHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
-        minFulfillmentPeriod: oneWeek,
+        minDisputePeriod: oneWeek,
       },
       // Protocol fees
       {
@@ -1355,9 +1355,9 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
-        it("Fulfillment period is less than minimum fulfillment period", async function () {
-          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
-          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
+        it("Dispute period is less than minimum dispute period", async function () {
+          // Set dispute period to less than minDisputePeriod (oneWeek)
+          offerDurations.disputePeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -1373,7 +1373,7 @@ describe("IBosonOrchestrationHandler", function () {
                 voucherInitValues,
                 agentId
               )
-          ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_PERIOD);
         });
 
         it("Resolution period is set to zero", async function () {
@@ -1394,7 +1394,28 @@ describe("IBosonOrchestrationHandler", function () {
                 voucherInitValues,
                 agentId
               )
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
+        });
+
+        it("Resolution period is set above the maximum resolution period", async function () {
+          // Set dispute duration period to 0
+          offerDurations.resolutionPeriod = oneMonth + 1;
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
         it("Available quantity is set to zero", async function () {

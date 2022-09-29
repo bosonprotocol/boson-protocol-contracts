@@ -58,7 +58,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in Redeemed state
-     * - Caller is not buyer and offer fulfillment period has not elapsed
+     * - Caller is not buyer and offer dispute period has not elapsed
      *
      * @param _exchangeId - the id of the exchange to complete
      */
@@ -79,11 +79,11 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         uint256 buyerId;
         (buyerExists, buyerId) = getBuyerIdByWallet(sender);
 
-        // Buyer may call any time. Seller or anyone else may call after fulfillment period elapses
+        // Buyer may call any time. Seller or anyone else may call after dispute period elapses
         // N.B. An existing buyer or seller may be the "anyone else" on an exchange they are not a part of
         if (!buyerExists || buyerId != exchange.buyerId) {
             uint256 elapsed = block.timestamp - voucher.redeemedDate;
-            require(elapsed >= fetchOfferDurations(offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_NOT_ELAPSED);
+            require(elapsed >= fetchOfferDurations(offerId).disputePeriod, DISPUTE_PERIOD_NOT_ELAPSED);
         }
 
         // Finalize the exchange
@@ -104,7 +104,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
      * - For any exchange:
      *   - Exchange does not exist
      *   - Exchange is not in Redeemed state
-     *   - Caller is not buyer and offer fulfillment period has not elapsed
+     *   - Caller is not buyer and offer dispute period has not elapsed
      *
      * @param _exchangeIds - the array of exchanges ids
      */

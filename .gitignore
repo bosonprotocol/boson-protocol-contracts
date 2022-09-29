@@ -30,3 +30,6 @@ coverage*
 
 ## generated contract docs
 /contract_docs/**
+
+## temporary file used for generate test chunks for CI
+time-report.txt
