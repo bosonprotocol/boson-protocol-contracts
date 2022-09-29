@@ -38,6 +38,8 @@ Deploy suite deploys protocol diamond, all facets, client and beacon, and initia
 ```npm run deploy-suite:mumbai```
 - **Mainnet**. This deploys the built contracts to Mainnet.
 ```npm run deploy-suite:mainnet```
+- **Polygon**. This deploys the built contracts to Polygon.
+```npm run deploy-suite:polygon```
 
 ### Deploy mock authentiacion token
 Boson protocol support LENS and ENS as authentication method for seller's admin account. Public networks have LENS and ENS already deployed, but to use that funcionality on custom local or test nodes, you need to deploy the mock contract first. We provide the scripts for the following networks:
@@ -61,6 +63,8 @@ You cannot run this script agains `hardhat` network, all other networks are supp
 ```npm run manage-roles:mumbai```
 - **Mainnet**. This runs the management script against the Mainnet. You need to modifiy `.env` with appropriate values for this to work.  
 ```npm run manage-roles:mainnet```
+- **Polygon**. This runs the management script against the Polygon. You need to modifiy `.env` with appropriate values for this to work.  
+```npm run manage-roles:polygon```
 
 ### Linting and tidying
 Contracts and scripts are linted using `solhint` and `eslint` respectively and prettified using `prettier`. There are two types of npm scripts:
