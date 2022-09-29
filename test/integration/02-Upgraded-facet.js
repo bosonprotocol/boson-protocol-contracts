@@ -27,6 +27,7 @@ const {
 } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
 const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
+const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 
 /**
  *  Integration test case - After Exchange handler facet upgrade, everything is still operational
@@ -205,13 +206,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     await mockToken.connect(operator).approve(protocolDiamond.address, "1000000");
   });
 
-  async function upgradeExchangeHandlerFacet() {
-    // Upgrade the ExchangeHandlerFacet functions
+  async function upgradeExchangeHandlerFacet(mockFacet) {
+    // Upgrade the Exchange Handler Facet functions
     // DiamondCutFacet
     const cutFacetViaDiamond = await ethers.getContractAt("DiamondCutFacet", protocolDiamond.address);
 
     // Deploy MockExchangeHandlerFacet
-    const MockExchangeHandlerFacet = await ethers.getContractFactory("MockExchangeHandlerFacet");
+    const MockExchangeHandlerFacet = await ethers.getContractFactory(mockFacet);
     const mockExchangeHandlerFacet = await MockExchangeHandlerFacet.deploy();
     await mockExchangeHandlerFacet.deployed();
 
@@ -235,8 +236,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // Be certain transaction was successful
     assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
 
-    // Cast Diamond to MockExchangeHandlerFacet
-    mockExchangeHandlerUpgrade = await ethers.getContractAt("MockExchangeHandlerFacet", protocolDiamond.address);
+    // Cast Diamond to the mock exchange handler facet.
+    mockExchangeHandlerUpgrade = await ethers.getContractAt(mockFacet, protocolDiamond.address);
   }
 
   // Exchange methods
@@ -311,7 +312,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
         // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet();
+        await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
       });
 
       it("should emit an ExchangeCompleted2 event when buyer calls", async function () {
@@ -339,7 +340,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         }
 
         // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet();
+        await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
 
         for (exchangeId = 1; exchangeId <= 5; exchangeId++) {
           // Redeem voucher
@@ -378,7 +379,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
         // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet();
+        await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
 
         // Revoke the voucher, expecting event
         await expect(mockExchangeHandlerUpgrade.connect(operator).revokeVoucher(exchange.id))
@@ -393,7 +394,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
         // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet();
+        await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
 
         // Cancel the voucher, expecting event
         await expect(mockExchangeHandlerUpgrade.connect(buyer).cancelVoucher(exchange.id))
@@ -408,7 +409,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
         // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet();
+        await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
 
         // Set time forward past the voucher's validUntilDate
         await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
@@ -426,7 +427,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
         // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet();
+        await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
 
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -457,7 +458,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         const validUntilDate = ethers.BigNumber.from(voucher.validUntilDate).add(oneMonth).toString();
 
         // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet();
+        await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
 
         // Extend the voucher, expecting event
         await expect(mockExchangeHandlerUpgrade.connect(operator).extendVoucher(exchange.id, validUntilDate))
@@ -533,7 +534,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
         // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet();
+        await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
 
         // Redeem voucher
         await mockExchangeHandlerUpgrade.connect(buyer).redeemVoucher(exchangeId);
@@ -831,9 +832,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: offerNative.price });
 
         buyerId = accountId.next().value;
-
-        // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet();
       });
 
       afterEach(async function () {
@@ -842,60 +840,103 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       });
 
       context("👉 withdrawFunds()", async function () {
-        it("should emit a FundsWithdrawn event", async function () {
-          // cancel the voucher, so both seller and buyer have something to withdraw
-          await mockExchangeHandlerUpgrade.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
-          await mockExchangeHandlerUpgrade.connect(buyer).cancelVoucher(++exchangeId); // canceling the voucher in the native currency
+        context("cancelVoucher() is working as expected", async function () {
+          it("should emit a FundsWithdrawn event", async function () {
+            // Upgrade Exchange handler facet
+            await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
+            // cancel the voucher, so both seller and buyer have something to withdraw
+            await mockExchangeHandlerUpgrade.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
+            await mockExchangeHandlerUpgrade.connect(buyer).cancelVoucher(++exchangeId); // canceling the voucher in the native currency
 
-          // expected payoffs - they are the same for token and native currency
-          // buyer: price - buyerCancelPenalty
-          const buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
+            // expected payoffs - they are the same for token and native currency
+            // buyer: price - buyerCancelPenalty
+            const buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
 
-          // seller: sellerDeposit + buyerCancelPenalty
-          const sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit)
-            .add(offerToken.buyerCancelPenalty)
-            .toString();
+            // seller: sellerDeposit + buyerCancelPenalty
+            const sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit)
+              .add(offerToken.buyerCancelPenalty)
+              .toString();
 
-          // Withdraw funds, testing for the event
-          // Withdraw tokens
-          const tokenListSeller = [mockToken.address, ethers.constants.AddressZero];
-          const tokenListBuyer = [ethers.constants.AddressZero, mockToken.address];
+            // Withdraw funds, testing for the event
+            // Withdraw tokens
+            const tokenListSeller = [mockToken.address, ethers.constants.AddressZero];
+            const tokenListBuyer = [ethers.constants.AddressZero, mockToken.address];
 
-          // Withdraw amounts
-          const tokenAmountsSeller = [sellerPayoff, ethers.BigNumber.from(sellerPayoff).div("2").toString()];
-          const tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("5").toString()];
+            // Withdraw amounts
+            const tokenAmountsSeller = [sellerPayoff, ethers.BigNumber.from(sellerPayoff).div("2").toString()];
+            const tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("5").toString()];
 
-          // seller withdrawal
-          const tx = await fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
-          await expect(tx)
-            .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(seller.id, treasury.address, mockToken.address, sellerPayoff, clerk.address);
+            // seller withdrawal
+            const tx = await fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
+            await expect(tx)
+              .to.emit(fundsHandler, "FundsWithdrawn")
+              .withArgs(seller.id, treasury.address, mockToken.address, sellerPayoff, clerk.address);
 
-          await expect(tx)
-            .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(
-              seller.id,
-              treasury.address,
-              ethers.constants.Zero,
-              ethers.BigNumber.from(sellerPayoff).div("2"),
-              clerk.address
-            );
+            await expect(tx)
+              .to.emit(fundsHandler, "FundsWithdrawn")
+              .withArgs(
+                seller.id,
+                treasury.address,
+                ethers.constants.Zero,
+                ethers.BigNumber.from(sellerPayoff).div("2"),
+                clerk.address
+              );
 
-          // buyer withdrawal
-          const tx2 = await fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer);
-          await expect(tx2)
-            .to.emit(fundsHandler, "FundsWithdrawn", buyer.address)
-            .withArgs(
-              buyerId,
-              buyer.address,
-              mockToken.address,
-              ethers.BigNumber.from(buyerPayoff).div("5"),
-              buyer.address
-            );
+            // buyer withdrawal
+            const tx2 = await fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer);
+            await expect(tx2)
+              .to.emit(fundsHandler, "FundsWithdrawn", buyer.address)
+              .withArgs(
+                buyerId,
+                buyer.address,
+                mockToken.address,
+                ethers.BigNumber.from(buyerPayoff).div("5"),
+                buyer.address
+              );
 
-          await expect(tx2)
-            .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(buyerId, buyer.address, ethers.constants.Zero, buyerPayoff, buyer.address);
+            await expect(tx2)
+              .to.emit(fundsHandler, "FundsWithdrawn")
+              .withArgs(buyerId, buyer.address, ethers.constants.Zero, buyerPayoff, buyer.address);
+          });
+        });
+
+        context("cancelVoucher() has a bug and does not finalize any exchange", async function () {
+          it("withdrawFunds() should revert", async function () {
+            // Upgrade Exchange handler facet
+            await upgradeExchangeHandlerFacet("MockExchangeHandlerFacetWithDefect");
+            // cancel the voucher, so both seller and buyer have something to withdraw
+            await mockExchangeHandlerUpgrade.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
+            await mockExchangeHandlerUpgrade.connect(buyer).cancelVoucher(++exchangeId); // canceling the voucher in the native currency
+
+            // expected payoffs - they are the same for token and native currency
+            // buyer: price - buyerCancelPenalty
+            const buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
+
+            // seller: sellerDeposit + buyerCancelPenalty
+            const sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit)
+              .add(offerToken.buyerCancelPenalty)
+              .toString();
+
+            // Withdraw funds, testing for the event
+            // Withdraw tokens
+            const tokenListSeller = [mockToken.address, ethers.constants.AddressZero];
+            const tokenListBuyer = [ethers.constants.AddressZero, mockToken.address];
+
+            // Withdraw amounts
+            const tokenAmountsSeller = [sellerPayoff, ethers.BigNumber.from(sellerPayoff).div("2").toString()];
+            const tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("5").toString()];
+
+            // seller withdrawal
+            // Attempt to withdraw the funds, expecting revert
+            await expect(
+              fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller)
+            ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+
+            // buyer withdrawal
+            await expect(
+              fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer)
+            ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+          });
         });
       });
     });

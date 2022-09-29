@@ -45,5 +45,5 @@ fs.readFile(filePath, "utf8", (_, data) => {
 
   console.log("Chunks", filesByChunk);
 
-  fs.writeFileSync("./test-chunks.txt", JSON.stringify(filesByChunk, null, 2));
+  fs.writeFileSync("./test/utils/test-chunks.txt", JSON.stringify(filesByChunk, null, 2));
 });
