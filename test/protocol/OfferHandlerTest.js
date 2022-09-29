@@ -728,7 +728,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
         it("Resolution period is greater than protocol max resolution period", async function () {
@@ -738,7 +738,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
         it("Available quantity is set to zero", async function () {
@@ -1995,7 +1995,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(operator)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
         it("For some offer, both voucher expiration date and voucher expiraton period are defined", async function () {
@@ -2076,7 +2076,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(operator)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
         it("For some offer, available quantity is set to zero", async function () {

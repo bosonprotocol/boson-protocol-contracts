@@ -1394,7 +1394,28 @@ describe("IBosonOrchestrationHandler", function () {
                 voucherInitValues,
                 agentId
               )
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
+        });
+
+        it("Resolution period is set above the maximum resolution period", async function () {
+          // Set dispute duration period to 0
+          offerDurations.resolutionPeriod = oneMonth + 1;
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
         it("Available quantity is set to zero", async function () {

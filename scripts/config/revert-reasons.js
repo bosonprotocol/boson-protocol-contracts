@@ -36,7 +36,7 @@ exports.RevertReasons = {
   AMBIGUOUS_VOUCHER_EXPIRY: "Exactly one of voucherRedeemableUntil and voucherValid must be non zero",
   REDEMPTION_PERIOD_INVALID: "Redemption period invalid",
   INVALID_DISPUTE_PERIOD: "Invalid dispute period",
-  INVALID_DISPUTE_DURATION: "Invalid dispute duration",
+  INVALID_RESOLUTION_PERIOD: "Invalid resolution period",
   INVALID_DISPUTE_RESOLVER: "Invalid dispute resolver",
   INVALID_QUANTITY_AVAILABLE: "Invalid quantity available",
   DR_UNSUPPORTED_FEE: "Dispute resolver does not accept this token",
