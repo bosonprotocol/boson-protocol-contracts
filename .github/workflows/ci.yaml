@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ !github.event.pull_request.draft }}
     name: build
+    outputs: 
+      test-chunks:  ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
+      test-chunk-ids: ${{ steps['set-test-chunk-ids'].outputs['test-chunk-ids'] }}
     steps:
       - uses: webfactory/ssh-agent@v0.5.4
         with:
@@ -31,16 +34,29 @@ jobs:
       - run: npm run build
       - run: npm run check:contracts
       - run: npm run check:scripts
-      - name: verify interface ids
+      - name: Verify interface ids
         run: npm run natspec-interface-id
-
-  test-group-1:
+      - id: set-test-chunks
+        run: echo "::set-output name=test-chunks::$(cat test/utils/test-chunks.txt | jq -cM '.')"
+        name: Set Chunks
+      - id: set-test-chunk-ids
+        name: Set Chunk IDs
+        run: |
+          echo "CHUNNKS"
+          echo $CHUNKS
+          echo "::set-output name=test-chunk-ids::$(echo $CHUNKS | jq -cM 'to_entries | map(.key)')"
+        env:
+          CHUNKS: ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
+  test:
     needs: build
     runs-on: ubuntu-latest
     if: ${{ !github.event.pull_request.draft }}
     env:
       GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
-    name: "test:group-1"
+    name: test (chunk ${{ matrix.chunk }})
+    strategy:
+      matrix:
+        chunk: ${{ fromJson(needs.build.outputs['test-chunk-ids']) }}
     steps:
       - uses: webfactory/ssh-agent@v0.5.4
         with:
@@ -50,7 +66,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v2.5.1
         with:
-          node-version: "16.14.x"
+          node-version: 16.14.x
           cache: "npm"
       - name: Install Dependencies
         run: npm install
@@ -62,71 +78,11 @@ jobs:
         run: npm run build
       - name: Contract Sizing
         run: npm run size
-      - name: Unit Tests Group 1
-        run: npx hardhat test test/protocol/OrchestrationHandlerTest.js test/domain/*.js test/protocol/PauseHandlerTest.js test/protocol/DisputeHandlerTest.js
+      - name: Unit Tests 
+        run: echo $CHUNKS | jq '.[${{ matrix.chunk }}] | .[] | @text' | xargs npx hardhat test 
+        env:
+          CHUNKS: ${{ needs.build.outputs['test-chunks'] }}
 
-  test-group-2:
-    needs: build
-    runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.draft }}
-    env:
-      GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
-    name: "test:group-2"
-    steps:
-      - uses: webfactory/ssh-agent@v0.5.4
-        with:
-          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
-      - name: Checkout repository
-        uses: actions/checkout@v2.4.0
-      - name: Setup node
-        uses: actions/setup-node@v2.5.1
-        with:
-          node-version: "16.14.x"
-          cache: "npm"
-      - name: Install Dependencies
-        run: npm install
-      - name: Prepare Environment
-        shell: bash
-        run: |
-          cp .env.example .env
-      - name: Compile Contracts
-        run: npm run build
-      - name: Contract Sizing
-        run: npm run size
-      - name: Unit Tests Group 2
-        run: npx hardhat test test/protocol/ExchangeHandlerTest.js test/access/AccessControllerTest.js test/protocol/OfferHandlerTest.js test/protocol/AccountHandlerTest.js test/protocol/AgentHandlerTest.js test/protocol/BuyerHandlerTest.js test/protocol/ConfigHandlerTest.js test/protocol/ProtocolDiamondTest.js test/protocol/TwinHandlerTest.js
-
-  test-group-3:
-    needs: build
-    runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.draft }}
-    env:
-      GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
-    name: "test:group-3"
-    steps:
-      - uses: webfactory/ssh-agent@v0.5.4
-        with:
-          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
-      - name: Checkout repository
-        uses: actions/checkout@v2.4.0
-      - name: Setup node
-        uses: actions/setup-node@v2.5.1
-        with:
-          node-version: "16.14.x"
-          cache: "npm"
-      - name: Install Dependencies
-        run: npm install
-      - name: Prepare Environment
-        shell: bash
-        run: |
-          cp .env.example .env
-      - name: Compile Contracts
-        run: npm run build
-      - name: Contract Sizing
-        run: npm run size
-      - name: Unit Tests Group 3
-        run: npx hardhat test test/protocol/FundsHandlerTest.js test/protocol/clients/*.js test/protocol/MetaTransactionsHandlerTest.js test/protocol/BundleHandlerTest.js test/protocol/DisputeResolverHandlerTest.js test/protocol/GroupHandlerTest.js test/protocol/SellerHandlerTest.js
-             
   integration-test:
     needs: build
     runs-on: ubuntu-latest
@@ -152,7 +108,7 @@ jobs:
         run: |
           cp .env.example .env
       - name: Integration tests
-        run: npm run test:integration
+        run: npx hardhat test test/integration/** 
 
   deploy-dry-run:
     needs: build

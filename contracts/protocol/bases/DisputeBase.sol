@@ -19,7 +19,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
      * - Caller does not hold a voucher for the given exchange id
      * - Exchange does not exist
      * - Exchange is not in a redeemed state
-     * - Fulfillment period has elapsed already
+     * - Dispute period has elapsed already
      *
      * @param _exchange - the exchange
      * @param _voucher - the associated voucher
@@ -33,9 +33,9 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
         // Fetch offer durations
         OfferDurations storage offerDurations = fetchOfferDurations(_exchange.offerId);
 
-        // Make sure the fulfillment period has not elapsed
+        // Make sure the dispute period has not elapsed
         uint256 elapsed = block.timestamp - _voucher.redeemedDate;
-        require(elapsed < offerDurations.fulfillmentPeriod, FULFILLMENT_PERIOD_HAS_ELAPSED);
+        require(elapsed < offerDurations.disputePeriod, DISPUTE_PERIOD_HAS_ELAPSED);
 
         // Make sure the caller is buyer associated with the exchange
         checkBuyer(_exchange.buyerId);
