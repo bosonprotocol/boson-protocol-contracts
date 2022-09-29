@@ -2,7 +2,7 @@
 
 <h1 align="center">Boson Protocol V2</h1>
 
-### [Intro](../README.md) | [Setup](setup.md) | [Tasks](tasks.md) | [Local Development](local-development.md) | [Architecture](architecture.md) | Domain Model | [State Machines](state-machines.md) | [Happy Path Exchange](happy-path-exchange.md)
+### [Intro](../README.md) | [Audits](audits.md) | [Setup](setup.md) | [Tasks](tasks.md) | [Architecture](architecture.md) | Domain Model | [State Machines](state-machines.md) | [Happy Path Exchange](happy-path-exchange.md)
 
 ## Entity Relationship Diagram
 ![Entity Relationships](images/Boson_Protocol_V2_-_Domain_Model.png)
