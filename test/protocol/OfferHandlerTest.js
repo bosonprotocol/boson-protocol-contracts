@@ -712,7 +712,7 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("Dispute period is less than minimum dispute period", async function () {
-          // Set fulfilment period to less than minDisputePeriod (oneWeek)
+          // Set dispute period to less than minDisputePeriod (oneWeek)
           offerDurations.disputePeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to Create an offer, expecting revert
@@ -2056,7 +2056,7 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("For some offer, Dispute period is less than minimum dispute period", async function () {
-          // Set fulfilment period to less than minDisputePeriod (oneWeek)
+          // Set dispute period to less than minDisputePeriod (oneWeek)
           offerDurationsList[1].disputePeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to Create an offer, expecting revert

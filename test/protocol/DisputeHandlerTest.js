@@ -405,12 +405,12 @@ describe("IBosonDisputeHandler", function () {
             );
           });
 
-          it("The fulfilment period has already elapsed", async function () {
+          it("The dispute period has already elapsed", async function () {
             // Get the redemption date
             [, , voucherStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
             const voucherRedeemedDate = voucherStruct.redeemedDate;
 
-            // Set time forward past the dispute resolution period
+            // Set time forward past the dispute period
             await setNextBlockTimestamp(voucherRedeemedDate.add(disputePeriod).add(1).toNumber());
 
             // Attempt to raise a dispute, expecting revert

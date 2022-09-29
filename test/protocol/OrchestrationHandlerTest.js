@@ -1356,7 +1356,7 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Dispute period is less than minimum dispute period", async function () {
-          // Set fulfilment period to less than minDisputePeriod (oneWeek)
+          // Set dispute period to less than minDisputePeriod (oneWeek)
           offerDurations.disputePeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to create a seller and an offer, expecting revert
