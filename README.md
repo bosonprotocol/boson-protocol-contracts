@@ -2,7 +2,7 @@
 
 <h1 align="center">Boson Protocol V2</h1>
 
-### Intro | [Audits](docs/audits.md) | [Setup](docs/setup.md) | [Tasks](docs/tasks.md) | [Architecture](docs/architecture.md) | [Domain Model](docs/domain.md) | [State Machines](docs/state-machines.md) | [Happy Path Exchange](happy-path-exchange.md) 
+### Intro | [Audits](docs/audits.md) | [Setup](docs/setup.md) | [Tasks](docs/tasks.md) | [Architecture](docs/architecture.md) | [Domain Model](docs/domain.md) | [State Machines](docs/state-machines.md) | [Happy Path Exchange](docs/happy-path-exchange.md) 
 
 ## Status
 Done or in progress are:
