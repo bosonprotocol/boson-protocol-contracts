@@ -33,7 +33,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * - Caller does not hold a voucher for the given exchange id
      * - Exchange does not exist
      * - Exchange is not in a Redeemed state
-     * - Fulfillment period has elapsed already
+     * - Dispute period has elapsed already
      *
      * @param _exchangeId - the id of the associated exchange
      */

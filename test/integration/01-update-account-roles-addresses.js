@@ -384,7 +384,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
           .withArgs(exchangeId, buyerAccount.id, seller.id, rando.address);
       });
 
-      it("Buyer should be able to complete exchange before fulfillment period is over after updating wallet address", async function () {
+      it("Buyer should be able to complete exchange before dispute period is over after updating wallet address", async function () {
         buyerAccount.wallet = rando.address;
         expect(buyerAccount.isValid()).is.true;
 
@@ -402,7 +402,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         const block = await ethers.provider.getBlock(tx.blockNumber);
         const disputePeriod = Number(offerDurations.disputePeriod);
 
-        // Expect the fulfillment period to not be over
+        // Expect the dispute period to not be over
         expect(block.timestamp).to.be.at.most(disputePeriod);
       });
 

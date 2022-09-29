@@ -1091,14 +1091,14 @@ describe("IBosonConfigHandler", function () {
         });
 
         it("should emit a MinDisputePeriodChanged event", async function () {
-          // Set new minumum fulfillment period
+          // Set new minumum dispute period
           await expect(configHandler.connect(deployer).setMinDisputePeriod(minDisputePeriod))
             .to.emit(configHandler, "MinDisputePeriodChanged")
             .withArgs(minDisputePeriod, deployer.address);
         });
 
         it("should update state", async function () {
-          // Set new minumum fulfillment period
+          // Set new minumum dispute period
           await configHandler.connect(deployer).setMinDisputePeriod(minDisputePeriod);
 
           // Verify that new value is stored
@@ -1251,7 +1251,7 @@ describe("IBosonConfigHandler", function () {
         );
         expect(await configHandler.connect(rando).getMinDisputePeriod()).to.equal(
           minDisputePeriod,
-          "Invalid min fulfillment period"
+          "Invalid min dispute period"
         );
       });
     });

@@ -1355,7 +1355,7 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
-        it("Fulfillment period is less than minimum fulfillment period", async function () {
+        it("Dispute period is less than minimum dispute period", async function () {
           // Set fulfilment period to less than minDisputePeriod (oneWeek)
           offerDurations.disputePeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
@@ -1373,7 +1373,7 @@ describe("IBosonOrchestrationHandler", function () {
                 voucherInitValues,
                 agentId
               )
-          ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_PERIOD);
         });
 
         it("Resolution period is set to zero", async function () {

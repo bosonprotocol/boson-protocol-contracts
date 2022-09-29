@@ -39,7 +39,7 @@ const accountId = incrementer();
 
 function mockOfferDurations() {
   // Required constructor params
-  const disputePeriod = oneMonth.toString(); // fulfillment period is one month
+  const disputePeriod = oneMonth.toString(); // dispute period is one month
   const voucherValid = oneMonth.toString(); // offers valid for one month
   const resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
 

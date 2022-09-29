@@ -12,7 +12,7 @@ describe("OfferDurations", function () {
 
   beforeEach(async function () {
     // Required constructor params
-    disputePeriod = oneMonth.toString(); // fulfillment period is one month
+    disputePeriod = oneMonth.toString(); // dispute period is one month
     voucherValid = oneMonth.toString(); // offers valid for one month
     resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
   });

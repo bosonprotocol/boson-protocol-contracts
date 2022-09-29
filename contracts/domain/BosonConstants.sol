@@ -76,7 +76,7 @@ string constant CANNOT_COMMIT = "Caller cannot commit";
 string constant EXCHANGE_FOR_OFFER_EXISTS = "Exchange for offer exists";
 string constant AMBIGUOUS_VOUCHER_EXPIRY = "Exactly one of voucherRedeemableUntil and voucherValid must be non zero";
 string constant REDEMPTION_PERIOD_INVALID = "Redemption period invalid";
-string constant INVALID_FULFILLMENT_PERIOD = "Invalid fulfillemnt period";
+string constant INVALID_DISPUTE_PERIOD = "Invalid dispute period";
 string constant INVALID_DISPUTE_DURATION = "Invalid dispute duration";
 string constant INVALID_DISPUTE_RESOLVER = "Invalid dispute resolver";
 string constant INVALID_QUANTITY_AVAILABLE = "Invalid quantity available";
@@ -92,7 +92,7 @@ string constant INVALID_CONDITION_PARAMETERS = "Invalid condition parameters";
 
 // Revert Reasons: Exchange related
 string constant NO_SUCH_EXCHANGE = "No such exchange";
-string constant FULFILLMENT_PERIOD_NOT_ELAPSED = "Fulfillment period has not yet elapsed";
+string constant DISPUTE_PERIOD_NOT_ELAPSED = "Dispute period has not yet elapsed";
 string constant VOUCHER_NOT_REDEEMABLE = "Voucher not yet valid or already expired";
 string constant VOUCHER_EXTENSION_NOT_VALID = "Proposed date is not later than the current one";
 string constant VOUCHER_STILL_VALID = "Voucher still valid";
@@ -146,7 +146,7 @@ string constant INVALID_FUNCTION_NAME = "Invalid function name";
 string constant INVALID_SIGNATURE = "Invalid signature";
 
 // Revert Reasons: Dispute related
-string constant FULFILLMENT_PERIOD_HAS_ELAPSED = "Fulfillment period has already elapsed";
+string constant DISPUTE_PERIOD_HAS_ELAPSED = "Dispute period has already elapsed";
 string constant DISPUTE_HAS_EXPIRED = "Dispute has expired";
 string constant INVALID_BUYER_PERCENT = "Invalid buyer percent";
 string constant DISPUTE_STILL_VALID = "Dispute still valid";

@@ -382,7 +382,7 @@ describe("IBosonDisputeHandler", function () {
           });
 
           it("exchange is not in a redeemed state - completed", async function () {
-            // Set time forward to run out the fulfillment period
+            // Set time forward to run out the dispute period
             newTime = Number((voucherRedeemableFrom + Number(disputePeriod) + 1).toString().substring(0, 11));
             await setNextBlockTimestamp(newTime);
 
@@ -415,7 +415,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to raise a dispute, expecting revert
             await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWith(
-              RevertReasons.FULFILLMENT_PERIOD_HAS_ELAPSED
+              RevertReasons.DISPUTE_PERIOD_HAS_ELAPSED
             );
           });
         });

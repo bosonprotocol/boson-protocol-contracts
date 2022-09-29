@@ -449,18 +449,18 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function getMaxResolutionPeriod() external view returns (uint256);
 
     /**
-     * @notice Sets the minimum fulfillment period a seller can specify.
+     * @notice Sets the minimum dispute period a seller can specify.
      *
      * Emits a MinDisputePeriodChanged event.
      *
      * Reverts if _minDisputePeriod is zero.
      *
-     * @param _minDisputePeriod - the minimum resolution period that a {BosonTypes.Seller} can specify
+     * @param _minDisputePeriod - the minimum dispute period that a {BosonTypes.Seller} can specify
      */
     function setMinDisputePeriod(uint256 _minDisputePeriod) external;
 
     /**
-     * @notice Gets the minimum fulfillment period a seller can specify.
+     * @notice Gets the minimum dispute period a seller can specify.
      */
     function getMinDisputePeriod() external view returns (uint256);
 

@@ -1162,7 +1162,7 @@ describe("IBosonExchangeHandler", function () {
         assert.equal(response, ExchangeState.Completed, "Exchange state is incorrect");
       });
 
-      it("should emit an ExchangeCompleted event if operator calls after fulfillment period", async function () {
+      it("should emit an ExchangeCompleted event if operator calls after dispute period", async function () {
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
@@ -1173,7 +1173,7 @@ describe("IBosonExchangeHandler", function () {
         blockNumber = await ethers.provider.getBlockNumber();
         block = await ethers.provider.getBlock(blockNumber);
 
-        // Set time forward to run out the fulfillment period
+        // Set time forward to run out the dispute period
         newTime = ethers.BigNumber.from(block.timestamp).add(disputePeriod).add(1).toNumber();
         await setNextBlockTimestamp(newTime);
 
@@ -1183,7 +1183,7 @@ describe("IBosonExchangeHandler", function () {
           .withArgs(offerId, buyerId, exchange.id, operator.address);
       });
 
-      it("should emit an ExchangeCompleted event if anyone calls after fulfillment period", async function () {
+      it("should emit an ExchangeCompleted event if anyone calls after dispute period", async function () {
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
@@ -1194,7 +1194,7 @@ describe("IBosonExchangeHandler", function () {
         blockNumber = await ethers.provider.getBlockNumber();
         block = await ethers.provider.getBlock(blockNumber);
 
-        // Set time forward to run out the fulfillment period
+        // Set time forward to run out the dispute period
         newTime = ethers.BigNumber.from(block.timestamp).add(disputePeriod).add(1).toNumber();
         await setNextBlockTimestamp(newTime);
 
@@ -1248,7 +1248,7 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
-        it("caller is not buyer and offer fulfillment period has not elapsed", async function () {
+        it("caller is not buyer and offer dispute period has not elapsed", async function () {
           // Set time forward to the offer's voucherRedeemableFrom
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
@@ -1257,11 +1257,11 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to complete the exchange, expecting revert
           await expect(exchangeHandler.connect(rando).completeExchange(exchange.id)).to.revertedWith(
-            RevertReasons.FULFILLMENT_PERIOD_NOT_ELAPSED
+            RevertReasons.DISPUTE_PERIOD_NOT_ELAPSED
           );
         });
 
-        it("caller is seller's operator and offer fulfillment period has not elapsed", async function () {
+        it("caller is seller's operator and offer dispute period has not elapsed", async function () {
           // Set time forward to the offer's voucherRedeemableFrom
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
@@ -1270,7 +1270,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to complete the exchange, expecting revert
           await expect(exchangeHandler.connect(operator).completeExchange(exchange.id)).to.revertedWith(
-            RevertReasons.FULFILLMENT_PERIOD_NOT_ELAPSED
+            RevertReasons.DISPUTE_PERIOD_NOT_ELAPSED
           );
         });
       });
@@ -1329,12 +1329,12 @@ describe("IBosonExchangeHandler", function () {
         }
       });
 
-      it("should emit an ExchangeCompleted event if operator calls after fulfillment period", async function () {
+      it("should emit an ExchangeCompleted event if operator calls after dispute period", async function () {
         // Get the current block info
         blockNumber = await ethers.provider.getBlockNumber();
         block = await ethers.provider.getBlock(blockNumber);
 
-        // Set time forward to run out the fulfillment period
+        // Set time forward to run out the dispute period
         newTime = ethers.BigNumber.from(block.timestamp).add(disputePeriod).add(1).toNumber();
         await setNextBlockTimestamp(newTime);
 
@@ -1361,12 +1361,12 @@ describe("IBosonExchangeHandler", function () {
           .withArgs(offerId, buyerId, exchangesToComplete[4], operator.address);
       });
 
-      it("should emit an ExchangeCompleted event if anyone calls after fulfillment period", async function () {
+      it("should emit an ExchangeCompleted event if anyone calls after dispute period", async function () {
         // Get the current block info
         blockNumber = await ethers.provider.getBlockNumber();
         block = await ethers.provider.getBlock(blockNumber);
 
-        // Set time forward to run out the fulfillment period
+        // Set time forward to run out the dispute period
         newTime = ethers.BigNumber.from(block.timestamp).add(disputePeriod).add(1).toNumber();
         await setNextBlockTimestamp(newTime);
 
@@ -1444,7 +1444,7 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
-        it("caller is not buyer and offer fulfillment period has not elapsed", async function () {
+        it("caller is not buyer and offer dispute period has not elapsed", async function () {
           // Create exchange with id 6
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
@@ -1458,11 +1458,11 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to complete the exchange, expecting revert
           await expect(exchangeHandler.connect(rando).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
-            RevertReasons.FULFILLMENT_PERIOD_NOT_ELAPSED
+            RevertReasons.DISPUTE_PERIOD_NOT_ELAPSED
           );
         });
 
-        it("caller is seller's operator and offer fulfillment period has not elapsed", async function () {
+        it("caller is seller's operator and offer dispute period has not elapsed", async function () {
           // Create exchange with id 6
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
@@ -1473,7 +1473,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to complete the exchange, expecting revert
           await expect(exchangeHandler.connect(operator).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
-            RevertReasons.FULFILLMENT_PERIOD_NOT_ELAPSED
+            RevertReasons.DISPUTE_PERIOD_NOT_ELAPSED
           );
         });
       });
@@ -3217,7 +3217,7 @@ describe("IBosonExchangeHandler", function () {
           blockNumber = await ethers.provider.getBlockNumber();
           block = await ethers.provider.getBlock(blockNumber);
 
-          // Set time forward to run out the fulfillment period
+          // Set time forward to run out the dispute period
           newTime = ethers.BigNumber.from(voucherRedeemableFrom).add(disputePeriod).add(1).toNumber();
           await setNextBlockTimestamp(newTime);
 

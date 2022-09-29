@@ -513,7 +513,7 @@ setupEnvironment["maxExchangesPerBatch"] = async function (exchangesCount = 10) 
     await exchangeHandler.connect(buyer).redeemVoucher(i);
   }
 
-  // Set time forward to run out the fulfillment period
+  // Set time forward to run out the dispute period
   const blockNumber = await ethers.provider.getBlockNumber();
   const block = await ethers.provider.getBlock(blockNumber);
   const newTime = ethers.BigNumber.from(block.timestamp).add(offerDurations.disputePeriod).add(1).toNumber();
@@ -581,7 +581,7 @@ setupEnvironment["maxDisputesPerBatch"] = async function (exchangesCount = 10) {
     await disputeHandler.connect(buyer).raiseDispute(i);
   }
 
-  // Set time forward to run out the fulfillment period
+  // Set time forward to run out the dispute period
   const blockNumber = await ethers.provider.getBlockNumber();
   const block = await ethers.provider.getBlock(blockNumber);
   const newTime = ethers.BigNumber.from(block.timestamp).add(offerDurations.resolutionPeriod).add(1).toNumber();
