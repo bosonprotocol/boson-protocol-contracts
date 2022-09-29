@@ -133,7 +133,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             ProtocolLib.ProtocolLimits storage limits = protocolLimits();
 
             // fulfillment period must be greater than or equal to the minimum fulfillment period
-            require(_offerDurations.fulfillmentPeriod >= limits.minFulfillmentPeriod, INVALID_FULFILLMENT_PERIOD);
+            require(_offerDurations.disputePeriod >= limits.minDisputePeriod, INVALID_FULFILLMENT_PERIOD);
 
             // dispute duration must be greater than zero
             require(
@@ -256,7 +256,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         OfferDurations storage offerDurations = fetchOfferDurations(_offer.id);
 
         // Set offer durations props individually since calldata structs can't be copied to storage
-        offerDurations.fulfillmentPeriod = _offerDurations.fulfillmentPeriod;
+        offerDurations.disputePeriod = _offerDurations.disputePeriod;
         offerDurations.voucherValid = _offerDurations.voucherValid;
         offerDurations.resolutionPeriod = _offerDurations.resolutionPeriod;
 

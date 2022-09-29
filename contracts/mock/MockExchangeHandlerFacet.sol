@@ -83,7 +83,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         // N.B. An existing buyer or seller may be the "anyone else" on an exchange they are not a part of
         if (!buyerExists || buyerId != exchange.buyerId) {
             uint256 elapsed = block.timestamp - voucher.redeemedDate;
-            require(elapsed >= fetchOfferDurations(offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_NOT_ELAPSED);
+            require(elapsed >= fetchOfferDurations(offerId).disputePeriod, FULFILLMENT_PERIOD_NOT_ELAPSED);
         }
 
         // Finalize the exchange

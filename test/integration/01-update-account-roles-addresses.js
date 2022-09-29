@@ -125,7 +125,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
-        minFulfillmentPeriod: oneWeek,
+        minDisputePeriod: oneWeek,
       },
       // Protocol fees
       {
@@ -205,7 +205,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       // Create an offer
       ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
 
-      offerDurations.fulfillmentPeriod = (oneMonth * 6).toString();
+      offerDurations.disputePeriod = (oneMonth * 6).toString();
 
       // Check if domains are valid
       expect(offer.isValid()).is.true;
@@ -400,10 +400,10 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
           .withArgs(offer.id, buyerAccount.id, exchangeId, rando.address);
 
         const block = await ethers.provider.getBlock(tx.blockNumber);
-        const fulfillmentPeriod = Number(offerDurations.fulfillmentPeriod);
+        const disputePeriod = Number(offerDurations.disputePeriod);
 
         // Expect the fulfillment period to not be over
-        expect(block.timestamp).to.be.at.most(fulfillmentPeriod);
+        expect(block.timestamp).to.be.at.most(disputePeriod);
       });
 
       context("After raise dispute actions", async function () {

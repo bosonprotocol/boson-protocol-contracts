@@ -8,15 +8,15 @@ const { bigNumberIsValid } = require("../util/validations.js");
 class OfferDurations {
   /*
     struct OfferDurations {
-        uint256 fulfillmentPeriod;
+        uint256 disputePeriod;
         uint256 voucherValid;
         uint256 resolutionPeriod;
     }
   */
 
-  constructor(fulfillmentPeriod, voucherValid, resolutionPeriod) {
+  constructor(disputePeriod, voucherValid, resolutionPeriod) {
     this.voucherValid = voucherValid;
-    this.fulfillmentPeriod = fulfillmentPeriod;
+    this.disputePeriod = disputePeriod;
     this.resolutionPeriod = resolutionPeriod;
   }
 
@@ -26,9 +26,9 @@ class OfferDurations {
    * @returns {OfferDurations}
    */
   static fromObject(o) {
-    const { fulfillmentPeriod, voucherValid, resolutionPeriod } = o;
+    const { disputePeriod, voucherValid, resolutionPeriod } = o;
 
-    return new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+    return new OfferDurations(disputePeriod, voucherValid, resolutionPeriod);
   }
 
   /**
@@ -37,13 +37,13 @@ class OfferDurations {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let fulfillmentPeriod, voucherValid, resolutionPeriod;
+    let disputePeriod, voucherValid, resolutionPeriod;
 
     // destructure struct
-    [fulfillmentPeriod, voucherValid, resolutionPeriod] = struct;
+    [disputePeriod, voucherValid, resolutionPeriod] = struct;
 
     return OfferDurations.fromObject({
-      fulfillmentPeriod: fulfillmentPeriod.toString(),
+      disputePeriod: disputePeriod.toString(),
       voucherValid: voucherValid.toString(),
       resolutionPeriod: resolutionPeriod.toString(),
     });
@@ -70,7 +70,7 @@ class OfferDurations {
    * @returns {string}
    */
   toStruct() {
-    return [this.fulfillmentPeriod, this.voucherValid, this.resolutionPeriod];
+    return [this.disputePeriod, this.voucherValid, this.resolutionPeriod];
   }
 
   /**
@@ -82,12 +82,12 @@ class OfferDurations {
   }
 
   /**
-   * Is this OfferDurations instance's fulfillmentPeriod field valid?
+   * Is this OfferDurations instance's disputePeriod field valid?
    * Must be a string representation of a big number
    * @returns {boolean}
    */
-  fulfillmentPeriodIsValid() {
-    return bigNumberIsValid(this.fulfillmentPeriod);
+  disputePeriodIsValid() {
+    return bigNumberIsValid(this.disputePeriod);
   }
 
   /**
@@ -113,7 +113,7 @@ class OfferDurations {
    * @returns {boolean}
    */
   isValid() {
-    return this.fulfillmentPeriodIsValid() && this.voucherValidIsValid() && this.resolutionPeriodIsValid();
+    return this.disputePeriodIsValid() && this.voucherValidIsValid() && this.resolutionPeriodIsValid();
   }
 }
 

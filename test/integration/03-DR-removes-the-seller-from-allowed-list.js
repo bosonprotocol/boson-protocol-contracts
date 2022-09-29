@@ -132,7 +132,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
-        minFulfillmentPeriod: oneWeek,
+        minDisputePeriod: oneWeek,
       },
       // Protocol fees
       {

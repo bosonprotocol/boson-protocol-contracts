@@ -9,7 +9,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x754aefce
+ * The ERC-165 identifier for this interface is: 0x2ad335b8
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
     /**
@@ -451,18 +451,18 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     /**
      * @notice Sets the minimum fulfillment period a seller can specify.
      *
-     * Emits a MinFulfillmentPeriodChanged event.
+     * Emits a MinDisputePeriodChanged event.
      *
-     * Reverts if _minFulfillmentPeriod is zero.
+     * Reverts if _minDisputePeriod is zero.
      *
-     * @param _minFulfillmentPeriod - the minimum resolution period that a {BosonTypes.Seller} can specify
+     * @param _minDisputePeriod - the minimum resolution period that a {BosonTypes.Seller} can specify
      */
-    function setMinFulfillmentPeriod(uint256 _minFulfillmentPeriod) external;
+    function setMinDisputePeriod(uint256 _minDisputePeriod) external;
 
     /**
      * @notice Gets the minimum fulfillment period a seller can specify.
      */
-    function getMinFulfillmentPeriod() external view returns (uint256);
+    function getMinDisputePeriod() external view returns (uint256);
 
     /**
      * @notice Sets the access controller address.

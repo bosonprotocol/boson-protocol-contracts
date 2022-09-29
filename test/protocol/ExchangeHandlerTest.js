@@ -93,7 +93,7 @@ describe("IBosonExchangeHandler", function () {
   let support, newTime;
   let price, sellerPool;
   let voucherRedeemableFrom;
-  let fulfillmentPeriod, voucherValid;
+  let disputePeriod, voucherValid;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let voucher, validUntilDate;
   let exchange, response, exists;
@@ -204,7 +204,7 @@ describe("IBosonExchangeHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
-        minFulfillmentPeriod: oneWeek,
+        minDisputePeriod: oneWeek,
       },
       // Protocol fees
       {
@@ -370,7 +370,7 @@ describe("IBosonExchangeHandler", function () {
       price = offer.price;
       voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
       voucherValid = offerDurations.voucherValid;
-      fulfillmentPeriod = offerDurations.fulfillmentPeriod;
+      disputePeriod = offerDurations.disputePeriod;
       sellerPool = ethers.utils.parseUnits("15", "ether").toString();
 
       // Required voucher constructor params
@@ -1174,7 +1174,7 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Set time forward to run out the fulfillment period
-        newTime = ethers.BigNumber.from(block.timestamp).add(fulfillmentPeriod).add(1).toNumber();
+        newTime = ethers.BigNumber.from(block.timestamp).add(disputePeriod).add(1).toNumber();
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1195,7 +1195,7 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Set time forward to run out the fulfillment period
-        newTime = ethers.BigNumber.from(block.timestamp).add(fulfillmentPeriod).add(1).toNumber();
+        newTime = ethers.BigNumber.from(block.timestamp).add(disputePeriod).add(1).toNumber();
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1335,7 +1335,7 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Set time forward to run out the fulfillment period
-        newTime = ethers.BigNumber.from(block.timestamp).add(fulfillmentPeriod).add(1).toNumber();
+        newTime = ethers.BigNumber.from(block.timestamp).add(disputePeriod).add(1).toNumber();
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1367,7 +1367,7 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Set time forward to run out the fulfillment period
-        newTime = ethers.BigNumber.from(block.timestamp).add(fulfillmentPeriod).add(1).toNumber();
+        newTime = ethers.BigNumber.from(block.timestamp).add(disputePeriod).add(1).toNumber();
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -3218,7 +3218,7 @@ describe("IBosonExchangeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
 
           // Set time forward to run out the fulfillment period
-          newTime = ethers.BigNumber.from(voucherRedeemableFrom).add(fulfillmentPeriod).add(1).toNumber();
+          newTime = ethers.BigNumber.from(voucherRedeemableFrom).add(disputePeriod).add(1).toNumber();
           await setNextBlockTimestamp(newTime);
 
           // Complete exchange

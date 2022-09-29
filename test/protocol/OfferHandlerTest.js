@@ -75,7 +75,7 @@ describe("IBosonOfferHandler", function () {
     offerFeesStruct,
     offerFeesList,
     offerFeesStructs;
-  let fulfillmentPeriod,
+  let disputePeriod,
     voucherValid,
     resolutionPeriod,
     offerDurations,
@@ -184,7 +184,7 @@ describe("IBosonOfferHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
-        minFulfillmentPeriod: oneWeek,
+        minDisputePeriod: oneWeek,
       },
       // Protocol fees
       {
@@ -712,8 +712,8 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("Fulfillment period is less than minimum fulfillment period", async function () {
-          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
-          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
+          // Set fulfilment period to less than minDisputePeriod (oneWeek)
+          offerDurations.disputePeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -1505,7 +1505,7 @@ describe("IBosonOfferHandler", function () {
           .add(oneMonth * 6 * (i + 1))
           .toString();
 
-        offerDurations.fulfillmentPeriod = fulfillmentPeriod = `${(i + 1) * oneMonth}`;
+        offerDurations.disputePeriod = disputePeriod = `${(i + 1) * oneMonth}`;
         offerDurations.voucherValid = voucherValid = `${(i + 1) * oneMonth}`;
         offerDurations.resolutionPeriod = resolutionPeriod = `${(i + 1) * oneWeek}`;
 
@@ -2056,8 +2056,8 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("For some offer, Fulfillment period is less than minimum fulfillment period", async function () {
-          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
-          offerDurationsList[1].fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
+          // Set fulfilment period to less than minDisputePeriod (oneWeek)
+          offerDurationsList[1].disputePeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -2226,7 +2226,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Number of dispute durations does not match the number of offers", async function () {
           // Make dispute durations longer
-          offerDurationsList.push(new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod));
+          offerDurationsList.push(new OfferDurations(disputePeriod, voucherValid, resolutionPeriod));
 
           // Attempt to Create an offer, expecting revert
           await expect(

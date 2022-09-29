@@ -35,7 +35,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
 
         // Make sure the fulfillment period has not elapsed
         uint256 elapsed = block.timestamp - _voucher.redeemedDate;
-        require(elapsed < offerDurations.fulfillmentPeriod, FULFILLMENT_PERIOD_HAS_ELAPSED);
+        require(elapsed < offerDurations.disputePeriod, FULFILLMENT_PERIOD_HAS_ELAPSED);
 
         // Make sure the caller is buyer associated with the exchange
         checkBuyer(_exchange.buyerId);

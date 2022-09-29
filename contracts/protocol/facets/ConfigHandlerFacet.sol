@@ -52,7 +52,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxTotalOfferFeePercentage(_limits.maxTotalOfferFeePercentage);
         setMaxRoyaltyPecentage(_limits.maxRoyaltyPecentage);
         setMaxResolutionPeriod(_limits.maxResolutionPeriod);
-        setMinFulfillmentPeriod(_limits.minFulfillmentPeriod);
+        setMinDisputePeriod(_limits.minDisputePeriod);
 
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -709,25 +709,25 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the minimum fulfillment period a seller can specify.
      *
-     * Emits a MinFulfillmentPeriodChanged event.
+     * Emits a MinDisputePeriodChanged event.
      *
-     * Reverts if the _minFulfillmentPeriod is zero.
+     * Reverts if the _minDisputePeriod is zero.
      *
-     * @param _minFulfillmentPeriod - the minimum resolution period that a {BosonTypes.Seller} can specify
+     * @param _minDisputePeriod - the minimum resolution period that a {BosonTypes.Seller} can specify
      */
-    function setMinFulfillmentPeriod(uint256 _minFulfillmentPeriod) public override onlyRole(ADMIN) nonReentrant {
-        // Make sure _minFulfillmentPeriod is greater than 0
-        checkNonZero(_minFulfillmentPeriod);
+    function setMinDisputePeriod(uint256 _minDisputePeriod) public override onlyRole(ADMIN) nonReentrant {
+        // Make sure _minDisputePeriod is greater than 0
+        checkNonZero(_minDisputePeriod);
 
-        protocolLimits().minFulfillmentPeriod = _minFulfillmentPeriod;
-        emit MinFulfillmentPeriodChanged(_minFulfillmentPeriod, msgSender());
+        protocolLimits().minDisputePeriod = _minDisputePeriod;
+        emit MinDisputePeriodChanged(_minDisputePeriod, msgSender());
     }
 
     /**
      * @notice Gets the minimum fulfillment period a seller can specify.
      */
-    function getMinFulfillmentPeriod() external view override returns (uint256) {
-        return protocolLimits().minFulfillmentPeriod;
+    function getMinDisputePeriod() external view override returns (uint256) {
+        return protocolLimits().minDisputePeriod;
     }
 
     /**

@@ -516,7 +516,7 @@ setupEnvironment["maxExchangesPerBatch"] = async function (exchangesCount = 10) 
   // Set time forward to run out the fulfillment period
   const blockNumber = await ethers.provider.getBlockNumber();
   const block = await ethers.provider.getBlock(blockNumber);
-  const newTime = ethers.BigNumber.from(block.timestamp).add(offerDurations.fulfillmentPeriod).add(1).toNumber();
+  const newTime = ethers.BigNumber.from(block.timestamp).add(offerDurations.disputePeriod).add(1).toNumber();
   await setNextBlockTimestamp(newTime);
 
   const exchangeIds = [...Array(exchangesCount + 1).keys()].slice(1);
@@ -861,7 +861,7 @@ async function setupCommonEnvironment() {
       maxTotalOfferFeePercentage: 4000, //40%
       maxRoyaltyPecentage: 1000, //10%
       maxResolutionPeriod: oneMonth,
-      minFulfillmentPeriod: oneWeek,
+      minDisputePeriod: oneWeek,
     },
     // Protocol fees
     {

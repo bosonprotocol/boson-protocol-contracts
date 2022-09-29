@@ -189,7 +189,7 @@ describe("IBosonOrchestrationHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
-        minFulfillmentPeriod: oneWeek,
+        minDisputePeriod: oneWeek,
       },
       // Protocol fees
       {
@@ -1356,8 +1356,8 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Fulfillment period is less than minimum fulfillment period", async function () {
-          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
-          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
+          // Set fulfilment period to less than minDisputePeriod (oneWeek)
+          offerDurations.disputePeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
