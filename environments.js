@@ -74,4 +74,13 @@ module.exports = {
         "adminAddress": process.env.ADMIN_ADDRESS_MUMBAI
     }  
 
+    // Polygon Mainnet
+    //  - placeholder private key is first address of test HDWallet used in hardhat network config
+    //  - Replace key with multisig pk for deployment
+    "polygon": {
+        "txNode": process.env.DEPLOYER_POLYGON_TXNODE,
+        "keys": [process.env.DEPLOYER_POLYGON_KEY],
+        "gasLimit": parseInt(process.env.DEPLOYER_GAS_LIMIT),
+        "adminAddress": process.env.ADMIN_ADDRESS_POLYGON
+    },
 };
