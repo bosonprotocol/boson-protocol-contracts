@@ -19,8 +19,8 @@ Done or in progress are:
   - ✅ Github Actions for CI
   - ✅ Support for EIP-712 meta-transactions
   - ✅ Protocol facet contracts and interfaces
-  - ✅ Generated contract documentation 
   - ✅ Remediated two audits
+  - 👉 Generated contract documentation
 
 ## Developers
   - [Setup](docs/setup.md) - Get going quickly on your local system
