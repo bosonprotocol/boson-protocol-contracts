@@ -25,6 +25,15 @@ module.exports = {
         "apiKey": process.env.GAS_REPORTER_COINMARKETCAP_API_KEY
     },
 
+    /*
+    NETWORK SPECIFIC ENVIROMENT CONFIGURATIONS
+    - txNode: blockchain node url (e.g. local, infura, alchemy etc.)
+    - keys: private key used for deployment
+    - gasLimit: maximum gas spent per transaction
+    - adminAddress: address that is granted ADMIN role during the deployment
+    - nftAuthTokenHolders: address that are given test auth tokens during the deployment. Relevant only for test networks.
+    */
+
     // Hardhat testnet
     //  - throwaway HDWallet mnemonic for running unit tests, which require more than one address
     "hardhat": {
@@ -44,8 +53,6 @@ module.exports = {
     },
 
     // Internal test env
-    //  - placeholder private key is first address of test HDWallet used in hardhat network config
-    //  - Replace key with pk for deployment
     "test": {
         "txNode": process.env.DEPLOYER_TEST_TXNODE,
         "keys": [process.env.DEPLOYER_TEST_KEY],
@@ -54,9 +61,7 @@ module.exports = {
         "nftAuthTokenHolders": process.env.AUTH_TOKEN_OWNERS_TEST
     },
 
-    // Mainnet
-    //  - placeholder private key is first address of test HDWallet used in hardhat network config
-    //  - Replace key with multisig pk for deployment
+    // Ethereum Mainnet
     "mainnet": {
         "txNode": process.env.DEPLOYER_MAINNET_TXNODE,
         "keys": [process.env.DEPLOYER_MAINNET_KEY],
@@ -65,13 +70,18 @@ module.exports = {
     },
 
     // Polygon Mumbai testnet
-    //  - placeholder private key is first address of test HDWallet used in hardhat network config
-    //  - Replace key with multisig pk for deployment
     "mumbai": {
         "txNode": process.env.DEPLOYER_MUMBAI_TXNODE,
         "keys": [process.env.DEPLOYER_MUMBAI_KEY],
         "gasLimit": parseInt(process.env.DEPLOYER_GAS_LIMIT),
         "adminAddress": process.env.ADMIN_ADDRESS_MUMBAI
-    }  
+    },
 
+    // Polygon Mainnet
+    "polygon": {
+        "txNode": process.env.DEPLOYER_POLYGON_TXNODE,
+        "keys": [process.env.DEPLOYER_POLYGON_KEY],
+        "gasLimit": parseInt(process.env.DEPLOYER_GAS_LIMIT),
+        "adminAddress": process.env.ADMIN_ADDRESS_POLYGON
+    },
 };

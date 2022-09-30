@@ -1,5 +1,3 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
 const { oneWeek, oneMonth } = require("../../test/utils/constants");
 
 /**
@@ -37,7 +35,8 @@ module.exports = {
     hardhat: "0x2cDA796787425AF0892F20F6019704F053bCD6bF", //dummy
     localhost: "0x2cDA796787425AF0892F20F6019704F053bCD6bF", //dummy
     test: "0x520ce45DF6d14334257BFdD360a5C22B06E309c7", //dummy
-    mumbai: "0x520ce45DF6d14334257BFdD360a5C22B06E309c7", //dummy
+    mumbai: "0x1f5431E8679630790E8EbA3a9b41d1BB4d41aeD0",
+    polygon: "0x9b3b0703d392321ad24338ff1f846650437a43c9",
   },
 
   // Treasury contract address
@@ -47,23 +46,26 @@ module.exports = {
     localhost: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
     test: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
     mumbai: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
+    polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
   },
 
   // Boson voucher beacon contract address
   BEACON: {
-    mainnet: ethers.constants.AddressZero,
+    mainnet: "0x494f5238b40119e707582Ce87E0ca3627dB23Bcb", //dummy
     hardhat: "0x494f5238b40119e707582Ce87E0ca3627dB23Bcb", //dummy
     localhost: "0x494f5238b40119e707582Ce87E0ca3627dB23Bcb", //dummy
     test: "0x494f5238b40119e707582Ce87E0ca3627dB23Bcb", //dummy
     mumbai: "0x494f5238b40119e707582Ce87E0ca3627dB23Bcb", //dummy
+    polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
   },
 
   // Beacon proxy contract address
   BEACON_PROXY: {
-    mainnet: ethers.constants.AddressZero,
+    mainnet: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     hardhat: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     localhost: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     test: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     mumbai: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
   },
 };

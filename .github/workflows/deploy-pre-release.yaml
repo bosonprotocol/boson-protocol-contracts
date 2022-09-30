@@ -41,7 +41,7 @@ jobs:
           mkdir -p logs
           mkdir -p addresses/abis/mumbai
       - name: Deploy to mumbai testnet
-        run: npm run deploy-suite:mumbai
+        run: npm run deploy-suite:polygon:mumbai
       - name: Upload Mumbai deploy output
         uses: actions/upload-artifact@v2
         with:
