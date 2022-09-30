@@ -37,7 +37,7 @@ const {
   mockAgent,
   mockBuyer,
   accountId,
-} = require("../utils/mock");
+} = require("../util/mock");
 const {
   getEvent,
   setNextBlockTimestamp,
@@ -45,8 +45,8 @@ const {
   prepareDataSignatureParameters,
   calculateContractAddress,
   applyPercentage,
-} = require("../../scripts/util/test-utils.js");
-const { oneWeek, oneMonth } = require("../utils/constants");
+} = require("../util/utils.js");
+const { oneWeek, oneMonth } = require("../util/constants");
 const { FundsList } = require("../../scripts/domain/Funds");
 const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
 

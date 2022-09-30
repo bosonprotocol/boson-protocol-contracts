@@ -3,7 +3,7 @@ const ethers = hre.ethers;
 const { expect } = require("chai");
 const Twin = require("../../scripts/domain/Twin.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
-const { mockTwin } = require("../utils/mock");
+const { mockTwin } = require("../util/mock");
 
 /**
  *  Test the Twin domain entity

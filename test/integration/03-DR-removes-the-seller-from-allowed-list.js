@@ -11,8 +11,8 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { setNextBlockTimestamp, applyPercentage } = require("../../scripts/util/test-utils.js");
-const { oneWeek, oneMonth } = require("../utils/constants");
+const { setNextBlockTimestamp, applyPercentage } = require("../util/utils.js");
+const { oneWeek, oneMonth } = require("../util/constants");
 const {
   mockOffer,
   mockDisputeResolver,
@@ -20,7 +20,7 @@ const {
   mockAuthToken,
   mockVoucherInitValues,
   accountId,
-} = require("../utils/mock");
+} = require("../util/mock");
 
 /**
  *  Integration test case - the disputes can be resolved even when approved sellers are removed from the allow list

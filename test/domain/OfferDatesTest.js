@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const OfferDates = require("../../scripts/domain/OfferDates");
-const { oneWeek, oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../util/constants");
 
 /**
  *  Test the OfferDates domain entity

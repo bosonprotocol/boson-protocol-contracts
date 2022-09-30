@@ -17,7 +17,7 @@ const { deployProtocolHandlerFacets } = require("../util/deploy-protocol-handler
 const { deployProtocolConfigFacet } = require("../util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../util/deploy-protocol-clients");
 const { deployMockTokens } = require("../util/deploy-mock-tokens");
-const { oneWeek, oneMonth } = require("../../test/utils/constants");
+const { oneWeek, oneMonth } = require("../../test/util/constants");
 const {
   mockSeller,
   mockDisputeResolver,
@@ -27,7 +27,7 @@ const {
   mockOffer,
   mockTwin,
   accountId,
-} = require("../../test/utils/mock");
+} = require("../../test/util/mock");
 const { setNextBlockTimestamp } = require("../util/test-utils.js");
 
 // Common vars

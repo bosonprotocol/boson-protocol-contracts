@@ -1,9 +1,9 @@
-// Script to split tests into chunks. Used on `test/utils/generate-test-chunks.sh`
+// Script to split tests into chunks. Used on `test/util/generate-test-chunks.sh`
 const fs = require("fs");
 
 // The number of chunks to split the tests into
 const chunks = process.argv[2];
-// The path to the temporary file with the outputs of `time` command, created on `test/utils/generate-test-chunks.sh` (`time-report.txt`)
+// The path to the temporary file with the outputs of `time` command, created on `test/util/generate-test-chunks.sh` (`time-report.txt`)
 const timeReportFile = process.argv[3];
 // A list of tests to split
 let files = JSON.parse(process.argv[4]);
@@ -59,5 +59,5 @@ fs.readFile(timeReportFile, "utf8", (_, data) => {
 
   console.log("Chunks", filesByChunk);
 
-  fs.writeFileSync("./test/utils/test-chunks.txt", JSON.stringify(filesByChunk, null, 2));
+  fs.writeFileSync("./test/util/test-chunks.txt", JSON.stringify(filesByChunk, null, 2));
 });

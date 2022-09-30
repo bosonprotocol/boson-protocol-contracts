@@ -7,7 +7,7 @@ const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.j
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
-const { oneWeek, oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../util/constants");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 
 /**
