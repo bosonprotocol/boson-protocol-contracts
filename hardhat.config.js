@@ -52,12 +52,18 @@ module.exports = {
       url: environments.mumbai.txNode,
       accounts: environments.mumbai.keys,
       gas: environments.mumbai.gasLimit
-    }
+    },
+    polygon: {
+      url: environments.polygon.txNode,
+      accounts: environments.polygon.keys,
+      gas: environments.polygon.gasLimit
+    },
   },
   etherscan: {
     apiKey: {
       mainnet: environments.etherscan.apiKey,
       polygonMumbai: environments.polygonscan.apiKey,
+      polygon: environments.polygonscan.apiKey,
     }
   },
   solidity: {
