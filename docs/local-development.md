@@ -2,10 +2,10 @@
 
 <h1 align="center">Boson Protocol V2</h1>
 
-## [Intro](../README.md) | [Setup](setup.md) | [Tasks](tasks.md) | Local development | [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md)
+### [Intro](../README.md) | [Audits](audits.md) | [Setup](setup.md) | [Tasks](tasks.md) | [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md) | [Happy Path Exchange](happy-path-exchange.md)
 
-If you want to develop against the Boson protocol smart contracts, you need to set up the local development enviromnent.
-Follow the steps on this page to get the complete set of instructions that will help you set up the environment in no time.
+## Running against a Local Node
+If you want to develop against the Boson protocol smart contracts, you will need to deploy contracts to a local node that you can execute transactions against with scripts or a locally served instance of your dapp.
 
 ## Prerequisites
 

@@ -2,12 +2,12 @@
 
 <h1 align="center">Boson Protocol V2</h1>
 
-## [Intro](../README.md) | [Setup](setup.md) | Tasks | [Local development](local-development.md) |  [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md)
+### [Intro](../README.md) | [Audits](audits.md) | [Setup](setup.md) | Tasks | [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md) | [Happy Path Exchange](happy-path-exchange.md)
+
 ## Development Tasks
 Everything required to build, test, analyse, and deploy is available as an NPM script.
 * Scripts are defined in [`package.json`](../package.json).
-* Most late-model IDEs such as Webstorm have an NPM tab to let you view and launch these
-tasks with a double-click.
+* Most late-model IDEs such as Webstorm have an NPM tab to let you view and launch these tasks with a double-click.
 * If you don't have an NPM launch window, you can run them from the command line.
 
 ### Build the contracts
@@ -87,7 +87,7 @@ This builds the contracts calculates their byte size. Useful to make sure the co
 ```npm run size```
 
 ### Estimate protocol config limits
-Estimate the maximum value for protocol config values. Detailed description of the estimation is avaialbe on [limit estimation](limit-estimation.md).
+Estimate the maximum value for protocol config values. Read more in this detailed description of the [limit estimation](limit-estimation.md) process.
 
 ```npm run estimate-limits```
 
