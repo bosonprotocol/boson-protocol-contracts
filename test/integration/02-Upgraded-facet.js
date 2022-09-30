@@ -18,14 +18,14 @@ const {
   mockVoucher,
   mockExchange,
   accountId,
-} = require("../utils/mock");
+} = require("../util/mock");
 const {
   setNextBlockTimestamp,
   calculateVoucherExpiry,
   prepareDataSignatureParameters,
   applyPercentage,
 } = require("../util/utils.js");
-const { oneWeek, oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../util/constants");
 const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 

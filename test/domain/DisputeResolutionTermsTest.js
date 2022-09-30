@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
-const { oneMonth } = require("../utils/constants");
+const { oneMonth } = require("../util/constants");
 
 /**
  *  Test the DisputeResolutionTerms domain entity

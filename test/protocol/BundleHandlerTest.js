@@ -23,8 +23,8 @@ const {
   mockVoucherInitValues,
   mockAuthToken,
   accountId,
-} = require("../utils/mock");
-const { oneWeek, oneMonth } = require("../utils/constants");
+} = require("../util/mock");
+const { oneWeek, oneMonth } = require("../util/constants");
 
 /**
  *  Test the Boson Bundle Handler interface

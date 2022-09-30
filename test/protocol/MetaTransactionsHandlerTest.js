@@ -27,8 +27,8 @@ const {
   mockAuthToken,
   accountId,
   mockExchange,
-} = require("../utils/mock");
-const { oneWeek, oneMonth } = require("../utils/constants");
+} = require("../util/mock");
+const { oneWeek, oneMonth } = require("../util/constants");
 const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
 
 /**

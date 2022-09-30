@@ -12,7 +12,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { calculateContractAddress } = require("../util/utils.js");
-const { oneWeek, oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../util/constants");
 const {
   mockOffer,
   mockSeller,
@@ -21,7 +21,7 @@ const {
   mockVoucherInitValues,
   mockAuthToken,
   accountId,
-} = require("../utils/mock.js");
+} = require("../util/mock.js");
 
 /**
  *  Test the Boson Buyer Handler

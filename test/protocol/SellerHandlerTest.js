@@ -12,9 +12,9 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { calculateContractAddress } = require("../util/utils.js");
-const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../utils/constants");
+const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { mockSeller, mockAuthToken, mockVoucherInitValues, accountId } = require("../utils/mock");
+const { mockSeller, mockAuthToken, mockVoucherInitValues, accountId } = require("../util/mock");
 
 /**
  *  Test the Boson Seller Handler

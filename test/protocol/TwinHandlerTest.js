@@ -16,8 +16,8 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { getEvent } = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { mockOffer, mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues, accountId } = require("../utils/mock");
-const { oneWeek, oneMonth } = require("../utils/constants");
+const { mockOffer, mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues, accountId } = require("../util/mock");
+const { oneWeek, oneMonth } = require("../util/constants");
 
 /**
  *  Test the Boson Twin Handler interface

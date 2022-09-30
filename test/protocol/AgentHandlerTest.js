@@ -10,8 +10,8 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { oneWeek, oneMonth } = require("../utils/constants");
-const { mockAgent, accountId } = require("../utils/mock");
+const { oneWeek, oneMonth } = require("../util/constants");
+const { mockAgent, accountId } = require("../util/mock");
 
 /**
  *  Test the Boson Agent Handler

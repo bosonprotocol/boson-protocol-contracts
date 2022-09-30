@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const Receipt = require("../../scripts/domain/Receipt.js");
-const { mockReceipt, mockOffer, mockTwinReceipt, mockCondition } = require("../utils/mock");
+const { mockReceipt, mockOffer, mockTwinReceipt, mockCondition } = require("../util/mock");
 const DisputeState = require("../../scripts/domain/DisputeState");
 
 /**

@@ -19,7 +19,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { applyPercentage } = require("../util/utils.js");
-const { oneWeek, oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../util/constants");
 const {
   mockOffer,
   mockDisputeResolver,
@@ -28,7 +28,7 @@ const {
   mockVoucherInitValues,
   mockAuthToken,
   accountId,
-} = require("../utils/mock");
+} = require("../util/mock");
 /**
  *  Test the Boson Offer Handler interface
  */

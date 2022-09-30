@@ -20,7 +20,7 @@ const {
   prepareDataSignatureParameters,
   applyPercentage,
 } = require("../util/utils.js");
-const { oneWeek, oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../util/constants");
 const {
   mockOffer,
   mockDisputeResolver,
@@ -29,7 +29,7 @@ const {
   mockAuthToken,
   mockAgent,
   accountId,
-} = require("../utils/mock");
+} = require("../util/mock");
 
 /**
  *  Test the Boson Funds Handler interface
