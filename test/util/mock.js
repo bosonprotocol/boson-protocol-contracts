@@ -22,7 +22,7 @@ const Agent = require("../../scripts/domain/Agent");
 const Receipt = require("../../scripts/domain/Receipt");
 const Voucher = require("../../scripts/domain/Voucher");
 const Dispute = require("../../scripts/domain/Dispute");
-const { applyPercentage } = require("../../scripts/util/test-utils.js");
+const { applyPercentage } = require("../../test/util/utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
 
 function* incrementer() {

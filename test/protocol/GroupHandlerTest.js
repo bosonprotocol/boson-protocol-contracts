@@ -17,7 +17,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { getEvent } = require("../../scripts/util/test-utils.js");
+const { getEvent } = require("../util/utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
 const {
   mockOffer,

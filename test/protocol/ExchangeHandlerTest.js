@@ -45,7 +45,7 @@ const {
   prepareDataSignatureParameters,
   calculateContractAddress,
   applyPercentage,
-} = require("../../scripts/util/test-utils.js");
+} = require("../util/utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
 const { FundsList } = require("../../scripts/domain/Funds");
 const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");

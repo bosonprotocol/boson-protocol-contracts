@@ -24,7 +24,7 @@ const {
   calculateVoucherExpiry,
   prepareDataSignatureParameters,
   applyPercentage,
-} = require("../../scripts/util/test-utils.js");
+} = require("../util/utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
 const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");

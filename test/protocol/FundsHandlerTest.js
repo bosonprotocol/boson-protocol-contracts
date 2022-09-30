@@ -19,7 +19,7 @@ const {
   eventEmittedWithArgs,
   prepareDataSignatureParameters,
   applyPercentage,
-} = require("../../scripts/util/test-utils.js");
+} = require("../util/utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
 const {
   mockOffer,

@@ -22,7 +22,7 @@ const {
   mockBuyer,
   accountId,
 } = require("../../utils/mock");
-const { applyPercentage } = require("../../../scripts/util/test-utils.js");
+const { applyPercentage } = require("../../util/utils.js");
 
 describe("IBosonVoucher", function () {
   let interfaceIds;

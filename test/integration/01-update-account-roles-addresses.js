@@ -26,7 +26,7 @@ const {
   calculateContractAddress,
   prepareDataSignatureParameters,
   applyPercentage,
-} = require("../../scripts/util/test-utils.js");
+} = require("../util/utils.js");
 
 /**
  *  Integration test case - operations should remain possible after updating account roles addresses.
