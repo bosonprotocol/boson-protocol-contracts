@@ -12,7 +12,7 @@ const {
   mockDisputeResolver,
   mockAgent,
   accountId,
-} = require("../utils/mock");
+} = require("../util/mock");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const Role = require("../../scripts/domain/Role");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -20,13 +20,13 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { oneMonth, oneWeek } = require("../utils/constants");
+const { oneMonth, oneWeek } = require("../util/constants");
 const {
   setNextBlockTimestamp,
   calculateContractAddress,
   prepareDataSignatureParameters,
   applyPercentage,
-} = require("../../scripts/util/test-utils.js");
+} = require("../util/utils.js");
 
 /**
  *  Integration test case - operations should remain possible after updating account roles addresses.

@@ -10,7 +10,7 @@ const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-prot
 const Role = require("../../../scripts/domain/Role");
 const { expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
-const { oneWeek, oneMonth } = require("../../utils/constants.js");
+const { oneWeek, oneMonth } = require("../../util/constants.js");
 
 describe("IClientExternalAddresses", function () {
   let accessController, protocolDiamond;

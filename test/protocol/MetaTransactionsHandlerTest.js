@@ -16,7 +16,7 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { prepareDataSignatureParameters, setNextBlockTimestamp } = require("../../scripts/util/test-utils.js");
+const { prepareDataSignatureParameters, setNextBlockTimestamp } = require("../util/utils.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const {
   mockOffer,
@@ -27,8 +27,8 @@ const {
   mockAuthToken,
   accountId,
   mockExchange,
-} = require("../utils/mock");
-const { oneWeek, oneMonth } = require("../utils/constants");
+} = require("../util/mock");
+const { oneWeek, oneMonth } = require("../util/constants");
 const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
 
 /**

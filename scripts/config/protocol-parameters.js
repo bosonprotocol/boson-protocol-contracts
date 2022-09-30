@@ -1,4 +1,4 @@
-const { oneWeek, oneMonth } = require("../../test/utils/constants");
+const { oneWeek, oneMonth } = require("../../test/util/constants");
 
 /**
  *  Protocol config parameters, used during the deployment

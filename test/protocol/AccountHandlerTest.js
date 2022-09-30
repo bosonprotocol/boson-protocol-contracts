@@ -9,7 +9,7 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { oneWeek, oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../util/constants");
 const {
   mockDisputeResolver,
   mockBuyer,
@@ -18,7 +18,7 @@ const {
   mockAuthToken,
   mockAgent,
   accountId,
-} = require("../utils/mock");
+} = require("../util/mock");
 
 /**
  *  Test the Boson Account Handler interface

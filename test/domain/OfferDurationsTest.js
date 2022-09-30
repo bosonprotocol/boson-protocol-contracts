@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
-const { oneWeek, oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../util/constants");
 
 /**
  *  Test the OfferDurations domain entity

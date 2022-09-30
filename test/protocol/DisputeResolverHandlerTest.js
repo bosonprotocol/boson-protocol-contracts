@@ -11,9 +11,9 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { getEvent } = require("../../scripts/util/test-utils.js");
-const { oneWeek, oneMonth } = require("../utils/constants");
-const { mockSeller, mockDisputeResolver, mockVoucherInitValues, mockAuthToken, accountId } = require("../utils/mock");
+const { getEvent } = require("../util/utils.js");
+const { oneWeek, oneMonth } = require("../util/constants");
+const { mockSeller, mockDisputeResolver, mockVoucherInitValues, mockAuthToken, accountId } = require("../util/mock");
 
 /**
  *  Test the Boson Dispute Resolver Handler

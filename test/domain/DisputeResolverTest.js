@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
-const { oneMonth } = require("../utils/constants");
+const { oneMonth } = require("../util/constants");
 
 /**
  *  Test the DisputeResolver domain entity

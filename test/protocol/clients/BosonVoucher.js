@@ -9,11 +9,11 @@ const { deployProtocolHandlerFacets } = require("../../../scripts/util/deploy-pr
 const Role = require("../../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const VoucherInitValues = require("../../../scripts/domain/VoucherInitValues");
-const { mockOffer } = require("../../utils/mock.js");
+const { mockOffer } = require("../../util/mock.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const { assert, expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
-const { oneWeek, oneMonth } = require("../../utils/constants");
+const { oneWeek, oneMonth } = require("../../util/constants");
 const {
   mockDisputeResolver,
   mockSeller,
@@ -21,8 +21,8 @@ const {
   mockAuthToken,
   mockBuyer,
   accountId,
-} = require("../../utils/mock");
-const { applyPercentage } = require("../../../scripts/util/test-utils.js");
+} = require("../../util/mock");
+const { applyPercentage } = require("../../util/utils.js");
 
 describe("IBosonVoucher", function () {
   let interfaceIds;
