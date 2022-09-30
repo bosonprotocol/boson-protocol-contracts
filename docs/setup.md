@@ -20,7 +20,7 @@ The stack is a simple one:
 All NPM resources are project local. No global installs required.
 
 ```
-cd path/to/contracts-v2 
+cd path/to/boson-protocol-contracts 
 npm install
 ```
 

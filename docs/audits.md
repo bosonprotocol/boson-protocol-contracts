@@ -8,7 +8,7 @@
 Version 2 of the Boson Protocol is an entirely new codebase and architecture from V1 and so we have once again had the  protocol thoroughly audited from top to bottom. Here are the results of those audits.
 
 ### Peckshield
-* [View Report](audits/PeckShield-Audit-Report-Boson.pdf)
+* [View Report](audits/PeckShield-Audit-Report-Boson-v2.0.pdf)
 
 ### Omniscia
 * Coming soon
