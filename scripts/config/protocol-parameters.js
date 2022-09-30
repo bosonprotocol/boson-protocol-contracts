@@ -1,5 +1,3 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
 const { oneWeek, oneMonth } = require("../../test/util/constants");
 
 /**
