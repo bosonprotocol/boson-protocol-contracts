@@ -195,7 +195,7 @@ async function main() {
 
   if (adminAddress.toLowerCase() != deployer.address.toLowerCase()) {
     // Grant ADMIN role to the specified admin address
-    // Skip this step if admindAddress is the deployer
+    // Skip this step if adminAddress is the deployer
     transactionResponse = await accessController.grantRole(Role.ADMIN, adminAddress);
     await transactionResponse.wait(confirmations);
   }
