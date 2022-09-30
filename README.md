@@ -30,3 +30,21 @@ Done or in progress are:
   - [Domain Model](docs/domain.md) - Entities and their relationships
   - [State Machines](docs/state-machines.md) - State Machines in the Core Exchange Mechanism
   - [Happy Path Exchange](docs/happy-path-exchange.md) - Timeline of the simplest exchange
+  - [Contributing](#contributing) - Guidelines for contributing to this repo
+  - [License](#license) - License information
+
+## Contributing
+
+We welcome contributions! Until now, Boson Protocol has been largely worked on by a small dedicated team. However, the ultimate goal is for all of the Boson Protocol repositories to be fully owned by the community and contributors. Issues, pull requests, suggestions, and any sort of involvement are more than welcome.
+
+If you have noticed a bug, please follow the [bug bounty procedure](https://github.com/bosonprotocol/community/blob/52725b04d1d3013dfc936d3d27ddc34019c6d02d/BugBountyProgram.md).
+
+Questions and feedback are always welcome, we will use them to improve our offering.
+
+All PRs must pass all tests before being merged.
+
+By being in this community, you agree to the [Code of Conduct](/docs/code-of-conduct.md). Take a look at it, if you haven't already.
+
+## License
+
+Licensed under [LGPL v3](LICENSE).
