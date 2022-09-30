@@ -52,7 +52,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in Redeemed state
-     * - Caller is not buyer and offer fulfillment period has not elapsed
+     * - Caller is not buyer and offer dispute period has not elapsed
      *
      * @param _exchangeId - the id of the exchange to complete
      */
@@ -69,7 +69,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - For any exchange:
      *   - Exchange does not exist
      *   - Exchange is not in Redeemed state
-     *   - Caller is not buyer and offer fulfillment period has not elapsed
+     *   - Caller is not buyer and offer dispute period has not elapsed
      *
      * @param _exchangeIds - the array of exchanges ids
      */

@@ -75,7 +75,7 @@ describe("IBosonOfferHandler", function () {
     offerFeesStruct,
     offerFeesList,
     offerFeesStructs;
-  let fulfillmentPeriod,
+  let disputePeriod,
     voucherValid,
     resolutionPeriod,
     offerDurations,
@@ -184,7 +184,7 @@ describe("IBosonOfferHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
-        minFulfillmentPeriod: oneWeek,
+        minDisputePeriod: oneWeek,
       },
       // Protocol fees
       {
@@ -711,14 +711,14 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
-        it("Fulfillment period is less than minimum fulfillment period", async function () {
-          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
-          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
+        it("Dispute period is less than minimum dispute period", async function () {
+          // Set dispute period to less than minDisputePeriod (oneWeek)
+          offerDurations.disputePeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_PERIOD);
         });
 
         it("Resolution period is set to zero", async function () {
@@ -728,7 +728,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
         it("Resolution period is greater than protocol max resolution period", async function () {
@@ -738,7 +738,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
         it("Available quantity is set to zero", async function () {
@@ -1505,7 +1505,7 @@ describe("IBosonOfferHandler", function () {
           .add(oneMonth * 6 * (i + 1))
           .toString();
 
-        offerDurations.fulfillmentPeriod = fulfillmentPeriod = `${(i + 1) * oneMonth}`;
+        offerDurations.disputePeriod = disputePeriod = `${(i + 1) * oneMonth}`;
         offerDurations.voucherValid = voucherValid = `${(i + 1) * oneMonth}`;
         offerDurations.resolutionPeriod = resolutionPeriod = `${(i + 1) * oneWeek}`;
 
@@ -1995,7 +1995,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(operator)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
         it("For some offer, both voucher expiration date and voucher expiraton period are defined", async function () {
@@ -2055,16 +2055,16 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
-        it("For some offer, Fulfillment period is less than minimum fulfillment period", async function () {
-          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
-          offerDurationsList[1].fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
+        it("For some offer, Dispute period is less than minimum dispute period", async function () {
+          // Set dispute period to less than minDisputePeriod (oneWeek)
+          offerDurationsList[1].disputePeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler
               .connect(operator)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_PERIOD);
         });
 
         it("For some offer, dispute duration is set to zero", async function () {
@@ -2076,7 +2076,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(operator)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
         it("For some offer, available quantity is set to zero", async function () {
@@ -2226,7 +2226,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Number of dispute durations does not match the number of offers", async function () {
           // Make dispute durations longer
-          offerDurationsList.push(new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod));
+          offerDurationsList.push(new OfferDurations(disputePeriod, voucherValid, resolutionPeriod));
 
           // Attempt to Create an offer, expecting revert
           await expect(
