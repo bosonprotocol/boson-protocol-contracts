@@ -47,4 +47,4 @@ By being in this community, you agree to the [Code of Conduct](/docs/code-of-con
 
 ## License
 
-Licensed under [LGPL v3](LICENSE).
+Licensed under [GPL-v3](LICENSE).
