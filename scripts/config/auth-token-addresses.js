@@ -19,7 +19,5 @@ module.exports = {
     hardhat: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
     localhost: "0x941275FD90443BAdE771fE8D1ebA996d98387A15", // dummy value, replace after running deploy-mocks:local
     test: "0x13E03B861B96d2fC9553D4c52ba1a914f73f50a4", //actual deployed value
-    mumbai: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
-    polygon: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
   },
 };
