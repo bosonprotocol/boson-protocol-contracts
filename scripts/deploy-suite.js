@@ -103,7 +103,7 @@ async function main() {
   const adminAddress = network === "hardhat" ? accounts[1].address : environments[network].adminAddress;
 
   // If admin address is unspecified, exit the deployment process
-  if (adminAddress == ethers.constants.AddressZero || adminAddress == "") {
+  if (adminAddress == ethers.constants.AddressZero || !adminAddress) {
     console.log("Admin address must not be zero address");
     process.exit(1);
   }
