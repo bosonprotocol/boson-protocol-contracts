@@ -1,3 +1,9 @@
+[![banner](images/banner.png)](https://bosonprotocol.io)
+
+<h1 align="center">Boson Protocol V2</h1>
+
+### [Intro](../README.md) | [Audits](audits.md) | [Setup](setup.md) | [Tasks](tasks.md) | [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md) | [Happy Path Exchange](happy-path-exchange.md)
+
 # Protocol limit estimation
 
 Certain actions in the protocol require looping over dynamic size arrays. To avoid hitting the block gas limit, special protocol limits were introduced which revert the transaction before the loop even starts. Values for these limits are then determined through estimation process, described here.
