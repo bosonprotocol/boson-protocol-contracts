@@ -9,7 +9,7 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 /**
  * @title BundleBase
  *
- * @notice Provides methods for bundle creation that can be shared accross facets
+ * @notice Provides methods for bundle creation that can be shared across facets
  */
 contract BundleBase is ProtocolBase, IBosonBundleEvents {
     /**
@@ -20,7 +20,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
      * Reverts if:
      * - The bundles region of protocol is paused
      * - Seller does not exist
-     * - Either offer ids or twin ids are empty
+     * - Either offerIds member or twinIds member is empty
      * - Any of the offers belongs to different seller
      * - Any of the offers does not exist
      * - Offer exists in a different bundle

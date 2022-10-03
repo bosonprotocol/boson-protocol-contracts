@@ -41,7 +41,7 @@ Deploy suite deploys protocol diamond, all facets, client and beacon, and initia
 - **Ethereum Mainnet**. This deploys the built contracts to Ethereum Mainnet.
 ```npm run deploy-suite:ethereum:mainnet```
 
-### Deploy mock authentiacion token
+### Deploy mock authentication token
 Boson protocol support LENS and ENS as authentication method for seller's admin account. Public networks have LENS and ENS already deployed, but to use that funcionality on custom local or test nodes, you need to deploy the mock contract first. We provide the scripts for the following networks:
 
 - **Hardhat network**. This deploys the built contracts to local network (mainly to test deployment script). Deployed contracts are discarded afterwards.  

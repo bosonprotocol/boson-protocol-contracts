@@ -1333,7 +1333,7 @@ describe("IBosonFundsHandler", function () {
             expectedProtocolAvailableFunds,
             "Protocol available funds mismatch after second withdrawal"
           );
-          // Native currency balance is increased for the protocl fee
+          // Native currency balance is increased for the protocol fee
           expect(protocolTreasuryNativeBalanceAfter).to.eql(
             protocolTreasuryNativeBalanceBefore.add(offerTokenProtocolFee),
             "Fee collector native currency balance mismatch after second withdrawal"

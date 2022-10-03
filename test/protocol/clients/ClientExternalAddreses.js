@@ -106,6 +106,13 @@ describe("IClientExternalAddresses", function () {
             RevertReasons.ACCESS_DENIED
           );
         });
+
+        it("implementation address is the zero address", async function () {
+          // Attempt to set new implementation, expecting revert
+          await expect(beacon.connect(deployer).setImplementation(ethers.constants.AddressZero)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+        });
       });
     });
 
@@ -135,6 +142,13 @@ describe("IClientExternalAddresses", function () {
           // Attempt to set new protocol address, expecting revert
           await expect(beacon.connect(rando).setProtocolAddress(protocolAddress)).to.revertedWith(
             RevertReasons.ACCESS_DENIED
+          );
+        });
+
+        it("protocol address is the zero address", async function () {
+          // Attempt to set new protocol address, expecting revert
+          await expect(beacon.connect(deployer).setProtocolAddress(ethers.constants.AddressZero)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
           );
         });
       });

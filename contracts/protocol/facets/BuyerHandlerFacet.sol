@@ -8,7 +8,7 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 /**
  * @title BuyerHandlerFacet
  *
- * @notice Handles buyer account management requests and queries
+ * @notice Handles buyer account management requests and queries.
  */
 contract BuyerHandlerFacet is BuyerBase {
     /**
@@ -23,7 +23,7 @@ contract BuyerHandlerFacet is BuyerBase {
     /**
      * @notice Creates a buyer.
      *
-     * Emits an BuyerCreated event if successful.
+     * Emits a BuyerCreated event if successful.
      *
      * Reverts if:
      * - The buyers region of protocol is paused
@@ -50,7 +50,7 @@ contract BuyerHandlerFacet is BuyerBase {
      * - Wallet address is zero address
      * - Address is not unique to this buyer
      * - Buyer does not exist
-     * - Current wallet address has oustanding vouchers
+     * - Current wallet address has outstanding vouchers
      *
      * @param _buyer - the fully populated buyer struct
      */

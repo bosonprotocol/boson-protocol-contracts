@@ -25,7 +25,7 @@ contract BosonTypes {
     }
 
     enum EvaluationMethod {
-        None, // None should always be at index 0, never chage this value
+        None, // None should always be at index 0. Never change this value.
         Threshold,
         SpecificToken
     }

@@ -1266,7 +1266,7 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
-        it("Both voucher expiration date and voucher expiraton period are defined", async function () {
+        it("Both voucher expiration date and voucher expiration period are defined", async function () {
           // Set both voucherRedeemableUntil and voucherValid
           offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) + oneMonth).toString();
           offerDurations.voucherValid = oneMonth.toString();
@@ -1288,7 +1288,7 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
-        it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
+        it("Neither of voucher expiration date and voucher expiration period are defined", async function () {
           // Set both voucherRedeemableUntil and voucherValid to "0"
           offerDates.voucherRedeemableUntil = "0";
           offerDurations.voucherValid = "0";

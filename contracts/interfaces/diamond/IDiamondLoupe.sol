@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 /**
  * @title IDiamondLoupe
  *
- * @notice Provides Diamond Facet inspection functionality
+ * @notice Provides Diamond Facet inspection functionality.
  *
  * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
  * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535

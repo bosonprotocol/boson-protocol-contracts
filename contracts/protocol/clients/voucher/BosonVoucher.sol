@@ -43,7 +43,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
         __ERC721_init_unchained(voucherName, voucherSymbol);
 
-        // we dont call init on ownable, but rather just set the ownership to correct owner
+        // we don't call init on ownable, but rather just set the ownership to correct owner
         _transferOwnership(_newOwner);
 
         _setContractURI(voucherInitValues.contractURI);
@@ -89,7 +89,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * IERC165 contracts, and all concrete ones need to be allowed
      * to respond.
      *
-     * 0x2a55205a representes ERC2981 interface id
+     * 0x2a55205a represents ERC2981 interface id
      */
     function supportsInterface(bytes4 interfaceId)
         public
@@ -156,7 +156,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @notice Transfers ownership of the contract to a new account (`newOwner`).
      * Can only be called by the protocol. Change is done by calling `updateSeller` on the protocol.
      *
-     * @param newOwner - the address to which ownsership of the voucher contract will be transferred
+     * @param newOwner - the address to which ownership of the voucher contract will be transferred
      */
     function transferOwnership(address newOwner) public override(IBosonVoucher, OwnableUpgradeable) onlyRole(PROTOCOL) {
         require(newOwner != address(0), "Ownable: new owner is the zero address");
@@ -226,7 +226,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @notice Sets the royalty percentage.
      * Can only be called by the owner or during the initialization
      *
-     * Emits RoyaltyPercentageChanged if succesful.
+     * Emits RoyaltyPercentageChanged if successful.
      *
      * Reverts if:
      * - Caller is not the owner.
@@ -242,7 +242,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @notice Sets royalty percentage.
      * Can only be called by the owner or during the initialization.
      *
-     * Emits RoyaltyPercentageChanged if succesful.
+     * Emits RoyaltyPercentageChanged if successful.
      *
      * @param _newRoyaltyPercentage - new royalty percentage
      */

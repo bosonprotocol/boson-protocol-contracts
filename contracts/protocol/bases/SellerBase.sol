@@ -11,7 +11,7 @@ import { IInitializableVoucherClone } from "../../interfaces/IInitializableVouch
 /**
  * @title SellerBase
  *
- * @dev Provides methods for seller creation that can be shared accross facets
+ * @dev Provides methods for seller creation that can be shared across facets
  */
 contract SellerBase is ProtocolBase, IBosonAccountEvents {
     /**
@@ -49,7 +49,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             ADMIN_OR_AUTH_TOKEN
         );
 
-        // Check that the addresses are unique to one seller id, accross all roles. These addresses should always be checked. Treasury is not checked
+        // Check that the addresses are unique to one seller id, across all roles. These addresses should always be checked. Treasury is not checked
         mapping(address => uint256) storage sellerIdByOperator = lookups.sellerIdByOperator;
         mapping(address => uint256) storage sellerIdByAdmin = lookups.sellerIdByAdmin;
         mapping(address => uint256) storage sellerIdByClerk = lookups.sellerIdByClerk;
@@ -71,7 +71,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
                 AUTH_TOKEN_MUST_BE_UNIQUE
             );
         } else {
-            // Check that the admin address is unique to one seller id, accross all roles
+            // Check that the admin address is unique to one seller id, across all roles
             require(
                 sellerIdByOperator[_seller.admin] == 0 &&
                     sellerIdByAdmin[_seller.admin] == 0 &&

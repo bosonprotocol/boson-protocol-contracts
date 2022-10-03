@@ -49,7 +49,7 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      * - Token list length exceeds the maximum allowed number of tokens
      * - Caller tries to withdraw more that they have in available funds
      * - There is nothing to withdraw
-     * - Transfer of funds is not succesful
+     * - Transfer of funds is not successful
      *
      * @param _entityId - id of entity for which funds should be withdrawn
      * @param _tokenList - list of contract addresses of tokens that are being withdrawn
@@ -75,7 +75,7 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      * - Token list length exceeds the maximum allowed number of tokens
      * - Caller tries to withdraw more that they have in available funds
      * - There is nothing to withdraw
-     * - Transfer of funds is not succesful
+     * - Transfer of funds is not successful
      *
      * @param _tokenList - list of contract addresses of tokens that are being withdrawn
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList

@@ -7,7 +7,7 @@ import { IDiamondCut } from "../interfaces/diamond/IDiamondCut.sol";
 /**
  * @title DiamondLib
  *
- * @notice Provides Diamond storage slot and supported interface checks
+ * @notice Provides Diamond storage slot and supported interface checks.
  *
  * @notice Based on Nick Mudge's gas-optimized diamond-2 reference,
  * with modifications to support role-based access and management of
@@ -16,7 +16,7 @@ import { IDiamondCut } from "../interfaces/diamond/IDiamondCut.sol";
  * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
  * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535
  *
- * N.B. Facet management functions from original `DiamondLib` were refactor/extracted
+ * N.B. Facet management functions from original `DiamondLib` were refactored/extracted
  * to JewelerLib, since business facets also use this library for access control and
  * managing supported interfaces.
  *
@@ -27,16 +27,16 @@ library DiamondLib {
     bytes32 internal constant DIAMOND_STORAGE_POSITION = keccak256("diamond.standard.diamond.storage");
 
     struct DiamondStorage {
-        // maps function selectors to the facets that execute the functions.
+        // Maps function selectors to the facets that execute the functions
         // and maps the selectors to their position in the selectorSlots array.
         // func selector => address facet, selector position
         mapping(bytes4 => bytes32) facets;
-        // array of slots of function selectors.
-        // each slot holds 8 function selectors.
+        // Array of slots of function selectors.
+        // Each slot holds 8 function selectors.
         mapping(uint256 => bytes32) selectorSlots;
         // The number of function selectors in selectorSlots
         uint16 selectorCount;
-        // Used to query if a contract implements an interface.
+        // Used to query if a contract implement is an interface.
         // Used to implement ERC-165.
         mapping(bytes4 => bool) supportedInterfaces;
         // The Boson Protocol AccessController

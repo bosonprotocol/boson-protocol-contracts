@@ -390,7 +390,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return offerDates - the offer dates details. See {BosonTypes.OfferDates}
      */
     function fetchOfferDates(uint256 _offerId) internal view returns (BosonTypes.OfferDates storage offerDates) {
-        // Get the offerDates's slot
+        // Get the offerDates slot
         offerDates = protocolEntities().offerDates[_offerId];
     }
 
@@ -420,7 +420,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         view
         returns (BosonTypes.DisputeResolutionTerms storage disputeResolutionTerms)
     {
-        // Get the disputeResolutionTerms's slot
+        // Get the disputeResolutionTerms slot
         disputeResolutionTerms = protocolEntities().disputeResolutionTerms[_offerId];
     }
 
@@ -446,7 +446,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return condition - the condition details. See {BosonTypes.Condition}
      */
     function fetchCondition(uint256 _groupId) internal view returns (BosonTypes.Condition storage condition) {
-        // Get the offerDates's slot
+        // Get the offerDates slot
         condition = protocolEntities().conditions[_groupId];
     }
 
@@ -498,7 +498,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         // Get the dispute's slot
         dispute = entities.disputes[_exchangeId];
 
-        // Get the disputeDates's slot
+        // Get the disputeDates slot
         disputeDates = entities.disputeDates[_exchangeId];
 
         // Determine existence
@@ -689,7 +689,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return offerFees - the offer fees details. See {BosonTypes.OfferFees}
      */
     function fetchOfferFees(uint256 _offerId) internal view returns (BosonTypes.OfferFees storage offerFees) {
-        // Get the offerFees's slot
+        // Get the offerFees slot
         offerFees = protocolEntities().offerFees[_offerId];
     }
 

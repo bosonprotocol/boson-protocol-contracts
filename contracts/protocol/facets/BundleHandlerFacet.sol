@@ -9,7 +9,7 @@ import { BundleBase } from "../bases/BundleBase.sol";
 /**
  * @title BundleHandlerFacet
  *
- * @notice Handles bundling of offers with twins within the protocol
+ * @notice Handles bundling of offers with twins within the protocol.
  */
 contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
     /**
@@ -28,7 +28,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * Reverts if:
      * - The bundles region of protocol is paused
      * - Seller does not exist
-     * - Either offer ids or twin ids are empty
+     * - Either offerIds member or twinIds member is empty
      * - Any of the offers belongs to different seller
      * - Any of the offers does not exist
      * - Offer exists in a different bundle
