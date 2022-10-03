@@ -9,7 +9,7 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 /**
  * @title AgentHandlerFacet
  *
- * @notice Handles Agent account management requests and queries
+ * @notice Handles Agent account management requests and queries.
  */
 contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**

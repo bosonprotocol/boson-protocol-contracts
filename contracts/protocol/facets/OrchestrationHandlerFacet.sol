@@ -14,7 +14,7 @@ import { PausableBase } from "../bases/PausableBase.sol";
 /**
  * @title OrchestrationHandlerFacet
  *
- * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
+ * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction.
  */
 contract OrchestrationHandlerFacet is
     PausableBase,
@@ -60,8 +60,8 @@ contract OrchestrationHandlerFacet is
      * - In offer struct:
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Both voucher expiration date and voucher expiraton period are defined
-     *   - Neither voucher expiration date nor voucher expiraton period are defined
+     *   - Both voucher expiration date and voucher expiration period are defined
+     *   - Neither voucher expiration date nor voucher expiration period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
@@ -113,8 +113,8 @@ contract OrchestrationHandlerFacet is
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Both voucher expiration date and voucher expiraton period are defined
-     *   - Neither voucher expiration date nor voucher expiraton period are defined
+     *   - Both voucher expiration date and voucher expiration period are defined
+     *   - Neither voucher expiration date nor voucher expiration period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
@@ -174,8 +174,8 @@ contract OrchestrationHandlerFacet is
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Both voucher expiration date and voucher expiraton period are defined
-     *   - Neither voucher expiration date nor voucher expiraton period are defined
+     *   - Both voucher expiration date and voucher expiration period are defined
+     *   - Neither voucher expiration date nor voucher expiration period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
@@ -233,8 +233,8 @@ contract OrchestrationHandlerFacet is
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Both voucher expiration date and voucher expiraton period are defined
-     *   - Neither voucher expiration date nor voucher expiraton period are defined
+     *   - Both voucher expiration date and voucher expiration period are defined
+     *   - Neither voucher expiration date nor voucher expiration period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
@@ -296,8 +296,8 @@ contract OrchestrationHandlerFacet is
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Both voucher expiration date and voucher expiraton period are defined
-     *   - Neither oucher expiration date nor voucher expiraton period are defined
+     *   - Both voucher expiration date and voucher expiration period are defined
+     *   - Neither voucher expiration date nor voucher expiration period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
@@ -377,8 +377,8 @@ contract OrchestrationHandlerFacet is
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Both voucher expiration date and voucher expiraton period are defined
-     *   - Neither voucher expiration date nor voucher expiraton period are defined
+     *   - Both voucher expiration date and voucher expiration period are defined
+     *   - Neither voucher expiration date nor voucher expiration period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
@@ -453,8 +453,8 @@ contract OrchestrationHandlerFacet is
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Both voucher expiration date and voucher expiraton period are defined
-     *   - Neither voucher expiration date nor voucher expiraton period are defined
+     *   - Both voucher expiration date and voucher expiration period are defined
+     *   - Neither voucher expiration date nor voucher expiration period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
@@ -537,8 +537,8 @@ contract OrchestrationHandlerFacet is
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Both voucher expiration date and voucher expiraton period are defined
-     *   - Neither voucher expiration date nor voucher expiraton period are defined
+     *   - Both voucher expiration date and voucher expiration period are defined
+     *   - Neither voucher expiration date nor voucher expiration period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
@@ -601,7 +601,7 @@ contract OrchestrationHandlerFacet is
     }
 
     /**
-     * @notice Checks that caller address is tha same as operator address and creates a seller.
+     * @notice Checks that caller address is the same as operator address and creates a seller.
      *
      * Emits a SellerCreated event if successful.
      *

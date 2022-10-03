@@ -12,7 +12,7 @@ import { IERC1155 } from "../../interfaces/IERC1155.sol";
 /**
  * @title TwinBase
  *
- * @notice Provides functions for twin creation that can be shared accross facets
+ * @notice Provides functions for twin creation that can be shared across facets
  */
 contract TwinBase is ProtocolBase, IBosonTwinEvents {
     /**
@@ -110,7 +110,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             twinIds.push(_twin.id);
         } else if (_twin.tokenType == TokenType.MultiToken) {
             // If token is Fungible or MultiToken amount should not be zero
-            // Also, tthe amount of tokens should not be more than the available token supply.
+            // Also, the amount of tokens should not be more than the available token supply.
             require(_twin.amount > 0 && _twin.amount <= _twin.supplyAvailable, INVALID_AMOUNT);
 
             // Not every ERC20 has supportsInterface method so we can't check interface support if token type is NonFungible
@@ -118,7 +118,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             require(contractSupportsInterface(_twin.tokenAddress, type(IERC1155).interfaceId), INVALID_TOKEN_ADDRESS);
         } else {
             // If token is Fungible or MultiToken amount should not be zero
-            // Also, tthe amount of tokens should not be more than the available token supply.
+            // Also, the amount of tokens should not be more than the available token supply.
             require(_twin.amount > 0 && _twin.amount <= _twin.supplyAvailable, INVALID_AMOUNT);
         }
 

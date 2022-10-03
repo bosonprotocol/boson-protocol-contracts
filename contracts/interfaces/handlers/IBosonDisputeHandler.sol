@@ -45,7 +45,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
 
     /**
      * @notice Extends the dispute timeout, allowing more time for mutual resolution.
-     * As a consequnece also buyer gets more time to escalate the dispute.
+     * As a consequence, buyer also gets more time to escalate the dispute.
      *
      * Emits a DisputeTimeoutExtened event if successful.
      *
@@ -141,7 +141,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * - Dispute is already expired
      * - Dispute is not in a Resolving state
      * - Dispute resolver is not specified (absolute zero offer)
-     * - Offer price is in native token and buyer caller does not send enough
+     * - Offer price is in native token and caller does not send enough
      * - Offer price is in some ERC20 token and caller also sends native currency
      * - If contract at token address does not support ERC20 function transferFrom
      * - If calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
@@ -171,14 +171,14 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
     function decideDispute(uint256 _exchangeId, uint256 _buyerPercent) external;
 
     /**
-     * @notice Enables dispute resolver to explicity refuse to resolve a dispute in Escalated state and releases the funds.
+     * @notice Enables dispute resolver to explicitly refuse to resolve a dispute in Escalated state and releases the funds.
      *
      * Emits an EscalatedDisputeRefused event if successful.
      *
      * Reverts if:
      * - The disputes region of protocol is paused
      * - Exchange does not exist
-     * - Exchange is not in a Eisputed state
+     * - Exchange is not in a Disputed state
      * - Dispute is in some state other than Escalated
      * - Dispute escalation response period has elapsed
      * - Caller is not the dispute resolver for this dispute
@@ -190,7 +190,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
     /**
      * @notice Expires the dispute in escalated state and release the funds.
      *
-     * Emits a EscalatedDisputeExpired event if successful.
+     * Emits an EscalatedDisputeExpired event if successful.
      *
      * Reverts if:
      * - The disputes region of protocol is paused
@@ -239,7 +239,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
     function getDisputeTimeout(uint256 _exchangeId) external view returns (bool exists, uint256 timeout);
 
     /**
-     * @notice Checks if the given dispute in a Finalized state.
+     * @notice Checks if the given dispute is in a Finalized state.
      *
      * Returns true if
      * - Dispute state is Retracted, Resolved, Decided or Refused

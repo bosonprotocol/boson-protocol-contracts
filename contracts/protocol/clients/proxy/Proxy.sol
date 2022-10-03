@@ -16,7 +16,7 @@ abstract contract Proxy {
     /**
      * @notice Delegates the current call to `implementation`.
      *
-     * This function does not return to its internall call site, it will return directly to the external caller.
+     * This function does not return to its internal call site, it will return directly to the external caller.
      *
      * @param implementation - the address of the implementation to which the call should be delegated
      */
@@ -46,7 +46,7 @@ abstract contract Proxy {
     }
 
     /**
-     * @notice This is a virtual function that should be overriden so it returns the address to which the fallback function
+     * @notice This is a virtual function that should be overridden so it returns the address to which the fallback function
      * and {_fallback} should delegate.
      *
      * @return the address to which the fallback function should delegate
@@ -56,7 +56,7 @@ abstract contract Proxy {
     /**
      * @notice Delegates the current call to the address returned by `_implementation()`.
      *
-     * This function does not return to its internall call site, it will return directly to the external caller.
+     * This function does not return to its internal call site, it will return directly to the external caller.
      */
     function _fallback() internal virtual {
         _beforeFallback();
@@ -83,7 +83,7 @@ abstract contract Proxy {
      * @notice Hook that is called before falling back to the implementation. Can happen as part of a manual `_fallback`
      * call, or as part of the Solidity `fallback` or `receive` functions.
      *
-     * If overriden should call `super._beforeFallback()`.
+     * If overridden should call `super._beforeFallback()`.
      */
     function _beforeFallback() internal virtual {}
 }

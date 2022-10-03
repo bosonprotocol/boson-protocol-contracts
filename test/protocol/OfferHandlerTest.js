@@ -666,7 +666,7 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
-        it("Both voucher expiration date and voucher expiraton period are defined", async function () {
+        it("Both voucher expiration date and voucher expiration period are defined", async function () {
           // Set both voucherRedeemableUntil and voucherValid
           offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) + oneMonth).toString();
           offerDurations.voucherValid = oneMonth.toString();
@@ -677,7 +677,7 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
-        it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
+        it("Neither of voucher expiration date and voucher expiration period are defined", async function () {
           // Set both voucherRedeemableUntil and voucherValid to "0"
           offerDates.voucherRedeemableUntil = "0";
           offerDurations.voucherValid = "0";
@@ -1998,7 +1998,7 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
-        it("For some offer, both voucher expiration date and voucher expiraton period are defined", async function () {
+        it("For some offer, both voucher expiration date and voucher expiration period are defined", async function () {
           // Set both voucherRedeemableUntil and voucherValid
           offerDatesList[2].voucherRedeemableUntil = ethers.BigNumber.from(offerDatesList[2].voucherRedeemableFrom)
             .add(oneMonth)
@@ -2013,7 +2013,7 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
-        it("For some offer, neither of voucher expiration date and voucher expiraton period are defined", async function () {
+        it("For some offer, neither of voucher expiration date and voucher expiration period are defined", async function () {
           // Set both voucherRedeemableUntil and voucherValid to "0"
           offerDatesList[1].voucherRedeemableUntil = "0";
           offerDurationsList[1].voucherValid = "0";

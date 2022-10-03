@@ -12,7 +12,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
 /**
  * @title ConfigHandlerFacet
  *
- * @notice Handles management and queries of various protocol-related settings
+ * @notice Handles management and queries of various protocol-related settings.
  */
 contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
@@ -75,7 +75,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the Boson Token (ERC-20 contract) address.
      *
-     * Emits a TokenAddressChanged event.
+     * Emits a TokenAddressChanged event if successful.
      *
      * Reverts if _tokenAddress is the zero address
      *
@@ -101,7 +101,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the Boson Protocol multi-sig wallet address.
      *
-     * Emits a TreasuryAddressChanged event.
+     * Emits a TreasuryAddressChanged event if successful.
      *
      * Reverts if _treasuryAddress is the zero address
      *
@@ -127,7 +127,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the Boson Voucher beacon contract address.
      *
-     * Emits a VoucherBeaconAddressChanged event.
+     * Emits a VoucherBeaconAddressChanged event if successful.
      *
      * Reverts if _voucherBeaconAddress is the zero address
      *
@@ -153,7 +153,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the Boson Voucher reference proxy implementation address.
      *
-     * Emits a BeaconProxyAddressChanged event.
+     * Emits a BeaconProxyAddressChanged event if successful.
      *
      * Reverts if _beaconProxyAddress is the zero address
      *
@@ -179,7 +179,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the protocol fee percentage.
      *
-     * Emits a ProtocolFeePercentageChanged event.
+     * Emits a ProtocolFeePercentageChanged event if successful.
      *
      * Reverts if the _protocolFeePercentage is greater than 10000.
      *
@@ -213,7 +213,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the flat protocol fee for exchanges in $BOSON.
      *
-     * Emits a ProtocolFeeFlatBosonChanged event.
+     * Emits a ProtocolFeeFlatBosonChanged event if successful.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -229,7 +229,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-     * @notice Getsthe flat protocol fee for exchanges in $BOSON.
+     * @notice Gets the flat protocol fee for exchanges in $BOSON.
      *
      * @return the flat fee taken for exchanges in $BOSON
      */
@@ -240,7 +240,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the maximum numbers of offers that can be added to a group in a single transaction.
      *
-     * Emits a MaxOffersPerGroupChanged event.
+     * Emits a MaxOffersPerGroupChanged event if successful.
      *
      * Reverts if the _maxOffersPerGroup is zero.
      *
@@ -268,7 +268,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the maximum numbers of twins that can be added to a bundle in a single transaction.
      *
-     * Emits a MaxTwinsPerBundleChanged event.
+     * Emits a MaxTwinsPerBundleChanged event if successful.
      *
      * Reverts if the _maxTwinsPerBundle is zero.
      *
@@ -296,7 +296,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the maximum numbers of offers that can be added to a bundle in a single transaction.
      *
-     * Emits a MaxOffersPerBundleChanged event.
+     * Emits a MaxOffersPerBundleChanged event if successful.
      *
      * Reverts if the _maxOffersPerBundle is zero.
      *
@@ -324,7 +324,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the maximum numbers of offers that can be created in a single transaction.
      *
-     * Emits a MaxOffersPerBatchChanged event.
+     * Emits a MaxOffersPerBatchChanged event if successful.
      *
      * Reverts if the _maxOffersPerBatch is zero.
      *
@@ -352,7 +352,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the maximum numbers of tokens that can be withdrawn in a single transaction.
      *
-     * Emits a MaxTokensPerWithdrawalChanged event.
+     * Emits a MaxTokensPerWithdrawalChanged event if successful.
      *
      * Reverts if the _maxTokensPerWithdrawal is zero.
      *
@@ -380,7 +380,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the maximum number of dispute resolver fee structs that can be processed in a single transaction.
      *
-     * Emits a MaxFeesPerDisputeResolverChanged event.
+     * Emits a MaxFeesPerDisputeResolverChanged event if successful.
      *
      * Reverts if the _maxFeesPerDisputeResolver is zero.
      *
@@ -413,7 +413,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the maximum escalation response period a dispute resolver can specify.
      *
-     * Emits a MaxEscalationResponsePeriodChanged event.
+     * Emits a MaxEscalationResponsePeriodChanged event if successful.
      *
      * Reverts if the _maxEscalationResponsePeriod is zero.
      *
@@ -446,7 +446,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the maximum number of disputes that can be expired in a single transaction.
      *
-     * Emits a MaxDisputesPerBatchChanged event.
+     * Emits a MaxDisputesPerBatchChanged event if successful.
      *
      * @dev Caller must have ADMIN role.
      *
@@ -470,9 +470,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-     * @notice Sets the total offer fee percentage limit which will validate the sum of (Protocol Fee percentage + Agent Fee percentage) of an offer fee.
+     * @notice Sets the total offer fee percentage limit that will validate the sum of (Protocol Fee percentage + Agent Fee percentage) of an offer fee.
      *
-     * Emits a MaxTotalOfferFeePercentageChanged event.
+     * Emits a MaxTotalOfferFeePercentageChanged event if successful.
      *
      * Reverts if _maxTotalOfferFeePercentage is greater than 10000.
      *
@@ -500,7 +500,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-     * @notice Gets the total offer fee percentage limit which will validate the sum of (Protocol Fee percentage + Agent Fee percentage) of an offer fee.
+     * @notice Gets the total offer fee percentage limit that will validate the sum of (Protocol Fee percentage + Agent Fee percentage) of an offer fee.
      *
      * @return the maximum total offer fee percentage
      */
@@ -511,7 +511,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the maximum royalty percentage that can be set by the seller.
      *
-     * Emits a MaxRoyaltyPercentageChanged event.
+     * Emits a MaxRoyaltyPercentageChanged event if successful.
      *
      * Reverts if:
      * - The _maxRoyaltyPercentage is zero.
@@ -550,7 +550,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the maximum number of seller ids that can be added to or removed from dispute resolver seller allow list in a single transaction.
      *
-     * Emits a MaxAllowedSellersChanged event.
+     * Emits a MaxAllowedSellersChanged event if successful.
      *
      * Reverts if the _maxAllowedSellers is zero.
      *
@@ -578,7 +578,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the buyer escalation fee percentage.
      *
-     * Emits a BuyerEscalationFeePercentageChanged event.
+     * Emits a BuyerEscalationFeePercentageChanged event if successful.
      *
      * Reverts if the _buyerEscalationDepositPercentage is greater than 10000.
      *
@@ -617,7 +617,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the contract address for the given AuthTokenType.
      *
-     * Emits an AuthTokenContractChanged event.
+     * Emits an AuthTokenContractChanged event if successful.
      *
      * Reverts if:
      * - _authTokenType is None.
@@ -653,7 +653,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the maximum number of exchanges that can be created in a single transaction.
      *
-     * Emits a MaxExchangesPerBatchChanged event.
+     * Emits a MaxExchangesPerBatchChanged event if successful.
      *
      * Reverts if the _maxExchangesPerBatch is zero.
      *
@@ -681,7 +681,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the maximum resolution period a seller can specify.
      *
-     * Emits a MaxResolutionPeriodChanged event.
+     * Emits a MaxResolutionPeriodChanged event if successful.
      *
      * Reverts if the _maxResolutionPeriod is zero.
      *
@@ -709,7 +709,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the minimum dispute period a seller can specify.
      *
-     * Emits a MinDisputePeriodChanged event.
+     * Emits a MinDisputePeriodChanged event if successful.
      *
      * Reverts if the _minDisputePeriod is zero.
      *
@@ -733,7 +733,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the access controller address.
      *
-     * Emits an AccessControllerAddressChanged event.
+     * Emits an AccessControllerAddressChanged event if successful.
      *
      * Reverts if _accessControllerAddress is the zero address
      *

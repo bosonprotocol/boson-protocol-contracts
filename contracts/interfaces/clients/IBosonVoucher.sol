@@ -40,7 +40,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @notice Transfers ownership of the contract to a new account (`newOwner`).
      * Can only be called by the protocol. Change is done by calling `updateSeller` on the protocol.
      *
-     * @param newOwner - the address to which ownsership of the voucher contract will be transferred
+     * @param newOwner - the address to which ownership of the voucher contract will be transferred
      */
     function transferOwnership(address newOwner) external;
 
@@ -78,7 +78,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @notice Sets the royalty percentage.
      * Can only be called by the owner or during the initialization
      *
-     * Emits RoyaltyPercentageChanged if succesful.
+     * Emits RoyaltyPercentageChanged if successful.
      *
      * Reverts if:
      * - Caller is not the owner.

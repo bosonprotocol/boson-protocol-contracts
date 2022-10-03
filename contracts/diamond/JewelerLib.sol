@@ -30,11 +30,11 @@ library JewelerLib {
     bytes32 internal constant CLEAR_SELECTOR_MASK = bytes32(uint256(0xffffffff << 224));
 
     /**
-     * @notice Cuts facets of the Diamond
+     * @notice Cuts facets of the Diamond.
      *
-     * Adds/replacse/removes any number of function selectors
+     * Adds/replaces/removes any number of function selectors.
      *
-     * If populated, _calldata is executed with delegatecall on _init
+     * If populated, _calldata is executed with delegatecall on _init.
      *
      * @param _facetCuts - contains the facet addresses and function selectors
      * @param _init - the address of the contract or facet to execute _calldata
@@ -92,13 +92,13 @@ library JewelerLib {
     }
 
     /**
-     * @notice Maintains the selectors in a FacetCut
+     * @notice Maintains the selectors in a FacetCut.
      *
      * N.B. This method is unbelievably long and dense.
      * It hails from the diamond-2 reference and works
      * under test.
      *
-     * I've added comments to try and reason about it
+     * I've added comments to try and reason about it.
      * - CLH
      *
      * @param _selectorCount - the current selectorCount

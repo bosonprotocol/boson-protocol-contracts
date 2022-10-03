@@ -10,7 +10,7 @@ import "../../domain/BosonConstants.sol";
 /**
  * @title GroupHandlerFacet
  *
- * @notice Handles grouping of offers and conditions
+ * @notice Handles grouping of offers and conditions.
  */
 contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
     /**

@@ -126,7 +126,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Wallet address is zero address
      * - Address is not unique to this buyer
      * - Buyer does not exist
-     * - Current wallet address has oustanding vouchers
+     * - Current wallet address has outstanding vouchers
      *
      * @param _buyer - the fully populated buyer struct
      */
@@ -148,7 +148,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
      *
-     * @param _disputeResolver - the fully populated buydispute resolver struct
+     * @param _disputeResolver - the fully populated dispute resolver struct
      */
     function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
 
@@ -206,7 +206,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - DisputeResolverFee does not exist for the dispute resolver
      *
      * @param _disputeResolverId - id of the dispute resolver
-     * @param _feeTokenAddresses - list of adddresses of dispute resolver fee tokens to remove
+     * @param _feeTokenAddresses - list of addresses of dispute resolver fee tokens to remove
      */
     function removeFeesFromDisputeResolver(uint256 _disputeResolverId, address[] calldata _feeTokenAddresses) external;
 
@@ -354,7 +354,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @notice Gets the details about a dispute resolver by an address associated with that dispute resolver: operator, admin, or clerk address.
      *
      * @param _associatedAddress - the address associated with the dispute resolver. Must be an operator, admin, or clerk address.
-     * @return exists - the dispute resolver  was found
+     * @return exists - the dispute resolver was found
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      * @return sellerAllowList - list of sellers that are allowed to chose this dispute resolver

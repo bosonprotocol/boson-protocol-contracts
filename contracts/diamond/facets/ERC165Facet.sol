@@ -17,7 +17,7 @@ contract ERC165Facet is IERC165 {
      * @return true if interface represented by sighash is supported
      */
     function supportsInterface(bytes4 _interfaceId) public view returns (bool) {
-        // Get the DiamontStorage struct
+        // Get the DiamondStorage struct
         return DiamondLib.supportsInterface(_interfaceId);
     }
 }

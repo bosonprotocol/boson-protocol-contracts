@@ -6,7 +6,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 /**
  * @title ProtocolLib
  *
- * @notice Provides access to the protocol addresses, limits, entities, fees, counters, initializers and  metaTransactions slots for Facets
+ * @notice Provides access to the protocol addresses, limits, entities, fees, counters, initializers and  metaTransactions slots for Facets.
  */
 library ProtocolLib {
     bytes32 internal constant PROTOCOL_ADDRESSES_POSITION = keccak256("boson.protocol.addresses");
@@ -36,7 +36,7 @@ library ProtocolLib {
         uint256 maxResolutionPeriod;
         // limit on the escalation response period that a dispute resolver can specify
         uint256 maxEscalationResponsePeriod;
-        // lower limit for fulfullment period
+        // lower limit for fulfillment period
         uint256 minDisputePeriod;
         // limit how many exchanges can be processed in single batch transaction
         uint16 maxExchangesPerBatch;

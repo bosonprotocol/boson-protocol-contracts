@@ -140,7 +140,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
      *
-     * @param _disputeResolver - the fully populated buydispute resolver struct
+     * @param _disputeResolver - the fully populated dispute resolver struct
      */
     function updateDisputeResolver(DisputeResolver memory _disputeResolver)
         external
@@ -286,7 +286,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - DisputeResolverFee does not exist for the dispute resolver
      *
      * @param _disputeResolverId - id of the dispute resolver
-     * @param _feeTokenAddresses - list of adddresses of dispute resolver fee tokens to remove
+     * @param _feeTokenAddresses - list of addresses of dispute resolver fee tokens to remove
      */
     function removeFeesFromDisputeResolver(uint256 _disputeResolverId, address[] calldata _feeTokenAddresses)
         external
@@ -360,7 +360,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - Seller id is already approved
      *
      * @param _disputeResolverId - id of the dispute resolver
-     * @param _sellerAllowList - List of seller ids to add to allowed list
+     * @param _sellerAllowList - list of seller ids to add to allowed list
      */
     function addSellersToAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList)
         external
@@ -527,7 +527,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @notice Gets the details about a dispute resolver by an address associated with that dispute resolver: operator, admin, or clerk address.
      *
      * @param _associatedAddress - the address associated with the dispute resolver. Must be an operator, admin, or clerk address.
-     * @return exists - the dispute resolver  was found
+     * @return exists - the dispute resolver was found
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      * @return sellerAllowList - list of sellers that are allowed to chose this dispute resolver
@@ -600,7 +600,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @notice Stores DisputeResolver struct in storage.
      *
      * Reverts if:
-     * - Escalation period is greater than the max escalaction period
+     * - Escalation period is greater than the max escalation period
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set
      */
@@ -642,7 +642,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - Some seller id is already approved
      *
      * @param _disputeResolverId - id of dispute resolver that is giving the permission
-     * @param _sellerAllowList - list of sellers ids added to allow list
+     * @param _sellerAllowList - list of seller ids added to allow list
      */
     function storeSellerAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) internal {
         // Cache protocol lookups for reference

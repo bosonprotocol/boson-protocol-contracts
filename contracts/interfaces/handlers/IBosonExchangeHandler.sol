@@ -31,7 +31,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - Buyer address is zero
      * - Buyer account is inactive
      * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Offer price is in native token and buyer caller does not send enough
+     * - Offer price is in native token and caller does not send enough
      * - Offer price is in some ERC20 token and caller also sends native currency
      * - Contract at token address does not support ERC20 function transferFrom
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)

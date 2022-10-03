@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 /**
  * @title IDiamondCut
  *
- * @notice Diamond Facet management
+ * @notice Manges Diamond Facets.
  *
  * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
  * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535
@@ -29,9 +29,9 @@ interface IDiamondCut {
     }
 
     /**
-     * @notice Cuts facets of the Diamond
+     * @notice Cuts facets of the Diamond.
      *
-     * Adds/replacse/removes any number of function selectors
+     * Adds/replaces/removes any number of function selectors.
      *
      * If populated, _calldata is executed with delegatecall on _init
      *
