@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 /**
  * @title IDiamondCut
  *
- * @notice Manges Diamond Facets.
+ * @notice Manages Diamond Facets.
  *
  * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
  * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535
