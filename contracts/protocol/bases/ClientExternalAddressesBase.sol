@@ -63,9 +63,15 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
     /**
      * @notice Sets the implementation address.
      *
+     * Emits an Upgraded event.
+     *
+     * Reverts if _impl is the zero address
+     *
      * @param _impl - the implementation address
      */
     function setImplementation(address _impl) external override onlyRole(UPGRADER) {
+        require(_impl != address(0), INVALID_ADDRESS);
+
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 
@@ -103,9 +109,13 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
      *
      * Emits a ProtocolAddressChanged event.
      *
+     * Reverts if _protocolAddress is the zero address
+     *
      * @param _protocolAddress - the ProtocolDiamond address
      */
     function setProtocolAddress(address _protocolAddress) external override onlyRole(UPGRADER) {
+        require(_protocolAddress != address(0), INVALID_ADDRESS);
+
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 
