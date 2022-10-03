@@ -5,6 +5,7 @@ const environments = require("../../environments");
 const network = hre.network.name;
 const confirmations = environments.confirmations;
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const Role = require("../domain/Role");
 
 /**
 Create and activate a dispute resolver
@@ -33,10 +34,19 @@ Path should contain a JSON file with the following:
 }
 **/
 
-const createAndActivateDR = async (path) => {
+const getDisputeResolverFromEvent = (events, eventName, index) => {
+  return DisputeResolver.fromStruct(events.find((e) => e.event === eventName).args[index]);
+};
+
+const addressNotFound = (address) => {
+  console.log(`${address} address not found for network ${network}`);
+  process.exit(1);
+};
+
+const createAndActivateDR = async (path, createOnly, activateOnly) => {
   const file = await fs.readFile(path, "utf8");
 
-  const { disputeResolver, disputeResolverFees, sellerAllowList } = await JSON.parse(file.toString());
+  let { disputeResolver, disputeResolverFees, sellerAllowList } = await JSON.parse(file.toString());
 
   const adminAddress = environments[network].adminAddress;
 
@@ -46,35 +56,55 @@ const createAndActivateDR = async (path) => {
     process.exit(1);
   }
 
-  // Find protocol diamond address
+  // Find protocol diamond and accessController addresses
   const chainId = (await hre.ethers.provider.getNetwork()).chainId;
-  const addresses = require(`../../addresses/${chainId}-${network}.json`);
-  const protocolAddress = addresses.contracts.find((c) => c.name === "ProtocolDiamond").address;
+  const addressList = require(`../../addresses/${chainId}-${network}.json`).contracts;
+  const protocolAddress = addressList.find((c) => c.name === "ProtocolDiamond").address;
+  const accessControllerAddress = addressList.find((c) => c.name === "AccessController").address;
 
   if (!protocolAddress) {
-    console.log("Protocol address not found for network", network);
-    process.exit(1);
+    return addressNotFound("ProtocolDiamond");
+  }
+
+  if (!accessControllerAddress) {
+    return addressNotFound("AccessController");
   }
 
   // Cast protocol diamond to IBosonAccountHandler
   const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolAddress);
+  // Get AccessController abstraction
+  const accessController = await ethers.getContractAt("AccessController", accessControllerAddress);
+
+  const hasRole = await accessController.hasRole(Role.ADMIN, adminAddress);
+
+  if (!hasRole) {
+    console.log("Admin address does not have admin role");
+    process.exit(1);
+  }
 
   // Get signer for admin address
   const signer = await ethers.getSigner(adminAddress);
 
+  let tx, receipt;
   // Create dispute resolver
-  let tx = await accountHandler
-    .connect(signer)
-    .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-  await tx.wait(confirmations);
+  if (!activateOnly) {
+    tx = await accountHandler
+      .connect(signer)
+      .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+    receipt = await tx.wait(confirmations);
+    disputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverCreated", 1);
+    console.log(`Dispute resolver created with id ${disputeResolver.id}`);
+  }
 
   // Activate dispute resolver
-  tx = await accountHandler.connect(signer).activateDisputeResolver(disputeResolver.id);
-  const receipt = await tx.wait(confirmations);
-  const disputeResolverCreated = receipt.events.find((e) => e.event === "DisputeResolverActivated").args[1];
+  if (!createOnly) {
+    tx = await accountHandler.connect(signer).activateDisputeResolver(disputeResolver.id);
+    receipt = await tx.wait(confirmations);
+    disputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverActivated", 1);
+    console.log(`Dispute resolver activated`);
+  }
 
-  console.log("Dispute resolver created and activated");
-  console.log(DisputeResolver.fromStruct(disputeResolverCreated));
+  console.log(disputeResolver);
 };
 
 exports.createAndActivateDR = createAndActivateDR;
