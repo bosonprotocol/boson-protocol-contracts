@@ -49,7 +49,7 @@ library FundsLib {
      * Emits FundsEncumbered event if successful.
      *
      * Reverts if:
-     * - Offer price is in native token and buyer caller does not send enough
+     * - Offer price is in native token and caller does not send enough
      * - Offer price is in some ERC20 token and caller also sends native currency
      * - Contract at token address does not support ERC20 function transferFrom
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
@@ -92,7 +92,7 @@ library FundsLib {
      * Emits ERC20 Transfer event in call stack if successful.
      *
      * Reverts if:
-     * - Offer price is in native token and buyer caller does not send enough
+     * - Offer price is in native token and caller does not send enough
      * - Offer price is in some ERC20 token and caller also sends native currency
      * - Contract at token address does not support ERC20 function transferFrom
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
@@ -128,7 +128,7 @@ library FundsLib {
 
         // Get the exchange and its state
         // Since this should be called only from certain functions from exchangeHandler and disputeHandler
-        // exhange must exist and be in a completed state, so that's not checked explicitly
+        // exchange must exist and be in a completed state, so that's not checked explicitly
         BosonTypes.Exchange storage exchange = pe.exchanges[_exchangeId];
 
         // Get offer from storage to get the details about sellerDeposit, price, sellerId, exchangeToken and buyerCancelPenalty

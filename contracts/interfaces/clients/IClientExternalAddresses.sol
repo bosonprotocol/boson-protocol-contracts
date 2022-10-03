@@ -7,8 +7,8 @@ import { IClientExternalAddressesEvents } from "../events/IClientExternalAddress
 /**
  * @title IClientExternalAddresses
  *
- * @notice ClientExternalAddresses is used to set and get addresses, used either by proxies or
- * by protocol client
+ * @notice ClientExternalAddresses is used to set and get addresses used either by proxies or
+ * by protocol clients.
  *
  *
  * The ERC-165 identifier for this interface is: 0x344552b3

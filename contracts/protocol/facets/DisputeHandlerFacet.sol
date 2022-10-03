@@ -12,7 +12,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
 /**
  * @title DisputeHandlerFacet
  *
- * @notice Handles disputes associated with exchanges within the protocol
+ * @notice Handles disputes associated with exchanges within the protocol.
  */
 contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     bytes32 private constant RESOLUTION_TYPEHASH =
@@ -91,7 +91,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
 
     /**
      * @notice Extends the dispute timeout, allowing more time for mutual resolution.
-     * As a consequnece also buyer gets more time to escalate the dispute.
+     * As a consequence, buyer also gets more time to escalate the dispute.
      *
      * Emits a DisputeTimeoutExtened event if successful.
      *
@@ -138,7 +138,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         // If expired already, it cannot be extended
         require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
 
-        // New dispute timout should be after the current dispute timeout
+        // New dispute timeout should be after the current dispute timeout
         require(_newDisputeTimeout > disputeDates.timeout, INVALID_DISPUTE_TIMEOUT);
 
         // Update the timeout
@@ -308,7 +308,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * - Dispute is already expired
      * - Dispute is not in a Resolving state
      * - Dispute resolver is not specified (absolute zero offer)
-     * - Offer price is in native token and buyer caller does not send enough
+     * - Offer price is in native token and caller does not send enough
      * - Offer price is in some ERC20 token and caller also sends native currency
      * - If contract at token address does not support ERC20 function transferFrom
      * - If calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
@@ -397,14 +397,14 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Enables dispute resolver to explicity refuse to resolve a dispute in Escalated state and releases the funds.
+     * @notice Enables dispute resolver to explicitly refuse to resolve a dispute in Escalated state and releases the funds.
      *
      * Emits an EscalatedDisputeRefused event if successful.
      *
      * Reverts if:
      * - The disputes region of protocol is paused
      * - Exchange does not exist
-     * - Exchange is not in a Eisputed state
+     * - Exchange is not in a Disputed state
      * - Dispute is in some state other than Escalated
      * - Dispute escalation response period has elapsed
      * - Caller is not the dispute resolver for this dispute
@@ -427,7 +427,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     /**
      * @notice Expires the dispute in escalated state and release the funds.
      *
-     * Emits a EscalatedDisputeExpired event if successful.
+     * Emits an EscalatedDisputeExpired event if successful.
      *
      * Reverts if:
      * - The disputes region of protocol is paused
@@ -462,7 +462,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @notice Transitions a dispute to a "finalized" state.
      *
      * Target state must be Retracted, Resolved, or Decided.
-     * Sets finalized date for exchange and dispute, stores the resolution if exists and releases the funds
+     * Sets finalized date for exchange and dispute. Stores the resolution, if exists, and releases the funds.
      *
      * Reverts if the current dispute state is not Resolving or Escalated.
      *
@@ -543,7 +543,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Checks if the given dispute in a Finalized state.
+     * @notice Checks if the given dispute is in a Finalized state.
      *
      * Returns true if
      * - Dispute state is Retracted, Resolved, Decided or Refused

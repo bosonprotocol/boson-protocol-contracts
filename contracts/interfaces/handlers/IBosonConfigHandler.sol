@@ -128,7 +128,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function setProtocolFeeFlatBoson(uint256 _protocolFeeFlatBoson) external;
 
     /**
-     * @notice Getsthe flat protocol fee for exchanges in $BOSON.
+     * @notice Gets the flat protocol fee for exchanges in $BOSON.
      *
      * @return the flat fee taken for exchanges in $BOSON
      */

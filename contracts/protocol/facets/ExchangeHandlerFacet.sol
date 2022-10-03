@@ -19,7 +19,7 @@ import { IERC20 } from "../../interfaces/IERC20.sol";
 /**
  * @title ExchangeHandlerFacet
  *
- * @notice Handles exchanges associated with offers within the protocol
+ * @notice Handles exchanges associated with offers within the protocol.
  */
 contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     using Address for address;
@@ -49,7 +49,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - Buyer address is zero
      * - Buyer account is inactive
      * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Offer price is in native token and buyer caller does not send enough
+     * - Offer price is in native token and caller does not send enough
      * - Offer price is in some ERC20 token and caller also sends native currency
      * - Contract at token address does not support ERC20 function transferFrom
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
@@ -125,7 +125,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // Map the offerId to the exchangeId as one-to-many
             lookups.exchangeIdsByOffer[_offerId].push(exchangeId);
 
-            // Shoudn't decrement if offer is unlimited
+            // Shouldn't decrement if offer is unlimited
             if (offer.quantityAvailable != type(uint256).max) {
                 // Decrement offer's quantity available
                 offer.quantityAvailable--;

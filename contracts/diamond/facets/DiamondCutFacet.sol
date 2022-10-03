@@ -24,7 +24,7 @@ contract DiamondCutFacet is IDiamondCut {
     /**
      * @notice Cuts facets of the Diamond
      *
-     * Adds/replacse/removes any number of function selectors
+     * Adds/replaces/removes any number of function selectors
      *
      * If populated, _calldata is executed with delegatecall on _init
      *

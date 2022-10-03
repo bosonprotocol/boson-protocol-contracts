@@ -9,7 +9,7 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 /**
  * @title BuyerBase
  *
- * @notice Provides methods for buyer creation that can be shared accross facets
+ * @notice Provides methods for buyer creation that can be shared across facets.
  */
 contract BuyerBase is ProtocolBase, IBosonAccountEvents {
     /**
@@ -31,7 +31,7 @@ contract BuyerBase is ProtocolBase, IBosonAccountEvents {
         //Check active is not set to false
         require(_buyer.active, MUST_BE_ACTIVE);
 
-        // Get the next accouni id and increment the counter
+        // Get the next account id and increment the counter
         uint256 buyerId = protocolCounters().nextAccountId++;
 
         //check that the wallet address is unique to one buyer id

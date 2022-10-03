@@ -9,7 +9,7 @@ import "./../../domain/BosonConstants.sol";
 /**
  * @title OfferBase
  *
- * @dev Provides methods for offer creation that can be shared accross facets
+ * @dev Provides methods for offer creation that can be shared across facets.
  */
 contract OfferBase is ProtocolBase, IBosonOfferEvents {
     /**
@@ -21,8 +21,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Caller is not an operator
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
-     * - Both voucher expiration date and voucher expiraton period are defined
-     * - Neither of voucher expiration date and voucher expiraton period are defined
+     * - Both voucher expiration date and voucher expiration period are defined
+     * - Neither of voucher expiration date and voucher expiration period are defined
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
      * - Dispute period is less than minimum dispute period
@@ -205,7 +205,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             // Set variable to eliminate multiple SLOAD
             uint256 offerPrice = _offer.price;
 
-            // condition for succesfull payout when exchange final state is canceled
+            // condition for successful payout when exchange final state is canceled
             require(_offer.buyerCancelPenalty <= offerPrice, OFFER_PENALTY_INVALID);
 
             // Calculate and set the protocol fee

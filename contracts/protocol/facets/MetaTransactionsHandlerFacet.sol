@@ -14,7 +14,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
 /**
  * @title MetaTransactionsHandlerFacet
  *
- * @notice Handles meta-transaction requests
+ * @notice Handles meta-transaction requests.
  */
 contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, ProtocolBase {
     /**
@@ -281,7 +281,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes32 _sigS,
         uint8 _sigV
     ) external payable override metaTransactionsNotPaused returns (bytes memory) {
-        // Make sure that protocol is not reentered throught meta transactions
+        // Make sure that protocol is not reentered through meta transactions
         // Cannot use modifier `nonReentrant` since it also changes reentrancyStatus to `ENTERED`,
         // but that then breaks meta transaction functionality
         require(protocolStatus().reentrancyStatus != ENTERED, REENTRANCY_GUARD);

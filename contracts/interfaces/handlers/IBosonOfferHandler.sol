@@ -22,8 +22,8 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Caller is not an operator
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
-     * - Both voucher expiration date and voucher expiraton period are defined
-     * - Neither of voucher expiration date and voucher expiraton period are defined
+     * - Both voucher expiration date and voucher expiration period are defined
+     * - Neither of voucher expiration date and voucher expiration period are defined
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
      * - Dispute period is less than minimum dispute period
@@ -66,8 +66,8 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Both voucher expiration date and voucher expiraton period are defined
-     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Both voucher expiration date and voucher expiration period are defined
+     *   - Neither of voucher expiration date and voucher expiration period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period

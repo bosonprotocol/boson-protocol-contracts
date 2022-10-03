@@ -9,7 +9,7 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 /**
  * @title GroupBase
  *
- * @notice Provides methods for group creation that can be shared accross facets
+ * @notice Provides methods for group creation that can be shared across facets
  */
 contract GroupBase is ProtocolBase, IBosonGroupEvents {
     /**
@@ -177,7 +177,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
     }
 
     /**
-     * @notice Checks that update can be done beofre performing an update
+     * @notice Checks that update can be done before performing an update
      * and returns seller id and group storage pointer for further use.
      *
      * Reverts if:

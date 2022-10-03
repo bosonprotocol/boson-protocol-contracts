@@ -3,7 +3,7 @@ pragma solidity 0.8.9;
 
 // Access Control Roles
 bytes32 constant ADMIN = keccak256("ADMIN"); // Role Admin
-bytes32 constant PAUSER = keccak256("PAUSER"); // Role for pausing the protocl
+bytes32 constant PAUSER = keccak256("PAUSER"); // Role for pausing the protocol
 bytes32 constant PROTOCOL = keccak256("PROTOCOL"); // Role for facets of the ProtocolDiamond
 bytes32 constant CLIENT = keccak256("CLIENT"); // Role for clients of the ProtocolDiamond
 bytes32 constant UPGRADER = keccak256("UPGRADER"); // Role for performing contract and config upgrades
@@ -21,7 +21,7 @@ string constant INVALID_ADDRESS = "Invalid address";
 string constant INVALID_STATE = "Invalid state";
 string constant ARRAY_LENGTH_MISMATCH = "Array length mismatch";
 
-// Reentracy guard
+// Reentrancy guard
 string constant REENTRANCY_GUARD = "ReentrancyGuard: reentrant call";
 uint256 constant NOT_ENTERED = 1;
 uint256 constant ENTERED = 2;
@@ -169,7 +169,7 @@ bytes32 constant EIP712_DOMAIN_TYPEHASH = keccak256(
 string constant VOUCHER_NAME = "Boson Voucher";
 string constant VOUCHER_SYMBOL = "BOSON_VOUCHER";
 
-// Meta Transations - Structs
+// Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(
     bytes(
         "MetaTransaction(uint256 nonce,address from,address contractAddress,string functionName,bytes functionSignature)"

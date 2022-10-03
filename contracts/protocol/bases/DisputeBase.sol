@@ -9,7 +9,7 @@ import "../../domain/BosonConstants.sol";
 /**
  *
  * @title DisputeBase
- * @notice Provides methods for dispute that can be shared accross facets
+ * @notice Provides methods for dispute that can be shared across facets.
  */
 contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
     /**
