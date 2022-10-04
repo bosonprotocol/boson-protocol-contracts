@@ -101,3 +101,45 @@ It outputs the list of files with errors of two types:
 
 Script will try to automatically fix the wrong interfaces if you run it with
 ```npm run natspec-interface-id:fix```, however this cannot fix the missing interface ids.
+
+### Create and/or activate dispute resolver
+
+Script will create and/or activate a dispute resolver
+
+**Arguments**:
+- `path`: Required argument with path for a JSON file containing the following
+  ```typescript
+    {
+     "disputeResolver": {
+      "id": string, // ignored
+      "escalationResponsePeriod": string,
+      "operator": string,
+      "admin": string,
+      "clerk": string,
+      "treasury": string,
+      "metadataUri": string,
+      "active": boolean // ignored
+      },
+      "disputeResolverFees": [
+        {
+        "tokenAddress": string,
+        "tokenName": string,
+        "feeAmount": string
+        }
+      ],
+      "sellerAllowList": [string]
+    }
+  ```
+- `network`: Network to run the script
+- `activate-only (optional)`: Optional flag to only activate the Dispute Resolver
+- `create-only (optional)`: Optional flag to only create the Dispute Resolver
+
+Example: 
+
+```
+npx hardhat create-dispute-resolver --path "path/to/dispute_resolver.json" --network localhost --create-only
+```
+
+
+
+
