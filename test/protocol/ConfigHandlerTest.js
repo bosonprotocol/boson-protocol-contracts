@@ -999,6 +999,13 @@ describe("IBosonConfigHandler", function () {
             ).to.revertedWith(RevertReasons.INVALID_AUTH_TOKEN_TYPE);
           });
 
+          it("_authTokenType is Custom", async function () {
+            // Attempt to set new auth token contract, expecting revert
+            await expect(
+              configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Custom, authTokenContract.address)
+            ).to.revertedWith(RevertReasons.INVALID_AUTH_TOKEN_TYPE);
+          });
+
           it("_authTokenContract is the zero address", async function () {
             // Attempt to set new auth token contract, expecting revert
             await expect(
@@ -1238,6 +1245,14 @@ describe("IBosonConfigHandler", function () {
         );
         //setAuthTokenContract is not called in the initialize function
         expect(await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.Lens)).to.equal(
+          ethers.constants.AddressZero,
+          "Invalid auth token contract address"
+        );
+        expect(await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.ENS)).to.equal(
+          ethers.constants.AddressZero,
+          "Invalid auth token contract address"
+        );
+        expect(await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.Custom)).to.equal(
           ethers.constants.AddressZero,
           "Invalid auth token contract address"
         );

@@ -4,10 +4,11 @@
 class AuthTokenType {}
 
 AuthTokenType.None = 0;
-AuthTokenType.Lens = 1;
-AuthTokenType.ENS = 2;
+AuthTokenType.Custom = 1;
+AuthTokenType.Lens = 2;
+AuthTokenType.ENS = 3;
 
-AuthTokenType.Types = [AuthTokenType.None, AuthTokenType.Lens, AuthTokenType.ENS];
+AuthTokenType.Types = [AuthTokenType.None, AuthTokenType.Custom, AuthTokenType.Lens, AuthTokenType.ENS];
 
 // Export
 module.exports = AuthTokenType;
