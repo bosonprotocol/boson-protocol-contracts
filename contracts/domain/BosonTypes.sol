@@ -65,7 +65,7 @@ contract BosonTypes {
 
     enum AuthTokenType {
         None,
-        Custom,
+        Custom, // For future use
         Lens,
         ENS
     }
