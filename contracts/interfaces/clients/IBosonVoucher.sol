@@ -15,6 +15,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     event ContractURIChanged(string contractURI);
     event RoyaltyPercentageChanged(uint256 royaltyPercentage);
+    event VoucherInitialized(uint256 sellerId, uint256 royaltyPercentage, string contractURI);
 
     /**
      * @notice Issues a voucher to a buyer.
@@ -35,6 +36,14 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
      */
     function burnVoucher(uint256 _exchangeId) external;
+
+
+    /**
+     * @notice Gets the seller id.
+     *
+     * @return the id for the Voucher seller 
+     */
+    function getSellerId(uint256 _exchangeId) external view returns (uint256);
 
     /**
      * @notice Transfers ownership of the contract to a new account (`newOwner`).
@@ -86,5 +95,12 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      *
      * @param _newRoyaltyPercentage fee in percentage. e.g. 500 = 5%
      */
-    function setRoyaltyPercentage(uint96 _newRoyaltyPercentage) external;
+    function setRoyaltyPercentage(uint256 _newRoyaltyPercentage) external;
+
+    /**
+     * @notice Gets the royalty percentage.
+     *
+     * @return royalty percentage
+     */
+    function getRoyaltyPercentage() external view returns (uint256);
 }

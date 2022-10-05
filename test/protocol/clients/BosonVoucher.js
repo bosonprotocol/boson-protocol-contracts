@@ -504,6 +504,30 @@ describe("IBosonVoucher", function () {
       });
     });
 
+    context("getRoyaltyPercentage()", function () {
+      it("should return the royalty fee percentage", async function () {
+        // give ownership to operator
+        await bosonVoucher.connect(protocol).transferOwnership(operator.address);
+
+        royaltyPercentage = "1000"; //15%
+        await bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage);
+
+        expect(await bosonVoucher.connect(rando).getRoyaltyPercentage()).to.equal(
+          royaltyPercentage,
+          "Invalid royalty percentage"
+        );
+      });
+    });
+
+    context("getSellerId()", function () {
+      it("should return the seller id", async function () {
+        expect(await bosonVoucher.connect(rando).getSellerId(exchangeId)).to.equal(
+          seller.id,
+          "Invalid seller id returned"
+        );
+      });
+    });
+
     context("royaltyInfo()", function () {
       beforeEach(async function () {
         // give ownership to operator
