@@ -91,6 +91,11 @@ describe("AuthToken", function () {
       expect(authToken.isValid()).is.true;
 
       // Valid field value
+      authToken.tokenType = AuthTokenType.Custom;
+      expect(authToken.tokenTypeIsValid()).is.true;
+      expect(authToken.isValid()).is.true;
+
+      // Valid field value
       authToken.tokenType = AuthTokenType.Lens;
       expect(authToken.tokenTypeIsValid()).is.true;
       expect(authToken.isValid()).is.true;
