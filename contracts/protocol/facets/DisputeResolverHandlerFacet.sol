@@ -28,6 +28,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * Emits a DisputeResolverCreated event if successful.
      *
      * Reverts if:
+     * - Caller is not the supplied admin
      * - The dispute resolvers region of protocol is paused
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
@@ -49,6 +50,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     ) external disputeResolversNotPaused nonReentrant {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        // Check that caller is supplied admin
+        require(_disputeResolver.admin ==  msgSender(), NOT_ADMIN);
 
         // Check for zero address
         require(

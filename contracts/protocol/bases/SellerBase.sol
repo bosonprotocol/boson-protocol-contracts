@@ -7,6 +7,7 @@ import { ProtocolBase } from "./ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IInitializableVoucherClone } from "../../interfaces/IInitializableVoucherClone.sol";
+import { IERC721 } from "../../interfaces/IERC721.sol";
 
 /**
  * @title SellerBase
@@ -20,6 +21,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
+     * - Caller is not the supplied admin or does not own supplied auth token
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
@@ -38,6 +40,34 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
     ) internal {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        // Get message sender
+        address sender = msgSender();
+
+        // Do caller and uniqueness checks based on auth type
+        if (_seller.admin == address(0)) {
+            // Check that caller owns the auth token
+            address authTokenContract = lookups.authTokenContracts[_authToken.tokenType];
+            address tokenIdOwner = IERC721(authTokenContract).ownerOf(_authToken.tokenId);
+            require(tokenIdOwner == sender, NOT_ADMIN);
+
+            // Check that auth token is unique to this seller
+            require(
+                lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0,
+                AUTH_TOKEN_MUST_BE_UNIQUE
+            );
+        } else {
+            // Check that caller is supplied admin
+            require(_seller.admin == sender, NOT_ADMIN);
+
+            // Check that the admin address is unique to one seller id, across all roles
+            require(
+                lookups.sellerIdByOperator[_seller.admin] == 0 &&
+                    lookups.sellerIdByAdmin[_seller.admin] == 0 &&
+                    lookups.sellerIdByClerk[_seller.admin] == 0,
+                SELLER_ADDRESS_MUST_BE_UNIQUE
+            );
+        }
 
         // Check active is not set to false
         require(_seller.active, MUST_BE_ACTIVE);
@@ -62,23 +92,6 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
                 sellerIdByClerk[_seller.clerk] == 0,
             SELLER_ADDRESS_MUST_BE_UNIQUE
         );
-
-        // Do other uniqueness checks based on auth type
-        if (_seller.admin == address(0)) {
-            // Check that auth token is unique to this seller
-            require(
-                lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0,
-                AUTH_TOKEN_MUST_BE_UNIQUE
-            );
-        } else {
-            // Check that the admin address is unique to one seller id, across all roles
-            require(
-                sellerIdByOperator[_seller.admin] == 0 &&
-                    sellerIdByAdmin[_seller.admin] == 0 &&
-                    sellerIdByClerk[_seller.admin] == 0,
-                SELLER_ADDRESS_MUST_BE_UNIQUE
-            );
-        }
 
         // Get the next account id and increment the counter
         uint256 sellerId = protocolCounters().nextAccountId++;
