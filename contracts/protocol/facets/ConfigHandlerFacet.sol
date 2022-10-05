@@ -621,6 +621,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Reverts if:
      * - _authTokenType is None.
+     * - _authTokenType is Custom.
      * - _authTokenContract is the zero address.
      *
      * @dev Caller must have ADMIN role.
@@ -634,7 +635,10 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         onlyRole(ADMIN)
         nonReentrant
     {
-        require(_authTokenType != AuthTokenType.None, INVALID_AUTH_TOKEN_TYPE);
+        require(
+            _authTokenType != AuthTokenType.None && _authTokenType != AuthTokenType.Custom,
+            INVALID_AUTH_TOKEN_TYPE
+        );
         require(_authTokenContract != address(0), INVALID_ADDRESS);
         protocolLookups().authTokenContracts[_authTokenType] = _authTokenContract;
         emit AuthTokenContractChanged(_authTokenType, _authTokenContract, msgSender());

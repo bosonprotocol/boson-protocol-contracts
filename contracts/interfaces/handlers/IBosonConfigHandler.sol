@@ -366,6 +366,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * Emits an AuthTokenContractChanged event.
      *
      * Reverts if _authTokenType is None
+     * Reverts if _authTokenType is Custom
      * Reverts if _authTokenContract is the zero address
      *
      * @dev Caller must have ADMIN role.
