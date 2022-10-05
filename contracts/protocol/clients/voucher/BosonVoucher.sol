@@ -128,7 +128,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     /**
      * @notice Gets the seller id.
      *
-     * @return the id for the Voucher seller 
+     * @return the id for the Voucher seller
      */
     function getSellerId(uint256 _exchangeId) public view override returns (uint256) {
         (bool exists, Offer memory offer) = getBosonOffer(_exchangeId);
