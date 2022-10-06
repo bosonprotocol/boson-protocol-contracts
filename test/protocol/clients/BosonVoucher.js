@@ -604,6 +604,9 @@ describe("IBosonVoucher", function () {
       await bosonVoucher.connect(protocol).transferOwnership(operator.address);
 
       expect(await bosonVoucher.connect(rando).getSellerId()).to.equal(seller.id, "Invalid seller id returned");
+
+      // Reset the accountId iterator
+      accountId.next(true);
     });
   });
 });
