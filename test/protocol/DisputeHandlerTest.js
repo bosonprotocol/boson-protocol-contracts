@@ -92,23 +92,12 @@ describe("IBosonDisputeHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [
-      deployer,
-      pauser,
-      operator,
-      admin,
-      clerk,
-      treasury,
-      buyer,
-      rando,
-      other1,
-      other2,
-      operatorDR,
-      adminDR,
-      clerkDR,
-      treasuryDR,
-      protocolTreasury,
-    ] = await ethers.getSigners();
+    [deployer, pauser, admin, treasury, buyer, rando, other1, other2, adminDR, treasuryDR, protocolTreasury] =
+      await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
+    operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();

@@ -109,19 +109,20 @@ describe("IBosonOrchestrationHandler", function () {
       deployer,
       pauser,
       operator,
-      clerk,
       treasury,
       rando,
       other1,
       other2,
       other3,
-      operatorDR,
       adminDR,
-      clerkDR,
       treasuryDR,
       protocolAdmin,
       protocolTreasury,
     ] = await ethers.getSigners();
+
+    // make all account the same
+    clerk = operator;
+    operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();

@@ -54,9 +54,7 @@ describe("SellerHandler", function () {
     [
       deployer,
       pauser,
-      operator,
       admin,
-      clerk,
       treasury,
       rando,
       other1,
@@ -67,10 +65,13 @@ describe("SellerHandler", function () {
       other6,
       other7,
       other8,
-      authTokenOwner,
+      // authTokenOwner,
       protocolTreasury,
       bosonToken,
     ] = await ethers.getSigners();
+
+    // make all account the same
+    authTokenOwner = operator = clerk = admin;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();

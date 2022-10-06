@@ -108,21 +108,12 @@ describe("IBosonMetaTransactionsHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [
-      deployer,
-      pauser,
-      operator,
-      buyer,
-      rando,
-      admin,
-      clerk,
-      treasury,
-      operatorDR,
-      adminDR,
-      clerkDR,
-      treasuryDR,
-      protocolTreasury,
-    ] = await ethers.getSigners();
+    [deployer, pauser, buyer, rando, admin, treasury, adminDR, treasuryDR, protocolTreasury] =
+      await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
+    operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();

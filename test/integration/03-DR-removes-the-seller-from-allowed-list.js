@@ -52,21 +52,12 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
 
   beforeEach(async function () {
     // Make accounts available
-    [
-      deployer,
-      pauser,
-      operator,
-      admin,
-      clerk,
-      treasury,
-      buyer,
-      other1,
-      operatorDR,
-      adminDR,
-      clerkDR,
-      treasuryDR,
-      protocolTreasury,
-    ] = await ethers.getSigners();
+    [deployer, pauser, admin, treasury, buyer, other1, adminDR, treasuryDR, protocolTreasury] =
+      await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
+    operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();

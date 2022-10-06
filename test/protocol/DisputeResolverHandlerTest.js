@@ -109,9 +109,7 @@ describe("DisputeResolverHandler", function () {
     [
       deployer,
       pauser,
-      operator,
       admin,
-      clerk,
       treasury,
       rando,
       other1,
@@ -123,6 +121,9 @@ describe("DisputeResolverHandler", function () {
       protocolTreasury,
       bosonToken,
     ] = await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();

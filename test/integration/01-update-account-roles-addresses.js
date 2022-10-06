@@ -51,22 +51,12 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [
-      deployer,
-      operator,
-      admin,
-      clerk,
-      treasury,
-      buyer,
-      rando,
-      operatorDR,
-      adminDR,
-      clerkDR,
-      treasuryDR,
-      agent,
-      protocolTreasury,
-      bosonToken,
-    ] = await ethers.getSigners();
+    [deployer, admin, treasury, buyer, rando, adminDR, treasuryDR, agent, protocolTreasury, bosonToken] =
+      await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
+    operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     const [protocolDiamond, , , , accessController] = await deployProtocolDiamond();

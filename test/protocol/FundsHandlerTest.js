@@ -107,23 +107,12 @@ describe("IBosonFundsHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [
-      deployer,
-      pauser,
-      operator,
-      admin,
-      clerk,
-      treasury,
-      rando,
-      buyer,
-      feeCollector,
-      operatorDR,
-      adminDR,
-      clerkDR,
-      treasuryDR,
-      other,
-      protocolTreasury,
-    ] = await ethers.getSigners();
+    [deployer, pauser, admin, treasury, rando, buyer, feeCollector, adminDR, treasuryDR, other, protocolTreasury] =
+      await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
+    operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -935,17 +924,6 @@ describe("IBosonFundsHandler", function () {
 
             // Attempt to withdraw the seller funds, expecting revert
             await expect(fundsHandler.connect(rando).withdrawFunds(seller.id, [], [])).to.revertedWith(
-              RevertReasons.NOT_AUTHORIZED
-            );
-
-            // not even the admin, operator or trasuary are allowed to withdraw
-            // Attempt to withdraw the seller funds as admin, expecting revert
-            await expect(fundsHandler.connect(admin).withdrawFunds(seller.id, [], [])).to.revertedWith(
-              RevertReasons.NOT_AUTHORIZED
-            );
-
-            // Attempt to withdraw the seller funds as operator, expecting revert
-            await expect(fundsHandler.connect(operator).withdrawFunds(seller.id, [], [])).to.revertedWith(
               RevertReasons.NOT_AUTHORIZED
             );
 

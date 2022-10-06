@@ -119,21 +119,21 @@ describe("IBosonExchangeHandler", function () {
     [
       deployer,
       pauser,
-      operator,
       admin,
-      clerk,
       treasury,
       buyer,
       rando,
       newOwner,
       fauxClient,
-      operatorDR,
       adminDR,
-      clerkDR,
       treasuryDR,
       protocolTreasury,
       bosonToken,
     ] = await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
+    operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();

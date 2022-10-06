@@ -48,8 +48,11 @@ describe("IBosonAccountHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, other1, other2, other3, protocolTreasury, bosonToken] =
+    [deployer, admin, treasury, rando, other1, other2, other3, protocolTreasury, bosonToken] =
       await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -210,11 +213,11 @@ describe("IBosonAccountHandler", function () {
       it("should be incremented after a seller is created", async function () {
         //addresses need to be unique to seller Id, so setting them to random addresses here
         seller.operator = rando.address;
-        seller.admin = other1.address;
-        seller.clerk = other2.address;
+        seller.admin = rando.address;
+        seller.clerk = rando.address;
 
         // Create another seller
-        await accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // What we expect the next account id to be
         expected = ++nextAccountId;
