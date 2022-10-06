@@ -60,14 +60,18 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             INVALID_ADDRESS
         );
 
-        // Get message sender
-        address sender = msgSender();
+        {
+            // Get message sender
+            address sender = msgSender();
 
-        // Check that caller is the supplied operator and clerk
-        require(
-            _disputeResolver.admin == sender && _disputeResolver.operator == sender && _disputeResolver.clerk == sender,
-            NOT_ADMIN_OPERATOR_AND_CLERK
-        );
+            // Check that caller is the supplied operator and clerk
+            require(
+                _disputeResolver.admin == sender &&
+                    _disputeResolver.operator == sender &&
+                    _disputeResolver.clerk == sender,
+                NOT_ADMIN_OPERATOR_AND_CLERK
+            );
+        }
 
         // Make sure the gas block limit is not hit
         require(_sellerAllowList.length <= protocolLimits().maxAllowedSellers, INVALID_AMOUNT_ALLOWED_SELLERS);
@@ -130,7 +134,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             _disputeResolver,
             _disputeResolverFees,
             _sellerAllowList,
-            sender
+            msgSender()
         );
     }
 
