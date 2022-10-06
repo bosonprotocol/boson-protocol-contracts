@@ -132,7 +132,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     function getSellerId() public view override returns (uint256) {
         (bool exists, Seller memory seller) = getBosonSellerByAddress(owner());
 
-        return exists ? seller.id: 0;
+        return exists ? seller.id : 0;
     }
 
     /**

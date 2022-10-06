@@ -77,7 +77,7 @@ abstract contract BeaconClientBase is BosonTypes {
      *
      * @param _sellerAddress - the address of the seller
      * @return exists - the seller was found
-     * @return seller - the seller associated with the _sellerAddress 
+     * @return seller - the seller associated with the _sellerAddress
      */
     function getBosonSellerByAddress(address _sellerAddress) internal view returns (bool exists, Seller memory seller) {
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
@@ -85,5 +85,3 @@ abstract contract BeaconClientBase is BosonTypes {
         (exists, seller, ) = IBosonAccountHandler(protocolDiamond).getSellerByAddress(_sellerAddress);
     }
 }
-
-
