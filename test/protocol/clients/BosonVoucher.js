@@ -278,7 +278,9 @@ describe("IBosonVoucher", function () {
       const sellerAllowList = [];
 
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver("2");
 
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
@@ -415,7 +417,9 @@ describe("IBosonVoucher", function () {
       const sellerAllowList = [];
 
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver("2");
 
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
@@ -558,7 +562,7 @@ describe("IBosonVoucher", function () {
       it("should revert during create seller if royaltyPercentage is greater than max royalty percentage defined in the protocol", async function () {
         // create invalid voucherInitValues
         royaltyPercentage = "2000"; // 20%
-        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+        voucherInitValues = new VoucherInitValues("ContractURI", royaltyPercentage);
 
         // create another seller
         seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
@@ -566,7 +570,7 @@ describe("IBosonVoucher", function () {
 
         // royalty percentage too high, expectig revert
         await expect(
-          accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues)
+          accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
         ).to.be.revertedWith(RevertReasons.ROYALTY_FEE_INVALID);
       });
     });

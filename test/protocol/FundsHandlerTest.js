@@ -460,7 +460,7 @@ describe("IBosonFundsHandler", function () {
 
         // Register and activate the dispute resolver
         await accountHandler
-          .connect(rando)
+          .connect(adminDR)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
         await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
@@ -1567,7 +1567,9 @@ describe("IBosonFundsHandler", function () {
       buyerEscalationDeposit = applyPercentage(DRFee, buyerEscalationDepositPercentage);
 
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       const { offer, ...mo } = await mockOffer();

@@ -50,7 +50,6 @@ describe("IBosonOrchestrationHandler", function () {
     pauser,
     rando,
     operator,
-    admin,
     clerk,
     treasury,
     other1,
@@ -110,7 +109,6 @@ describe("IBosonOrchestrationHandler", function () {
       deployer,
       pauser,
       operator,
-      admin,
       clerk,
       treasury,
       rando,
@@ -269,11 +267,13 @@ describe("IBosonOrchestrationHandler", function () {
       sellerAllowList = [];
 
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(operator.address, operator.address, clerk.address, treasury.address); // admin == operator
       expect(seller.isValid()).is.true;
 
       // How that seller looks as a returned struct
@@ -292,6 +292,11 @@ describe("IBosonOrchestrationHandler", function () {
       authToken = new AuthToken("8400", AuthTokenType.Lens);
       expect(authToken.isValid()).is.true;
       authTokenStruct = authToken.toStruct();
+
+      // deploy mock auth token and mint one to operator
+      const [mockAuthERC721Contract] = await deployMockTokens(gasLimit, ["Foreign721"]);
+      await configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, mockAuthERC721Contract.address);
+      await mockAuthERC721Contract.connect(operator).mint(authToken.tokenId, 1);
 
       // The first offer id
       nextOfferId = "1";
@@ -1038,12 +1043,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("addresses are not unique to this seller Id", async function () {
           // Create a seller
-          await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+          await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-          seller.admin = other1.address;
           seller.clerk = other2.address;
 
-          // Attempt to create a seller with non-unique operator, expecting revert
+          // Attempt to create a seller with non-unique admin and operator, expecting revert
+          // N.B. operator and admin are tested together, since they must be the same
           await expect(
             orchestrationHandler
               .connect(operator)
@@ -1059,32 +1064,14 @@ describe("IBosonOrchestrationHandler", function () {
               )
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
-          seller.admin = admin.address;
-          seller.operator = other1.address;
-
-          // Attempt to create a seller with non-unique admin, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(other1)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                disputeResolver.id,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId
-              )
-          ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
-
           seller.clerk = clerk.address;
           seller.admin = other2.address;
+          seller.operator = other2.address;
 
           // Attempt to create a seller with non-unique clerk, expecting revert
           await expect(
             orchestrationHandler
-              .connect(other1)
+              .connect(other2)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1114,6 +1101,47 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId
               )
           ).to.revertedWith(RevertReasons.NOT_OPERATOR);
+        });
+
+        it("Caller is not the supplied admin", async function () {
+          seller.operator = rando.address;
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(rando)
+              .createSellerAndOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.NOT_ADMIN);
+        });
+
+        it("Caller does not own supplied auth token", async function () {
+          seller.admin = ethers.constants.AddressZero;
+          seller.operator = rando.address;
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(rando)
+              .createSellerAndOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                authToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
 
         it("admin address is NOT zero address and AuthTokenType is NOT None", async function () {
@@ -1159,16 +1187,15 @@ describe("IBosonOrchestrationHandler", function () {
           seller.admin = ethers.constants.AddressZero;
 
           // Create a seller
-          await accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues);
+          await accountHandler.connect(operator).createSeller(seller, authToken, voucherInitValues);
 
-          //Set seller 2's addresses to unique operator and clerk addresses
-          seller.operator = other2.address;
+          //Set seller 2's addresses to unique clerk addresses
           seller.clerk = other3.address;
 
           // Attempt to create a seller with non-unique authToken and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(other2)
+              .connect(operator)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1732,7 +1759,7 @@ describe("IBosonOrchestrationHandler", function () {
         groupStruct = group.toStruct();
 
         // create a seller
-        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
       });
 
       it("should emit an OfferCreated and GroupCreated events", async function () {
@@ -2195,7 +2222,7 @@ describe("IBosonOrchestrationHandler", function () {
     context("👉 createOfferAddToGroup()", async function () {
       beforeEach(async function () {
         // create a seller
-        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // The first group id
         nextGroupId = "1";
@@ -2723,7 +2750,7 @@ describe("IBosonOrchestrationHandler", function () {
         twinStruct = twin.toStruct();
 
         // create a seller
-        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
@@ -3309,7 +3336,7 @@ describe("IBosonOrchestrationHandler", function () {
         twinStruct = twin.toStruct();
 
         // create a seller
-        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler

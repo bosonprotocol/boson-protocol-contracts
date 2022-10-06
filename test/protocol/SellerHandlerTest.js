@@ -206,11 +206,11 @@ describe("SellerHandler", function () {
     context("👉 createSeller()", async function () {
       it("should emit a SellerCreated event when auth token is empty", async function () {
         // Create a seller, testing for the event
-        const tx = await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+        const tx = await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         await expect(tx)
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, rando.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, admin.address);
 
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
@@ -232,11 +232,11 @@ describe("SellerHandler", function () {
         // Create a seller, testing for the event
         seller.admin = ethers.constants.AddressZero;
         sellerStruct = seller.toStruct();
-        const tx = await accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues);
+        const tx = await accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues);
 
         await expect(tx)
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, rando.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, authTokenOwner.address);
 
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
@@ -256,7 +256,7 @@ describe("SellerHandler", function () {
 
       it("should update state when authToken is empty", async function () {
         // Create a seller
-        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Get the seller as a struct
         [, sellerStruct, emptyAuthTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -292,7 +292,7 @@ describe("SellerHandler", function () {
         expect(voucherInitValues.isValid()).is.true;
 
         // Create a seller
-        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
@@ -326,7 +326,7 @@ describe("SellerHandler", function () {
         expect(voucherInitValues.isValid()).is.true;
 
         // Create a seller
-        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
@@ -358,7 +358,7 @@ describe("SellerHandler", function () {
         seller.admin = ethers.constants.AddressZero;
 
         // Create a seller
-        await accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues);
+        await accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues);
 
         // Get the seller as a struct
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -393,9 +393,9 @@ describe("SellerHandler", function () {
         seller.id = "444";
 
         // Create a seller, testing for the event
-        await expect(accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues))
+        await expect(accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(sellerId, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, rando.address);
+          .withArgs(sellerId, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, admin.address);
 
         // wrong seller id should not exist
         [exists] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -416,16 +416,16 @@ describe("SellerHandler", function () {
         sellerStruct = seller.toStruct();
 
         // Create a seller, testing for the event
-        await expect(accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues))
+        await expect(accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, rando.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, other1.address);
       });
 
       it("should be possible to use non-unique treasury address", async function () {
         // Create a seller, testing for the event
-        await expect(accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues))
+        await expect(accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, rando.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, admin.address);
 
         seller.id = accountId.next().value;
         seller.operator = other1.address;
@@ -439,16 +439,16 @@ describe("SellerHandler", function () {
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
 
         // Create a seller, testing for the event
-        await expect(accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues))
+        await expect(accountHandler.connect(other2).createSeller(seller, emptyAuthToken, voucherInitValues))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, rando.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, other2.address);
       });
 
       it("every seller should get a different clone address", async function () {
         // Create a seller, testing for the event
-        await expect(accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues))
+        await expect(accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, rando.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, admin.address);
 
         // second seller
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
@@ -468,9 +468,9 @@ describe("SellerHandler", function () {
         sellerStruct = seller.toStruct();
 
         // Create a seller, testing for the event
-        await expect(accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues))
+        await expect(accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, rando.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, authTokenOwner.address);
 
         seller.id = accountId.next().value;
         seller.operator = other1.address;
@@ -483,13 +483,16 @@ describe("SellerHandler", function () {
         authToken.tokenType = AuthTokenType.ENS;
         authTokenStruct = authToken.toStruct();
 
+        // mint token on ens contract
+        await mockAuthERC721Contract2.connect(authTokenOwner).mint(8400, 1);
+
         // expected address of the first clone
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
 
         // Create a seller, testing for the event
-        await expect(accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues))
+        await expect(accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, rando.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, authTokenOwner.address);
       });
 
       it("should be possible to create a seller with same auth token type but different id", async function () {
@@ -500,9 +503,9 @@ describe("SellerHandler", function () {
         sellerStruct = seller.toStruct();
 
         // Create a seller, testing for the event
-        await expect(accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues))
+        await expect(accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, rando.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, authTokenOwner.address);
 
         seller.id = accountId.next().value;
         seller.operator = other1.address;
@@ -511,9 +514,12 @@ describe("SellerHandler", function () {
         //Create struct again with new addresses
         sellerStruct = seller.toStruct();
 
-        // Set different auth token type, keeping token Id the same
+        // Set different token Id, keeping auth token type the same
         authToken.tokenId = "0";
         authTokenStruct = authToken.toStruct();
+
+        // mint the token
+        await mockAuthERC721Contract.connect(rando).mint(authToken.tokenId, 1);
 
         // expected address of the first clone
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
@@ -549,7 +555,7 @@ describe("SellerHandler", function () {
 
           // Attempt to Create a seller, expecting revert
           await expect(
-            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+            accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
           seller.operator = operator.address;
@@ -557,7 +563,7 @@ describe("SellerHandler", function () {
 
           // Attempt to Create a seller, expecting revert
           await expect(
-            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+            accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
           seller.clerk = clerk.address;
@@ -565,20 +571,20 @@ describe("SellerHandler", function () {
 
           // Attempt to Create a seller, expecting revert
           await expect(
-            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+            accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
         it("addresses are not unique to this seller Id when address used for same role", async function () {
           // Create a seller
-          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+          await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           seller.admin = other1.address;
           seller.clerk = other2.address;
 
           // Attempt to Create a seller with non-unique operator, expecting revert
           await expect(
-            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+            accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           seller.admin = admin.address;
@@ -586,7 +592,7 @@ describe("SellerHandler", function () {
 
           // Attempt to Create a seller with non-unique admin, expecting revert
           await expect(
-            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+            accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           seller.clerk = clerk.address;
@@ -594,13 +600,13 @@ describe("SellerHandler", function () {
 
           // Attempt to Create a seller with non-unique clerk, expecting revert
           await expect(
-            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+            accountHandler.connect(other2).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
         it("addresses are not unique to this seller Id when address used for different role", async function () {
           // Create a seller
-          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+          await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           //Set seller 2's admin address to seller 1's operator address
           seller.admin = operator.address;
@@ -609,7 +615,7 @@ describe("SellerHandler", function () {
 
           // Attempt to Create a seller with non-unique operator, expecting revert
           await expect(
-            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+            accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           //Set seller 2's operator address to seller 1's clerk address
@@ -619,7 +625,7 @@ describe("SellerHandler", function () {
 
           // Attempt to Create a seller with non-unique admin, expecting revert
           await expect(
-            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+            accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           //Set seller 2's clerk address to seller 1's admin address
@@ -629,14 +635,14 @@ describe("SellerHandler", function () {
 
           // Attempt to Create a seller with non-unique clerk, expecting revert
           await expect(
-            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+            accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
         it("admin address is NOT zero address and AuthTokenType is NOT None", async function () {
           // Attempt to Create a seller, expecting revert
           await expect(
-            accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues)
+            accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.ADMIN_OR_AUTH_TOKEN);
         });
 
@@ -654,7 +660,7 @@ describe("SellerHandler", function () {
           seller.admin = ethers.constants.AddressZero;
 
           // Create a seller
-          await accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues);
+          await accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues);
 
           //Set seller 2's addresses to unique operator and clerk addresses
           seller.operator = other2.address;
@@ -662,8 +668,25 @@ describe("SellerHandler", function () {
 
           // Attempt to Create a seller with non-unique authToken
           await expect(
-            accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues)
+            accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE);
+        });
+
+        it("Caller is not the supplied admin", async function () {
+          // Attempt to Create a seller with admin not the same to caller address
+          await expect(
+            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.NOT_ADMIN);
+        });
+
+        it("Caller does not own supplied auth token", async function () {
+          // Set admin == zero address because seller will be created with auth token
+          seller.admin = ethers.constants.AddressZero;
+
+          // Attempt to Create a seller without owning the auth token
+          await expect(
+            accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
       });
     });
@@ -681,13 +704,13 @@ describe("SellerHandler", function () {
         seller.admin = ethers.constants.AddressZero;
 
         // Create a seller
-        await accountHandler.connect(admin).createSeller(seller, authToken, voucherInitValues);
+        await accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues);
 
         // Create a another seller
         seller2 = mockSeller(other1.address, other2.address, other3.address, other4.address);
         expect(seller2.isValid()).is.true;
 
-        await accountHandler.connect(rando).createSeller(seller2, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(other2).createSeller(seller2, emptyAuthToken, voucherInitValues);
       });
 
       it("should return true for exists if seller is found", async function () {
@@ -758,7 +781,7 @@ describe("SellerHandler", function () {
         seller.admin = ethers.constants.AddressZero;
 
         // Create a seller
-        await accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues);
+        await accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues);
 
         // Create a another seller
         seller2 = mockSeller(other1.address, other2.address, other3.address, other4.address);
@@ -766,7 +789,7 @@ describe("SellerHandler", function () {
 
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
-        await accountHandler.connect(rando).createSeller(seller2, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(other2).createSeller(seller2, emptyAuthToken, voucherInitValues);
       });
 
       afterEach(async function () {
@@ -959,7 +982,7 @@ describe("SellerHandler", function () {
         seller.admin = ethers.constants.AddressZero;
 
         // Create a seller
-        await accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues);
+        await accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues);
 
         // Create seller 2
         seller2 = mockSeller(other1.address, other2.address, other3.address, other4.address);
@@ -967,7 +990,7 @@ describe("SellerHandler", function () {
 
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
-        await accountHandler.connect(rando).createSeller(seller2, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(other2).createSeller(seller2, emptyAuthToken, voucherInitValues);
 
         // Create seller 3
         seller3 = mockSeller(other5.address, ethers.constants.AddressZero, other6.address, treasury.address);
@@ -975,6 +998,7 @@ describe("SellerHandler", function () {
 
         contractURI = `https://ipfs.io/ipfs/QmPChd2hVbrJ6bfo3WBcTW4iZnpHm8TEzWkLHmLpXhF68A`;
 
+        await mockAuthERC721Contract2.connect(rando).mint(authToken2.tokenId, 1);
         await accountHandler.connect(rando).createSeller(seller3, authToken2, voucherInitValues);
       });
 
@@ -1032,6 +1056,7 @@ describe("SellerHandler", function () {
         seller4 = mockSeller(other7.address, ethers.constants.AddressZero, other8.address, treasury.address);
         expect(seller4.isValid()).is.true;
 
+        await mockAuthERC721Contract2.connect(rando).mint(authToken3.tokenId, 1);
         await accountHandler.connect(rando).createSeller(seller4, authToken3, voucherInitValues);
 
         //Search on authToken
@@ -1082,6 +1107,7 @@ describe("SellerHandler", function () {
         seller4 = mockSeller(other7.address, ethers.constants.AddressZero, other8.address, treasury.address);
         expect(seller4.isValid()).is.true;
 
+        await mockAuthERC721Contract.connect(rando).mint(authToken3.tokenId, 1);
         await accountHandler.connect(rando).createSeller(seller4, authToken3, voucherInitValues);
 
         //Search on authToken
@@ -1162,7 +1188,7 @@ describe("SellerHandler", function () {
         authTokenStruct = authToken.toStruct();
 
         // Create a seller
-        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
       });
 
       it("should emit a SellerUpdated and OwnershipTransferred event with correct values if values change", async function () {
@@ -1274,7 +1300,7 @@ describe("SellerHandler", function () {
         expect(seller2.isValid()).is.true;
 
         // Create a seller with auth token
-        await accountHandler.connect(rando).createSeller(seller2, authToken, voucherInitValues);
+        await accountHandler.connect(authTokenOwner).createSeller(seller2, authToken, voucherInitValues);
 
         seller2.operator = other5.address;
         seller2.admin = other6.address;
@@ -1339,7 +1365,7 @@ describe("SellerHandler", function () {
         expect(seller2.isValid()).is.true;
 
         // Create a seller with auth token
-        await accountHandler.connect(rando).createSeller(seller2, authToken, voucherInitValues);
+        await accountHandler.connect(authTokenOwner).createSeller(seller2, authToken, voucherInitValues);
 
         seller2.operator = other5.address;
         seller2.admin = ethers.constants.AddressZero;
@@ -1471,7 +1497,7 @@ describe("SellerHandler", function () {
         authToken2 = new AuthToken("8500", AuthTokenType.Lens);
 
         //Create seller2
-        await accountHandler.connect(rando).createSeller(seller2, authToken2, voucherInitValues);
+        await accountHandler.connect(authTokenOwner).createSeller(seller2, authToken2, voucherInitValues);
 
         //Update seller2
         seller2.operator = rando.address;
@@ -1674,9 +1700,9 @@ describe("SellerHandler", function () {
           expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
 
           //Create second seller
-          await expect(accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues))
+          await expect(accountHandler.connect(other2).createSeller(seller, emptyAuthToken, voucherInitValues))
             .to.emit(accountHandler, "SellerCreated")
-            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, rando.address);
+            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, other2.address);
 
           //Set operator address value to be same as first seller created in Seller Methods beforeEach
           seller.operator = operator.address; //already being used by seller 1
@@ -1689,7 +1715,7 @@ describe("SellerHandler", function () {
           seller.admin = admin.address; //already being used by seller 1
           seller.operator = other1.address;
 
-          // Attempt to update a seller with non-unique admin, expecting revert
+          // // Attempt to update a seller with non-unique admin, expecting revert
           await expect(accountHandler.connect(other2).updateSeller(seller, emptyAuthToken)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
@@ -1714,9 +1740,9 @@ describe("SellerHandler", function () {
           expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
 
           //Create second seller
-          await expect(accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues))
+          await expect(accountHandler.connect(other2).createSeller(seller, emptyAuthToken, voucherInitValues))
             .to.emit(accountHandler, "SellerCreated")
-            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, rando.address);
+            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, other2.address);
 
           //Set seller 2's admin address to seller 1's operator address
           seller.admin = operator.address;
@@ -1773,7 +1799,7 @@ describe("SellerHandler", function () {
           expect(seller2.isValid()).is.true;
 
           // Create a seller with auth token
-          await accountHandler.connect(rando).createSeller(seller2, emptyAuthToken, voucherInitValues);
+          await accountHandler.connect(other2).createSeller(seller2, emptyAuthToken, voucherInitValues);
 
           seller2.admin = ethers.constants.AddressZero;
 
@@ -1793,12 +1819,11 @@ describe("SellerHandler", function () {
           expect(authToken2.isValid()).is.true;
 
           // Create a seller with auth token
-          await accountHandler.connect(rando).createSeller(seller2, authToken2, voucherInitValues);
+          await mockAuthERC721Contract2.connect(authTokenOwner).mint(0, 2);
+          await accountHandler.connect(authTokenOwner).createSeller(seller2, authToken2, voucherInitValues);
 
-          seller2.opeator = other5.address;
-
-          //Mint the token to a different address
-          await mockAuthERC721Contract2.connect(other8).mint(0, 2);
+          //Transfer the token to a different address
+          await mockAuthERC721Contract2.connect(authTokenOwner).transferFrom(authTokenOwner.address, other8.address, 0);
 
           // Attempt to update seller2 for token that seller doesn't own
           await expect(accountHandler.connect(authTokenOwner).updateSeller(seller2, authToken2)).to.revertedWith(
@@ -1806,7 +1831,7 @@ describe("SellerHandler", function () {
           );
         });
 
-        it("auth token id currently stored for seller does not exist", async function () {
+        it("auth token id does not exist", async function () {
           //Create seller 2 with auth token
           seller2 = mockSeller(other1.address, ethers.constants.AddressZero, other3.address, other4.address);
           expect(seller2.isValid()).is.true;
@@ -1815,15 +1840,10 @@ describe("SellerHandler", function () {
           authToken2 = new AuthToken("0", AuthTokenType.ENS);
           expect(authToken2.isValid()).is.true;
 
-          // Create a seller with auth token
-          await accountHandler.connect(rando).createSeller(seller2, authToken2, voucherInitValues);
-
-          seller2.opeator = other5.address;
-
           // Attempt to update seller2 for token Id that doesn't exist
-          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller2, authToken2)).to.revertedWith(
-            RevertReasons.ERC721_NON_EXISTENT
-          );
+          await expect(
+            accountHandler.connect(authTokenOwner).createSeller(seller2, authToken2, voucherInitValues)
+          ).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
         });
       });
     });

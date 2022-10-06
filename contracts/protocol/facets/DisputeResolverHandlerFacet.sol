@@ -51,9 +51,6 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        // Check that caller is supplied admin
-        require(_disputeResolver.admin ==  msgSender(), NOT_ADMIN);
-
         // Check for zero address
         require(
             _disputeResolver.admin != address(0) &&
@@ -62,6 +59,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 _disputeResolver.treasury != address(0),
             INVALID_ADDRESS
         );
+
+        // Check that caller is supplied admin
+        require(_disputeResolver.admin == msgSender(), NOT_ADMIN);
 
         // Make sure the gas block limit is not hit
         require(_sellerAllowList.length <= protocolLimits().maxAllowedSellers, INVALID_AMOUNT_ALLOWED_SELLERS);

@@ -460,7 +460,7 @@ describe("BuyerHandler", function () {
 
           // Register the dispute resolver
           await accountHandler
-            .connect(rando)
+            .connect(admin)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
           await accountHandler.connect(deployer).activateDisputeResolver(++id);

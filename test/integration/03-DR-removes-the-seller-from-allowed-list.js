@@ -33,7 +33,6 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
     admin,
     clerk,
     treasury,
-    rando,
     buyer,
     other1,
     operatorDR,
@@ -61,7 +60,6 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       clerk,
       treasury,
       buyer,
-      rando,
       other1,
       operatorDR,
       adminDR,
@@ -200,7 +198,9 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       const sellerAllowList = ["2", "1"];
 
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // Buyer escalation deposit used in multiple tests

@@ -214,7 +214,7 @@ describe("IBosonAccountHandler", function () {
         seller.clerk = other2.address;
 
         // Create another seller
-        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // What we expect the next account id to be
         expected = ++nextAccountId;
@@ -243,7 +243,7 @@ describe("IBosonAccountHandler", function () {
       it("should be incremented after a dispute resolver is created", async function () {
         // Create a dispute resolver
         await accountHandler
-          .connect(rando)
+          .connect(admin)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // What we expect the next account id to be

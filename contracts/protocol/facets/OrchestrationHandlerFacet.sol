@@ -51,6 +51,7 @@ contract OrchestrationHandlerFacet is
      * - The offers region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the same as operator address
+     * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -367,6 +368,7 @@ contract OrchestrationHandlerFacet is
      * - The groups region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the same as operator address
+     * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -443,6 +445,7 @@ contract OrchestrationHandlerFacet is
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the same as operator address
+     * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -527,6 +530,7 @@ contract OrchestrationHandlerFacet is
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the same as operator address
+     * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:

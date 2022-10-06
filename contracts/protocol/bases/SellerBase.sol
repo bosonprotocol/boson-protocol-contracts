@@ -41,6 +41,13 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         // Check active is not set to false
         require(_seller.active, MUST_BE_ACTIVE);
 
+        // Admin address or AuthToken data must be present. A seller can have one or the other
+        require(
+            (_seller.admin == address(0) && _authToken.tokenType != AuthTokenType.None) ||
+                (_seller.admin != address(0) && _authToken.tokenType == AuthTokenType.None),
+            ADMIN_OR_AUTH_TOKEN
+        );
+
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
@@ -71,13 +78,6 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
                 SELLER_ADDRESS_MUST_BE_UNIQUE
             );
         }
-
-        // Admin address or AuthToken data must be present. A seller can have one or the other
-        require(
-            (_seller.admin == address(0) && _authToken.tokenType != AuthTokenType.None) ||
-                (_seller.admin != address(0) && _authToken.tokenType == AuthTokenType.None),
-            ADMIN_OR_AUTH_TOKEN
-        );
 
         // Check that the addresses are unique to one seller id, across all roles. These addresses should always be checked. Treasury is not checked
         mapping(address => uint256) storage sellerIdByOperator = lookups.sellerIdByOperator;
