@@ -39,7 +39,8 @@ interface IBosonOrchestrationHandler is
      * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the same as operator address
+     * - Caller is not the supplied admin or does not own supplied auth token
+     * - Caller is not the supplied operator and clerk
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -317,7 +318,8 @@ interface IBosonOrchestrationHandler is
      * - The offers region of protocol is paused
      * - The groups region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the same as operator address
+     * - Caller is not the supplied admin or does not own supplied auth token
+     * - Caller is not the supplied operator and clerk
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -388,7 +390,8 @@ interface IBosonOrchestrationHandler is
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the same as operator address
+     * - Caller is not the supplied admin or does not own supplied auth token
+     * - Caller is not the supplied operator and clerk
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -467,7 +470,8 @@ interface IBosonOrchestrationHandler is
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the same as operator address
+     * - Caller is not the supplied admin or does not own supplied auth token
+     * - Caller is not the supplied operator and clerk
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:

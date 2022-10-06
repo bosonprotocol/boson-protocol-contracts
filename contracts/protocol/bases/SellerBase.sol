@@ -22,6 +22,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      *
      * Reverts if:
      * - Caller is not the supplied admin or does not own supplied auth token
+     * - Caller is not the supplied operator and clerk
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
@@ -53,6 +54,9 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Get message sender
         address sender = msgSender();
+
+        // Check that caller is the supplied operator and clerk
+        require(_seller.operator == sender && _seller.clerk == sender, NOT_OPERATOR_AND_CLERK);
 
         // Do caller and uniqueness checks based on auth type
         if (_authToken.tokenType != AuthTokenType.None) {
