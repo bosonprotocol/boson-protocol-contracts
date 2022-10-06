@@ -38,6 +38,9 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues
     ) internal {
+        // Check active is not set to false
+        require(_seller.active, MUST_BE_ACTIVE);
+
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
@@ -45,7 +48,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         address sender = msgSender();
 
         // Do caller and uniqueness checks based on auth type
-        if (_seller.admin == address(0)) {
+        if (_authToken.tokenType != AuthTokenType.None) {
             // Check that caller owns the auth token
             address authTokenContract = lookups.authTokenContracts[_authToken.tokenType];
             address tokenIdOwner = IERC721(authTokenContract).ownerOf(_authToken.tokenId);
@@ -68,9 +71,6 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
                 SELLER_ADDRESS_MUST_BE_UNIQUE
             );
         }
-
-        // Check active is not set to false
-        require(_seller.active, MUST_BE_ACTIVE);
 
         // Admin address or AuthToken data must be present. A seller can have one or the other
         require(
@@ -103,7 +103,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         lookups.cloneAddress[sellerId] = voucherCloneAddress;
 
         // Notify watchers of state change
-        emit SellerCreated(sellerId, _seller, voucherCloneAddress, _authToken, msgSender());
+        emit SellerCreated(sellerId, _seller, voucherCloneAddress, _authToken, sender);
     }
 
     /**
