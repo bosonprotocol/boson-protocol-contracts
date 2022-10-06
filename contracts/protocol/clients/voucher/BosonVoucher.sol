@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
-
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
@@ -130,9 +129,10 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      *
      * @return the id for the Voucher seller
      */
-    function getSellerId(uint256 _exchangeId) public view override returns (uint256) {
-        (bool exists, Offer memory offer) = getBosonOffer(_exchangeId);
-        return exists ? offer.sellerId : 0;
+    function getSellerId() public view override returns (uint256) {
+        (bool exists, Seller memory seller) = getBosonSellerByAddress(owner());
+
+        return exists ? seller.id: 0;
     }
 
     /**
