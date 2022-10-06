@@ -305,7 +305,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       it("should be true after executing a meta transaction with nonce", async function () {
-        result = await metaTransactionsHandler.connect(operator).isUsedNonce(deployer.address, nonce);
+        result = await metaTransactionsHandler.connect(operator).isUsedNonce(operator.address, nonce);
 
         // Verify the expectation
         assert.equal(result, expectedResult, "Nonce is used");
@@ -373,13 +373,13 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // We expect that the nonce is used now. Hence expecting to return true.
         expectedResult = true;
-        result = await metaTransactionsHandler.connect(operator).isUsedNonce(deployer.address, nonce);
+        result = await metaTransactionsHandler.connect(operator).isUsedNonce(operator.address, nonce);
         assert.equal(result, expectedResult, "Nonce is not used");
 
         //Verify that another nonce value is unused.
         expectedResult = false;
         nonce = nonce + 1;
-        result = await metaTransactionsHandler.connect(rando).isUsedNonce(deployer.address, nonce);
+        result = await metaTransactionsHandler.connect(rando).isUsedNonce(operator.address, nonce);
         assert.equal(result, expectedResult, "Nonce is used");
       });
     });
@@ -458,7 +458,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Verify that nonce is used. Expect true.
           let expectedResult = true;
-          result = await metaTransactionsHandler.connect(operator).isUsedNonce(deployer.address, nonce);
+          result = await metaTransactionsHandler.connect(operator).isUsedNonce(operator.address, nonce);
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
@@ -497,7 +497,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Verify that nonce is used. Expect true.
           let expectedResult = true;
-          result = await metaTransactionsHandler.connect(operator).isUsedNonce(deployer.address, nonce);
+          result = await metaTransactionsHandler.connect(operator).isUsedNonce(operator.address, nonce);
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
@@ -537,7 +537,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
 
-        it("Should allow different msg.sender to use same nonce", async () => {
+        it("Should allow different signers to use same nonce", async () => {
           let r, s, v;
 
           // Prepare the function signature for the facet function.
@@ -569,7 +569,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Verify that nonce is used. Expect true.
           let expectedResult = true;
-          result = await metaTransactionsHandler.connect(operator).isUsedNonce(deployer.address, nonce);
+          result = await metaTransactionsHandler.connect(operator).isUsedNonce(operator.address, nonce);
           assert.equal(result, expectedResult, "Nonce is unused");
 
           // send a meta transaction again, check for event
@@ -608,7 +608,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Verify that nonce is used. Expect true.
           expectedResult = true;
-          result = await metaTransactionsHandler.connect(operatorDR).isUsedNonce(rando.address, nonce);
+          result = await metaTransactionsHandler.connect(operatorDR).isUsedNonce(operatorDR.address, nonce);
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
@@ -1360,7 +1360,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Verify that nonce is used. Expect true.
             let expectedResult = true;
-            result = await metaTransactionsHandler.connect(buyer).isUsedNonce(deployer.address, nonce);
+            result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
             assert.equal(result, expectedResult, "Nonce is unused");
           });
 
@@ -1544,7 +1544,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               // Verify that nonce is used. Expect true.
               let expectedResult = true;
-              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(deployer.address, nonce);
+              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
               assert.equal(result, expectedResult, "Nonce is unused");
             });
 
@@ -1698,7 +1698,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               // Verify that nonce is used. Expect true.
               let expectedResult = true;
-              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(deployer.address, nonce);
+              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
               assert.equal(result, expectedResult, "Nonce is unused");
             });
 
@@ -1861,7 +1861,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               // Verify that nonce is used. Expect true.
               let expectedResult = true;
-              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(deployer.address, nonce);
+              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
               assert.equal(result, expectedResult, "Nonce is unused");
             });
 
@@ -2026,7 +2026,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               // Verify that nonce is used. Expect true.
               let expectedResult = true;
-              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(deployer.address, nonce);
+              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
               assert.equal(result, expectedResult, "Nonce is unused");
             });
 
@@ -2213,7 +2213,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               // Verify that nonce is used. Expect true.
               let expectedResult = true;
-              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(deployer.address, nonce);
+              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
               assert.equal(result, expectedResult, "Nonce is unused");
             });
 
@@ -2378,7 +2378,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               // Verify that nonce is used. Expect true.
               let expectedResult = true;
-              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(deployer.address, nonce);
+              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
               assert.equal(result, expectedResult, "Nonce is unused");
             });
 
@@ -2607,7 +2607,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               // Verify that nonce is used. Expect true.
               let expectedResult = true;
-              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(deployer.address, nonce);
+              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
               assert.equal(result, expectedResult, "Nonce is unused");
             });
 
@@ -2867,7 +2867,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Verify that nonce is used. Expect true.
           let expectedResult = true;
-          result = await metaTransactionsHandler.connect(operator).isUsedNonce(deployer.address, nonce);
+          result = await metaTransactionsHandler.connect(operator).isUsedNonce(operator.address, nonce);
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
@@ -3190,7 +3190,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Verify that nonce is used. Expect true.
             let expectedResult = true;
-            result = await metaTransactionsHandler.connect(buyer).isUsedNonce(deployer.address, nonce);
+            result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
             assert.equal(result, expectedResult, "Nonce is unused");
           });
 
@@ -3252,7 +3252,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Verify that nonce is used. Expect true.
             let expectedResult = true;
-            result = await metaTransactionsHandler.connect(buyer).isUsedNonce(deployer.address, nonce);
+            result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
             assert.equal(result, expectedResult, "Nonce is unused");
           });
 
