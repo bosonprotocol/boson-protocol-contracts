@@ -406,11 +406,11 @@ describe("DisputeResolverHandler", function () {
         );
 
         // Create a dispute resolver 2
-        disputeResolver2 = mockDisputeResolver(other1.address, other2.address, other3.address, other4.address, false);
+        disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, other1.address, false);
         expect(disputeResolver2.isValid()).is.true;
 
         await accountHandler
-          .connect(other2)
+          .connect(other1)
           .createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
 
         let disputeResolverStruct2;
@@ -484,12 +484,12 @@ describe("DisputeResolverHandler", function () {
         expect(valid).is.true;
 
         // Create a valid dispute resolver, then set fields in tests directly
-        disputeResolver2 = mockDisputeResolver(other1.address, other2.address, other3.address, treasury.address, false);
+        disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, treasury.address, false);
         expect(disputeResolver2.isValid()).is.true;
         expectedDisputeResolverStruct = disputeResolver2.toStruct();
 
         const tx2 = await accountHandler
-          .connect(other2)
+          .connect(other1)
           .createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
         valid = await isValidDisputeResolverEvent(
           tx2,
@@ -499,7 +499,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolverFeeList,
           2,
           sellerAllowList,
-          other2.address
+          other1.address
         );
         expect(valid).is.true;
       });
@@ -548,69 +548,22 @@ describe("DisputeResolverHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
-        it("Any address is not unique to this dispute resolver Id for the same role", async function () {
-          disputeResolver2 = mockDisputeResolver(operator.address, other2.address, other3.address, other4.address);
+        it("Address is not unique to this dispute resolver Id", async function () {
+          disputeResolver2 = mockDisputeResolver(
+            operator.address,
+            operator.address,
+            operator.address,
+            operator.address
+          );
           expect(disputeResolver2.isValid()).is.true;
           disputeResolver2Struct = disputeResolver2.toStruct();
 
           //Create dispute resolver 1
           accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-
-          // Attempt to create another dispute resolver with same addresses
-          await expect(
-            accountHandler.connect(other2).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
-
-          //Set each address value to be same as dispute resolver 1 and expect revert
-          disputeResolver2.operator = rando.address;
-          disputeResolver2.admin = admin.address;
 
           // Attempt to create another dispute resolver with same addresses
           await expect(
             accountHandler.connect(admin).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
-
-          disputeResolver2.admin = other2.address;
-          disputeResolver2.clerk = clerk.address;
-
-          // Attempt to create another dispute resolver with same addresses
-          await expect(
-            accountHandler.connect(other2).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
-        });
-
-        it("Any address is not unique to this dispute resolver Id for a different role", async function () {
-          //Set dispute resolver 2's admin address to dispute resolver 1's operator address
-          disputeResolver2 = mockDisputeResolver(other1.address, operator.address, other3.address, other4.address);
-          expect(disputeResolver2.isValid()).is.true;
-          disputeResolver2Struct = disputeResolver2.toStruct();
-
-          //Create dispute resolver 1
-          accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-
-          // Attempt to create another dispute resolver with non-unique admin address
-          await expect(
-            accountHandler
-              .connect(operator)
-              .createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
-
-          //Set dispute resolver 2's operator address to dispute resolver 1's clerk address
-          disputeResolver2.admin = other2.address;
-          disputeResolver2.operator = clerk.address;
-
-          // Attempt to create another dispute resolver with non-unique operator address
-          await expect(
-            accountHandler.connect(other2).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
-
-          //Set dispute resolver 2's clerk address to dispute resolver 1's admin address
-          disputeResolver2.operator = other1.address;
-          disputeResolver2.clerk = admin.address;
-
-          // Attempt to create another dispute resolver with non-unique clerk address
-          await expect(
-            accountHandler.connect(other2).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
         });
 
@@ -999,7 +952,7 @@ describe("DisputeResolverHandler", function () {
 
       it("should update the correct dispute resolver", async function () {
         // Configure another dispute resolver
-        disputeResolver2 = mockDisputeResolver(other1.address, other2.address, other3.address, other4.address);
+        disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, other1.address);
         expect(disputeResolver2.isValid()).is.true;
 
         const expectedDisputeResolver2 = disputeResolver2.clone();
@@ -1013,7 +966,7 @@ describe("DisputeResolverHandler", function () {
 
         //Create disputeResolver2 testing, for the event
         const tx = await accountHandler
-          .connect(other2)
+          .connect(other1)
           .createDisputeResolver(disputeResolver2, disputeResolverFees2, sellerAllowList);
         const valid = await isValidDisputeResolverEvent(
           tx,
@@ -1023,7 +976,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolverFeeList2,
           2,
           sellerAllowList,
-          other2.address
+          other1.address
         );
         expect(valid).is.true;
 
@@ -1217,12 +1170,12 @@ describe("DisputeResolverHandler", function () {
           );
         });
 
-        it("Any address is not unique to this dispute resolver Id for the same role", async function () {
-          disputeResolver2 = mockDisputeResolver(other1.address, other2.address, other3.address, other4.address);
+        it("Address is not unique to this dispute resolver Id", async function () {
+          disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, other1.address);
           expect(disputeResolver2.isValid()).is.true;
           disputeResolver2Struct = disputeResolver2.toStruct();
           await accountHandler
-            .connect(other2)
+            .connect(other1)
             .createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
 
           //Set each address value to be same as disputeResolver2 and expect revert
@@ -1234,7 +1187,7 @@ describe("DisputeResolverHandler", function () {
           );
 
           disputeResolver.operator = operator.address;
-          disputeResolver.admin = other2.address;
+          disputeResolver.admin = other1.address;
 
           // Attempt to update dispute resolver 1 with non-unique admin address, expecting revert
           await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
@@ -1242,7 +1195,7 @@ describe("DisputeResolverHandler", function () {
           );
 
           disputeResolver.admin = admin.address;
-          disputeResolver.clerk = other3.address;
+          disputeResolver.clerk = other1.address;
 
           // Attempt to update dispute resolver 1 with non-unique clerk address, expecting revert
           await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
@@ -1250,20 +1203,20 @@ describe("DisputeResolverHandler", function () {
           );
         });
 
-        it("Any address is not unique to this dispute resolver Id for a different role", async function () {
-          disputeResolver2 = mockDisputeResolver(other1.address, other2.address, other3.address, other4.address);
+        it("Address is not unique to this dispute resolver Id", async function () {
+          disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, other1.address);
           expect(disputeResolver2.isValid()).is.true;
 
           //disputeResolver2Struct = disputeResolver2.toStruct();
           await accountHandler
-            .connect(other2)
+            .connect(other1)
             .createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
 
           //Set dispute resolver 2's admin address to dispute resolver 1's operator address
           disputeResolver2.admin = operator.address;
 
           // Attempt to update dispute resolver 1 with non-unique admin address, expecting revert
-          await expect(accountHandler.connect(other2).updateDisputeResolver(disputeResolver2)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver2)).to.revertedWith(
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
 
@@ -1272,7 +1225,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolver2.operator = clerk.address;
 
           // Attempt to update dispute resolver 1 with non-unique operator address, expecting revert
-          await expect(accountHandler.connect(other2).updateDisputeResolver(disputeResolver2)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver2)).to.revertedWith(
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
 
@@ -1281,7 +1234,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolver2.clerk = admin.address;
 
           // Attempt to update dispute resolver 1 with non-unique clerk address, expecting revert
-          await expect(accountHandler.connect(other2).updateDisputeResolver(disputeResolver2)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver2)).to.revertedWith(
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
         });
