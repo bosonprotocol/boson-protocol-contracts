@@ -222,6 +222,10 @@ describe("SellerHandler", function () {
           .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
           .withArgs(voucherInitValues.royaltyPercentage);
 
+        await expect(tx)
+          .to.emit(bosonVoucher, "VoucherInitialized")
+          .withArgs(seller.id, voucherInitValues.royaltyPercentage, contractURI);
+
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         await expect(tx)
@@ -247,6 +251,10 @@ describe("SellerHandler", function () {
         await expect(tx)
           .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
           .withArgs(voucherInitValues.royaltyPercentage);
+
+        await expect(tx)
+          .to.emit(bosonVoucher, "VoucherInitialized")
+          .withArgs(seller.id, voucherInitValues.royaltyPercentage, contractURI);
 
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 

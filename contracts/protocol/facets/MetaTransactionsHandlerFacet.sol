@@ -180,9 +180,10 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     function validateTx(
         string calldata _functionName,
         bytes calldata _functionSignature,
-        uint256 _nonce
+        uint256 _nonce,
+        address _userAddress
     ) internal view {
-        require(!protocolMetaTxInfo().usedNonce[msg.sender][_nonce], NONCE_USED_ALREADY);
+        require(!protocolMetaTxInfo().usedNonce[_userAddress][_nonce], NONCE_USED_ALREADY);
 
         bytes4 destinationFunctionSig = convertBytesToBytes4(_functionSignature);
         require(destinationFunctionSig != msg.sig, INVALID_FUNCTION_SIGNATURE);
@@ -231,7 +232,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         ProtocolLib.ProtocolMetaTxInfo storage metaTxInfo = protocolMetaTxInfo();
 
         // Store the nonce provided to avoid playback of the same tx
-        metaTxInfo.usedNonce[msg.sender][_nonce] = true;
+        metaTxInfo.usedNonce[_userAddress][_nonce] = true;
 
         // Set the current transaction signer and transaction type.
         setCurrentSenderAddress(_userAddress);
@@ -286,7 +287,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         // but that then breaks meta transaction functionality
         require(protocolStatus().reentrancyStatus != ENTERED, REENTRANCY_GUARD);
 
-        validateTx(_functionName, _functionSignature, _nonce);
+        validateTx(_functionName, _functionSignature, _nonce, _userAddress);
 
         MetaTransaction memory metaTx;
         metaTx.nonce = _nonce;

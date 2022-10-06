@@ -498,6 +498,21 @@ describe("IBosonVoucher", function () {
       });
     });
 
+    context("getRoyaltyPercentage()", function () {
+      it("should return the royalty fee percentage", async function () {
+        // give ownership to operator
+        await bosonVoucher.connect(protocol).transferOwnership(operator.address);
+
+        royaltyPercentage = "1000"; //10%
+        await bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage);
+
+        expect(await bosonVoucher.connect(rando).getRoyaltyPercentage()).to.equal(
+          royaltyPercentage,
+          "Invalid royalty percentage"
+        );
+      });
+    });
+
     context("royaltyInfo()", function () {
       beforeEach(async function () {
         // give ownership to operator
@@ -563,6 +578,29 @@ describe("IBosonVoucher", function () {
           accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
         ).to.be.revertedWith(RevertReasons.ROYALTY_FEE_INVALID);
       });
+    });
+  });
+
+  context("getSellerId()", function () {
+    it("should return the seller id", async function () {
+      // prepare the VoucherInitValues
+      voucherInitValues = mockVoucherInitValues();
+      expect(voucherInitValues.isValid()).is.true;
+
+      // AuthToken
+      emptyAuthToken = mockAuthToken();
+      expect(emptyAuthToken.isValid()).is.true;
+
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+      await bosonVoucher.connect(protocol).transferOwnership(operator.address);
+
+      expect(await bosonVoucher.connect(rando).getSellerId()).to.equal(seller.id, "Invalid seller id returned");
+
+      // Reset the accountId iterator
+      accountId.next(true);
     });
   });
 });

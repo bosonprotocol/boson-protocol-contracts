@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
-
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
@@ -49,6 +48,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         _setContractURI(voucherInitValues.contractURI);
 
         _setRoyaltyPercentage(voucherInitValues.royaltyPercentage);
+
+        emit VoucherInitialized(_sellerId, _royaltyPercentage, _contractURI);
     }
 
     /**
@@ -121,6 +122,17 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     {
         (bool exists, Offer memory offer) = getBosonOffer(_exchangeId);
         return exists ? offer.metadataUri : "";
+    }
+
+    /**
+     * @notice Gets the seller id.
+     *
+     * @return the id for the Voucher seller
+     */
+    function getSellerId() public view override returns (uint256) {
+        (bool exists, Seller memory seller) = getBosonSellerByAddress(owner());
+
+        return exists ? seller.id : 0;
     }
 
     /**
@@ -234,8 +246,17 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      *
      * @param _newRoyaltyPercentage fee in percentage. e.g. 500 = 5%
      */
-    function setRoyaltyPercentage(uint96 _newRoyaltyPercentage) external override onlyOwner {
+    function setRoyaltyPercentage(uint256 _newRoyaltyPercentage) external override onlyOwner {
         _setRoyaltyPercentage(_newRoyaltyPercentage);
+    }
+
+    /**
+     * @notice Gets the royalty percentage.
+     *
+     * @return _royaltyPercentage fee in percentage. e.g. 500 = 5%
+     */
+    function getRoyaltyPercentage() external view returns (uint256) {
+        return _royaltyPercentage;
     }
 
     /**
