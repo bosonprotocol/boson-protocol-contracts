@@ -2,7 +2,7 @@
 
 <h1 align="center">Boson Protocol V2</h1>
 
-### [Intro](../README.md) | [Audits](audits.md) | [Setup](setup.md) | Tasks | [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md) | [Happy Path Exchange](happy-path-exchange.md)
+### [Intro](../README.md) | [Audits](audits.md) | [Setup](setup.md) | Tasks | [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md) | [Sequences](sequences.md)
 
 ## Development Tasks
 Everything required to build, test, analyse, and deploy is available as an NPM script.

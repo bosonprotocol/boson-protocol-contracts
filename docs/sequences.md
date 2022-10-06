@@ -1,0 +1,25 @@
+[![banner](images/banner.png)](https://bosonprotocol.io)
+
+<h1 align="center">Boson Protocol V2</h1>
+
+### [Intro](../README.md) | [Audits](audits.md) | [Setup](setup.md) | [Tasks](tasks.md) | [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md) | Sequences
+
+## Happy Path Exchange
+![Happy Path Exchange](images/Boson_Protocol_V2_-_Happy_Path_Exchange.png)
+
+### About this diagram
+* This diagram shows an example timeline and sequence of protocol interactions for the simplest case of the so-called "Happy Path Exchange".
+* In the Happy Path scenario, no dispute is raised, and the voucher is never canceled or revoked, but rather redeemed sometime within the redemption period.
+* The diagram shows the buyer committing to the offer, but in fact anyone can commit to the offer on behalf of the buyer. In any case, it is the buyer's wallet that must complete exchange-related transactions for buyer actions after redemption.
+* "Lazy Buyer" describes the expected behavior of most buyers on the happy path. Once their order is fulfilled, no further interaction with the protocol is required on their part. In that case, the seller must wait until the dispute period has passed before they are able to complete the exchange and withdraw their funds.
+* A kind buyer could, of course, complete the exchange any time during the dispute period, releasing the funds for the seller early. They would incur a network transaction fee (gas), and so they are not expected to take this action.
+* It is also worth noting here that a seller does not have to withdraw their funds once an exchange is completed. They can leave it in the protocol to back their deposits for future exchanges, or only withdraw periodically.
+
+## Raise and Resolve a Dispute
+![Raise and Resolve a Dispute](images/Boson_Protocol_V2_-_Raise_and_Resolve.png)
+
+### About this diagram
+* This diagram shows an example timeline and sequence of protocol interactions for a dispute raised and mutually resolved by the buyer and seller.
+* In this scenario, the buyer has received damaged or otherwise unacceptable goods. Since the Dispute Period has not yet elapsed, the buyer raises a dispute. In an off-chain discussion the two parties arrive at a resolution, which essentially boils down to what percentage of the pot (all the committed funds from both parties for the current exchange) the buyer will receive. 
+* When the buyer raises the dispute, they must pay a small fee, a percentage of the price of the offer. This fee is intended only as a spam-prevention measure so that frivolous disputes are not a griefing vector for the seller. This fee goes into the aforementioned pot, and is divvied according to the resolved split.
+* Also, as noted in the Happy Path sequence, neither party must necessarily withdraw their funds immediately nor in any particular order. Funds unencumbered at the end of an exchange accumulate for the buyer and seller, so they may withdraw all available funds from finalized exchanges at any time. The seller may leave it in the protocol to back their deposits for future exchanges. 
