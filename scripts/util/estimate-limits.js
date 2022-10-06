@@ -28,7 +28,7 @@ const {
   mockTwin,
   accountId,
 } = require("../../test/util/mock");
-const { setNextBlockTimestamp } = require("../util/test-utils.js");
+const { setNextBlockTimestamp } = require("../../test/util/utils.js");
 
 // Common vars
 let deployer,
@@ -841,8 +841,8 @@ async function setupCommonEnvironment() {
   const protocolConfig = [
     // Protocol addresses
     {
-      treasury: ethers.constants.AddressZero,
-      token: ethers.constants.AddressZero,
+      treasury: rando.address,
+      token: rando.address,
       voucherBeacon: beacon.address,
       beaconProxy: proxy.address,
     },
@@ -867,8 +867,8 @@ async function setupCommonEnvironment() {
     {
       percentage: protocolFeePercentage,
       flatBoson: protocolFeeFlatBoson,
+      buyerEscalationDepositPercentage,
     },
-    buyerEscalationDepositPercentage,
   ];
 
   await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
