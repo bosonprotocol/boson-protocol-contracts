@@ -29,6 +29,7 @@ contract SellerHandlerFacet is SellerBase {
      *
      * Reverts if:
      * - Caller is not the supplied admin or does not own supplied auth token
+     * - Caller is not the supplied operator and clerk revert reason
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller

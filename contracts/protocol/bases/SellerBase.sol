@@ -73,27 +73,13 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         } else {
             // Check that caller is supplied admin
             require(_seller.admin == sender, NOT_ADMIN);
-
-            // Check that the admin address is unique to one seller id, across all roles
-            require(
-                lookups.sellerIdByOperator[_seller.admin] == 0 &&
-                    lookups.sellerIdByAdmin[_seller.admin] == 0 &&
-                    lookups.sellerIdByClerk[_seller.admin] == 0,
-                SELLER_ADDRESS_MUST_BE_UNIQUE
-            );
         }
 
-        // Check that the addresses are unique to one seller id, across all roles. These addresses should always be checked. Treasury is not checked
-        mapping(address => uint256) storage sellerIdByOperator = lookups.sellerIdByOperator;
-        mapping(address => uint256) storage sellerIdByAdmin = lookups.sellerIdByAdmin;
-        mapping(address => uint256) storage sellerIdByClerk = lookups.sellerIdByClerk;
+        // Check that the sender address is unique to one seller id, across all roles
         require(
-            sellerIdByOperator[_seller.operator] == 0 &&
-                sellerIdByOperator[_seller.clerk] == 0 &&
-                sellerIdByAdmin[_seller.operator] == 0 &&
-                sellerIdByAdmin[_seller.clerk] == 0 &&
-                sellerIdByClerk[_seller.operator] == 0 &&
-                sellerIdByClerk[_seller.clerk] == 0,
+            lookups.sellerIdByAdmin[sender] == 0 &&
+                lookups.sellerIdByOperator[sender] == 0 &&
+                lookups.sellerIdByClerk[sender] == 0,
             SELLER_ADDRESS_MUST_BE_UNIQUE
         );
 
