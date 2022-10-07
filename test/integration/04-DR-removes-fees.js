@@ -36,7 +36,6 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     clerk,
     treasury,
     buyer,
-    rando,
     operatorDR,
     adminDR,
     clerkDR,
@@ -51,21 +50,11 @@ describe("[@skip-on-coverage] DR removes fee", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [
-      deployer,
-      operator,
-      admin,
-      clerk,
-      treasury,
-      buyer,
-      rando,
-      operatorDR,
-      adminDR,
-      clerkDR,
-      treasuryDR,
-      protocolTreasury,
-      bosonToken,
-    ] = await ethers.getSigners();
+    [deployer, admin, treasury, buyer, adminDR, treasuryDR, protocolTreasury, bosonToken] = await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
+    operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     const [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -183,7 +172,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     const sellerAllowList = [];
 
     // Register and activate the dispute resolver
-    await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+    await accountHandler.connect(adminDR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
     await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
     // Create a seller account

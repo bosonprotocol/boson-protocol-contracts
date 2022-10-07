@@ -108,21 +108,12 @@ describe("IBosonMetaTransactionsHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [
-      deployer,
-      pauser,
-      operator,
-      buyer,
-      rando,
-      admin,
-      clerk,
-      treasury,
-      operatorDR,
-      adminDR,
-      clerkDR,
-      treasuryDR,
-      protocolTreasury,
-    ] = await ethers.getSigners();
+    [deployer, pauser, buyer, rando, admin, treasury, adminDR, treasuryDR, protocolTreasury] =
+      await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
+    operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -578,7 +569,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           seller.clerk = clerkDR.address;
           seller.treasury = treasuryDR.address;
 
-          message.from = operatorDR.address;
+          message.from = adminDR.address;
 
           // Prepare the function signature for the facet function.
           functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
@@ -591,7 +582,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Collect the signature components
           ({ r, s, v } = await prepareDataSignatureParameters(
-            operatorDR,
+            adminDR,
             customTransactionType,
             "MetaTransaction",
             message,
@@ -601,10 +592,10 @@ describe("IBosonMetaTransactionsHandler", function () {
           await expect(
             metaTransactionsHandler
               .connect(rando)
-              .executeMetaTransaction(operatorDR.address, message.functionName, functionSignature, nonce, r, s, v)
+              .executeMetaTransaction(adminDR.address, message.functionName, functionSignature, nonce, r, s, v)
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-            .withArgs(operatorDR.address, rando.address, message.functionName, nonce);
+            .withArgs(adminDR.address, rando.address, message.functionName, nonce);
 
           // Verify that nonce is used. Expect true.
           expectedResult = true;
@@ -850,7 +841,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           emptyAuthToken = mockAuthToken();
           expect(emptyAuthToken.isValid()).is.true;
 
-          await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+          await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Create a valid twin, then set fields in tests directly
           twin = mockTwin(bosonToken.address);
@@ -996,7 +987,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Register and activate the dispute resolver
             await accountHandler
-              .connect(rando)
+              .connect(adminDR)
               .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
             await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
@@ -1216,7 +1207,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Register and activate the dispute resolver
           await accountHandler
-            .connect(rando)
+            .connect(adminDR)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
           await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
@@ -2774,7 +2765,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Register and activate the dispute resolver
           await accountHandler
-            .connect(rando)
+            .connect(adminDR)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
           await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
@@ -2992,7 +2983,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           // AuthToken
           emptyAuthToken = mockAuthToken();
           expect(emptyAuthToken.isValid()).is.true;
-          await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
+          await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Create a valid dispute resolver
           disputeResolver = mockDisputeResolver(
@@ -3017,7 +3008,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Register and activate the dispute resolver
           await accountHandler
-            .connect(rando)
+            .connect(adminDR)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
           await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 

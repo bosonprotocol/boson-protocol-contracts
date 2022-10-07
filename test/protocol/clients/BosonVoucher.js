@@ -56,22 +56,12 @@ describe("IBosonVoucher", function () {
 
   beforeEach(async function () {
     // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
-    [
-      deployer,
-      protocol,
-      buyer,
-      rando,
-      operator,
-      admin,
-      clerk,
-      treasury,
-      operatorDR,
-      adminDR,
-      clerkDR,
-      treasuryDR,
-      protocolTreasury,
-      bosonToken,
-    ] = await ethers.getSigners();
+    [deployer, protocol, buyer, rando, admin, treasury, adminDR, treasuryDR, protocolTreasury, bosonToken] =
+      await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
+    operatorDR = clerkDR = adminDR;
 
     // Deploy diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -278,7 +268,9 @@ describe("IBosonVoucher", function () {
       const sellerAllowList = [];
 
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver("2");
 
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
@@ -415,7 +407,9 @@ describe("IBosonVoucher", function () {
       const sellerAllowList = [];
 
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver("2");
 
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
@@ -573,7 +567,7 @@ describe("IBosonVoucher", function () {
       it("should revert during create seller if royaltyPercentage is greater than max royalty percentage defined in the protocol", async function () {
         // create invalid voucherInitValues
         royaltyPercentage = "2000"; // 20%
-        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+        voucherInitValues = new VoucherInitValues("ContractURI", royaltyPercentage);
 
         // create another seller
         seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
@@ -581,7 +575,7 @@ describe("IBosonVoucher", function () {
 
         // royalty percentage too high, expectig revert
         await expect(
-          accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues)
+          accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
         ).to.be.revertedWith(RevertReasons.ROYALTY_FEE_INVALID);
       });
     });

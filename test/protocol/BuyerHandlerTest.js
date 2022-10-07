@@ -63,21 +63,11 @@ describe("BuyerHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [
-      deployer,
-      pauser,
-      operator,
-      admin,
-      clerk,
-      treasury,
-      rando,
-      other1,
-      other2,
-      other3,
-      other4,
-      protocolTreasury,
-      bosonToken,
-    ] = await ethers.getSigners();
+    [deployer, pauser, admin, treasury, rando, other1, other2, other3, other4, protocolTreasury, bosonToken] =
+      await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -460,7 +450,7 @@ describe("BuyerHandler", function () {
 
           // Register the dispute resolver
           await accountHandler
-            .connect(rando)
+            .connect(admin)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
           await accountHandler.connect(deployer).activateDisputeResolver(++id);

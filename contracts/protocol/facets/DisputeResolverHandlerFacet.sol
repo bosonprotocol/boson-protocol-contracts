@@ -28,6 +28,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * Emits a DisputeResolverCreated event if successful.
      *
      * Reverts if:
+     * - Caller is not the supplied admin, operator and clerk
      * - The dispute resolvers region of protocol is paused
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
@@ -58,6 +59,19 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 _disputeResolver.treasury != address(0),
             INVALID_ADDRESS
         );
+
+        {
+            // Get message sender
+            address sender = msgSender();
+
+            // Check that caller is the supplied operator and clerk
+            require(
+                _disputeResolver.admin == sender &&
+                    _disputeResolver.operator == sender &&
+                    _disputeResolver.clerk == sender,
+                NOT_ADMIN_OPERATOR_AND_CLERK
+            );
+        }
 
         // Make sure the gas block limit is not hit
         require(_sellerAllowList.length <= protocolLimits().maxAllowedSellers, INVALID_AMOUNT_ALLOWED_SELLERS);

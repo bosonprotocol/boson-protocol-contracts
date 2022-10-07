@@ -74,22 +74,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   beforeEach(async function () {
     // Make accounts available
-    [
-      deployer,
-      pauser,
-      operator,
-      admin,
-      clerk,
-      treasury,
-      buyer,
-      rando,
-      operatorDR,
-      adminDR,
-      clerkDR,
-      treasuryDR,
-      protocolTreasury,
-      bosonToken,
-    ] = await ethers.getSigners();
+    [deployer, pauser, admin, treasury, buyer, rando, adminDR, treasuryDR, protocolTreasury, bosonToken] =
+      await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
+    operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -260,7 +250,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       const sellerAllowList = [];
 
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // Create the offer
@@ -483,7 +475,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       const sellerAllowList = [];
 
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // buyer escalation deposit used in multiple tests
@@ -773,7 +767,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         // Register and activate the dispute resolver
         await accountHandler
-          .connect(rando)
+          .connect(adminDR)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
         await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 

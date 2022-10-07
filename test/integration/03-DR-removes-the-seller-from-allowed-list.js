@@ -33,7 +33,6 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
     admin,
     clerk,
     treasury,
-    rando,
     buyer,
     other1,
     operatorDR,
@@ -53,22 +52,12 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
 
   beforeEach(async function () {
     // Make accounts available
-    [
-      deployer,
-      pauser,
-      operator,
-      admin,
-      clerk,
-      treasury,
-      buyer,
-      rando,
-      other1,
-      operatorDR,
-      adminDR,
-      clerkDR,
-      treasuryDR,
-      protocolTreasury,
-    ] = await ethers.getSigners();
+    [deployer, pauser, admin, treasury, buyer, other1, adminDR, treasuryDR, protocolTreasury] =
+      await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
+    operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -200,7 +189,9 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       const sellerAllowList = ["2", "1"];
 
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // Buyer escalation deposit used in multiple tests

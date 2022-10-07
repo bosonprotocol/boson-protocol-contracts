@@ -104,22 +104,12 @@ describe("IBosonOfferHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [
-      deployer,
-      pauser,
-      operator,
-      admin,
-      clerk,
-      treasury,
-      rando,
-      operatorDR,
-      adminDR,
-      clerkDR,
-      treasuryDR,
-      other,
-      protocolAdmin,
-      protocolTreasury,
-    ] = await ethers.getSigners();
+    [deployer, pauser, admin, treasury, rando, adminDR, treasuryDR, other, protocolAdmin, protocolTreasury] =
+      await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
+    operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -267,7 +257,9 @@ describe("IBosonOfferHandler", function () {
       sellerAllowList = [];
 
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // The first offer id
@@ -1467,7 +1459,9 @@ describe("IBosonOfferHandler", function () {
       ];
 
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
       // Necessary to cover all offers resolution periods
