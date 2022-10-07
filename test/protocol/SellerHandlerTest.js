@@ -606,7 +606,7 @@ describe("SellerHandler", function () {
             accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
-          // Update seller operator
+          // Update seller clerk
           seller.clerk = other2.address;
           await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
@@ -685,7 +685,7 @@ describe("SellerHandler", function () {
           seller.operator = authTokenOwner.address;
           await accountHandler.connect(rando).updateSeller(seller, emptyAuthToken);
 
-          // // Attempt to Create a seller with non-unique operator, expecting revert
+          // Attempt to Create a seller with non-unique operator, expecting revert
           await expect(
             accountHandler.connect(authTokenOwner).createSeller(seller2, authToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
@@ -700,7 +700,7 @@ describe("SellerHandler", function () {
             accountHandler.connect(authTokenOwner).createSeller(seller2, authToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
-          // Update the seller, so admin matches authTokenOwner
+          // Update the seller admin and clerk, so admin matches authTokenOwner
           seller.admin = authTokenOwner.address;
           seller.clerk = rando.address;
           await accountHandler.connect(rando).updateSeller(seller, emptyAuthToken);
