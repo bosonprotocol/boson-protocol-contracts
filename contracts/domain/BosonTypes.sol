@@ -84,6 +84,12 @@ contract BosonTypes {
         bool active;
     }
 
+    struct SellerUpdate {
+        address operator;
+        address admin;
+        address clerk;
+    }
+
     struct Buyer {
         uint256 id;
         address payable wallet;

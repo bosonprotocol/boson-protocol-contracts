@@ -102,33 +102,155 @@ contract SellerHandlerFacet is SellerBase {
             require(seller.admin == sender, NOT_ADMIN);
         }
 
-        // Check that the passed in addresses are unique to one seller id across all roles -- not used or are used by this seller id.
-        // Checking this seller id is necessary because one or more addresses may not change
-        {
-            uint256 check1 = lookups.sellerIdByOperator[_seller.operator];
-            uint256 check2 = lookups.sellerIdByOperator[_seller.clerk];
-            uint256 check3 = lookups.sellerIdByAdmin[_seller.operator];
-            uint256 check4 = lookups.sellerIdByAdmin[_seller.clerk];
-            uint256 check5 = lookups.sellerIdByClerk[_seller.operator];
-            uint256 check6 = lookups.sellerIdByClerk[_seller.clerk];
-            require(
-                (check1 == 0 || check1 == _seller.id) &&
-                    (check2 == 0 || check2 == _seller.id) &&
-                    (check3 == 0 || check3 == _seller.id) &&
-                    (check4 == 0 || check4 == _seller.id) &&
-                    (check5 == 0 || check5 == _seller.id) &&
-                    (check6 == 0 || check6 == _seller.id),
-                SELLER_ADDRESS_MUST_BE_UNIQUE
-            );
-        }
+         SellerUpdate sellerUpdate;
+         sellerUpdate.operator = seller.operator;
+         sellerUpdate.clerk = seller.clerk;
+         sellerUpdate.admin = seller.admin;
+
+         preSellerUpdateChecks(_seller.id, sellerAdmin);
+
+        // Get storage location for seller
+        (, Seller storage seller, AuthToken storage authToken) = fetchSeller(_seller.id);
 
         // Admin address or AuthToken data must be present in parameters. A seller can have one or the other. Check passed in parameters
         if (_seller.admin == address(0)) {
             // Check that auth token is unique to this seller
             uint256 check = lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId];
             require(check == 0 || check == _seller.id, AUTH_TOKEN_MUST_BE_UNIQUE);
-        } else {
-            // Check that the admin address is unique to one seller id across all roles -- not used or is used by this seller id.
+
+            require(_authToken.tokenType != AuthTokenType.None, AUTH_TOKEN_TYPE_MUST_BE_SET);
+
+            // Store auth token
+            authToken.tokenId = _authToken.tokenId;
+            authToken.tokenType = _authToken.tokenType;
+
+            // Store seller by auth token reference
+            lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] = _seller.id;
+
+            // Remove previous admin address if it exists
+            delete lookups.sellerIdByAdmin[seller.admin];
+        } else { 
+          lookups.sellerPendingUpdates[_seller.id] = _seller.admin;
+        }
+
+        if (seller.treasury != _seller.treasury && _seller.treasury != address(0)) {
+            // Update treasury
+            seller.treasury = _seller.treasury;
+        }
+
+        if(_seller.operator !== seller.operator) {
+          require(_seller.operator !== address(0), INVALID_ADDRESS);
+          lookups.sellerPendingUpdates[seller.id].operator = _seller.operator;
+        }
+
+        if(_seller.clerk !== seller.clerk) {
+          require(_seller.clerk !== address(0), INVALID_ADDRESS);
+          lookups.sellerPendingUpdates[seller.id].clerk = _seller.clerk;
+        }
+
+        // Notify watchers of state change
+        emit SellerUpdated(_seller.id, _seller, _authToken, sender);
+        emit SellerUpdateAddressesRequested(_seller.id, _seller, sender);
+    }
+
+    function approveSellerUpdate(uint256 _sellerId) external {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        address sender = msgSender();
+
+        // Get seller pending update
+        SellerUpdate storage _sellerPendingUpdate = lookups.sellerPendingUpdates[_sellerId];
+
+        require(_sellerPendingUpdate.admin !== address(0) || _sellerPendingUpdate.operator !== address(0) || _sellerPendingUpdate.clerk !== address(0), NO_PENDING_ADDRESSES_UPDATE );
+        preSellerUpdateChecks(_sellerId, _sellerPendingUpdate);
+
+        // Get storage location for seller
+        (, Seller storage seller) = fetchSeller(_sellerId);
+
+        // Approve operator address
+        if (sellerPendingUpdate.operator == sender) {
+            // If operator changed, update the operator and transfer the ownership of NFT voucher
+            if (seller.operator != _sellerPendingUpdate.operator) {
+                seller.operator = _sellerPendingUpdate.operator;
+
+                IBosonVoucher(lookups.cloneAddress[seller.id]).transferOwnership(seller.operator);
+
+                // Update seller id by operator mapping
+                delete lookups.sellerIdByOperator[seller.operator];
+                lookups.sellerIdByOperator[sender] = _sellerId;
+            }
+
+            // Delete pending update operator
+            _sellerPendingUpdate.operator = address(0);
+        }
+
+        // Approva admin address
+        if (sellerPendingUpdate.admin == sender) {
+            // Update seller admin
+            if (seller.admin != _sellerPendingUpdate.admin) {
+              seller.admin = _sellerPendingUpdate.admin;
+
+              // Update seller id by admin mapping
+              delete lookups.sellerIdByAdmin[seller.admin];
+              lookups.sellerIdByAdmin[sender] = _sellerId;
+            }
+
+            // Delete pending update admin
+            sellerPendingUpdate.admin = address(0);
+
+        }
+
+        // Aprove clerk address
+        if (sellerPendingUpdate.clerk == sender) {
+            // Update seller clerk
+            if (seller.clerk != _sellerPendingUpdate.clerk) {
+              seller.clerk = _sellerPendingUpdate.clerk;
+
+              // Update seller id by clerk mapping
+              delete lookups.sellerIdByClerk[seller.clerk];
+              lookups.sellerIdByClerk[sender] = _sellerId;
+            }
+
+            // Delete pending update clerk
+            sellerPendingUpdate.clerk = address(0);
+
+        }
+
+        // Notify watchers of state change
+        emit SellerUpdated(_sellerId, seller, 0, sender);
+    }
+
+    function preSellerUpdateChecks(uint256 _sellerId, SellerUpdate calldata _seller) internal {
+        // Check that the operator passed in addresses are unique to one seller id across all roles -- not used or are used by this seller id.
+        if (_seller.operator != address(0)) {
+            uint256 check1 = lookups.sellerIdByOperator[_seller.operator];
+            uint256 check2 = lookups.sellerIdByClerk[_seller.operator];
+            uint256 check3 = lookups.sellerIdByAdmin[_seller.operator];
+
+             require(
+                (check1 == 0 || check1 == _seller.id) &&
+                    (check2 == 0 || check2 == _seller.id) &&
+                    (check3 == 0 || check3 == _seller.id),
+                SELLER_ADDRESS_MUST_BE_UNIQUE
+            );
+        }
+
+        // Check that the clerk passed in addresses are unique to one seller id across all roles -- not used or are used by this seller id.
+        if (_seller.clerk != address(0)) {
+            uint256 check1 = lookups.sellerIdByOperator[_seller.clerk];
+            uint256 check2 = lookups.sellerIdByClerk[_seller.clerk];
+            uint256 check3 = lookups.sellerIdByAdmin[_seller.clerk];
+
+             require(
+                (check1 == 0 || check1 == _seller.id) &&
+                    (check2 == 0 || check2 == _seller.id) &&
+                    (check3 == 0 || check3 == _seller.id),
+                SELLER_ADDRESS_MUST_BE_UNIQUE
+            );
+        }
+
+        // Check that the admin address is unique to one seller id across all roles -- not used or is used by this seller id.
+        if (_seller.admin != address(0)) {
             uint256 check1 = lookups.sellerIdByOperator[_seller.admin];
             uint256 check2 = lookups.sellerIdByAdmin[_seller.admin];
             uint256 check3 = lookups.sellerIdByClerk[_seller.admin];
@@ -139,28 +261,6 @@ contract SellerHandlerFacet is SellerBase {
                 SELLER_ADDRESS_MUST_BE_UNIQUE
             );
         }
-
-        // Delete current mappings
-        delete lookups.sellerIdByOperator[seller.operator];
-        delete lookups.sellerIdByAdmin[seller.admin];
-        delete lookups.sellerIdByClerk[seller.clerk];
-        delete lookups.sellerIdByAuthToken[authToken.tokenType][authToken.tokenId];
-        delete protocolEntities().authTokens[seller.id];
-
-        // Store this address of existing seller operator to check if you have to transfer the ownership later
-        address oldSellerOperator = seller.operator;
-
-        // Ignore active flag passed in by caller and set to value in storage.
-        _seller.active = seller.active;
-        storeSeller(_seller, _authToken);
-
-        // If operator changed, transfer the ownership of NFT voucher
-        if (oldSellerOperator != _seller.operator) {
-            IBosonVoucher(lookups.cloneAddress[seller.id]).transferOwnership(_seller.operator);
-        }
-
-        // Notify watchers of state change
-        emit SellerUpdated(_seller.id, _seller, _authToken, sender);
     }
 
     /**
