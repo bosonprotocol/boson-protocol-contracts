@@ -31,6 +31,7 @@ Path should contain a JSON file with the following:
     }
   ],
   "sellerAllowList": [string]
+  "privateKey": string // optional
 }
 **/
 
@@ -46,7 +47,7 @@ const addressNotFound = (address) => {
 const createAndActivateDR = async (path, createOnly, activateOnly) => {
   const file = await fs.readFile(path, "utf8");
 
-  let { disputeResolver, disputeResolverFees, sellerAllowList } = await JSON.parse(file.toString());
+  let { disputeResolver, disputeResolverFees, sellerAllowList, privateKey } = await JSON.parse(file.toString());
 
   const adminAddress = environments[network].adminAddress;
 
@@ -83,36 +84,46 @@ const createAndActivateDR = async (path, createOnly, activateOnly) => {
   }
 
   // Get signer for admin address
-  const signer = await ethers.getSigner(adminAddress);
+  const protocolAdminSigner = await ethers.getSigner(adminAddress);
 
   let tx, receipt;
   // Create dispute resolver
   if (!activateOnly) {
+    // privateKey
+    let disputeResolverSigner;
+
+    if (!privateKey) {
+      disputeResolverSigner = protocolAdminSigner;
+    } else {
+      disputeResolverSigner = new ethers.Wallet(privateKey, protocolAdminSigner.provider);
+    }
+
     // create dispute resolver with callers account
-    let adminDisputeResolver = { ...disputeResolver };
-    adminDisputeResolver.admin = adminAddress;
-    adminDisputeResolver.operator = adminAddress;
-    adminDisputeResolver.clerk = adminAddress;
+    let initialDisputeResolver = { ...disputeResolver };
+    initialDisputeResolver.admin = disputeResolverSigner.address;
+    initialDisputeResolver.operator = disputeResolverSigner.address;
+    initialDisputeResolver.clerk = disputeResolverSigner.address;
 
     tx = await accountHandler
-      .connect(signer)
-      .createDisputeResolver(adminDisputeResolver, disputeResolverFees, sellerAllowList);
+      .connect(disputeResolverSigner)
+      .createDisputeResolver(initialDisputeResolver, disputeResolverFees, sellerAllowList);
     receipt = await tx.wait(confirmations);
-    adminDisputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverCreated", 1);
+    initialDisputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverCreated", 1);
 
-    // if caller does not match supplied dispute resolver, update it
+    // if caller does not match supplied dispute resolver, update it.
+    // this is primary used when one does not have access to private key of dispute resolver or it does not exist (i.e. DR is a smart contract)
     if (
-      adminDisputeResolver.admin.toLowerCase() != disputeResolver.admin.toLowerCase() ||
-      adminDisputeResolver.operator.toLowerCase() != disputeResolver.operator.toLowerCase() ||
-      adminDisputeResolver.clerk.toLowerCase() != disputeResolver.clerk.toLowerCase()
+      initialDisputeResolver.admin.toLowerCase() != disputeResolver.admin.toLowerCase() ||
+      initialDisputeResolver.operator.toLowerCase() != disputeResolver.operator.toLowerCase() ||
+      initialDisputeResolver.clerk.toLowerCase() != disputeResolver.clerk.toLowerCase()
     ) {
-      disputeResolver.id = adminDisputeResolver.id;
-      tx = await accountHandler.connect(signer).updateDisputeResolver(disputeResolver);
+      disputeResolver.id = initialDisputeResolver.id;
+      tx = await accountHandler.connect(disputeResolverSigner).updateDisputeResolver(disputeResolver);
       receipt = await tx.wait(confirmations);
       disputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverUpdated", 1);
     } else {
       // no need to update on chain
-      disputeResolver = adminDisputeResolver;
+      disputeResolver = initialDisputeResolver;
     }
 
     console.log(`Dispute resolver created with id ${disputeResolver.id}`);
@@ -120,7 +131,7 @@ const createAndActivateDR = async (path, createOnly, activateOnly) => {
 
   // Activate dispute resolver
   if (!createOnly) {
-    tx = await accountHandler.connect(signer).activateDisputeResolver(disputeResolver.id);
+    tx = await accountHandler.connect(protocolAdminSigner).activateDisputeResolver(disputeResolver.id);
     receipt = await tx.wait(confirmations);
     disputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverActivated", 1);
     console.log(`Dispute resolver activated`);
