@@ -83,20 +83,6 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             );
         }
 
-        // Check that the addresses are unique to one seller id, across all roles. These addresses should always be checked. Treasury is not checked
-        mapping(address => uint256) storage sellerIdByOperator = lookups.sellerIdByOperator;
-        mapping(address => uint256) storage sellerIdByAdmin = lookups.sellerIdByAdmin;
-        mapping(address => uint256) storage sellerIdByClerk = lookups.sellerIdByClerk;
-        require(
-            sellerIdByOperator[_seller.operator] == 0 &&
-                sellerIdByOperator[_seller.clerk] == 0 &&
-                sellerIdByAdmin[_seller.operator] == 0 &&
-                sellerIdByAdmin[_seller.clerk] == 0 &&
-                sellerIdByClerk[_seller.operator] == 0 &&
-                sellerIdByClerk[_seller.clerk] == 0,
-            SELLER_ADDRESS_MUST_BE_UNIQUE
-        );
-
         // Get the next account id and increment the counter
         uint256 sellerId = protocolCounters().nextAccountId++;
         _seller.id = sellerId;
