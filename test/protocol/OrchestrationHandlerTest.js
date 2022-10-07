@@ -54,7 +54,6 @@ describe("IBosonOrchestrationHandler", function () {
     treasury,
     other1,
     other2,
-    other3,
     operatorDR,
     adminDR,
     clerkDR,
@@ -113,7 +112,6 @@ describe("IBosonOrchestrationHandler", function () {
       rando,
       other1,
       other2,
-      other3,
       adminDR,
       treasuryDR,
       protocolAdmin,
@@ -1003,76 +1001,15 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
 
-        it("addresses are the zero address", async function () {
-          seller.clerk = ethers.constants.AddressZero;
-
-          // Attempt to create a seller and an offer, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                disputeResolver.id,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId
-              )
-          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
-
-          seller.clerk = clerk.address;
-          seller.treasury = ethers.constants.AddressZero;
-
-          // Attempt to create a seller and an offer, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                disputeResolver.id,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId
-              )
-          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
-        });
-
         it("addresses are not unique to this seller Id", async function () {
           // Create a seller
           await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-          seller.clerk = other2.address;
-
-          // Attempt to create a seller with non-unique admin and operator, expecting revert
+          // Attempt to create a seller with non-unique admin, operator and clerk, expecting revert
           // N.B. operator and admin are tested together, since they must be the same
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                disputeResolver.id,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId
-              )
-          ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
-
-          seller.clerk = clerk.address;
-          seller.admin = other2.address;
-          seller.operator = other2.address;
-
-          // Attempt to create a seller with non-unique clerk, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(other2)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1106,6 +1043,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Caller is not the supplied admin", async function () {
           seller.operator = rando.address;
+          seller.clerk = rando.address;
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -1127,6 +1065,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("Caller does not own supplied auth token", async function () {
           seller.admin = ethers.constants.AddressZero;
           seller.operator = rando.address;
+          seller.clerk = rando.address;
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -1189,9 +1128,6 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Create a seller
           await accountHandler.connect(operator).createSeller(seller, authToken, voucherInitValues);
-
-          //Set seller 2's addresses to unique clerk addresses
-          seller.clerk = other3.address;
 
           // Attempt to create a seller with non-unique authToken and an offer, expecting revert
           await expect(
@@ -1749,7 +1685,7 @@ describe("IBosonOrchestrationHandler", function () {
         seller.id = "2"; // "1" is dispute resolver
         offerIds = ["1"];
 
-        condition = mockCondition({ tokenAddress: other3.address, tokenType: TokenType.MultiToken, tokenId: "5150" });
+        condition = mockCondition({ tokenAddress: other2.address, tokenType: TokenType.MultiToken, tokenId: "5150" });
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, seller.id, offerIds);
@@ -2265,7 +2201,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         condition = mockCondition({
           tokenType: TokenType.MultiToken,
-          tokenAddress: other3.address,
+          tokenAddress: other2.address,
           tokenId: "5150",
           maxCommits: "3",
         });
@@ -3303,7 +3239,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Required constructor params for Group
         offerIds = ["1"];
 
-        condition = mockCondition({ tokenType: TokenType.MultiToken, tokenAddress: other3.address, tokenId: "5150" });
+        condition = mockCondition({ tokenType: TokenType.MultiToken, tokenAddress: other2.address, tokenId: "5150" });
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, seller.id, offerIds);
@@ -4022,7 +3958,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Required constructor params for Group
         offerIds = ["1"];
 
-        condition = mockCondition({ tokenType: TokenType.MultiToken, tokenAddress: other3.address, tokenId: "5150" });
+        condition = mockCondition({ tokenType: TokenType.MultiToken, tokenAddress: other2.address, tokenId: "5150" });
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, seller.id, offerIds);
@@ -5112,7 +5048,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         offerIds = ["1"];
 
-        condition = mockCondition({ tokenType: TokenType.MultiToken, tokenAddress: other3.address, tokenId: "5150" });
+        condition = mockCondition({ tokenType: TokenType.MultiToken, tokenAddress: other2.address, tokenId: "5150" });
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, seller.id, offerIds);
