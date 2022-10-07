@@ -135,9 +135,11 @@ Script will create and/or activate a dispute resolver
 - `activate-only (optional)`: Optional flag to only activate the Dispute Resolver
 - `create-only (optional)`: Optional flag to only create the Dispute Resolver
 
-`privateKey` represents the private key that will create a dispute resolver. If it is not specified, the protocol admin account will be used (same account that later activate the dispute resolver and is specified in `.env`).
-If `operator`, `admin` and `clerk` matches the address, corresponding to `privateKey`, dispute resolver is simply created and activated.
-If any of `operator`, `admin` and `clerk` differs from the address, corresponding to `privateKey`, dispute resolver is created in two steps. Firstly, a dispute resolver with `operator`, `admin` and `clerk` set to address, corresponding to `privateKey` is created and then in the second step dispute resolver is updated with addresses from JSON file.
+
+Note about the field `privateKey` in JSON file:
+- `privateKey` represents the hex encoded private key that will create a dispute resolver. If it is not specified, the protocol admin account will be used (same account that later activate the dispute resolver and is specified in `.env`).
+- If all `operator`, `admin` and `clerk` match the address, corresponding to `privateKey`, dispute resolver is simply created and activated.
+- If any of `operator`, `admin` or `clerk` differs from the address, corresponding to `privateKey`, dispute resolver is created in two steps. Firstly, a dispute resolver with `operator`, `admin` and `clerk` set to address, corresponding to `privateKey` is created and then in the second step dispute resolver is updated with addresses from JSON file.
 
 Example: 
 
