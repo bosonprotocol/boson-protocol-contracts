@@ -88,11 +88,33 @@ const createAndActivateDR = async (path, createOnly, activateOnly) => {
   let tx, receipt;
   // Create dispute resolver
   if (!activateOnly) {
+    // create dispute resolver with callers account
+    let adminDisputeResolver = { ...disputeResolver };
+    adminDisputeResolver.admin = adminAddress;
+    adminDisputeResolver.operator = adminAddress;
+    adminDisputeResolver.clerk = adminAddress;
+
     tx = await accountHandler
       .connect(signer)
-      .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      .createDisputeResolver(adminDisputeResolver, disputeResolverFees, sellerAllowList);
     receipt = await tx.wait(confirmations);
-    disputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverCreated", 1);
+    adminDisputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverCreated", 1);
+
+    // if caller does not match supplied dispute resolver, update it
+    if (
+      adminDisputeResolver.admin.toLowerCase() != disputeResolver.admin.toLowerCase() ||
+      adminDisputeResolver.operator.toLowerCase() != disputeResolver.operator.toLowerCase() ||
+      adminDisputeResolver.clerk.toLowerCase() != disputeResolver.clerk.toLowerCase()
+    ) {
+      disputeResolver.id = adminDisputeResolver.id;
+      tx = await accountHandler.connect(signer).updateDisputeResolver(disputeResolver);
+      receipt = await tx.wait(confirmations);
+      disputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverUpdated", 1);
+    } else {
+      // no need to update on chain
+      disputeResolver = adminDisputeResolver;
+    }
+
     console.log(`Dispute resolver created with id ${disputeResolver.id}`);
   }
 
