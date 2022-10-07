@@ -70,24 +70,18 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
                 lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0,
                 AUTH_TOKEN_MUST_BE_UNIQUE
             );
-
-            // Check that the sender address is unique to one seller id, for operator and clerk role
-            require(
-                lookups.sellerIdByOperator[sender] == 0 && lookups.sellerIdByClerk[sender] == 0,
-                SELLER_ADDRESS_MUST_BE_UNIQUE
-            );
         } else {
             // Check that caller is supplied admin
             require(_seller.admin == sender, NOT_ADMIN);
-
-            // Check that the admin address is unique to one seller id, across all roles
-            require(
-                lookups.sellerIdByOperator[_seller.admin] == 0 &&
-                    lookups.sellerIdByAdmin[_seller.admin] == 0 &&
-                    lookups.sellerIdByClerk[_seller.admin] == 0,
-                SELLER_ADDRESS_MUST_BE_UNIQUE
-            );
         }
+
+        // Check that the sender address is unique to one seller id, across all roles
+        require(
+            lookups.sellerIdByAdmin[sender] == 0 &&
+                lookups.sellerIdByOperator[sender] == 0 &&
+                lookups.sellerIdByClerk[sender] == 0,
+            SELLER_ADDRESS_MUST_BE_UNIQUE
+        );
 
         // Get the next account id and increment the counter
         uint256 sellerId = protocolCounters().nextAccountId++;

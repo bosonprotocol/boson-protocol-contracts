@@ -668,30 +668,44 @@ describe("SellerHandler", function () {
 
         it("addresses are not unique to this seller Id when address used for same role and the seller is created with auth token", async function () {
           // Create a seller
+          seller.admin = rando.address;
+          seller.operator = rando.address;
+          seller.clerk = rando.address;
+
           seller2 = mockSeller(
             authTokenOwner.address,
             ethers.constants.AddressZero,
             authTokenOwner.address,
             authTokenOwner.address
           );
-          await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Update the seller, so operator matches authTokenOwner
           seller.operator = authTokenOwner.address;
-          // seller.clerk = other
-          await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+          await accountHandler.connect(rando).updateSeller(seller, emptyAuthToken);
 
-          // Attempt to Create a seller with non-unique operator, expecting revert
+          // // Attempt to Create a seller with non-unique operator, expecting revert
           await expect(
             accountHandler.connect(authTokenOwner).createSeller(seller2, authToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
-          // Update seller operator
+          // Update seller operator and clerk, so clerk matches authTokenOwner
           seller.clerk = authTokenOwner.address;
-          seller.operator = operator.address;
-          await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+          seller.operator = rando.address;
+          await accountHandler.connect(rando).updateSeller(seller, emptyAuthToken);
 
           // Attempt to Create a seller with non-unique clerk, expecting revert
+          await expect(
+            accountHandler.connect(authTokenOwner).createSeller(seller2, authToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
+
+          // Update the seller, so admin matches authTokenOwner
+          seller.admin = authTokenOwner.address;
+          seller.clerk = rando.address;
+          await accountHandler.connect(rando).updateSeller(seller, emptyAuthToken);
+
+          // Attempt to Create a seller with non-unique operator, expecting revert
           await expect(
             accountHandler.connect(authTokenOwner).createSeller(seller2, authToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
