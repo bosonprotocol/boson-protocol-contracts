@@ -666,6 +666,37 @@ describe("SellerHandler", function () {
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
+        it("addresses are not unique to this seller Id when address used for same role and the seller is created with auth token", async function () {
+          // Create a seller
+          seller2 = mockSeller(
+            authTokenOwner.address,
+            ethers.constants.AddressZero,
+            authTokenOwner.address,
+            authTokenOwner.address
+          );
+          await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          // Update the seller, so operator matches authTokenOwner
+          seller.operator = authTokenOwner.address;
+          // seller.clerk = other
+          await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+          // Attempt to Create a seller with non-unique operator, expecting revert
+          await expect(
+            accountHandler.connect(authTokenOwner).createSeller(seller2, authToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
+
+          // Update seller operator
+          seller.clerk = authTokenOwner.address;
+          seller.operator = operator.address;
+          await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+          // Attempt to Create a seller with non-unique clerk, expecting revert
+          await expect(
+            accountHandler.connect(authTokenOwner).createSeller(seller2, authToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
+        });
+
         it("admin address is NOT zero address and AuthTokenType is NOT None", async function () {
           // Attempt to Create a seller, expecting revert
           await expect(
