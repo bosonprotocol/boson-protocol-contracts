@@ -1023,24 +1023,6 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
-        it("Caller is not operator the specified in seller", async function () {
-          // Attempt to create a seller and an offer, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(rando)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                disputeResolver.id,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId
-              )
-          ).to.revertedWith(RevertReasons.NOT_OPERATOR);
-        });
-
         it("Caller is not the supplied admin", async function () {
           seller.operator = rando.address;
           seller.clerk = rando.address;
@@ -1082,6 +1064,27 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId
               )
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
+        });
+
+        it("Caller is not the supplied operator", async function () {
+          seller.admin = rando.address;
+          seller.clerk = rando.address;
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(rando)
+              .createSellerAndOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.NOT_OPERATOR_AND_CLERK);
         });
 
         it("Caller is not the supplied clerk", async function () {
