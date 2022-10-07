@@ -637,10 +637,33 @@ describe("DisputeResolverHandler", function () {
         });
 
         it("Caller is not the supplied admin", async function () {
+          disputeResolver.operator = rando.address;
+          disputeResolver.clerk = rando.address;
+
           // Create a dispute resolver
           await expect(
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.NOT_ADMIN);
+          ).to.revertedWith(RevertReasons.NOT_ADMIN_OPERATOR_AND_CLERK);
+        });
+
+        it("Caller is not the supplied operator", async function () {
+          disputeResolver.admin = rando.address;
+          disputeResolver.clerk = rando.address;
+
+          // Create a dispute resolver
+          await expect(
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+          ).to.revertedWith(RevertReasons.NOT_ADMIN_OPERATOR_AND_CLERK);
+        });
+
+        it("Caller is not the supplied clerk", async function () {
+          disputeResolver.admin = rando.address;
+          disputeResolver.operator = rando.address;
+
+          // Create a dispute resolver
+          await expect(
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+          ).to.revertedWith(RevertReasons.NOT_ADMIN_OPERATOR_AND_CLERK);
         });
       });
     });

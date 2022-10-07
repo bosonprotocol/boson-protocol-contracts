@@ -61,7 +61,7 @@ exports.RevertReasons = {
   AGENT_ADDRESS_MUST_BE_UNIQUE: "Agent address cannot be assigned to another agent Id",
   NOT_ADMIN: "Not admin",
   NOT_OPERATOR_AND_CLERK: "Not operator and clerk",
-  NOT_ADMIN_OPERATOR_AND_CLERK: "Not admin operator and clerk",
+  NOT_ADMIN_OPERATOR_AND_CLERK: "Not admin, operator and clerk",
   NOT_BUYER_WALLET: "Not buyer's wallet address",
   NOT_AGENT_WALLET: "Not agent's wallet address",
   NO_SUCH_BUYER: "No such buyer",

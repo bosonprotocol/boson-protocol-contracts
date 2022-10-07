@@ -65,7 +65,6 @@ describe("SellerHandler", function () {
       other6,
       other7,
       other8,
-      // authTokenOwner,
       protocolTreasury,
       bosonToken,
     ] = await ethers.getSigners();
@@ -718,6 +717,26 @@ describe("SellerHandler", function () {
           await expect(
             accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
+        });
+
+        it("Caller is not the supplied operator", async function () {
+          seller.admin = rando.address;
+          seller.clerk = rando.address;
+
+          // Attempt to Create a seller with operator not the same to caller address
+          await expect(
+            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.NOT_OPERATOR_AND_CLERK);
+        });
+
+        it("Caller is not the supplied clerk", async function () {
+          seller.admin = rando.address;
+          seller.operator = rando.address;
+
+          // Attempt to Create a seller with clerk not the same to caller address
+          await expect(
+            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.NOT_OPERATOR_AND_CLERK);
         });
       });
     });
@@ -1745,7 +1764,7 @@ describe("SellerHandler", function () {
           seller.admin = admin.address; //already being used by seller 1
           seller.operator = other1.address;
 
-          // // Attempt to update a seller with non-unique admin, expecting revert
+          // Attempt to update a seller with non-unique admin, expecting revert
           await expect(accountHandler.connect(other1).updateSeller(seller, emptyAuthToken)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );

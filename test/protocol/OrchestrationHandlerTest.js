@@ -272,7 +272,7 @@ describe("IBosonOrchestrationHandler", function () {
       await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(operator.address, operator.address, clerk.address, treasury.address); // admin == operator
+      seller = mockSeller(operator.address, operator.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       // How that seller looks as a returned struct
@@ -1082,6 +1082,27 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId
               )
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
+        });
+
+        it("Caller is not the supplied clerk", async function () {
+          seller.admin = rando.address;
+          seller.operator = rando.address;
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(rando)
+              .createSellerAndOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.NOT_OPERATOR_AND_CLERK);
         });
 
         it("admin address is NOT zero address and AuthTokenType is NOT None", async function () {
