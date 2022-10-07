@@ -15,12 +15,13 @@ const confirmations = environments.confirmations;
  *  N.B. Intended for use with both test and deployment scripts
  *
  * @param gasLimit - gasLimit for transactions
+ * @param gasPrice - gasPrice for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolClientImpls(gasLimit) {
+async function deployProtocolClientImpls(gasLimit, gasPrice) {
   // Deploy the BosonVoucher contract
   const BosonVoucher = await ethers.getContractFactory("BosonVoucher");
-  const bosonVoucher = await BosonVoucher.deploy({ gasLimit });
+  const bosonVoucher = await BosonVoucher.deploy({ gasLimit: gasLimit, gasPrice: ethers.utils.parseUnits(gasPrice, 'gwei') });
   await bosonVoucher.deployTransaction.wait(confirmations);
 
   return [bosonVoucher];

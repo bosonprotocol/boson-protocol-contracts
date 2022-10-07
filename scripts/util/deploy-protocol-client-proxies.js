@@ -20,9 +20,10 @@ const confirmations = environments.confirmations;
  * @param protocolClients
  * @param protocolClientArgs
  * @param gasLimit - gasLimit for transactions
+ * @param gasPrice: gasPrice for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolClientProxies(protocolClients, gasLimit) {
+async function deployProtocolClientProxies(protocolClients, gasLimit, gasPrice) {
   let bosonClientBeacon;
 
   // Destructure the protocol client implementations
@@ -30,7 +31,7 @@ async function deployProtocolClientProxies(protocolClients, gasLimit) {
 
   // Deploy the ClientProxy for BosonVoucher
   const ClientProxy = await ethers.getContractFactory("BeaconClientProxy");
-  const clientProxy = await ClientProxy.deploy({ gasLimit });
+  const clientProxy = await ClientProxy.deploy({ gasLimit: gasLimit, gasPrice: ethers.utils.parseUnits(gasPrice, 'gwei')});
   await clientProxy.deployTransaction.wait(confirmations);
 
   // init instead of constructors

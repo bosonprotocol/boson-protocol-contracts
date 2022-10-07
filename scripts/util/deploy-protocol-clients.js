@@ -16,17 +16,18 @@ const { castProtocolClientProxies } = require("./cast-protocol-client-proxies.js
  *
  * @param protocolClientArgs
  * @param gasLimit - gasLimit for transactions
+ * @param gasPrice - gasPrice for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolClients(protocolClientArgs, gasLimit) {
+async function deployProtocolClients(protocolClientArgs, gasLimit, gasPrice) {
   // Deploy Protocol Client implementation contracts
-  const protocolClientImpls = await deployProtocolClientImpls(gasLimit);
+  const protocolClientImpls = await deployProtocolClientImpls(gasLimit, gasPrice);
 
   // Deploy Protocol Client beacon contracts
-  const protocolClientBeacons = await deployProtocolClientBeacons(protocolClientImpls, protocolClientArgs, gasLimit);
+  const protocolClientBeacons = await deployProtocolClientBeacons(protocolClientImpls, protocolClientArgs, gasLimit, gasPrice);
 
   // Deploy Protocol Client proxy contracts
-  const protocolClientProxies = await deployProtocolClientProxies(protocolClientBeacons, gasLimit);
+  const protocolClientProxies = await deployProtocolClientProxies(protocolClientBeacons, gasLimit, gasPrice);
 
   // Cast the proxies to their implementation interfaces
   const protocolClients = await castProtocolClientProxies(protocolClientProxies);

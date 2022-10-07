@@ -2,7 +2,7 @@ const environments = require("../environments");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const network = hre.network.name;
-let gasLimit;
+let gasLimit, gasPrice;
 const confirmations = environments.confirmations;
 
 const protocolConfig = require("./config/protocol-parameters");
@@ -85,6 +85,19 @@ async function main() {
   let transactionResponse;
 
   gasLimit = environments[network].gasLimit;
+  //gasPrice = environments[network].gasPrice;
+
+  console.log("network ", network);
+
+  //const provider = ethers.providers.getDefaultProvider(network);
+
+  //const providerGasPrice = await ethers.provider.getGasPrice();
+  //console.log("provider gas price ", providerGasPrice.toString());
+  gasPrice = ethers.utils.formatUnits(await ethers.provider.getGasPrice(), 'gwei')
+  //gasPrice = await ethers.provider.getGasPrice();
+
+  console.log("gasLimit ", gasLimit);
+  console.log("gasPrice ", gasPrice);
 
   // Output script header
   const divider = "-".repeat(80);
@@ -114,7 +127,7 @@ async function main() {
   console.log(`💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...`);
 
   // Deploy the Diamond
-  const [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs] = await deployProtocolDiamond(gasLimit);
+  const [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs] = await deployProtocolDiamond(gasLimit, gasPrice);
   deploymentComplete("AccessController", accessController.address, [], contracts);
   deploymentComplete("DiamondLoupeFacet", dlf.address, [], contracts);
   deploymentComplete("DiamondCutFacet", dcf.address, [], contracts);
@@ -132,13 +145,13 @@ async function main() {
   // Cut the ConfigHandlerFacet facet into the Diamond
   const {
     facets: [configHandlerFacet],
-  } = await deployProtocolConfigFacet(protocolDiamond, config, gasLimit);
+  } = await deployProtocolConfigFacet(protocolDiamond, config, gasLimit, gasPrice);
   deploymentComplete("ConfigHandlerFacet", configHandlerFacet.address, [], contracts);
 
   console.log(`\n💎 Deploying and initializing protocol handler facets...`);
 
   // Deploy and cut facets
-  const deployedFacets = await deployProtocolHandlerFacets(protocolDiamond, getNoArgFacetNames(), gasLimit);
+  const deployedFacets = await deployProtocolHandlerFacets(protocolDiamond, getNoArgFacetNames(), gasLimit, gasPrice);
   for (let i = 0; i < deployedFacets.length; i++) {
     const deployedFacet = deployedFacets[i];
     deploymentComplete(deployedFacet.name, deployedFacet.contract.address, [], contracts);
@@ -148,7 +161,7 @@ async function main() {
 
   // Deploy the Protocol Client implementation/proxy pairs
   const protocolClientArgs = [protocolDiamond.address];
-  const [impls, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+  const [impls, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit, gasPrice);
   const [bosonVoucherImpl] = impls;
   const [bosonClientBeacon] = beacons;
   const [bosonVoucherProxy] = proxies;

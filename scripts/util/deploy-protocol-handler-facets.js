@@ -12,16 +12,17 @@ const confirmations = environments.confirmations;
  * @param diamond
  * @param facetNames - list of facet names to deploy and cut
  * @param gasLimit - gasLimit for transactions
+ * @param gasPrice - gasPrice for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolHandlerFacets(diamond, facetNames, gasLimit) {
+async function deployProtocolHandlerFacets(diamond, facetNames, gasLimit, gasPrice) {
   let deployedFacets = [];
 
   // Deploy all the no-arg initializer handler facets
   while (facetNames.length) {
     let facetName = facetNames.shift();
     let FacetContractFactory = await ethers.getContractFactory(facetName);
-    const facetContract = await FacetContractFactory.deploy({ gasLimit });
+    const facetContract = await FacetContractFactory.deploy({ gasLimit: gasLimit, gasPrice: ethers.utils.parseUnits(gasPrice, 'gwei') });
     await facetContract.deployTransaction.wait(confirmations);
 
     deployedFacets.push({
@@ -43,7 +44,7 @@ async function deployProtocolHandlerFacets(diamond, facetNames, gasLimit) {
     const deployedFacet = deployedFacets[i];
     const facetCut = getFacetAddCut(deployedFacet.contract, [initFunction]);
     const transactionResponse = await diamondCutFacet.diamondCut([facetCut], deployedFacet.contract.address, callData, {
-      gasLimit,
+      gasLimit: gasLimit, gasPrice: ethers.utils.parseUnits(gasPrice, 'gwei')
     });
     await transactionResponse.wait(confirmations);
   }

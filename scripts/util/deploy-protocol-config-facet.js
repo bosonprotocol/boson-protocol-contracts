@@ -13,12 +13,13 @@ const confirmations = environments.confirmations;
  * @param diamond
  * @param config
  * @param gasLimit - gasLimit for transactions
+ * @param gasPrice - gasPrice for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolConfigFacet(diamond, config, gasLimit) {
+async function deployProtocolConfigFacet(diamond, config, gasLimit, gasPrice) {
   // Deploy the ConfigHandler Facet
   const ConfigHandlerFacet = await ethers.getContractFactory("ConfigHandlerFacet");
-  const configHandlerFacet = await ConfigHandlerFacet.deploy({ gasLimit });
+  const configHandlerFacet = await ConfigHandlerFacet.deploy({ gasLimit: gasLimit, gasPrice: ethers.utils.parseUnits(gasPrice, 'gwei') });
   await configHandlerFacet.deployTransaction.wait(confirmations);
 
   // Cast Diamond to DiamondCutFacet
@@ -28,7 +29,7 @@ async function deployProtocolConfigFacet(diamond, config, gasLimit) {
   const configCallData = ConfigHandlerFacet.interface.encodeFunctionData("initialize", config);
   const configHandlerCut = getFacetAddCut(configHandlerFacet, [configCallData.slice(0, 10)]);
   const diamondCut = await cutFacet.diamondCut([configHandlerCut], configHandlerFacet.address, configCallData, {
-    gasLimit,
+    gasLimit: gasLimit, gasPrice: ethers.utils.parseUnits(gasPrice, 'gwei')
   });
 
   await diamondCut.wait(confirmations);
