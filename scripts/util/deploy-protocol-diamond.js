@@ -21,28 +21,30 @@ async function deployProtocolDiamond(gasLimit, gasPrice) {
   // Core interfaces that will be supported at the Diamond address
   const interfaces = [InterfaceIds.IDiamondLoupe, InterfaceIds.IDiamondCut, InterfaceIds.IERC165];
 
-  console.log("gasPrice param in deployProtocolDiamond ", gasPrice);
-  const parsedGasPrice =  ethers.utils.parseUnits(gasPrice, 'gwei');
-  console.log("deploying AccessConroller with gasLimit %s and gasPrice %s ", gasLimit, parsedGasPrice);
-
   // Deploy the AccessController contract
   const AccessController = await ethers.getContractFactory("AccessController");
-  const accessController = await AccessController.deploy({ gasLimit: gasLimit, gasPrice: ethers.utils.parseUnits(gasPrice, 'gwei') });
+  const accessController = await AccessController.deploy({
+    gasLimit: gasLimit,
+    gasPrice,
+  });
   await accessController.deployTransaction.wait(confirmations);
 
   // Diamond Loupe Facet
   const DiamondLoupeFacet = await ethers.getContractFactory("DiamondLoupeFacet");
-  const dlf = await DiamondLoupeFacet.deploy({ gasLimit: gasLimit, gasPrice: ethers.utils.parseUnits(gasPrice, 'gwei') });
+  const dlf = await DiamondLoupeFacet.deploy({
+    gasLimit: gasLimit,
+    gasPrice,
+  });
   await dlf.deployTransaction.wait(confirmations);
 
   // Diamond Cut Facet
   const DiamondCutFacet = await ethers.getContractFactory("DiamondCutFacet");
-  const dcf = await DiamondCutFacet.deploy({ gasLimit: gasLimit, gasPrice: ethers.utils.parseUnits(gasPrice, 'gwei') });
+  const dcf = await DiamondCutFacet.deploy({ gasLimit: gasLimit, gasPrice });
   await dcf.deployTransaction.wait(confirmations);
 
   // ERC165 Facet
   const ERC165Facet = await ethers.getContractFactory("ERC165Facet");
-  const erc165f = await ERC165Facet.deploy({ gasLimit: gasLimit, gasPrice: ethers.utils.parseUnits(gasPrice, 'gwei') });
+  const erc165f = await ERC165Facet.deploy({ gasLimit: gasLimit, gasPrice });
   await erc165f.deployTransaction.wait(confirmations);
 
   // Arguments for Diamond constructor
@@ -54,7 +56,10 @@ async function deployProtocolDiamond(gasLimit, gasPrice) {
 
   // Deploy Protocol Diamond
   const ProtocolDiamond = await ethers.getContractFactory("ProtocolDiamond");
-  const protocolDiamond = await ProtocolDiamond.deploy(...diamondArgs, { gasLimit: gasLimit, gasPrice: ethers.utils.parseUnits(gasPrice, 'gwei') });
+  const protocolDiamond = await ProtocolDiamond.deploy(...diamondArgs, {
+    gasLimit: gasLimit,
+    gasPrice,
+  });
   await protocolDiamond.deployTransaction.wait(confirmations);
 
   return [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs];

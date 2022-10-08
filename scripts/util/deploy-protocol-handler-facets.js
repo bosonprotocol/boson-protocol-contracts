@@ -22,7 +22,7 @@ async function deployProtocolHandlerFacets(diamond, facetNames, gasLimit, gasPri
   while (facetNames.length) {
     let facetName = facetNames.shift();
     let FacetContractFactory = await ethers.getContractFactory(facetName);
-    const facetContract = await FacetContractFactory.deploy({ gasLimit: gasLimit, gasPrice: ethers.utils.parseUnits(gasPrice, 'gwei') });
+    const facetContract = await FacetContractFactory.deploy({ gasLimit: gasLimit, gasPrice });
     await facetContract.deployTransaction.wait(confirmations);
 
     deployedFacets.push({
@@ -44,7 +44,8 @@ async function deployProtocolHandlerFacets(diamond, facetNames, gasLimit, gasPri
     const deployedFacet = deployedFacets[i];
     const facetCut = getFacetAddCut(deployedFacet.contract, [initFunction]);
     const transactionResponse = await diamondCutFacet.diamondCut([facetCut], deployedFacet.contract.address, callData, {
-      gasLimit: gasLimit, gasPrice: ethers.utils.parseUnits(gasPrice, 'gwei')
+      gasLimit: gasLimit,
+      gasPrice,
     });
     await transactionResponse.wait(confirmations);
   }

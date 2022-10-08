@@ -29,7 +29,10 @@ async function deployProtocolClientBeacons(protocolClients, protocolClientArgs, 
 
   // Deploy the ClientBeacon for BosonVoucher
   const ClientBeacon = await ethers.getContractFactory("BosonClientBeacon");
-  const clientBeacon = await ClientBeacon.deploy(...protocolClientArgs, bosonVoucherImpl.address, { gasLimit: gasLimit, gasPrice: ethers.utils.parseUnits(gasPrice, 'gwei')});
+  const clientBeacon = await ClientBeacon.deploy(...protocolClientArgs, bosonVoucherImpl.address, {
+    gasLimit: gasLimit,
+    gasPrice,
+  });
   await clientBeacon.deployTransaction.wait(confirmations);
 
   return [clientBeacon];

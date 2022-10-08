@@ -85,19 +85,7 @@ async function main() {
   let transactionResponse;
 
   gasLimit = environments[network].gasLimit;
-  //gasPrice = environments[network].gasPrice;
-
-  console.log("network ", network);
-
-  //const provider = ethers.providers.getDefaultProvider(network);
-
-  //const providerGasPrice = await ethers.provider.getGasPrice();
-  //console.log("provider gas price ", providerGasPrice.toString());
-  gasPrice = ethers.utils.formatUnits(await ethers.provider.getGasPrice(), 'gwei')
-  //gasPrice = await ethers.provider.getGasPrice();
-
-  console.log("gasLimit ", gasLimit);
-  console.log("gasPrice ", gasPrice);
+  const { gasPrice } = await ethers.provider.getFeeData();
 
   // Output script header
   const divider = "-".repeat(80);
@@ -127,7 +115,10 @@ async function main() {
   console.log(`💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...`);
 
   // Deploy the Diamond
-  const [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs] = await deployProtocolDiamond(gasLimit, gasPrice);
+  const [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs] = await deployProtocolDiamond(
+    gasLimit,
+    gasPrice
+  );
   deploymentComplete("AccessController", accessController.address, [], contracts);
   deploymentComplete("DiamondLoupeFacet", dlf.address, [], contracts);
   deploymentComplete("DiamondCutFacet", dcf.address, [], contracts);
