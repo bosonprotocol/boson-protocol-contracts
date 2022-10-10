@@ -1,4 +1,4 @@
-const { oneWeek, oneMonth } = require("../../test/util/constants");
+const { oneWeek, ninetyDays } = require("../../test/util/constants");
 
 /**
  *  Protocol config parameters, used during the deployment
@@ -20,12 +20,12 @@ module.exports = {
     maxOffersPerBatch: "100",
     maxTokensPerWithdrawal: "100",
     maxFeesPerDisputeResolver: 100,
-    maxEscalationResponsePeriod: oneMonth,
+    maxEscalationResponsePeriod: ninetyDays,
     maxDisputesPerBatch: "100",
     maxAllowedSellers: "100",
     maxTotalOfferFeePercentage: 4000, // 40%
     maxRoyaltyPecentage: 1000, //10%
-    maxResolutionPeriod: oneMonth,
+    maxResolutionPeriod: ninetyDays,
     minDisputePeriod: oneWeek,
   },
 
