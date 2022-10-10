@@ -1921,7 +1921,7 @@ describe("SellerHandler", function () {
 
           authToken.tokenType = AuthTokenType.Custom;
 
-          // Attempt to Create a seller with AuthTokenType == Custom, expecting revert
+          // Attempt to Update a seller with AuthTokenType == Custom, expecting revert
           await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, authToken)).to.revertedWith(
             RevertReasons.INVALID_AUTH_TOKEN_TYPE
           );
