@@ -94,7 +94,7 @@ contract SellerHandlerFacet is SellerBase {
         address sender = msgSender();
 
         // Check that caller is authorized to call this function
-        if (seller.admin == address(0)) {
+        if (_authToken.tokenType != AuthTokenType.None) {
             address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
             address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
             require(tokenIdOwner == sender, NOT_ADMIN);
@@ -102,17 +102,15 @@ contract SellerHandlerFacet is SellerBase {
             require(seller.admin == sender, NOT_ADMIN);
         }
 
-        preSellerUpdateChecks(_seller);
+        sellerPreUpdateChecks(_seller);
 
         bool needsApproval = false;
 
         // Admin address or AuthToken data must be present in parameters. A seller can have one or the other. Check passed in parameters
-        if (_seller.admin == address(0)) {
+        if (_authToken.tokenType != AuthTokenType.None) {
             // Check that auth token is unique to this seller
             uint256 check = lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId];
             require(check == 0 || check == _seller.id, AUTH_TOKEN_MUST_BE_UNIQUE);
-
-            require(_authToken.tokenType != AuthTokenType.None, AUTH_TOKEN_TYPE_MUST_BE_SET);
 
             // Store auth token
             authToken.tokenId = _authToken.tokenId;
@@ -127,6 +125,7 @@ contract SellerHandlerFacet is SellerBase {
             delete lookups.sellerIdByAdmin[seller.admin];
             delete seller.admin;
         } else {
+            require(_seller.admin != address(0), INVALID_ADDRESS);
             // If admin address exists, admin address owner must approve the update for prevent front-running
             lookups.sellerPendingUpdates[_seller.id].admin = _seller.admin;
             needsApproval = true;
@@ -176,7 +175,7 @@ contract SellerHandlerFacet is SellerBase {
             NO_PENDING_SELLER_ROLE_UPDATE
         );
 
-        preSellerUpdateChecks(_sellerPendingUpdate);
+        sellerPreUpdateChecks(_sellerPendingUpdate);
 
         // Get storage location for seller
         (, Seller storage seller, ) = fetchSeller(_sellerId);
@@ -241,7 +240,7 @@ contract SellerHandlerFacet is SellerBase {
         emit SellerUpdateRolesApproved(_sellerId, seller, sender);
     }
 
-    function preSellerUpdateChecks(Seller memory _seller) internal view {
+    function sellerPreUpdateChecks(Seller memory _seller) internal view {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
