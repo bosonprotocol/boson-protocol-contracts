@@ -36,6 +36,7 @@ contract SellerHandlerFacet is SellerBase {
      * - Seller is not active (if active == false)
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - AuthTokenType is Custom
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -65,6 +66,7 @@ contract SellerHandlerFacet is SellerBase {
      * - Seller does not exist
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - AuthTokenType is Custom
      *
      * @param _seller - the fully populated seller struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -83,6 +85,8 @@ contract SellerHandlerFacet is SellerBase {
                 (_seller.admin != address(0) && _authToken.tokenType == AuthTokenType.None),
             ADMIN_OR_AUTH_TOKEN
         );
+
+        require(_authToken.tokenType != AuthTokenType.Custom, INVALID_AUTH_TOKEN_TYPE);
 
         // Check Seller exists in sellers mapping
         (exists, seller, authToken) = fetchSeller(_seller.id);

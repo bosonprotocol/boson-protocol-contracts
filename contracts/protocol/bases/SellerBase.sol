@@ -29,6 +29,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      * - Seller is not active (if active == false)
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - AuthTokenType is Custom
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -60,6 +61,8 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Do caller and uniqueness checks based on auth type
         if (_authToken.tokenType != AuthTokenType.None) {
+            require(_authToken.tokenType != AuthTokenType.Custom, INVALID_AUTH_TOKEN_TYPE);
+
             // Check that caller owns the auth token
             address authTokenContract = lookups.authTokenContracts[_authToken.tokenType];
             address tokenIdOwner = IERC721(authTokenContract).ownerOf(_authToken.tokenId);

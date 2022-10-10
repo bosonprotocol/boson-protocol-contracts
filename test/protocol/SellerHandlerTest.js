@@ -742,6 +742,18 @@ describe("SellerHandler", function () {
           ).to.revertedWith(RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE);
         });
 
+        it("authTokenType is Custom", async function () {
+          // Set admin == zero address because seller will be created with auth token
+          seller.admin = ethers.constants.AddressZero;
+
+          authToken.tokenType = AuthTokenType.Custom;
+
+          // Attempt to Create a seller with AuthTokenType == Custom, expecting revert
+          await expect(
+            accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.INVALID_AUTH_TOKEN_TYPE);
+        });
+
         it("Caller is not the supplied admin", async function () {
           seller.operator = rando.address;
           seller.clerk = rando.address;
@@ -1900,6 +1912,18 @@ describe("SellerHandler", function () {
           // Attempt to update seller2 with non-unique authToken used by seller 1
           await expect(accountHandler.connect(other1).updateSeller(seller2, authToken)).to.revertedWith(
             RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE
+          );
+        });
+
+        it("authTokenType is Custom", async function () {
+          // Set admin == zero address because seller will be created with auth token
+          seller.admin = ethers.constants.AddressZero;
+
+          authToken.tokenType = AuthTokenType.Custom;
+
+          // Attempt to Update a seller with AuthTokenType == Custom, expecting revert
+          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, authToken)).to.revertedWith(
+            RevertReasons.INVALID_AUTH_TOKEN_TYPE
           );
         });
 
