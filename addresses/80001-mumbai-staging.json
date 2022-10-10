@@ -1,0 +1,163 @@
+{
+  "chainId": 80001,
+  "env": "mumbai",
+  "protocolVersion": "2.0.0-rc.3",
+  "contracts": [
+    {
+      "name": "AccessController",
+      "address": "0x6A90120001dbd6C4497785b73E5EF18acFd202cF",
+      "args": []
+    },
+    {
+      "name": "DiamondLoupeFacet",
+      "address": "0x0E54DbC1A5D3463dF093eE8D5Ef65C4dEe9503C1",
+      "args": []
+    },
+    {
+      "name": "DiamondCutFacet",
+      "address": "0x9B39F129C1a1E72FCc1f6730f916fBfc7B061b9b",
+      "args": []
+    },
+    {
+      "name": "ERC165Facet",
+      "address": "0xcfae2ea3C46D7e97101325aE45ea4F4225FA1dfd",
+      "args": []
+    },
+    {
+      "name": "ProtocolDiamond",
+      "address": "0x26F5BC2D2B0CA2951f55B12437Bf044Ff0DB6f2d",
+      "args": [
+        "0x6A90120001dbd6C4497785b73E5EF18acFd202cF",
+        [
+          [
+            "0x0E54DbC1A5D3463dF093eE8D5Ef65C4dEe9503C1",
+            0,
+            [
+              "0xcdffacc6",
+              "0x52ef6b2c",
+              "0xadfca15e",
+              "0x7a0ed627"
+            ]
+          ],
+          [
+            "0x9B39F129C1a1E72FCc1f6730f916fBfc7B061b9b",
+            0,
+            [
+              "0x1f931c1c"
+            ]
+          ],
+          [
+            "0xcfae2ea3C46D7e97101325aE45ea4F4225FA1dfd",
+            0,
+            [
+              "0x01ffc9a7"
+            ]
+          ]
+        ],
+        [
+          "0x48e2b093",
+          "0x1f931c1c",
+          "0x01ffc9a7"
+        ]
+      ]
+    },
+    {
+      "name": "ConfigHandlerFacet",
+      "address": "0xB98570a34D59f68c882F07D31D107ddd36957796",
+      "args": []
+    },
+    {
+      "name": "AccountHandlerFacet",
+      "address": "0xDdA83B911222A0872d5221ffFcDe7414CE3E878E",
+      "args": []
+    },
+    {
+      "name": "SellerHandlerFacet",
+      "address": "0xa893828BF584e9EF4E54E672Ae0E3fA5582f536C",
+      "args": []
+    },
+    {
+      "name": "BuyerHandlerFacet",
+      "address": "0x31d0fFe2A08E5C317193865d57bE5906024c49cD",
+      "args": []
+    },
+    {
+      "name": "DisputeResolverHandlerFacet",
+      "address": "0x3c8672D557d7EC8FBe0de5e31D1C5a2e824Ce263",
+      "args": []
+    },
+    {
+      "name": "AgentHandlerFacet",
+      "address": "0x38f155F80c801561B193C8de813C5260700f3f9F",
+      "args": []
+    },
+    {
+      "name": "BundleHandlerFacet",
+      "address": "0xAC30900D55bf3cf412E325488F7a811902eA15E6",
+      "args": []
+    },
+    {
+      "name": "DisputeHandlerFacet",
+      "address": "0x077c2FDB8136c4CD7BaD358110B3294067C3E82B",
+      "args": []
+    },
+    {
+      "name": "ExchangeHandlerFacet",
+      "address": "0xF8E6370B0d7D60DA008AA5F0504Bd74014eCae55",
+      "args": []
+    },
+    {
+      "name": "FundsHandlerFacet",
+      "address": "0x98E6e966FbE284A2f5737Fb2Bbe797D02e33D47C",
+      "args": []
+    },
+    {
+      "name": "GroupHandlerFacet",
+      "address": "0xEE67B3d057df3aF8BAba7a0C2dd35437cdCb8ee3",
+      "args": []
+    },
+    {
+      "name": "MetaTransactionsHandlerFacet",
+      "address": "0x1721f3F88E67f2CDA0f92d9585A945E86439122a",
+      "args": []
+    },
+    {
+      "name": "OfferHandlerFacet",
+      "address": "0x1f1e554535026Bd91628dA2013d07BB4e2789082",
+      "args": []
+    },
+    {
+      "name": "OrchestrationHandlerFacet",
+      "address": "0x263FEEE8B69aD1AD4040F49fC1971d137EE17511",
+      "args": []
+    },
+    {
+      "name": "TwinHandlerFacet",
+      "address": "0x692ae6353DedFE741Cf9ebf834390C1EbF4302ED",
+      "args": []
+    },
+    {
+      "name": "PauseHandlerFacet",
+      "address": "0xD7D1e83603a66fD19D5398E92576d1A330568B18",
+      "args": []
+    },
+    {
+      "name": "BosonVoucher Logic",
+      "address": "0x191A7b1bec7A7444a7218476FA130D5ecFa088b5",
+      "args": []
+    },
+    {
+      "name": "BosonVoucher Beacon",
+      "address": "0xc25DA82C3e3594382c5EeFCaFD085F0488696C5C",
+      "args": [
+        "0x26F5BC2D2B0CA2951f55B12437Bf044Ff0DB6f2d",
+        "0x191A7b1bec7A7444a7218476FA130D5ecFa088b5"
+      ]
+    },
+    {
+      "name": "BosonVoucher Proxy",
+      "address": "0xCE39e61Ef5D9bF436483006D885016Dbe463EE4e",
+      "args": []
+    }
+  ]
+}

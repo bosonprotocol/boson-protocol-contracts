@@ -7,6 +7,7 @@ import { ProtocolBase } from "./ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IInitializableVoucherClone } from "../../interfaces/IInitializableVoucherClone.sol";
+import { IERC721 } from "../../interfaces/IERC721.sol";
 
 /**
  * @title SellerBase
@@ -20,6 +21,8 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
+     * - Caller is not the supplied admin or does not own supplied auth token
+     * - Caller is not the supplied operator and clerk
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
@@ -36,9 +39,6 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues
     ) internal {
-        // Cache protocol lookups for reference
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
         // Check active is not set to false
         require(_seller.active, MUST_BE_ACTIVE);
 
@@ -49,36 +49,39 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             ADMIN_OR_AUTH_TOKEN
         );
 
-        // Check that the addresses are unique to one seller id, across all roles. These addresses should always be checked. Treasury is not checked
-        mapping(address => uint256) storage sellerIdByOperator = lookups.sellerIdByOperator;
-        mapping(address => uint256) storage sellerIdByAdmin = lookups.sellerIdByAdmin;
-        mapping(address => uint256) storage sellerIdByClerk = lookups.sellerIdByClerk;
-        require(
-            sellerIdByOperator[_seller.operator] == 0 &&
-                sellerIdByOperator[_seller.clerk] == 0 &&
-                sellerIdByAdmin[_seller.operator] == 0 &&
-                sellerIdByAdmin[_seller.clerk] == 0 &&
-                sellerIdByClerk[_seller.operator] == 0 &&
-                sellerIdByClerk[_seller.clerk] == 0,
-            SELLER_ADDRESS_MUST_BE_UNIQUE
-        );
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        // Do other uniqueness checks based on auth type
-        if (_seller.admin == address(0)) {
+        // Get message sender
+        address sender = msgSender();
+
+        // Check that caller is the supplied operator and clerk
+        require(_seller.operator == sender && _seller.clerk == sender, NOT_OPERATOR_AND_CLERK);
+
+        // Do caller and uniqueness checks based on auth type
+        if (_authToken.tokenType != AuthTokenType.None) {
+            // Check that caller owns the auth token
+            address authTokenContract = lookups.authTokenContracts[_authToken.tokenType];
+            address tokenIdOwner = IERC721(authTokenContract).ownerOf(_authToken.tokenId);
+            require(tokenIdOwner == sender, NOT_ADMIN);
+
             // Check that auth token is unique to this seller
             require(
                 lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0,
                 AUTH_TOKEN_MUST_BE_UNIQUE
             );
         } else {
-            // Check that the admin address is unique to one seller id, across all roles
-            require(
-                sellerIdByOperator[_seller.admin] == 0 &&
-                    sellerIdByAdmin[_seller.admin] == 0 &&
-                    sellerIdByClerk[_seller.admin] == 0,
-                SELLER_ADDRESS_MUST_BE_UNIQUE
-            );
+            // Check that caller is supplied admin
+            require(_seller.admin == sender, NOT_ADMIN);
         }
+
+        // Check that the sender address is unique to one seller id, across all roles
+        require(
+            lookups.sellerIdByAdmin[sender] == 0 &&
+                lookups.sellerIdByOperator[sender] == 0 &&
+                lookups.sellerIdByClerk[sender] == 0,
+            SELLER_ADDRESS_MUST_BE_UNIQUE
+        );
 
         // Get the next account id and increment the counter
         uint256 sellerId = protocolCounters().nextAccountId++;
@@ -90,7 +93,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         lookups.cloneAddress[sellerId] = voucherCloneAddress;
 
         // Notify watchers of state change
-        emit SellerCreated(sellerId, _seller, voucherCloneAddress, _authToken, msgSender());
+        emit SellerCreated(sellerId, _seller, voucherCloneAddress, _authToken, sender);
     }
 
     /**

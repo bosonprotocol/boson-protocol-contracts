@@ -18,6 +18,8 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
+     * - Caller is not the supplied admin or does not own supplied auth token
+     * - Caller is not the supplied operator and clerk
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
@@ -56,6 +58,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a DisputeResolverCreated event if successful.
      *
      * Reverts if:
+     * - Caller is not the supplied admin, operator and clerk
      * - The dispute resolvers region of protocol is paused
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver

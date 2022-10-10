@@ -60,7 +60,10 @@ describe("IBosonTwinHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, pauser, operator, admin, clerk, treasury, rando, protocolTreasury] = await ethers.getSigners();
+    [deployer, pauser, admin, treasury, rando, protocolTreasury] = await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();

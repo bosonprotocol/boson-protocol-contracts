@@ -50,7 +50,8 @@ contract OrchestrationHandlerFacet is
      * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the same as operator address
+     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -96,7 +97,7 @@ contract OrchestrationHandlerFacet is
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
     ) external override sellersNotPaused offersNotPaused orchestrationNotPaused nonReentrant {
-        checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
+        createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
     }
 
@@ -366,7 +367,8 @@ contract OrchestrationHandlerFacet is
      * - The offers region of protocol is paused
      * - The groups region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the same as operator address
+     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -418,7 +420,7 @@ contract OrchestrationHandlerFacet is
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
     ) external override sellersNotPaused {
-        checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
+        createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
     }
 
@@ -442,7 +444,8 @@ contract OrchestrationHandlerFacet is
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the same as operator address
+     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -501,7 +504,7 @@ contract OrchestrationHandlerFacet is
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
     ) external override sellersNotPaused {
-        checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
+        createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
     }
 
@@ -526,7 +529,8 @@ contract OrchestrationHandlerFacet is
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the same as operator address
+     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -588,7 +592,7 @@ contract OrchestrationHandlerFacet is
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
     ) external override sellersNotPaused {
-        checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
+        createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferWithConditionAndTwinAndBundle(
             _offer,
             _offerDates,
@@ -598,36 +602,6 @@ contract OrchestrationHandlerFacet is
             _twin,
             _agentId
         );
-    }
-
-    /**
-     * @notice Checks that caller address is the same as operator address and creates a seller.
-     *
-     * Emits a SellerCreated event if successful.
-     *
-     * Reverts if:
-     * - Caller is not the same as operator address
-     * - Admin address is zero address and AuthTokenType == None
-     * - AuthTokenType is not unique to this seller
-     * - In seller struct:
-     *   - Address values are zero address
-     *   - Addresses are not unique to this seller
-     *   - Seller is not active (if active == false)
-     *
-     * @param _seller - the fully populated struct with seller id set to 0x0
-     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
-     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
-     */
-    function checkAndCreateSeller(
-        Seller memory _seller,
-        AuthToken calldata _authToken,
-        VoucherInitValues calldata _voucherInitValues
-    ) internal {
-        // Caller should be the operator, specified in seller
-        require(_seller.operator == msgSender(), NOT_OPERATOR);
-
-        // Create seller and update structs values to represent true state
-        createSellerInternal(_seller, _authToken, _voucherInitValues);
     }
 
     /**

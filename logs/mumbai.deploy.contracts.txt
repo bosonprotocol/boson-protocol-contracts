@@ -1,0 +1,143 @@
+Nothing to compile
+network  mumbai
+gasLimit  10000000
+gasPrice  182.24223336
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Fri Oct 07 2022 23:51:31 GMT+0200 (Central European Summer Time)
+🔱 Deployer account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+deploying AccessConroller with gasLimit 10000000 and gasPrice 182242233360 
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Mon Oct 10 2022 10:17:02 GMT+0200 (Central European Summer Time)
+🔱 Deployer account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x6A90120001dbd6C4497785b73E5EF18acFd202cF
+✅ DiamondLoupeFacet deployed to: 0x0E54DbC1A5D3463dF093eE8D5Ef65C4dEe9503C1
+✅ DiamondCutFacet deployed to: 0x9B39F129C1a1E72FCc1f6730f916fBfc7B061b9b
+✅ ERC165Facet deployed to: 0xcfae2ea3C46D7e97101325aE45ea4F4225FA1dfd
+✅ ProtocolDiamond deployed to: 0x26F5BC2D2B0CA2951f55B12437Bf044Ff0DB6f2d
+
+💎 Granting UPGRADER role...
+
+💎 Deploying and initializing config facet...
+✅ ConfigHandlerFacet deployed to: 0xB98570a34D59f68c882F07D31D107ddd36957796
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0xDdA83B911222A0872d5221ffFcDe7414CE3E878E
+✅ SellerHandlerFacet deployed to: 0xa893828BF584e9EF4E54E672Ae0E3fA5582f536C
+✅ BuyerHandlerFacet deployed to: 0x31d0fFe2A08E5C317193865d57bE5906024c49cD
+✅ DisputeResolverHandlerFacet deployed to: 0x3c8672D557d7EC8FBe0de5e31D1C5a2e824Ce263
+✅ AgentHandlerFacet deployed to: 0x38f155F80c801561B193C8de813C5260700f3f9F
+✅ BundleHandlerFacet deployed to: 0xAC30900D55bf3cf412E325488F7a811902eA15E6
+✅ DisputeHandlerFacet deployed to: 0x077c2FDB8136c4CD7BaD358110B3294067C3E82B
+✅ ExchangeHandlerFacet deployed to: 0xF8E6370B0d7D60DA008AA5F0504Bd74014eCae55
+✅ FundsHandlerFacet deployed to: 0x98E6e966FbE284A2f5737Fb2Bbe797D02e33D47C
+✅ GroupHandlerFacet deployed to: 0xEE67B3d057df3aF8BAba7a0C2dd35437cdCb8ee3
+✅ MetaTransactionsHandlerFacet deployed to: 0x1721f3F88E67f2CDA0f92d9585A945E86439122a
+✅ OfferHandlerFacet deployed to: 0x1f1e554535026Bd91628dA2013d07BB4e2789082
+✅ OrchestrationHandlerFacet deployed to: 0x263FEEE8B69aD1AD4040F49fC1971d137EE17511
+✅ TwinHandlerFacet deployed to: 0x692ae6353DedFE741Cf9ebf834390C1EbF4302ED
+✅ PauseHandlerFacet deployed to: 0xD7D1e83603a66fD19D5398E92576d1A330568B18
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0x191A7b1bec7A7444a7218476FA130D5ecFa088b5
+✅ BosonVoucher Beacon deployed to: 0xc25DA82C3e3594382c5EeFCaFD085F0488696C5C
+✅ BosonVoucher Proxy deployed to: 0xCE39e61Ef5D9bF436483006D885016Dbe463EE4e
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+⏲ Pause one minute, allowing deployments to propagate before verifying..
+🔍 Verifying contracts on block explorer...
+
+📋 Verifying AccessController
+contract object in verify function  {
+  name: 'AccessController',
+  address: '0x6A90120001dbd6C4497785b73E5EF18acFd202cF',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/access/AccessController.sol:AccessController at 0x6A90120001dbd6C4497785b73E5EF18acFd202cF
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify AccessController on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying DiamondLoupeFacet
+contract object in verify function  {
+  name: 'DiamondLoupeFacet',
+  address: '0x0E54DbC1A5D3463dF093eE8D5Ef65C4dEe9503C1',
+  args: []
+}
+Compiled 128 Solidity files successfully
+Successfully submitted source code for contract
+contracts/diamond/facets/DiamondLoupeFacet.sol:DiamondLoupeFacet at 0x0E54DbC1A5D3463dF093eE8D5Ef65C4dEe9503C1
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify DiamondLoupeFacet on block explorer. Failure during etherscan status polling. The verification may still succeed but
+should be checked manually.
+Endpoint URL: https://api-testnet.polygonscan.com/api?apikey=PEBBR23AJ6NNC37E5FFMEEJGKPI4VTFDR3&module=contract&action=checkverifystatus&guid=6uw2dk6zd1rplp2hyihikz5ym6rbqpnyzf8qxma4hsa1szqlqt
+Reason: The HTTP server response is not ok. Status code: 302 Response text: <html><head><title>Object moved</title></head><body>
+<h2>Object moved to <a href="//api-testnet.polygonscan.com/apierror.html?aspxerrorpath=/api">here</a>.</h2>
+</body></html>
+
+
+📋 Verifying DiamondCutFacet
+contract object in verify function  {
+  name: 'DiamondCutFacet',
+  address: '0x9B39F129C1a1E72FCc1f6730f916fBfc7B061b9b',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/diamond/facets/DiamondCutFacet.sol:DiamondCutFacet at 0x9B39F129C1a1E72FCc1f6730f916fBfc7B061b9b
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify DiamondCutFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying ERC165Facet
+contract object in verify function  {
+  name: 'ERC165Facet',
+  address: '0xcfae2ea3C46D7e97101325aE45ea4F4225FA1dfd',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/diamond/facets/ERC165Facet.sol:ERC165Facet at 0xcfae2ea3C46D7e97101325aE45ea4F4225FA1dfd
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify ERC165Facet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying ProtocolDiamond
+contract object in verify function  {
+  name: 'ProtocolDiamond',
+  address: '0x26F5BC2D2B0CA2951f55B12437Bf044Ff0DB6f2d',
+  args: [
+    '0x6A90120001dbd6C4497785b73E5EF18acFd202cF',
+    [ [Array], [Array], [Array] ],
+    [ '0x48e2b093', '0x1f931c1c', '0x01ffc9a7' ]
+  ]
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/diamond/ProtocolDiamond.sol:ProtocolDiamond at 0x26F5BC2D2B0CA2951f55B12437Bf044Ff0DB6f2d
+for verification on the block explorer. Waiting for verification result...
+
+Note: The verification process was stopped because all of the contracts for rc.3 are already verified on Mumbai since
+      we already deployed rc.3 for the test env
+

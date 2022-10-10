@@ -119,21 +119,21 @@ describe("IBosonExchangeHandler", function () {
     [
       deployer,
       pauser,
-      operator,
       admin,
-      clerk,
       treasury,
       buyer,
       rando,
       newOwner,
       fauxClient,
-      operatorDR,
       adminDR,
-      clerkDR,
       treasuryDR,
       protocolTreasury,
       bosonToken,
     ] = await ethers.getSigners();
+
+    // make all account the same
+    operator = clerk = admin;
+    operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -345,7 +345,9 @@ describe("IBosonExchangeHandler", function () {
       const sellerAllowList = [];
 
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // Create the offer
