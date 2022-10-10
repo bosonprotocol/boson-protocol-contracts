@@ -2,7 +2,7 @@
 
 <h1 align="center">Boson Protocol V2</h1>
 
-### Intro | [Audits](docs/audits.md) | [Setup](docs/setup.md) | [Tasks](docs/tasks.md) | [Architecture](docs/architecture.md) | [Domain Model](docs/domain.md) | [State Machines](docs/state-machines.md) | [Happy Path Exchange](docs/happy-path-exchange.md) 
+### Intro | [Audits](docs/audits.md) | [Setup](docs/setup.md) | [Tasks](docs/tasks.md) | [Architecture](docs/architecture.md) | [Domain Model](docs/domain.md) | [State Machines](docs/state-machines.md) | [Sequences](docs/sequences.md) 
 
 ## Status
 Done or in progress are:
@@ -20,7 +20,7 @@ Done or in progress are:
   - ✅ Support for EIP-712 meta-transactions
   - ✅ Protocol facet contracts and interfaces
   - ✅ Remediated audits
-  - 👉 Generated contract documentation
+  - ✅ Generated contract documentation
 
 ## Developers
   - [Audits](docs/audits.md) - See the results of our latest security audits
@@ -29,7 +29,7 @@ Done or in progress are:
   - [Architecture](docs/architecture.md) - Start with the big picture
   - [Domain Model](docs/domain.md) - Entities and their relationships
   - [State Machines](docs/state-machines.md) - State Machines in the Core Exchange Mechanism
-  - [Happy Path Exchange](docs/happy-path-exchange.md) - Timeline of the simplest exchange
+  - [Sequences](docs/sequences.md) - Timeline of the simplest exchange
   - [Contributing](#contributing) - Guidelines for contributing to this repo
   - [License](#license) - License information
 
