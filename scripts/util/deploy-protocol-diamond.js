@@ -10,10 +10,10 @@ const confirmations = environments.confirmations;
  *
  * Reused between deployment script and unit tests for consistency
  *
- * @param gasLimit - gasLimit for transactions
+ * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolDiamond(gasLimit) {
+async function deployProtocolDiamond(maxPriorityFeePerGas) {
   // Get interface Ids
   const InterfaceIds = await getInterfaceIds();
 
@@ -22,22 +22,22 @@ async function deployProtocolDiamond(gasLimit) {
 
   // Deploy the AccessController contract
   const AccessController = await ethers.getContractFactory("AccessController");
-  const accessController = await AccessController.deploy({ gasLimit });
+  const accessController = await AccessController.deploy({ maxPriorityFeePerGas });
   await accessController.deployTransaction.wait(confirmations);
 
   // Diamond Loupe Facet
   const DiamondLoupeFacet = await ethers.getContractFactory("DiamondLoupeFacet");
-  const dlf = await DiamondLoupeFacet.deploy({ gasLimit });
+  const dlf = await DiamondLoupeFacet.deploy({ maxPriorityFeePerGas });
   await dlf.deployTransaction.wait(confirmations);
 
   // Diamond Cut Facet
   const DiamondCutFacet = await ethers.getContractFactory("DiamondCutFacet");
-  const dcf = await DiamondCutFacet.deploy({ gasLimit });
+  const dcf = await DiamondCutFacet.deploy({ maxPriorityFeePerGas });
   await dcf.deployTransaction.wait(confirmations);
 
   // ERC165 Facet
   const ERC165Facet = await ethers.getContractFactory("ERC165Facet");
-  const erc165f = await ERC165Facet.deploy({ gasLimit });
+  const erc165f = await ERC165Facet.deploy({ maxPriorityFeePerGas });
   await erc165f.deployTransaction.wait(confirmations);
 
   // Arguments for Diamond constructor
@@ -49,7 +49,7 @@ async function deployProtocolDiamond(gasLimit) {
 
   // Deploy Protocol Diamond
   const ProtocolDiamond = await ethers.getContractFactory("ProtocolDiamond");
-  const protocolDiamond = await ProtocolDiamond.deploy(...diamondArgs, { gasLimit });
+  const protocolDiamond = await ProtocolDiamond.deploy(...diamondArgs, { maxPriorityFeePerGas });
   await protocolDiamond.deployTransaction.wait(confirmations);
 
   return [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs];
