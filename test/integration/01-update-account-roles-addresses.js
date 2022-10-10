@@ -47,7 +47,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
     agent,
     protocolTreasury,
     bosonToken;
-  let buyerEscalationDepositPercentage;
+  let buyerEscalationDepositPercentage, redeemedDate;
 
   beforeEach(async function () {
     // Make accounts available
@@ -326,7 +326,9 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
     context("After redeem actions", async function () {
       beforeEach(async function () {
         // Redeem the voucher so that buyer can update the wallet
-        await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+        const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+        const block = await ethers.provider.getBlock(tx.blockNumber);
+        redeemedDate = ethers.BigNumber.from(block.timestamp);
       });
 
       it("Agent should be able to withdraw funds after updating wallet address", async function () {
@@ -392,10 +394,10 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
           .withArgs(offer.id, buyerAccount.id, exchangeId, rando.address);
 
         const block = await ethers.provider.getBlock(tx.blockNumber);
-        const disputePeriod = Number(offerDurations.disputePeriod);
+        const disputePeriodEnd = redeemedDate.add(ethers.BigNumber.from(offerDurations.disputePeriod));
 
         // Expect the dispute period to not be over
-        expect(block.timestamp).to.be.at.most(disputePeriod);
+        expect(block.timestamp).to.be.at.most(disputePeriodEnd);
       });
 
       context("After raise dispute actions", async function () {
