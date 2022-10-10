@@ -84,7 +84,7 @@ contract BosonTypes {
         bool active;
     }
 
-    struct SellerUpdate {
+    struct SellerRoleUpdate {
         address operator;
         address admin;
         address clerk;

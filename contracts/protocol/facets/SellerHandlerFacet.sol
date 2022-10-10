@@ -102,15 +102,12 @@ contract SellerHandlerFacet is SellerBase {
             require(seller.admin == sender, NOT_ADMIN);
         }
 
-         SellerUpdate sellerUpdate;
-         sellerUpdate.operator = seller.operator;
-         sellerUpdate.clerk = seller.clerk;
-         sellerUpdate.admin = seller.admin;
+        SellerRoleUpdate memory sellerUpdate;
+        sellerUpdate.operator = seller.operator;
+        sellerUpdate.clerk = seller.clerk;
+        sellerUpdate.admin = seller.admin;
 
-         preSellerUpdateChecks(_seller.id, sellerAdmin);
-
-        // Get storage location for seller
-        (, Seller storage seller, AuthToken storage authToken) = fetchSeller(_seller.id);
+        preSellerUpdateChecks(_seller.id, sellerUpdate);
 
         // Admin address or AuthToken data must be present in parameters. A seller can have one or the other. Check passed in parameters
         if (_seller.admin == address(0)) {
@@ -129,8 +126,8 @@ contract SellerHandlerFacet is SellerBase {
 
             // Remove previous admin address if it exists
             delete lookups.sellerIdByAdmin[seller.admin];
-        } else { 
-          lookups.sellerPendingUpdates[_seller.id] = _seller.admin;
+        } else {
+            lookups.sellerPendingUpdates[_seller.id].admin = _seller.admin;
         }
 
         if (seller.treasury != _seller.treasury && _seller.treasury != address(0)) {
@@ -138,19 +135,19 @@ contract SellerHandlerFacet is SellerBase {
             seller.treasury = _seller.treasury;
         }
 
-        if(_seller.operator !== seller.operator) {
-          require(_seller.operator !== address(0), INVALID_ADDRESS);
-          lookups.sellerPendingUpdates[seller.id].operator = _seller.operator;
+        if (_seller.operator != seller.operator) {
+            require(_seller.operator != address(0), INVALID_ADDRESS);
+            lookups.sellerPendingUpdates[seller.id].operator = _seller.operator;
         }
 
-        if(_seller.clerk !== seller.clerk) {
-          require(_seller.clerk !== address(0), INVALID_ADDRESS);
-          lookups.sellerPendingUpdates[seller.id].clerk = _seller.clerk;
+        if (_seller.clerk != seller.clerk) {
+            require(_seller.clerk != address(0), INVALID_ADDRESS);
+            lookups.sellerPendingUpdates[seller.id].clerk = _seller.clerk;
         }
 
         // Notify watchers of state change
         emit SellerUpdated(_seller.id, _seller, _authToken, sender);
-        emit SellerUpdateAddressesRequested(_seller.id, _seller, sender);
+        emit SellerUpdateRoleRequested(_seller.id, sellerUpdate, sender);
     }
 
     function approveSellerUpdate(uint256 _sellerId) external {
@@ -159,16 +156,21 @@ contract SellerHandlerFacet is SellerBase {
         address sender = msgSender();
 
         // Get seller pending update
-        SellerUpdate storage _sellerPendingUpdate = lookups.sellerPendingUpdates[_sellerId];
+        SellerRoleUpdate storage _sellerPendingUpdate = lookups.sellerPendingUpdates[_sellerId];
 
-        require(_sellerPendingUpdate.admin !== address(0) || _sellerPendingUpdate.operator !== address(0) || _sellerPendingUpdate.clerk !== address(0), NO_PENDING_ADDRESSES_UPDATE );
+        require(
+            _sellerPendingUpdate.admin != address(0) ||
+                _sellerPendingUpdate.operator != address(0) ||
+                _sellerPendingUpdate.clerk != address(0),
+            NO_PENDING_SELLER_ROLE_UPDATE
+        );
         preSellerUpdateChecks(_sellerId, _sellerPendingUpdate);
 
         // Get storage location for seller
-        (, Seller storage seller) = fetchSeller(_sellerId);
+        (, Seller storage seller, ) = fetchSeller(_sellerId);
 
         // Approve operator address
-        if (sellerPendingUpdate.operator == sender) {
+        if (_sellerPendingUpdate.operator == sender) {
             // If operator changed, update the operator and transfer the ownership of NFT voucher
             if (seller.operator != _sellerPendingUpdate.operator) {
                 seller.operator = _sellerPendingUpdate.operator;
@@ -185,52 +187,53 @@ contract SellerHandlerFacet is SellerBase {
         }
 
         // Approva admin address
-        if (sellerPendingUpdate.admin == sender) {
+        if (_sellerPendingUpdate.admin == sender) {
             // Update seller admin
             if (seller.admin != _sellerPendingUpdate.admin) {
-              seller.admin = _sellerPendingUpdate.admin;
+                seller.admin = _sellerPendingUpdate.admin;
 
-              // Update seller id by admin mapping
-              delete lookups.sellerIdByAdmin[seller.admin];
-              lookups.sellerIdByAdmin[sender] = _sellerId;
+                // Update seller id by admin mapping
+                delete lookups.sellerIdByAdmin[seller.admin];
+                lookups.sellerIdByAdmin[sender] = _sellerId;
             }
 
             // Delete pending update admin
-            sellerPendingUpdate.admin = address(0);
-
+            _sellerPendingUpdate.admin = address(0);
         }
 
         // Aprove clerk address
-        if (sellerPendingUpdate.clerk == sender) {
+        if (_sellerPendingUpdate.clerk == sender) {
             // Update seller clerk
             if (seller.clerk != _sellerPendingUpdate.clerk) {
-              seller.clerk = _sellerPendingUpdate.clerk;
+                seller.clerk = _sellerPendingUpdate.clerk;
 
-              // Update seller id by clerk mapping
-              delete lookups.sellerIdByClerk[seller.clerk];
-              lookups.sellerIdByClerk[sender] = _sellerId;
+                // Update seller id by clerk mapping
+                delete lookups.sellerIdByClerk[seller.clerk];
+                lookups.sellerIdByClerk[sender] = _sellerId;
             }
 
             // Delete pending update clerk
-            sellerPendingUpdate.clerk = address(0);
-
+            _sellerPendingUpdate.clerk = address(0);
         }
 
         // Notify watchers of state change
-        emit SellerUpdated(_sellerId, seller, 0, sender);
+        emit SellerUpdateRoleApproved(_sellerId, seller, sender);
     }
 
-    function preSellerUpdateChecks(uint256 _sellerId, SellerUpdate calldata _seller) internal {
+    function preSellerUpdateChecks(uint256 _sellerId, SellerRoleUpdate memory _seller) internal view {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
         // Check that the operator passed in addresses are unique to one seller id across all roles -- not used or are used by this seller id.
         if (_seller.operator != address(0)) {
             uint256 check1 = lookups.sellerIdByOperator[_seller.operator];
             uint256 check2 = lookups.sellerIdByClerk[_seller.operator];
             uint256 check3 = lookups.sellerIdByAdmin[_seller.operator];
 
-             require(
-                (check1 == 0 || check1 == _seller.id) &&
-                    (check2 == 0 || check2 == _seller.id) &&
-                    (check3 == 0 || check3 == _seller.id),
+            require(
+                (check1 == 0 || check1 == _sellerId) &&
+                    (check2 == 0 || check2 == _sellerId) &&
+                    (check3 == 0 || check3 == _sellerId),
                 SELLER_ADDRESS_MUST_BE_UNIQUE
             );
         }
@@ -241,10 +244,10 @@ contract SellerHandlerFacet is SellerBase {
             uint256 check2 = lookups.sellerIdByClerk[_seller.clerk];
             uint256 check3 = lookups.sellerIdByAdmin[_seller.clerk];
 
-             require(
-                (check1 == 0 || check1 == _seller.id) &&
-                    (check2 == 0 || check2 == _seller.id) &&
-                    (check3 == 0 || check3 == _seller.id),
+            require(
+                (check1 == 0 || check1 == _sellerId) &&
+                    (check2 == 0 || check2 == _sellerId) &&
+                    (check3 == 0 || check3 == _sellerId),
                 SELLER_ADDRESS_MUST_BE_UNIQUE
             );
         }
@@ -255,9 +258,9 @@ contract SellerHandlerFacet is SellerBase {
             uint256 check2 = lookups.sellerIdByAdmin[_seller.admin];
             uint256 check3 = lookups.sellerIdByClerk[_seller.admin];
             require(
-                (check1 == 0 || check1 == _seller.id) &&
-                    (check2 == 0 || check2 == _seller.id) &&
-                    (check3 == 0 || check3 == _seller.id),
+                (check1 == 0 || check1 == _sellerId) &&
+                    (check2 == 0 || check2 == _sellerId) &&
+                    (check3 == 0 || check3 == _sellerId),
                 SELLER_ADDRESS_MUST_BE_UNIQUE
             );
         }

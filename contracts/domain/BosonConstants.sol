@@ -63,7 +63,7 @@ string constant INVALID_AUTH_TOKEN_TYPE = "Invalid AuthTokenType";
 string constant ADMIN_OR_AUTH_TOKEN = "An admin address or an auth token is required";
 string constant AUTH_TOKEN_MUST_BE_UNIQUE = "Auth token cannot be assigned to another entity of the same type";
 string constant INVALID_AGENT_FEE_PERCENTAGE = "Sum of agent fee percentage and protocol fee percentage should be <= max fee percentage limit";
-string constant NO_PENDING_ADDRESSES_UPDATE = "No pending addresses updates for the given seller";
+string constant NO_PENDING_SELLER_ROLE_UPDATE = "No pending role updates for the given seller";
 string constant AUTH_TOKEN_TYPE_MUST_BE_SET = "Auth token type must be set";
 
 // Revert Reasons: Offer related
