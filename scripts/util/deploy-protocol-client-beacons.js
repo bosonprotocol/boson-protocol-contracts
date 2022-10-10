@@ -31,7 +31,7 @@ async function deployProtocolClientBeacons(protocolClients, protocolClientArgs, 
   const ClientBeacon = await ethers.getContractFactory("BosonClientBeacon");
   const clientBeacon = await ClientBeacon.deploy(...protocolClientArgs, bosonVoucherImpl.address, {
     gasLimit: gasLimit,
-    gasPrice,
+    gasPrice: gasPrice,
   });
   await clientBeacon.deployTransaction.wait(confirmations);
 

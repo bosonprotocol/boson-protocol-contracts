@@ -45,7 +45,7 @@ async function deployProtocolHandlerFacets(diamond, facetNames, gasLimit, gasPri
     const facetCut = getFacetAddCut(deployedFacet.contract, [initFunction]);
     const transactionResponse = await diamondCutFacet.diamondCut([facetCut], deployedFacet.contract.address, callData, {
       gasLimit: gasLimit,
-      gasPrice,
+      gasPrice: gasPrice,
     });
     await transactionResponse.wait(confirmations);
   }

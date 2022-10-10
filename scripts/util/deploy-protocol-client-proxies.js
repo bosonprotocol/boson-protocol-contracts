@@ -31,7 +31,7 @@ async function deployProtocolClientProxies(protocolClients, gasLimit, gasPrice) 
 
   // Deploy the ClientProxy for BosonVoucher
   const ClientProxy = await ethers.getContractFactory("BeaconClientProxy");
-  const clientProxy = await ClientProxy.deploy({ gasLimit: gasLimit, gasPrice });
+  const clientProxy = await ClientProxy.deploy({ gasLimit: gasLimit, gasPrice: gasPrice });
   await clientProxy.deployTransaction.wait(confirmations);
 
   // init instead of constructors
