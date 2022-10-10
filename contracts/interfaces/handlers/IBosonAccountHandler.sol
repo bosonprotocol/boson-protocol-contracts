@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: GPL-3.0-or-laterIAccou
 pragma solidity 0.8.9;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
@@ -26,6 +26,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Seller is not active (if active == false)
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - AuthTokenType is Custom
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -110,6 +111,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Seller does not exist
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - AuthTokenType is Custom
      *
      * @param _seller - the fully populated seller struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
