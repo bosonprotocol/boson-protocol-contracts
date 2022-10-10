@@ -22,12 +22,8 @@ interface IBosonAccountEvents {
         BosonTypes.AuthToken authToken,
         address indexed executedBy
     );
-    event SellerUpdateRoleRequested(
-        uint256 indexed sellerId,
-        BosonTypes.SellerRoleUpdate seller,
-        address indexed executedBy
-    );
-    event SellerUpdateRoleApproved(uint256 indexed sellerId, BosonTypes.Seller seller, address indexed executedBy);
+    event SellerUpdateRolesRequested(uint256 indexed accountId, BosonTypes.Seller seller, address indexed executedBy);
+    event SellerUpdateRolesApproved(uint256 indexed sellerId, BosonTypes.Seller seller, address indexed executedBy);
     event BuyerCreated(uint256 indexed buyerId, BosonTypes.Buyer buyer, address indexed executedBy);
     event BuyerUpdated(uint256 indexed buyerId, BosonTypes.Buyer buyer, address indexed executedBy);
     event AgentUpdated(uint256 indexed agentId, BosonTypes.Agent agent, address indexed executedBy);
