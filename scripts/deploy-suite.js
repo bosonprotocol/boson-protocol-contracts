@@ -2,7 +2,7 @@ const environments = require("../environments");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const network = hre.network.name;
-const confirmations = environments.confirmations;
+const confirmations = network == "hardhat" ? 1 : environments.confirmations;
 const tipMultiplier = ethers.BigNumber.from(environments.tipMultiplier);
 const tipSuggestion = "1500000000"; // ethers.js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = ethers.BigNumber.from(tipSuggestion).mul(tipMultiplier);
@@ -126,7 +126,7 @@ async function main() {
   console.log(`\n💎 Granting UPGRADER role...`);
 
   // Temporarily grant UPGRADER role to deployer account
-  transactionResponse = await accessController.grantRole(Role.UPGRADER, deployer.address);
+  transactionResponse = await accessController.grantRole(Role.UPGRADER, deployer.address, { maxPriorityFeePerGas });
   await transactionResponse.wait(confirmations);
 
   console.log(`\n💎 Deploying and initializing config facet...`);
@@ -169,17 +169,22 @@ async function main() {
   const bosonConfigHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
   // Add Voucher NFT addresses to protocol config
-  transactionResponse = await bosonConfigHandler.setVoucherBeaconAddress(bosonClientBeacon.address);
+  transactionResponse = await bosonConfigHandler.setVoucherBeaconAddress(bosonClientBeacon.address, {
+    maxPriorityFeePerGas,
+  });
   await transactionResponse.wait(confirmations);
 
-  transactionResponse = await bosonConfigHandler.setBeaconProxyAddress(bosonVoucherProxy.address);
+  transactionResponse = await bosonConfigHandler.setBeaconProxyAddress(bosonVoucherProxy.address, {
+    maxPriorityFeePerGas,
+  });
   await transactionResponse.wait(confirmations);
 
   // Add NFT auth token addresses to protocol config
   // LENS
   transactionResponse = await bosonConfigHandler.setAuthTokenContract(
     AuthTokenType.Lens,
-    authTokenContracts.lensAddress
+    authTokenContracts.lensAddress,
+    { maxPriorityFeePerGas }
   );
   await transactionResponse.wait(confirmations);
 
@@ -188,7 +193,8 @@ async function main() {
   if (!(network === "polygon" || network === "mumbai")) {
     transactionResponse = await bosonConfigHandler.setAuthTokenContract(
       AuthTokenType.ENS,
-      authTokenContracts.ensAddress
+      authTokenContracts.ensAddress,
+      { maxPriorityFeePerGas }
     );
     await transactionResponse.wait(confirmations);
   }
@@ -196,17 +202,19 @@ async function main() {
   console.log(`✅ ConfigHandlerFacet updated with remaining post-initialization config.`);
 
   // Renounce temporarily granted UPGRADER role for deployer account
-  transactionResponse = await accessController.renounceRole(Role.UPGRADER, deployer.address);
+  transactionResponse = await accessController.renounceRole(Role.UPGRADER, deployer.address, { maxPriorityFeePerGas });
   await transactionResponse.wait(confirmations);
 
   // Grant PROTOCOL role to the ProtocolDiamond contract
-  transactionResponse = await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+  transactionResponse = await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address, {
+    maxPriorityFeePerGas,
+  });
   await transactionResponse.wait(confirmations);
 
   if (adminAddress.toLowerCase() != deployer.address.toLowerCase()) {
     // Grant ADMIN role to the specified admin address
     // Skip this step if adminAddress is the deployer
-    transactionResponse = await accessController.grantRole(Role.ADMIN, adminAddress);
+    transactionResponse = await accessController.grantRole(Role.ADMIN, adminAddress, { maxPriorityFeePerGas });
     await transactionResponse.wait(confirmations);
   }
 

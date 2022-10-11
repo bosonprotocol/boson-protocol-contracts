@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const environments = require("../../environments");
-const confirmations = environments.confirmations;
+const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
 
 /**
  * Deploy the Protocol Client implementation contracts

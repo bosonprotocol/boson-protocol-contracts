@@ -3,7 +3,7 @@ const ethers = hre.ethers;
 const fs = require("fs").promises;
 const environments = require("../../environments");
 const network = hre.network.name;
-const confirmations = environments.confirmations;
+const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Role = require("../domain/Role");
 
