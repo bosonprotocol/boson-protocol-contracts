@@ -94,7 +94,7 @@ contract SellerHandlerFacet is SellerBase {
         address sender = msgSender();
 
         // Check that caller is authorized to call this function
-        if (_authToken.tokenType != AuthTokenType.None) {
+        if (authToken.tokenType != AuthTokenType.None) {
             address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
             address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
             require(tokenIdOwner == sender, NOT_ADMIN);
@@ -117,11 +117,11 @@ contract SellerHandlerFacet is SellerBase {
             uint256 check = lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId];
             require(check == 0 || check == _seller.id, AUTH_TOKEN_MUST_BE_UNIQUE);
 
+            delete lookups.sellerIdByAuthToken[authToken.tokenType][authToken.tokenId];
+
             // Store auth token
             authToken.tokenId = _authToken.tokenId;
             authToken.tokenType = _authToken.tokenType;
-
-            delete lookups.sellerIdByAuthToken[authToken.tokenType][authToken.tokenId];
 
             // Store seller by auth token reference
             lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] = _seller.id;
@@ -159,7 +159,6 @@ contract SellerHandlerFacet is SellerBase {
         }
 
         if (needsApproval) {
-            lookups.sellerPendingUpdates[_seller.id].id = _seller.id;
             emit SellerUpdateRolesRequested(_seller.id, _seller, sender);
         }
 
