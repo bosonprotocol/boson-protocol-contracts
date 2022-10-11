@@ -16,7 +16,7 @@ const { deployProtocolClients } = require("./util/deploy-protocol-clients.js");
 const { deployProtocolConfigFacet } = require("./util/deploy-protocol-config-facet.js");
 const { deployProtocolHandlerFacets } = require("./util/deploy-protocol-handler-facets.js");
 const { verifyOnBlockExplorer, verifyOnTestEnv } = require("./util/report-verify-deployments");
-const { delay, deploymentComplete, writeContracts } = require("./util/utils");
+const { delay, deploymentComplete, getFees, writeContracts } = require("./util/utils");
 const AuthTokenType = require("../scripts/domain/AuthTokenType");
 
 /**
@@ -126,7 +126,11 @@ async function main() {
   console.log(`\n💎 Granting UPGRADER role...`);
 
   // Temporarily grant UPGRADER role to deployer account
-  transactionResponse = await accessController.grantRole(Role.UPGRADER, deployer.address, { maxPriorityFeePerGas });
+  transactionResponse = await accessController.grantRole(
+    Role.UPGRADER,
+    deployer.address,
+    await getFees(maxPriorityFeePerGas)
+  );
   await transactionResponse.wait(confirmations);
 
   console.log(`\n💎 Deploying and initializing config facet...`);
@@ -169,14 +173,16 @@ async function main() {
   const bosonConfigHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
   // Add Voucher NFT addresses to protocol config
-  transactionResponse = await bosonConfigHandler.setVoucherBeaconAddress(bosonClientBeacon.address, {
-    maxPriorityFeePerGas,
-  });
+  transactionResponse = await bosonConfigHandler.setVoucherBeaconAddress(
+    bosonClientBeacon.address,
+    await getFees(maxPriorityFeePerGas)
+  );
   await transactionResponse.wait(confirmations);
 
-  transactionResponse = await bosonConfigHandler.setBeaconProxyAddress(bosonVoucherProxy.address, {
-    maxPriorityFeePerGas,
-  });
+  transactionResponse = await bosonConfigHandler.setBeaconProxyAddress(
+    bosonVoucherProxy.address,
+    await getFees(maxPriorityFeePerGas)
+  );
   await transactionResponse.wait(confirmations);
 
   // Add NFT auth token addresses to protocol config
@@ -184,7 +190,7 @@ async function main() {
   transactionResponse = await bosonConfigHandler.setAuthTokenContract(
     AuthTokenType.Lens,
     authTokenContracts.lensAddress,
-    { maxPriorityFeePerGas }
+    await getFees(maxPriorityFeePerGas)
   );
   await transactionResponse.wait(confirmations);
 
@@ -194,7 +200,7 @@ async function main() {
     transactionResponse = await bosonConfigHandler.setAuthTokenContract(
       AuthTokenType.ENS,
       authTokenContracts.ensAddress,
-      { maxPriorityFeePerGas }
+      await getFees(maxPriorityFeePerGas)
     );
     await transactionResponse.wait(confirmations);
   }
@@ -202,19 +208,29 @@ async function main() {
   console.log(`✅ ConfigHandlerFacet updated with remaining post-initialization config.`);
 
   // Renounce temporarily granted UPGRADER role for deployer account
-  transactionResponse = await accessController.renounceRole(Role.UPGRADER, deployer.address, { maxPriorityFeePerGas });
+  transactionResponse = await accessController.renounceRole(
+    Role.UPGRADER,
+    deployer.address,
+    await getFees(maxPriorityFeePerGas)
+  );
   await transactionResponse.wait(confirmations);
 
   // Grant PROTOCOL role to the ProtocolDiamond contract
-  transactionResponse = await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address, {
-    maxPriorityFeePerGas,
-  });
+  transactionResponse = await accessController.grantRole(
+    Role.PROTOCOL,
+    protocolDiamond.address,
+    await getFees(maxPriorityFeePerGas)
+  );
   await transactionResponse.wait(confirmations);
 
   if (adminAddress.toLowerCase() != deployer.address.toLowerCase()) {
     // Grant ADMIN role to the specified admin address
     // Skip this step if adminAddress is the deployer
-    transactionResponse = await accessController.grantRole(Role.ADMIN, adminAddress, { maxPriorityFeePerGas });
+    transactionResponse = await accessController.grantRole(
+      Role.ADMIN,
+      adminAddress,
+      await getFees(maxPriorityFeePerGas)
+    );
     await transactionResponse.wait(confirmations);
   }
 

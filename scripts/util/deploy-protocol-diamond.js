@@ -4,6 +4,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const environments = require("../../environments");
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
+const { getFees } = require("./utils");
 
 /**
  * Deploy the ProtocolDiamond
@@ -22,22 +23,22 @@ async function deployProtocolDiamond(maxPriorityFeePerGas) {
 
   // Deploy the AccessController contract
   const AccessController = await ethers.getContractFactory("AccessController");
-  const accessController = await AccessController.deploy({ maxPriorityFeePerGas });
+  const accessController = await AccessController.deploy(await getFees(maxPriorityFeePerGas));
   await accessController.deployTransaction.wait(confirmations);
 
   // Diamond Loupe Facet
   const DiamondLoupeFacet = await ethers.getContractFactory("DiamondLoupeFacet");
-  const dlf = await DiamondLoupeFacet.deploy({ maxPriorityFeePerGas });
+  const dlf = await DiamondLoupeFacet.deploy(await getFees(maxPriorityFeePerGas));
   await dlf.deployTransaction.wait(confirmations);
 
   // Diamond Cut Facet
   const DiamondCutFacet = await ethers.getContractFactory("DiamondCutFacet");
-  const dcf = await DiamondCutFacet.deploy({ maxPriorityFeePerGas });
+  const dcf = await DiamondCutFacet.deploy(await getFees(maxPriorityFeePerGas));
   await dcf.deployTransaction.wait(confirmations);
 
   // ERC165 Facet
   const ERC165Facet = await ethers.getContractFactory("ERC165Facet");
-  const erc165f = await ERC165Facet.deploy({ maxPriorityFeePerGas });
+  const erc165f = await ERC165Facet.deploy(await getFees(maxPriorityFeePerGas));
   await erc165f.deployTransaction.wait(confirmations);
 
   // Arguments for Diamond constructor
@@ -49,7 +50,7 @@ async function deployProtocolDiamond(maxPriorityFeePerGas) {
 
   // Deploy Protocol Diamond
   const ProtocolDiamond = await ethers.getContractFactory("ProtocolDiamond");
-  const protocolDiamond = await ProtocolDiamond.deploy(...diamondArgs, { maxPriorityFeePerGas });
+  const protocolDiamond = await ProtocolDiamond.deploy(...diamondArgs, await getFees(maxPriorityFeePerGas));
   await protocolDiamond.deployTransaction.wait(confirmations);
 
   return [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs];

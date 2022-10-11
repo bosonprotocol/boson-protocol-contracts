@@ -13,6 +13,7 @@ const {
 } = require("../../scripts/util/diamond-utils.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
+const { maxPriorityFeePerGas } = require("../util/constants");
 
 /**
  * Test the Protocol Diamond contract and its core facets
@@ -59,7 +60,9 @@ describe("ProtocolDiamond", async function () {
     [deployer, admin, upgrader, rando] = await ethers.getSigners();
 
     // Deploy the Diamond
-    [protocolDiamond, diamondLoupe, diamondCut, erc165, accessController] = await deployProtocolDiamond();
+    [protocolDiamond, diamondLoupe, diamondCut, erc165, accessController] = await deployProtocolDiamond(
+      maxPriorityFeePerGas
+    );
 
     // Cast Diamond to DiamondLoupeFacet
     loupeFacetViaDiamond = await ethers.getContractAt("DiamondLoupeFacet", protocolDiamond.address);

@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const environments = require("../../environments");
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
+const { getFees } = require("./utils");
 
 /**
  * Deploy the Protocol Client Proxy contracts
@@ -30,7 +31,7 @@ async function deployProtocolClientProxies(protocolClients, maxPriorityFeePerGas
 
   // Deploy the ClientProxy for BosonVoucher
   const ClientProxy = await ethers.getContractFactory("BeaconClientProxy");
-  const clientProxy = await ClientProxy.deploy({ maxPriorityFeePerGas });
+  const clientProxy = await ClientProxy.deploy(await getFees(maxPriorityFeePerGas));
   await clientProxy.deployTransaction.wait(confirmations);
 
   // init instead of constructors
