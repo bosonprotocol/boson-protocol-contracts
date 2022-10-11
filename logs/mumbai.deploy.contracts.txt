@@ -141,3 +141,473 @@ for verification on the block explorer. Waiting for verification result...
 Note: The verification process was stopped because all of the contracts for rc.3 are already verified on Mumbai since
       we already deployed rc.3 for the test env
 
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Tue Oct 11 2022 13:57:06 GMT+0200 (Central European Summer Time)
+🔱 Deployer account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0xAA34Bb04B4Efbe7D7733b92F8F585F4803987d04
+✅ DiamondLoupeFacet deployed to: 0x959C39BF5859263FC6efb8b871dA3e6B9e8CE500
+✅ DiamondCutFacet deployed to: 0xbA555eE251357b202eD9C5F67f2AB8f23f39d6A0
+✅ ERC165Facet deployed to: 0x1eF7f64a280F7a6731a76fCfc5951a03e35F0FAe
+✅ ProtocolDiamond deployed to: 0x785a225EBAC1b600cA3170C6c7fA3488A203Fc21
+
+💎 Granting UPGRADER role...
+
+💎 Deploying and initializing config facet...
+✅ ConfigHandlerFacet deployed to: 0x5FD0c06aa761DF63a1CC71eB773Aa27491C30181
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0xCE837BfaF8DD496e632F49562388de4070BC89d3
+✅ SellerHandlerFacet deployed to: 0x6f7C5ed68e1950eD9df735518a7b6254694F331e
+✅ BuyerHandlerFacet deployed to: 0xe2439C0Bee3e3764a73113dd0b1E75408392166E
+✅ DisputeResolverHandlerFacet deployed to: 0x3572Cff371582b917861F78F178FD4CA720B40E6
+✅ AgentHandlerFacet deployed to: 0xfae9F984E8F632634e6e1d979139770537Bca4Fe
+✅ BundleHandlerFacet deployed to: 0x330Ef585001d9E64c62381361c577f6d7cDf0c7e
+✅ DisputeHandlerFacet deployed to: 0x0B6E4A844ca54841240e79a87fCCC447EF77D197
+✅ ExchangeHandlerFacet deployed to: 0x1A4c25cD4c7529D7b21534d858260e207f1E8d2C
+✅ FundsHandlerFacet deployed to: 0x5980CE2C787B9033Ff578c4A60676d35C09887a6
+✅ GroupHandlerFacet deployed to: 0x3D05697E821A91c38AF1ed145B6f667E68d5aC8b
+✅ MetaTransactionsHandlerFacet deployed to: 0x74849F760f75eDB925b10735C14DFC260ED5b114
+✅ OfferHandlerFacet deployed to: 0xe2984Be61aFbbD10422aF5f2BE9E109F838fb504
+✅ OrchestrationHandlerFacet deployed to: 0x2073FF5fd688814a4E40206cCd8B5C5c12DBaffC
+✅ TwinHandlerFacet deployed to: 0x67cc63AE207Ef298cD56F6B433Dc6E348570be03
+✅ PauseHandlerFacet deployed to: 0x8528d132331Ec469A2d7CE412A7089Feb54392EC
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0x12b2194bdBDabE12B723c0865714327f940eFb63
+✅ BosonVoucher Beacon deployed to: 0xc3552C2F8331Be2fFAA1e80504A0813C3d8816C5
+✅ BosonVoucher Proxy deployed to: 0xaC991233dB3EDAB7f5605ceb111738D5dd7B8484
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+⏲ Pause one minute, allowing deployments to propagate before verifying..
+🔍 Verifying contracts on block explorer...
+
+📋 Verifying AccessController
+contract object in verify function  {
+  name: 'AccessController',
+  address: '0xAA34Bb04B4Efbe7D7733b92F8F585F4803987d04',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/access/AccessController.sol:AccessController at 0xAA34Bb04B4Efbe7D7733b92F8F585F4803987d04
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify AccessController on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying DiamondLoupeFacet
+contract object in verify function  {
+  name: 'DiamondLoupeFacet',
+  address: '0x959C39BF5859263FC6efb8b871dA3e6B9e8CE500',
+  args: []
+}
+Compiled 128 Solidity files successfully
+Successfully submitted source code for contract
+contracts/diamond/facets/DiamondLoupeFacet.sol:DiamondLoupeFacet at 0x959C39BF5859263FC6efb8b871dA3e6B9e8CE500
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify DiamondLoupeFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying DiamondCutFacet
+contract object in verify function  {
+  name: 'DiamondCutFacet',
+  address: '0xbA555eE251357b202eD9C5F67f2AB8f23f39d6A0',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/diamond/facets/DiamondCutFacet.sol:DiamondCutFacet at 0xbA555eE251357b202eD9C5F67f2AB8f23f39d6A0
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify DiamondCutFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying ERC165Facet
+contract object in verify function  {
+  name: 'ERC165Facet',
+  address: '0x1eF7f64a280F7a6731a76fCfc5951a03e35F0FAe',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/diamond/facets/ERC165Facet.sol:ERC165Facet at 0x1eF7f64a280F7a6731a76fCfc5951a03e35F0FAe
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify ERC165Facet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying ProtocolDiamond
+contract object in verify function  {
+  name: 'ProtocolDiamond',
+  address: '0x785a225EBAC1b600cA3170C6c7fA3488A203Fc21',
+  args: [
+    '0xAA34Bb04B4Efbe7D7733b92F8F585F4803987d04',
+    [ [Array], [Array], [Array] ],
+    [ '0x48e2b093', '0x1f931c1c', '0x01ffc9a7' ]
+  ]
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/diamond/ProtocolDiamond.sol:ProtocolDiamond at 0x785a225EBAC1b600cA3170C6c7fA3488A203Fc21
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify ProtocolDiamond on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying ConfigHandlerFacet
+contract object in verify function  {
+  name: 'ConfigHandlerFacet',
+  address: '0x5FD0c06aa761DF63a1CC71eB773Aa27491C30181',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/ConfigHandlerFacet.sol:ConfigHandlerFacet at 0x5FD0c06aa761DF63a1CC71eB773Aa27491C30181
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify ConfigHandlerFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying AccountHandlerFacet
+contract object in verify function  {
+  name: 'AccountHandlerFacet',
+  address: '0xCE837BfaF8DD496e632F49562388de4070BC89d3',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/AccountHandlerFacet.sol:AccountHandlerFacet at 0xCE837BfaF8DD496e632F49562388de4070BC89d3
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract AccountHandlerFacet on Etherscan.
+https://mumbai.polygonscan.com/address/0xCE837BfaF8DD496e632F49562388de4070BC89d3#code
+
+📋 Verifying SellerHandlerFacet
+contract object in verify function  {
+  name: 'SellerHandlerFacet',
+  address: '0x6f7C5ed68e1950eD9df735518a7b6254694F331e',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/SellerHandlerFacet.sol:SellerHandlerFacet at 0x6f7C5ed68e1950eD9df735518a7b6254694F331e
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract SellerHandlerFacet on Etherscan.
+https://mumbai.polygonscan.com/address/0x6f7C5ed68e1950eD9df735518a7b6254694F331e#code
+
+📋 Verifying BuyerHandlerFacet
+contract object in verify function  {
+  name: 'BuyerHandlerFacet',
+  address: '0xe2439C0Bee3e3764a73113dd0b1E75408392166E',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/BuyerHandlerFacet.sol:BuyerHandlerFacet at 0xe2439C0Bee3e3764a73113dd0b1E75408392166E
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify BuyerHandlerFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying DisputeResolverHandlerFacet
+contract object in verify function  {
+  name: 'DisputeResolverHandlerFacet',
+  address: '0x3572Cff371582b917861F78F178FD4CA720B40E6',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/DisputeResolverHandlerFacet.sol:DisputeResolverHandlerFacet at 0x3572Cff371582b917861F78F178FD4CA720B40E6
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify DisputeResolverHandlerFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying AgentHandlerFacet
+contract object in verify function  {
+  name: 'AgentHandlerFacet',
+  address: '0xfae9F984E8F632634e6e1d979139770537Bca4Fe',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/AgentHandlerFacet.sol:AgentHandlerFacet at 0xfae9F984E8F632634e6e1d979139770537Bca4Fe
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify AgentHandlerFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying BundleHandlerFacet
+contract object in verify function  {
+  name: 'BundleHandlerFacet',
+  address: '0x330Ef585001d9E64c62381361c577f6d7cDf0c7e',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/BundleHandlerFacet.sol:BundleHandlerFacet at 0x330Ef585001d9E64c62381361c577f6d7cDf0c7e
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify BundleHandlerFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying DisputeHandlerFacet
+contract object in verify function  {
+  name: 'DisputeHandlerFacet',
+  address: '0x0B6E4A844ca54841240e79a87fCCC447EF77D197',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/DisputeHandlerFacet.sol:DisputeHandlerFacet at 0x0B6E4A844ca54841240e79a87fCCC447EF77D197
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify DisputeHandlerFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying ExchangeHandlerFacet
+contract object in verify function  {
+  name: 'ExchangeHandlerFacet',
+  address: '0x1A4c25cD4c7529D7b21534d858260e207f1E8d2C',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/ExchangeHandlerFacet.sol:ExchangeHandlerFacet at 0x1A4c25cD4c7529D7b21534d858260e207f1E8d2C
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract ExchangeHandlerFacet on Etherscan.
+https://mumbai.polygonscan.com/address/0x1A4c25cD4c7529D7b21534d858260e207f1E8d2C#code
+
+📋 Verifying FundsHandlerFacet
+contract object in verify function  {
+  name: 'FundsHandlerFacet',
+  address: '0x5980CE2C787B9033Ff578c4A60676d35C09887a6',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/FundsHandlerFacet.sol:FundsHandlerFacet at 0x5980CE2C787B9033Ff578c4A60676d35C09887a6
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify FundsHandlerFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying GroupHandlerFacet
+contract object in verify function  {
+  name: 'GroupHandlerFacet',
+  address: '0x3D05697E821A91c38AF1ed145B6f667E68d5aC8b',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/GroupHandlerFacet.sol:GroupHandlerFacet at 0x3D05697E821A91c38AF1ed145B6f667E68d5aC8b
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify GroupHandlerFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying MetaTransactionsHandlerFacet
+contract object in verify function  {
+  name: 'MetaTransactionsHandlerFacet',
+  address: '0x74849F760f75eDB925b10735C14DFC260ED5b114',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/MetaTransactionsHandlerFacet.sol:MetaTransactionsHandlerFacet at 0x74849F760f75eDB925b10735C14DFC260ED5b114
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify MetaTransactionsHandlerFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying OfferHandlerFacet
+contract object in verify function  {
+  name: 'OfferHandlerFacet',
+  address: '0xe2984Be61aFbbD10422aF5f2BE9E109F838fb504',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/OfferHandlerFacet.sol:OfferHandlerFacet at 0xe2984Be61aFbbD10422aF5f2BE9E109F838fb504
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify OfferHandlerFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying OrchestrationHandlerFacet
+contract object in verify function  {
+  name: 'OrchestrationHandlerFacet',
+  address: '0x2073FF5fd688814a4E40206cCd8B5C5c12DBaffC',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/OrchestrationHandlerFacet.sol:OrchestrationHandlerFacet at 0x2073FF5fd688814a4E40206cCd8B5C5c12DBaffC
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract OrchestrationHandlerFacet on Etherscan.
+https://mumbai.polygonscan.com/address/0x2073FF5fd688814a4E40206cCd8B5C5c12DBaffC#code
+
+📋 Verifying TwinHandlerFacet
+contract object in verify function  {
+  name: 'TwinHandlerFacet',
+  address: '0x67cc63AE207Ef298cD56F6B433Dc6E348570be03',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/TwinHandlerFacet.sol:TwinHandlerFacet at 0x67cc63AE207Ef298cD56F6B433Dc6E348570be03
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify TwinHandlerFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying PauseHandlerFacet
+contract object in verify function  {
+  name: 'PauseHandlerFacet',
+  address: '0x8528d132331Ec469A2d7CE412A7089Feb54392EC',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/PauseHandlerFacet.sol:PauseHandlerFacet at 0x8528d132331Ec469A2d7CE412A7089Feb54392EC
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify PauseHandlerFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying BosonVoucher Logic
+contract object in verify function  {
+  name: 'BosonVoucher Logic',
+  address: '0x12b2194bdBDabE12B723c0865714327f940eFb63',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/clients/voucher/BosonVoucher.sol:BosonVoucher at 0x12b2194bdBDabE12B723c0865714327f940eFb63
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract BosonVoucher on Etherscan.
+https://mumbai.polygonscan.com/address/0x12b2194bdBDabE12B723c0865714327f940eFb63#code
+
+📋 Verifying BosonVoucher Beacon
+contract object in verify function  {
+  name: 'BosonVoucher Beacon',
+  address: '0xc3552C2F8331Be2fFAA1e80504A0813C3d8816C5',
+  args: [
+    '0x785a225EBAC1b600cA3170C6c7fA3488A203Fc21',
+    '0x12b2194bdBDabE12B723c0865714327f940eFb63'
+  ]
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/clients/proxy/BosonClientBeacon.sol:BosonClientBeacon at 0xc3552C2F8331Be2fFAA1e80504A0813C3d8816C5
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify BosonVoucher Beacon on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying BosonVoucher Proxy
+contract object in verify function  {
+  name: 'BosonVoucher Proxy',
+  address: '0xaC991233dB3EDAB7f5605ceb111738D5dd7B8484',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/clients/proxy/BeaconClientProxy.sol:BeaconClientProxy at 0xaC991233dB3EDAB7f5605ceb111738D5dd7B8484
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify BosonVoucher Proxy on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+
+Compiled 128 Solidity files successfully
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Tue Oct 11 2022 15:17:49 GMT+0200 (Central European Summer Time)
+🔱 Deployer account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x1D391f6e60FeE7f31D22813b037eD7875BeC04F4
+✅ DiamondLoupeFacet deployed to: 0x202DEfcad2ED5012C8EDF198D27936fbd3bCbC8D
+✅ DiamondCutFacet deployed to: 0xe7DF910475C611F686fC8cB5fB6141F5B1530FA8
+✅ ERC165Facet deployed to: 0xA9F78ba25c4d25F99F417eC5Ff73c6EF7d5025d7
+✅ ProtocolDiamond deployed to: 0x5099CA7839e1580bD0C12FC5FECfA45147886BeB
+
+💎 Granting UPGRADER role...
+
+💎 Deploying and initializing config facet...
+✅ ConfigHandlerFacet deployed to: 0xcf1414C724669233603C00acA360cCae72b7b817
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0xF160a67b6426C9A443AB56Bfa545AEC1ab68f3f1
+✅ SellerHandlerFacet deployed to: 0xd1f9DBaBD1C0DF59C885Bb16fD40e4185E360584
+✅ BuyerHandlerFacet deployed to: 0xf11Cf1Fc850bCF0936Fd4ba308CB8E71909799fc
+✅ DisputeResolverHandlerFacet deployed to: 0x758dBA0E8b873e0187cfe67733B3e95E087EdAaC
+✅ AgentHandlerFacet deployed to: 0x2d2A4CF61699ac539b392CF1555fe3f42A7CAfF9
+✅ BundleHandlerFacet deployed to: 0x46fF888CFC5ad04174A32a1Ea5702a225A25f9ec
+✅ DisputeHandlerFacet deployed to: 0xAb0C4143D89354D963C557EEEe20f483ec9964c4
+✅ ExchangeHandlerFacet deployed to: 0x0d54D64aadd92671A02205aBCCCCFa9B30b906e7
+✅ FundsHandlerFacet deployed to: 0x126bC418B0F765207A526aE1Efbb735F065E5957
+✅ GroupHandlerFacet deployed to: 0x38Ab812B01b142851F53785c09B7fdE18f50c67D
+✅ MetaTransactionsHandlerFacet deployed to: 0xa31895aF7728E878Fb573f8637e3bE1aB93F6138
+✅ OfferHandlerFacet deployed to: 0xC7dF108D9e9a0691A86F70446577E615E8f8f6Cf
+✅ OrchestrationHandlerFacet deployed to: 0x59594262b12a5280aE5B3987F96F792931b1869a
+✅ TwinHandlerFacet deployed to: 0x431B569ad65dB5440744E3843e11A8d7D0187C41
+✅ PauseHandlerFacet deployed to: 0x5feE2aF9111a5c54517700abc0d96295e5332c81
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0x4595b3090922Ec5F59baFa32d60d740Fc86261De
+✅ BosonVoucher Beacon deployed to: 0xed8e979C6E1E4aBa280fa830628Db949D043c5fa
+✅ BosonVoucher Proxy deployed to: 0x9548cEaA669261479e1B1d04796F7F1c24596CD8
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+⏲ Pause one minute, allowing deployments to propagate before verifying..
+🔍 Verifying contracts on block explorer...
+
+📋 Verifying AccessController
+contract object in verify function  {
+  name: 'AccessController',
+  address: '0x1D391f6e60FeE7f31D22813b037eD7875BeC04F4',
+  args: []
+}
+Nothing to compile
+
+Note: Terminating verification. Because this deployment deploys the same bytecode for the staging env,
+      contracts were already previously verified. Verification will fail with an "Already Verified" error
