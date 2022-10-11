@@ -1,5 +1,5 @@
-// Some periods in milliseconds
-const oneDay = 86400; // 1 day in seconds
+// Some periods in seconds
+const oneDay = 86400; //  1 day in seconds
 const ninetyDays = oneDay * 90; // 90 days in seconds
 const oneWeek = oneDay * 7; // 7 days in seconds
 const oneMonth = oneDay * 31; // 31 days in seconds
