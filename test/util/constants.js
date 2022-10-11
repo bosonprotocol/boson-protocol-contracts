@@ -2,11 +2,11 @@ const environments = require("../../environments");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 
-// Some periods in milliseconds
+// Some periods in seconds
 const oneDay = 86400; //  1 day in seconds
 const ninetyDays = oneDay * 90; // 90 days in seconds
-const oneWeek = 604800; //  7 days in seconds
-const oneMonth = 2678400; // 31 days in seconds
+const oneWeek = oneDay * 7; // 7 days in seconds
+const oneMonth = oneDay * 31; // 31 days in seconds
 const VOUCHER_NAME = "Boson Voucher";
 const VOUCHER_SYMBOL = "BOSON_VOUCHER";
 
