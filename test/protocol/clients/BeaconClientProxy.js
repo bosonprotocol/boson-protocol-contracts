@@ -1,9 +1,9 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 
-const { gasLimit } = require("../../../environments");
 const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { expect } = require("chai");
+const { maxPriorityFeePerGas } = require("../../util/constants");
 
 describe("BeaconClientProxy", function () {
   let protocol, rando;
@@ -15,7 +15,7 @@ describe("BeaconClientProxy", function () {
 
     // deploy proxy
     const protocolClientArgs = [protocol.address];
-    const [, , proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [, , proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
     [proxy] = proxies;
   });
 

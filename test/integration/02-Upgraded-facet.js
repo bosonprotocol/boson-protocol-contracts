@@ -25,7 +25,7 @@ const {
   prepareDataSignatureParameters,
   applyPercentage,
 } = require("../util/utils.js");
-const { oneWeek, oneMonth } = require("../util/constants");
+const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 
@@ -82,7 +82,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -94,21 +94,25 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, [
-      "AccountHandlerFacet",
-      "AgentHandlerFacet",
-      "SellerHandlerFacet",
-      "BuyerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "FundsHandlerFacet",
-      "DisputeHandlerFacet",
-    ]);
+    await deployProtocolHandlerFacets(
+      protocolDiamond,
+      [
+        "AccountHandlerFacet",
+        "AgentHandlerFacet",
+        "SellerHandlerFacet",
+        "BuyerHandlerFacet",
+        "DisputeResolverHandlerFacet",
+        "ExchangeHandlerFacet",
+        "OfferHandlerFacet",
+        "FundsHandlerFacet",
+        "DisputeHandlerFacet",
+      ],
+      maxPriorityFeePerGas
+    );
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
-    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
     const [beacon] = beacons;
     const [proxy] = proxies;
 
@@ -152,7 +156,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     ];
 
     // Deploy the Config facet, initializing the protocol config
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);

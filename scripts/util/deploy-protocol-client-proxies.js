@@ -1,7 +1,8 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const environments = require("../../environments");
-const confirmations = environments.confirmations;
+const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
+const { getFees } = require("./utils");
 
 /**
  * Deploy the Protocol Client Proxy contracts
@@ -19,10 +20,10 @@ const confirmations = environments.confirmations;
  *
  * @param protocolClients
  * @param protocolClientArgs
- * @param gasLimit - gasLimit for transactions
+ * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolClientProxies(protocolClients, gasLimit) {
+async function deployProtocolClientProxies(protocolClients, maxPriorityFeePerGas) {
   let bosonClientBeacon;
 
   // Destructure the protocol client implementations
@@ -30,11 +31,14 @@ async function deployProtocolClientProxies(protocolClients, gasLimit) {
 
   // Deploy the ClientProxy for BosonVoucher
   const ClientProxy = await ethers.getContractFactory("BeaconClientProxy");
-  const clientProxy = await ClientProxy.deploy({ gasLimit });
+  const clientProxy = await ClientProxy.deploy(await getFees(maxPriorityFeePerGas));
   await clientProxy.deployTransaction.wait(confirmations);
 
   // init instead of constructors
-  let transactionResponse = await clientProxy.initialize(bosonClientBeacon.address);
+  let transactionResponse = await clientProxy.initialize(
+    bosonClientBeacon.address,
+    await getFees(maxPriorityFeePerGas)
+  );
   await transactionResponse.wait(confirmations);
 
   return [clientProxy];

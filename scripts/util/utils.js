@@ -1,4 +1,5 @@
 const hre = require("hardhat");
+const ethers = hre.ethers;
 const fs = require("fs");
 const packageFile = require("../../package.json");
 
@@ -44,8 +45,28 @@ function readContracts(chainId, env) {
   return JSON.parse(fs.readFileSync(getAddressesFilePath(chainId, env), "utf-8"));
 }
 
+async function getBaseFee() {
+  if (hre.network.name == "hardhat") {
+    // getBlock("pending") doesn't work with hardhat. This is the value one gets by calling getBlock("0")
+    return "1000000000";
+  }
+  const { baseFeePerGas } = await ethers.provider.getBlock("pending");
+  return baseFeePerGas;
+}
+
+async function getMaxFeePerGas(maxPriorityFeePerGas) {
+  return maxPriorityFeePerGas.add(await getBaseFee());
+}
+
+async function getFees(maxPriorityFeePerGas) {
+  return { maxPriorityFeePerGas, maxFeePerGas: await getMaxFeePerGas(maxPriorityFeePerGas) };
+}
+
 exports.getAddressesFilePath = getAddressesFilePath;
 exports.writeContracts = writeContracts;
 exports.readContracts = readContracts;
 exports.delay = delay;
 exports.deploymentComplete = deploymentComplete;
+exports.getBaseFee = getBaseFee;
+exports.getMaxFeePerGas = getMaxFeePerGas;
+exports.getFees = getFees;

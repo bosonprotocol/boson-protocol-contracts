@@ -7,7 +7,7 @@ const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.j
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
-const { oneWeek, oneMonth } = require("../util/constants");
+const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 
 /**
@@ -33,7 +33,7 @@ describe("IBosonConfigHandler", function () {
     maxResolutionPeriod,
     minDisputePeriod;
   let protocolFeePercentage, protocolFeeFlatBoson;
-  let erc165, protocolDiamond, accessController, configHandler, gasLimit;
+  let erc165, protocolDiamond, accessController, configHandler;
   let authTokenContract;
 
   before(async function () {
@@ -52,7 +52,7 @@ describe("IBosonConfigHandler", function () {
     proxy = accounts[5];
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -119,7 +119,11 @@ describe("IBosonConfigHandler", function () {
           },
         ];
 
-        const { cutTransaction } = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+        const { cutTransaction } = await deployProtocolConfigFacet(
+          protocolDiamond,
+          protocolConfig,
+          maxPriorityFeePerGas
+        );
 
         await expect(cutTransaction)
           .to.emit(configHandler, "TokenAddressChanged")
@@ -239,7 +243,7 @@ describe("IBosonConfigHandler", function () {
           buyerEscalationDepositPercentage,
         },
       ];
-      await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+      await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
     });
 
     // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)

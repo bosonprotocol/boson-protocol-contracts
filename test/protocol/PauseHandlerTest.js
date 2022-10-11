@@ -8,6 +8,7 @@ const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.j
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
+const { maxPriorityFeePerGas } = require("../util/constants");
 
 /**
  *  Test the Boson Pause Handler interface
@@ -33,7 +34,7 @@ describe("IBosonPauseHandler", function () {
     [deployer, pauser, rando] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -42,7 +43,7 @@ describe("IBosonPauseHandler", function () {
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, ["PauseHandlerFacet"]);
+    await deployProtocolHandlerFacets(protocolDiamond, ["PauseHandlerFacet"], maxPriorityFeePerGas);
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);

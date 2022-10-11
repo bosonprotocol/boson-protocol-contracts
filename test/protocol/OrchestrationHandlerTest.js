@@ -27,7 +27,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { getEvent, applyPercentage, calculateContractAddress } = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
+const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL, maxPriorityFeePerGas } = require("../util/constants");
 const {
   mockTwin,
   mockOffer,
@@ -123,7 +123,7 @@ describe("IBosonOrchestrationHandler", function () {
     operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -136,19 +136,23 @@ describe("IBosonOrchestrationHandler", function () {
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, [
-      "SellerHandlerFacet",
-      "AgentHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "GroupHandlerFacet",
-      "TwinHandlerFacet",
-      "BundleHandlerFacet",
-      "OrchestrationHandlerFacet",
-      "PauseHandlerFacet",
-      "AccountHandlerFacet",
-    ]);
+    await deployProtocolHandlerFacets(
+      protocolDiamond,
+      [
+        "SellerHandlerFacet",
+        "AgentHandlerFacet",
+        "DisputeResolverHandlerFacet",
+        "ExchangeHandlerFacet",
+        "OfferHandlerFacet",
+        "GroupHandlerFacet",
+        "TwinHandlerFacet",
+        "BundleHandlerFacet",
+        "OrchestrationHandlerFacet",
+        "PauseHandlerFacet",
+        "AccountHandlerFacet",
+      ],
+      maxPriorityFeePerGas
+    );
 
     // Deploy the mock tokens
     [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens(gasLimit);
@@ -160,7 +164,7 @@ describe("IBosonOrchestrationHandler", function () {
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
-    const [, [beacon], [proxy]] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [, [beacon], [proxy]] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
@@ -195,7 +199,7 @@ describe("IBosonOrchestrationHandler", function () {
         buyerEscalationDepositPercentage,
       },
     ];
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);

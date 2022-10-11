@@ -2,7 +2,8 @@ const { getFacetAddCut } = require("./diamond-utils.js");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const environments = require("../../environments");
-const confirmations = environments.confirmations;
+const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
+const { getFees } = require("./utils");
 
 /**
  * Cut the Protocol Handler facets
@@ -11,17 +12,17 @@ const confirmations = environments.confirmations;
  *
  * @param diamond
  * @param facetNames - list of facet names to deploy and cut
- * @param gasLimit - gasLimit for transactions
+ * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolHandlerFacets(diamond, facetNames, gasLimit) {
+async function deployProtocolHandlerFacets(diamond, facetNames, maxPriorityFeePerGas) {
   let deployedFacets = [];
 
   // Deploy all the no-arg initializer handler facets
   while (facetNames.length) {
     let facetName = facetNames.shift();
     let FacetContractFactory = await ethers.getContractFactory(facetName);
-    const facetContract = await FacetContractFactory.deploy({ gasLimit });
+    const facetContract = await FacetContractFactory.deploy(await getFees(maxPriorityFeePerGas));
     await facetContract.deployTransaction.wait(confirmations);
 
     deployedFacets.push({
@@ -42,9 +43,12 @@ async function deployProtocolHandlerFacets(diamond, facetNames, gasLimit) {
   for (let i = 0; i < deployedFacets.length; i++) {
     const deployedFacet = deployedFacets[i];
     const facetCut = getFacetAddCut(deployedFacet.contract, [initFunction]);
-    const transactionResponse = await diamondCutFacet.diamondCut([facetCut], deployedFacet.contract.address, callData, {
-      gasLimit,
-    });
+    const transactionResponse = await diamondCutFacet.diamondCut(
+      [facetCut],
+      deployedFacet.contract.address,
+      callData,
+      await getFees(maxPriorityFeePerGas)
+    );
     await transactionResponse.wait(confirmations);
   }
 
