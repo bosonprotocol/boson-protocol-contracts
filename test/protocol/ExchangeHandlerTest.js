@@ -767,7 +767,7 @@ describe("IBosonExchangeHandler", function () {
 
           // set validFrom date in the past
           offerDates.validFrom = ethers.BigNumber.from(now)
-            .add((oneMonth) * 6)
+            .add(oneMonth * 6)
             .toString(); // 6 months in the future
           offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom).add(10).toString(); // just after the valid from so it succeeds.
 
