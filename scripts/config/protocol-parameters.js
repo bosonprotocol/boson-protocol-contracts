@@ -8,23 +8,23 @@ const { oneWeek, ninetyDays } = require("../../test/util/constants");
 module.exports = {
   // Protocol configuration params
   fees: {
-    percentage: "150", // 1.5%  : 150
+    percentage: "50", // 0.5%  : 50
     flatBoson: "0",
-    buyerEscalationDepositPercentage: "100", // 1%
+    buyerEscalationDepositPercentage: "1000", // 10%
   },
   limits: {
-    maxExchangesPerBatch: "100",
-    maxOffersPerGroup: "100",
-    maxTwinsPerBundle: "100",
-    maxOffersPerBundle: "100",
-    maxOffersPerBatch: "100",
-    maxTokensPerWithdrawal: "100",
-    maxFeesPerDisputeResolver: 100,
+    maxExchangesPerBatch: "140",
+    maxOffersPerGroup: "95",
+    maxTwinsPerBundle: "125",
+    maxOffersPerBundle: "125",
+    maxOffersPerBatch: "12",
+    maxTokensPerWithdrawal: "125",
+    maxFeesPerDisputeResolver: "75",
     maxEscalationResponsePeriod: ninetyDays,
-    maxDisputesPerBatch: "100",
-    maxAllowedSellers: "100",
-    maxTotalOfferFeePercentage: 4000, // 40%
-    maxRoyaltyPecentage: 1000, //10%
+    maxDisputesPerBatch: "75",
+    maxAllowedSellers: "140",
+    maxTotalOfferFeePercentage: "10000", // 100%
+    maxRoyaltyPecentage: "10000", //100%
     maxResolutionPeriod: ninetyDays,
     minDisputePeriod: oneWeek,
   },
