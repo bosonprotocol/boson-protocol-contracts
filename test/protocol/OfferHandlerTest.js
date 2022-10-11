@@ -19,7 +19,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { applyPercentage } = require("../util/utils.js");
-const { oneWeek, oneMonth } = require("../util/constants");
+const { oneWeek, oneMonth, oneDay } = require("../util/constants");
 const {
   mockOffer,
   mockDisputeResolver,
@@ -627,10 +627,10 @@ describe("IBosonOfferHandler", function () {
           const now = block.timestamp.toString();
 
           // set validFrom date in the past
-          offerDates.validFrom = ethers.BigNumber.from(now - (oneMonth / 1000) * 6).toString(); // 6 months ago
+          offerDates.validFrom = ethers.BigNumber.from(now - (oneMonth) * 6).toString(); // 6 months ago
 
           // set valid until > valid from
-          offerDates.validUntil = ethers.BigNumber.from(now - oneMonth / 1000).toString(); // 1 month ago
+          offerDates.validUntil = ethers.BigNumber.from(now - oneMonth).toString(); // 1 month ago
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -725,7 +725,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Resolution period is greater than protocol max resolution period", async function () {
           // Set max resolution period to 1 day
-          await configHandler.setMaxResolutionPeriod(86400 * 1000); // 24 hours
+          await configHandler.setMaxResolutionPeriod(oneDay); // 24 hours
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -1195,7 +1195,7 @@ describe("IBosonOfferHandler", function () {
 
           it("Valid until date is not in the future", async function () {
             // Set until date in the past
-            offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom - (oneMonth / 1000) * 6).toString(); // 6 months ago
+            offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom - (oneMonth) * 6).toString(); // 6 months ago
 
             // Attempt to update an offer, expecting revert
             await expect(offerHandler.connect(operator).extendOffer(offer.id, offerDates.validUntil)).to.revertedWith(
@@ -1931,10 +1931,10 @@ describe("IBosonOfferHandler", function () {
           let now = offerDatesList[0].validFrom;
 
           // set validFrom date in the past
-          offerDatesList[0].validFrom = ethers.BigNumber.from(now - (oneMonth / 1000) * 6).toString(); // 6 months ago
+          offerDatesList[0].validFrom = ethers.BigNumber.from(now - (oneMonth) * 6).toString(); // 6 months ago
 
           // set valid until > valid from
-          offerDatesList[0].validUntil = ethers.BigNumber.from(now - oneMonth / 1000).toString(); // 1 month ago
+          offerDatesList[0].validUntil = ethers.BigNumber.from(now - oneMonth).toString(); // 1 month ago
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -2696,7 +2696,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
-          newValidUntilDate = ethers.BigNumber.from(offerDatesList[0].validFrom - (oneMonth / 1000) * 6).toString(); // 6 months ago
+          newValidUntilDate = ethers.BigNumber.from(offerDatesList[0].validFrom - (oneMonth) * 6).toString(); // 6 months ago
 
           // Attempt to extend the offers, expecting revert
           await expect(
