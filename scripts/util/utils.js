@@ -46,7 +46,7 @@ function readContracts(chainId, env) {
 }
 
 async function getBaseFee() {
-  if (hre.network.name == "hardhat") {
+  if (hre.network.name == "hardhat" || hre.network.name == "localhost") {
     // getBlock("pending") doesn't work with hardhat. This is the value one gets by calling getBlock("0")
     return "1000000000";
   }
