@@ -194,37 +194,32 @@ contract SellerHandlerFacet is SellerBase {
         (, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
 
         // Approve operator address
-        if (_sellerPendingUpdate.operator == sender) {
-            // If operator changed, update the operator and transfer the ownership of NFT voucher
-            if (seller.operator != _sellerPendingUpdate.operator) {
-                delete lookups.sellerIdByOperator[seller.operator];
+        if (_sellerPendingUpdate.operator == sender && _sellerPendingUpdate.operator != address(0)) {
+            delete lookups.sellerIdByOperator[seller.operator];
 
-                // Update operator
-                seller.operator = _sellerPendingUpdate.operator;
+            // Update operator
+            seller.operator = _sellerPendingUpdate.operator;
 
-                // Transfer ownership of NFT voucher to new operator
-                IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender);
+            // Transfer ownership of NFT voucher to new operator
+            IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender);
 
-                // Store new seller id by operator mapping
-                lookups.sellerIdByOperator[sender] = _sellerId;
-            }
+            // Store new seller id by operator mapping
+            lookups.sellerIdByOperator[sender] = _sellerId;
 
             // Delete pending update operator
             delete _sellerPendingUpdate.operator;
         }
 
         // Approve admin address
-        if (_sellerPendingUpdate.admin == sender) {
-            if (seller.admin != _sellerPendingUpdate.admin) {
-                // Delete old seller id by admin mapping
-                delete lookups.sellerIdByAdmin[seller.admin];
+        if (_sellerPendingUpdate.admin == sender && _sellerPendingUpdate.admin != address(0)) {
+            // Delete old seller id by admin mapping
+            delete lookups.sellerIdByAdmin[seller.admin];
 
-                // Update admin
-                seller.admin = _sellerPendingUpdate.admin;
+            // Update admin
+            seller.admin = _sellerPendingUpdate.admin;
 
-                // Store new seller id by admin mapping
-                lookups.sellerIdByAdmin[sender] = _sellerId;
-            }
+            // Store new seller id by admin mapping
+            lookups.sellerIdByAdmin[sender] = _sellerId;
 
             // Delete pending update admin
             delete _sellerPendingUpdate.admin;
@@ -233,17 +228,15 @@ contract SellerHandlerFacet is SellerBase {
         }
 
         // Aprove clerk address
-        if (_sellerPendingUpdate.clerk == sender) {
-            if (seller.clerk != _sellerPendingUpdate.clerk) {
-                // Delete old seller id by clerk mapping
-                delete lookups.sellerIdByClerk[seller.clerk];
+        if (_sellerPendingUpdate.clerk == sender && _sellerPendingUpdate.clerk != address(0)) {
+            // Delete old seller id by clerk mapping
+            delete lookups.sellerIdByClerk[seller.clerk];
 
-                // Update clerk
-                seller.clerk = _sellerPendingUpdate.clerk;
+            // Update clerk
+            seller.clerk = _sellerPendingUpdate.clerk;
 
-                // Store new seller id by clerk mapping
-                lookups.sellerIdByClerk[sender] = _sellerId;
-            }
+            // Store new seller id by clerk mapping
+            lookups.sellerIdByClerk[sender] = _sellerId;
 
             // Delete pending update clerk
             delete _sellerPendingUpdate.clerk;

@@ -19,7 +19,7 @@ const { mockSeller, mockAuthToken, mockVoucherInitValues, accountId } = require(
 /**
  *  Test the Boson Seller Handler
  */
-describe.only("SellerHandler", function () {
+describe("SellerHandler", function () {
   // Common vars
   let deployer,
     pauser,
@@ -1415,12 +1415,12 @@ describe.only("SellerHandler", function () {
         sellerStruct = seller.toStruct();
 
         // Check clerk updated
-        // await expect(tx)
-        //   .to.emit(accountHandler, "SellerUpdateApplied")
-        //   .withArgs(seller.id, sellerStruct, pendingSellerStruct, authTokenStruct, other3.address);
+        await expect(tx)
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, authTokenStruct, other3.address);
       });
 
-      it("should not emit a SellerUpdateApplied and OwnershipTransferred event with correct values if values stay the same", async function () {
+      it("should not emit a SellerUpdateApplied and OwnershipTransferred event if values stay the same", async function () {
         const tx = await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
         // Nothing should emit because values are the same
@@ -2191,6 +2191,86 @@ describe.only("SellerHandler", function () {
           await expect(
             accountHandler.connect(authTokenOwner).createSeller(seller2, authToken2, voucherInitValues)
           ).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        });
+      });
+    });
+
+    context("👉 optInToSellerUpdate()", function () {
+      beforeEach(async function () {
+        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        pendingSeller = seller.clone();
+        pendingSeller.id = "0";
+        pendingSeller.operator = ethers.constants.AddressZero;
+        pendingSeller.admin = ethers.constants.AddressZero;
+        pendingSeller.clerk = ethers.constants.AddressZero;
+        pendingSeller.treasury = ethers.constants.AddressZero;
+        pendingSeller.active = false;
+        pendingSellerStruct = pendingSeller.toStruct();
+      });
+
+      it("New operator should opt-in to update seller", async function () {
+        seller.operator = other1.address;
+        sellerStruct = seller.toStruct();
+
+        await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+        await expect(accountHandler.connect(other1).optInToSellerUpdate(seller.id))
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, emptyAuthTokenStruct, other1.address);
+      });
+
+      it("New admin should opt-in to update seller", async function () {
+        seller.admin = other1.address;
+        sellerStruct = seller.toStruct();
+
+        await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+        await expect(accountHandler.connect(other1).optInToSellerUpdate(seller.id))
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, emptyAuthTokenStruct, other1.address);
+      });
+
+      it("New clerk should opt-in to update seller", async function () {
+        seller.clerk = other1.address;
+        sellerStruct = seller.toStruct();
+
+        await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+        await expect(accountHandler.connect(other1).optInToSellerUpdate(seller.id))
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, emptyAuthTokenStruct, other1.address);
+      });
+
+      it("Should update admin, clerk and operator in a single call when addresses are the same ", async function () {
+        seller.clerk = other1.address;
+        seller.admin = other1.address;
+        seller.operator = other1.address;
+        sellerStruct = seller.toStruct();
+
+        await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+        await expect(accountHandler.connect(other1).optInToSellerUpdate(seller.id))
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, emptyAuthTokenStruct, other1.address);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Should revert if there are no pending updates", async function () {
+          seller.clerk = other1.address;
+          seller.admin = other1.address;
+          seller.operator = other1.address;
+          sellerStruct = seller.toStruct();
+
+          await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+          await expect(accountHandler.connect(other1).optInToSellerUpdate(seller.id))
+            .to.emit(accountHandler, "SellerUpdateApplied")
+            .withArgs(seller.id, sellerStruct, pendingSellerStruct, emptyAuthTokenStruct, other1.address);
+
+          await expect(accountHandler.connect(other1).optInToSellerUpdate(seller.id)).to.revertedWith(
+            RevertReasons.NO_PENDING_SELLER_ROLE_UPDATE
+          );
         });
       });
     });
