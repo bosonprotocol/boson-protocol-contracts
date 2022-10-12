@@ -46,7 +46,7 @@ module.exports = {
     localhost: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
     test: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
     mumbai: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
-    polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
+    polygon: "0x11D0d293751E18FCC56c70E1FB264CeB9f7C3fE7",
   },
 
   // Boson voucher beacon contract address
