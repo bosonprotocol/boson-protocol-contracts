@@ -16,12 +16,13 @@ interface IBosonAccountEvents {
         BosonTypes.AuthToken authToken,
         address indexed executedBy
     );
-    event SellerUpdatePending(uint256 indexed sellerId, BosonTypes.Seller pendingSeller, address indexed executedBy);
+    event SellerUpdatePending(uint256 indexed sellerId, BosonTypes.Seller pendingSeller, BosonTypes.AuthToken pendingAuthToken, address indexed executedBy);
     event SellerUpdateApplied(
         uint256 indexed sellerId,
         BosonTypes.Seller seller,
         BosonTypes.Seller pendingSeller,
         BosonTypes.AuthToken authToken,
+        BosonTypes.AuthToken pendingAuthToken,
         address indexed executedBy
     );
     event BuyerCreated(uint256 indexed buyerId, BosonTypes.Buyer buyer, address indexed executedBy);

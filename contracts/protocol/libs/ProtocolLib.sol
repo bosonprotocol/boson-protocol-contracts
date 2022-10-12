@@ -176,6 +176,8 @@ library ProtocolLib {
         mapping(uint256 => mapping(uint256 => uint256)) offerIdIndexByGroup;
         // seller id => Seller
         mapping(uint256 => BosonTypes.Seller) sellerPendingUpdates;
+        // seller id => AuthToken
+        mapping(uint256 => BosonTypes.AuthToken) sellerPendingAuthTokenUpdate;
     }
 
     // Incrementing id counters

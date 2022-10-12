@@ -308,6 +308,32 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         exists = (_sellerId > 0 && seller.id == _sellerId);
     }
 
+    function fetchSellerPendingUpdate(uint256 _sellerId)
+        internal
+        view
+        returns (
+            bool exists,
+            Seller storage sellerPendingUpdate,
+            AuthToken storage authTokenPendingUpdate
+        )
+    {
+        // Cache protocol entities for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        // Get the seller's slot
+        sellerPendingUpdate = lookups.sellerPendingUpdates[_sellerId];
+
+        //Get the seller's auth token's slot
+        authTokenPendingUpdate = lookups.sellerPendingAuthTokenUpdate[_sellerId];
+
+        // Determine existence
+        exists =
+            sellerPendingUpdate.admin != address(0) ||
+            sellerPendingUpdate.operator != address(0) ||
+            sellerPendingUpdate.clerk != address(0) ||
+            authTokenPendingUpdate.tokenType != AuthTokenType.None;
+    }
+
     /**
      * @notice Fetches a given buyer from storage by id
      *
