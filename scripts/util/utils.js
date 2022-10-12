@@ -25,8 +25,9 @@ async function writeContracts(contracts) {
 
   const chainId = (await hre.ethers.provider.getNetwork()).chainId;
   const env = hre.network.name;
+  const path = getAddressesFilePath(chainId, env);
   fs.writeFileSync(
-    getAddressesFilePath(chainId, env),
+    path,
     JSON.stringify(
       {
         chainId: chainId,
@@ -39,6 +40,8 @@ async function writeContracts(contracts) {
     ),
     "utf-8"
   );
+
+  return path;
 }
 
 function readContracts(chainId, env) {
@@ -58,8 +61,12 @@ async function getMaxFeePerGas(maxPriorityFeePerGas) {
   return maxPriorityFeePerGas.add(await getBaseFee());
 }
 
-async function getFees(maxPriorityFeePerGas) {
-  return { maxPriorityFeePerGas, maxFeePerGas: await getMaxFeePerGas(maxPriorityFeePerGas) };
+async function getFees() {
+  // maxPriorityFeePerGas TODO add back as an argument when ethers.js supports 1559 on polygon
+  const { gasPrice } = await ethers.provider.getFeeData();
+  const newGasPrice = gasPrice.mul(ethers.BigNumber.from("2"));
+  //  return { maxPriorityFeePerGas, maxFeePerGas: await getMaxFeePerGas(maxPriorityFeePerGas) }; // TODO use when ethers.js supports 1559 on polygon
+  return { gasPrice: newGasPrice };
 }
 
 exports.getAddressesFilePath = getAddressesFilePath;

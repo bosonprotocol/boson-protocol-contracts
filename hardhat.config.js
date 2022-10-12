@@ -33,6 +33,17 @@ task("create-dispute-resolver", "Creates and activates a dispute resolver")
     await createAndActivateDR(path, createOnly, activateOnly);
   });
 
+task("verify-suite", "Verify contracts on the block explorer")
+  .addParam("chainId", "The chain id of the deployed contract address file")
+  .addParam("env", "The environment of the contract address file")
+  .setAction(async ({ chainId, env }) => {
+    const { verifySuite } = await lazyImport("./scripts/util/verify-suite");
+
+    // Contract list filter - empty array or use values from the name field of the contract object
+    const filter = [];
+    await verifySuite(chainId, env, filter);
+  });
+
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {
