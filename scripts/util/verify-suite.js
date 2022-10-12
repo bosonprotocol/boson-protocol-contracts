@@ -4,12 +4,12 @@ const { readContracts } = require("./utils");
 /**
  * Verify Boson Protocol V2 contract suite
  *
- * Usage: npx hardhat verify-suite --chain-id <chain id> --env <env>
+ * Usage: npx hardhat verify-suite --network <network> --chain-id <chain id> --env <env>
  *
- *  e.g.: npx hardhat verify-suite --137 --env polygon
+ *  e.g.: npx hardhat verify-suite --network polygon --chain-id 137 --env polygon
  *      : reads addresses/137-polygon.json
  *      : verifies each contract listed, with the given constructor args
- *      
+ *
  *  If you need to filter the list of contracts to verify,
  *  edit hardhat.config.js temporarily and set the filter
  *  array in the task definition
@@ -19,22 +19,21 @@ const { readContracts } = require("./utils");
  * @param filter - optional list of names to verify (subset of all contacts)
  * @returns {Promise<void>}
  */
-const verifySuite = async (chainId, env, filter= []) => {
+const verifySuite = async (chainId, env, filter = []) => {
+  console.log(chainId, env, filter);
 
-  console.log(chainId, env, filter)
+  // Read the contracts for the chain
+  const { contracts } = await readContracts(chainId, env);
 
-    // Read the contracts for the chain
-    const { contracts } = await readContracts(chainId, env);
-
-    console.log("🔍 Verifying contracts on block explorer...");
-    while (contracts.length) {
-      const contract = contracts.shift();
-      if (filter.length && filter.contains(contract.name)) {
-        await verifyOnBlockExplorer(contract);
-      }
+  console.log("🔍 Verifying contracts on block explorer...");
+  while (contracts.length) {
+    const contract = contracts.shift();
+    if (filter.length && filter.includes(contract.name)) {
+      await verifyOnBlockExplorer(contract);
     }
+  }
 
-    console.log("\n");
+  console.log("\n");
 };
 
 exports.verifySuite = verifySuite;

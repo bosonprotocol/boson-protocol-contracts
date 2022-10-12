@@ -339,3 +339,81 @@ Endpoint URL: https://api.polygonscan.com/api
 Reason: Connect Timeout Error
 
 
+137 polygon [ 'GroupHandlerFacet', 'BosonVoucher Beacon', 'BosonVoucher Proxy' ]
+🔍 Verifying contracts on block explorer...
+
+137 polygon [ 'GroupHandlerFacet', 'BosonVoucher Beacon', 'BosonVoucher Proxy' ]
+🔍 Verifying contracts on block explorer...
+
+📋 Verifying GroupHandlerFacet
+contract object in verify function  {
+  name: 'GroupHandlerFacet',
+  address: '0x52075179452377DA8264e3525f71c9099257fA90',
+  args: []
+}
+❌ Failed to verify GroupHandlerFacet on block explorer. The selected network is hardhat. Please select a network supported by Etherscan.
+
+📋 Verifying BosonVoucher Beacon
+contract object in verify function  {
+  name: 'BosonVoucher Beacon',
+  address: '0xF5FB35763fb5AE8B48AA8bfaF382BE385A5c9428',
+  args: [
+    '0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5',
+    '0x89E83690861c2f34f4B8B15f2aFFFe1FB670812d'
+  ]
+}
+❌ Failed to verify BosonVoucher Beacon on block explorer. The selected network is hardhat. Please select a network supported by Etherscan.
+
+📋 Verifying BosonVoucher Proxy
+contract object in verify function  {
+  name: 'BosonVoucher Proxy',
+  address: '0x57A12A9F2a81B2b13c20F9F465eA6814F76c7168',
+  args: []
+}
+❌ Failed to verify BosonVoucher Proxy on block explorer. The selected network is hardhat. Please select a network supported by Etherscan.
+
+
+137 polygon [ 'GroupHandlerFacet', 'BosonVoucher Beacon', 'BosonVoucher Proxy' ]
+🔍 Verifying contracts on block explorer...
+
+📋 Verifying GroupHandlerFacet
+contract object in verify function  {
+  name: 'GroupHandlerFacet',
+  address: '0x52075179452377DA8264e3525f71c9099257fA90',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/GroupHandlerFacet.sol:GroupHandlerFacet at 0x52075179452377DA8264e3525f71c9099257fA90
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract GroupHandlerFacet on Etherscan.
+https://polygonscan.com/address/0x52075179452377DA8264e3525f71c9099257fA90#code
+
+📋 Verifying BosonVoucher Beacon
+contract object in verify function  {
+  name: 'BosonVoucher Beacon',
+  address: '0xF5FB35763fb5AE8B48AA8bfaF382BE385A5c9428',
+  args: [
+    '0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5',
+    '0x89E83690861c2f34f4B8B15f2aFFFe1FB670812d'
+  ]
+}
+Compiled 128 Solidity files successfully
+❌ Failed to verify BosonVoucher Beacon on block explorer. Contract source code already verified
+
+📋 Verifying BosonVoucher Proxy
+contract object in verify function  {
+  name: 'BosonVoucher Proxy',
+  address: '0x57A12A9F2a81B2b13c20F9F465eA6814F76c7168',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/clients/proxy/BeaconClientProxy.sol:BeaconClientProxy at 0x57A12A9F2a81B2b13c20F9F465eA6814F76c7168
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract BeaconClientProxy on Etherscan.
+https://polygonscan.com/address/0x57A12A9F2a81B2b13c20F9F465eA6814F76c7168#code
+
+

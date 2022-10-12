@@ -40,8 +40,7 @@ task("verify-suite", "Verify contracts on the block explorer")
     const { verifySuite } = await lazyImport("./scripts/util/verify-suite");
 
     // Contract list filter - empty array or use values from the name field of the contract object
-    // const filter = [];
-    const filter = ['GroupHandlerFacet','BosonVoucher Beacon', 'BosonVoucher Proxy'];
+    const filter = [];
     await verifySuite(chainId, env, filter);
   });
 

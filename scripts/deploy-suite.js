@@ -244,7 +244,6 @@ async function main() {
   if (network === "test" || network === "localhost") {
     await verifyOnTestEnv(contracts);
   }
-
 }
 
 main()
