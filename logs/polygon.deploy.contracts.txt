@@ -1,0 +1,277 @@
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: polygon
+📅 Wed Oct 12 2022 17:36:58 GMT+0100 (Western European Summer Time)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x9C867632dFE6b70D83DfE7865cF8510C168AFd40
+✅ DiamondLoupeFacet deployed to: 0xba596Ee5C051FAf6B263d457835e65a26661382c
+✅ DiamondCutFacet deployed to: 0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9
+✅ ERC165Facet deployed to: 0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294
+✅ ProtocolDiamond deployed to: 0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5
+
+💎 Granting UPGRADER role...
+
+💎 Deploying and initializing config facet...
+✅ ConfigHandlerFacet deployed to: 0xd8C3B2232B3d597156148f757Bb2bd665843aABd
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0xE282Ff84bd704504057eAF78Ac34E4a991b69d83
+✅ SellerHandlerFacet deployed to: 0x4aA238eF21737E138C4f7D4D722F55680ccB30c9
+✅ BuyerHandlerFacet deployed to: 0xabd67624662f05B4fb5084f8edcC2F2A422670bf
+✅ DisputeResolverHandlerFacet deployed to: 0xeD2E929E36484E767E39d9b4F1c190cC179Ed586
+✅ AgentHandlerFacet deployed to: 0xe8A57dd8784E6f0CE4C1B51CEf52d04b7C1F1C04
+✅ BundleHandlerFacet deployed to: 0x8A7F0260Ed956f8a51193672F26d9B9a31347359
+✅ DisputeHandlerFacet deployed to: 0x8FA52A7d571146657157bA1e2d15F55796c0D49C
+✅ ExchangeHandlerFacet deployed to: 0x588665499eCC0cc9b6924275359F1D279A242610
+✅ FundsHandlerFacet deployed to: 0x6252236D213A80A67C85a48ec48D38245C8362fF
+✅ GroupHandlerFacet deployed to: 0x52075179452377DA8264e3525f71c9099257fA90
+✅ MetaTransactionsHandlerFacet deployed to: 0x85a52d353027e28739F57A212324Ccd05EF83008
+✅ OfferHandlerFacet deployed to: 0x5FD6b187E800bAfA53bDEE18619A8E828A6c1011
+✅ OrchestrationHandlerFacet deployed to: 0x794DF5A4D6276C06035f68C3D906AfB9E00583e3
+✅ TwinHandlerFacet deployed to: 0xA0D1872bFa6031A94AD2339A81bF9c99719ec397
+✅ PauseHandlerFacet deployed to: 0xe45A5828c39d14Fb854526426c70547C9dF1Ae61
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0x89E83690861c2f34f4B8B15f2aFFFe1FB670812d
+✅ BosonVoucher Beacon deployed to: 0xF5FB35763fb5AE8B48AA8bfaF382BE385A5c9428
+✅ BosonVoucher Proxy deployed to: 0x57A12A9F2a81B2b13c20F9F465eA6814F76c7168
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+⏲ Pause one minute, allowing deployments to propagate before verifying..
+🔍 Verifying contracts on block explorer...
+
+📋 Verifying AccessController
+contract object in verify function  {
+  name: 'AccessController',
+  address: '0x9C867632dFE6b70D83DfE7865cF8510C168AFd40',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify AccessController on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying DiamondLoupeFacet
+contract object in verify function  {
+  name: 'DiamondLoupeFacet',
+  address: '0xba596Ee5C051FAf6B263d457835e65a26661382c',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify DiamondLoupeFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying DiamondCutFacet
+contract object in verify function  {
+  name: 'DiamondCutFacet',
+  address: '0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify DiamondCutFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying ERC165Facet
+contract object in verify function  {
+  name: 'ERC165Facet',
+  address: '0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify ERC165Facet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying ProtocolDiamond
+contract object in verify function  {
+  name: 'ProtocolDiamond',
+  address: '0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5',
+  args: [
+    '0x9C867632dFE6b70D83DfE7865cF8510C168AFd40',
+    [ [Array], [Array], [Array] ],
+    [ '0x48e2b093', '0x1f931c1c', '0x01ffc9a7' ]
+  ]
+}
+Nothing to compile
+❌ Failed to verify ProtocolDiamond on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying ConfigHandlerFacet
+contract object in verify function  {
+  name: 'ConfigHandlerFacet',
+  address: '0xd8C3B2232B3d597156148f757Bb2bd665843aABd',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify ConfigHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying AccountHandlerFacet
+contract object in verify function  {
+  name: 'AccountHandlerFacet',
+  address: '0xE282Ff84bd704504057eAF78Ac34E4a991b69d83',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify AccountHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying SellerHandlerFacet
+contract object in verify function  {
+  name: 'SellerHandlerFacet',
+  address: '0x4aA238eF21737E138C4f7D4D722F55680ccB30c9',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify SellerHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying BuyerHandlerFacet
+contract object in verify function  {
+  name: 'BuyerHandlerFacet',
+  address: '0xabd67624662f05B4fb5084f8edcC2F2A422670bf',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify BuyerHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying DisputeResolverHandlerFacet
+contract object in verify function  {
+  name: 'DisputeResolverHandlerFacet',
+  address: '0xeD2E929E36484E767E39d9b4F1c190cC179Ed586',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify DisputeResolverHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying AgentHandlerFacet
+contract object in verify function  {
+  name: 'AgentHandlerFacet',
+  address: '0xe8A57dd8784E6f0CE4C1B51CEf52d04b7C1F1C04',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify AgentHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying BundleHandlerFacet
+contract object in verify function  {
+  name: 'BundleHandlerFacet',
+  address: '0x8A7F0260Ed956f8a51193672F26d9B9a31347359',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify BundleHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying DisputeHandlerFacet
+contract object in verify function  {
+  name: 'DisputeHandlerFacet',
+  address: '0x8FA52A7d571146657157bA1e2d15F55796c0D49C',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify DisputeHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying ExchangeHandlerFacet
+contract object in verify function  {
+  name: 'ExchangeHandlerFacet',
+  address: '0x588665499eCC0cc9b6924275359F1D279A242610',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify ExchangeHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying FundsHandlerFacet
+contract object in verify function  {
+  name: 'FundsHandlerFacet',
+  address: '0x6252236D213A80A67C85a48ec48D38245C8362fF',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify FundsHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying GroupHandlerFacet
+contract object in verify function  {
+  name: 'GroupHandlerFacet',
+  address: '0x52075179452377DA8264e3525f71c9099257fA90',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify GroupHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying MetaTransactionsHandlerFacet
+contract object in verify function  {
+  name: 'MetaTransactionsHandlerFacet',
+  address: '0x85a52d353027e28739F57A212324Ccd05EF83008',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify MetaTransactionsHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying OfferHandlerFacet
+contract object in verify function  {
+  name: 'OfferHandlerFacet',
+  address: '0x5FD6b187E800bAfA53bDEE18619A8E828A6c1011',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify OfferHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying OrchestrationHandlerFacet
+contract object in verify function  {
+  name: 'OrchestrationHandlerFacet',
+  address: '0x794DF5A4D6276C06035f68C3D906AfB9E00583e3',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify OrchestrationHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying TwinHandlerFacet
+contract object in verify function  {
+  name: 'TwinHandlerFacet',
+  address: '0xA0D1872bFa6031A94AD2339A81bF9c99719ec397',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify TwinHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying PauseHandlerFacet
+contract object in verify function  {
+  name: 'PauseHandlerFacet',
+  address: '0xe45A5828c39d14Fb854526426c70547C9dF1Ae61',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify PauseHandlerFacet on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying BosonVoucher Logic
+contract object in verify function  {
+  name: 'BosonVoucher Logic',
+  address: '0x89E83690861c2f34f4B8B15f2aFFFe1FB670812d',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify BosonVoucher Logic on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+📋 Verifying BosonVoucher Beacon
+contract object in verify function  {
+  name: 'BosonVoucher Beacon',
+  address: '0xF5FB35763fb5AE8B48AA8bfaF382BE385A5c9428',
+  args: [
+    '0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5',
+    '0x89E83690861c2f34f4B8B15f2aFFFe1FB670812d'
+  ]
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/clients/proxy/BosonClientBeacon.sol:BosonClientBeacon at 0xF5FB35763fb5AE8B48AA8bfaF382BE385A5c9428
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract BosonClientBeacon on Etherscan.
+https://polygonscan.com/address/0xF5FB35763fb5AE8B48AA8bfaF382BE385A5c9428#code
+
+📋 Verifying BosonVoucher Proxy
+contract object in verify function  {
+  name: 'BosonVoucher Proxy',
+  address: '0x57A12A9F2a81B2b13c20F9F465eA6814F76c7168',
+  args: []
+}
+Compiled 128 Solidity files successfully
+❌ Failed to verify BosonVoucher Proxy on block explorer. ENOENT: no such file or directory, open '/Users/mischat/Development/bosonprotocol/boson-protocol-contracts/artifacts/build-info/d91342b100765fec1e07b7f3c4cb362c.json'
+
+
