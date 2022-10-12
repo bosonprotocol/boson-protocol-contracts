@@ -58,8 +58,11 @@ async function getMaxFeePerGas(maxPriorityFeePerGas) {
   return maxPriorityFeePerGas.add(await getBaseFee());
 }
 
-async function getFees(maxPriorityFeePerGas) {
-  return { maxPriorityFeePerGas, maxFeePerGas: await getMaxFeePerGas(maxPriorityFeePerGas) };
+async function getFees() { //maxPriorityFeePerGas TODO add back as argument when polygon gets 1559 back
+  const { gasPrice } = await ethers.provider.getFeeData();
+  const newGasPrice = gasPrice.mul(ethers.BigNumber.from("2"));
+//  return { maxPriorityFeePerGas, maxFeePerGas: await getMaxFeePerGas(maxPriorityFeePerGas) }; // TODO use when polygon gets 1559 back
+  return { gasPrice: newGasPrice };
 }
 
 exports.getAddressesFilePath = getAddressesFilePath;
