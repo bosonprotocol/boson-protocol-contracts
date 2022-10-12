@@ -236,27 +236,8 @@ async function main() {
 
   console.log(`✅ Granted roles to appropriate contract and addresses.`);
 
-  await writeContracts(contracts);
-
-  //Verify on test node if test env
-  if (network === "test" || network === "localhost") {
-    await verifyOnTestEnv(contracts);
-  }
-
-  // Bail now if deploying locally
-  if (network === "hardhat" || network === "test" || network === "localhost") process.exit();
-
-  // Wait a minute after deployment completes and then verify contracts on block exporer
-  console.log("⏲ Pause one minute, allowing deployments to propagate before verifying..");
-  await delay(60000).then(async () => {
-    console.log("🔍 Verifying contracts on block explorer...");
-    while (contracts.length) {
-      const contract = contracts.shift();
-      await verifyOnBlockExplorer(contract);
-    }
-  });
-
-  console.log("\n");
+  const contractsPath = await writeContracts(contracts);
+  console.log(`✅ Contracts written to ${contractsPath}`);
 }
 
 main()
