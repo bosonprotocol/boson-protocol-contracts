@@ -116,7 +116,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      */
     function updateSeller(BosonTypes.Seller memory _seller, BosonTypes.AuthToken calldata _authToken) external;
 
-    function approveSellerUpdate(uint256 _sellerId) external;
+    function optInToSellerUpdate(uint256 _sellerId) external;
 
     /**
      * @notice Updates a buyer, with the exception of the active flag.

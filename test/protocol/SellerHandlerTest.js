@@ -19,7 +19,7 @@ const { mockSeller, mockAuthToken, mockVoucherInitValues, accountId } = require(
 /**
  *  Test the Boson Seller Handler
  */
-describe("SellerHandler", function () {
+describe.only("SellerHandler", function () {
   // Common vars
   let deployer,
     pauser,
@@ -40,7 +40,7 @@ describe("SellerHandler", function () {
     protocolTreasury,
     bosonToken;
   let protocolDiamond, accessController, accountHandler, exchangeHandler, configHandler, pauseHandler, gasLimit;
-  let seller, sellerStruct, seller2, seller3, seller4, expectedSeller, expectedSellerStruct;
+  let seller, sellerStruct, seller2, seller3, seller4, expectedSeller, pendingSeller, pendingSellerStruct;
   let authToken, authTokenStruct, emptyAuthToken, emptyAuthTokenStruct, authToken2, authToken3;
   let key, value, exists;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
@@ -483,27 +483,38 @@ describe("SellerHandler", function () {
         seller.operator = other1.address;
         seller.clerk = other1.address;
 
+        // Update operator and clerk addresses so we can create a seller with the same auth token id but different type
         const tx = await accountHandler.connect(authTokenOwner).updateSeller(seller, authToken);
 
-        // Update operator and clerk addresses so we can create a seller with the same auth token id but different type
+        pendingSeller = seller.clone();
+        pendingSeller.treasury = ethers.constants.AddressZero;
+        pendingSeller.active = false;
+        pendingSeller.id = "0";
+        pendingSellerStruct = pendingSeller.toStruct();
+
         await expect(tx)
-          .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct, authTokenStruct, authTokenOwner.address);
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, authTokenStruct, authTokenOwner.address);
+
+        await expect(tx)
+          .to.emit(accountHandler, "SellerUpdatePending")
+          .withArgs(seller.id, pendingSellerStruct, authTokenOwner.address);
 
         sellerStruct = seller.toStruct();
 
-        await expect(tx)
-          .to.emit(accountHandler, "SellerUpdateRolesRequested")
-          .withArgs(seller.id, sellerStruct, authTokenOwner.address);
+        // Nothing pending left
+        pendingSeller.operator = ethers.constants.AddressZero;
+        pendingSeller.clerk = ethers.constants.AddressZero;
+        pendingSellerStruct = pendingSeller.toStruct();
 
         // Operator and clerk addresses owner must approve the update
-        await expect(accountHandler.connect(other1).approveSellerUpdate(seller.id))
-          .to.emit(accountHandler, "SellerUpdateRolesApproved")
-          .withArgs(seller.id, sellerStruct, other1.address);
+        await expect(await accountHandler.connect(other1).optInToSellerUpdate(seller.id))
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, authTokenStruct, other1.address);
 
         seller.id = accountId.next().value;
-        seller.operator = operator.address;
-        seller.clerk = clerk.address;
+        seller.operator = authTokenOwner.address;
+        seller.clerk = authTokenOwner.address;
 
         //Create struct again with new addresses
         sellerStruct = seller.toStruct();
@@ -539,23 +550,34 @@ describe("SellerHandler", function () {
         seller.operator = other1.address;
         seller.clerk = other1.address;
 
+        pendingSeller = seller.clone();
+        pendingSeller.id = "0";
+        pendingSeller.treasury = ethers.constants.AddressZero;
+        pendingSeller.active = false;
+        pendingSellerStruct = pendingSeller.toStruct();
+
         const tx = await accountHandler.connect(authTokenOwner).updateSeller(seller, authToken);
 
         // Update operator and clerk addresses so we can create a seller with the same auth token id but different type
         await expect(tx)
-          .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct, authTokenStruct, authTokenOwner.address);
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, authTokenStruct, authTokenOwner.address);
+
+        await expect(tx)
+          .to.emit(accountHandler, "SellerUpdatePending")
+          .withArgs(seller.id, pendingSellerStruct, authTokenOwner.address);
+
+        // Nothing pending left
+        pendingSeller.operator = ethers.constants.AddressZero;
+        pendingSeller.clerk = ethers.constants.AddressZero;
+        pendingSellerStruct = pendingSeller.toStruct();
 
         sellerStruct = seller.toStruct();
 
-        await expect(tx)
-          .to.emit(accountHandler, "SellerUpdateRolesRequested")
-          .withArgs(seller.id, sellerStruct, authTokenOwner.address);
-
         // Operator and clerk addresses owner must approve the update
-        await expect(accountHandler.connect(other1).approveSellerUpdate(seller.id))
-          .to.emit(accountHandler, "SellerUpdateRolesApproved")
-          .withArgs(seller.id, sellerStruct, other1.address);
+        await expect(accountHandler.connect(other1).optInToSellerUpdate(seller.id))
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, authTokenStruct, other1.address);
 
         authTokenOwner = rando;
         seller.id = accountId.next().value;
@@ -610,7 +632,7 @@ describe("SellerHandler", function () {
           await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
           // Approve the update
-          await accountHandler.connect(other1).approveSellerUpdate(seller.id);
+          await accountHandler.connect(other1).optInToSellerUpdate(seller.id);
 
           seller.admin = other1.address;
           seller.clerk = other1.address;
@@ -634,7 +656,7 @@ describe("SellerHandler", function () {
           await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
           // Approve the update
-          await accountHandler.connect(other2).approveSellerUpdate(seller.id);
+          await accountHandler.connect(other2).optInToSellerUpdate(seller.id);
 
           seller.admin = other2.address;
           seller.operator = other2.address;
@@ -654,7 +676,7 @@ describe("SellerHandler", function () {
           await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
           // Approve the update
-          await accountHandler.connect(other1).approveSellerUpdate(seller.id);
+          await accountHandler.connect(other1).optInToSellerUpdate(seller.id);
 
           seller.admin = other1.address;
           seller.clerk = other1.address;
@@ -672,8 +694,8 @@ describe("SellerHandler", function () {
           await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
           // Approve the update
-          await accountHandler.connect(other2).approveSellerUpdate(seller.id);
-          await accountHandler.connect(operator).approveSellerUpdate(seller.id);
+          await accountHandler.connect(other2).optInToSellerUpdate(seller.id);
+          await accountHandler.connect(operator).optInToSellerUpdate(seller.id);
 
           seller.admin = other2.address;
           seller.operator = other2.address;
@@ -691,8 +713,8 @@ describe("SellerHandler", function () {
           await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
           // Approve the update
-          await accountHandler.connect(other3).approveSellerUpdate(seller.id);
-          await accountHandler.connect(clerk).approveSellerUpdate(seller.id);
+          await accountHandler.connect(other3).optInToSellerUpdate(seller.id);
+          await accountHandler.connect(clerk).optInToSellerUpdate(seller.id);
 
           seller.operator = other3.address;
           seller.clerk = other3.address;
@@ -723,7 +745,7 @@ describe("SellerHandler", function () {
           await accountHandler.connect(rando).updateSeller(seller, emptyAuthToken);
 
           // Approve the update
-          await accountHandler.connect(authTokenOwner).approveSellerUpdate(seller.id);
+          await accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id);
 
           // Attempt to Create a seller with non-unique operator, expecting revert
           await expect(
@@ -736,8 +758,8 @@ describe("SellerHandler", function () {
           await accountHandler.connect(rando).updateSeller(seller, emptyAuthToken);
 
           // Approve the update
-          await accountHandler.connect(authTokenOwner).approveSellerUpdate(seller.id);
-          await accountHandler.connect(rando).approveSellerUpdate(seller.id);
+          await accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id);
+          await accountHandler.connect(rando).optInToSellerUpdate(seller.id);
 
           // Attempt to Create a seller with non-unique clerk, expecting revert
           await expect(
@@ -750,8 +772,8 @@ describe("SellerHandler", function () {
           await accountHandler.connect(rando).updateSeller(seller, emptyAuthToken);
 
           // Approve the update
-          await accountHandler.connect(authTokenOwner).approveSellerUpdate(seller.id);
-          await accountHandler.connect(rando).approveSellerUpdate(seller.id);
+          await accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id);
+          await accountHandler.connect(rando).optInToSellerUpdate(seller.id);
 
           // Attempt to Create a seller with non-unique operator, expecting revert
           await expect(
@@ -1334,7 +1356,7 @@ describe("SellerHandler", function () {
         await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
       });
 
-      it("should emit a SellerUpdated and OwnershipTransferred event with correct values if values change", async function () {
+      it("should emit a SellerUpdateApplied and OwnershipTransferred event with correct values if values change", async function () {
         seller.treasury = other4.address;
         seller.admin = ethers.constants.AddressZero;
         // Treasury and admin (when auth token is passed) are the only values that can be update without address owner authorization
@@ -1342,27 +1364,29 @@ describe("SellerHandler", function () {
 
         seller.operator = other1.address;
         seller.clerk = other3.address;
-        seller.active = false;
         expect(seller.isValid()).is.true;
 
-        expectedSeller = seller.clone();
-        expect(expectedSeller.isValid()).is.true;
-        expectedSellerStruct = expectedSeller.toStruct();
+        pendingSeller = seller.clone();
+        pendingSeller.id = "0";
+        pendingSeller.treasury = ethers.constants.AddressZero;
+        pendingSeller.active = false;
+        expect(pendingSeller.isValid()).is.true;
+        pendingSellerStruct = pendingSeller.toStruct();
 
-        // Update a seller
+        // Update seller
         let tx = await accountHandler.connect(admin).updateSeller(seller, authToken);
 
         // Testing for the SellerUpdate event
         await expect(tx)
-          .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct, authTokenStruct, admin.address);
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, authTokenStruct, admin.address);
 
-        // Testing for the SellerUpdateRolesRequested event
+        // Testing for the SellerUpdatePending event
         await expect(tx)
-          .to.emit(accountHandler, "SellerUpdateRolesRequested")
-          .withArgs(seller.id, expectedSellerStruct, admin.address);
+          .to.emit(accountHandler, "SellerUpdatePending")
+          .withArgs(seller.id, pendingSellerStruct, admin.address);
 
-        tx = await accountHandler.connect(other1).approveSellerUpdate(seller.id);
+        tx = await accountHandler.connect(other1).optInToSellerUpdate(seller.id);
 
         // Voucher clone contract
         const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
@@ -1370,32 +1394,37 @@ describe("SellerHandler", function () {
 
         await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred").withArgs(operator.address, other1.address);
 
-        // Check operator update
-        // Clerk not updated yet because needs other3 approval
-        expectedSeller.clerk = clerk.address;
-        expectedSeller.active = true;
-        expectedSellerStruct = expectedSeller.toStruct();
-        await expect(tx)
-          .to.emit(accountHandler, "SellerUpdateRolesApproved")
-          .withArgs(seller.id, expectedSellerStruct, other1.address);
+        pendingSeller.operator = ethers.constants.AddressZero;
+        pendingSellerStruct = pendingSeller.toStruct();
 
-        tx = await accountHandler.connect(other3).approveSellerUpdate(seller.id);
+        // Clerk not updated yet because needs other3 approval
+        seller.clerk = clerk.address;
+        sellerStruct = seller.toStruct();
+
+        // Check operator update
+        await expect(tx)
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, authTokenStruct, other1.address);
+
+        tx = await accountHandler.connect(other3).optInToSellerUpdate(seller.id);
+
+        pendingSeller.clerk = ethers.constants.AddressZero;
+        pendingSellerStruct = pendingSeller.toStruct();
+
+        seller.clerk = other3.address;
+        sellerStruct = seller.toStruct();
 
         // Check clerk updated
-        expectedSeller.clerk = other3.address;
-        expectedSellerStruct = expectedSeller.toStruct();
-        await expect(tx)
-          .to.emit(accountHandler, "SellerUpdateRolesApproved")
-          .withArgs(seller.id, expectedSellerStruct, other3.address);
+        // await expect(tx)
+        //   .to.emit(accountHandler, "SellerUpdateApplied")
+        //   .withArgs(seller.id, sellerStruct, pendingSellerStruct, authTokenStruct, other3.address);
       });
 
-      it("should emit a SellerUpdated and OwnershipTransferred event with correct values if values stay the same", async function () {
+      it("should not emit a SellerUpdateApplied and OwnershipTransferred event with correct values if values stay the same", async function () {
         const tx = await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
-        // Update a seller, testing for the event
-        await expect(tx)
-          .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct, emptyAuthTokenStruct, admin.address);
+        // Nothing should emit because values are the same
+        await expect(tx).to.not.emit(accountHandler, "SellerUpdateApplied");
 
         // Voucher clone contract
         const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
@@ -1421,10 +1450,10 @@ describe("SellerHandler", function () {
         await accountHandler.connect(admin).updateSeller(seller, authToken);
 
         // Approve operator update
-        await accountHandler.connect(other1).approveSellerUpdate(seller.id);
+        await accountHandler.connect(other1).optInToSellerUpdate(seller.id);
 
         // Approve clerk update
-        await accountHandler.connect(other3).approveSellerUpdate(seller.id);
+        await accountHandler.connect(other3).optInToSellerUpdate(seller.id);
 
         // Get the seller as a struct
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -1497,13 +1526,13 @@ describe("SellerHandler", function () {
         await accountHandler.connect(authTokenOwner).updateSeller(seller2, emptyAuthToken);
 
         // Approve operator update
-        await accountHandler.connect(other5).approveSellerUpdate(seller2.id);
+        await accountHandler.connect(other5).optInToSellerUpdate(seller2.id);
 
         // Approve admin update
-        await accountHandler.connect(other6).approveSellerUpdate(seller2.id);
+        await accountHandler.connect(other6).optInToSellerUpdate(seller2.id);
 
         // Approve clerk update
-        await accountHandler.connect(other7).approveSellerUpdate(seller2.id);
+        await accountHandler.connect(other7).optInToSellerUpdate(seller2.id);
 
         // Get the seller as a struct
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller2.id);
@@ -1579,8 +1608,8 @@ describe("SellerHandler", function () {
         // Update seller
         await accountHandler.connect(authTokenOwner).updateSeller(seller2, authToken2);
 
-        await accountHandler.connect(other5).approveSellerUpdate(seller2.id);
-        await accountHandler.connect(other7).approveSellerUpdate(seller2.id);
+        await accountHandler.connect(other5).optInToSellerUpdate(seller2.id);
+        await accountHandler.connect(other7).optInToSellerUpdate(seller2.id);
 
         // Get the seller as a struct
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller2.id);
@@ -1663,7 +1692,7 @@ describe("SellerHandler", function () {
         await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
         // Approve update
-        await accountHandler.connect(other1).approveSellerUpdate(seller.id);
+        await accountHandler.connect(other1).optInToSellerUpdate(seller.id);
 
         // Get the seller as a struct
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -1719,7 +1748,7 @@ describe("SellerHandler", function () {
         await accountHandler.connect(authTokenOwner).updateSeller(seller2, authToken2);
 
         // Approve update
-        await accountHandler.connect(rando).approveSellerUpdate(seller2.id);
+        await accountHandler.connect(rando).optInToSellerUpdate(seller2.id);
 
         // Check first seller hasn't changed
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -1762,44 +1791,50 @@ describe("SellerHandler", function () {
         // Update seller
         let tx = await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
-        // Testing for the SellerUpdate event
+        pendingSeller = seller.clone();
+        pendingSeller.active = false;
+        pendingSeller.id = "0";
+        pendingSeller.operator = ethers.constants.AddressZero;
+        pendingSeller.clerk = ethers.constants.AddressZero;
+        pendingSeller.treasury = ethers.constants.AddressZero;
+        pendingSellerStruct = pendingSeller.toStruct();
+
+        // Testing for the SellerUpdatePending event
         await expect(tx)
-          .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct, emptyAuthTokenStruct, admin.address);
+          .to.emit(accountHandler, "SellerUpdatePending")
+          .withArgs(seller.id, pendingSellerStruct, admin.address);
 
         sellerStruct = seller.toStruct();
 
-        // Testing for the SellerUpdateRolesRequested event
-        await expect(tx)
-          .to.emit(accountHandler, "SellerUpdateRolesRequested")
-          .withArgs(seller.id, sellerStruct, admin.address);
+        pendingSeller.admin = ethers.constants.AddressZero;
+        pendingSellerStruct = pendingSeller.toStruct();
 
         // Approve update
-        await expect(accountHandler.connect(other2).approveSellerUpdate(seller.id))
-          .to.emit(accountHandler, "SellerUpdateRolesApproved")
-          .withArgs(seller.id, sellerStruct, other2.address);
+        await expect(accountHandler.connect(other2).optInToSellerUpdate(seller.id))
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, emptyAuthTokenStruct, other2.address);
 
         seller.admin = other3.address;
 
         // Update seller
         tx = await accountHandler.connect(other2).updateSeller(seller, emptyAuthToken);
 
-        // Testing for the SellerUpdate event
+        pendingSeller.admin = other3.address;
+        pendingSellerStruct = pendingSeller.toStruct();
+
+        // Testing for the SellerUpdatePending event
         await expect(tx)
-          .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct, emptyAuthTokenStruct, other2.address);
+          .to.emit(accountHandler, "SellerUpdatePending")
+          .withArgs(seller.id, pendingSellerStruct, other2.address);
 
         sellerStruct = seller.toStruct();
-
-        // Testing for the SellerUpdateRolesRequested event
-        await expect(tx)
-          .to.emit(accountHandler, "SellerUpdateRolesRequested")
-          .withArgs(seller.id, sellerStruct, other2.address);
+        pendingSeller.admin = ethers.constants.AddressZero;
+        pendingSellerStruct = pendingSeller.toStruct();
 
         // Approve update
-        await expect(accountHandler.connect(other3).approveSellerUpdate(seller.id))
-          .to.emit(accountHandler, "SellerUpdateRolesApproved")
-          .withArgs(seller.id, sellerStruct, other3.address);
+        await expect(accountHandler.connect(other3).optInToSellerUpdate(seller.id))
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, emptyAuthTokenStruct, other3.address);
 
         // Attempt to update the seller with original admin address, expecting revert
         await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWith(
@@ -1811,12 +1846,23 @@ describe("SellerHandler", function () {
         seller.admin = ethers.constants.AddressZero;
         sellerStruct = seller.toStruct();
 
+        // Nothing pending
+        pendingSeller = seller.clone();
+        pendingSeller.active = false;
+        pendingSeller.id = "0";
+        pendingSeller.operator = ethers.constants.AddressZero;
+        pendingSeller.clerk = ethers.constants.AddressZero;
+        pendingSeller.treasury = ethers.constants.AddressZero;
+        pendingSellerStruct = pendingSeller.toStruct();
+
         // Update seller, testing for the event
         await expect(accountHandler.connect(admin).updateSeller(seller, authToken))
-          .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct, authTokenStruct, admin.address);
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, authTokenStruct, admin.address);
 
         seller.operator = other3.address;
+        pendingSeller.operator = other3.address;
+        pendingSellerStruct = pendingSeller.toStruct();
 
         // Transfer ownership of auth token because owner must be different from old admin
         await mockAuthERC721Contract.connect(authTokenOwner).transferFrom(authTokenOwner.address, other1.address, 8400);
@@ -1827,20 +1873,22 @@ describe("SellerHandler", function () {
 
         // Testing for the SellerUpdate event
         await expect(tx)
-          .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct, authTokenStruct, authTokenOwner.address);
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, authTokenStruct, authTokenOwner.address);
+
+        // Testing for the SellerUpdatePending event
+        await expect(tx)
+          .to.emit(accountHandler, "SellerUpdatePending")
+          .withArgs(seller.id, pendingSellerStruct, authTokenOwner.address);
 
         sellerStruct = seller.toStruct();
-
-        // Testing for the SellerUpdateRolesRequested event
-        await expect(tx)
-          .to.emit(accountHandler, "SellerUpdateRolesRequested")
-          .withArgs(seller.id, sellerStruct, authTokenOwner.address);
+        pendingSeller.operator = ethers.constants.AddressZero;
+        pendingSellerStruct = pendingSeller.toStruct();
 
         // Approve update
-        await expect(accountHandler.connect(other3).approveSellerUpdate(seller.id))
-          .to.emit(accountHandler, "SellerUpdateRolesApproved")
-          .withArgs(seller.id, sellerStruct, other3.address);
+        await expect(accountHandler.connect(other3).optInToSellerUpdate(seller.id))
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, authTokenStruct, other3.address);
 
         // Attempt to update the seller with original admin address, expecting revert
         await expect(accountHandler.connect(admin).updateSeller(seller, authToken)).to.revertedWith(
@@ -1857,24 +1905,25 @@ describe("SellerHandler", function () {
         seller.admin = other1.address;
         seller.clerk = other1.address;
 
+        pendingSeller = seller.clone();
+        pendingSeller.active = false;
+        pendingSeller.id = "0";
+        pendingSeller.treasury = ethers.constants.AddressZero;
+        pendingSellerStruct = pendingSeller.toStruct();
+
         // Update seller
         const tx = await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
-        // Testing for the SellerUpdate event
+        // Testing for the SellerUpdatePending event
         await expect(tx)
-          .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct, emptyAuthTokenStruct, admin.address);
+          .to.emit(accountHandler, "SellerUpdatePending")
+          .withArgs(seller.id, pendingSellerStruct, admin.address);
 
         //Create struct again with new addresses
         sellerStruct = seller.toStruct();
 
-        // Testing for the SellerUpdateRolesRequested event
-        await expect(tx)
-          .to.emit(accountHandler, "SellerUpdateRolesRequested")
-          .withArgs(seller.id, sellerStruct, admin.address);
-
-        // Approve update
-        await accountHandler.connect(other1).approveSellerUpdate(seller.id);
+        // // Approve update
+        await accountHandler.connect(other1).optInToSellerUpdate(seller.id);
 
         // Make sure seller treasury didn't change
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -1895,7 +1944,7 @@ describe("SellerHandler", function () {
       });
 
       it("should be possible to use the same address for operator, admin, clerk, and treasury", async function () {
-        // Only treasury doesn't need owner approval
+        // Only treasury doesn't need owner approval and will be updated immediately
         seller.treasury = other1.address;
         sellerStruct = seller.toStruct();
 
@@ -1906,22 +1955,34 @@ describe("SellerHandler", function () {
         // Update seller
         const tx = await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
-        // Testing for the SellerUpdated event
+        // Pending seller is filled with only admin, clerk, and operator addresses
+        pendingSeller = seller.clone();
+        pendingSeller.id = ethers.BigNumber.from("0");
+        pendingSeller.active = false;
+        pendingSeller.treasury = ethers.constants.AddressZero;
+        pendingSellerStruct = pendingSeller.toStruct();
+
+        // Testing for the SellerUpdateApplied event
         await expect(tx)
-          .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct, emptyAuthTokenStruct, admin.address);
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, emptyAuthTokenStruct, admin.address);
+
+        // Testing for the SellerUpdatePending event
+        await expect(tx)
+          .to.emit(accountHandler, "SellerUpdatePending")
+          .withArgs(seller.id, pendingSellerStruct, admin.address);
 
         sellerStruct = seller.toStruct();
-
-        // Testing for the SellerUpdateRolesRequested event
-        await expect(tx)
-          .to.emit(accountHandler, "SellerUpdateRolesRequested")
-          .withArgs(seller.id, sellerStruct, admin.address);
+        // Nothing pending left
+        pendingSeller.admin = ethers.constants.AddressZero;
+        pendingSeller.clerk = ethers.constants.AddressZero;
+        pendingSeller.operator = ethers.constants.AddressZero;
+        pendingSellerStruct = pendingSeller.toStruct();
 
         // Approve update
-        await expect(accountHandler.connect(other1).approveSellerUpdate(seller.id))
-          .to.emit(accountHandler, "SellerUpdateRolesApproved")
-          .withArgs(seller.id, sellerStruct, other1.address);
+        await expect(await accountHandler.connect(other1).optInToSellerUpdate(seller.id))
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(seller.id, sellerStruct, pendingSellerStruct, emptyAuthTokenStruct, other1.address);
       });
 
       context("💔 Revert Reasons", async function () {
