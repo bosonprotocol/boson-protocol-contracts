@@ -166,9 +166,12 @@ contract object in verify function  {
   args: []
 }
 Nothing to compile
-❌ Failed to verify BundleHandlerFacet on block explorer. Failed to send contract verification request.
-Endpoint URL: https://api.polygonscan.com/api
-Reason: Headers Timeout Error
+Successfully submitted source code for contract
+contracts/protocol/facets/BundleHandlerFacet.sol:BundleHandlerFacet at 0x8A7F0260Ed956f8a51193672F26d9B9a31347359
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract BundleHandlerFacet on Etherscan.
+https://polygonscan.com/address/0x8A7F0260Ed956f8a51193672F26d9B9a31347359#code
 
 📋 Verifying DisputeHandlerFacet
 contract object in verify function  {
@@ -317,7 +320,12 @@ contract object in verify function  {
   ]
 }
 Nothing to compile
-❌ Failed to verify BosonVoucher Beacon on block explorer. Contract source code already verified
+Successfully submitted source code for contract
+contracts/protocol/clients/voucher/BosonClientBeacon.sol:BosonClientBeacon at 0xF5FB35763fb5AE8B48AA8bfaF382BE385A5c9428
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract BosonClientBeacon on Etherscan.
+https://polygonscan.com/address/0xF5FB35763fb5AE8B48AA8bfaF382BE385A5c9428#code
 
 📋 Verifying BosonVoucher Proxy
 contract object in verify function  {

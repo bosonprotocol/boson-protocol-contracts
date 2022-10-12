@@ -15,8 +15,8 @@ const { deployProtocolDiamond } = require("./util/deploy-protocol-diamond.js");
 const { deployProtocolClients } = require("./util/deploy-protocol-clients.js");
 const { deployProtocolConfigFacet } = require("./util/deploy-protocol-config-facet.js");
 const { deployProtocolHandlerFacets } = require("./util/deploy-protocol-handler-facets.js");
-const { verifyOnBlockExplorer, verifyOnTestEnv } = require("./util/report-verify-deployments");
-const { delay, deploymentComplete, getFees, writeContracts } = require("./util/utils");
+const { verifyOnTestEnv } = require("./util/report-verify-deployments");
+const { deploymentComplete, getFees, writeContracts } = require("./util/utils");
 const AuthTokenType = require("../scripts/domain/AuthTokenType");
 
 /**
@@ -238,6 +238,13 @@ async function main() {
 
   const contractsPath = await writeContracts(contracts);
   console.log(`✅ Contracts written to ${contractsPath}`);
+
+  // Verify on test node if test env
+  // Just checks that there is contract code at the expected addresses
+  if (network === "test" || network === "localhost") {
+    await verifyOnTestEnv(contracts);
+  }
+
 }
 
 main()
