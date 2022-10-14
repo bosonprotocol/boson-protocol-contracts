@@ -7,13 +7,14 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IBosonAccountHandler } from "../interfaces/handlers/IBosonAccountHandler.sol";
 import { IBosonMetaTransactionsHandler } from "../interfaces/handlers/IBosonMetaTransactionsHandler.sol";
 import { BosonTypes } from "../domain/BosonTypes.sol";
+import { MockNativeMetaTransaction } from "./MockNativeMetaTransaction.sol";
 
 /**
  * @title Foreign20
  *
  * @notice Mock ERC-(20) NFT for Unit Testing
  */
-contract Foreign20 is ERC20Pausable {
+contract Foreign20 is ERC20Pausable, MockNativeMetaTransaction {
     string public constant TOKEN_NAME = "Foreign20";
     string public constant TOKEN_SYMBOL = "20Test";
 
