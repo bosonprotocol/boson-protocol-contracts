@@ -111,45 +111,46 @@ contract SellerHandlerFacet is SellerBase {
 
         // @TODO check if using uint256 is better on gas efficiency
         bool needsApproval;
-
-        Seller storage sellerPendingUpdates = lookups.sellerPendingUpdates[_seller.id];
-        AuthToken storage authTokenPendingUpdate = lookups.sellerPendingAuthTokenUpdate[_seller.id];
+        (, Seller storage sellerPendingUpdate, AuthToken storage authTokenPendingUpdate) = fetchSellerPendingUpdate(
+            _seller.id
+        );
 
         // Admin address or AuthToken data must be present in parameters. A seller can have one or the other. Check passed in parameters
         if (_authToken.tokenType != AuthTokenType.None) {
-            // Check that auth token is unique to this seller
-            uint256 check = lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId];
-            require(check == 0 || check == _seller.id, AUTH_TOKEN_MUST_BE_UNIQUE);
+            // If AuthToken data is different from the one in storage, then set it as pending update
+            if (authToken.tokenType != _authToken.tokenType || authToken.tokenId != _authToken.tokenId) {
+                // Check that auth token is unique to this seller
+                uint256 check = lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId];
+                require(check == 0 || check == _seller.id, AUTH_TOKEN_MUST_BE_UNIQUE);
 
-            // Auth token owner must approve the update to prevent front-running
-            authTokenPendingUpdate.tokenType = _authToken.tokenType;
-            authTokenPendingUpdate.tokenId = _authToken.tokenId;
-            needsApproval = true;
-        } else {
-            if (seller.admin != _seller.admin) {
-                require(_seller.admin != address(0), INVALID_ADDRESS);
-                // If admin address exists, admin address owner must approve the update to prevent front-running
-                sellerPendingUpdates.admin = _seller.admin;
+                // Auth token owner must approve the update to prevent front-running
+                authTokenPendingUpdate.tokenType = _authToken.tokenType;
+                authTokenPendingUpdate.tokenId = _authToken.tokenId;
                 needsApproval = true;
             }
+        } else if (seller.admin != _seller.admin) {
+            require(_seller.admin != address(0), INVALID_ADDRESS);
+            // If admin address exists, admin address owner must approve the update to prevent front-running
+            sellerPendingUpdate.admin = _seller.admin;
+            needsApproval = true;
         }
 
         if (_seller.operator != seller.operator) {
             require(_seller.operator != address(0), INVALID_ADDRESS);
             // Operator address owner must approve the update to prevent front-running
-            sellerPendingUpdates.operator = _seller.operator;
+            sellerPendingUpdate.operator = _seller.operator;
             needsApproval = true;
         }
 
         if (_seller.clerk != seller.clerk) {
             require(_seller.clerk != address(0), INVALID_ADDRESS);
             // Clerk address owner must approve the update to prevent front-running
-            sellerPendingUpdates.clerk = _seller.clerk;
+            sellerPendingUpdate.clerk = _seller.clerk;
             needsApproval = true;
         }
 
         if (needsApproval) {
-            emit SellerUpdatePending(_seller.id, sellerPendingUpdates, authTokenPendingUpdate, sender);
+            emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, sender);
         }
 
         if (seller.treasury != _seller.treasury) {
@@ -161,7 +162,7 @@ contract SellerHandlerFacet is SellerBase {
             emit SellerUpdateApplied(
                 _seller.id,
                 seller,
-                sellerPendingUpdates,
+                sellerPendingUpdate,
                 authToken,
                 authTokenPendingUpdate,
                 sender
@@ -183,13 +184,12 @@ contract SellerHandlerFacet is SellerBase {
 
         require(exists, NO_PENDING_SELLER_ROLE_UPDATE);
 
-        preUpdateSellerCheck(_sellerId, sender, lookups);
-
         // Get storage location for seller
         (, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
 
         // Approve operator address
         if (sellerPendingUpdate.operator != address(0) && sellerPendingUpdate.operator == sender) {
+            preUpdateSellerCheck(_sellerId, sellerPendingUpdate.operator, lookups);
             delete lookups.sellerIdByOperator[seller.operator];
 
             // Update operator
@@ -207,6 +207,7 @@ contract SellerHandlerFacet is SellerBase {
 
         // Approve admin address
         if (sellerPendingUpdate.admin != address(0) && sellerPendingUpdate.admin == sender) {
+            preUpdateSellerCheck(_sellerId, sellerPendingUpdate.admin, lookups);
             // Delete old seller id by admin mapping
             delete lookups.sellerIdByAdmin[seller.admin];
 
@@ -224,6 +225,7 @@ contract SellerHandlerFacet is SellerBase {
 
         // Aprove clerk address
         if (sellerPendingUpdate.clerk != address(0) && sellerPendingUpdate.clerk == sender) {
+            preUpdateSellerCheck(_sellerId, sellerPendingUpdate.clerk, lookups);
             // Delete old seller id by clerk mapping
             delete lookups.sellerIdByClerk[seller.clerk];
 
@@ -273,6 +275,8 @@ contract SellerHandlerFacet is SellerBase {
         // Notify watchers of state change
         emit SellerUpdateApplied(_sellerId, seller, sellerPendingUpdate, authToken, authTokenPendingUpdate, sender);
     }
+
+    function optInToAuthTokenUpdate(uint256 sellerId) external {}
 
     function preUpdateSellerCheck(
         uint256 _sellerId,
