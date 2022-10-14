@@ -17,8 +17,11 @@ import { MockNativeMetaTransaction } from "./MockNativeMetaTransaction.sol";
 contract Foreign20 is ERC20Pausable, MockNativeMetaTransaction {
     string public constant TOKEN_NAME = "Foreign20";
     string public constant TOKEN_SYMBOL = "20Test";
+    string public constant ERC712_VERSION = "1";
 
-    constructor() ERC20(TOKEN_NAME, TOKEN_SYMBOL) {}
+    constructor() ERC20(TOKEN_NAME, TOKEN_SYMBOL) {
+      _initializeEIP712(TOKEN_NAME, ERC712_VERSION);
+    }
 
     /**
      * Mints some tokens
