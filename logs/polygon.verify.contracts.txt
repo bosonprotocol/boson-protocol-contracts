@@ -1,0 +1,419 @@
+boson-protocol-contracts ➤ npx hardhat run --network polygon scripts/verify-suite.js        
+🔍 Verifying contracts on block explorer...
+
+📋 Verifying AccessController
+contract object in verify function  {
+  name: 'AccessController',
+  address: '0x9C867632dFE6b70D83DfE7865cF8510C168AFd40',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/access/AccessController.sol:AccessController at 0x9C867632dFE6b70D83DfE7865cF8510C168AFd40
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract AccessController on Etherscan.
+https://polygonscan.com/address/0x9C867632dFE6b70D83DfE7865cF8510C168AFd40#code
+
+📋 Verifying DiamondLoupeFacet
+contract object in verify function  {
+  name: 'DiamondLoupeFacet',
+  address: '0xba596Ee5C051FAf6B263d457835e65a26661382c',
+  args: []
+}
+Compiled 128 Solidity files successfully
+Successfully submitted source code for contract
+contracts/diamond/facets/DiamondLoupeFacet.sol:DiamondLoupeFacet at 0xba596Ee5C051FAf6B263d457835e65a26661382c
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract DiamondLoupeFacet on Etherscan.
+https://polygonscan.com/address/0xba596Ee5C051FAf6B263d457835e65a26661382c#code
+
+📋 Verifying DiamondCutFacet
+contract object in verify function  {
+  name: 'DiamondCutFacet',
+  address: '0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/diamond/facets/DiamondCutFacet.sol:DiamondCutFacet at 0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract DiamondCutFacet on Etherscan.
+https://polygonscan.com/address/0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9#code
+
+📋 Verifying ERC165Facet
+contract object in verify function  {
+  name: 'ERC165Facet',
+  address: '0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/diamond/facets/ERC165Facet.sol:ERC165Facet at 0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract ERC165Facet on Etherscan.
+https://polygonscan.com/address/0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294#code
+
+📋 Verifying ProtocolDiamond
+contract object in verify function  {
+  name: 'ProtocolDiamond',
+  address: '0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5',
+  args: [
+    '0x9C867632dFE6b70D83DfE7865cF8510C168AFd40',
+    [ [Array], [Array], [Array] ],
+    [ '0x48e2b093', '0x1f931c1c', '0x01ffc9a7' ]
+  ]
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/diamond/ProtocolDiamond.sol:ProtocolDiamond at 0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract ProtocolDiamond on Etherscan.
+https://polygonscan.com/address/0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5#code
+
+📋 Verifying ConfigHandlerFacet
+contract object in verify function  {
+  name: 'ConfigHandlerFacet',
+  address: '0xd8C3B2232B3d597156148f757Bb2bd665843aABd',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/ConfigHandlerFacet.sol:ConfigHandlerFacet at 0xd8C3B2232B3d597156148f757Bb2bd665843aABd
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract ConfigHandlerFacet on Etherscan.
+https://polygonscan.com/address/0xd8C3B2232B3d597156148f757Bb2bd665843aABd#code
+
+📋 Verifying AccountHandlerFacet
+contract object in verify function  {
+  name: 'AccountHandlerFacet',
+  address: '0xE282Ff84bd704504057eAF78Ac34E4a991b69d83',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/AccountHandlerFacet.sol:AccountHandlerFacet at 0xE282Ff84bd704504057eAF78Ac34E4a991b69d83
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract AccountHandlerFacet on Etherscan.
+https://polygonscan.com/address/0xE282Ff84bd704504057eAF78Ac34E4a991b69d83#code
+
+📋 Verifying SellerHandlerFacet
+contract object in verify function  {
+  name: 'SellerHandlerFacet',
+  address: '0x4aA238eF21737E138C4f7D4D722F55680ccB30c9',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/SellerHandlerFacet.sol:SellerHandlerFacet at 0x4aA238eF21737E138C4f7D4D722F55680ccB30c9
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract SellerHandlerFacet on Etherscan.
+https://polygonscan.com/address/0x4aA238eF21737E138C4f7D4D722F55680ccB30c9#code
+
+📋 Verifying BuyerHandlerFacet
+contract object in verify function  {
+  name: 'BuyerHandlerFacet',
+  address: '0xabd67624662f05B4fb5084f8edcC2F2A422670bf',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/BuyerHandlerFacet.sol:BuyerHandlerFacet at 0xabd67624662f05B4fb5084f8edcC2F2A422670bf
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract BuyerHandlerFacet on Etherscan.
+https://polygonscan.com/address/0xabd67624662f05B4fb5084f8edcC2F2A422670bf#code
+
+📋 Verifying DisputeResolverHandlerFacet
+contract object in verify function  {
+  name: 'DisputeResolverHandlerFacet',
+  address: '0xeD2E929E36484E767E39d9b4F1c190cC179Ed586',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/DisputeResolverHandlerFacet.sol:DisputeResolverHandlerFacet at 0xeD2E929E36484E767E39d9b4F1c190cC179Ed586
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract DisputeResolverHandlerFacet on Etherscan.
+https://polygonscan.com/address/0xeD2E929E36484E767E39d9b4F1c190cC179Ed586#code
+
+📋 Verifying AgentHandlerFacet
+contract object in verify function  {
+  name: 'AgentHandlerFacet',
+  address: '0xe8A57dd8784E6f0CE4C1B51CEf52d04b7C1F1C04',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/AgentHandlerFacet.sol:AgentHandlerFacet at 0xe8A57dd8784E6f0CE4C1B51CEf52d04b7C1F1C04
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract AgentHandlerFacet on Etherscan.
+https://polygonscan.com/address/0xe8A57dd8784E6f0CE4C1B51CEf52d04b7C1F1C04#code
+
+📋 Verifying BundleHandlerFacet
+contract object in verify function  {
+  name: 'BundleHandlerFacet',
+  address: '0x8A7F0260Ed956f8a51193672F26d9B9a31347359',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/BundleHandlerFacet.sol:BundleHandlerFacet at 0x8A7F0260Ed956f8a51193672F26d9B9a31347359
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract BundleHandlerFacet on Etherscan.
+https://polygonscan.com/address/0x8A7F0260Ed956f8a51193672F26d9B9a31347359#code
+
+📋 Verifying DisputeHandlerFacet
+contract object in verify function  {
+  name: 'DisputeHandlerFacet',
+  address: '0x8FA52A7d571146657157bA1e2d15F55796c0D49C',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/DisputeHandlerFacet.sol:DisputeHandlerFacet at 0x8FA52A7d571146657157bA1e2d15F55796c0D49C
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract DisputeHandlerFacet on Etherscan.
+https://polygonscan.com/address/0x8FA52A7d571146657157bA1e2d15F55796c0D49C#code
+
+📋 Verifying ExchangeHandlerFacet
+contract object in verify function  {
+  name: 'ExchangeHandlerFacet',
+  address: '0x588665499eCC0cc9b6924275359F1D279A242610',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/ExchangeHandlerFacet.sol:ExchangeHandlerFacet at 0x588665499eCC0cc9b6924275359F1D279A242610
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract ExchangeHandlerFacet on Etherscan.
+https://polygonscan.com/address/0x588665499eCC0cc9b6924275359F1D279A242610#code
+
+📋 Verifying FundsHandlerFacet
+contract object in verify function  {
+  name: 'FundsHandlerFacet',
+  address: '0x6252236D213A80A67C85a48ec48D38245C8362fF',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/FundsHandlerFacet.sol:FundsHandlerFacet at 0x6252236D213A80A67C85a48ec48D38245C8362fF
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract FundsHandlerFacet on Etherscan.
+https://polygonscan.com/address/0x6252236D213A80A67C85a48ec48D38245C8362fF#code
+
+📋 Verifying GroupHandlerFacet
+contract object in verify function  {
+  name: 'GroupHandlerFacet',
+  address: '0x52075179452377DA8264e3525f71c9099257fA90',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify GroupHandlerFacet on block explorer. Failed to send contract verification request.
+Endpoint URL: https://api.polygonscan.com/api
+Reason: Connect Timeout Error
+
+📋 Verifying MetaTransactionsHandlerFacet
+contract object in verify function  {
+  name: 'MetaTransactionsHandlerFacet',
+  address: '0x85a52d353027e28739F57A212324Ccd05EF83008',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/MetaTransactionsHandlerFacet.sol:MetaTransactionsHandlerFacet at 0x85a52d353027e28739F57A212324Ccd05EF83008
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract MetaTransactionsHandlerFacet on Etherscan.
+https://polygonscan.com/address/0x85a52d353027e28739F57A212324Ccd05EF83008#code
+
+📋 Verifying OfferHandlerFacet
+contract object in verify function  {
+  name: 'OfferHandlerFacet',
+  address: '0x5FD6b187E800bAfA53bDEE18619A8E828A6c1011',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/OfferHandlerFacet.sol:OfferHandlerFacet at 0x5FD6b187E800bAfA53bDEE18619A8E828A6c1011
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract OfferHandlerFacet on Etherscan.
+https://polygonscan.com/address/0x5FD6b187E800bAfA53bDEE18619A8E828A6c1011#code
+
+📋 Verifying OrchestrationHandlerFacet
+contract object in verify function  {
+  name: 'OrchestrationHandlerFacet',
+  address: '0x794DF5A4D6276C06035f68C3D906AfB9E00583e3',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/OrchestrationHandlerFacet.sol:OrchestrationHandlerFacet at 0x794DF5A4D6276C06035f68C3D906AfB9E00583e3
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract OrchestrationHandlerFacet on Etherscan.
+https://polygonscan.com/address/0x794DF5A4D6276C06035f68C3D906AfB9E00583e3#code
+
+📋 Verifying TwinHandlerFacet
+contract object in verify function  {
+  name: 'TwinHandlerFacet',
+  address: '0xA0D1872bFa6031A94AD2339A81bF9c99719ec397',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/TwinHandlerFacet.sol:TwinHandlerFacet at 0xA0D1872bFa6031A94AD2339A81bF9c99719ec397
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract TwinHandlerFacet on Etherscan.
+https://polygonscan.com/address/0xA0D1872bFa6031A94AD2339A81bF9c99719ec397#code
+
+📋 Verifying PauseHandlerFacet
+contract object in verify function  {
+  name: 'PauseHandlerFacet',
+  address: '0xe45A5828c39d14Fb854526426c70547C9dF1Ae61',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/PauseHandlerFacet.sol:PauseHandlerFacet at 0xe45A5828c39d14Fb854526426c70547C9dF1Ae61
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract PauseHandlerFacet on Etherscan.
+https://polygonscan.com/address/0xe45A5828c39d14Fb854526426c70547C9dF1Ae61#code
+
+📋 Verifying BosonVoucher Logic
+contract object in verify function  {
+  name: 'BosonVoucher Logic',
+  address: '0x89E83690861c2f34f4B8B15f2aFFFe1FB670812d',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/clients/voucher/BosonVoucher.sol:BosonVoucher at 0x89E83690861c2f34f4B8B15f2aFFFe1FB670812d
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract BosonVoucher on Etherscan.
+https://polygonscan.com/address/0x89E83690861c2f34f4B8B15f2aFFFe1FB670812d#code
+
+📋 Verifying BosonVoucher Beacon
+contract object in verify function  {
+  name: 'BosonVoucher Beacon',
+  address: '0xF5FB35763fb5AE8B48AA8bfaF382BE385A5c9428',
+  args: [
+    '0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5',
+    '0x89E83690861c2f34f4B8B15f2aFFFe1FB670812d'
+  ]
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/clients/voucher/BosonClientBeacon.sol:BosonClientBeacon at 0xF5FB35763fb5AE8B48AA8bfaF382BE385A5c9428
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract BosonClientBeacon on Etherscan.
+https://polygonscan.com/address/0xF5FB35763fb5AE8B48AA8bfaF382BE385A5c9428#code
+
+📋 Verifying BosonVoucher Proxy
+contract object in verify function  {
+  name: 'BosonVoucher Proxy',
+  address: '0x57A12A9F2a81B2b13c20F9F465eA6814F76c7168',
+  args: []
+}
+Nothing to compile
+❌ Failed to verify BosonVoucher Proxy on block explorer. Failed to send contract verification request.
+Endpoint URL: https://api.polygonscan.com/api
+Reason: Connect Timeout Error
+
+
+137 polygon [ 'GroupHandlerFacet', 'BosonVoucher Beacon', 'BosonVoucher Proxy' ]
+🔍 Verifying contracts on block explorer...
+
+137 polygon [ 'GroupHandlerFacet', 'BosonVoucher Beacon', 'BosonVoucher Proxy' ]
+🔍 Verifying contracts on block explorer...
+
+📋 Verifying GroupHandlerFacet
+contract object in verify function  {
+  name: 'GroupHandlerFacet',
+  address: '0x52075179452377DA8264e3525f71c9099257fA90',
+  args: []
+}
+❌ Failed to verify GroupHandlerFacet on block explorer. The selected network is hardhat. Please select a network supported by Etherscan.
+
+📋 Verifying BosonVoucher Beacon
+contract object in verify function  {
+  name: 'BosonVoucher Beacon',
+  address: '0xF5FB35763fb5AE8B48AA8bfaF382BE385A5c9428',
+  args: [
+    '0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5',
+    '0x89E83690861c2f34f4B8B15f2aFFFe1FB670812d'
+  ]
+}
+❌ Failed to verify BosonVoucher Beacon on block explorer. The selected network is hardhat. Please select a network supported by Etherscan.
+
+📋 Verifying BosonVoucher Proxy
+contract object in verify function  {
+  name: 'BosonVoucher Proxy',
+  address: '0x57A12A9F2a81B2b13c20F9F465eA6814F76c7168',
+  args: []
+}
+❌ Failed to verify BosonVoucher Proxy on block explorer. The selected network is hardhat. Please select a network supported by Etherscan.
+
+
+137 polygon [ 'GroupHandlerFacet', 'BosonVoucher Beacon', 'BosonVoucher Proxy' ]
+🔍 Verifying contracts on block explorer...
+
+📋 Verifying GroupHandlerFacet
+contract object in verify function  {
+  name: 'GroupHandlerFacet',
+  address: '0x52075179452377DA8264e3525f71c9099257fA90',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/facets/GroupHandlerFacet.sol:GroupHandlerFacet at 0x52075179452377DA8264e3525f71c9099257fA90
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract GroupHandlerFacet on Etherscan.
+https://polygonscan.com/address/0x52075179452377DA8264e3525f71c9099257fA90#code
+
+📋 Verifying BosonVoucher Beacon
+contract object in verify function  {
+  name: 'BosonVoucher Beacon',
+  address: '0xF5FB35763fb5AE8B48AA8bfaF382BE385A5c9428',
+  args: [
+    '0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5',
+    '0x89E83690861c2f34f4B8B15f2aFFFe1FB670812d'
+  ]
+}
+Compiled 128 Solidity files successfully
+❌ Failed to verify BosonVoucher Beacon on block explorer. Contract source code already verified
+
+📋 Verifying BosonVoucher Proxy
+contract object in verify function  {
+  name: 'BosonVoucher Proxy',
+  address: '0x57A12A9F2a81B2b13c20F9F465eA6814F76c7168',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/protocol/clients/proxy/BeaconClientProxy.sol:BeaconClientProxy at 0x57A12A9F2a81B2b13c20F9F465eA6814F76c7168
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract BeaconClientProxy on Etherscan.
+https://polygonscan.com/address/0x57A12A9F2a81B2b13c20F9F465eA6814F76c7168#code
+
+

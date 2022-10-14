@@ -20,7 +20,7 @@ const {
   prepareDataSignatureParameters,
   applyPercentage,
 } = require("../util/utils.js");
-const { oneWeek, oneMonth } = require("../util/constants");
+const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const {
   mockOffer,
   mockDisputeResolver,
@@ -115,7 +115,7 @@ describe("IBosonFundsHandler", function () {
     operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -127,21 +127,25 @@ describe("IBosonFundsHandler", function () {
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, [
-      "SellerHandlerFacet",
-      "BuyerHandlerFacet",
-      "AgentHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "FundsHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "PauseHandlerFacet",
-      "AccountHandlerFacet",
-    ]);
+    await deployProtocolHandlerFacets(
+      protocolDiamond,
+      [
+        "SellerHandlerFacet",
+        "BuyerHandlerFacet",
+        "AgentHandlerFacet",
+        "DisputeResolverHandlerFacet",
+        "FundsHandlerFacet",
+        "ExchangeHandlerFacet",
+        "OfferHandlerFacet",
+        "PauseHandlerFacet",
+        "AccountHandlerFacet",
+      ],
+      maxPriorityFeePerGas
+    );
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
-    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
     const [beacon] = beacons;
     const [proxy] = proxies;
 
@@ -187,7 +191,7 @@ describe("IBosonFundsHandler", function () {
       },
     ];
 
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
@@ -863,7 +867,7 @@ describe("IBosonFundsHandler", function () {
           });
 
           it("Withdraw when dispute is retracted, it emits a FundsWithdrawn event", async function () {
-            await deployProtocolHandlerFacets(protocolDiamond, ["DisputeHandlerFacet"]);
+            await deployProtocolHandlerFacets(protocolDiamond, ["DisputeHandlerFacet"], maxPriorityFeePerGas);
 
             // Cast Diamond to IBosonDisputeHandler
             disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
@@ -2547,7 +2551,7 @@ describe("IBosonFundsHandler", function () {
 
       context("Final state DISPUTED", async function () {
         beforeEach(async function () {
-          await deployProtocolHandlerFacets(protocolDiamond, ["DisputeHandlerFacet"]);
+          await deployProtocolHandlerFacets(protocolDiamond, ["DisputeHandlerFacet"], maxPriorityFeePerGas);
 
           // Cast Diamond to IBosonDisputeHandler
           disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);

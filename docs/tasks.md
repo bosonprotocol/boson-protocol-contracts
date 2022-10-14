@@ -2,7 +2,7 @@
 
 <h1 align="center">Boson Protocol V2</h1>
 
-### [Intro](../README.md) | [Audits](audits.md) | [Setup](setup.md) | Tasks | [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md) | [Happy Path Exchange](happy-path-exchange.md)
+### [Intro](../README.md) | [Audits](audits.md) | [Setup](setup.md) | Tasks | [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md) | [Sequences](sequences.md)
 
 ## Development Tasks
 Everything required to build, test, analyse, and deploy is available as an NPM script.
@@ -128,11 +128,18 @@ Script will create and/or activate a dispute resolver
         }
       ],
       "sellerAllowList": [string]
+      "privateKey": string // optional
     }
   ```
 - `network`: Network to run the script
 - `activate-only (optional)`: Optional flag to only activate the Dispute Resolver
 - `create-only (optional)`: Optional flag to only create the Dispute Resolver
+
+
+Note about the field `privateKey` in JSON file:
+- `privateKey` represents the hex encoded private key that will create a dispute resolver. If it is not specified, the protocol admin account will be used (same account that later activate the dispute resolver and is specified in `.env`).
+- If all `operator`, `admin` and `clerk` match the address, corresponding to `privateKey`, dispute resolver is simply created and activated.
+- If any of `operator`, `admin` or `clerk` differs from the address, corresponding to `privateKey`, dispute resolver is created in two steps. Firstly, a dispute resolver with `operator`, `admin` and `clerk` set to address, corresponding to `privateKey` is created and then in the second step dispute resolver is updated with addresses from JSON file.
 
 Example: 
 

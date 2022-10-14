@@ -10,7 +10,7 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { oneWeek, oneMonth } = require("../util/constants");
+const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const { mockAgent, accountId } = require("../util/mock");
 
 /**
@@ -19,7 +19,7 @@ const { mockAgent, accountId } = require("../util/mock");
 describe("AgentHandler", function () {
   // Common vars
   let deployer, pauser, rando, other1, other2, other3, protocolTreasury, bosonToken;
-  let protocolDiamond, accessController, accountHandler, pauseHandler, gasLimit;
+  let protocolDiamond, accessController, accountHandler, pauseHandler;
   let agent, agentStruct, agent2, agent2Struct, expectedAgent, expectedAgentStruct;
   let nextAccountId;
   let invalidAccountId, id, id2, key, value, exists;
@@ -30,7 +30,7 @@ describe("AgentHandler", function () {
     [deployer, pauser, rando, other1, other2, other3, protocolTreasury, bosonToken] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -42,15 +42,15 @@ describe("AgentHandler", function () {
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, [
-      "AccountHandlerFacet",
-      "AgentHandlerFacet",
-      "PauseHandlerFacet",
-    ]);
+    await deployProtocolHandlerFacets(
+      protocolDiamond,
+      ["AccountHandlerFacet", "AgentHandlerFacet", "PauseHandlerFacet"],
+      maxPriorityFeePerGas
+    );
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
-    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
     const [beacon] = beacons;
     const [proxy] = proxies;
 
@@ -93,7 +93,7 @@ describe("AgentHandler", function () {
       },
     ];
 
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
 
     // Cast Diamond to IBosonAccountHandler
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);

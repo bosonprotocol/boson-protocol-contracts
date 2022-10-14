@@ -46,7 +46,7 @@ const {
   calculateContractAddress,
   applyPercentage,
 } = require("../util/utils.js");
-const { oneWeek, oneMonth } = require("../util/constants");
+const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const { FundsList } = require("../../scripts/domain/Funds");
 const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
 
@@ -136,7 +136,7 @@ describe("IBosonExchangeHandler", function () {
     operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -148,25 +148,32 @@ describe("IBosonExchangeHandler", function () {
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, [
-      "AccountHandlerFacet",
-      "AgentHandlerFacet",
-      "SellerHandlerFacet",
-      "BuyerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "FundsHandlerFacet",
-      "DisputeHandlerFacet",
-      "TwinHandlerFacet",
-      "BundleHandlerFacet",
-      "GroupHandlerFacet",
-      "PauseHandlerFacet",
-    ]);
+    await deployProtocolHandlerFacets(
+      protocolDiamond,
+      [
+        "AccountHandlerFacet",
+        "AgentHandlerFacet",
+        "SellerHandlerFacet",
+        "BuyerHandlerFacet",
+        "DisputeResolverHandlerFacet",
+        "ExchangeHandlerFacet",
+        "OfferHandlerFacet",
+        "FundsHandlerFacet",
+        "DisputeHandlerFacet",
+        "TwinHandlerFacet",
+        "BundleHandlerFacet",
+        "GroupHandlerFacet",
+        "PauseHandlerFacet",
+      ],
+      maxPriorityFeePerGas
+    );
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
-    const [implementations, beacons, proxies, clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [implementations, beacons, proxies, clients] = await deployProtocolClients(
+      protocolClientArgs,
+      maxPriorityFeePerGas
+    );
     [bosonVoucher] = clients;
     const [beacon] = beacons;
     const [proxy] = proxies;
@@ -215,7 +222,7 @@ describe("IBosonExchangeHandler", function () {
     ];
 
     // Deploy the Config facet, initializing the protocol config
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
@@ -767,7 +774,7 @@ describe("IBosonExchangeHandler", function () {
 
           // set validFrom date in the past
           offerDates.validFrom = ethers.BigNumber.from(now)
-            .add((oneMonth / 1000) * 6)
+            .add(oneMonth * 6)
             .toString(); // 6 months in the future
           offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom).add(10).toString(); // just after the valid from so it succeeds.
 

@@ -13,7 +13,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { calculateContractAddress } = require("../util/utils.js");
-const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
+const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL, maxPriorityFeePerGas } = require("../util/constants");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockSeller, mockAuthToken, mockVoucherInitValues, accountId } = require("../util/mock");
 
@@ -83,7 +83,7 @@ describe("SellerHandler", function () {
     authTokenOwner = operator = clerk = admin;
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -95,20 +95,18 @@ describe("SellerHandler", function () {
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, [
-      "AccountHandlerFacet",
-      "SellerHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "PauseHandlerFacet",
-    ]);
+    await deployProtocolHandlerFacets(
+      protocolDiamond,
+      ["AccountHandlerFacet", "SellerHandlerFacet", "ExchangeHandlerFacet", "OfferHandlerFacet", "PauseHandlerFacet"],
+      maxPriorityFeePerGas
+    );
 
     // Deploy mock ERC721 tokens
     [mockAuthERC721Contract, mockAuthERC721Contract2] = await deployMockTokens(gasLimit, ["Foreign721", "Foreign721"]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
-    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
     const [beacon] = beacons;
     const [proxy] = proxies;
 
@@ -151,7 +149,7 @@ describe("SellerHandler", function () {
       },
     ];
 
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
@@ -851,6 +849,18 @@ describe("SellerHandler", function () {
           await expect(
             accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE);
+        });
+
+        it("authTokenType is Custom", async function () {
+          // Set admin == zero address because seller will be created with auth token
+          seller.admin = ethers.constants.AddressZero;
+
+          authToken.tokenType = AuthTokenType.Custom;
+
+          // Attempt to Create a seller with AuthTokenType == Custom, expecting revert
+          await expect(
+            accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.INVALID_AUTH_TOKEN_TYPE);
         });
 
         it("Caller is not the supplied admin", async function () {
@@ -2277,6 +2287,18 @@ describe("SellerHandler", function () {
           // Attempt to update seller2 with non-unique authToken used by seller 1
           await expect(accountHandler.connect(other1).updateSeller(seller2, authToken)).to.revertedWith(
             RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE
+          );
+        });
+
+        it("authTokenType is Custom", async function () {
+          // Set admin == zero address because seller will be created with auth token
+          seller.admin = ethers.constants.AddressZero;
+
+          authToken.tokenType = AuthTokenType.Custom;
+
+          // Attempt to Update a seller with AuthTokenType == Custom, expecting revert
+          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, authToken)).to.revertedWith(
+            RevertReasons.INVALID_AUTH_TOKEN_TYPE
           );
         });
 
