@@ -1,0 +1,6 @@
+/**
+ */
+exports.Facets = [
+  "SellerHandlerFacet",
+  // "BuyerHandlerFacet"
+];

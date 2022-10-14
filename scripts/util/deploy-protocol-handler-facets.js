@@ -15,7 +15,7 @@ const { getFees } = require("./utils");
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolHandlerFacets(diamond, facetNames, maxPriorityFeePerGas) {
+async function deployProtocolHandlerFacets(diamond, facetNames, maxPriorityFeePerGas, doCut = true) {
   let deployedFacets = [];
 
   // Deploy all the no-arg initializer handler facets
@@ -31,25 +31,29 @@ async function deployProtocolHandlerFacets(diamond, facetNames, maxPriorityFeePe
     });
   }
 
-  // Cast Diamond to DiamondCutFacet
-  const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", diamond.address);
+  if (doCut) {
+    // Cast Diamond to DiamondCutFacet
+    const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", diamond.address);
 
-  // All handler facets currently have no-arg initializers
-  let initFunction = "initialize()";
-  let initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
-  let callData = initInterface.encodeFunctionData("initialize");
+    // All handler facets currently have no-arg initializers
+    let initFunction = "initialize()";
+    let initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
+    let callData = initInterface.encodeFunctionData("initialize");
 
-  // Cut all the facets into the diamond
-  for (let i = 0; i < deployedFacets.length; i++) {
-    const deployedFacet = deployedFacets[i];
-    const facetCut = getFacetAddCut(deployedFacet.contract, [initFunction]);
-    const transactionResponse = await diamondCutFacet.diamondCut(
-      [facetCut],
-      deployedFacet.contract.address,
-      callData,
-      await getFees(maxPriorityFeePerGas)
-    );
-    await transactionResponse.wait(confirmations);
+    // Cut all the facets into the diamond
+
+    for (let i = 0; i < deployedFacets.length; i++) {
+      const deployedFacet = deployedFacets[i];
+
+      const facetCut = getFacetAddCut(deployedFacet.contract, [initFunction]);
+      const transactionResponse = await diamondCutFacet.diamondCut(
+        [facetCut],
+        deployedFacet.contract.address,
+        callData,
+        await getFees(maxPriorityFeePerGas)
+      );
+      await transactionResponse.wait(confirmations);
+    }
   }
 
   // Return an array of objects with facet name and contract properties
