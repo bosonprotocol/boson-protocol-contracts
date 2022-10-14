@@ -8,7 +8,7 @@ SellerFields.Operator = 1;
 SellerFields.Clerk = 2;
 SellerFields.AuthToken = 3;
 
-SellerFields.Types = [SellerFields.None, SellerFields.Custom, SellerFields.Lens, SellerFields.ENS];
+SellerFields.Types = [SellerFields.Admin, SellerFields.Operator, SellerFields.Clerk, SellerFields.AuthToken];
 
 // Export
 module.exports = SellerFields;

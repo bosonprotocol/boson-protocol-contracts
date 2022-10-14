@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: GPL-3.0-or-laterSelerH
 pragma solidity 0.8.9;
 
 import "hardhat/console.sol";
@@ -116,7 +116,7 @@ contract SellerHandlerFacet is SellerBase {
         // Clean old seller pending update data if exists
         delete lookups.sellerPendingUpdates[_seller.id];
 
-        needsApproval;
+        bool needsApproval;
         (, Seller storage sellerPendingUpdate, AuthToken storage authTokenPendingUpdate) = fetchSellerPendingUpdate(
             _seller.id
         );
