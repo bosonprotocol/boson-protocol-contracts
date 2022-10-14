@@ -730,7 +730,7 @@ describe("SellerHandler", function () {
 
           // Approve the update
           await accountHandler.connect(other2).optInToSellerUpdate(seller.id, [SellerFields.Clerk]);
-          // Admin and Operator are the same address
+          // Admin and operator are the same address
           await accountHandler
             .connect(operator)
             .optInToSellerUpdate(seller.id, [SellerFields.Operator, SellerFields.Admin]);

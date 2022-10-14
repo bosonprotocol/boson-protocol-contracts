@@ -56,8 +56,8 @@ contract SellerHandlerFacet is SellerBase {
      *         All other fields should be filled, even those staying the same.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
-     * Emits a SellerUpdateApplied event if seller changed the treasury.
-     * Emits a SellerUpdatePending event if the seller requests an update for admin, clerk, operator, or auth token.
+     * Emits a SellerUpdateApplied event if the seller has changed the treasury.
+     * Emits a SellerUpdatePending event if the seller has requested an update for admin, clerk, operator, or auth token.
      * Addresses owner of new values for admin, clerk, operator or auth token need to opt-in to update.
      *
      * Reverts if:
