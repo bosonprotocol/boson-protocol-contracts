@@ -10,7 +10,7 @@ const tipSuggestion = "1500000000"; // ethers.js always returns this constant, i
 const maxPriorityFeePerGas = ethers.BigNumber.from(tipSuggestion).mul(tipMultiplier);
 const { deployProtocolHandlerFacets } = require("./util/deploy-protocol-handler-facets.js");
 const { FacetCutAction, getSelectors } = require("./util/diamond-utils.js");
-const { getFees } = require("./util/utils.js");
+const { deploymentComplete, getFees, writeContracts } = require("./util/utils.js");
 
 /**
  * Upgrades facets.
@@ -18,7 +18,7 @@ const { getFees } = require("./util/utils.js");
  * TODO:
  * 1. get list of facets to upgrade (either pass in as arguments, or from file)
  * 2. deploy facets ✅
- * 3. update addresses file
+ * 3. update addresses file ✅
  * 4. get list of old selectors on updated facet ✅
  * 5. compare sellectors of new facet and create add/replace/remove methods ✅
  * 6. make diamond cuts ✅
@@ -32,6 +32,7 @@ async function main() {
 
   const chainId = (await hre.ethers.provider.getNetwork()).chainId;
   const contractsFile = readContracts(chainId, network);
+  let contracts = contractsFile.contracts;
 
   const divider = "-".repeat(80);
   console.log(`${divider}\nBoson Protocol Contract Suite Upgrader\n${divider}`);
@@ -43,7 +44,7 @@ async function main() {
   console.log("🔱 Admin account: ", admin ? admin : "not found" && process.exit());
   console.log(divider);
 
-  const protocolDiamondInfo = contractsFile.contracts.find((i) => i.name === "ProtocolDiamond");
+  const protocolDiamondInfo = contracts.find((i) => i.name === "ProtocolDiamond");
 
   const diamondLoupe = await ethers.getContractAt("DiamondLoupeFacet", protocolDiamondInfo.address);
 
@@ -72,7 +73,7 @@ async function main() {
     // TODO better naming for facet = new, facetInfo = old
 
     // get currently registered selectors
-    const facetInfo = contractsFile.contracts.find((i) => i.name === facet.name);
+    const facetInfo = contracts.find((i) => i.name === facet.name);
     const registeredSelectors = await diamondLoupe.facetFunctionSelectors(facetInfo.address);
 
     // get new selectors from compiled contract
@@ -112,7 +113,14 @@ async function main() {
       );
       await transactionResponse.wait(confirmations);
     }
+
+    // remove old entry from contracts
+    contracts = contracts.filter((i) => i.name !== facet.name);
+    deploymentComplete(facet.name, facet.contract.address, [], contracts);
   }
+
+  const contractsPath = await writeContracts(contracts);
+  console.log(`✅ Contracts written to ${contractsPath}`);
 
   console.log(`\n📋 Diamond upgraded.`);
   console.log("\n");
