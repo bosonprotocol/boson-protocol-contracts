@@ -100,7 +100,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      *         All other fields should be filled, even those staying the same.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
-     * Emits a SellerUpdated event if successful.
+     * Emits a SellerUpdateApplied event if seller changed the treasury.
+     * Emits a SellerUpdatePending event if the seller requests an update for admin, clerk, operator, or auth token.
+     * Addresses owner of new values for admin, clerk, operator or auth token need to opt-in to update.
      *
      * Reverts if:
      * - The sellers region of protocol is paused
@@ -116,7 +118,22 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      */
     function updateSeller(BosonTypes.Seller memory _seller, BosonTypes.AuthToken calldata _authToken) external;
 
-    function optInToSellerUpdate(uint256 _sellerId) external;
+    /**
+     * @notice Opt-in to a pending seller update
+     *
+     * Emits a SellerUpdateApplied event if successful.
+     *
+     * Reverts if:
+     * - The sellers region of protocol is paused
+     * - Addresses are not unique to this seller
+     * - Caller is not the address pending update for the field being updated
+     * - No pending update exists for this seller
+     * - AuthTokenType is not unique to this seller
+     *
+     * @param _sellerId - seller id
+     * @param _fieldsToUpdate - fields to update, see SellerFields enum
+     */
+    function optInToSellerUpdate(uint256 _sellerId, BosonTypes.SellerFields[] calldata _fieldsToUpdate) external;
 
     /**
      * @notice Updates a buyer, with the exception of the active flag.
