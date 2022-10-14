@@ -664,7 +664,6 @@ describe("SellerHandler", function () {
           await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
           // Approve the update
-          console.log(SellerFields.Operator);
           await accountHandler.connect(other1).optInToSellerUpdate(seller.id, [SellerFields.Operator]);
 
           seller.admin = other1.address;
@@ -2038,7 +2037,7 @@ describe("SellerHandler", function () {
         //Create struct again with new addresses
         sellerStruct = seller.toStruct();
 
-        // // Approve update
+        // Approve update
         await accountHandler
           .connect(other1)
           .optInToSellerUpdate(seller.id, [SellerFields.Operator, SellerFields.Admin, SellerFields.Clerk]);

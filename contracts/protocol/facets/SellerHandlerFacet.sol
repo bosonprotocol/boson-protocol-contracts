@@ -1,7 +1,6 @@
-// SPDX-License-Identifier: GPL-3.0-or-laterSelerH
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
-import "hardhat/console.sol";
 import "../../domain/BosonConstants.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { SellerBase } from "../bases/SellerBase.sol";

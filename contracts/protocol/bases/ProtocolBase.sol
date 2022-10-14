@@ -308,6 +308,14 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         exists = (_sellerId > 0 && seller.id == _sellerId);
     }
 
+    /**
+     * @notice Fetches a given seller pending update from storage by id
+     *
+     * @param _sellerId - the id of the seller
+     * @return exists - whether the seller or auth token pending update exists
+     * @return sellerPendingUpdate - the seller pending update details. See {BosonTypes.Seller}
+     * @return authTokenPendingUpdate - auth token pending update details
+     */
     function fetchSellerPendingUpdate(uint256 _sellerId)
         internal
         view
