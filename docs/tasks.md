@@ -44,7 +44,7 @@ Deploy suite deploys protocol diamond, all facets, client and beacon, and initia
 ### Upgrade facet
 Upgrade existing facets, add new facets or remove existing facets. We provide different npm scripts for different use cases. Script for Hardhat network does not exist since contracts are discrded after the deployment, so they cannot be upgraded.
 
-- **local network**. This upgrades the existing diamond on a independent instance of local network (e.g. `npx hardhat node`). Upgrade process is described [here](local-development.md).
+- **local network**. This upgrades the existing diamond on a independent instance of local network (e.g. `npx hardhat node`). Upgrade process is described [here](local-development.md#upgrade-facets).
 ```npm run upgrade-facets:local```
 - **internal test node**. This upgrades the existing diamond on a custom test network. You need to modifiy `.env` with appropriate values for this to work.  
 ```npm run upgrade-facets:test```

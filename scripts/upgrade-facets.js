@@ -20,11 +20,11 @@ const rl = readline.createInterface({
 });
 
 /**
- * Upgrades existing facets or add new.
+ * Upgrades or reamoves existing facets, or add new facets.
  *
  * Process:
  *  1.  Edit scripts/config/facet-upgrade.js.
- *  1a. Provide a list of facets that needs to be upgraded (field "names")
+ *  1a. Provide a list of facets that needs to be upgraded (field "addOrUpgrade") or removed completely (field "remove")
  *  1b. Optionally you can specify which selectors should be ignored (filed "skip"). You don't have to specify "initialize()" since it's ignored by default
  *  2. Update protocol version in package.json. If not, script will prompt you to confirm that version remains unchanged.
  *  2. Run the appropriate npm script in package.json to upgrde facets for a given network
@@ -89,7 +89,12 @@ async function main() {
   }
 
   // Deploy new facets
-  const deployedFacets = await deployProtocolHandlerFacets(protocolAddress, Facets.names, maxPriorityFeePerGas, false);
+  const deployedFacets = await deployProtocolHandlerFacets(
+    protocolAddress,
+    Facets.addOrUpgrade,
+    maxPriorityFeePerGas,
+    false
+  );
 
   // Cast Diamond to DiamondCutFacet and DiamondLoupeFacet
   const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", protocolAddress);
@@ -100,6 +105,7 @@ async function main() {
   let initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
   let callData = initInterface.encodeFunctionData("initialize");
 
+  // manage new or upgraded facets
   for (const newFacet of deployedFacets) {
     console.log(`\n📋 Facet: ${newFacet.name}`);
 
@@ -177,6 +183,43 @@ async function main() {
       );
       await transactionResponse.wait(confirmations);
     }
+  }
+
+  // manage facets that are being completely removed
+  for (const facetToRemove of Facets.remove) {
+    // Get currently registered selectors
+    const oldFacet = contracts.find((i) => i.name === facetToRemove);
+
+    let registeredSelectors;
+    if (oldFacet) {
+      // Facet already exists and is only upgraded
+      registeredSelectors = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
+    } else {
+      // Facet does not exist, skip next steps
+      continue;
+    }
+    console.log(`\n📋💀 Facet removal: ${facetToRemove}`);
+
+    // Remove old entry from contracts
+    contracts = contracts.filter((i) => i.name !== facetToRemove);
+
+    // All selectors must be removed
+    let selectorsToRemove = registeredSelectors; // all selectors must be removed
+
+    // Logs
+    console.log(`💎 Removed selectors:\n\t${selectorsToRemove.join("\n\t")}`);
+
+    // Removing the selectors
+    const removeFacetCut = [ethers.constants.AddressZero, FacetCutAction.Remove, selectorsToRemove];
+
+    // Diamond cut
+    const transactionResponse = await diamondCutFacet.diamondCut(
+      [removeFacetCut],
+      ethers.constants.AddressZero,
+      "0x",
+      await getFees(maxPriorityFeePerGas)
+    );
+    await transactionResponse.wait(confirmations);
   }
 
   const contractsPath = await writeContracts(contracts);
