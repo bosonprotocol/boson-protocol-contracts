@@ -329,10 +329,10 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Get the seller's slot
-        sellerPendingUpdate = lookups.sellerPendingUpdates[_sellerId];
+        sellerPendingUpdate = lookups.pendingAddressUpdatesBySeller[_sellerId];
 
         //Get the seller's auth token's slot
-        authTokenPendingUpdate = lookups.sellerPendingAuthTokenUpdate[_sellerId];
+        authTokenPendingUpdate = lookups.pendingAuthTokenUpdatesBySeller[_sellerId];
 
         // Determine existence
         exists =

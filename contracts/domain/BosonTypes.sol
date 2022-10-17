@@ -70,7 +70,7 @@ contract BosonTypes {
         ENS
     }
 
-    enum SellerFields {
+    enum SellerUpdateFields {
         Admin,
         Operator,
         Clerk,

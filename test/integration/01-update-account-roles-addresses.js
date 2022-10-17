@@ -14,7 +14,7 @@ const {
 } = require("../util/mock");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const Role = require("../../scripts/domain/Role");
-const SellerFields = require("../../scripts/domain/SellerFields");
+const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
@@ -257,7 +257,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       sellerPendingUpdate.operator = ethers.constants.AddressZero;
 
       // Approve the update
-      await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerFields.Operator]))
+      await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]))
         .to.emit(accountHandler, "SellerUpdateApplied")
         .withArgs(
           seller.id,
@@ -287,7 +287,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       sellerPendingUpdate.operator = ethers.constants.AddressZero;
 
       // Approve the update
-      await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerFields.Operator]))
+      await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]))
         .to.emit(accountHandler, "SellerUpdateApplied")
         .withArgs(
           seller.id,
@@ -352,7 +352,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         sellerPendingUpdate.clerk = ethers.constants.AddressZero;
 
         // Approve the update
-        await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerFields.Clerk]))
+        await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Clerk]))
           .to.emit(accountHandler, "SellerUpdateApplied")
           .withArgs(
             seller.id,
@@ -491,7 +491,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
           sellerPendingUpdate.operator = ethers.constants.AddressZero;
 
           // Approve the update
-          await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerFields.Operator]))
+          await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]))
             .to.emit(accountHandler, "SellerUpdateApplied")
             .withArgs(
               seller.id,
@@ -588,7 +588,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
           sellerPendingUpdate.operator = ethers.constants.AddressZero;
 
           // Approve the update
-          await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerFields.Operator]))
+          await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]))
             .to.emit(accountHandler, "SellerUpdateApplied")
             .withArgs(
               seller.id,

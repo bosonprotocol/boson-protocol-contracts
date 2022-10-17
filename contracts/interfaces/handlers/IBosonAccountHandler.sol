@@ -97,19 +97,20 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function createAgent(BosonTypes.Agent memory _agent) external;
 
     /**
-     * @notice Updates a seller, with the exception of the active flag.
-     *         All other fields should be filled, even those staying the same.
+     * @notice Updates treasury address, if changed. Puts admin, operator, clerk and AuthToken in pending state, if changed.
+     *         Pending updates can be completed by calling the optInToSellerUpdate function.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a SellerUpdateApplied event if the seller has changed the treasury.
      * Emits a SellerUpdatePending event if the seller has requested an update for admin, clerk, operator, or auth token.
-     * Addresses owner of new values for admin, clerk, operator or auth token need to opt-in to update.
+     * Holder of new auth token and/or owner(s) of new addresses for admin, clerk, operator must opt-in to the update.
      *
      * Reverts if:
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
-     * - Caller is not the admin address of the seller
+     * - Caller is not the admin address of the stored seller
+     * - Stored auth token exists and caller is not the owner
      * - Seller does not exist
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -129,13 +130,14 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - The sellers region of protocol is paused
      * - Addresses are not unique to this seller
      * - Caller is not the address pending update for the field being updated
+     * - Caller is not the address of the owner of the pending AuthToken being updated
      * - No pending update exists for this seller
      * - AuthTokenType is not unique to this seller
      *
      * @param _sellerId - seller id
-     * @param _fieldsToUpdate - fields to update, see SellerFields enum
+     * @param _fieldsToUpdate - fields to update, see SellerUpdateFields enum
      */
-    function optInToSellerUpdate(uint256 _sellerId, BosonTypes.SellerFields[] calldata _fieldsToUpdate) external;
+    function optInToSellerUpdate(uint256 _sellerId, BosonTypes.SellerUpdateFields[] calldata _fieldsToUpdate) external;
 
     /**
      * @notice Updates a buyer, with the exception of the active flag.

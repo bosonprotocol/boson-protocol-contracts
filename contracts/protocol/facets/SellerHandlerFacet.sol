@@ -2,6 +2,7 @@
 pragma solidity 0.8.9;
 
 import "../../domain/BosonConstants.sol";
+import "hardhat/console.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { SellerBase } from "../bases/SellerBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -52,19 +53,20 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
-     * @notice Updates a seller, with the exception of the active flag.
-     *         All other fields should be filled, even those staying the same.
+     * @notice Updates treasury address, if changed. Puts admin, operator, clerk and AuthToken in pending state, if changed.
+     *         Pending updates can be completed by calling the optInToSellerUpdate function.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a SellerUpdateApplied event if the seller has changed the treasury.
      * Emits a SellerUpdatePending event if the seller has requested an update for admin, clerk, operator, or auth token.
-     * Addresses owner of new values for admin, clerk, operator or auth token need to opt-in to update.
+     * Holder of new auth token and/or owner(s) of new addresses for admin, clerk, operator must opt-in to the update.
      *
      * Reverts if:
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
-     * - Caller is not the admin address of the seller
+     * - Caller is not the admin address of the stored seller
+     * - Stored auth token exists and caller is not the owner
      * - Seller does not exist
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -108,12 +110,8 @@ contract SellerHandlerFacet is SellerBase {
             require(seller.admin == sender, NOT_ADMIN);
         }
 
-        preUpdateSellerCheck(_seller.id, _seller.admin, lookups);
-        preUpdateSellerCheck(_seller.id, _seller.operator, lookups);
-        preUpdateSellerCheck(_seller.id, _seller.clerk, lookups);
-
         // Clean old seller pending update data if exists
-        delete lookups.sellerPendingUpdates[_seller.id];
+        delete lookups.pendingAddressUpdatesBySeller[_seller.id];
 
         bool needsApproval;
         (, Seller storage sellerPendingUpdate, AuthToken storage authTokenPendingUpdate) = fetchSellerPendingUpdate(
@@ -126,7 +124,7 @@ contract SellerHandlerFacet is SellerBase {
             if (authToken.tokenType != _authToken.tokenType || authToken.tokenId != _authToken.tokenId) {
                 // Check that auth token is unique to this seller
                 uint256 check = lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId];
-                require(check == 0 || check == _seller.id, AUTH_TOKEN_MUST_BE_UNIQUE);
+                require(check == 0, AUTH_TOKEN_MUST_BE_UNIQUE);
 
                 // Auth token owner must approve the update to prevent front-running
                 authTokenPendingUpdate.tokenType = _authToken.tokenType;
@@ -134,6 +132,7 @@ contract SellerHandlerFacet is SellerBase {
                 needsApproval = true;
             }
         } else if (seller.admin != _seller.admin) {
+            preUpdateSellerCheck(_seller.id, _seller.admin, lookups);
             require(_seller.admin != address(0), INVALID_ADDRESS);
             // If admin address exists, admin address owner must approve the update to prevent front-running
             sellerPendingUpdate.admin = _seller.admin;
@@ -141,6 +140,7 @@ contract SellerHandlerFacet is SellerBase {
         }
 
         if (_seller.operator != seller.operator) {
+            preUpdateSellerCheck(_seller.id, _seller.operator, lookups);
             require(_seller.operator != address(0), INVALID_ADDRESS);
             // Operator address owner must approve the update to prevent front-running
             sellerPendingUpdate.operator = _seller.operator;
@@ -148,6 +148,7 @@ contract SellerHandlerFacet is SellerBase {
         }
 
         if (_seller.clerk != seller.clerk) {
+            preUpdateSellerCheck(_seller.id, _seller.clerk, lookups);
             require(_seller.clerk != address(0), INVALID_ADDRESS);
             // Clerk address owner must approve the update to prevent front-running
             sellerPendingUpdate.clerk = _seller.clerk;
@@ -158,7 +159,7 @@ contract SellerHandlerFacet is SellerBase {
             emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, sender);
         }
 
-        if (seller.treasury != _seller.treasury) {
+        if (_seller.treasury != seller.treasury) {
             require(_seller.treasury != address(0), INVALID_ADDRESS);
             // Update treasury
             seller.treasury = _seller.treasury;
@@ -184,13 +185,14 @@ contract SellerHandlerFacet is SellerBase {
      * - The sellers region of protocol is paused
      * - Addresses are not unique to this seller
      * - Caller is not the address pending update for the field being updated
+     * - Caller is not the address of the owner of the pending AuthToken being updated
      * - No pending update exists for this seller
      * - AuthTokenType is not unique to this seller
      *
      * @param _sellerId - seller id
-     * @param _fieldsToUpdate - fields to update, see SellerFields enum
+     * @param _fieldsToUpdate - fields to update, see SellerUpdateFields enum
      */
-    function optInToSellerUpdate(uint256 _sellerId, SellerFields[] calldata _fieldsToUpdate)
+    function optInToSellerUpdate(uint256 _sellerId, SellerUpdateFields[] calldata _fieldsToUpdate)
         external
         sellersNotPaused
         nonReentrant
@@ -212,18 +214,19 @@ contract SellerHandlerFacet is SellerBase {
         (, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
 
         for (uint256 i = 0; i < _fieldsToUpdate.length; i++) {
-            SellerFields role = _fieldsToUpdate[i];
+            SellerUpdateFields role = _fieldsToUpdate[i];
 
             // Approve admin update
-            if (role == SellerFields.Admin && sellerPendingUpdate.admin != address(0)) {
+            if (role == SellerUpdateFields.Admin && sellerPendingUpdate.admin != address(0)) {
                 require(sellerPendingUpdate.admin == sender, UNAUTHORIZED_CALLER_UPDATE);
 
-                preUpdateSellerCheck(_sellerId, sellerPendingUpdate.admin, lookups);
+                preUpdateSellerCheck(_sellerId, sender, lookups);
+
                 // Delete old seller id by admin mapping
                 delete lookups.sellerIdByAdmin[seller.admin];
 
                 // Update admin
-                seller.admin = sellerPendingUpdate.admin;
+                seller.admin = sender;
 
                 // Store new seller id by admin mapping
                 lookups.sellerIdByAdmin[sender] = _sellerId;
@@ -235,13 +238,16 @@ contract SellerHandlerFacet is SellerBase {
             }
 
             // Approve operator update
-            if (role == SellerFields.Operator && sellerPendingUpdate.operator != address(0)) {
+            if (role == SellerUpdateFields.Operator && sellerPendingUpdate.operator != address(0)) {
                 require(sellerPendingUpdate.operator == sender, UNAUTHORIZED_CALLER_UPDATE);
-                preUpdateSellerCheck(_sellerId, sellerPendingUpdate.operator, lookups);
+
+                preUpdateSellerCheck(_sellerId, sender, lookups);
+
+                // Delete old seller id by operator mapping
                 delete lookups.sellerIdByOperator[seller.operator];
 
                 // Update operator
-                seller.operator = sellerPendingUpdate.operator;
+                seller.operator = sender;
 
                 // Transfer ownership of NFT voucher to new operator
                 IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender);
@@ -254,14 +260,16 @@ contract SellerHandlerFacet is SellerBase {
             }
 
             // Aprove clerk update
-            if (role == SellerFields.Clerk && sellerPendingUpdate.clerk != address(0)) {
+            if (role == SellerUpdateFields.Clerk && sellerPendingUpdate.clerk != address(0)) {
                 require(sellerPendingUpdate.clerk == sender, UNAUTHORIZED_CALLER_UPDATE);
-                preUpdateSellerCheck(_sellerId, sellerPendingUpdate.clerk, lookups);
+
+                preUpdateSellerCheck(_sellerId, sender, lookups);
+
                 // Delete old seller id by clerk mapping
                 delete lookups.sellerIdByClerk[seller.clerk];
 
                 // Update clerk
-                seller.clerk = sellerPendingUpdate.clerk;
+                seller.clerk = sender;
 
                 // Store new seller id by clerk mapping
                 lookups.sellerIdByClerk[sender] = _sellerId;
@@ -271,7 +279,7 @@ contract SellerHandlerFacet is SellerBase {
             }
 
             // Approve auth token update
-            if (role == SellerFields.AuthToken && authTokenPendingUpdate.tokenType != AuthTokenType.None) {
+            if (role == SellerUpdateFields.AuthToken && authTokenPendingUpdate.tokenType != AuthTokenType.None) {
                 address authTokenContract = lookups.authTokenContracts[authTokenPendingUpdate.tokenType];
                 address tokenIdOwner = IERC721(authTokenContract).ownerOf(authTokenPendingUpdate.tokenId);
                 require(tokenIdOwner == sender, UNAUTHORIZED_CALLER_UPDATE);
@@ -280,7 +288,7 @@ contract SellerHandlerFacet is SellerBase {
                 uint256 check = lookups.sellerIdByAuthToken[authTokenPendingUpdate.tokenType][
                     authTokenPendingUpdate.tokenId
                 ];
-                require(check == 0 || check == _sellerId, AUTH_TOKEN_MUST_BE_UNIQUE);
+                require(check == 0, AUTH_TOKEN_MUST_BE_UNIQUE);
 
                 // Delete old seller id by auth token mapping
                 delete lookups.sellerIdByAuthToken[authToken.tokenType][authToken.tokenId];
@@ -404,6 +412,7 @@ contract SellerHandlerFacet is SellerBase {
      *
      * @param _sellerId - the id of the seller to check
      * @param _role - the address to check
+     * @param _lookups - the lookups struct
      */
     function preUpdateSellerCheck(
         uint256 _sellerId,
