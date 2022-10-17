@@ -208,7 +208,7 @@ contract SellerHandlerFacet is SellerBase {
             AuthToken storage authTokenPendingUpdate
         ) = fetchSellerPendingUpdate(_sellerId);
 
-        require(exists, NO_SELLER_PENDING_UPDATE);
+        require(exists, NO_PENDING_ACCOUNT_FOR_ACCOUNT);
 
         // Get storage location for seller
         (, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);

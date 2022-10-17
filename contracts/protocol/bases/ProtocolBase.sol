@@ -388,6 +388,31 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
+     * @notice Fetches a given dispute resolver pending update from storage by id
+     *
+     * @param _disputeResolverId - the id of the dispute resolver
+     * @return exists - whether the dispute resolver pending update exists
+     * @return disputeResolverPendingUpdate - the dispute resolver pending update details. See {BosonTypes.DisputeResolver}
+     */
+    function fetchDisputeResolverPendingUpdate(uint256 _disputeResolverId)
+        internal
+        view
+        returns (bool exists, DisputeResolver storage disputeResolverPendingUpdate)
+    {
+        // Cache protocol entities for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        // Get the seller's slot
+        disputeResolverPendingUpdate = lookups.pendingAddressUpdatesByDisputeResolver[_disputeResolverId];
+
+        // Determine existence
+        exists =
+            disputeResolverPendingUpdate.admin != address(0) ||
+            disputeResolverPendingUpdate.operator != address(0) ||
+            disputeResolverPendingUpdate.clerk != address(0);
+    }
+
+    /**
      * @notice Fetches a given agent from storage by id
      *
      * @param _agentId - the id of the agent

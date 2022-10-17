@@ -40,9 +40,15 @@ interface IBosonAccountEvents {
         uint256[] sellerAllowList,
         address indexed executedBy
     );
-    event DisputeResolverUpdated(
+    event DisputeResolverUpdatePending(
+        uint256 indexed disputeResolverId,
+        BosonTypes.DisputeResolver pendingDisputeResolver,
+        address indexed executedBy
+    );
+    event DisputeResolverUpdateApplied(
         uint256 indexed disputeResolverId,
         BosonTypes.DisputeResolver disputeResolver,
+        BosonTypes.DisputeResolver pendingDisputeResolver,
         address indexed executedBy
     );
     event DisputeResolverFeesAdded(
