@@ -92,6 +92,18 @@ To get the examples how to use the admin to perform actions, refer to unit test 
 - PAUSER role: `test/protocol/PauseHandlerTest.js`
 - FEE_COLLECTOR role: `test/protocol/FundsHandlerTest.js`
 
+### Upgrade facets
+To test the upgrade functionality, you first need to setup upgrader account as described in previous section.
+
+To perform the upgrade you then
+- Update some of the existing facets or crate new one.
+- Update config file `scripts/config/facet-upgrade.js`:
+  - "names" is the list of facets that will be upgraded or added,
+  - "skip" allows you to specify methods that will be ignored during the process.
+- Update `version` in `package.json`. If you the version in `package.json` mathches the existing verison in addresses file, you will have to explicitly confirm that you want to proceed.
+- Run `npm run upgrade-facets:local`. This will deploy new facets and make all necessary diamond cuts. It also updates the existing addresses file `addresses/31337-localhost.json` and outputs the upgrade log to the console.
+
+
 ### Using the protocol
 You can find the examples how to use all functions of the protocol in our test files in folder `test/protocol`.
 

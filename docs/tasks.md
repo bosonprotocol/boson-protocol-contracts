@@ -41,6 +41,20 @@ Deploy suite deploys protocol diamond, all facets, client and beacon, and initia
 - **Ethereum Mainnet**. This deploys the built contracts to Ethereum Mainnet.
 ```npm run deploy-suite:ethereum:mainnet```
 
+### Upgrade facet
+Upgrade existing facets, add new facets or remove existing facets. We provide different npm scripts for different use cases. Script for Hardhat network does not exist since contracts are discrded after the deployment, so they cannot be upgraded.
+
+- **local network**. This upgrades the existing diamond on a independent instance of local network (e.g. `npx hardhat node`). Upgrade process is described [here](local-development.md).
+```npm run upgrade-facets:local```
+- **internal test node**. This upgrades the existing diamond on a custom test network. You need to modifiy `.env` with appropriate values for this to work.  
+```npm run upgrade-facets:test```
+- **Polygon Mumbai**. This upgrades the existing diamond on Polygon Mumbai.  
+```npm run upgrade-facets:polygon:mumbai```
+- **Polygon Mainnet**. This upgrades the existing diamond on Polygon Mainnet.
+```npm run upgrade-facets:polygon:mainnet```
+- **Ethereum Mainnet**. This upgrades the existing diamond on Ethereum Mainnet.
+```npm run upgrade-facets:ethereum:mainnet```
+
 ### Deploy mock authentication token
 Boson protocol support LENS and ENS as authentication method for seller's admin account. Public networks have LENS and ENS already deployed, but to use that funcionality on custom local or test nodes, you need to deploy the mock contract first. We provide the scripts for the following networks:
 

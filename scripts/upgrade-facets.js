@@ -20,8 +20,15 @@ const rl = readline.createInterface({
 });
 
 /**
- * Upgrades facets.
+ * Upgrades existing facets or add new.
  *
+ * Process:
+ *  1.  Edit scripts/config/facet-upgrade.js.
+ *  1a. Provide a list of facets that needs to be upgraded (field "names")
+ *  1b. Optionally you can specify which selectors should be ignored (filed "skip"). You don't have to specify "initialize()" since it's ignored by default
+ *  2. Update protocol version in package.json. If not, script will prompt you to confirm that version remains unchanged.
+ *  2. Run the appropriate npm script in package.json to upgrde facets for a given network
+ *  3. Save changes to the repo as a record of what was upgraded
  */
 async function main() {
   // Bail now if hardhat network
