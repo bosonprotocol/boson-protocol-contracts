@@ -98,7 +98,14 @@ async function main() {
 
     // Get currently registered selectors
     const oldFacet = contracts.find((i) => i.name === newFacet.name);
-    const registeredSelectors = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
+    let registeredSelectors;
+    if (oldFacet) {
+      // Facet already exists and is only upgraded
+      registeredSelectors = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
+    } else {
+      // Facet is new
+      registeredSelectors = [];
+    }
 
     // Remove old entry from contracts
     contracts = contracts.filter((i) => i.name !== newFacet.name);
