@@ -9,7 +9,7 @@ const tipMultiplier = ethers.BigNumber.from(environments.tipMultiplier);
 const tipSuggestion = "1500000000"; // ethers.js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = ethers.BigNumber.from(tipSuggestion).mul(tipMultiplier);
 const { deployProtocolHandlerFacets } = require("./util/deploy-protocol-handler-facets.js");
-const { FacetCutAction, getSelectors } = require("./util/diamond-utils.js");
+const { FacetCutAction, getSelectors, removeSelectors } = require("./util/diamond-utils.js");
 const { deploymentComplete, getFees, writeContracts } = require("./util/utils.js");
 const Role = require("./domain/Role");
 const packageFile = require("../package.json");
@@ -82,7 +82,7 @@ async function main() {
   }
 
   // Deploy new facets
-  const deployedFacets = await deployProtocolHandlerFacets(protocolAddress, Facets, maxPriorityFeePerGas, false);
+  const deployedFacets = await deployProtocolHandlerFacets(protocolAddress, Facets.names, maxPriorityFeePerGas, false);
 
   // Cast Diamond to DiamondCutFacet and DiamondLoupeFacet
   const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", protocolAddress);
@@ -109,29 +109,36 @@ async function main() {
     const newSelectors = selectors.selectors.remove([initFunction]);
 
     // Determine actions to be made
-    const replaceSelectors = registeredSelectors.filter((value) => newSelectors.includes(value)); // intersection of old and new selectors
-    const removeSelectors = registeredSelectors.filter((value) => !replaceSelectors.includes(value)); // unique old selectors
-    const addSelectors = newSelectors.filter((value) => !replaceSelectors.includes(value)); // unique new selectors
+    let selectorsToReplace = registeredSelectors.filter((value) => newSelectors.includes(value)); // intersection of old and new selectors
+    let selectorsToRemove = registeredSelectors.filter((value) => !selectorsToReplace.includes(value)); // unique old selectors
+    let selectorsToAdd = newSelectors.filter((value) => !selectorsToReplace.includes(value)); // unique new selectors
+
+    // Skip selectors if set in config
+    const selectorsToSkip = Facets.skip[newFacet.name] ? Facets.skip[newFacet.name] : [];
+    selectorsToReplace = removeSelectors(selectorsToReplace, selectorsToSkip);
+    selectorsToRemove = removeSelectors(selectorsToRemove, selectorsToSkip);
+    selectorsToAdd = removeSelectors(selectorsToAdd, selectorsToSkip);
 
     // Logs
-    console.log(`💎 Removed selectors:\n\t${removeSelectors.join("\n\t")}`);
+    console.log(`💎 Removed selectors:\n\t${selectorsToRemove.join("\n\t")}`);
     console.log(
-      `💎 Replaced selectors:\n\t${replaceSelectors
+      `💎 Replaced selectors:\n\t${selectorsToReplace
         .map((selector) => `${selector}: ${selectors.signatureToNameMapping[selector]}`)
         .join("\n\t")}`
     );
     console.log(
-      `💎 Added selectors:\n\t${addSelectors
+      `💎 Added selectors:\n\t${selectorsToAdd
         .map((selector) => `${selector}: ${selectors.signatureToNameMapping[selector]}`)
         .join("\n\t")}`
     );
+    console.log(`❌ Skipped selectors:\n\t${selectorsToSkip.join("\n\t")}`);
 
     // Adding and replacing are done in one diamond cut
-    if (addSelectors.length > 0 || replaceSelectors.length > 0) {
+    if (selectorsToAdd.length > 0 || selectorsToReplace.length > 0) {
       const newFacetAddress = newFacet.contract.address;
       let facetCut = [];
-      if (addSelectors.length > 0) facetCut.push([newFacetAddress, FacetCutAction.Add, addSelectors]);
-      if (replaceSelectors.length > 0) facetCut.push([newFacetAddress, FacetCutAction.Replace, replaceSelectors]);
+      if (selectorsToAdd.length > 0) facetCut.push([newFacetAddress, FacetCutAction.Add, selectorsToAdd]);
+      if (selectorsToReplace.length > 0) facetCut.push([newFacetAddress, FacetCutAction.Replace, selectorsToReplace]);
 
       // Diamond cut
       const transactionResponse = await diamondCutFacet.diamondCut(
@@ -144,8 +151,8 @@ async function main() {
     }
 
     // Removing is done in a separate diamond cut
-    if (removeSelectors.length > 0) {
-      const removeFacetCut = [ethers.constants.AddressZero, FacetCutAction.Remove, removeSelectors];
+    if (selectorsToRemove.length > 0) {
+      const removeFacetCut = [ethers.constants.AddressZero, FacetCutAction.Remove, selectorsToRemove];
 
       // Diamond cut
       const transactionResponse = await diamondCutFacet.diamondCut(
@@ -159,7 +166,9 @@ async function main() {
   }
 
   const contractsPath = await writeContracts(contracts);
+  console.log(divider);
   console.log(`✅ Contracts written to ${contractsPath}`);
+  console.log(divider);
 
   console.log(`\n📋 Diamond upgraded.`);
   console.log("\n");
