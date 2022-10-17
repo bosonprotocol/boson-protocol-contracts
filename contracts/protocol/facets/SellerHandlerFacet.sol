@@ -53,7 +53,7 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
-     * @notice Updates treasury address, if changed. Puts admin, operator, clerk and AuthToken in pending state, if changed.
+     * @notice Updates treasury address, if changed. Puts admin, operator, clerk and AuthToken in pending queue, if changed.
      *         Pending updates can be completed by calling the optInToSellerUpdate function.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *

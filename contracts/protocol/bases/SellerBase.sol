@@ -182,4 +182,38 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         IInitializableVoucherClone(cloneAddress).initialize(pa.voucherBeacon);
         IInitializableVoucherClone(cloneAddress).initializeVoucher(_sellerId, _operator, _voucherInitValues);
     }
+
+    /**
+     * @notice Fetches a given seller pending update from storage by id
+     *
+     * @param _sellerId - the id of the seller
+     * @return exists - whether the seller or auth token pending update exists
+     * @return sellerPendingUpdate - the seller pending update details. See {BosonTypes.Seller}
+     * @return authTokenPendingUpdate - auth token pending update details
+     */
+    function fetchSellerPendingUpdate(uint256 _sellerId)
+        internal
+        view
+        returns (
+            bool exists,
+            Seller storage sellerPendingUpdate,
+            AuthToken storage authTokenPendingUpdate
+        )
+    {
+        // Cache protocol entities for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        // Get the seller's slot
+        sellerPendingUpdate = lookups.pendingAddressUpdatesBySeller[_sellerId];
+
+        //Get the seller's auth token's slot
+        authTokenPendingUpdate = lookups.pendingAuthTokenUpdatesBySeller[_sellerId];
+
+        // Determine existence
+        exists =
+            sellerPendingUpdate.admin != address(0) ||
+            sellerPendingUpdate.operator != address(0) ||
+            sellerPendingUpdate.clerk != address(0) ||
+            authTokenPendingUpdate.tokenType != AuthTokenType.None;
+    }
 }
