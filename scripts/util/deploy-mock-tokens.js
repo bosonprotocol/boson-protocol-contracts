@@ -3,7 +3,7 @@ const { expect } = require("chai");
 const environments = require("../../environments");
 const ethers = hre.ethers;
 const network = hre.network.name;
-const confirmations = environments.confirmations;
+const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
 
 /**
  * Deploy mock tokens for unit tests

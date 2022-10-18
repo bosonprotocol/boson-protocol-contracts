@@ -12,7 +12,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { setNextBlockTimestamp, applyPercentage } = require("../util/utils.js");
-const { oneWeek, oneMonth } = require("../util/constants");
+const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const {
   mockOffer,
   mockDisputeResolver,
@@ -60,7 +60,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
     operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -72,20 +72,24 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, [
-      "SellerHandlerFacet",
-      "BuyerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "FundsHandlerFacet",
-      "DisputeHandlerFacet",
-    ]);
+    await deployProtocolHandlerFacets(
+      protocolDiamond,
+      [
+        "SellerHandlerFacet",
+        "BuyerHandlerFacet",
+        "DisputeResolverHandlerFacet",
+        "ExchangeHandlerFacet",
+        "OfferHandlerFacet",
+        "FundsHandlerFacet",
+        "DisputeHandlerFacet",
+      ],
+      maxPriorityFeePerGas
+    );
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
     const gasLimit = environments[network].gasLimit;
-    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
     const [beacon] = beacons;
     const [proxy] = proxies;
 
@@ -132,7 +136,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
     ];
 
     // Deploy the Config facet, initializing the protocol config
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);

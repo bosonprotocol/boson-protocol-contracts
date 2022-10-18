@@ -2,8 +2,10 @@ const environments = require("../environments");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const network = hre.network.name;
-let gasLimit;
-const confirmations = environments.confirmations;
+const confirmations = network == "hardhat" ? 1 : environments.confirmations;
+const tipMultiplier = ethers.BigNumber.from(environments.tipMultiplier);
+const tipSuggestion = "1500000000"; // ethers.js always returns this constant, it does not vary per block
+const maxPriorityFeePerGas = ethers.BigNumber.from(tipSuggestion).mul(tipMultiplier);
 
 const protocolConfig = require("./config/protocol-parameters");
 const authTokenAddresses = require("./config/auth-token-addresses");
@@ -13,8 +15,8 @@ const { deployProtocolDiamond } = require("./util/deploy-protocol-diamond.js");
 const { deployProtocolClients } = require("./util/deploy-protocol-clients.js");
 const { deployProtocolConfigFacet } = require("./util/deploy-protocol-config-facet.js");
 const { deployProtocolHandlerFacets } = require("./util/deploy-protocol-handler-facets.js");
-const { verifyOnBlockExplorer, verifyOnTestEnv } = require("./util/report-verify-deployments");
-const { delay, deploymentComplete, writeContracts } = require("./util/utils");
+const { verifyOnTestEnv } = require("./util/report-verify-deployments");
+const { deploymentComplete, getFees, writeContracts } = require("./util/utils");
 const AuthTokenType = require("../scripts/domain/AuthTokenType");
 
 /**
@@ -84,8 +86,6 @@ async function main() {
 
   let transactionResponse;
 
-  gasLimit = environments[network].gasLimit;
-
   // Output script header
   const divider = "-".repeat(80);
   console.log(`${divider}\nBoson Protocol V2 Contract Suite Deployer\n${divider}`);
@@ -114,7 +114,9 @@ async function main() {
   console.log(`💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...`);
 
   // Deploy the Diamond
-  const [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs] = await deployProtocolDiamond(gasLimit);
+  const [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs] = await deployProtocolDiamond(
+    maxPriorityFeePerGas
+  );
   deploymentComplete("AccessController", accessController.address, [], contracts);
   deploymentComplete("DiamondLoupeFacet", dlf.address, [], contracts);
   deploymentComplete("DiamondCutFacet", dcf.address, [], contracts);
@@ -124,7 +126,11 @@ async function main() {
   console.log(`\n💎 Granting UPGRADER role...`);
 
   // Temporarily grant UPGRADER role to deployer account
-  transactionResponse = await accessController.grantRole(Role.UPGRADER, deployer.address);
+  transactionResponse = await accessController.grantRole(
+    Role.UPGRADER,
+    deployer.address,
+    await getFees(maxPriorityFeePerGas)
+  );
   await transactionResponse.wait(confirmations);
 
   console.log(`\n💎 Deploying and initializing config facet...`);
@@ -132,13 +138,13 @@ async function main() {
   // Cut the ConfigHandlerFacet facet into the Diamond
   const {
     facets: [configHandlerFacet],
-  } = await deployProtocolConfigFacet(protocolDiamond, config, gasLimit);
+  } = await deployProtocolConfigFacet(protocolDiamond, config, maxPriorityFeePerGas);
   deploymentComplete("ConfigHandlerFacet", configHandlerFacet.address, [], contracts);
 
   console.log(`\n💎 Deploying and initializing protocol handler facets...`);
 
   // Deploy and cut facets
-  const deployedFacets = await deployProtocolHandlerFacets(protocolDiamond, getNoArgFacetNames(), gasLimit);
+  const deployedFacets = await deployProtocolHandlerFacets(protocolDiamond, getNoArgFacetNames(), maxPriorityFeePerGas);
   for (let i = 0; i < deployedFacets.length; i++) {
     const deployedFacet = deployedFacets[i];
     deploymentComplete(deployedFacet.name, deployedFacet.contract.address, [], contracts);
@@ -148,7 +154,7 @@ async function main() {
 
   // Deploy the Protocol Client implementation/proxy pairs
   const protocolClientArgs = [protocolDiamond.address];
-  const [impls, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+  const [impls, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
   const [bosonVoucherImpl] = impls;
   const [bosonClientBeacon] = beacons;
   const [bosonVoucherProxy] = proxies;
@@ -167,17 +173,24 @@ async function main() {
   const bosonConfigHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
   // Add Voucher NFT addresses to protocol config
-  transactionResponse = await bosonConfigHandler.setVoucherBeaconAddress(bosonClientBeacon.address);
+  transactionResponse = await bosonConfigHandler.setVoucherBeaconAddress(
+    bosonClientBeacon.address,
+    await getFees(maxPriorityFeePerGas)
+  );
   await transactionResponse.wait(confirmations);
 
-  transactionResponse = await bosonConfigHandler.setBeaconProxyAddress(bosonVoucherProxy.address);
+  transactionResponse = await bosonConfigHandler.setBeaconProxyAddress(
+    bosonVoucherProxy.address,
+    await getFees(maxPriorityFeePerGas)
+  );
   await transactionResponse.wait(confirmations);
 
   // Add NFT auth token addresses to protocol config
   // LENS
   transactionResponse = await bosonConfigHandler.setAuthTokenContract(
     AuthTokenType.Lens,
-    authTokenContracts.lensAddress
+    authTokenContracts.lensAddress,
+    await getFees(maxPriorityFeePerGas)
   );
   await transactionResponse.wait(confirmations);
 
@@ -186,7 +199,8 @@ async function main() {
   if (!(network === "polygon" || network === "mumbai")) {
     transactionResponse = await bosonConfigHandler.setAuthTokenContract(
       AuthTokenType.ENS,
-      authTokenContracts.ensAddress
+      authTokenContracts.ensAddress,
+      await getFees(maxPriorityFeePerGas)
     );
     await transactionResponse.wait(confirmations);
   }
@@ -194,43 +208,42 @@ async function main() {
   console.log(`✅ ConfigHandlerFacet updated with remaining post-initialization config.`);
 
   // Renounce temporarily granted UPGRADER role for deployer account
-  transactionResponse = await accessController.renounceRole(Role.UPGRADER, deployer.address);
+  transactionResponse = await accessController.renounceRole(
+    Role.UPGRADER,
+    deployer.address,
+    await getFees(maxPriorityFeePerGas)
+  );
   await transactionResponse.wait(confirmations);
 
   // Grant PROTOCOL role to the ProtocolDiamond contract
-  transactionResponse = await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+  transactionResponse = await accessController.grantRole(
+    Role.PROTOCOL,
+    protocolDiamond.address,
+    await getFees(maxPriorityFeePerGas)
+  );
   await transactionResponse.wait(confirmations);
 
   if (adminAddress.toLowerCase() != deployer.address.toLowerCase()) {
     // Grant ADMIN role to the specified admin address
     // Skip this step if adminAddress is the deployer
-    transactionResponse = await accessController.grantRole(Role.ADMIN, adminAddress);
+    transactionResponse = await accessController.grantRole(
+      Role.ADMIN,
+      adminAddress,
+      await getFees(maxPriorityFeePerGas)
+    );
     await transactionResponse.wait(confirmations);
   }
 
   console.log(`✅ Granted roles to appropriate contract and addresses.`);
 
-  await writeContracts(contracts);
+  const contractsPath = await writeContracts(contracts);
+  console.log(`✅ Contracts written to ${contractsPath}`);
 
-  //Verify on test node if test env
+  // Verify on test node if test env
+  // Just checks that there is contract code at the expected addresses
   if (network === "test" || network === "localhost") {
     await verifyOnTestEnv(contracts);
   }
-
-  // Bail now if deploying locally
-  if (network === "hardhat" || network === "test" || network === "localhost") process.exit();
-
-  // Wait a minute after deployment completes and then verify contracts on block exporer
-  console.log("⏲ Pause one minute, allowing deployments to propagate before verifying..");
-  await delay(60000).then(async () => {
-    console.log("🔍 Verifying contracts on block explorer...");
-    while (contracts.length) {
-      const contract = contracts.shift();
-      await verifyOnBlockExplorer(contract);
-    }
-  });
-
-  console.log("\n");
 }
 
 main()

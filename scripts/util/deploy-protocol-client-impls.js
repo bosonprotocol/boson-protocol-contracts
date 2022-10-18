@@ -1,7 +1,8 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const environments = require("../../environments");
-const confirmations = environments.confirmations;
+const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
+const { getFees } = require("./utils");
 
 /**
  * Deploy the Protocol Client implementation contracts
@@ -14,13 +15,13 @@ const confirmations = environments.confirmations;
  *
  *  N.B. Intended for use with both test and deployment scripts
  *
- * @param gasLimit - gasLimit for transactions
+ * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolClientImpls(gasLimit) {
+async function deployProtocolClientImpls(maxPriorityFeePerGas) {
   // Deploy the BosonVoucher contract
   const BosonVoucher = await ethers.getContractFactory("BosonVoucher");
-  const bosonVoucher = await BosonVoucher.deploy({ gasLimit });
+  const bosonVoucher = await BosonVoucher.deploy(await getFees(maxPriorityFeePerGas));
   await bosonVoucher.deployTransaction.wait(confirmations);
 
   return [bosonVoucher];

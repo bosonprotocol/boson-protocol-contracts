@@ -1,7 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 
-const { gasLimit } = require("../../../environments");
 const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { getInterfaceIds } = require("../../../scripts/config/supported-interfaces.js");
 const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond.js");
@@ -13,7 +12,7 @@ const { mockOffer } = require("../../util/mock.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const { assert, expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
-const { oneWeek, oneMonth } = require("../../util/constants");
+const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants");
 const {
   mockDisputeResolver,
   mockSeller,
@@ -64,7 +63,7 @@ describe("IBosonVoucher", function () {
     operatorDR = clerkDR = adminDR;
 
     // Deploy diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Cast Diamond to contract interfaces
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
@@ -78,16 +77,20 @@ describe("IBosonVoucher", function () {
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, [
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "SellerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "FundsHandlerFacet",
-    ]);
+    await deployProtocolHandlerFacets(
+      protocolDiamond,
+      [
+        "ExchangeHandlerFacet",
+        "OfferHandlerFacet",
+        "SellerHandlerFacet",
+        "DisputeResolverHandlerFacet",
+        "FundsHandlerFacet",
+      ],
+      maxPriorityFeePerGas
+    );
 
     const protocolClientArgs = [protocolDiamond.address];
-    const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
     [bosonVoucher] = bv;
     const [beacon] = beacons;
     const [proxy] = proxies;
@@ -129,7 +132,7 @@ describe("IBosonVoucher", function () {
       },
     ];
 
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
   });
 
   // Interface support

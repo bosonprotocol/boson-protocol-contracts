@@ -1,6 +1,6 @@
 {
   "name": "@bosonprotocol/boson-protocol-contracts",
-  "version": "2.0.0-rc.4",
+  "version": "2.0.0",
   "description": "Boson Protocol core exchange mechanism",
   "author": "Boson Protocol Maintainers",
   "license": "GPL-3.0-or-later",
@@ -38,6 +38,10 @@
     "deploy-suite:ethereum:mainnet": "npx hardhat run --network mainnet scripts/deploy-suite.js >> logs/mainnet.deploy.contracts.txt",
     "deploy-suite:polygon:mumbai": "npx hardhat run --network mumbai scripts/deploy-suite.js >> logs/mumbai.deploy.contracts.txt",
     "deploy-suite:polygon:mainnet": "npx hardhat run --network polygon scripts/deploy-suite.js >> logs/polygon.deploy.contracts.txt",
+    "verify-suite:ethereum:mainnet": "npx hardhat verify-suite --network mainnet --chain-id 1 --env mainnet  >> logs/mainnet.verify.contracts.txt",
+    "verify-suite:polygon:mumbai-test": "npx hardhat verify-suite --network mumbai --chain-id 80001 --env mumbai-test >> logs/mumbai-test.verify.contracts.txt",
+    "verify-suite:polygon:mumbai-staging": "npx hardhat verify-suite --network mumbai --chain-id 80001 --env mumbai-staging >> logs/mumbai-staging.verify.contracts.txt",
+    "verify-suite:polygon:mainnet": "npx hardhat verify-suite --network polygon --chain-id 137 --env polygon >> logs/polygon.verify.contracts.txt",
     "deploy-mocks:hardhat": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-mock-nft-auth --network hardhat",
     "deploy-mocks:local": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-mock-nft-auth --network localhost",
     "deploy-mocks:test": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-mock-nft-auth --network test >> logs/test.deploy.mocks.txt",

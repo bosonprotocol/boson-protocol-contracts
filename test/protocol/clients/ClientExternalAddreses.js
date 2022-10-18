@@ -10,7 +10,7 @@ const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-prot
 const Role = require("../../../scripts/domain/Role");
 const { expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
-const { oneWeek, oneMonth } = require("../../util/constants.js");
+const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants.js");
 
 describe("IClientExternalAddresses", function () {
   let accessController, protocolDiamond;
@@ -24,14 +24,14 @@ describe("IClientExternalAddresses", function () {
     [deployer, rando, other1, other3, proxy, protocolTreasury, bosonToken] = await ethers.getSigners();
 
     // Deploy accessController
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // grant upgrader role
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
     // Deploy client
     const protocolClientArgs = [protocolDiamond.address];
-    const [, beacons] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [, beacons] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
     [beacon] = beacons;
 
     // set protocolFees
@@ -73,7 +73,7 @@ describe("IClientExternalAddresses", function () {
       },
     ];
 
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
   });
 
   // Interface support
@@ -158,13 +158,13 @@ describe("IClientExternalAddresses", function () {
       context("💔 Revert Reasons", async function () {
         it("_protocolAddress address is the zero address", async function () {
           // Deploy Protocol Client implementation contracts
-          const protocolClientImpls = await deployProtocolClientImpls(gasLimit);
+          const protocolClientImpls = await deployProtocolClientImpls(maxPriorityFeePerGas);
 
           // Deploy Protocol Client beacon contracts
           const protocolClientArgs = [ethers.constants.AddressZero];
-          await expect(deployProtocolClientBeacons(protocolClientImpls, protocolClientArgs, gasLimit)).to.revertedWith(
-            RevertReasons.INVALID_ADDRESS
-          );
+          await expect(
+            deployProtocolClientBeacons(protocolClientImpls, protocolClientArgs, maxPriorityFeePerGas)
+          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
         it("_impl address is the zero address", async function () {

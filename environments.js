@@ -8,7 +8,9 @@
 require("dotenv").config();
 
 module.exports = {
+  // Transaction controls
   confirmations: parseInt(process.env.CONFIRMATIONS),
+  tipMultiplier: parseInt(process.env.TIP_MULTIPLIER),
 
   // Needed for verifying contract code on Etherscan
   etherscan: {

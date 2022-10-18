@@ -18,7 +18,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { getEvent } = require("../util/utils.js");
-const { oneWeek, oneMonth } = require("../util/constants");
+const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const {
   mockOffer,
   mockDisputeResolver,
@@ -80,7 +80,7 @@ describe("IBosonGroupHandler", function () {
     operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -89,17 +89,21 @@ describe("IBosonGroupHandler", function () {
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, [
-      "SellerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "OfferHandlerFacet",
-      "GroupHandlerFacet",
-      "PauseHandlerFacet",
-    ]);
+    await deployProtocolHandlerFacets(
+      protocolDiamond,
+      [
+        "SellerHandlerFacet",
+        "DisputeResolverHandlerFacet",
+        "OfferHandlerFacet",
+        "GroupHandlerFacet",
+        "PauseHandlerFacet",
+      ],
+      maxPriorityFeePerGas
+    );
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
-    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
     const [beacon] = beacons;
     const [proxy] = proxies;
 
@@ -144,7 +148,7 @@ describe("IBosonGroupHandler", function () {
         buyerEscalationDepositPercentage,
       },
     ];
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);

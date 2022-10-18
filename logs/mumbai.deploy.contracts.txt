@@ -611,3 +611,173 @@ Nothing to compile
 
 Note: Terminating verification. Because this deployment deploys the same bytecode for the staging env,
       contracts were already previously verified. Verification will fail with an "Already Verified" error
+Compiled 124 Solidity files successfully
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Tue Oct 11 2022 15:06:36 GMT-0300 (Brasilia Standard Time)
+🔱 Deployer account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0xD1d4113a0D591Cd5Ac0cec701E44f76dA6E590E5
+✅ DiamondLoupeFacet deployed to: 0xD09Bad4547f18e68BAc0315cF42B1D6df1c761a7
+✅ DiamondCutFacet deployed to: 0xB81Fca115D878d7f5B728F1D09dC9D8C10E73561
+✅ ERC165Facet deployed to: 0x5fFb18F4bbfd74D6c168AB7c8ba977A5FB22bFEF
+✅ ProtocolDiamond deployed to: 0xCF0d3EC28Ed4c9acD89456257B40642F847cBB5b
+
+💎 Granting UPGRADER role...
+
+💎 Deploying and initializing config facet...
+✅ ConfigHandlerFacet deployed to: 0x81Ae0C8b397A34AfC23Bcc9fb8960694D30eAadD
+
+💎 Deploying and initializing protocol handler facets...
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Tue Oct 11 2022 15:12:24 GMT-0300 (Brasilia Standard Time)
+🔱 Deployer account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0xb0140c30b85189c633BdB47E078ba9D2294871Cf
+✅ DiamondLoupeFacet deployed to: 0x883A543E07Db690faaCcf2F7AD250FF4A64Ae31A
+✅ DiamondCutFacet deployed to: 0xFeF0C2bD9EfcB68fa52dc52d4930c4Db4d7f8f8E
+✅ ERC165Facet deployed to: 0xc814dBbe801376a18B3965B8477aF3f6234EeFD4
+✅ ProtocolDiamond deployed to: 0xFDBB107DA8b12fECD81E1550ABc2EFb58c1136C9
+
+💎 Granting UPGRADER role...
+
+💎 Deploying and initializing config facet...
+✅ ConfigHandlerFacet deployed to: 0xD045574EDD2EDd525bFE1E14eEB074E262d4519D
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0x02711A79F1F0AB8E77A8A22F1ECE9204067CF322
+✅ SellerHandlerFacet deployed to: 0x1B1c950De2162616Eb4356c7A5AD41Bc7AB642C9
+✅ BuyerHandlerFacet deployed to: 0x31e3804f60DcF2AC53C34F536784265Bd2113987
+✅ DisputeResolverHandlerFacet deployed to: 0xab359335d426b6A6180067f79E05499b7Aa6A75f
+✅ AgentHandlerFacet deployed to: 0x85Cc39c58E36ae884B540a7d670a8D7AE06246D5
+✅ BundleHandlerFacet deployed to: 0xC03f0A39B8F95485D70594A465cFa7DEA7936174
+✅ DisputeHandlerFacet deployed to: 0xBEf153eAD111126dcB8aE2e865e342B376Ed7Fc3
+✅ ExchangeHandlerFacet deployed to: 0x389baD63C90Ab29D04cA8e093BE4A3AF03364C8e
+✅ FundsHandlerFacet deployed to: 0x159B9a8260907DF3605514E8e6Da23c7fA05c273
+✅ GroupHandlerFacet deployed to: 0x94A746D1a72d59635FE630853478587694D2EdaD
+✅ MetaTransactionsHandlerFacet deployed to: 0x79a333Ce106AD8C756cbB71a37B7726168FcD066
+✅ OfferHandlerFacet deployed to: 0x69Aec42330D8C31f6155983F1b2df9229d09212F
+✅ OrchestrationHandlerFacet deployed to: 0xdC3825904a1A6cf165a72094c4B21C9Ca2165350
+✅ TwinHandlerFacet deployed to: 0xFF68B52B13364EdB361Ed5a3fAeA1AD12e261A10
+✅ PauseHandlerFacet deployed to: 0x6e9d5c5fB5C79a235E7B368289B62bC596b0b354
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0xC0426F417026E1F418EBb37F334780E6bbeFca7D
+✅ BosonVoucher Beacon deployed to: 0x733bE18FD7200B849A14bd6b01D1873C778b22DD
+✅ BosonVoucher Proxy deployed to: 0xD5dD143Cc46c66Cf0dd44651aDF7813127704f22
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+⏲ Pause one minute, allowing deployments to propagate before verifying..
+🔍 Verifying contracts on block explorer...
+
+📋 Verifying AccessController
+contract object in verify function  {
+  name: 'AccessController',
+  address: '0xb0140c30b85189c633BdB47E078ba9D2294871Cf',
+  args: []
+}
+Nothing to compile
+Successfully submitted source code for contract
+contracts/access/AccessController.sol:AccessController at 0xb0140c30b85189c633BdB47E078ba9D2294871Cf
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify AccessController on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying DiamondLoupeFacet
+contract object in verify function  {
+  name: 'DiamondLoupeFacet',
+  address: '0x883A543E07Db690faaCcf2F7AD250FF4A64Ae31A',
+  args: []
+}
+Compiled 128 Solidity files successfully
+Successfully submitted source code for contract
+contracts/diamond/facets/DiamondLoupeFacet.sol:DiamondLoupeFacet at 0x883A543E07Db690faaCcf2F7AD250FF4A64Ae31A
+for verification on the block explorer. Waiting for verification result...
+
+❌ Failed to verify DiamondLoupeFacet on block explorer. The Etherscan API responded with a failure status.
+The verification may still succeed but should be checked manually.
+Reason: Already Verified
+
+📋 Verifying DiamondCutFacet
+contract object in verify function  {
+  name: 'DiamondCutFacet',
+  address: '0xFeF0C2bD9EfcB68fa52dc52d4930c4Db4d7f8f8E',
+  args: []
+}
+Nothing to compile
+
+Note: Terminating verification. Because this deployment deploys the same bytecode for the staging env,
+      contracts were already previously verified. Verification will fail with an "Already Verified" error
+
+Compiled 128 Solidity files successfully
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Tue Oct 11 2022 15:26:15 GMT-0300 (Brasilia Standard Time)
+🔱 Deployer account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x955AbDE524CEd6A8AcA3A4a097bd3484c09f58bE
+✅ DiamondLoupeFacet deployed to: 0x120643A4c4EDcd2e86C67193006B1e0c44EEF1A9
+✅ DiamondCutFacet deployed to: 0x77Ca7EBAAfC81433e46601e1acA7c245B33e2421
+✅ ERC165Facet deployed to: 0x7131bE6AD8e32F6C248A727Dee17530F58D4e51e
+✅ ProtocolDiamond deployed to: 0xf9719c7e641964D83cC50ea2d4d0D4e6C300d50E
+
+💎 Granting UPGRADER role...
+
+💎 Deploying and initializing config facet...
+✅ ConfigHandlerFacet deployed to: 0xC656c68b48926a429Aa7165fFace65246126d682
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0x79f27E9A4fa1E79C6dB7748D2D3C818b27B06956
+✅ SellerHandlerFacet deployed to: 0x90ab67d226c84FdC33f7a3c9B9D5B66Fea51b55b
+✅ BuyerHandlerFacet deployed to: 0x5Bb476E32d1e88B31bBC82d999D760eCb0c14d7D
+✅ DisputeResolverHandlerFacet deployed to: 0x826A551366aCB0e8B97a645bc8d61FbB3Cf90ca1
+✅ AgentHandlerFacet deployed to: 0x954E0018cD1acc808774048231417c5b39687E22
+✅ BundleHandlerFacet deployed to: 0x75a762D427f584b49Df816C7B8EF35f366C5021e
+✅ DisputeHandlerFacet deployed to: 0x506040028eB82d9bcD04f0834E7413D580C12777
+✅ ExchangeHandlerFacet deployed to: 0xE9745a15ff08f4a1Ef9f35FafF6afc5C3c81d92A
+✅ FundsHandlerFacet deployed to: 0x2330876E961a1A247f38813B78CdD4c00c7f2852
+✅ GroupHandlerFacet deployed to: 0x44132DC5471F013530a5Fa69b89B651073Ca093e
+✅ MetaTransactionsHandlerFacet deployed to: 0x76C3bf69519ACc8Ad5fF2B720Ef1F623754e1842
+✅ OfferHandlerFacet deployed to: 0x89682edb5A902A49d73Bf3139Eaa9c52F1551b63
+✅ OrchestrationHandlerFacet deployed to: 0x6e599ec84e16B9444bE392eD489493aebB139692
+✅ TwinHandlerFacet deployed to: 0xa6Ff006d7a3A66AE432381c0030Ea6A7561A0A36
+✅ PauseHandlerFacet deployed to: 0xd65517cc0c987AfCd1Ae62e281410f8F1fA636dD
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0x7Ec228D90F62116c607a556eb0610C056E097581
+✅ BosonVoucher Beacon deployed to: 0xaFca5eAA6a6826a405c60110942150979Ff78281
+✅ BosonVoucher Proxy deployed to: 0xC54A578dbcBD57d844976eABDA61B853d0a0a724
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+⏲ Pause one minute, allowing deployments to propagate before verifying..
+🔍 Verifying contracts on block explorer...
+
+📋 Verifying AccessController
+contract object in verify function  {
+  name: 'AccessController',
+  address: '0x955AbDE524CEd6A8AcA3A4a097bd3484c09f58bE',
+  args: []
+}
+Nothing to compile
+
+Note: Terminating verification. Because this deployment deploys the same bytecode for the staging env,
+      contracts were already previously verified. Verification will fail with an "Already Verified" error
