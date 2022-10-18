@@ -43,6 +43,12 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         // Check active is not set to false
         require(_seller.active, MUST_BE_ACTIVE);
 
+        // Check for zero address
+        require(
+            _seller.operator != address(0) && _seller.clerk != address(0) && _seller.treasury != address(0),
+            INVALID_ADDRESS
+        );
+
         // Admin address or AuthToken data must be present. A seller can have one or the other
         require(
             (_seller.admin == address(0) && _authToken.tokenType != AuthTokenType.None) ||
@@ -89,7 +95,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         // Get the next account id and increment the counter
         uint256 sellerId = protocolCounters().nextAccountId++;
         _seller.id = sellerId;
-        storeSeller(_seller, _authToken);
+        storeSeller(_seller, _authToken, lookups);
 
         // Create clone and store its address cloneAddress
         address voucherCloneAddress = cloneBosonVoucher(sellerId, _seller.operator, _voucherInitValues);
@@ -102,24 +108,15 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
     /**
      * @notice Validates seller struct and stores it to storage, along with auth token if present.
      *
-     * Reverts if:
-     * - Address values are zero address
-     * - Addresses are not unique to this seller
-     *
      * @param _seller - the fully populated struct with seller id set
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
+     * @param _lookups - ProtocolLib.ProtocolLookups struct
      */
-
-    function storeSeller(Seller memory _seller, AuthToken calldata _authToken) internal {
-        // Cache protocol lookups for reference
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
-        // Check for zero address
-        require(
-            _seller.operator != address(0) && _seller.clerk != address(0) && _seller.treasury != address(0),
-            INVALID_ADDRESS
-        );
-
+    function storeSeller(
+        Seller memory _seller,
+        AuthToken calldata _authToken,
+        ProtocolLib.ProtocolLookups storage _lookups
+    ) internal {
         // Get storage location for seller
         (, Seller storage seller, AuthToken storage authToken) = fetchSeller(_seller.id);
 
@@ -138,16 +135,16 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             authToken.tokenType = _authToken.tokenType;
 
             // Store seller by auth token reference
-            lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] = _seller.id;
+            _lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] = _seller.id;
         } else {
             // Empty auth token passed in
             // Store admin address reference
-            lookups.sellerIdByAdmin[_seller.admin] = _seller.id;
+            _lookups.sellerIdByAdmin[_seller.admin] = _seller.id;
         }
 
         // Map the seller's other addresses to the seller id. It's not necessary to map the treasury address, as it only receives funds
-        lookups.sellerIdByOperator[_seller.operator] = _seller.id;
-        lookups.sellerIdByClerk[_seller.clerk] = _seller.id;
+        _lookups.sellerIdByOperator[_seller.operator] = _seller.id;
+        _lookups.sellerIdByClerk[_seller.clerk] = _seller.id;
     }
 
     /**
