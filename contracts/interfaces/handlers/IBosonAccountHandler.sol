@@ -178,6 +178,11 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      */
     function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
 
+    function optInToDisputeResolverUpdate(
+        uint256 _disputeResolverId,
+        BosonTypes.DisputeResolverUpdateFields[] calldata _fieldsToUpdate
+    ) external;
+
     /**
      * @notice Updates an agent, with the exception of the active flag.
      *         All other fields should be filled, even those staying the same.

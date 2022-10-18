@@ -51,11 +51,34 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
+        // Check for zero address
+        require(
+            _disputeResolver.admin != address(0) &&
+                _disputeResolver.operator != address(0) &&
+                _disputeResolver.clerk != address(0) &&
+                _disputeResolver.treasury != address(0),
+            INVALID_ADDRESS
+        );
+
+        {
+            // Get message sender
+            address sender = msgSender();
+
+            // Check that caller is the supplied operator and clerk
+            require(
+                _disputeResolver.admin == sender &&
+                    _disputeResolver.operator == sender &&
+                    _disputeResolver.clerk == sender,
+                NOT_ADMIN_OPERATOR_AND_CLERK
+            );
+        }
+
         // Make sure the gas block limit is not hit
         require(_sellerAllowList.length <= protocolLimits().maxAllowedSellers, INVALID_AMOUNT_ALLOWED_SELLERS);
 
         // Get the next account id and increment the counter
         uint256 disputeResolverId = protocolCounters().nextAccountId++;
+
         // Check that the addresses are unique to one dispute resolver id, across all rolls
         mapping(address => uint256) storage disputeResolverIdByOperator = lookups.disputeResolverIdByOperator;
         mapping(address => uint256) storage disputeResolverIdByAdmin = lookups.disputeResolverIdByAdmin;
@@ -72,7 +95,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 disputeResolverIdByClerk[_disputeResolver.admin] == 0,
             DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
         );
+
         _disputeResolver.id = disputeResolverId;
+
         // The number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
         require(
             _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver,
@@ -80,6 +105,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         );
         // Get storage location for dispute resolver fees
         (, , DisputeResolverFee[] storage disputeResolverFees) = fetchDisputeResolver(_disputeResolver.id);
+
         // Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
         mapping(address => uint256) storage disputeResolverFeeTokens = lookups.disputeResolverFeeTokenIndex[
             _disputeResolver.id
@@ -90,9 +116,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 DUPLICATE_DISPUTE_RESOLVER_FEES
             );
             disputeResolverFees.push(_disputeResolverFees[i]);
+
             // Set index mapping. Should be index in disputeResolverFees array + 1
             disputeResolverFeeTokens[_disputeResolverFees[i].tokenAddress] = disputeResolverFees.length;
         }
+
         // Ignore supplied active flag and set to false. Dispute resolver must be activated by protocol.
         _disputeResolver.active = false;
 
@@ -113,7 +141,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @notice Updates a dispute resolver, not including DisputeResolverFees, allowed seller list or active flag.
      *         All DisputeResolver fields should be filled, even those staying the same.
      *         Use removeFeesFromDisputeResolver and addFeesToDisputeResolver to add and remove fees.
-     *         Use adSellersToAllowList and removeSellersFromAllowList to add and remove allowed sellers.
+     *         Use addSellersToAllowList and removeSellersFromAllowList to add and remove allowed sellers.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a DisputeResolverUpdated event if successful.
@@ -162,6 +190,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Clean old dispute resolver pending update data if exists
         delete lookups.pendingAddressUpdatesByDisputeResolver[_disputeResolver.id];
 
+        bool needsApproval;
         (, DisputeResolver storage disputeResolverPendingUpdate) = fetchDisputeResolverPendingUpdate(
             _disputeResolver.id
         );
@@ -172,6 +201,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
             // If admin address exists, admin address owner must approve the update to prevent front-running
             disputeResolverPendingUpdate.admin = _disputeResolver.admin;
+            needsApproval = true;
         }
 
         if (_disputeResolver.operator != disputeResolver.operator) {
@@ -180,6 +210,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
             // If operator address exists, operator address owner must approve the update to prevent front-running
             disputeResolverPendingUpdate.operator = _disputeResolver.operator;
+            needsApproval = true;
         }
 
         if (_disputeResolver.clerk != disputeResolver.clerk) {
@@ -188,10 +219,55 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
             // If clerk address exists, clerk address owner must approve the update to prevent front-running
             disputeResolverPendingUpdate.clerk = _disputeResolver.clerk;
+            needsApproval = true;
         }
 
-        // Notify watchers of state change
-        emit DisputeResolverUpdatePending(_disputeResolver.id, disputeResolverPendingUpdate, sender);
+        if (needsApproval) {
+            // Notify watchers of state change
+            emit DisputeResolverUpdatePending(_disputeResolver.id, disputeResolverPendingUpdate, sender);
+        }
+
+        bool updateApplied;
+
+        if (_disputeResolver.treasury != disputeResolver.treasury) {
+            require(_disputeResolver.treasury != address(0), INVALID_ADDRESS);
+
+            // Update treasury
+            disputeResolver.treasury = _disputeResolver.treasury;
+
+            updateApplied = true;
+        }
+
+        if (_disputeResolver.escalationResponsePeriod != disputeResolver.escalationResponsePeriod) {
+            // Escalation period must be greater than zero and less than or equal to the max allowed
+            require(
+                _disputeResolver.escalationResponsePeriod > 0 &&
+                    _disputeResolver.escalationResponsePeriod <= protocolLimits().maxEscalationResponsePeriod,
+                INVALID_ESCALATION_PERIOD
+            );
+
+            // Update escalation response period
+            disputeResolver.escalationResponsePeriod = _disputeResolver.escalationResponsePeriod;
+
+            updateApplied = true;
+        }
+
+        if (keccak256(bytes(_disputeResolver.metadataUri)) != keccak256(bytes(disputeResolver.metadataUri))) {
+            // Update metadata URI
+            disputeResolver.metadataUri = _disputeResolver.metadataUri;
+
+            updateApplied = true;
+        }
+
+        if (updateApplied) {
+            // Notify watchers of state change
+            emit DisputeResolverUpdateApplied(
+                _disputeResolver.id,
+                disputeResolver,
+                disputeResolverPendingUpdate,
+                sender
+            );
+        }
     }
 
     /**
@@ -208,7 +284,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @param _disputeResolverId - disputeResolver id
      * @param _fieldsToUpdate - fields to update, see DisputeResolverUpdateFields enum
      */
-    function optInTodisputeResolverUpdate(
+    function optInToDisputeResolverUpdate(
         uint256 _disputeResolverId,
         DisputeResolverUpdateFields[] calldata _fieldsToUpdate
     ) external disputeResolversNotPaused nonReentrant {
