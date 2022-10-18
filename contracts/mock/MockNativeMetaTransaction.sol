@@ -16,7 +16,7 @@ contract MockNativeMetaTransaction is MockEIP712Base {
         address payable relayerAddress,
         bytes functionSignature
     );
-    mapping(address => uint256) nonces;
+    mapping(address => uint256) private nonces;
 
     /*
      * Meta transaction structure.

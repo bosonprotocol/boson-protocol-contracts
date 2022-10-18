@@ -2,7 +2,7 @@
 pragma solidity 0.8.9;
 
 contract MockInitializable {
-    bool inited = false;
+    bool private inited = false;
 
     modifier initializer() {
         require(!inited, "already inited");
