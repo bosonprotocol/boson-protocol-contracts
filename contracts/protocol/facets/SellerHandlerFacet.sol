@@ -2,7 +2,6 @@
 pragma solidity 0.8.9;
 
 import "../../domain/BosonConstants.sol";
-import "hardhat/console.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { SellerBase } from "../bases/SellerBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
