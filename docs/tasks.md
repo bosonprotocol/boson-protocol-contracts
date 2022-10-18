@@ -42,7 +42,7 @@ Deploy suite deploys protocol diamond, all facets, client and beacon, and initia
 ```npm run deploy-suite:ethereum:mainnet```
 
 ### Upgrade facet
-Upgrade existing facets, add new facets or remove existing facets. We provide different npm scripts for different use cases. A script for Hardhat network does not exist. since contracts are discarded after the deployment, they cannot be upgraded.
+Upgrade existing facets, add new facets or remove existing facets. We provide different npm scripts for different use cases. A script for Hardhat network does not exist. Since contracts are discarded after the deployment, they cannot be upgraded.
 
 For upgrade to succeed you need an account with UPGRADER role. Refer to "Manage Roles" to see how to grant it.
 

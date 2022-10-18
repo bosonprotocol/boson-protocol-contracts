@@ -55,8 +55,6 @@ async function main() {
         break;
       case "n":
       case "no":
-        process.exit(1);
-        break;
       default:
         process.exit(1);
     }
@@ -144,9 +142,31 @@ async function main() {
     let selectorsToAdd = newSelectors.filter((value) => !selectorsToReplace.includes(value)); // unique new selectors
 
     // Skip selectors if set in config
-    const selectorsToSkip = Facets.skip[newFacet.name] ? Facets.skip[newFacet.name] : [];
+    let selectorsToSkip = Facets.skip[newFacet.name] ? Facets.skip[newFacet.name] : [];
     selectorsToReplace = removeSelectors(selectorsToReplace, selectorsToSkip);
     selectorsToRemove = removeSelectors(selectorsToRemove, selectorsToSkip);
+    selectorsToAdd = removeSelectors(selectorsToAdd, selectorsToSkip);
+
+    // Check if selectors that are being added are not registered yet on some other facet
+    // If collision is found, user must choose to either (s)kip it or (r)eplace it.
+    for (const selectorToAdd of selectorsToAdd) {
+      const existingFacetAddress = await diamondLoupe.facetAddress(selectorToAdd);
+      if (existingFacetAddress != ethers.constants.AddressZero) {
+        // Selector exist on some other facet
+        const selectorName = selectors.signatureToNameMapping[selectorToAdd];
+        const prompt = `Selector ${selectorName} is already registered on facet ${existingFacetAddress}. Do you want to (r)eplace or (s)kip it? `;
+        const answer = await getUserResponse(prompt, ["r", "s"]);
+        if (answer == "r") {
+          // User chose to replace
+          selectorsToReplace.push(selectorToAdd);
+        } else {
+          // User chose to skip
+          selectorsToSkip.push(selectorName);
+        }
+        // In any case, remove it from selectorsToAdd
+        selectorsToAdd = removeSelectors(selectorsToAdd, [selectorName]);
+      }
+    }
 
     // Adding and replacing are done in one diamond cut
     if (selectorsToAdd.length > 0 || selectorsToReplace.length > 0) {
@@ -235,6 +255,18 @@ const addressNotFound = (address) => {
   console.log(`${address} address not found for network ${network}`);
   process.exit(1);
 };
+
+async function getUserResponse(question, validResponses) {
+  const answer = await new Promise((resolve) => {
+    rl.question(question, resolve);
+  });
+  if (validResponses.includes(answer)) {
+    return answer;
+  } else {
+    console.log("Invalid response!");
+    return await getUserResponse(question, validResponses);
+  }
+}
 
 main()
   .then(() => process.exit(0))
