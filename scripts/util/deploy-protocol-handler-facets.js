@@ -13,6 +13,7 @@ const { getFees } = require("./utils");
  * @param diamond
  * @param facetNames - list of facet names to deploy and cut
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
+ * @param doCut - boolean that tells if cut transaction should be done or not (default: true)
  * @returns {Promise<(*|*|*)[]>}
  */
 async function deployProtocolHandlerFacets(diamond, facetNames, maxPriorityFeePerGas, doCut = true) {
