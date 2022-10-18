@@ -21,11 +21,12 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
-     * - Caller is not the supplied admin or does not own supplied auth token
      * - Caller is not the supplied operator and clerk
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
+     * - Caller is not the admin address of the stored seller
+     * - Caller is not the address of the owner of the stored AuthToken
      * - Seller is not active (if active == false)
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller

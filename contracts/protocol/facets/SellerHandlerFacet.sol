@@ -66,7 +66,7 @@ contract SellerHandlerFacet is SellerBase {
      * - Address values are zero address
      * - Addresses are not unique to this seller
      * - Caller is not the admin address of the stored seller
-     * - Stored auth token exists and caller is not the owner
+     * - Caller is not the address of the owner of the stored AuthToken
      * - Seller does not exist
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -131,7 +131,7 @@ contract SellerHandlerFacet is SellerBase {
                 authTokenPendingUpdate.tokenId = _authToken.tokenId;
                 needsApproval = true;
             }
-        } else if (seller.admin != _seller.admin) {
+        } else if (_seller.admin != seller.admin) {
             preUpdateSellerCheck(_seller.id, _seller.admin, lookups);
             require(_seller.admin != address(0), INVALID_ADDRESS);
             // If admin address exists, admin address owner must approve the update to prevent front-running

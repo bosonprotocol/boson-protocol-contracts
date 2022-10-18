@@ -110,7 +110,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Address values are zero address
      * - Addresses are not unique to this seller
      * - Caller is not the admin address of the stored seller
-     * - Stored auth token exists and caller is not the owner
+     * - Caller is not the address of the owner of the stored AuthToken
      * - Seller does not exist
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
