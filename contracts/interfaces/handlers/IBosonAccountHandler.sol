@@ -109,8 +109,8 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
-     * - Caller is not the admin address of the stored seller
-     * - Caller is not the address of the owner of the stored AuthToken
+     * - Caller address is not the admin address of the stored seller with no AuthToken
+     * - Caller is not the owner of the seller's stored AuthToken
      * - Seller does not exist
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -129,8 +129,8 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Reverts if:
      * - The sellers region of protocol is paused
      * - Addresses are not unique to this seller
-     * - Caller is not the address pending update for the field being updated
-     * - Caller is not the address of the owner of the pending AuthToken being updated
+     * - Caller address is not pending for the field being updated
+     * - Caller is not the of the owner of the pending AuthToken being updated
      * - No pending update exists for this seller
      * - AuthTokenType is not unique to this seller
      *
