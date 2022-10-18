@@ -20,26 +20,18 @@ contract Foreign20 is ERC20Pausable, MockNativeMetaTransaction {
     string public constant ERC712_VERSION = "1";
 
     constructor() ERC20(TOKEN_NAME, TOKEN_SYMBOL) {
-      _initializeEIP712(TOKEN_NAME, ERC712_VERSION);
+        _initializeEIP712(TOKEN_NAME, ERC712_VERSION);
     }
 
     // This is to support Native meta transactions
     // never use msg.sender directly, use _msgSender() instead
-    function _msgSender()
-        internal
-        override
-        view
-        returns (address sender)
-    {
+    function _msgSender() internal view override returns (address sender) {
         if (msg.sender == address(this)) {
             bytes memory array = msg.data;
             uint256 index = msg.data.length;
             assembly {
                 // Load the 32 bytes word from memory with the address on the lower 20 bytes, and mask those.
-                sender := and(
-                    mload(add(array, index)),
-                    0xffffffffffffffffffffffffffffffffffffffff
-                )
+                sender := and(mload(add(array, index)), 0xffffffffffffffffffffffffffffffffffffffff)
             }
         } else {
             sender = msg.sender;

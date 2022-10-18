@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
-// This file is copied/pasted from the BOSON Child Token implementation deployed on Polygon 
+// This file is copied/pasted from the BOSON Child Token implementation deployed on Polygon
 
 import { MockInitializable } from "./MockInitializable.sol";
 
@@ -13,23 +13,14 @@ contract MockEIP712Base is MockInitializable {
         bytes32 salt;
     }
 
-    bytes32 internal constant EIP712_DOMAIN_TYPEHASH = keccak256(
-        bytes(
-            "EIP712Domain(string name,string version,address verifyingContract,bytes32 salt)"
-        )
-    );
+    bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
+        keccak256(bytes("EIP712Domain(string name,string version,address verifyingContract,bytes32 salt)"));
     bytes32 internal domainSeperator;
 
     // supposed to be called once while initializing.
     // one of the contractsa that inherits this contract follows proxy pattern
     // so it is not possible to do this in a constructor
-    function _initializeEIP712(
-        string memory name,
-        string memory version
-    )
-        internal
-        initializer
-    {
+    function _initializeEIP712(string memory name, string memory version) internal initializer {
         _setDomainSeperator(name, version);
     }
 
@@ -64,14 +55,7 @@ contract MockEIP712Base is MockInitializable {
      * "\\x19" makes the encoding deterministic
      * "\\x01" is the version byte to make it compatible to EIP-191
      */
-    function toTypedMessageHash(bytes32 messageHash)
-        internal
-        view
-        returns (bytes32)
-    {
-        return
-            keccak256(
-                abi.encodePacked("\x19\x01", getDomainSeperator(), messageHash)
-            );
+    function toTypedMessageHash(bytes32 messageHash) internal view returns (bytes32) {
+        return keccak256(abi.encodePacked("\x19\x01", getDomainSeperator(), messageHash));
     }
 }
