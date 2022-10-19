@@ -214,6 +214,8 @@ library ProtocolLib {
         mapping(string => BosonTypes.MetaTxInputType) inputType;
         // map input type => hash info
         mapping(BosonTypes.MetaTxInputType => BosonTypes.HashInfo) hashInfo;
+        // Can function be executed using meta transactions
+        mapping(string => bool) isAllowed;
     }
 
     // Individual facet initialization states

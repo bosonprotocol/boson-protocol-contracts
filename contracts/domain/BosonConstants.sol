@@ -148,6 +148,7 @@ string constant INVALID_FUNCTION_SIGNATURE = "functionSignature can not be of ex
 string constant SIGNER_AND_SIGNATURE_DO_NOT_MATCH = "Signer and signature do not match";
 string constant INVALID_FUNCTION_NAME = "Invalid function name";
 string constant INVALID_SIGNATURE = "Invalid signature";
+string constant FUNCTION_NOT_ALLOWED = "Function can not be executed via meta transaction";
 
 // Revert Reasons: Dispute related
 string constant DISPUTE_PERIOD_HAS_ELAPSED = "Dispute period has already elapsed";

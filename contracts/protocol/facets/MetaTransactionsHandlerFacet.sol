@@ -170,6 +170,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      *
      * Reverts if:
      * - Nonce is already used by the msg.sender for another transaction
+     * - Function is not whitelisted to be called using metatransactions
      * - Function signature matches executeMetaTransaction
      * - Function name does not match the bytes4 version of the function signature
      *
@@ -183,11 +184,19 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         uint256 _nonce,
         address _userAddress
     ) internal view {
-        require(!protocolMetaTxInfo().usedNonce[_userAddress][_nonce], NONCE_USED_ALREADY);
+        ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
 
+        // Nonce should be unused
+        require(!pmti.usedNonce[_userAddress][_nonce], NONCE_USED_ALREADY);
+
+        // Function must be allowed
+        require(pmti.isAllowed[_functionName], FUNCTION_NOT_ALLOWED);
+
+        // Cannot call executeMetaTransaction via meta transaction
         bytes4 destinationFunctionSig = convertBytesToBytes4(_functionSignature);
         require(destinationFunctionSig != msg.sig, INVALID_FUNCTION_SIGNATURE);
 
+        // Function name must correspond to selector
         bytes4 functionNameSig = bytes4(keccak256(abi.encodePacked(_functionName)));
         require(destinationFunctionSig == functionNameSig, INVALID_FUNCTION_NAME);
     }
@@ -304,5 +313,38 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         );
 
         return executeTx(_userAddress, _functionName, _functionSignature, _nonce);
+    }
+
+    /**
+     * @notice Manages allow list of functions that can be executed using metatransactions.
+     *
+     * Emits a FunctionsWhitelisted event if successful.
+     *
+     * Reverts if:
+     * - Caller is not a protocol admin
+     *
+     * @param _functionNames - the list of function names
+     * @param _isAllowed - new whitelist status
+     */
+    function setAllowedFunctions(string[] calldata _functionNames, bool _isAllowed) external override onlyRole(ADMIN) {
+        ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
+
+        // set new values
+        for (uint256 i = 0; i < _functionNames.length; i++) {
+            pmti.isAllowed[_functionNames[i]] = _isAllowed;
+        }
+
+        // Notify external observers
+        emit FunctionsWhitelisted(_functionNames, _isAllowed);
+    }
+
+    /**
+     * @notice Tells if function can be executed as meta transaction or not.
+     *
+     * @param _functionName - the function name
+     * @return isAllowed - whitelist status
+     */
+    function isFunctionAllowed(string calldata _functionName) external view override returns (bool isAllowed) {
+        return protocolMetaTxInfo().isAllowed[_functionName];
     }
 }
