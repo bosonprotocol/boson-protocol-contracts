@@ -171,7 +171,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * Reverts if:
      * - Nonce is already used by the msg.sender for another transaction
      * - Function is not whitelisted to be called using metatransactions
-     * - Function signature matches executeMetaTransaction
      * - Function name does not match the bytes4 version of the function signature
      *
      * @param _functionName - the function name that we want to execute
@@ -189,14 +188,11 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         // Nonce should be unused
         require(!pmti.usedNonce[_userAddress][_nonce], NONCE_USED_ALREADY);
 
-        // Function must be allowed
-        require(pmti.isAllowed[_functionName], FUNCTION_NOT_ALLOWED);
-
-        // Cannot call executeMetaTransaction via meta transaction
-        bytes4 destinationFunctionSig = convertBytesToBytes4(_functionSignature);
-        require(destinationFunctionSig != msg.sig, INVALID_FUNCTION_SIGNATURE);
+        // Function must be whitelisted
+        require(pmti.isWhitelisted[_functionName], FUNCTION_NOT_WHITELISTED);
 
         // Function name must correspond to selector
+        bytes4 destinationFunctionSig = convertBytesToBytes4(_functionSignature);
         bytes4 functionNameSig = bytes4(keccak256(abi.encodePacked(_functionName)));
         require(destinationFunctionSig == functionNameSig, INVALID_FUNCTION_NAME);
     }
@@ -268,7 +264,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * Reverts if:
      * - The meta-transactions region of protocol is paused
      * - Nonce is already used by the msg.sender for another transaction
-     * - Function signature matches executeMetaTransaction
+     * - Function is not whitelisted to be called using metatransactions
      * - Function name does not match the bytes4 version of the function signature
      * - sender does not match the recovered signer
      * - Any code executed in the signed transaction reverts
@@ -324,27 +320,31 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * - Caller is not a protocol admin
      *
      * @param _functionNames - the list of function names
-     * @param _isAllowed - new whitelist status
+     * @param _isWhitelisted - new whitelist status
      */
-    function setAllowedFunctions(string[] calldata _functionNames, bool _isAllowed) external override onlyRole(ADMIN) {
+    function setWhitelistedFunctions(string[] calldata _functionNames, bool _isWhitelisted)
+        external
+        override
+        onlyRole(ADMIN)
+    {
         ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
 
         // set new values
         for (uint256 i = 0; i < _functionNames.length; i++) {
-            pmti.isAllowed[_functionNames[i]] = _isAllowed;
+            pmti.isWhitelisted[_functionNames[i]] = _isWhitelisted;
         }
 
         // Notify external observers
-        emit FunctionsWhitelisted(_functionNames, _isAllowed);
+        emit FunctionsWhitelisted(_functionNames, _isWhitelisted);
     }
 
     /**
      * @notice Tells if function can be executed as meta transaction or not.
      *
      * @param _functionName - the function name
-     * @return isAllowed - whitelist status
+     * @return isWhitelisted - whitelist status
      */
-    function isFunctionAllowed(string calldata _functionName) external view override returns (bool isAllowed) {
-        return protocolMetaTxInfo().isAllowed[_functionName];
+    function isFunctionWhitelisted(string calldata _functionName) external view override returns (bool isWhitelisted) {
+        return protocolMetaTxInfo().isWhitelisted[_functionName];
     }
 }

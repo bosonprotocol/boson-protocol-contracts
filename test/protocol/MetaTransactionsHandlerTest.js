@@ -28,7 +28,7 @@ const {
   mockExchange,
 } = require("../util/mock");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
-const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
+const { getSelectors, FacetCutAction, getStateModifyingFunctions } = require("../../scripts/util/diamond-utils.js");
 
 /**
  *  Test the Boson Meta transactions Handler interface
@@ -127,22 +127,20 @@ describe("IBosonMetaTransactionsHandler", function () {
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(
-      protocolDiamond,
-      [
-        "SellerHandlerFacet",
-        "DisputeResolverHandlerFacet",
-        "FundsHandlerFacet",
-        "ExchangeHandlerFacet",
-        "OfferHandlerFacet",
-        "TwinHandlerFacet",
-        "DisputeHandlerFacet",
-        "MetaTransactionsHandlerFacet",
-        "PauseHandlerFacet",
-        "BuyerHandlerFacet",
-      ],
-      maxPriorityFeePerGas
-    );
+    const facetNames = [
+      "SellerHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "FundsHandlerFacet",
+      "ExchangeHandlerFacet",
+      "OfferHandlerFacet",
+      "TwinHandlerFacet",
+      "DisputeHandlerFacet",
+      "MetaTransactionsHandlerFacet",
+      "PauseHandlerFacet",
+      "BuyerHandlerFacet",
+    ];
+
+    await deployProtocolHandlerFacets(protocolDiamond, [...facetNames], maxPriorityFeePerGas);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
@@ -226,6 +224,13 @@ describe("IBosonMetaTransactionsHandler", function () {
 
     // Deploy the mock tokens
     [bosonToken, mockToken] = await deployMockTokens(["BosonToken", "Foreign20"]);
+
+    //  Whitelist contract methods
+    const stateModifyingFunctions = await getStateModifyingFunctions(facetNames);
+    const smf = stateModifyingFunctions.filter(
+      (fn) => fn != "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"
+    ); // remove executeMetaTransaction from the list
+    await metaTransactionsHandler.setWhitelistedFunctions(smf, true);
   });
 
   async function upgradeMetaTransactionsHandlerFacet() {
@@ -637,8 +642,82 @@ describe("IBosonMetaTransactionsHandler", function () {
             ).to.revertedWith(RevertReasons.REGION_PAUSED);
           });
 
+          it("Should fail when function name is not whitelised", async function () {
+            // Remove function from whitelist
+            await metaTransactionsHandler.setWhitelistedFunctions([message.functionName], false);
+
+            // Prepare the function signature for the facet function.
+            functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+              seller,
+              emptyAuthToken,
+              voucherInitValues,
+            ]);
+
+            // Prepare the message
+            message.functionSignature = functionSignature;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              operator,
+              customTransactionType,
+              "MetaTransaction",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                operator.address,
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
+            ).to.revertedWith(RevertReasons.FUNCTION_NOT_WHITELISTED);
+          });
+
+          it("Should fail when function name is not whitelised - incorrect name", async function () {
+            let incorrectFunctionName = "createSeller"; // function with this name does not exist (argument types are missing)
+
+            // Prepare the function signature for the facet function.
+            functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+              seller,
+              emptyAuthToken,
+              voucherInitValues,
+            ]);
+
+            // Prepare the message
+            message.functionName = incorrectFunctionName;
+            message.functionSignature = functionSignature;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              operator,
+              customTransactionType,
+              "MetaTransaction",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                operator.address,
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
+            ).to.revertedWith(RevertReasons.FUNCTION_NOT_WHITELISTED);
+          });
+
           it("Should fail when function name is incorrect", async function () {
-            let incorrectFunctionName = "createSeller"; // there are no function argument types here.
+            let incorrectFunctionName = "redeemVoucher(uint256)"; // function name is whitelisted, but different than what we encode in next step
 
             // Prepare the function signature for the facet function.
             functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
@@ -902,6 +981,14 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        beforeEach(async function () {
+          // Prepare the message
+          message = {};
+          message.nonce = parseInt(nonce);
+          message.from = operator.address;
+          message.contractAddress = metaTransactionsHandler.address;
+        });
+
         it("Should fail when try to call executeMetaTransaction method itself", async function () {
           // Function signature for executeMetaTransaction function.
           functionSignature = metaTransactionsHandler.interface.encodeFunctionData("executeMetaTransaction", [
@@ -939,7 +1026,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               s,
               v
             )
-          ).to.revertedWith(RevertReasons.INVALID_FUNCTION_SIGNATURE);
+          ).to.revertedWith(RevertReasons.FUNCTION_NOT_WHITELISTED);
         });
 
         context("Reentrancy guard", async function () {

@@ -110,6 +110,20 @@ function getFacetRemoveCut(facet, omitFunctions = []) {
   return [facet.address, FacetCutAction.Remove, selectors];
 }
 
+async function getStateModifyingFunctions(facetNames) {
+  let stateModifyingFunctions = [];
+  for (const facetName of facetNames) {
+    let FacetContractFactory = await ethers.getContractFactory(facetName);
+    const functions = FacetContractFactory.interface.functions;
+    const functionNames = Object.keys(functions);
+    const facetStateModifyingFunctions = functionNames.filter(
+      (fn) => fn != "initialize()" && functions[fn].stateMutability != "view"
+    );
+    stateModifyingFunctions.push(...facetStateModifyingFunctions);
+  }
+  return stateModifyingFunctions;
+}
+
 exports.getSelectors = getSelectors;
 exports.getSelector = getSelector;
 exports.FacetCutAction = FacetCutAction;
@@ -120,3 +134,4 @@ exports.getFacetAddCut = getFacetAddCut;
 exports.getFacetReplaceCut = getFacetReplaceCut;
 exports.getFacetRemoveCut = getFacetRemoveCut;
 exports.getInterfaceId = getInterfaceId;
+exports.getStateModifyingFunctions = getStateModifyingFunctions;

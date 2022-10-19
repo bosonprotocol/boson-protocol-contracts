@@ -14,5 +14,5 @@ interface IBosonMetaTransactionsEvents {
         uint256 nonce
     );
 
-    event FunctionsWhitelisted(string[] functionNames, bool isAllowed);
+    event FunctionsWhitelisted(string[] functionNames, bool isWhitelisted);
 }

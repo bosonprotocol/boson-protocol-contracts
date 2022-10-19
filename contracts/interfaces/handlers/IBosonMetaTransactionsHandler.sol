@@ -9,7 +9,7 @@ import { IBosonMetaTransactionsEvents } from "../events/IBosonMetaTransactionsEv
  *
  * @notice Manages incoming meta-transactions in the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x32f03444
+ * The ERC-165 identifier for this interface is: 0x895d6272
  */
 interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
     /**
@@ -27,7 +27,7 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      * Reverts if:
      * - The meta-transactions region of protocol is paused
      * - Nonce is already used by the msg.sender for another transaction
-     * - Function signature matches executeMetaTransaction
+     * - Function is not whitelisted to be called using metatransactions
      * - Function name does not match the bytes4 version of the function signature
      * - sender does not match the recovered signer
      * - Any code executed in the signed transaction reverts
@@ -60,15 +60,15 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      * - Caller is not a protocol admin
      *
      * @param _functionNames - the list of function names
-     * @param _isAllowed - new whitelist status
+     * @param _isWhitelisted - new whitelist status
      */
-    function setAllowedFunctions(string[] calldata _functionNames, bool _isAllowed) external;
+    function setWhitelistedFunctions(string[] calldata _functionNames, bool _isWhitelisted) external;
 
     /**
      * @notice Tells if function can be executed as meta transaction or not.
      *
      * @param _functionName - the function name
-     * @return isAllowed - whitelist status
+     * @return isWhitelisted - whitelist status
      */
-    function isFunctionAllowed(string calldata _functionName) external view returns (bool isAllowed);
+    function isFunctionWhitelisted(string calldata _functionName) external view returns (bool isWhitelisted);
 }

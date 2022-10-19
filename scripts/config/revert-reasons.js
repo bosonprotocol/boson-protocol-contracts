@@ -146,10 +146,10 @@ exports.RevertReasons = {
   // Meta-Transactions related
   NONCE_USED_ALREADY: "Nonce used already",
   FUNCTION_CALL_NOT_SUCCESSFUL: "Function call not successful",
-  INVALID_FUNCTION_SIGNATURE: "functionSignature can not be of executeMetaTransaction method",
   INVALID_SIGNATURE: "Invalid signature",
   SIGNER_AND_SIGNATURE_DO_NOT_MATCH: "Signer and signature do not match",
   INVALID_FUNCTION_NAME: "Invalid function name",
+  FUNCTION_NOT_WHITELISTED: "Function can not be executed via meta transaction",
 
   // Dispute related
   DISPUTE_PERIOD_HAS_ELAPSED: "Dispute period has already elapsed",
