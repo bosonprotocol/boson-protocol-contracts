@@ -70,6 +70,13 @@ contract BosonTypes {
         ENS
     }
 
+    enum SellerUpdateFields {
+        Admin,
+        Operator,
+        Clerk,
+        AuthToken
+    }
+
     struct AuthToken {
         uint256 tokenId;
         AuthTokenType tokenType;
