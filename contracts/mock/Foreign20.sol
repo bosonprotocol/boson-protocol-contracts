@@ -7,17 +7,37 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IBosonAccountHandler } from "../interfaces/handlers/IBosonAccountHandler.sol";
 import { IBosonMetaTransactionsHandler } from "../interfaces/handlers/IBosonMetaTransactionsHandler.sol";
 import { BosonTypes } from "../domain/BosonTypes.sol";
+import { MockNativeMetaTransaction } from "./MockNativeMetaTransaction.sol";
 
 /**
  * @title Foreign20
  *
  * @notice Mock ERC-(20) NFT for Unit Testing
  */
-contract Foreign20 is ERC20Pausable {
+contract Foreign20 is ERC20Pausable, MockNativeMetaTransaction {
     string public constant TOKEN_NAME = "Foreign20";
     string public constant TOKEN_SYMBOL = "20Test";
+    string public constant ERC712_VERSION = "1";
 
-    constructor() ERC20(TOKEN_NAME, TOKEN_SYMBOL) {}
+    constructor() ERC20(TOKEN_NAME, TOKEN_SYMBOL) {
+        _initializeEIP712(TOKEN_NAME, ERC712_VERSION);
+    }
+
+    // This is to support Native meta transactions
+    // never use msg.sender directly, use _msgSender() instead
+    function _msgSender() internal view override returns (address sender) {
+        if (msg.sender == address(this)) {
+            bytes memory array = msg.data;
+            uint256 index = msg.data.length;
+            assembly {
+                // Load the 32 bytes word from memory with the address on the lower 20 bytes, and mask those.
+                sender := and(mload(add(array, index)), 0xffffffffffffffffffffffffffffffffffffffff)
+            }
+        } else {
+            sender = msg.sender;
+        }
+        return sender;
+    }
 
     /**
      * Mints some tokens

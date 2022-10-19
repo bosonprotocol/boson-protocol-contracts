@@ -53,7 +53,11 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
+<<<<<<< HEAD
      * @notice Updates treasury address, if changed. Puts admin, operator, clerk and AuthToken in pending state, if changed.
+=======
+     * @notice Updates treasury address, if changed. Puts admin, operator, clerk and AuthToken in pending queue, if changed.
+>>>>>>> main
      *         Pending updates can be completed by calling the optInToSellerUpdate function.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
@@ -65,8 +69,13 @@ contract SellerHandlerFacet is SellerBase {
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
+<<<<<<< HEAD
      * - Caller is not the admin address of the stored seller
      * - Stored auth token exists and caller is not the owner
+=======
+     * - Caller address is not the admin address of the stored seller with no AuthToken
+     * - Caller is not the owner of the seller's stored AuthToken
+>>>>>>> main
      * - Seller does not exist
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -131,7 +140,11 @@ contract SellerHandlerFacet is SellerBase {
                 authTokenPendingUpdate.tokenId = _authToken.tokenId;
                 needsApproval = true;
             }
+<<<<<<< HEAD
         } else if (seller.admin != _seller.admin) {
+=======
+        } else if (_seller.admin != seller.admin) {
+>>>>>>> main
             preUpdateSellerCheck(_seller.id, _seller.admin, lookups);
             require(_seller.admin != address(0), INVALID_ADDRESS);
             // If admin address exists, admin address owner must approve the update to prevent front-running
@@ -184,8 +197,13 @@ contract SellerHandlerFacet is SellerBase {
      * Reverts if:
      * - The sellers region of protocol is paused
      * - Addresses are not unique to this seller
+<<<<<<< HEAD
      * - Caller is not the address pending update for the field being updated
      * - Caller is not the address of the owner of the pending AuthToken being updated
+=======
+     * - Caller address is not pending for the field being updated
+     * - Caller is not the of the owner of the pending AuthToken being updated
+>>>>>>> main
      * - No pending update exists for this seller
      * - AuthTokenType is not unique to this seller
      *
@@ -208,7 +226,11 @@ contract SellerHandlerFacet is SellerBase {
             AuthToken storage authTokenPendingUpdate
         ) = fetchSellerPendingUpdate(_sellerId);
 
+<<<<<<< HEAD
         require(exists, NO_PENDING_ACCOUNT_FOR_ACCOUNT);
+=======
+        require(exists, NO_SELLER_PENDING_UPDATE);
+>>>>>>> main
 
         // Get storage location for seller
         (, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
