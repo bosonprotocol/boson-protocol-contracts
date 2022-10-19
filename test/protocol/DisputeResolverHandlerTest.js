@@ -2486,7 +2486,7 @@ describe("DisputeResolverHandler", function () {
 
           await expect(
             accountHandler.connect(other1).optInToDisputeResolverUpdate(disputeResolver.id, [])
-          ).to.revertedWith(RevertReasons.NO_PENDING_ACCOUNT_FOR_ACCOUNT);
+          ).to.revertedWith(RevertReasons.NO_PENDING_UPDATE_FOR_ACCOUNT);
         });
 
         it("Caller is not the new admin", async function () {

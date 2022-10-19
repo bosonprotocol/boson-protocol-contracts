@@ -83,7 +83,7 @@ exports.RevertReasons = {
     "Allowed sellers are not present or exceed maximum allowed sellers in a single transaction",
   INVALID_AGENT_FEE_PERCENTAGE:
     "Sum of agent fee percentage and protocol fee percentage should be <= max fee percentage limit",
-  NO_PENDING_ACCOUNT_FOR_ACCOUNT: "No pending updates for the given account",
+  NO_PENDING_UPDATE_FOR_ACCOUNT: "No pending updates for the given account",
   UNAUTHORIZED_CALLER_UPDATE: "Caller has no permission to approve this update",
 
   // Twin related

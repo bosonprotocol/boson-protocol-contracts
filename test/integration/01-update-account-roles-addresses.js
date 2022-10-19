@@ -27,6 +27,7 @@ const {
   prepareDataSignatureParameters,
   applyPercentage,
 } = require("../util/utils.js");
+const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolverUpdateFields");
 
 /**
  *  Integration test case - operations should remain possible after updating account roles addresses.
@@ -647,10 +648,11 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
             disputeResolver.operator = rando.address;
             expect(disputeResolver.isValid()).is.true;
 
-            // Update the dispute resolver operator, testing for the event
-            await expect(accountHandler.connect(adminDR).updateDisputeResolver(disputeResolver))
-              .to.emit(accountHandler, "DisputeResolverUpdated")
-              .withArgs(disputeResolver.id, disputeResolver.toStruct(), adminDR.address);
+            // Update the dispute resolver operator
+            await accountHandler.connect(adminDR).updateDisputeResolver(disputeResolver);
+            await accountHandler
+              .connect(rando)
+              .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Operator]);
           });
 
           it("Dispute resolver should be able to decide dispute after change the operator address", async function () {

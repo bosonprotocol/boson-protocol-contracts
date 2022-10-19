@@ -303,7 +303,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             _disputeResolverId
         );
 
-        require(exists, NO_PENDING_ACCOUNT_FOR_ACCOUNT);
+        require(exists, NO_PENDING_UPDATE_FOR_ACCOUNT);
 
         // Get storage location for disputeResolver
         (, DisputeResolver storage disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
