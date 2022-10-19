@@ -309,40 +309,6 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @notice Fetches a given seller pending update from storage by id
-     *
-     * @param _sellerId - the id of the seller
-     * @return exists - whether the seller or auth token pending update exists
-     * @return sellerPendingUpdate - the seller pending update details. See {BosonTypes.Seller}
-     * @return authTokenPendingUpdate - auth token pending update details
-     */
-    function fetchSellerPendingUpdate(uint256 _sellerId)
-        internal
-        view
-        returns (
-            bool exists,
-            Seller storage sellerPendingUpdate,
-            AuthToken storage authTokenPendingUpdate
-        )
-    {
-        // Cache protocol entities for reference
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
-        // Get the seller's slot
-        sellerPendingUpdate = lookups.pendingAddressUpdatesBySeller[_sellerId];
-
-        //Get the seller's auth token's slot
-        authTokenPendingUpdate = lookups.pendingAuthTokenUpdatesBySeller[_sellerId];
-
-        // Determine existence
-        exists =
-            sellerPendingUpdate.admin != address(0) ||
-            sellerPendingUpdate.operator != address(0) ||
-            sellerPendingUpdate.clerk != address(0) ||
-            authTokenPendingUpdate.tokenType != AuthTokenType.None;
-    }
-
-    /**
      * @notice Fetches a given buyer from storage by id
      *
      * @param _buyerId - the id of the buyer
@@ -385,31 +351,6 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
 
         // Determine existence
         exists = (_disputeResolverId > 0 && disputeResolver.id == _disputeResolverId);
-    }
-
-    /**
-     * @notice Fetches a given dispute resolver pending update from storage by id
-     *
-     * @param _disputeResolverId - the id of the dispute resolver
-     * @return exists - whether the dispute resolver pending update exists
-     * @return disputeResolverPendingUpdate - the dispute resolver pending update details. See {BosonTypes.DisputeResolver}
-     */
-    function fetchDisputeResolverPendingUpdate(uint256 _disputeResolverId)
-        internal
-        view
-        returns (bool exists, DisputeResolver storage disputeResolverPendingUpdate)
-    {
-        // Cache protocol entities for reference
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
-        // Get the seller's slot
-        disputeResolverPendingUpdate = lookups.pendingAddressUpdatesByDisputeResolver[_disputeResolverId];
-
-        // Determine existence
-        exists =
-            disputeResolverPendingUpdate.admin != address(0) ||
-            disputeResolverPendingUpdate.operator != address(0) ||
-            disputeResolverPendingUpdate.clerk != address(0);
     }
 
     /**

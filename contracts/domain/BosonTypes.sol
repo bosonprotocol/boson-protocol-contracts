@@ -80,8 +80,7 @@ contract BosonTypes {
     enum DisputeResolverUpdateFields {
         Admin,
         Operator,
-        Clerk,
-        AuthToken
+        Clerk
     }
 
     struct AuthToken {

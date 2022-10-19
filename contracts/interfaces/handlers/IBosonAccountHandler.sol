@@ -159,13 +159,19 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function updateBuyer(BosonTypes.Buyer memory _buyer) external;
 
     /**
-     * @notice Updates a dispute resolver, not including DisputeResolverFees, allowed seller list or active flag.
+     * @notice Updates treasury address, escalationResponsePeriod or metadataUri if changed. Puts admin, operator and clerk in pending queue, if changed.
+     *         Pending updates can be completed by calling the optInToDisputeResolverUpdate function.
+     *
+     *         Update doesn't include DisputeResolverFees, allowed seller list or active flag.
      *         All DisputeResolver fields should be filled, even those staying the same.
      *         Use removeFeesFromDisputeResolver and addFeesToDisputeResolver to add and remove fees.
      *         Use addSellersToAllowList and removeSellersFromAllowList to add and remove allowed sellers.
+     *
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a DisputeResolverUpdated event if successful.
+     * Emits a DisputeResolverUpdatePending event if the seller has requested an update for admin, clerk, operator, or auth token.
+     * Owner(s) of new addresses for admin, clerk, operator must opt-in to the update.
      *
      * Reverts if:
      * - The dispute resolvers region of protocol is paused

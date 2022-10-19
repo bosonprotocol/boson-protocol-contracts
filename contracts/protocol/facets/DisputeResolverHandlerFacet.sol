@@ -138,13 +138,19 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Updates a dispute resolver, not including DisputeResolverFees, allowed seller list or active flag.
+     * @notice Updates treasury address, escalationResponsePeriod or metadataUri if changed. Puts admin, operator and clerk in pending queue, if changed.
+     *         Pending updates can be completed by calling the optInToDisputeResolverUpdate function.
+     *
+     *         Update doesn't include DisputeResolverFees, allowed seller list or active flag.
      *         All DisputeResolver fields should be filled, even those staying the same.
      *         Use removeFeesFromDisputeResolver and addFeesToDisputeResolver to add and remove fees.
      *         Use addSellersToAllowList and removeSellersFromAllowList to add and remove allowed sellers.
+     *
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a DisputeResolverUpdated event if successful.
+     * Emits a DisputeResolverUpdatePending event if the seller has requested an update for admin, clerk, operator, or auth token.
+     * Owner(s) of new addresses for admin, clerk, operator must opt-in to the update.
      *
      * Reverts if:
      * - The dispute resolvers region of protocol is paused
@@ -699,14 +705,19 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         )
     {
         uint256 disputeResolverId;
+
         (exists, disputeResolverId) = getDisputeResolverIdByOperator(_associatedAddress);
+
         if (exists) {
             return getDisputeResolver(disputeResolverId);
         }
+
         (exists, disputeResolverId) = getDisputeResolverIdByAdmin(_associatedAddress);
+
         if (exists) {
             return getDisputeResolver(disputeResolverId);
         }
+
         (exists, disputeResolverId) = getDisputeResolverIdByClerk(_associatedAddress);
         if (exists) {
             return getDisputeResolver(disputeResolverId);
@@ -849,5 +860,30 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
             );
         }
+    }
+
+    /**
+     * @notice Fetches a given dispute resolver pending update from storage by id
+     *
+     * @param _disputeResolverId - the id of the dispute resolver
+     * @return exists - whether the dispute resolver pending update exists
+     * @return disputeResolverPendingUpdate - the dispute resolver pending update details. See {BosonTypes.DisputeResolver}
+     */
+    function fetchDisputeResolverPendingUpdate(uint256 _disputeResolverId)
+        internal
+        view
+        returns (bool exists, DisputeResolver storage disputeResolverPendingUpdate)
+    {
+        // Cache protocol entities for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        // Get the seller's slot
+        disputeResolverPendingUpdate = lookups.pendingAddressUpdatesByDisputeResolver[_disputeResolverId];
+
+        // Determine existence
+        exists =
+            disputeResolverPendingUpdate.admin != address(0) ||
+            disputeResolverPendingUpdate.operator != address(0) ||
+            disputeResolverPendingUpdate.clerk != address(0);
     }
 }
