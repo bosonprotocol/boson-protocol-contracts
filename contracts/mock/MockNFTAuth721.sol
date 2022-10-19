@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
 /**
  * @title MockNFTAuth721
  *
  * @notice Mock ERC-(721) NFT that represents NFT Auth tokens
  */
-contract MockNFTAuth721 is ERC721Upgradeable {
+contract MockNFTAuth721 is ERC721EnumerableUpgradeable {
     string public constant TOKEN_NAME = "MockNFTAuth721";
     string public constant TOKEN_SYMBOL = "721NFTAuth";
 
