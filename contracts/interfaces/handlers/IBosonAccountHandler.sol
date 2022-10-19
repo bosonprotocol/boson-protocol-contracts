@@ -178,6 +178,20 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      */
     function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
 
+    /**
+     * @notice Opt-in to a pending dispute resolver update
+     *
+     * Emits a DisputeResolverUpdateApplied event if successful.
+     *
+     * Reverts if:
+     * - The dispute resolver region of protocol is paused
+     * - Addresses are not unique to this dispute resolver
+     * - Caller address is not pending update for the field being updated
+     * - No pending update exists for this dispute resolver
+     *
+     * @param _disputeResolverId - disputeResolver id
+     * @param _fieldsToUpdate - fields to update, see DisputeResolverUpdateFields enum
+     */
     function optInToDisputeResolverUpdate(
         uint256 _disputeResolverId,
         BosonTypes.DisputeResolverUpdateFields[] calldata _fieldsToUpdate

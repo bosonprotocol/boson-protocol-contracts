@@ -19,7 +19,7 @@ const { mockSeller, mockDisputeResolver, mockVoucherInitValues, mockAuthToken, a
 /**
  *  Test the Boson Dispute Resolver Handler
  */
-describe.only("DisputeResolverHandler", function() {
+describe("DisputeResolverHandler", function() {
   // Common vars
   let deployer,
     pauser,
@@ -796,7 +796,7 @@ describe.only("DisputeResolverHandler", function() {
       });
     });
 
-    context.only("👉 updateDisputeResolver()", async function() {
+    context("👉 updateDisputeResolver()", async function() {
       beforeEach(async function() {
         // Create a dispute resolver from objects in Dispute Resolver Methods beforeEach
         await accountHandler
@@ -806,31 +806,23 @@ describe.only("DisputeResolverHandler", function() {
         expectedDisputeResolver = disputeResolver.clone();
         expectedDisputeResolver.active = false;
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
-        disputeResolverPendingUpdate
       });
 
       it("should emit a DisputeResolverUpdatePending event with correct values if values change", async function() {
         disputeResolver.escalationResponsePeriod = Number(
           Number(disputeResolver.escalationResponsePeriod) - oneWeek
         ).toString();
-        disputeResolver.operator = other1.address;
-        disputeResolver.admin = other2.address;
-        disputeResolver.clerk = other3.address;
+        disputeResolver.operator = disputeResolverPendingUpdate.operator = other1.address;
+        disputeResolver.admin = disputeResolverPendingUpdate.admin = other2.address;
+        disputeResolver.clerk = disputeResolverPendingUpdate.clerk = other3.address;
         disputeResolver.treasury = other4.address;
         disputeResolver.metadataUri = "https://ipfs.io/ipfs/updatedUri";
         disputeResolver.active = true;
         expect(disputeResolver.isValid()).is.true;
+        disputeResolverPendingUpdateStruct = disputeResolverPendingUpdate.toStruct();
 
         expectedDisputeResolver = disputeResolver.clone();
         expectedDisputeResolver.active = false;
-
-        disputeResolverPendingUpdate = expectedDisputeResolver.clone();
-        disputeResolverPendingUpdate.id = "0";
-        disputeResolverPendingUpdate.treasury = ethers.constants.AddressZero;
-        disputeResolverPendingUpdate.metadataUri = "";
-        disputeResolverPendingUpdate.escalationResponsePeriod = "0";
-        disputeResolverPendingUpdate.active = false;
-        disputeResolverPendingUpdateStruct = disputeResolverPendingUpdate.toStruct();
 
         // Update a dispute resolver
         const tx = await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
@@ -1231,13 +1223,45 @@ describe.only("DisputeResolverHandler", function() {
         disputeResolver.active = false;
         expect(disputeResolver.isValid()).is.true;
 
-        expectedDisputeResolverStruct = disputeResolver.toStruct();
+        // Treasury is the only address that doesn't need owner opt-in
+        expectedDisputeResolver = disputeResolver.clone();
+        expectedDisputeResolver.operator = operator.address;
+        expectedDisputeResolver.admin = admin.address;
+        expectedDisputeResolver.clerk = clerk.address;
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
 
-        //Update a dispute resolver, testing for the event
-        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver))
-          .to.emit(accountHandler, "DisputeResolverUpdated")
-          .withArgs(disputeResolver.id, expectedDisputeResolverStruct, admin.address);
+        disputeResolverPendingUpdate.operator = other1.address;
+        disputeResolverPendingUpdate.admin = other1.address;
+        disputeResolverPendingUpdate.clerk = other1.address;
+        disputeResolverPendingUpdateStruct = disputeResolverPendingUpdate.toStruct();
+
+        // Update a dispute resolver
+        const tx = await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+        // Testing for the DisputeResolverUpdateApplied event
+        await expect(tx)
+          .to.emit(accountHandler, "DisputeResolverUpdateApplied")
+          .withArgs(disputeResolver.id, expectedDisputeResolverStruct, disputeResolverPendingUpdateStruct, admin.address);
+
+        // Testing for the DisputeResolverUpdatePending event
+        await expect(tx)
+          .to.emit(accountHandler, "DisputeResolverUpdatePending")
+          .withArgs(disputeResolver.id, disputeResolverPendingUpdateStruct, admin.address);
+
+        expectedDisputeResolver = disputeResolver.clone();
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+
+        disputeResolverPendingUpdate.operator = ethers.constants.AddressZero;
+        disputeResolverPendingUpdate.admin = ethers.constants.AddressZero;
+        disputeResolverPendingUpdate.clerk = ethers.constants.AddressZero;
+        disputeResolverPendingUpdateStruct = disputeResolverPendingUpdate.toStruct();
+
+        // Approve operator update
+        await expect(accountHandler.connect(other1).optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Operator, DisputeResolverUpdateFields.Admin, DisputeResolverUpdateFields.Clerk]))
+          .to.emit(accountHandler, "DisputeResolverUpdateApplied")
+          .withArgs(disputeResolver.id, expectedDisputeResolverStruct, disputeResolverPendingUpdateStruct, other1.address);
       });
+
       context("💔 Revert Reasons", async function() {
         it("The dispute resolvers region of protocol is paused", async function() {
           // Pause the dispute resolvers region of the protocol
@@ -1378,6 +1402,9 @@ describe.only("DisputeResolverHandler", function() {
 
         it("EscalationResponsePeriod is invalid", async function() {
           await configHandler.setMaxEscalationResponsePeriod(oneWeek);
+
+          // New escalation period has to be different from the current escalation period
+          disputeResolver.escalationResponsePeriod = oneWeek + 1;
 
           // Attempt to update a DisputeResolver, expecting revert
           await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
@@ -2221,6 +2248,260 @@ describe.only("DisputeResolverHandler", function() {
           await expect(accountHandler.connect(admin).activateDisputeResolver(disputeResolver.id)).to.revertedWith(
             RevertReasons.ACCESS_DENIED
           );
+        });
+      });
+    });
+
+    context("👉 optInToDisputeResolverUpdate()", function() {
+      beforeEach(async function() {
+        expectedDisputeResolver = disputeResolver.clone();
+        expectedDisputeResolver.active = false;
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+
+        await accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      });
+
+      it("New operator should opt-in to update disputeResolver", async function() {
+        disputeResolver.operator = other1.address;
+        expectedDisputeResolver.operator = other1.address;
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+
+        await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+        await expect(accountHandler.connect(other1).optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Operator]))
+          .to.emit(accountHandler, "DisputeResolverUpdateApplied")
+          .withArgs(
+            disputeResolver.id,
+            expectedDisputeResolverStruct,
+            disputeResolverPendingUpdateStruct,
+            other1.address
+          );
+      });
+
+      it("New admin should opt-in to update disputeResolver", async function() {
+        disputeResolver.admin = other1.address;
+        expectedDisputeResolver.admin = other1.address;
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+
+        await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+        await expect(accountHandler.connect(other1).optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Admin]))
+          .to.emit(accountHandler, "DisputeResolverUpdateApplied")
+          .withArgs(
+            disputeResolver.id,
+            expectedDisputeResolverStruct,
+            disputeResolverPendingUpdateStruct,
+            other1.address
+          );
+      });
+
+      it("New clerk should opt-in to update disputeResolver", async function() {
+        disputeResolver.clerk = other1.address;
+        expectedDisputeResolver.clerk = other1.address;
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+
+        await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+        await expect(accountHandler.connect(other1).optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Clerk]))
+          .to.emit(accountHandler, "DisputeResolverUpdateApplied")
+          .withArgs(
+            disputeResolver.id,
+            expectedDisputeResolverStruct,
+            disputeResolverPendingUpdateStruct,
+            other1.address
+          );
+      });
+
+      it("Should update admin, clerk and operator in a single call ", async function() {
+        disputeResolver.clerk = expectedDisputeResolver.clerk = other1.address;
+        disputeResolver.admin = expectedDisputeResolver.admin = other1.address;
+        disputeResolver.operator = expectedDisputeResolver.operator = other1.address;
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+
+        await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+        await expect(
+          accountHandler
+            .connect(other1)
+            .optInToDisputeResolverUpdate(disputeResolver.id, [
+              DisputeResolverUpdateFields.Clerk,
+              DisputeResolverUpdateFields.Admin,
+              DisputeResolverUpdateFields.Operator,
+            ])
+        )
+          .to.emit(accountHandler, "DisputeResolverUpdateApplied")
+          .withArgs(
+            disputeResolver.id,
+            expectedDisputeResolverStruct,
+            disputeResolverPendingUpdateStruct,
+            other1.address
+          );
+      });
+
+      it("If updateDisputeResolver is called twice with no optIn in between, disputeResolverPendingUpdate is populated with the data from second call", async function() {
+        disputeResolver.operator = disputeResolverPendingUpdate.operator = other1.address;
+        disputeResolverPendingUpdateStruct = disputeResolverPendingUpdate.toStruct();
+
+        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdatePending")
+          .withArgs(disputeResolver.id, disputeResolverPendingUpdateStruct, admin.address);
+
+        const disputeResolverPendingUpdate2 = disputeResolverPendingUpdate.clone();
+        disputeResolver.operator = expectedDisputeResolver.operator = disputeResolverPendingUpdate2.operator = other2.address;
+        let disputeResolverPendingUpdate2Struct = disputeResolverPendingUpdate2.toStruct();
+
+        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdatePending")
+          .withArgs(disputeResolver.id, disputeResolverPendingUpdate2Struct, admin.address);
+
+        await expect(
+          accountHandler.connect(other1).optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Operator])
+        ).to.revertedWith(RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
+
+        disputeResolverPendingUpdate.operator = ethers.constants.AddressZero;
+        disputeResolverPendingUpdate2Struct = disputeResolverPendingUpdate.toStruct();
+
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+
+        await expect(accountHandler.connect(other2).optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Operator]))
+          .to.emit(accountHandler, "DisputeResolverUpdateApplied")
+          .withArgs(
+            disputeResolver.id,
+            expectedDisputeResolverStruct,
+            disputeResolverPendingUpdate2Struct,
+            other2.address
+          );
+      });
+
+      context("💔 Revert Reasons", async function() {
+        it("There are no pending updates", async function() {
+          disputeResolver.clerk = other1.address;
+          disputeResolver.admin = other1.address;
+          disputeResolver.operator = other1.address;
+          expectedDisputeResolver = disputeResolver.clone();
+          expectedDisputeResolver.active = false;
+          expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+
+          // No pending update auth token
+          await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+          await expect(
+            accountHandler
+              .connect(other1)
+              .optInToDisputeResolverUpdate(disputeResolver.id, [
+                DisputeResolverUpdateFields.Clerk,
+                DisputeResolverUpdateFields.Admin,
+                DisputeResolverUpdateFields.Operator,
+              ])
+          )
+            .to.emit(accountHandler, "DisputeResolverUpdateApplied")
+            .withArgs(
+              disputeResolver.id,
+              expectedDisputeResolverStruct,
+              disputeResolverPendingUpdateStruct,
+              other1.address
+            );
+
+          await expect(accountHandler.connect(other1).optInToDisputeResolverUpdate(disputeResolver.id, [])).to.revertedWith(
+            RevertReasons.NO_PENDING_ACCOUNT_FOR_ACCOUNT
+          );
+        });
+
+        it("Caller is not the new admin", async function() {
+          disputeResolver.admin = other1.address;
+          disputeResolverStruct = disputeResolver.toStruct();
+
+          await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+          await expect(
+            accountHandler.connect(other2).optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Admin])
+          ).to.revertedWith(RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
+        });
+
+        it("Caller is not the new clerk", async function() {
+          disputeResolver.clerk = other1.address;
+          disputeResolverStruct = disputeResolver.toStruct();
+
+          await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+          await expect(
+            accountHandler.connect(other2).optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Clerk])
+          ).to.revertedWith(RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
+        });
+
+        it("Caller is not the new operator", async function() {
+          disputeResolver.operator = other1.address;
+          disputeResolverStruct = disputeResolver.toStruct();
+
+          await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+          await expect(
+            accountHandler.connect(other2).optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Operator])
+          ).to.revertedWith(RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
+        });
+
+        it("The DisputeResolvers region of protocol is paused", async function() {
+          disputeResolver.operator = other1.address;
+
+          await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+          // Pause the disputeResolvers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.DisputeResolvers]);
+
+          await expect(accountHandler.connect(rando).optInToDisputeResolverUpdate(disputeResolver.id, [])).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
+        it("Admin is not unique to this disputeResolver", async function() {
+          // Update disputeResolver admin
+          disputeResolver.admin = other1.address;
+          await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+          // Create disputeResolver with same admin
+          disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, other1.address);
+          expect(disputeResolver2.isValid()).is.true;
+
+          await accountHandler.connect(other1).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
+
+          // Attemp to approve the update with non-unique admin, expecting revert
+          await expect(
+            accountHandler.connect(other1).optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Admin])
+          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+        });
+
+        it("Clerk is not unique to this disputeResolver", async function() {
+          // Update disputeResolver clerk
+          disputeResolver.clerk = other1.address;
+          await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+          // Create disputeResolver with same clerk
+          disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, other1.address);
+          expect(disputeResolver2.isValid()).is.true;
+
+          await accountHandler.connect(other1).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
+
+          // Attemp to approve the update with non-unique clerk, expecting revert
+          await expect(
+            accountHandler.connect(other1).optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Clerk])
+          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+        });
+
+        it("Operator is not unique to this disputeResolver", async function() {
+          // Update disputeResolver operator
+          disputeResolver.operator = other1.address;
+          await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+          // Create disputeResolver with same operator
+          disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, other1.address);
+          expect(disputeResolver2.isValid()).is.true;
+
+          await accountHandler.connect(other1).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
+
+          // Attemp to approve the update with non-unique operator, expecting revert
+          await expect(
+            accountHandler.connect(other1).optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Operator])
+          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
         });
       });
     });

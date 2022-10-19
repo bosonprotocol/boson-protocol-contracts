@@ -271,14 +271,14 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Opt-in to a pending dispute resolver uupdate
+     * @notice Opt-in to a pending dispute resolver update
      *
      * Emits a DisputeResolverUpdateApplied event if successful.
      *
      * Reverts if:
      * - The dispute resolver region of protocol is paused
      * - Addresses are not unique to this dispute resolver
-     * - Caller is not the address pending update for the field being updated
+     * - Caller address is not pending update for the field being updated
      * - No pending update exists for this dispute resolver
      *
      * @param _disputeResolverId - disputeResolver id
