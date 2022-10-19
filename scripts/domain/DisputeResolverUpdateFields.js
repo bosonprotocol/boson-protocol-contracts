@@ -1,7 +1,7 @@
 /**
  * Boson Protocol Domain Enum: DisputeResolverUpdateFields
  */
-class DisputeResolverUpdateFields { }
+class DisputeResolverUpdateFields {}
 
 DisputeResolverUpdateFields.Admin = 0;
 DisputeResolverUpdateFields.Operator = 1;
