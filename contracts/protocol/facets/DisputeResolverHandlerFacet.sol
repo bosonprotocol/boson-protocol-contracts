@@ -887,7 +887,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Cache protocol entities for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        // Get the seller's slot
+        // Get the dispute resolver pending update slot
         disputeResolverPendingUpdate = lookups.pendingAddressUpdatesByDisputeResolver[_disputeResolverId];
 
         // Determine existence
