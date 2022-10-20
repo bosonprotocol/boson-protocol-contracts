@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x6db2c812
+ * The ERC-165 identifier for this interface is: 0x9a56a1ef
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -97,17 +97,20 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function createAgent(BosonTypes.Agent memory _agent) external;
 
     /**
-     * @notice Updates a seller, with the exception of the active flag.
-     *         All other fields should be filled, even those staying the same.
+     * @notice Updates treasury address, if changed. Puts admin, operator, clerk and AuthToken in pending queue, if changed.
+     *         Pending updates can be completed by calling the optInToSellerUpdate function.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
-     * Emits a SellerUpdated event if successful.
+     * Emits a SellerUpdateApplied event if the seller has changed the treasury.
+     * Emits a SellerUpdatePending event if the seller has requested an update for admin, clerk, operator, or auth token.
+     * Holder of new auth token and/or owner(s) of new addresses for admin, clerk, operator must opt-in to the update.
      *
      * Reverts if:
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
-     * - Caller is not the admin address of the seller
+     * - Caller address is not the admin address of the stored seller with no AuthToken
+     * - Caller is not the owner of the seller's stored AuthToken
      * - Seller does not exist
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -117,6 +120,24 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      */
     function updateSeller(BosonTypes.Seller memory _seller, BosonTypes.AuthToken calldata _authToken) external;
+
+    /**
+     * @notice Opt-in to a pending seller update
+     *
+     * Emits a SellerUpdateApplied event if successful.
+     *
+     * Reverts if:
+     * - The sellers region of protocol is paused
+     * - Addresses are not unique to this seller
+     * - Caller address is not pending for the field being updated
+     * - Caller is not the of the owner of the pending AuthToken being updated
+     * - No pending update exists for this seller
+     * - AuthTokenType is not unique to this seller
+     *
+     * @param _sellerId - seller id
+     * @param _fieldsToUpdate - fields to update, see SellerUpdateFields enum
+     */
+    function optInToSellerUpdate(uint256 _sellerId, BosonTypes.SellerUpdateFields[] calldata _fieldsToUpdate) external;
 
     /**
      * @notice Updates a buyer, with the exception of the active flag.

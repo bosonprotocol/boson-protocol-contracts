@@ -14,6 +14,7 @@ const {
 } = require("../util/mock");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const Role = require("../../scripts/domain/Role");
+const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
@@ -147,7 +148,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
   });
 
   context("After commit actions", function () {
-    let buyerAccount, seller, disputeResolver, agentAccount;
+    let buyerAccount, seller, disputeResolver, agentAccount, sellerPendingUpdate;
     let offer, offerDates, offerDurations, disputeResolverId;
     let exchangeId;
     let disputeResolverFeeNative;
@@ -231,6 +232,11 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
 
       exchangeId = "1";
+
+      const addressZero = ethers.constants.AddressZero;
+      sellerPendingUpdate = mockSeller(addressZero, addressZero, addressZero, addressZero);
+      sellerPendingUpdate.id = "0";
+      sellerPendingUpdate.active = false;
     });
 
     afterEach(async function () {
@@ -241,11 +247,26 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
     it("Seller should be able to revoke the voucher after updating operator address", async function () {
       seller.operator = rando.address;
       expect(seller.isValid()).is.true;
+      sellerPendingUpdate.operator = rando.address;
 
       // Update the seller wallet, testing for the event
       await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
-        .to.emit(accountHandler, "SellerUpdated")
-        .withArgs(seller.id, seller.toStruct(), emptyAuthToken.toStruct(), admin.address);
+        .to.emit(accountHandler, "SellerUpdatePending")
+        .withArgs(seller.id, sellerPendingUpdate.toStruct(), emptyAuthToken.toStruct(), admin.address);
+
+      sellerPendingUpdate.operator = ethers.constants.AddressZero;
+
+      // Approve the update
+      await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]))
+        .to.emit(accountHandler, "SellerUpdateApplied")
+        .withArgs(
+          seller.id,
+          seller.toStruct(),
+          sellerPendingUpdate.toStruct(),
+          emptyAuthToken.toStruct(),
+          emptyAuthToken.toStruct(),
+          rando.address
+        );
 
       // Revoke the voucher
       await expect(exchangeHandler.connect(rando).revokeVoucher(exchangeId))
@@ -256,11 +277,26 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
     it("Seller should be able to extend the voucher after updating operator address", async function () {
       seller.operator = rando.address;
       expect(seller.isValid()).is.true;
+      sellerPendingUpdate.operator = rando.address;
 
       // Update the seller wallet, testing for the event
       await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
-        .to.emit(accountHandler, "SellerUpdated")
-        .withArgs(seller.id, seller.toStruct(), emptyAuthToken.toStruct(), admin.address);
+        .to.emit(accountHandler, "SellerUpdatePending")
+        .withArgs(seller.id, sellerPendingUpdate.toStruct(), emptyAuthToken.toStruct(), admin.address);
+
+      sellerPendingUpdate.operator = ethers.constants.AddressZero;
+
+      // Approve the update
+      await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]))
+        .to.emit(accountHandler, "SellerUpdateApplied")
+        .withArgs(
+          seller.id,
+          seller.toStruct(),
+          sellerPendingUpdate.toStruct(),
+          emptyAuthToken.toStruct(),
+          emptyAuthToken.toStruct(),
+          rando.address
+        );
 
       // Extend the voucher
       const newValidUntil = offerDates.validUntil * 12;
@@ -306,11 +342,26 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       it("Seller should be able to withdraw funds after updating clerk address", async function () {
         seller.clerk = rando.address;
         expect(seller.isValid()).is.true;
+        sellerPendingUpdate.clerk = rando.address;
 
         // Update the seller wallet, testing for the event
         await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
-          .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, seller.toStruct(), emptyAuthToken.toStruct(), admin.address);
+          .to.emit(accountHandler, "SellerUpdatePending")
+          .withArgs(seller.id, sellerPendingUpdate.toStruct(), emptyAuthToken.toStruct(), admin.address);
+
+        sellerPendingUpdate.clerk = ethers.constants.AddressZero;
+
+        // Approve the update
+        await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Clerk]))
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(
+            seller.id,
+            seller.toStruct(),
+            sellerPendingUpdate.toStruct(),
+            emptyAuthToken.toStruct(),
+            emptyAuthToken.toStruct(),
+            rando.address
+          );
 
         // Attempt to withdraw funds with old seller clerk, should fail
         await expect(
@@ -430,11 +481,26 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         it("Seller should be able to resolve dispute after updating operator address", async function () {
           seller.operator = rando.address;
           expect(seller.isValid()).is.true;
+          sellerPendingUpdate.operator = rando.address;
 
           // Update the seller wallet, testing for the event
           await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
-            .to.emit(accountHandler, "SellerUpdated")
-            .withArgs(seller.id, seller.toStruct(), emptyAuthToken.toStruct(), admin.address);
+            .to.emit(accountHandler, "SellerUpdatePending")
+            .withArgs(seller.id, sellerPendingUpdate.toStruct(), emptyAuthToken.toStruct(), admin.address);
+
+          sellerPendingUpdate.operator = ethers.constants.AddressZero;
+
+          // Approve the update
+          await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]))
+            .to.emit(accountHandler, "SellerUpdateApplied")
+            .withArgs(
+              seller.id,
+              seller.toStruct(),
+              sellerPendingUpdate.toStruct(),
+              emptyAuthToken.toStruct(),
+              emptyAuthToken.toStruct(),
+              rando.address
+            );
 
           // Collect the signature components
           const { r, s, v } = await prepareDataSignatureParameters(
@@ -512,11 +578,26 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         it("If the seller operator address was changed, the buyer should not be able to resolve a dispute with the old signature", async function () {
           seller.operator = rando.address;
           expect(seller.isValid()).is.true;
+          sellerPendingUpdate.operator = rando.address;
 
           // Update the seller wallet, testing for the event
           await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
-            .to.emit(accountHandler, "SellerUpdated")
-            .withArgs(seller.id, seller.toStruct(), emptyAuthToken.toStruct(), admin.address);
+            .to.emit(accountHandler, "SellerUpdatePending")
+            .withArgs(seller.id, sellerPendingUpdate.toStruct(), emptyAuthToken.toStruct(), admin.address);
+
+          sellerPendingUpdate.operator = ethers.constants.AddressZero;
+
+          // Approve the update
+          await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]))
+            .to.emit(accountHandler, "SellerUpdateApplied")
+            .withArgs(
+              seller.id,
+              seller.toStruct(),
+              sellerPendingUpdate.toStruct(),
+              emptyAuthToken.toStruct(),
+              emptyAuthToken.toStruct(),
+              rando.address
+            );
 
           // Collect the signature components
           const { r, s, v } = await prepareDataSignatureParameters(
