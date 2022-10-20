@@ -20,7 +20,7 @@ const { mockSeller, mockAuthToken, mockVoucherInitValues, accountId } = require(
 /**
  *  Test the Boson Seller Handler
  */
-describe.only("SellerHandler", function () {
+describe("SellerHandler", function () {
   // Common vars
   let deployer,
     pauser,

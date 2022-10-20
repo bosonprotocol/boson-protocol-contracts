@@ -203,135 +203,134 @@ contract SellerHandlerFacet is SellerBase {
             AuthToken storage authTokenPendingUpdate
         ) = fetchSellerPendingUpdate(_sellerId);
 
+        // Be sure an update is pending
         require(exists, NO_PENDING_UPDATE_FOR_ACCOUNT);
 
-        {
-            bool updateApplied;
+        bool updateApplied;
 
-            // Get storage location for seller
-            (, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
+        // Get storage location for seller
+        (, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
 
-            // Cache protocol lookups and sender for reference
-            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        // Cache protocol lookups and sender for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-            for (uint256 i = 0; i < _fieldsToUpdate.length; i++) {
-                SellerUpdateFields role = _fieldsToUpdate[i];
+        for (uint256 i = 0; i < _fieldsToUpdate.length; i++) {
+            SellerUpdateFields role = _fieldsToUpdate[i];
 
-                // Approve admin update
-                if (role == SellerUpdateFields.Admin && sellerPendingUpdate.admin != address(0)) {
-                    require(sellerPendingUpdate.admin == msgSender(), UNAUTHORIZED_CALLER_UPDATE);
+            // Approve admin update
+            if (role == SellerUpdateFields.Admin && sellerPendingUpdate.admin != address(0)) {
+                require(sellerPendingUpdate.admin == msgSender(), UNAUTHORIZED_CALLER_UPDATE);
 
-                    preUpdateSellerCheck(_sellerId, msgSender(), lookups);
+                preUpdateSellerCheck(_sellerId, msgSender(), lookups);
 
-                    // Delete old seller id by admin mapping
-                    delete lookups.sellerIdByAdmin[seller.admin];
+                // Delete old seller id by admin mapping
+                delete lookups.sellerIdByAdmin[seller.admin];
 
-                    // Update admin
-                    seller.admin = msgSender();
+                // Update admin
+                seller.admin = msgSender();
 
-                    // Store new seller id by admin mapping
-                    lookups.sellerIdByAdmin[msgSender()] = _sellerId;
+                // Store new seller id by admin mapping
+                lookups.sellerIdByAdmin[msgSender()] = _sellerId;
 
-                    // Delete pending update admin
-                    delete sellerPendingUpdate.admin;
-                    // Delete auth token for seller id if it exists
-                    delete protocolEntities().authTokens[_sellerId];
+                // Delete pending update admin
+                delete sellerPendingUpdate.admin;
+                // Delete auth token for seller id if it exists
+                delete protocolEntities().authTokens[_sellerId];
 
-                    updateApplied = true;
-                }
-
-                // Approve operator update
-                if (role == SellerUpdateFields.Operator && sellerPendingUpdate.operator != address(0)) {
-                    require(sellerPendingUpdate.operator == msgSender(), UNAUTHORIZED_CALLER_UPDATE);
-
-                    preUpdateSellerCheck(_sellerId, msgSender(), lookups);
-
-                    // Delete old seller id by operator mapping
-                    delete lookups.sellerIdByOperator[seller.operator];
-
-                    // Update operator
-                    seller.operator = msgSender();
-
-                    // Transfer ownership of NFT voucher to new operator
-                    IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(msgSender());
-
-                    // Store new seller id by operator mapping
-                    lookups.sellerIdByOperator[msgSender()] = _sellerId;
-
-                    // Delete pending update operator
-                    delete sellerPendingUpdate.operator;
-
-                    updateApplied = true;
-                }
-
-                // Aprove clerk update
-                if (role == SellerUpdateFields.Clerk && sellerPendingUpdate.clerk != address(0)) {
-                    require(sellerPendingUpdate.clerk == msgSender(), UNAUTHORIZED_CALLER_UPDATE);
-
-                    preUpdateSellerCheck(_sellerId, msgSender(), lookups);
-
-                    // Delete old seller id by clerk mapping
-                    delete lookups.sellerIdByClerk[seller.clerk];
-
-                    // Update clerk
-                    seller.clerk = msgSender();
-
-                    // Store new seller id by clerk mapping
-                    lookups.sellerIdByClerk[msgSender()] = _sellerId;
-
-                    // Delete pending update clerk
-                    delete sellerPendingUpdate.clerk;
-
-                    updateApplied = true;
-                }
-
-                // Approve auth token update
-                if (role == SellerUpdateFields.AuthToken && authTokenPendingUpdate.tokenType != AuthTokenType.None) {
-                    address authTokenContract = lookups.authTokenContracts[authTokenPendingUpdate.tokenType];
-                    address tokenIdOwner = IERC721(authTokenContract).ownerOf(authTokenPendingUpdate.tokenId);
-                    require(tokenIdOwner == msgSender(), UNAUTHORIZED_CALLER_UPDATE);
-
-                    // Check that auth token is unique to this seller
-                    uint256 check = lookups.sellerIdByAuthToken[authTokenPendingUpdate.tokenType][
-                        authTokenPendingUpdate.tokenId
-                    ];
-                    require(check == 0, AUTH_TOKEN_MUST_BE_UNIQUE);
-
-                    // Delete old seller id by auth token mapping
-                    delete lookups.sellerIdByAuthToken[authToken.tokenType][authToken.tokenId];
-
-                    // Update auth token
-                    authToken.tokenType = authTokenPendingUpdate.tokenType;
-                    authToken.tokenId = authTokenPendingUpdate.tokenId;
-
-                    // Store seller by auth token reference
-                    lookups.sellerIdByAuthToken[authTokenPendingUpdate.tokenType][
-                        authTokenPendingUpdate.tokenId
-                    ] = _sellerId;
-
-                    // Remove previous admin address if it exists
-                    delete lookups.sellerIdByAdmin[seller.admin];
-                    delete seller.admin;
-
-                    // Delete pending update auth token
-                    delete authTokenPendingUpdate.tokenType;
-                    delete authTokenPendingUpdate.tokenId;
-
-                    updateApplied = true;
-                }
+                updateApplied = true;
             }
 
-            if (updateApplied) {
-                // Notify watchers of state change
-                emit SellerUpdateApplied(
-                    _sellerId,
-                    seller,
-                    sellerPendingUpdate,
-                    authToken,
-                    authTokenPendingUpdate,
-                    msgSender()
-                );
+            // Approve operator update
+            if (role == SellerUpdateFields.Operator && sellerPendingUpdate.operator != address(0)) {
+                require(sellerPendingUpdate.operator == msgSender(), UNAUTHORIZED_CALLER_UPDATE);
+
+                preUpdateSellerCheck(_sellerId, msgSender(), lookups);
+
+                // Delete old seller id by operator mapping
+                delete lookups.sellerIdByOperator[seller.operator];
+
+                // Update operator
+                seller.operator = msgSender();
+
+                // Transfer ownership of NFT voucher contract to new operator
+                IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(msgSender());
+
+                // Store new seller id by operator mapping
+                lookups.sellerIdByOperator[msgSender()] = _sellerId;
+
+                // Delete pending update operator
+                delete sellerPendingUpdate.operator;
+
+                updateApplied = true;
             }
+
+            // Aprove clerk update
+            if (role == SellerUpdateFields.Clerk && sellerPendingUpdate.clerk != address(0)) {
+                require(sellerPendingUpdate.clerk == msgSender(), UNAUTHORIZED_CALLER_UPDATE);
+
+                preUpdateSellerCheck(_sellerId, msgSender(), lookups);
+
+                // Delete old seller id by clerk mapping
+                delete lookups.sellerIdByClerk[seller.clerk];
+
+                // Update clerk
+                seller.clerk = msgSender();
+
+                // Store new seller id by clerk mapping
+                lookups.sellerIdByClerk[msgSender()] = _sellerId;
+
+                // Delete pending update clerk
+                delete sellerPendingUpdate.clerk;
+
+                updateApplied = true;
+            }
+
+            // Approve auth token update
+            if (role == SellerUpdateFields.AuthToken && authTokenPendingUpdate.tokenType != AuthTokenType.None) {
+                address authTokenContract = lookups.authTokenContracts[authTokenPendingUpdate.tokenType];
+                address tokenIdOwner = IERC721(authTokenContract).ownerOf(authTokenPendingUpdate.tokenId);
+                require(tokenIdOwner == msgSender(), UNAUTHORIZED_CALLER_UPDATE);
+
+                // Check that auth token is unique to this seller
+                uint256 check = lookups.sellerIdByAuthToken[authTokenPendingUpdate.tokenType][
+                    authTokenPendingUpdate.tokenId
+                ];
+                require(check == 0, AUTH_TOKEN_MUST_BE_UNIQUE);
+
+                // Delete old seller id by auth token mapping
+                delete lookups.sellerIdByAuthToken[authToken.tokenType][authToken.tokenId];
+
+                // Update auth token
+                authToken.tokenType = authTokenPendingUpdate.tokenType;
+                authToken.tokenId = authTokenPendingUpdate.tokenId;
+
+                // Store seller by auth token reference
+                lookups.sellerIdByAuthToken[authTokenPendingUpdate.tokenType][
+                    authTokenPendingUpdate.tokenId
+                ] = _sellerId;
+
+                // Remove previous admin address if it exists
+                delete lookups.sellerIdByAdmin[seller.admin];
+                delete seller.admin;
+
+                // Delete pending update auth token
+                delete authTokenPendingUpdate.tokenType;
+                delete authTokenPendingUpdate.tokenId;
+
+                updateApplied = true;
+            }
+        }
+
+        if (updateApplied) {
+            // Notify watchers of state change
+            emit SellerUpdateApplied(
+                _sellerId,
+                seller,
+                sellerPendingUpdate,
+                authToken,
+                authTokenPendingUpdate,
+                msgSender()
+            );
         }
     }
 
