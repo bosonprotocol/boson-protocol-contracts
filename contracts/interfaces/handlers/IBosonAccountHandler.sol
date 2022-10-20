@@ -170,7 +170,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a DisputeResolverUpdated event if successful.
-     * Emits a DisputeResolverUpdatePending event if the seller has requested an update for admin, clerk, operator, or auth token.
+     * Emits a DisputeResolverUpdatePending event if the dispute resolver has requested an update for admin, clerk or operator.
      * Owner(s) of new addresses for admin, clerk, operator must opt-in to the update.
      *
      * Reverts if:

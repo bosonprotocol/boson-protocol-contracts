@@ -209,6 +209,8 @@ contract SellerHandlerFacet is SellerBase {
 
         require(exists, NO_PENDING_UPDATE_FOR_ACCOUNT);
 
+        bool updateApplied;
+
         // Get storage location for seller
         (, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
 
@@ -311,8 +313,10 @@ contract SellerHandlerFacet is SellerBase {
             }
         }
 
-        // Notify watchers of state change
-        emit SellerUpdateApplied(_sellerId, seller, sellerPendingUpdate, authToken, authTokenPendingUpdate, sender);
+        if (updateApplied) {
+            // Notify watchers of state change
+            emit SellerUpdateApplied(_sellerId, seller, sellerPendingUpdate, authToken, authTokenPendingUpdate, sender);
+        }
     }
 
     /**

@@ -149,7 +149,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a DisputeResolverUpdated event if successful.
-     * Emits a DisputeResolverUpdatePending event if the seller has requested an update for admin, clerk, operator, or auth token.
+     * Emits a DisputeResolverUpdatePending event if the dispute resolver has requested an update for admin, clerk or operator.
      * Owner(s) of new addresses for admin, clerk, operator must opt-in to the update.
      *
      * Reverts if:
@@ -203,7 +203,6 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
         if (_disputeResolver.admin != disputeResolver.admin) {
             preUpdateDisputeResolverCheck(_disputeResolver.id, _disputeResolver.admin, lookups);
-            require(_disputeResolver.admin != address(0), INVALID_ADDRESS);
 
             // If admin address exists, admin address owner must approve the update to prevent front-running
             disputeResolverPendingUpdate.admin = _disputeResolver.admin;
@@ -212,7 +211,6 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
         if (_disputeResolver.operator != disputeResolver.operator) {
             preUpdateDisputeResolverCheck(_disputeResolver.id, _disputeResolver.operator, lookups);
-            require(_disputeResolver.operator != address(0), INVALID_ADDRESS);
 
             // If operator address exists, operator address owner must approve the update to prevent front-running
             disputeResolverPendingUpdate.operator = _disputeResolver.operator;
@@ -221,23 +219,15 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
         if (_disputeResolver.clerk != disputeResolver.clerk) {
             preUpdateDisputeResolverCheck(_disputeResolver.id, _disputeResolver.clerk, lookups);
-            require(_disputeResolver.clerk != address(0), INVALID_ADDRESS);
 
             // If clerk address exists, clerk address owner must approve the update to prevent front-running
             disputeResolverPendingUpdate.clerk = _disputeResolver.clerk;
             needsApproval = true;
         }
 
-        if (needsApproval) {
-            // Notify watchers of state change
-            emit DisputeResolverUpdatePending(_disputeResolver.id, disputeResolverPendingUpdate, sender);
-        }
-
         bool updateApplied;
 
         if (_disputeResolver.treasury != disputeResolver.treasury) {
-            require(_disputeResolver.treasury != address(0), INVALID_ADDRESS);
-
             // Update treasury
             disputeResolver.treasury = _disputeResolver.treasury;
 
@@ -263,6 +253,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             disputeResolver.metadataUri = _disputeResolver.metadataUri;
 
             updateApplied = true;
+        }
+
+        if (needsApproval) {
+            // Notify watchers of state change
+            emit DisputeResolverUpdatePending(_disputeResolver.id, disputeResolverPendingUpdate, sender);
         }
 
         if (updateApplied) {
@@ -305,6 +300,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
         require(exists, NO_PENDING_UPDATE_FOR_ACCOUNT);
 
+        bool updateApplied;
+
         // Get storage location for disputeResolver
         (, DisputeResolver storage disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
 
@@ -328,6 +325,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
                 // Delete pending update admin
                 delete disputeResolverPendingUpdate.admin;
+
+                updateApplied = true;
             }
 
             // Approve operator update
@@ -347,6 +346,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
                 // Delete pending update operator
                 delete disputeResolverPendingUpdate.operator;
+
+                updateApplied = true;
             }
 
             // Aprove clerk update
@@ -366,11 +367,20 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
                 // Delete pending update clerk
                 delete disputeResolverPendingUpdate.clerk;
+
+                updateApplied = true;
             }
         }
 
-        // Notify watchers of state change
-        emit DisputeResolverUpdateApplied(_disputeResolverId, disputeResolver, disputeResolverPendingUpdate, sender);
+        if (updateApplied) {
+            // Notify watchers of state change
+            emit DisputeResolverUpdateApplied(
+                _disputeResolverId,
+                disputeResolver,
+                disputeResolverPendingUpdate,
+                sender
+            );
+        }
     }
 
     /**
