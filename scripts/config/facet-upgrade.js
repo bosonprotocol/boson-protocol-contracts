@@ -10,5 +10,5 @@
 exports.Facets = {
   addOrUpgrade: ["SellerHandlerFacet", "BuyerHandlerFacet"],
   remove: [],
-  skip: { SellerHandlerFacet: ["getSellerByAddress(address)", "getSeller(uint256)"] },
+  skip: { SellerHandlerFacet: [] },
 };
