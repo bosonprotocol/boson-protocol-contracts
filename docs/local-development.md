@@ -73,7 +73,7 @@ To deploy the whole suite of the Boson protocol contract, execute
 This deploys all contract on the local node and prints out all the information about the deployment. Besides that, ABIs of the contracts are generated and all contract addresses are stored so you can later use them if needed. You will find them in folders:
 
 - `artifacts/contracts/interfaces`
-- `addresses/31337-localhost.json`
+- `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node)
 
 ### [Optional] Manage roles
 If you want to perform any of the following:
@@ -102,7 +102,7 @@ To perform the upgrade you then
   - "remove": list of facets that will be completely removed
   - "skip" allows you to specify methods that will be ignored during the process.
 - Update `version` in `package.json`. If the version in `package.json` matches the existing version in addresses file, you will have to explicitly confirm that you want to proceed.
-- Run `npm run upgrade-facets:local`. This will deploy new facets and make all necessary diamond cuts. It also updates the existing addresses file `addresses/31337-localhost.json` and outputs the upgrade log to the console.
+- Run `npm run upgrade-facets:local`. This will deploy new facets and make all necessary diamond cuts. It also updates the existing addresses file `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node) and outputs the upgrade log to the console.
 
 
 ### Using the protocol

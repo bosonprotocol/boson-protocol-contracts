@@ -42,7 +42,6 @@ async function deployProtocolHandlerFacets(diamond, facetNames, maxPriorityFeePe
     let callData = initInterface.encodeFunctionData("initialize");
 
     // Cut all the facets into the diamond
-
     for (let i = 0; i < deployedFacets.length; i++) {
       const deployedFacet = deployedFacets[i];
 
