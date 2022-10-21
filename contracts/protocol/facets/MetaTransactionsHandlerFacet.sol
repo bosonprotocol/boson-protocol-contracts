@@ -335,7 +335,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         }
 
         // Notify external observers
-        emit FunctionsWhitelisted(_functionNames, _isWhitelisted);
+        emit FunctionsWhitelisted(_functionNames, _isWhitelisted, msgSender());
     }
 
     /**

@@ -381,6 +381,66 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
     });
 
+    context("👉 setWhitelistedFunctions()", async function () {
+      let functionList;
+      beforeEach(async function () {
+        // A list of random functions
+        functionList = [
+          "testFunction1(uint256)",
+          "testFunction2(uint256)",
+          "testFunction3((uint256,address,bool))",
+          "testFunction4(uint256[])",
+        ];
+
+        // Grant UPGRADER role to admin account
+        await accessController.grantRole(Role.ADMIN, admin.address);
+      });
+
+      it("should emit a FunctionsWhitelisted event", async function () {
+        // Enable functions
+        await expect(metaTransactionsHandler.connect(admin).setWhitelistedFunctions(functionList, true))
+          .to.emit(metaTransactionsHandler, "FunctionsWhitelisted")
+          .withArgs(functionList, true, admin.address);
+
+        // Disable functions
+        await expect(metaTransactionsHandler.connect(admin).setWhitelistedFunctions(functionList, false))
+          .to.emit(metaTransactionsHandler, "FunctionsWhitelisted")
+          .withArgs(functionList, false, admin.address);
+      });
+
+      it("should update state", async function () {
+        // Functions should be disabled by default
+        for (const func of functionList) {
+          expect(await metaTransactionsHandler.isFunctionWhitelisted(func)).to.be.false;
+        }
+
+        // Enable functions
+        await metaTransactionsHandler.connect(admin).setWhitelistedFunctions(functionList, true);
+
+        // Functions should be enabled
+        for (const func of functionList) {
+          expect(await metaTransactionsHandler.isFunctionWhitelisted(func)).to.be.true;
+        }
+
+        // Disable functions
+        await metaTransactionsHandler.connect(admin).setWhitelistedFunctions(functionList, false);
+
+        // Functions should be disabled
+        for (const func of functionList) {
+          expect(await metaTransactionsHandler.isFunctionWhitelisted(func)).to.be.false;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("caller is not the admin", async function () {
+          // Attempt to set new max offer per group, expecting revert
+          await expect(
+            metaTransactionsHandler.connect(rando).setWhitelistedFunctions(functionList, true)
+          ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+        });
+      });
+    });
+
     context("👉 executeMetaTransaction()", async function () {
       beforeEach(async function () {
         // Set the message Type
