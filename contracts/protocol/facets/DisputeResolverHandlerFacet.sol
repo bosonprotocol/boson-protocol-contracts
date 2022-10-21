@@ -308,8 +308,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         for (uint256 i = 0; i < _fieldsToUpdate.length; i++) {
             DisputeResolverUpdateFields role = _fieldsToUpdate[i];
 
-            // Approve admin update
             if (role == DisputeResolverUpdateFields.Admin && disputeResolverPendingUpdate.admin != address(0)) {
+                // Approve admin update
                 require(disputeResolverPendingUpdate.admin == sender, UNAUTHORIZED_CALLER_UPDATE);
 
                 preUpdateDisputeResolverCheck(_disputeResolverId, sender, lookups);
@@ -327,10 +327,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 delete disputeResolverPendingUpdate.admin;
 
                 updateApplied = true;
-            }
-
-            // Approve operator update
-            if (role == DisputeResolverUpdateFields.Operator && disputeResolverPendingUpdate.operator != address(0)) {
+            } else if (
+                role == DisputeResolverUpdateFields.Operator && disputeResolverPendingUpdate.operator != address(0)
+            ) {
+                // Approve operator update
                 require(disputeResolverPendingUpdate.operator == sender, UNAUTHORIZED_CALLER_UPDATE);
 
                 preUpdateDisputeResolverCheck(_disputeResolverId, sender, lookups);
@@ -348,10 +348,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 delete disputeResolverPendingUpdate.operator;
 
                 updateApplied = true;
-            }
-
-            // Aprove clerk update
-            if (role == DisputeResolverUpdateFields.Clerk && disputeResolverPendingUpdate.clerk != address(0)) {
+            } else if (role == DisputeResolverUpdateFields.Clerk && disputeResolverPendingUpdate.clerk != address(0)) {
+                // Aprove clerk update
                 require(disputeResolverPendingUpdate.clerk == sender, UNAUTHORIZED_CALLER_UPDATE);
 
                 preUpdateDisputeResolverCheck(_disputeResolverId, sender, lookups);
