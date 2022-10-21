@@ -122,9 +122,9 @@ async function main() {
   const erc165Extended = await ethers.getContractAt("IERC165Extended", protocolAddress);
 
   // All handler facets currently have no-arg initializers
-  let initFunction = "initialize()";
-  let initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
-  let callData = initInterface.encodeFunctionData("initialize");
+  const noArgInitFunction = "initialize()";
+  const noArgInitInterface = new ethers.utils.Interface([`function ${noArgInitFunction}`]);
+  const noArgCallData = noArgInitInterface.encodeFunctionData("initialize");
 
   // manage new or upgraded facets
   for (const newFacet of deployedFacets) {
@@ -146,9 +146,14 @@ async function main() {
     const newFacetInterfaceId = interfaceIdFromFacetName(newFacet.name);
     deploymentComplete(newFacet.name, newFacet.contract.address, [], newFacetInterfaceId, contracts);
 
+    // Determine calldata. Depends on whether initialize accepts args or not
+    const callData = Facets.initArgs[newFacet.name]
+      ? newFacet.contract.interface.encodeFunctionData("initialize", Facets.initArgs[newFacet.name])
+      : noArgCallData;
+
     // Get new selectors from compiled contract
     const selectors = getSelectors(newFacet.contract, true);
-    const newSelectors = selectors.selectors.remove([initFunction]);
+    const newSelectors = selectors.selectors.remove([callData.slice(0, 10)]); // remove initializer from cut
 
     // Determine actions to be made
     let selectorsToReplace = registeredSelectors.filter((value) => newSelectors.includes(value)); // intersection of old and new selectors
