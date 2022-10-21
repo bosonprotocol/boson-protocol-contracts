@@ -215,7 +215,7 @@ library ProtocolLib {
         // map input type => hash info
         mapping(BosonTypes.MetaTxInputType => BosonTypes.HashInfo) hashInfo;
         // Can function be executed using meta transactions
-        mapping(string => bool) isWhitelisted;
+        mapping(bytes32 => bool) isWhitelisted;
     }
 
     // Individual facet initialization states

@@ -9,7 +9,7 @@ import { IBosonMetaTransactionsEvents } from "../events/IBosonMetaTransactionsEv
  *
  * @notice Manages incoming meta-transactions in the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x895d6272
+ * The ERC-165 identifier for this interface is: 0x350d635f
  */
 interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
     /**
@@ -59,16 +59,16 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      * Reverts if:
      * - Caller is not a protocol admin
      *
-     * @param _functionNames - the list of function names
+     * @param _functionNameHashes - a list of hashed function names (keccak256)
      * @param _isWhitelisted - new whitelist status
      */
-    function setWhitelistedFunctions(string[] calldata _functionNames, bool _isWhitelisted) external;
+    function setWhitelistedFunctions(bytes32[] calldata _functionNameHashes, bool _isWhitelisted) external;
 
     /**
      * @notice Tells if function can be executed as meta transaction or not.
      *
-     * @param _functionName - the function name
+     * @param _functionNameHash - hashed function name (keccak256)
      * @return isWhitelisted - whitelist status
      */
-    function isFunctionWhitelisted(string calldata _functionName) external view returns (bool isWhitelisted);
+    function isFunctionWhitelisted(bytes32 _functionNameHash) external view returns (bool isWhitelisted);
 }
