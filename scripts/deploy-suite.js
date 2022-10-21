@@ -9,12 +9,16 @@ const maxPriorityFeePerGas = ethers.BigNumber.from(tipSuggestion).mul(tipMultipl
 
 const protocolConfig = require("./config/protocol-parameters");
 const authTokenAddresses = require("./config/auth-token-addresses");
+const facets = require("./config/facet-deploy");
 
 const Role = require("./domain/Role");
 const { deployProtocolDiamond } = require("./util/deploy-protocol-diamond.js");
 const { deployProtocolClients } = require("./util/deploy-protocol-clients.js");
 const { deployProtocolConfigFacet } = require("./util/deploy-protocol-config-facet.js");
-const { deployProtocolHandlerFacets } = require("./util/deploy-protocol-handler-facets.js");
+const {
+  deployProtocolHandlerFacets,
+  deployProtocolHandlerFacetsWithArgs,
+} = require("./util/deploy-protocol-handler-facets.js");
 const { verifyOnTestEnv } = require("./util/report-verify-deployments");
 const { getInterfaceIds, interfaceImplementers } = require("./config/supported-interfaces.js");
 const { deploymentComplete, getFees, writeContracts } = require("./util/utils");
@@ -59,23 +63,14 @@ function getAuthTokenContracts() {
  * Get a list of no-arg initializer facet names to be cut into the Diamond
  */
 function getNoArgFacetNames() {
-  return [
-    "AccountHandlerFacet",
-    "SellerHandlerFacet",
-    "BuyerHandlerFacet",
-    "DisputeResolverHandlerFacet",
-    "AgentHandlerFacet",
-    "BundleHandlerFacet",
-    "DisputeHandlerFacet",
-    "ExchangeHandlerFacet",
-    "FundsHandlerFacet",
-    "GroupHandlerFacet",
-    "MetaTransactionsHandlerFacet",
-    "OfferHandlerFacet",
-    "OrchestrationHandlerFacet",
-    "TwinHandlerFacet",
-    "PauseHandlerFacet",
-  ];
+  return facets.noArgFacets;
+}
+
+/**
+ * Get a list of facet names to be cut into the Diamond
+ */
+function getArgFacetNames() {
+  return facets.argFacets;
 }
 
 async function main() {
@@ -154,8 +149,22 @@ async function main() {
 
   // Deploy and cut facets
   const deployedFacets = await deployProtocolHandlerFacets(protocolDiamond, getNoArgFacetNames(), maxPriorityFeePerGas);
-  for (let i = 0; i < deployedFacets.length; i++) {
-    const deployedFacet = deployedFacets[i];
+  for (const deployedFacet of deployedFacets) {
+    deploymentComplete(
+      deployedFacet.name,
+      deployedFacet.contract.address,
+      [],
+      interfaceIdFromFacetName(deployedFacet.name),
+      contracts
+    );
+  }
+
+  const deployedFacetsWithArgs = await deployProtocolHandlerFacetsWithArgs(
+    protocolDiamond,
+    getArgFacetNames(),
+    maxPriorityFeePerGas
+  );
+  for (const deployedFacet of deployedFacetsWithArgs) {
     deploymentComplete(
       deployedFacet.name,
       deployedFacet.contract.address,
