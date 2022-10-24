@@ -16,9 +16,6 @@ jobs:
       test-chunks:  ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
       test-chunk-ids: ${{ steps['set-test-chunk-ids'].outputs['test-chunk-ids'] }}
     steps:
-      - uses: webfactory/ssh-agent@v0.7.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Setup node
@@ -58,9 +55,6 @@ jobs:
       matrix:
         chunk: ${{ fromJson(needs.build.outputs['test-chunk-ids']) }}
     steps:
-      - uses: webfactory/ssh-agent@v0.7.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Setup node
@@ -91,15 +85,12 @@ jobs:
       GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
     name: "test:integration"
     steps:
-      - uses: webfactory/ssh-agent@v0.7.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: '16.14.x'
+          node-version: 16.14.x
           cache: 'npm'
       - name: Install Dependencies
         run: npm install
@@ -116,15 +107,12 @@ jobs:
     if: ${{ !github.event.pull_request.draft }}
     name: "deploy: dry run"
     steps:
-      - uses: webfactory/ssh-agent@v0.7.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "16.14.x"
+          node-version: 16.14.x
           cache: "npm"
       - name: Install Dependencies
         run: npm install
