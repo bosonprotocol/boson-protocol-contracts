@@ -161,7 +161,7 @@ async function main() {
     let selectorsToAdd = newSelectors.filter((value) => !selectorsToReplace.includes(value)); // unique new selectors
 
     // Skip selectors if set in config
-    let selectorsToSkip = Facets.skip[newFacet.name] ? Facets.skip[newFacet.name] : [];
+    let selectorsToSkip = Facets.skipSelectors[newFacet.name] ? Facets.skipSelectors[newFacet.name] : [];
     selectorsToReplace = removeSelectors(selectorsToReplace, selectorsToSkip);
     selectorsToRemove = removeSelectors(selectorsToRemove, selectorsToSkip);
     selectorsToAdd = removeSelectors(selectorsToAdd, selectorsToSkip);
@@ -194,10 +194,19 @@ async function main() {
       if (selectorsToAdd.length > 0) facetCut.push([newFacetAddress, FacetCutAction.Add, selectorsToAdd]);
       if (selectorsToReplace.length > 0) facetCut.push([newFacetAddress, FacetCutAction.Replace, selectorsToReplace]);
 
-      // Diamond cut
-      const transactionResponse = await diamondCutFacet
-        .connect(adminSigner)
-        .diamondCut(facetCut, newFacetAddress, callData, await getFees(maxPriorityFeePerGas));
+      // Diamond cut - add or replace
+      let transactionResponse;
+      if (Facets.skipInit.includes(newFacet.name)) {
+        // Without initialization
+        transactionResponse = await diamondCutFacet
+          .connect(adminSigner)
+          .diamondCut(facetCut, ethers.constants.AddressZero, "0x", await getFees(maxPriorityFeePerGas));
+      } else {
+        // With initialization
+        transactionResponse = await diamondCutFacet
+          .connect(adminSigner)
+          .diamondCut(facetCut, newFacetAddress, callData, await getFees(maxPriorityFeePerGas));
+      }
       await transactionResponse.wait(confirmations);
     }
 
