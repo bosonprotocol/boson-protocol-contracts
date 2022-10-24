@@ -129,7 +129,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Reverts if:
      * - The sellers region of protocol is paused
      * - Addresses are not unique to this seller
-     * - Caller address is not pending for the field being updated
+     * - Caller address is not pending update for the field being updated
      * - Caller is not the owner of the pending AuthToken being updated
      * - No pending update exists for this seller
      * - AuthTokenType is not unique to this seller
@@ -148,7 +148,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      *
      * Reverts if:
      * - The buyers region of protocol is paused
-     * - Caller is not the wallet address associated with the buyer account
+     * - Caller is not the admin address of the stored buyer
      * - Wallet address is zero address
      * - Address is not unique to this buyer
      * - Buyer does not exist
@@ -175,10 +175,10 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      *
      * Reverts if:
      * - The dispute resolvers region of protocol is paused
-     * - Caller is not the admin address associated with the dispute resolver account
-     * - Any address is zero address
+     * - Caller is not the admin address of the stored dispute resolver
      * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
+     * - EscalationResponsePeriod is invalid
      *
      * @param _disputeResolver - the fully populated dispute resolver struct
      */

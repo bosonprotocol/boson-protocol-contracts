@@ -932,7 +932,7 @@ describe("DisputeResolverHandler", function () {
         expect(exists).to.be.true;
       });
 
-      it("should update state correctly if values are the same", async function () {
+      it("state should stay the same if values are the same", async function () {
         // Update disupte resolver
         await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
 
@@ -945,7 +945,6 @@ describe("DisputeResolverHandler", function () {
         let returnedDisputeResolverFeeList = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct);
         expect(returnedDisputeResolver.isValid()).is.true;
         expect(returnedDisputeResolverFeeList.isValid()).is.true;
-        expect(returnedDisputeResolver.isValid()).is.true;
 
         // Returned values should match the input in updateDisputeResolver
         for ([key, value] of Object.entries(expectedDisputeResolver)) {

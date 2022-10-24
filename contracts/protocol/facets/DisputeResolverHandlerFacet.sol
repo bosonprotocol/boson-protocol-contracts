@@ -103,6 +103,14 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver,
             INVALID_AMOUNT_DISPUTE_RESOLVER_FEES
         );
+
+        // Escalation period must be greater than zero and less than or equal to the max allowed
+        require(
+            _disputeResolver.escalationResponsePeriod > 0 &&
+                _disputeResolver.escalationResponsePeriod <= protocolLimits().maxEscalationResponsePeriod,
+            INVALID_ESCALATION_PERIOD
+        );
+
         // Get storage location for dispute resolver fees
         (, , DisputeResolverFee[] storage disputeResolverFees) = fetchDisputeResolver(_disputeResolver.id);
 
@@ -154,10 +162,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      *
      * Reverts if:
      * - The dispute resolvers region of protocol is paused
-     * - Caller is not the admin address associated with the dispute resolver account
+     * - Caller is not the admin address of the stored dispute resolver
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
+     * - EscalationResponsePeriod is invalid
      *
      * @param _disputeResolver - the fully populated dispute resolver struct
      */
@@ -771,21 +780,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
      * @notice Stores DisputeResolver struct in storage.
      *
-     * Reverts if:
-     * - Escalation period is greater than the max escalation period
-     *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set
      */
     function storeDisputeResolver(DisputeResolver memory _disputeResolver) internal {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
-        // Escalation period must be greater than zero and less than or equal to the max allowed
-        require(
-            _disputeResolver.escalationResponsePeriod > 0 &&
-                _disputeResolver.escalationResponsePeriod <= protocolLimits().maxEscalationResponsePeriod,
-            INVALID_ESCALATION_PERIOD
-        );
 
         // Get storage location for dispute resolver
         (, DisputeResolver storage disputeResolver, ) = fetchDisputeResolver(_disputeResolver.id);

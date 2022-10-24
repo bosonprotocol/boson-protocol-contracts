@@ -183,7 +183,7 @@ contract SellerHandlerFacet is SellerBase {
      * Reverts if:
      * - The sellers region of protocol is paused
      * - Addresses are not unique to this seller
-     * - Caller address is not pending for the field being updated
+     * - Caller address is not pending update for the field being updated
      * - Caller is not the owner of the pending AuthToken being updated
      * - No pending update exists for this seller
      * - AuthTokenType is not unique to this seller
