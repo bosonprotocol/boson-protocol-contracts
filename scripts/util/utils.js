@@ -13,8 +13,8 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function deploymentComplete(name, address, args, contracts) {
-  contracts.push({ name, address, args });
+function deploymentComplete(name, address, args, interfaceId, contracts) {
+  contracts.push({ name, address, args, interfaceId });
   console.log(`✅ ${name} deployed to: ${address}`);
 }
 

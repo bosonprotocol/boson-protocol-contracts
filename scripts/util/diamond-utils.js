@@ -9,17 +9,21 @@ const ethers = hre.ethers;
 const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
 
 // get function selectors from ABI
-function getSelectors(contract) {
+function getSelectors(contract, returnSignatureToNameMapping = false) {
   const signatures = Object.keys(contract.interface.functions);
+  let signatureToNameMapping = {};
   const selectors = signatures.reduce((acc, val) => {
     if (val !== "init(bytes)") {
-      acc.push(contract.interface.getSighash(val));
+      const signature = contract.interface.getSighash(val);
+      acc.push(signature);
+      if (returnSignatureToNameMapping) signatureToNameMapping[signature] = val;
     }
     return acc;
   }, []);
   selectors.contract = contract;
   selectors.remove = remove;
   selectors.get = get;
+  if (returnSignatureToNameMapping) return { selectors, signatureToNameMapping };
   return selectors;
 }
 
