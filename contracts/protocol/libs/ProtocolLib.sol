@@ -178,6 +178,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Seller) pendingAddressUpdatesBySeller;
         // seller id => AuthToken
         mapping(uint256 => BosonTypes.AuthToken) pendingAuthTokenUpdatesBySeller;
+        // dispute resolver id => DisputeResolver
+        mapping(uint256 => BosonTypes.DisputeResolver) pendingAddressUpdatesByDisputeResolver;
     }
 
     // Incrementing id counters

@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x9a56a1ef
+ * The ERC-165 identifier for this interface is: 0xb8667cfd
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -129,8 +129,8 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Reverts if:
      * - The sellers region of protocol is paused
      * - Addresses are not unique to this seller
-     * - Caller address is not pending for the field being updated
-     * - Caller is not the of the owner of the pending AuthToken being updated
+     * - Caller address is not pending update for the field being updated
+     * - Caller is not the owner of the pending AuthToken being updated
      * - No pending update exists for this seller
      * - AuthTokenType is not unique to this seller
      *
@@ -148,7 +148,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      *
      * Reverts if:
      * - The buyers region of protocol is paused
-     * - Caller is not the wallet address associated with the buyer account
+     * - Caller is not the wallet address of the stored buyer
      * - Wallet address is zero address
      * - Address is not unique to this buyer
      * - Buyer does not exist
@@ -159,24 +159,49 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function updateBuyer(BosonTypes.Buyer memory _buyer) external;
 
     /**
-     * @notice Updates a dispute resolver, not including DisputeResolverFees, allowed seller list or active flag.
+     * @notice Updates treasury address, escalationResponsePeriod or metadataUri if changed. Puts admin, operator and clerk in pending queue, if changed.
+     *         Pending updates can be completed by calling the optInToDisputeResolverUpdate function.
+     *
+     *         Update doesn't include DisputeResolverFees, allowed seller list or active flag.
      *         All DisputeResolver fields should be filled, even those staying the same.
      *         Use removeFeesFromDisputeResolver and addFeesToDisputeResolver to add and remove fees.
      *         Use addSellersToAllowList and removeSellersFromAllowList to add and remove allowed sellers.
+     *
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a DisputeResolverUpdated event if successful.
+     * Emits a DisputeResolverUpdatePending event if the dispute resolver has requested an update for admin, clerk or operator.
+     * Owner(s) of new addresses for admin, clerk, operator must opt-in to the update.
      *
      * Reverts if:
      * - The dispute resolvers region of protocol is paused
-     * - Caller is not the admin address associated with the dispute resolver account
-     * - Any address is zero address
+     * - Caller is not the admin address of the stored dispute resolver
      * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
+     * - EscalationResponsePeriod is invalid
      *
      * @param _disputeResolver - the fully populated dispute resolver struct
      */
     function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
+
+    /**
+     * @notice Opt-in to a pending dispute resolver update
+     *
+     * Emits a DisputeResolverUpdateApplied event if successful.
+     *
+     * Reverts if:
+     * - The dispute resolver region of protocol is paused
+     * - Addresses are not unique to this dispute resolver
+     * - Caller address is not pending update for the field being updated
+     * - No pending update exists for this dispute resolver
+     *
+     * @param _disputeResolverId - disputeResolver id
+     * @param _fieldsToUpdate - fields to update, see DisputeResolverUpdateFields enum
+     */
+    function optInToDisputeResolverUpdate(
+        uint256 _disputeResolverId,
+        BosonTypes.DisputeResolverUpdateFields[] calldata _fieldsToUpdate
+    ) external;
 
     /**
      * @notice Updates an agent, with the exception of the active flag.

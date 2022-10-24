@@ -77,6 +77,12 @@ contract BosonTypes {
         AuthToken
     }
 
+    enum DisputeResolverUpdateFields {
+        Admin,
+        Operator,
+        Clerk
+    }
+
     struct AuthToken {
         uint256 tokenId;
         AuthTokenType tokenType;
