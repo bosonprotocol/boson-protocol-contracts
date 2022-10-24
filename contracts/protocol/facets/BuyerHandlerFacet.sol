@@ -46,7 +46,7 @@ contract BuyerHandlerFacet is BuyerBase {
      *
      * Reverts if:
      * - The buyers region of protocol is paused
-     * - Caller is not the admin address of the stored buyer
+     * - Caller is not the wallet address of the stored buyer
      * - Wallet address is zero address
      * - Address is not unique to this buyer
      * - Buyer does not exist

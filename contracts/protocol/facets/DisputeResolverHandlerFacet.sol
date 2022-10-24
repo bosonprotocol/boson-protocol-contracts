@@ -73,9 +73,6 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             );
         }
 
-        // Make sure the gas block limit is not hit
-        require(_sellerAllowList.length <= protocolLimits().maxAllowedSellers, INVALID_AMOUNT_ALLOWED_SELLERS);
-
         // Get the next account id and increment the counter
         uint256 disputeResolverId = protocolCounters().nextAccountId++;
 
@@ -96,20 +93,28 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
         );
 
+        {
+            // Cache protocol limits for reference
+            ProtocolLib.ProtocolLimits storage limits = protocolLimits();
+
+            // Make sure the gas block limit is not hit
+            require(_sellerAllowList.length <= limits.maxAllowedSellers, INVALID_AMOUNT_ALLOWED_SELLERS);
+
+            // The number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
+            require(
+                _disputeResolverFees.length <= limits.maxFeesPerDisputeResolver,
+                INVALID_AMOUNT_DISPUTE_RESOLVER_FEES
+            );
+
+            // Escalation period must be greater than zero and less than or equal to the max allowed
+            require(
+                _disputeResolver.escalationResponsePeriod > 0 &&
+                    _disputeResolver.escalationResponsePeriod <= limits.maxEscalationResponsePeriod,
+                INVALID_ESCALATION_PERIOD
+            );
+        }
+
         _disputeResolver.id = disputeResolverId;
-
-        // The number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
-        require(
-            _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver,
-            INVALID_AMOUNT_DISPUTE_RESOLVER_FEES
-        );
-
-        // Escalation period must be greater than zero and less than or equal to the max allowed
-        require(
-            _disputeResolver.escalationResponsePeriod > 0 &&
-                _disputeResolver.escalationResponsePeriod <= protocolLimits().maxEscalationResponsePeriod,
-            INVALID_ESCALATION_PERIOD
-        );
 
         // Get storage location for dispute resolver fees
         (, , DisputeResolverFee[] storage disputeResolverFees) = fetchDisputeResolver(_disputeResolver.id);
