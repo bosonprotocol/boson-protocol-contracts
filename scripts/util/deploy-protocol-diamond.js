@@ -19,7 +19,12 @@ async function deployProtocolDiamond(maxPriorityFeePerGas) {
   const InterfaceIds = await getInterfaceIds();
 
   // Core interfaces that will be supported at the Diamond address
-  const interfaces = [InterfaceIds.IDiamondLoupe, InterfaceIds.IDiamondCut, InterfaceIds.IERC165];
+  const interfaces = [
+    InterfaceIds.IDiamondLoupe,
+    InterfaceIds.IDiamondCut,
+    InterfaceIds.IERC165,
+    InterfaceIds.IERC165Extended,
+  ];
 
   // Deploy the AccessController contract
   const AccessController = await ethers.getContractFactory("AccessController");

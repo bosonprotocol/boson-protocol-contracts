@@ -16,6 +16,7 @@ const { deployProtocolClients } = require("./util/deploy-protocol-clients.js");
 const { deployProtocolConfigFacet } = require("./util/deploy-protocol-config-facet.js");
 const { deployProtocolHandlerFacets } = require("./util/deploy-protocol-handler-facets.js");
 const { verifyOnTestEnv } = require("./util/report-verify-deployments");
+const { getInterfaceIds, interfaceImplementers } = require("./config/supported-interfaces.js");
 const { deploymentComplete, getFees, writeContracts } = require("./util/utils");
 const AuthTokenType = require("../scripts/domain/AuthTokenType");
 
@@ -83,6 +84,8 @@ async function main() {
 
   // Deployed contracts
   let contracts = [];
+  const interfaceIds = await getInterfaceIds();
+  const interfaceIdFromFacetName = (facetName) => interfaceIds[interfaceImplementers[facetName]];
 
   let transactionResponse;
 
@@ -117,11 +120,11 @@ async function main() {
   const [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs] = await deployProtocolDiamond(
     maxPriorityFeePerGas
   );
-  deploymentComplete("AccessController", accessController.address, [], contracts);
-  deploymentComplete("DiamondLoupeFacet", dlf.address, [], contracts);
-  deploymentComplete("DiamondCutFacet", dcf.address, [], contracts);
-  deploymentComplete("ERC165Facet", erc165f.address, [], contracts);
-  deploymentComplete("ProtocolDiamond", protocolDiamond.address, diamondArgs, contracts);
+  deploymentComplete("AccessController", accessController.address, [], "", contracts);
+  deploymentComplete("DiamondLoupeFacet", dlf.address, [], interfaceIdFromFacetName("DiamondLoupeFacet"), contracts);
+  deploymentComplete("DiamondCutFacet", dcf.address, [], interfaceIdFromFacetName("DiamondCutFacet"), contracts);
+  deploymentComplete("ERC165Facet", erc165f.address, [], interfaceIdFromFacetName("ERC165Facet"), contracts);
+  deploymentComplete("ProtocolDiamond", protocolDiamond.address, diamondArgs, "", contracts);
 
   console.log(`\n💎 Granting UPGRADER role...`);
 
@@ -139,7 +142,13 @@ async function main() {
   const {
     facets: [configHandlerFacet],
   } = await deployProtocolConfigFacet(protocolDiamond, config, maxPriorityFeePerGas);
-  deploymentComplete("ConfigHandlerFacet", configHandlerFacet.address, [], contracts);
+  deploymentComplete(
+    "ConfigHandlerFacet",
+    configHandlerFacet.address,
+    [],
+    interfaceIdFromFacetName("ConfigHandlerFacet"),
+    contracts
+  );
 
   console.log(`\n💎 Deploying and initializing protocol handler facets...`);
 
@@ -147,7 +156,13 @@ async function main() {
   const deployedFacets = await deployProtocolHandlerFacets(protocolDiamond, getNoArgFacetNames(), maxPriorityFeePerGas);
   for (let i = 0; i < deployedFacets.length; i++) {
     const deployedFacet = deployedFacets[i];
-    deploymentComplete(deployedFacet.name, deployedFacet.contract.address, [], contracts);
+    deploymentComplete(
+      deployedFacet.name,
+      deployedFacet.contract.address,
+      [],
+      interfaceIdFromFacetName(deployedFacet.name),
+      contracts
+    );
   }
 
   console.log(`\n⧉ Deploying Protocol Client implementation/proxy pairs...`);
@@ -163,9 +178,9 @@ async function main() {
   const bosonVoucherProxyArgs = [...protocolClientArgs, bosonVoucherImpl.address];
 
   // Report and prepare for verification
-  deploymentComplete("BosonVoucher Logic", bosonVoucherImpl.address, [], contracts);
-  deploymentComplete("BosonVoucher Beacon", bosonClientBeacon.address, bosonVoucherProxyArgs, contracts);
-  deploymentComplete("BosonVoucher Proxy", bosonVoucherProxy.address, [], contracts);
+  deploymentComplete("BosonVoucher Logic", bosonVoucherImpl.address, [], "", contracts);
+  deploymentComplete("BosonVoucher Beacon", bosonClientBeacon.address, bosonVoucherProxyArgs, "", contracts);
+  deploymentComplete("BosonVoucher Proxy", bosonVoucherProxy.address, [], "", contracts);
 
   console.log(`\n🌐️Configuring and granting roles...`);
 

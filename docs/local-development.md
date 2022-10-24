@@ -73,7 +73,7 @@ To deploy the whole suite of the Boson protocol contract, execute
 This deploys all contract on the local node and prints out all the information about the deployment. Besides that, ABIs of the contracts are generated and all contract addresses are stored so you can later use them if needed. You will find them in folders:
 
 - `artifacts/contracts/interfaces`
-- `addresses/31337-localhost.json`
+- `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node)
 
 ### [Optional] Manage roles
 If you want to perform any of the following:
@@ -91,6 +91,19 @@ To get the examples how to use the admin to perform actions, refer to unit test 
 - `test/protocol/DisputeResolverHandlerTest.js`
 - PAUSER role: `test/protocol/PauseHandlerTest.js`
 - FEE_COLLECTOR role: `test/protocol/FundsHandlerTest.js`
+
+### Upgrade facets
+To test the upgrade functionality, you first need to setup upgrader account as described in previous section.
+
+To perform the upgrade you then
+- Update some of the existing facets or create new one.
+- Update config file `scripts/config/facet-upgrade.js`:
+  - "addOrUpgrade" is the list of facets that will be upgraded or added,
+  - "remove": list of facets that will be completely removed
+  - "skip" allows you to specify methods that will be ignored during the process.
+- Update `version` in `package.json`. If the version in `package.json` matches the existing version in addresses file, you will have to explicitly confirm that you want to proceed.
+- Run `npm run upgrade-facets:local`. This will deploy new facets and make all necessary diamond cuts. It also updates the existing addresses file `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node) and outputs the upgrade log to the console.
+
 
 ### Using the protocol
 You can find the examples how to use all functions of the protocol in our test files in folder `test/protocol`.

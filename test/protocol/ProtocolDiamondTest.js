@@ -94,6 +94,14 @@ describe("ProtocolDiamond", async function () {
         // Test
         expect(support, "ERC-165 interface not supported").is.true;
       });
+
+      it("should indicate support for extended ERC-165 interface", async function () {
+        // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
+        support = await erc165ViaDiamond.supportsInterface(InterfaceIds.IERC165Extended);
+
+        // Test
+        expect(support, "Extended ERC-165 interface not supported").is.true;
+      });
     });
   });
 
@@ -1113,6 +1121,65 @@ describe("ProtocolDiamond", async function () {
       assert.equal(await test2ViaDiamond.test2Func18(), "Protocol");
       assert.equal(await test2ViaDiamond.test2Func19(), "Protocol");
       assert.equal(await test2ViaDiamond.test2Func20(), "Protocol");
+    });
+  });
+
+  // Modification tests
+  context("📋 ERC165Facet", async function () {
+    context("👉 addSupportedInterface() - Privileged Access", async function () {
+      it("should require UPGRADER to add supported interface", async function () {
+        // non-UPGRADER attempt
+        await expect(
+          erc165ViaDiamond.connect(admin).addSupportedInterface(InterfaceIds.IBosonAccountHandler)
+        ).to.be.revertedWith(RevertReasons.ONLY_UPGRADER);
+
+        support = await erc165ViaDiamond.supportsInterface(InterfaceIds.IBosonAccountHandler);
+
+        // Test
+        expect(support, "Account handler interface should not be supported").is.false;
+
+        // UPGRADER attempt
+        tx = await erc165ViaDiamond.connect(upgrader).addSupportedInterface(InterfaceIds.IBosonAccountHandler);
+
+        // Wait for transaction to confirm
+        receipt = await tx.wait();
+
+        // Be certain transaction was successful
+        assert.equal(receipt.status, 1, `UPGRADER not able to upgrader ProtocolDiamond`);
+
+        support = await erc165ViaDiamond.supportsInterface(InterfaceIds.IBosonAccountHandler);
+
+        // Test
+        expect(support, "Account handler interface should be supported").is.true;
+      });
+    });
+
+    context("👉 removeSupportedInterface() - Privileged Access", async function () {
+      it("should require UPGRADER to remove supported interface", async function () {
+        // non-UPGRADER attempt
+        await expect(
+          erc165ViaDiamond.connect(admin).removeSupportedInterface(InterfaceIds.IERC165Extended)
+        ).to.be.revertedWith(RevertReasons.ONLY_UPGRADER);
+
+        support = await erc165ViaDiamond.supportsInterface(InterfaceIds.IERC165Extended);
+
+        // Test
+        expect(support, "Extended ERC-165 interface not supported").is.true;
+
+        // UPGRADER attempt
+        tx = await erc165ViaDiamond.connect(upgrader).removeSupportedInterface(InterfaceIds.IERC165Extended);
+
+        // Wait for transaction to confirm
+        receipt = await tx.wait();
+
+        // Be certain transaction was successful
+        assert.equal(receipt.status, 1, `UPGRADER not able to upgrader ProtocolDiamond`);
+
+        support = await erc165ViaDiamond.supportsInterface(InterfaceIds.IERC165Extended);
+
+        // Test
+        expect(support, "Extended ERC-165 interface should not be supported").is.false;
+      });
     });
   });
 });
