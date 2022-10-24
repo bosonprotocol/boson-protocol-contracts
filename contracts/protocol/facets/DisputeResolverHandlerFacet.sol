@@ -60,6 +60,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             INVALID_ADDRESS
         );
 
+        // Scope to avoid stack too deep errors
         {
             // Get message sender
             address sender = msgSender();
@@ -93,6 +94,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
         );
 
+        // Scope to avoid stack too deep errors
         {
             // Cache protocol limits for reference
             ProtocolLib.ProtocolLimits storage limits = protocolLimits();
@@ -204,7 +206,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Get message sender
         address sender = msgSender();
 
-        // Check that msg.sender is the admin address for this dispute resolver
+        // Check that caller is the admin address for this dispute resolver
         require(disputeResolver.admin == sender, NOT_ADMIN);
 
         // Clean old dispute resolver pending update data if exists
