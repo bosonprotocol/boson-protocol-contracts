@@ -18,12 +18,12 @@ jobs:
     name: mumbai_deploy
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3.1.0
         with:
           token: ${{ secrets.BSNORG_ACTIONS_SECRET }}
           fetch-depth: 0
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v3.5.1
         with:
           node-version: '16.14.x'
           cache: 'npm'

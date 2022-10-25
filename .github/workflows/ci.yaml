@@ -17,9 +17,9 @@ jobs:
       test-chunk-ids: ${{ steps['set-test-chunk-ids'].outputs['test-chunk-ids'] }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3.1.0
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v3.5.1
         with:
           node-version: "16.14.x"
           cache: "npm"
@@ -56,9 +56,9 @@ jobs:
         chunk: ${{ fromJson(needs.build.outputs['test-chunk-ids']) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3.1.0
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v3.5.1
         with:
           node-version: 16.14.x
           cache: "npm"
@@ -86,9 +86,9 @@ jobs:
     name: "test:integration"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3.1.0
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v3.5.1
         with:
           node-version: 16.14.x
           cache: 'npm'
@@ -108,9 +108,9 @@ jobs:
     name: "deploy: dry run"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3.1.0
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v3.5.1
         with:
           node-version: 16.14.x
           cache: "npm"
