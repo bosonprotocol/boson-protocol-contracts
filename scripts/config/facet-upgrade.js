@@ -1,3 +1,5 @@
+const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
+
 /**
  * Config file used to upgrade the facets
  *
@@ -21,10 +23,38 @@
       skipInit: ["Facet2"],
     }
  */
-exports.Facets = {
-  addOrUpgrade: [],
-  remove: [],
-  skipSelectors: {},
-  initArgs: {},
-  skipInit: [],
-};
+async function getFacets() {
+  // metaTransactionsHandlerFacet initializer arguments.
+  const MetaTransactionsHandlerFacetInitArgs = await getStateModifyingFunctionsHashes(
+    [
+      "AccountHandlerFacet",
+      "SellerHandlerFacet",
+      "BuyerHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "AgentHandlerFacet",
+      "BundleHandlerFacet",
+      "DisputeHandlerFacet",
+      "ExchangeHandlerFacet",
+      "FundsHandlerFacet",
+      "GroupHandlerFacet",
+      "OfferHandlerFacet",
+      "OrchestrationHandlerFacet",
+      "TwinHandlerFacet",
+      "PauseHandlerFacet",
+      "MetaTransactionsHandlerFacet",
+    ],
+    ["executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"]
+  );
+
+  return {
+    addOrUpgrade: ["MetaTransactionsHandlerFacet"],
+    remove: [],
+    skipSelectors: { SellerHandlerFacet: [] },
+    initArgs: {
+      MetaTransactionsHandlerFacet: [MetaTransactionsHandlerFacetInitArgs],
+    },
+    skipInit: [],
+  };
+}
+
+exports.getFacets = getFacets;

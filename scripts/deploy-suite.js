@@ -9,7 +9,7 @@ const maxPriorityFeePerGas = ethers.BigNumber.from(tipSuggestion).mul(tipMultipl
 
 const protocolConfig = require("./config/protocol-parameters");
 const authTokenAddresses = require("./config/auth-token-addresses");
-const facets = require("./config/facet-deploy");
+const { getFacets } = require("./config/facet-deploy");
 
 const Role = require("./domain/Role");
 const { deployProtocolDiamond } = require("./util/deploy-protocol-diamond.js");
@@ -62,15 +62,15 @@ function getAuthTokenContracts() {
 /**
  * Get a list of no-arg initializer facet names to be cut into the Diamond
  */
-function getNoArgFacetNames() {
-  return facets.noArgFacets;
+async function getNoArgFacetNames() {
+  return (await getFacets()).noArgFacets;
 }
 
 /**
  * Get a list of facet names to be cut into the Diamond
  */
-function getArgFacetNames() {
-  return facets.argFacets;
+async function getArgFacetNames() {
+  return (await getFacets()).argFacets;
 }
 
 async function main() {
@@ -148,7 +148,11 @@ async function main() {
   console.log(`\n💎 Deploying and initializing protocol handler facets...`);
 
   // Deploy and cut facets
-  const deployedFacets = await deployProtocolHandlerFacets(protocolDiamond, getNoArgFacetNames(), maxPriorityFeePerGas);
+  const deployedFacets = await deployProtocolHandlerFacets(
+    protocolDiamond,
+    await getNoArgFacetNames(),
+    maxPriorityFeePerGas
+  );
   for (const deployedFacet of deployedFacets) {
     deploymentComplete(
       deployedFacet.name,
@@ -161,7 +165,7 @@ async function main() {
 
   const deployedFacetsWithArgs = await deployProtocolHandlerFacetsWithArgs(
     protocolDiamond,
-    getArgFacetNames(),
+    await getArgFacetNames(),
     maxPriorityFeePerGas
   );
   for (const deployedFacet of deployedFacetsWithArgs) {
