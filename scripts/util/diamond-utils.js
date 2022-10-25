@@ -1,5 +1,7 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const keccak256 = ethers.utils.keccak256;
+const toUtf8Bytes = ethers.utils.toUtf8Bytes;
 
 /**
  * Utilities for testing and interacting with Diamond
@@ -124,6 +126,13 @@ async function getStateModifyingFunctions(facetNames) {
   return stateModifyingFunctions;
 }
 
+async function getStateModifyingFunctionsHashes(facetNames, omitFunctions = []) {
+  //  Whitelist contract methods
+  const stateModifyingFunctions = await getStateModifyingFunctions(facetNames);
+  const smf = stateModifyingFunctions.filter((fn) => !omitFunctions.includes(fn));
+  return smf.map((smf) => keccak256(toUtf8Bytes(smf)));
+}
+
 exports.getSelectors = getSelectors;
 exports.getSelector = getSelector;
 exports.FacetCutAction = FacetCutAction;
@@ -135,3 +144,4 @@ exports.getFacetReplaceCut = getFacetReplaceCut;
 exports.getFacetRemoveCut = getFacetRemoveCut;
 exports.getInterfaceId = getInterfaceId;
 exports.getStateModifyingFunctions = getStateModifyingFunctions;
+exports.getStateModifyingFunctionsHashes = getStateModifyingFunctionsHashes;

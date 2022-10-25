@@ -14,7 +14,10 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
+const {
+  deployProtocolHandlerFacets,
+  deployProtocolHandlerFacetsWithArgs,
+} = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { prepareDataSignatureParameters, setNextBlockTimestamp } = require("../util/utils.js");
@@ -30,7 +33,11 @@ const {
   mockExchange,
 } = require("../util/mock");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
-const { getSelectors, FacetCutAction, getStateModifyingFunctions } = require("../../scripts/util/diamond-utils.js");
+const {
+  getSelectors,
+  FacetCutAction,
+  getStateModifyingFunctionsHashes,
+} = require("../../scripts/util/diamond-utils.js");
 
 /**
  *  Test the Boson Meta transactions Handler interface
@@ -137,12 +144,22 @@ describe("IBosonMetaTransactionsHandler", function () {
       "OfferHandlerFacet",
       "TwinHandlerFacet",
       "DisputeHandlerFacet",
-      "MetaTransactionsHandlerFacet",
       "PauseHandlerFacet",
       "BuyerHandlerFacet",
     ];
 
+    // Get input arguments for MetaTransactionsHandlerFacet
+    const stateModifyingFunctionsHashes = await getStateModifyingFunctionsHashes(
+      [...facetNames, "MetaTransactionsHandlerFacet"],
+      ["executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"]
+    );
+
     await deployProtocolHandlerFacets(protocolDiamond, [...facetNames], maxPriorityFeePerGas);
+    await deployProtocolHandlerFacetsWithArgs(
+      protocolDiamond,
+      { MetaTransactionsHandlerFacet: [stateModifyingFunctionsHashes] },
+      maxPriorityFeePerGas
+    );
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
@@ -226,14 +243,6 @@ describe("IBosonMetaTransactionsHandler", function () {
 
     // Deploy the mock tokens
     [bosonToken, mockToken] = await deployMockTokens(["BosonToken", "Foreign20"]);
-
-    //  Whitelist contract methods
-    const stateModifyingFunctions = await getStateModifyingFunctions(facetNames);
-    const smf = stateModifyingFunctions.filter(
-      (fn) => fn != "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"
-    ); // remove executeMetaTransaction from the list
-    const smfHashes = smf.map((smf) => keccak256(toUtf8Bytes(smf)));
-    await metaTransactionsHandler.setWhitelistedFunctions(smfHashes, true);
   });
 
   async function upgradeMetaTransactionsHandlerFacet() {
