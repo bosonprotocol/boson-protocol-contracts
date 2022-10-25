@@ -20,6 +20,7 @@ module.exports = {
     "OrchestrationHandlerFacet",
     "TwinHandlerFacet",
     "PauseHandlerFacet",
+    "MetaTransactionsHandlerFacet",
   ],
-  argFacets: { MetaTransactionsHandlerFacet: [[]] },
+  argFacets: {},
 };

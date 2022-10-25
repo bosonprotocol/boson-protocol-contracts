@@ -10,9 +10,9 @@
  * - skipInit": list of facets for which you want to skip initialization call.
  */
 exports.Facets = {
-  addOrUpgrade: ["MetaTransactionsHandlerFacet"],
+  addOrUpgrade: [],
   remove: [],
-  skipSelectors: { SellerHandlerFacet: [] },
-  initArgs: { MetaTransactionsHandlerFacet: [[]] },
-  skipInit: ["MetaTransactionsHandlerFacet"],
+  skipSelectors: {},
+  initArgs: {},
+  skipInit: [],
 };
