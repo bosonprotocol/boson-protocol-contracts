@@ -33,8 +33,7 @@ async function deployProtocolHandlerFacets(diamond, facetNames, maxPriorityFeePe
  * Reused between deployment script and unit tests for consistency.
  *
  * @param diamond
- * @param facetNames - list of facet names to deploy and cut
- * @param args - object {facetName: initializerArguments}
+ * @param facetData - object with facet names and corresponding initialization arguments {facetName1: initializerArguments1, facetName2: initializerArguments2, ...}
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
  * @param doCut - boolean that tells if cut transaction should be done or not (default: true)
  * @returns {Promise<(*|*|*)[]>}
@@ -42,9 +41,8 @@ async function deployProtocolHandlerFacets(diamond, facetNames, maxPriorityFeePe
 async function deployProtocolHandlerFacetsWithArgs(diamond, facetData, maxPriorityFeePerGas, doCut = true) {
   let deployedFacets = [];
 
-  // Deploy all the handler facets
+  // Deploy all handler facets
   for (const facetName of Object.keys(facetData)) {
-    // let facetName = facetNames.shift();
     let FacetContractFactory = await ethers.getContractFactory(facetName);
     const facetContract = await FacetContractFactory.deploy(await getFees(maxPriorityFeePerGas));
     await facetContract.deployTransaction.wait(confirmations);
