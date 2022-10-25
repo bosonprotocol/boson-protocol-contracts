@@ -16,13 +16,10 @@ jobs:
       test-chunks:  ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
       test-chunk-ids: ${{ steps['set-test-chunk-ids'].outputs['test-chunk-ids'] }}
     steps:
-      - uses: webfactory/ssh-agent@v0.5.4
-        with:
-          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
       - name: Checkout repository
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.1.0
       - name: Setup node
-        uses: actions/setup-node@v2.5.1
+        uses: actions/setup-node@v3.5.1
         with:
           node-version: "16.14.x"
           cache: "npm"
@@ -37,14 +34,14 @@ jobs:
       - name: Verify interface ids
         run: npm run natspec-interface-id
       - id: set-test-chunks
-        run: echo "::set-output name=test-chunks::$(cat test/util/test-chunks.txt | jq -cM '.')"
+        run: echo "test-chunks=$(cat test/util/test-chunks.txt | jq -cM '.')" >> $GITHUB_OUTPUT
         name: Set Chunks
       - id: set-test-chunk-ids
         name: Set Chunk IDs
         run: |
           echo "CHUNNKS"
           echo $CHUNKS
-          echo "::set-output name=test-chunk-ids::$(echo $CHUNKS | jq -cM 'to_entries | map(.key)')"
+          echo "test-chunk-ids=$(echo $CHUNKS | jq -cM 'to_entries | map(.key)')" >> $GITHUB_OUTPUT
         env:
           CHUNKS: ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
   test:
@@ -58,13 +55,10 @@ jobs:
       matrix:
         chunk: ${{ fromJson(needs.build.outputs['test-chunk-ids']) }}
     steps:
-      - uses: webfactory/ssh-agent@v0.5.4
-        with:
-          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
       - name: Checkout repository
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.1.0
       - name: Setup node
-        uses: actions/setup-node@v2.5.1
+        uses: actions/setup-node@v3.5.1
         with:
           node-version: 16.14.x
           cache: "npm"
@@ -91,15 +85,12 @@ jobs:
       GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
     name: "test:integration"
     steps:
-      - uses: webfactory/ssh-agent@v0.5.4
-        with:
-          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
       - name: Checkout repository
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.1.0
       - name: Setup node
-        uses: actions/setup-node@v2.5.1
+        uses: actions/setup-node@v3.5.1
         with:
-          node-version: '16.14.x'
+          node-version: 16.14.x
           cache: 'npm'
       - name: Install Dependencies
         run: npm install
@@ -116,15 +107,12 @@ jobs:
     if: ${{ !github.event.pull_request.draft }}
     name: "deploy: dry run"
     steps:
-      - uses: webfactory/ssh-agent@v0.5.4
-        with:
-          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
       - name: Checkout repository
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.1.0
       - name: Setup node
-        uses: actions/setup-node@v2.5.1
+        uses: actions/setup-node@v3.5.1
         with:
-          node-version: "16.14.x"
+          node-version: 16.14.x
           cache: "npm"
       - name: Install Dependencies
         run: npm install
