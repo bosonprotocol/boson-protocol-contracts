@@ -781,3 +781,54 @@ Nothing to compile
 
 Note: Terminating verification. Because this deployment deploys the same bytecode for the staging env,
       contracts were already previously verified. Verification will fail with an "Already Verified" error
+
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Tue Oct 25 2022 11:22:12 GMT-0400 (Eastern Daylight Time)
+🔱 Deployer account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0xDeD864F315Eb7237191FDF5be6Af7f374e425B64
+✅ DiamondLoupeFacet deployed to: 0xCb3EA53D2b376e0374136756C93d4fa6Fb04cc50
+✅ DiamondCutFacet deployed to: 0x7385bA3289761f87c6874ba9d34e8025d0450d2A
+✅ ERC165Facet deployed to: 0x39A5ab02C41C789aBCbAa870B4E0906B7b19FD52
+✅ ProtocolDiamond deployed to: 0xe352CD629b1bb98cb82C79896079f9673dcd0350
+
+💎 Granting UPGRADER role...
+
+💎 Deploying and initializing config facet...
+✅ ConfigHandlerFacet deployed to: 0x5240a4c50b1F71Cf6e438465A9AAC613b5221Ae8
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0x03C7D2545B683e312d3cF1c1C9aFbBCf3d85F651
+✅ SellerHandlerFacet deployed to: 0xc8212084e9AE88f3500De4Eb7459000480C17e2F
+✅ BuyerHandlerFacet deployed to: 0xbf8400bc401A27c666Dbde422C5ca472aF64F735
+✅ DisputeResolverHandlerFacet deployed to: 0x671F49755d03B8f2E809CE00980c3ECf30A8f145
+✅ AgentHandlerFacet deployed to: 0xe3300895ddFC996A626f55EEEeCbc2ff22aBB581
+✅ BundleHandlerFacet deployed to: 0xAA44D7b4b2a7518b23ceE48d92E93ce2bc011aF7
+✅ DisputeHandlerFacet deployed to: 0xB281579F101Cc79b140378aa3d5a10254c5E2135
+✅ ExchangeHandlerFacet deployed to: 0xA63001A7D0a132FbCe91FC0471E2Acb799c2Edd5
+✅ FundsHandlerFacet deployed to: 0xC66FdD35B50b0b94c0f9E4780Cdd9C59e37085c2
+✅ GroupHandlerFacet deployed to: 0x8F33eb57BD1982b42E0916BcDC4870e88f118049
+✅ MetaTransactionsHandlerFacet deployed to: 0xaA4Dd0703389B81e6f56F5B5F5A244a625DC2B86
+✅ OfferHandlerFacet deployed to: 0x7A7A95D30B7e64BDda7ECD302dB37e8350213ac2
+✅ OrchestrationHandlerFacet deployed to: 0x8eBA8147e0d34343eC8D63378b09834522467cB1
+✅ TwinHandlerFacet deployed to: 0x2535A0B7fC3BF0a881E7dF37D92037Bd8E909750
+✅ PauseHandlerFacet deployed to: 0x0Cc19CDfE22Df03318edD48479a09ADBece461F3
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0x8D9634d100A1B48dcF381759D231AFAbA37b6cCd
+✅ BosonVoucher Beacon deployed to: 0xa24DeBb071Acb663acFE08d2F13F16FC7d4611f0
+✅ BosonVoucher Proxy deployed to: 0xe0b06853a9079D39fe4f2c34D99b1540178fAEdD
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+✅ Contracts written to /Users/cliffhall/Projects/boson-protocol-contracts/scripts/util/../../addresses/80001-mumbai.json
+
+Note: We did not deploy to staging for v2.1.0-rc.1 because we will attempt to upgrade the existing
+      deployment with the upgrade script. This is mainly for auditors.
+
