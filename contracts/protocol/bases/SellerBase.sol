@@ -201,10 +201,10 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         // Cache protocol entities for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        // Get the seller's slot
+        // Get the seller pending update slot
         sellerPendingUpdate = lookups.pendingAddressUpdatesBySeller[_sellerId];
 
-        //Get the seller's auth token's slot
+        //Get the seller auth token pending update slot
         authTokenPendingUpdate = lookups.pendingAuthTokenUpdatesBySeller[_sellerId];
 
         // Determine existence

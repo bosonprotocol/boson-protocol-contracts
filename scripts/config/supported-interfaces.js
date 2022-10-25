@@ -22,7 +22,30 @@ const interfaces = [
   "IDiamondCut",
   "IDiamondLoupe",
   "IERC165",
+  "IERC165Extended",
 ];
+
+const interfaceImplementers = {
+  AccountHandlerFacet: "IBosonAccountHandler",
+  SellerHandlerFacet: "IBosonAccountHandler",
+  BuyerHandlerFacet: "IBosonAccountHandler",
+  DisputeResolverHandlerFacet: "IBosonAccountHandler",
+  AgentHandlerFacet: "IBosonAccountHandler",
+  BundleHandlerFacet: "IBosonBundleHandler",
+  DisputeHandlerFacet: "IBosonDisputeHandler",
+  ExchangeHandlerFacet: "IBosonExchangeHandler",
+  FundsHandlerFacet: "IBosonFundsHandler",
+  GroupHandlerFacet: "IBosonGroupHandler",
+  MetaTransactionsHandlerFacet: "IBosonMetaTransactionsHandler",
+  OfferHandlerFacet: "IBosonOfferHandler",
+  OrchestrationHandlerFacet: "IBosonOrchestrationHandler",
+  TwinHandlerFacet: "IBosonTwinHandler",
+  PauseHandlerFacet: "IBosonPauseHandler",
+  DiamondLoupeFacet: "IDiamondLoupe",
+  DiamondCutFacet: "IDiamondCut",
+  ERC165Facet: "IERC165Extended",
+  ConfigHandlerFacet: "IBosonConfigHandler",
+};
 
 // manually add the interfaces that currently cannot be calculated
 const otherInterfaces = {
@@ -42,3 +65,4 @@ async function getInterfaceIds() {
 }
 
 exports.getInterfaceIds = getInterfaceIds;
+exports.interfaceImplementers = interfaceImplementers;

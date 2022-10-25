@@ -2607,7 +2607,7 @@ describe("SellerHandler", function () {
             );
 
           await expect(accountHandler.connect(other1).optInToSellerUpdate(seller.id, [])).to.revertedWith(
-            RevertReasons.NO_SELLER_PENDING_UPDATE
+            RevertReasons.NO_PENDING_UPDATE_FOR_ACCOUNT
           );
         });
 

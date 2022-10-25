@@ -60,6 +60,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             INVALID_ADDRESS
         );
 
+        // Scope to avoid stack too deep errors
         {
             // Get message sender
             address sender = msgSender();
@@ -72,9 +73,6 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 NOT_ADMIN_OPERATOR_AND_CLERK
             );
         }
-
-        // Make sure the gas block limit is not hit
-        require(_sellerAllowList.length <= protocolLimits().maxAllowedSellers, INVALID_AMOUNT_ALLOWED_SELLERS);
 
         // Get the next account id and increment the counter
         uint256 disputeResolverId = protocolCounters().nextAccountId++;
@@ -96,13 +94,29 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
         );
 
-        _disputeResolver.id = disputeResolverId;
+        // Scope to avoid stack too deep errors
+        {
+            // Cache protocol limits for reference
+            ProtocolLib.ProtocolLimits storage limits = protocolLimits();
 
-        // The number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
-        require(
-            _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver,
-            INVALID_AMOUNT_DISPUTE_RESOLVER_FEES
-        );
+            // Make sure the gas block limit is not hit
+            require(_sellerAllowList.length <= limits.maxAllowedSellers, INVALID_AMOUNT_ALLOWED_SELLERS);
+
+            // The number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
+            require(
+                _disputeResolverFees.length <= limits.maxFeesPerDisputeResolver,
+                INVALID_AMOUNT_DISPUTE_RESOLVER_FEES
+            );
+
+            // Escalation period must be greater than zero and less than or equal to the max allowed
+            require(
+                _disputeResolver.escalationResponsePeriod > 0 &&
+                    _disputeResolver.escalationResponsePeriod <= limits.maxEscalationResponsePeriod,
+                INVALID_ESCALATION_PERIOD
+            );
+        }
+
+        _disputeResolver.id = disputeResolverId;
 
         // Get storage location for dispute resolver fees
         (, , DisputeResolverFee[] storage disputeResolverFees) = fetchDisputeResolver(_disputeResolver.id);
@@ -139,20 +153,27 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Updates a dispute resolver, not including DisputeResolverFees, allowed seller list or active flag.
+     * @notice Updates treasury address, escalationResponsePeriod or metadataUri if changed. Puts admin, operator and clerk in pending queue, if changed.
+     *         Pending updates can be completed by calling the optInToDisputeResolverUpdate function.
+     *
+     *         Update doesn't include DisputeResolverFees, allowed seller list or active flag.
      *         All DisputeResolver fields should be filled, even those staying the same.
      *         Use removeFeesFromDisputeResolver and addFeesToDisputeResolver to add and remove fees.
      *         Use addSellersToAllowList and removeSellersFromAllowList to add and remove allowed sellers.
+     *
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a DisputeResolverUpdated event if successful.
+     * Emits a DisputeResolverUpdatePending event if the dispute resolver has requested an update for admin, clerk or operator.
+     * Owner(s) of new addresses for admin, clerk, operator must opt-in to the update.
      *
      * Reverts if:
      * - The dispute resolvers region of protocol is paused
-     * - Caller is not the admin address associated with the dispute resolver account
+     * - Caller is not the admin address of the stored dispute resolver
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
+     * - EscalationResponsePeriod is invalid
      *
      * @param _disputeResolver - the fully populated dispute resolver struct
      */
@@ -185,43 +206,195 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Get message sender
         address sender = msgSender();
 
-        // Check that msg.sender is the admin address for this dispute resolver
+        // Check that caller is the admin address for this dispute resolver
         require(disputeResolver.admin == sender, NOT_ADMIN);
 
-        // check that the addresses are unique to one dispute resolverId if new, across all roles
-        require(
-            (lookups.disputeResolverIdByOperator[_disputeResolver.operator] == 0 ||
-                lookups.disputeResolverIdByOperator[_disputeResolver.operator] == _disputeResolver.id) &&
-                (lookups.disputeResolverIdByOperator[_disputeResolver.admin] == 0 ||
-                    lookups.disputeResolverIdByOperator[_disputeResolver.admin] == _disputeResolver.id) &&
-                (lookups.disputeResolverIdByOperator[_disputeResolver.clerk] == 0 ||
-                    lookups.disputeResolverIdByOperator[_disputeResolver.clerk] == _disputeResolver.id) &&
-                (lookups.disputeResolverIdByAdmin[_disputeResolver.admin] == 0 ||
-                    lookups.disputeResolverIdByAdmin[_disputeResolver.admin] == _disputeResolver.id) &&
-                (lookups.disputeResolverIdByAdmin[_disputeResolver.operator] == 0 ||
-                    lookups.disputeResolverIdByAdmin[_disputeResolver.operator] == _disputeResolver.id) &&
-                (lookups.disputeResolverIdByAdmin[_disputeResolver.clerk] == 0 ||
-                    lookups.disputeResolverIdByAdmin[_disputeResolver.clerk] == _disputeResolver.id) &&
-                (lookups.disputeResolverIdByClerk[_disputeResolver.clerk] == 0 ||
-                    lookups.disputeResolverIdByClerk[_disputeResolver.clerk] == _disputeResolver.id) &&
-                (lookups.disputeResolverIdByClerk[_disputeResolver.operator] == 0 ||
-                    lookups.disputeResolverIdByClerk[_disputeResolver.operator] == _disputeResolver.id) &&
-                (lookups.disputeResolverIdByClerk[_disputeResolver.admin] == 0 ||
-                    lookups.disputeResolverIdByClerk[_disputeResolver.admin] == _disputeResolver.id),
-            DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
+        // Clean old dispute resolver pending update data if exists
+        delete lookups.pendingAddressUpdatesByDisputeResolver[_disputeResolver.id];
+
+        bool needsApproval;
+        (, DisputeResolver storage disputeResolverPendingUpdate) = fetchDisputeResolverPendingUpdate(
+            _disputeResolver.id
         );
 
-        // Delete current mappings
-        delete lookups.disputeResolverIdByOperator[disputeResolver.operator];
-        delete lookups.disputeResolverIdByAdmin[disputeResolver.admin];
-        delete lookups.disputeResolverIdByClerk[disputeResolver.clerk];
+        if (_disputeResolver.admin != disputeResolver.admin) {
+            preUpdateDisputeResolverCheck(_disputeResolver.id, _disputeResolver.admin, lookups);
 
-        // Ignore supplied active flag and keep value already stored. Dispute resolver cannot self-activate.
-        _disputeResolver.active = disputeResolver.active;
-        storeDisputeResolver(_disputeResolver);
+            // If admin address exists, admin address owner must approve the update to prevent front-running
+            disputeResolverPendingUpdate.admin = _disputeResolver.admin;
+            needsApproval = true;
+        }
 
-        // Notify watchers of state change
-        emit DisputeResolverUpdated(_disputeResolver.id, _disputeResolver, sender);
+        if (_disputeResolver.operator != disputeResolver.operator) {
+            preUpdateDisputeResolverCheck(_disputeResolver.id, _disputeResolver.operator, lookups);
+
+            // If operator address exists, operator address owner must approve the update to prevent front-running
+            disputeResolverPendingUpdate.operator = _disputeResolver.operator;
+            needsApproval = true;
+        }
+
+        if (_disputeResolver.clerk != disputeResolver.clerk) {
+            preUpdateDisputeResolverCheck(_disputeResolver.id, _disputeResolver.clerk, lookups);
+
+            // If clerk address exists, clerk address owner must approve the update to prevent front-running
+            disputeResolverPendingUpdate.clerk = _disputeResolver.clerk;
+            needsApproval = true;
+        }
+
+        bool updateApplied;
+
+        if (_disputeResolver.treasury != disputeResolver.treasury) {
+            // Update treasury
+            disputeResolver.treasury = _disputeResolver.treasury;
+
+            updateApplied = true;
+        }
+
+        if (_disputeResolver.escalationResponsePeriod != disputeResolver.escalationResponsePeriod) {
+            // Escalation period must be greater than zero and less than or equal to the max allowed
+            require(
+                _disputeResolver.escalationResponsePeriod > 0 &&
+                    _disputeResolver.escalationResponsePeriod <= protocolLimits().maxEscalationResponsePeriod,
+                INVALID_ESCALATION_PERIOD
+            );
+
+            // Update escalation response period
+            disputeResolver.escalationResponsePeriod = _disputeResolver.escalationResponsePeriod;
+
+            updateApplied = true;
+        }
+
+        if (keccak256(bytes(_disputeResolver.metadataUri)) != keccak256(bytes(disputeResolver.metadataUri))) {
+            // Update metadata URI
+            disputeResolver.metadataUri = _disputeResolver.metadataUri;
+
+            updateApplied = true;
+        }
+
+        if (needsApproval) {
+            // Notify watchers of state change
+            emit DisputeResolverUpdatePending(_disputeResolver.id, disputeResolverPendingUpdate, sender);
+        }
+
+        if (updateApplied) {
+            // Notify watchers of state change
+            emit DisputeResolverUpdateApplied(
+                _disputeResolver.id,
+                disputeResolver,
+                disputeResolverPendingUpdate,
+                sender
+            );
+        }
+    }
+
+    /**
+     * @notice Opt-in to a pending dispute resolver update
+     *
+     * Emits a DisputeResolverUpdateApplied event if successful.
+     *
+     * Reverts if:
+     * - The dispute resolver region of protocol is paused
+     * - Addresses are not unique to this dispute resolver
+     * - Caller address is not pending update for the field being updated
+     * - No pending update exists for this dispute resolver
+     *
+     * @param _disputeResolverId - disputeResolver id
+     * @param _fieldsToUpdate - fields to update, see DisputeResolverUpdateFields enum
+     */
+    function optInToDisputeResolverUpdate(
+        uint256 _disputeResolverId,
+        DisputeResolverUpdateFields[] calldata _fieldsToUpdate
+    ) external disputeResolversNotPaused nonReentrant {
+        // Cache protocol lookups and sender for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        address sender = msgSender();
+
+        // Get disputeResolver pending update
+        (bool exists, DisputeResolver storage disputeResolverPendingUpdate) = fetchDisputeResolverPendingUpdate(
+            _disputeResolverId
+        );
+
+        require(exists, NO_PENDING_UPDATE_FOR_ACCOUNT);
+
+        bool updateApplied;
+
+        // Get storage location for disputeResolver
+        (, DisputeResolver storage disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
+
+        for (uint256 i = 0; i < _fieldsToUpdate.length; i++) {
+            DisputeResolverUpdateFields role = _fieldsToUpdate[i];
+
+            if (role == DisputeResolverUpdateFields.Admin && disputeResolverPendingUpdate.admin != address(0)) {
+                // Approve admin update
+                require(disputeResolverPendingUpdate.admin == sender, UNAUTHORIZED_CALLER_UPDATE);
+
+                preUpdateDisputeResolverCheck(_disputeResolverId, sender, lookups);
+
+                // Delete old disputeResolver id by admin mapping
+                delete lookups.disputeResolverIdByAdmin[disputeResolver.admin];
+
+                // Update admin
+                disputeResolver.admin = sender;
+
+                // Store new disputeResolver id by admin mapping
+                lookups.disputeResolverIdByAdmin[sender] = _disputeResolverId;
+
+                // Delete pending update admin
+                delete disputeResolverPendingUpdate.admin;
+
+                updateApplied = true;
+            } else if (
+                role == DisputeResolverUpdateFields.Operator && disputeResolverPendingUpdate.operator != address(0)
+            ) {
+                // Approve operator update
+                require(disputeResolverPendingUpdate.operator == sender, UNAUTHORIZED_CALLER_UPDATE);
+
+                preUpdateDisputeResolverCheck(_disputeResolverId, sender, lookups);
+
+                // Delete old disputeResolver id by operator mapping
+                delete lookups.disputeResolverIdByOperator[disputeResolver.operator];
+
+                // Update operator
+                disputeResolver.operator = sender;
+
+                // Store new disputeResolver id by operator mapping
+                lookups.disputeResolverIdByOperator[sender] = _disputeResolverId;
+
+                // Delete pending update operator
+                delete disputeResolverPendingUpdate.operator;
+
+                updateApplied = true;
+            } else if (role == DisputeResolverUpdateFields.Clerk && disputeResolverPendingUpdate.clerk != address(0)) {
+                // Aprove clerk update
+                require(disputeResolverPendingUpdate.clerk == sender, UNAUTHORIZED_CALLER_UPDATE);
+
+                preUpdateDisputeResolverCheck(_disputeResolverId, sender, lookups);
+
+                // Delete old disputeResolver id by clerk mapping
+                delete lookups.disputeResolverIdByClerk[disputeResolver.clerk];
+
+                // Update clerk
+                disputeResolver.clerk = sender;
+
+                // Store new disputeResolver id by clerk mapping
+                lookups.disputeResolverIdByClerk[sender] = _disputeResolverId;
+
+                // Delete pending update clerk
+                delete disputeResolverPendingUpdate.clerk;
+
+                updateApplied = true;
+            }
+        }
+
+        if (updateApplied) {
+            // Notify watchers of state change
+            emit DisputeResolverUpdateApplied(
+                _disputeResolverId,
+                disputeResolver,
+                disputeResolverPendingUpdate,
+                sender
+            );
+        }
     }
 
     /**
@@ -386,7 +559,6 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             _sellerAllowList.length > 0 && _sellerAllowList.length <= protocolLimits().maxAllowedSellers,
             INVALID_AMOUNT_ALLOWED_SELLERS
         );
-
         bool exists;
         DisputeResolver storage disputeResolver;
 
@@ -559,11 +731,13 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         uint256 disputeResolverId;
 
         (exists, disputeResolverId) = getDisputeResolverIdByOperator(_associatedAddress);
+
         if (exists) {
             return getDisputeResolver(disputeResolverId);
         }
 
         (exists, disputeResolverId) = getDisputeResolverIdByAdmin(_associatedAddress);
+
         if (exists) {
             return getDisputeResolver(disputeResolverId);
         }
@@ -613,21 +787,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
      * @notice Stores DisputeResolver struct in storage.
      *
-     * Reverts if:
-     * - Escalation period is greater than the max escalation period
-     *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set
      */
     function storeDisputeResolver(DisputeResolver memory _disputeResolver) internal {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
-        // Escalation period must be greater than zero and less than or equal to the max allowed
-        require(
-            _disputeResolver.escalationResponsePeriod > 0 &&
-                _disputeResolver.escalationResponsePeriod <= protocolLimits().maxEscalationResponsePeriod,
-            INVALID_ESCALATION_PERIOD
-        );
 
         // Get storage location for dispute resolver
         (, DisputeResolver storage disputeResolver, ) = fetchDisputeResolver(_disputeResolver.id);
@@ -680,5 +844,60 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 .allowedSellers[_disputeResolverId]
                 .length; //Set index mapping. Should be index in allowedSellers array + 1
         }
+    }
+
+    /**
+     * @notice Pre update dispute resolver checks
+     *
+     * Reverts if:
+     *   - Address has already been used by another dispute resolver as operator, admin, or clerk
+     *
+     * @param _disputeResolverId - the id of the disputeResolver to check
+     * @param _role - the address to check
+     * @param _lookups - the lookups struct
+     */
+    function preUpdateDisputeResolverCheck(
+        uint256 _disputeResolverId,
+        address _role,
+        ProtocolLib.ProtocolLookups storage _lookups
+    ) internal view {
+        // Check that the role is unique to one dispute resolver id across all roles -- not used or is used by this dispute resolver id.
+        if (_role != address(0)) {
+            uint256 check1 = _lookups.disputeResolverIdByOperator[_role];
+            uint256 check2 = _lookups.disputeResolverIdByClerk[_role];
+            uint256 check3 = _lookups.disputeResolverIdByAdmin[_role];
+
+            require(
+                (check1 == 0 || check1 == _disputeResolverId) &&
+                    (check2 == 0 || check2 == _disputeResolverId) &&
+                    (check3 == 0 || check3 == _disputeResolverId),
+                DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
+            );
+        }
+    }
+
+    /**
+     * @notice Fetches a given dispute resolver pending update from storage by id
+     *
+     * @param _disputeResolverId - the id of the dispute resolver
+     * @return exists - whether the dispute resolver pending update exists
+     * @return disputeResolverPendingUpdate - the dispute resolver pending update details. See {BosonTypes.DisputeResolver}
+     */
+    function fetchDisputeResolverPendingUpdate(uint256 _disputeResolverId)
+        internal
+        view
+        returns (bool exists, DisputeResolver storage disputeResolverPendingUpdate)
+    {
+        // Cache protocol entities for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        // Get the dispute resolver pending update slot
+        disputeResolverPendingUpdate = lookups.pendingAddressUpdatesByDisputeResolver[_disputeResolverId];
+
+        // Determine existence
+        exists =
+            disputeResolverPendingUpdate.admin != address(0) ||
+            disputeResolverPendingUpdate.operator != address(0) ||
+            disputeResolverPendingUpdate.clerk != address(0);
     }
 }

@@ -183,8 +183,8 @@ contract SellerHandlerFacet is SellerBase {
      * Reverts if:
      * - The sellers region of protocol is paused
      * - Addresses are not unique to this seller
-     * - Caller address is not pending for the field being updated
-     * - Caller is not the of the owner of the pending AuthToken being updated
+     * - Caller address is not pending update for the field being updated
+     * - Caller is not the owner of the pending AuthToken being updated
      * - No pending update exists for this seller
      * - AuthTokenType is not unique to this seller
      *
@@ -196,21 +196,27 @@ contract SellerHandlerFacet is SellerBase {
         sellersNotPaused
         nonReentrant
     {
-        // Cache protocol lookups and sender for reference
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-        address sender = msgSender();
+        Seller storage sellerPendingUpdate;
+        AuthToken storage authTokenPendingUpdate;
 
-        // Get seller pending update
-        (
-            bool exists,
-            Seller storage sellerPendingUpdate,
-            AuthToken storage authTokenPendingUpdate
-        ) = fetchSellerPendingUpdate(_sellerId);
+        {
+            bool exists;
+            // Get seller pending update
+            (exists, sellerPendingUpdate, authTokenPendingUpdate) = fetchSellerPendingUpdate(_sellerId);
 
-        require(exists, NO_SELLER_PENDING_UPDATE);
+            // Be sure an update is pending
+            require(exists, NO_PENDING_UPDATE_FOR_ACCOUNT);
+        }
+
+        bool updateApplied;
 
         // Get storage location for seller
         (, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
+
+        // Cache protocol lookups and sender for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        address sender = msgSender();
 
         for (uint256 i = 0; i < _fieldsToUpdate.length; i++) {
             SellerUpdateFields role = _fieldsToUpdate[i];
@@ -234,10 +240,10 @@ contract SellerHandlerFacet is SellerBase {
                 delete sellerPendingUpdate.admin;
                 // Delete auth token for seller id if it exists
                 delete protocolEntities().authTokens[_sellerId];
-            }
 
-            // Approve operator update
-            if (role == SellerUpdateFields.Operator && sellerPendingUpdate.operator != address(0)) {
+                updateApplied = true;
+            } else if (role == SellerUpdateFields.Operator && sellerPendingUpdate.operator != address(0)) {
+                // Approve operator update
                 require(sellerPendingUpdate.operator == sender, UNAUTHORIZED_CALLER_UPDATE);
 
                 preUpdateSellerCheck(_sellerId, sender, lookups);
@@ -248,7 +254,7 @@ contract SellerHandlerFacet is SellerBase {
                 // Update operator
                 seller.operator = sender;
 
-                // Transfer ownership of NFT voucher to new operator
+                // Transfer ownership of NFT voucher contract to new operator
                 IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender);
 
                 // Store new seller id by operator mapping
@@ -256,10 +262,10 @@ contract SellerHandlerFacet is SellerBase {
 
                 // Delete pending update operator
                 delete sellerPendingUpdate.operator;
-            }
 
-            // Aprove clerk update
-            if (role == SellerUpdateFields.Clerk && sellerPendingUpdate.clerk != address(0)) {
+                updateApplied = true;
+            } else if (role == SellerUpdateFields.Clerk && sellerPendingUpdate.clerk != address(0)) {
+                // Aprove clerk update
                 require(sellerPendingUpdate.clerk == sender, UNAUTHORIZED_CALLER_UPDATE);
 
                 preUpdateSellerCheck(_sellerId, sender, lookups);
@@ -275,10 +281,10 @@ contract SellerHandlerFacet is SellerBase {
 
                 // Delete pending update clerk
                 delete sellerPendingUpdate.clerk;
-            }
 
-            // Approve auth token update
-            if (role == SellerUpdateFields.AuthToken && authTokenPendingUpdate.tokenType != AuthTokenType.None) {
+                updateApplied = true;
+            } else if (role == SellerUpdateFields.AuthToken && authTokenPendingUpdate.tokenType != AuthTokenType.None) {
+                // Approve auth token update
                 address authTokenContract = lookups.authTokenContracts[authTokenPendingUpdate.tokenType];
                 address tokenIdOwner = IERC721(authTokenContract).ownerOf(authTokenPendingUpdate.tokenId);
                 require(tokenIdOwner == sender, UNAUTHORIZED_CALLER_UPDATE);
@@ -308,11 +314,22 @@ contract SellerHandlerFacet is SellerBase {
                 // Delete pending update auth token
                 delete authTokenPendingUpdate.tokenType;
                 delete authTokenPendingUpdate.tokenId;
+
+                updateApplied = true;
             }
         }
 
-        // Notify watchers of state change
-        emit SellerUpdateApplied(_sellerId, seller, sellerPendingUpdate, authToken, authTokenPendingUpdate, sender);
+        if (updateApplied) {
+            // Notify watchers of state change
+            emit SellerUpdateApplied(
+                _sellerId,
+                seller,
+                sellerPendingUpdate,
+                authToken,
+                authTokenPendingUpdate,
+                msgSender()
+            );
+        }
     }
 
     /**

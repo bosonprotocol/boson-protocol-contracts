@@ -69,6 +69,19 @@ library DiamondLib {
     }
 
     /**
+     * @notice Removes a supported interface from the Diamond.
+     *
+     * @param _interfaceId - the interface to remove
+     */
+    function removeSupportedInterface(bytes4 _interfaceId) internal {
+        // Get the DiamondStorage struct
+        DiamondStorage storage ds = diamondStorage();
+
+        // Flag the interfaces as unsupported
+        ds.supportedInterfaces[_interfaceId] = false;
+    }
+
+    /**
      * @notice Checks if a specific interface is supported.
      * Implementation of ERC-165 interface detection standard.
      *
