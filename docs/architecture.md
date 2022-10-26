@@ -23,7 +23,7 @@ If you aren't familiar with proxies or the diamond in particular, a good analogy
 The analogy may not be exact, but the takeaways are that each facet is replaceable or removable independent of the others, and they are all controlled and monitored via the diamond.
 
 #### Take a deeper dive on Diamonds
-* [The reference implementation](https://github.com/mudgen/diamond-2-hardhat) we used is optimized for gas at transaction time. Our implementation been adapted to use role-based access control rather than single-owner. It also manages supported interfaces for facets to avoid conflicts and allow testing of all our facet interfaces via [EIP-165](https://eips.ethereum.org/EIPS/eip-165).
+* [The reference implementation](https://github.com/mudgen/diamond-2-hardhat) we used is optimized for gas at transaction time. Our implementation has been adapted to use role-based access control rather than single-owner. It also manages supported interfaces for facets to avoid conflicts and allow testing of all our facet interfaces via [EIP-165](https://eips.ethereum.org/EIPS/eip-165).
 * Nick Mudge, the architect of the Diamond MultiFacet Proxy specification, [has a blog](https://eip2535diamonds.substack.com/p/list-of-projects-using-eip-2535-diamonds) devoted to working with diamonds, along with a list of projects currently using the spec.
 
 #### Reduces the protocol to a black box
@@ -39,7 +39,7 @@ This pattern gives us some distinct advantages, a few of which are:
 - **Reduced the attack surface**: There is only one publicly accessible entry point to the protocol.
 - **Simple to monitor**: Only one address to watch for protocol events.
 - **Upgradeable**: Logic and storage are separated, such that any vulnerabilities can be properly remediated, not worked around. Fixing or improving the deployed code doesn't necessitate a messy migration of data (which sometimes is impossible if a strategy is not in place before the initial launch of a protocol).
-- **Virtually unlimited contract size**: No need to worry about the diamond reaching the contract size limit, as all its functionality is delegated. Individual facets must fit within than the maximum contract size limit, of course. But when a facet must be split for size, implementing a strategy for privileged communication between its resultant pieces is not necessary as they merely contribute functions to the diamond.
+- **Virtually unlimited contract size**: No need to worry about the diamond reaching the contract size limit, as all its functionality is delegated. Individual facets must fit within the maximum contract size limit, of course. But when a facet must be split for size, implementing a strategy for privileged communication between its resultant pieces is not necessary as they merely contribute functions to the diamond.
 - **Maintainability**: Developers can focus on business logic rather than managing contract collaboration patterns and the potential threats that naturally arise.
 - **Easier to reason about contract storage**: When using Diamonds storage is a first class consideration. With developers working on different facets, it leads us to consider and declare the data that is maintained and visible to each facet in a uniform way. This means facets can share data while not clobbering each other in the shared storage slots of the diamond proxy.
 
