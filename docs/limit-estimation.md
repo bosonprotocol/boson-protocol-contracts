@@ -61,7 +61,7 @@ Config file is placed in `scripts/config/limit-estimation.js`. It has the follow
 
 ## Setting up the environment
 
-For each of the limits you must prepare an evironment, before it can be tested. For example, before `maxOffersPerGroup` can be tested, protocol contracts must be deployed and enough offers must be created so the limit can actuall be tested. A similar setup is needed for all other methods.
+For each of the limits you must prepare an evironment, before it can be tested. For example, before `maxOffersPerGroup` can be tested, protocol contracts must be deployed and enough offers must be created so the limit can actually be tested. A similar setup is needed for all other methods.
 
 This is done in file `scripts/util/estimate-limits.js`. Each of the limits must have a setup function which accepts `maxArrayLength`, prepares the environment and returns the invocation details that can be then used when invoking the `methods` during the estimation.
 
@@ -132,7 +132,7 @@ The results for parameters
 ## Methodology
 
 As seen from the results above, some limits are relatively high and to actually hit the limit, already the setup would take a lot of time (e.g. for making `>1700` offers to hit limit in `removeOffersFromGroup`). To get the estimates we therefore use the following approach:
-- get the actual estimates for relatively small number of differen array lengths
+- get the actual estimates for relatively small number of different array lengths
 - given how gas is determined, there exist approximate linear relation, which can be written as `gasSpent = intrinsicGas + arrayLength*costPerLoop`. Intrinsic costs here contains all costs that are fixed regardless of the array size.
 - use linear regression to estimate `intrinsicGas` and `costPerLoop`
 - use these estimates to calculate the biggest `arrayLength` where `gasSpent <= blockGasLimit` which gives the maximum value. To get the safe value we find the biggest `arrayLength` where `gasSpent <= safeGasLimitPercent*blockGasLimit`
