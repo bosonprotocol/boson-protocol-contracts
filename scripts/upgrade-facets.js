@@ -121,12 +121,12 @@ async function main() {
   const diamondLoupe = await ethers.getContractAt("DiamondLoupeFacet", protocolAddress);
   const erc165Extended = await ethers.getContractAt("IERC165Extended", protocolAddress);
 
-  // All handler facets currently have no-arg initializers
+  // Initialization data for facets with no-arg initializers
   const noArgInitFunction = "initialize()";
   const noArgInitInterface = new ethers.utils.Interface([`function ${noArgInitFunction}`]);
   const noArgCallData = noArgInitInterface.encodeFunctionData("initialize");
 
-  // manage new or upgraded facets
+  // Manage new or upgraded facets
   for (const newFacet of deployedFacets) {
     console.log(`\n📋 Facet: ${newFacet.name}`);
 
