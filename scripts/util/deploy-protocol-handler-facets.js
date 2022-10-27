@@ -6,7 +6,7 @@ const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmat
 const { getFees } = require("./utils");
 
 /**
- * Cut the Protocol Handler facets
+ * Cut the Protocol Handler facets with no-arg initializers
  *
  * Reused between deployment script and unit tests for consistency.
  *
@@ -17,11 +17,32 @@ const { getFees } = require("./utils");
  * @returns {Promise<(*|*|*)[]>}
  */
 async function deployProtocolHandlerFacets(diamond, facetNames, maxPriorityFeePerGas, doCut = true) {
+  // Convert facetNames into expected facetData format
+  let facetData = {};
+  for (const facetName of facetNames) {
+    facetData[facetName] = "";
+  }
+
+  // Make the deployment with generic method
+  return deployProtocolHandlerFacetsWithArgs(diamond, facetData, maxPriorityFeePerGas, doCut);
+}
+
+/**
+ * Cut the Protocol Handler facets with initializers with arguments
+ *
+ * Reused between deployment script and unit tests for consistency.
+ *
+ * @param diamond
+ * @param facetData - object with facet names and corresponding initialization arguments {facetName1: initializerArguments1, facetName2: initializerArguments2, ...}
+ * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
+ * @param doCut - boolean that tells if cut transaction should be done or not (default: true)
+ * @returns {Promise<(*|*|*)[]>}
+ */
+async function deployProtocolHandlerFacetsWithArgs(diamond, facetData, maxPriorityFeePerGas, doCut = true) {
   let deployedFacets = [];
 
-  // Deploy all the no-arg initializer handler facets
-  while (facetNames.length) {
-    let facetName = facetNames.shift();
+  // Deploy all handler facets
+  for (const facetName of Object.keys(facetData)) {
     let FacetContractFactory = await ethers.getContractFactory(facetName);
     const facetContract = await FacetContractFactory.deploy(await getFees(maxPriorityFeePerGas));
     await facetContract.deployTransaction.wait(confirmations);
@@ -36,16 +57,12 @@ async function deployProtocolHandlerFacets(diamond, facetNames, maxPriorityFeePe
     // Cast Diamond to DiamondCutFacet
     const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", diamond.address);
 
-    // All handler facets currently have no-arg initializers
-    let initFunction = "initialize()";
-    let initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
-    let callData = initInterface.encodeFunctionData("initialize");
-
     // Cut all the facets into the diamond
     for (let i = 0; i < deployedFacets.length; i++) {
       const deployedFacet = deployedFacets[i];
 
-      const facetCut = getFacetAddCut(deployedFacet.contract, [initFunction]);
+      const callData = deployedFacet.contract.interface.encodeFunctionData("initialize", facetData[deployedFacet.name]);
+      const facetCut = getFacetAddCut(deployedFacet.contract, [callData.slice(0, 10)]);
       const transactionResponse = await diamondCutFacet.diamondCut(
         [facetCut],
         deployedFacet.contract.address,
@@ -53,6 +70,7 @@ async function deployProtocolHandlerFacets(diamond, facetNames, maxPriorityFeePe
         await getFees(maxPriorityFeePerGas)
       );
       await transactionResponse.wait(confirmations);
+      deployedFacets[i].cutTransaction = transactionResponse;
     }
   }
 
@@ -70,3 +88,4 @@ if (require.main === module) {
 }
 
 exports.deployProtocolHandlerFacets = deployProtocolHandlerFacets;
+exports.deployProtocolHandlerFacetsWithArgs = deployProtocolHandlerFacetsWithArgs;

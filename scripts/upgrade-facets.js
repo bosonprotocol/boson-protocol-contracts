@@ -121,12 +121,12 @@ async function main() {
   const diamondLoupe = await ethers.getContractAt("DiamondLoupeFacet", protocolAddress);
   const erc165Extended = await ethers.getContractAt("IERC165Extended", protocolAddress);
 
-  // All handler facets currently have no-arg initializers
-  let initFunction = "initialize()";
-  let initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
-  let callData = initInterface.encodeFunctionData("initialize");
+  // Initialization data for facets with no-arg initializers
+  const noArgInitFunction = "initialize()";
+  const noArgInitInterface = new ethers.utils.Interface([`function ${noArgInitFunction}`]);
+  const noArgCallData = noArgInitInterface.encodeFunctionData("initialize");
 
-  // manage new or upgraded facets
+  // Manage new or upgraded facets
   for (const newFacet of deployedFacets) {
     console.log(`\n📋 Facet: ${newFacet.name}`);
 
@@ -146,9 +146,14 @@ async function main() {
     const newFacetInterfaceId = interfaceIdFromFacetName(newFacet.name);
     deploymentComplete(newFacet.name, newFacet.contract.address, [], newFacetInterfaceId, contracts);
 
+    // Determine calldata. Depends on whether initialize accepts args or not
+    const callData = Facets.initArgs[newFacet.name]
+      ? newFacet.contract.interface.encodeFunctionData("initialize", Facets.initArgs[newFacet.name])
+      : noArgCallData;
+
     // Get new selectors from compiled contract
     const selectors = getSelectors(newFacet.contract, true);
-    const newSelectors = selectors.selectors.remove([initFunction]);
+    const newSelectors = selectors.selectors.remove([callData.slice(0, 10)]); // remove initializer from cut
 
     // Determine actions to be made
     let selectorsToReplace = registeredSelectors.filter((value) => newSelectors.includes(value)); // intersection of old and new selectors
@@ -156,7 +161,7 @@ async function main() {
     let selectorsToAdd = newSelectors.filter((value) => !selectorsToReplace.includes(value)); // unique new selectors
 
     // Skip selectors if set in config
-    let selectorsToSkip = Facets.skip[newFacet.name] ? Facets.skip[newFacet.name] : [];
+    let selectorsToSkip = Facets.skipSelectors[newFacet.name] ? Facets.skipSelectors[newFacet.name] : [];
     selectorsToReplace = removeSelectors(selectorsToReplace, selectorsToSkip);
     selectorsToRemove = removeSelectors(selectorsToRemove, selectorsToSkip);
     selectorsToAdd = removeSelectors(selectorsToAdd, selectorsToSkip);
@@ -189,10 +194,19 @@ async function main() {
       if (selectorsToAdd.length > 0) facetCut.push([newFacetAddress, FacetCutAction.Add, selectorsToAdd]);
       if (selectorsToReplace.length > 0) facetCut.push([newFacetAddress, FacetCutAction.Replace, selectorsToReplace]);
 
-      // Diamond cut
-      const transactionResponse = await diamondCutFacet
-        .connect(adminSigner)
-        .diamondCut(facetCut, newFacetAddress, callData, await getFees(maxPriorityFeePerGas));
+      // Diamond cut - add or replace
+      let transactionResponse;
+      if (Facets.skipInit.includes(newFacet.name)) {
+        // Without initialization
+        transactionResponse = await diamondCutFacet
+          .connect(adminSigner)
+          .diamondCut(facetCut, ethers.constants.AddressZero, "0x", await getFees(maxPriorityFeePerGas));
+      } else {
+        // With initialization
+        transactionResponse = await diamondCutFacet
+          .connect(adminSigner)
+          .diamondCut(facetCut, newFacetAddress, callData, await getFees(maxPriorityFeePerGas));
+      }
       await transactionResponse.wait(confirmations);
     }
 

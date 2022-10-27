@@ -1,9 +1,4 @@
-const { getFacetAddCut } = require("./diamond-utils.js");
-const hre = require("hardhat");
-const ethers = hre.ethers;
-const environments = require("../../environments");
-const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
-const { getFees } = require("./utils");
+const { deployProtocolHandlerFacetsWithArgs } = require("./deploy-protocol-handler-facets.js");
 
 /**
  * Cut the Config Handler facet
@@ -17,28 +12,15 @@ const { getFees } = require("./utils");
  * @returns {Promise<(*|*|*)[]>}
  */
 async function deployProtocolConfigFacet(diamond, config, maxPriorityFeePerGas) {
-  // Deploy the ConfigHandler Facet
-  const ConfigHandlerFacet = await ethers.getContractFactory("ConfigHandlerFacet");
-  const configHandlerFacet = await ConfigHandlerFacet.deploy(await getFees(maxPriorityFeePerGas));
-  await configHandlerFacet.deployTransaction.wait(confirmations);
-
-  // Cast Diamond to DiamondCutFacet
-  const cutFacet = await ethers.getContractAt("DiamondCutFacet", diamond.address);
-
-  // Cut ConfigHandler facet, initializing
-  const configCallData = ConfigHandlerFacet.interface.encodeFunctionData("initialize", config);
-  const configHandlerCut = getFacetAddCut(configHandlerFacet, [configCallData.slice(0, 10)]);
-  const diamondCut = await cutFacet.diamondCut(
-    [configHandlerCut],
-    configHandlerFacet.address,
-    configCallData,
-    await getFees(maxPriorityFeePerGas)
+  // Use generic script for facets with initializer with arguments to deploy ConfigHandler Facet
+  const deployedFacet = await deployProtocolHandlerFacetsWithArgs(
+    diamond,
+    { ConfigHandlerFacet: config },
+    maxPriorityFeePerGas
   );
 
-  await diamondCut.wait(confirmations);
-
   // Return the cut transaction to test the events emitted by the initializer function
-  return { facets: [configHandlerFacet], cutTransaction: diamondCut };
+  return { facets: [deployedFacet[0].contract], cutTransaction: deployedFacet[0].cutTransaction };
 }
 
 if (require.main === module) {
