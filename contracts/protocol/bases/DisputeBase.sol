@@ -18,7 +18,6 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
      * Reverts if:
      * - Caller does not hold a voucher for the given exchange id
      * - Exchange does not exist
-     * - Exchange is not in a redeemed state
      * - Dispute period has elapsed already
      *
      * @param _exchange - the exchange
