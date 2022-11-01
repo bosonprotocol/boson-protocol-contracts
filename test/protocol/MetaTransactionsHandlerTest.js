@@ -1,7 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect, assert } = require("chai");
-const { gasLimit } = require("../../environments");
 
 const Buyer = require("../../scripts/domain/Buyer");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
@@ -152,7 +151,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     const [proxy] = proxies;
 
     // Deploy the boson token
-    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+    [bosonToken] = await deployMockTokens(["BosonToken"]);
 
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
@@ -226,7 +225,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
 
     // Deploy the mock tokens
-    [bosonToken, mockToken] = await deployMockTokens(gasLimit, ["BosonToken", "Foreign20"]);
+    [bosonToken, mockToken] = await deployMockTokens(["BosonToken", "Foreign20"]);
   });
 
   async function upgradeMetaTransactionsHandlerFacet() {
@@ -249,9 +248,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     ];
 
     // Send the DiamondCut transaction
-    const tx = await cutFacetViaDiamond
-      .connect(deployer)
-      .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+    const tx = await cutFacetViaDiamond.connect(deployer).diamondCut(facetCuts, ethers.constants.AddressZero, "0x");
 
     // Wait for transaction to confirm
     const receipt = await tx.wait();
@@ -965,7 +962,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           it("Should fail on reenter", async function () {
             // Deploy malicious contracts
-            const [maliciousToken] = await deployMockTokens(gasLimit, ["Foreign20Malicious"]);
+            const [maliciousToken] = await deployMockTokens(["Foreign20Malicious"]);
             await maliciousToken.setProtocolAddress(protocolDiamond.address);
 
             // Initial ids for all the things
@@ -1111,7 +1108,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           it("Should emit MetaTransactionExecuted event and update state", async () => {
             // Deploy malicious contracts
-            const [maliciousToken] = await deployMockTokens(gasLimit, ["Foreign20Malicious2"]);
+            const [maliciousToken] = await deployMockTokens(["Foreign20Malicious2"]);
             await maliciousToken.setProtocolAddress(protocolDiamond.address);
 
             // Mint and approve protocol to transfer the tokens

@@ -58,7 +58,7 @@ describe("IBosonDisputeHandler", function () {
     fundsHandler,
     disputeHandler,
     pauseHandler;
-  let bosonToken, gasLimit;
+  let bosonToken;
   let buyerId, offer, offerId, seller;
   let block, blockNumber, tx;
   let support, newTime;
@@ -134,7 +134,7 @@ describe("IBosonDisputeHandler", function () {
     const [proxy] = proxies;
 
     // Deploy the boson token
-    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+    [bosonToken] = await deployMockTokens(["BosonToken"]);
 
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
@@ -1275,7 +1275,7 @@ describe("IBosonDisputeHandler", function () {
         async function createDisputeExchangeWithToken() {
           // utility function that deploys a mock token, creates a offer with it, creates an exchange and push it into escalated state
           // deploy a mock token
-          const [mockToken] = await deployMockTokens(gasLimit, ["Foreign20"]);
+          const [mockToken] = await deployMockTokens(["Foreign20"]);
 
           // add to DR fees
           DRFeeToken = ethers.utils.parseUnits("2", "ether").toString();
@@ -1532,7 +1532,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Received ERC20 token amount differs from the expected value", async function () {
             // Deploy ERC20 with fees
-            const [Foreign20WithFee] = await deployMockTokens(gasLimit, ["Foreign20WithFee"]);
+            const [Foreign20WithFee] = await deployMockTokens(["Foreign20WithFee"]);
 
             // add to DR fees
             DRFeeToken = ethers.utils.parseUnits("2", "ether").toString();

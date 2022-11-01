@@ -380,7 +380,7 @@ setupEnvironment["maxOffersPerBundle"] = async function (offerCount = 10) {
   }
 
   // Create a valid twin.
-  const [bosonToken] = await deployMockTokens(gasLimit);
+  const [bosonToken] = await deployMockTokens();
   const twin = mockTwin(bosonToken.address);
   twin.supplyAvailable = ethers.BigNumber.from(twin.amount).mul(offerCount);
 
@@ -433,7 +433,7 @@ setupEnvironment["maxTwinsPerBundle"] = async function (twinCount = 10) {
   await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
   for (let i = 0; i < twinCount; i++) {
-    const [twinContract] = await deployMockTokens(gasLimit, ["Foreign20"]);
+    const [twinContract] = await deployMockTokens(["Foreign20"]);
     const twin = mockTwin(twinContract.address);
 
     // Approving the twinHandler contract to transfer seller's tokens
@@ -630,7 +630,7 @@ setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
   let tokenAddresses = [];
   for (let i = 1; i < tokenCount + 1; i++) {
     // create a token
-    const [tokenContract] = await deployMockTokens(gasLimit, ["Foreign20"]);
+    const [tokenContract] = await deployMockTokens(["Foreign20"]);
     tokenAddresses.push(tokenContract.address);
 
     offer.exchangeToken = tokenContract.address;

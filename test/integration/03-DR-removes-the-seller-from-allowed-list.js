@@ -1,8 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
-const environments = require("../../environments");
-const network = hre.network.name;
 
 const Role = require("../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
@@ -88,13 +86,12 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
-    const gasLimit = environments[network].gasLimit;
     const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
     const [beacon] = beacons;
     const [proxy] = proxies;
 
     // Deploy the boson token
-    const [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+    const [bosonToken] = await deployMockTokens(["BosonToken"]);
 
     // Set protocolFees
     const protocolFeePercentage = "200"; // 2 %
