@@ -2082,7 +2082,7 @@ describe("IBosonExchangeHandler", function () {
 
             // Deploy contract to test redeem called by another contract
             let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
-            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address, {});
+            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address);
             await testProtocolFunctions.deployed();
 
             await testProtocolFunctions.commit(offerId, { value: price });
