@@ -179,7 +179,6 @@ describe("SnapshotGate", function () {
 
     // Deploy the mock tokens
     [foreign20] = await deployMockTokens(["Foreign20"]);
-
   });
 
   // All supported Exchange methods
@@ -253,7 +252,6 @@ describe("SnapshotGate", function () {
 
       // Each holder will have a random amount of each token
       for (let holder of holders) {
-
         // Mint a bunch of exchange tokens for the holder and approve the gate to transfer them
         const amountToMint = "15000000000000000000";
         await foreign20.connect(holder).mint(holder.address, amountToMint);
@@ -285,11 +283,11 @@ describe("SnapshotGate", function () {
       groups = [];
 
       // Make 2 passes, creating native token offers and then ERC20 offers
-      for (let j = 0; j< 2; j++) {
+      for (let j = 0; j < 2; j++) {
         for (let i = 1; i <= snapshotTokenCount; i++) {
           // The token id
           const tokenId = i.toString(); // first and second batches use same token ids
-          offerId = Number((snapshotTokenCount * j)+i).toString(); // offer id from first or second batch
+          offerId = Number(snapshotTokenCount * j + i).toString(); // offer id from first or second batch
           groupId = offerId;
 
           // The supply of this token
@@ -302,7 +300,7 @@ describe("SnapshotGate", function () {
           price = offer.price;
 
           // Set price in ERC-20 token if on second pass
-          if (j>0){
+          if (j > 0) {
             offer.exchangeToken = foreign20.address;
             offer.buyerCancelPenalty = "0";
           }
@@ -317,7 +315,9 @@ describe("SnapshotGate", function () {
           expect(offerDurations.isValid()).is.true;
 
           // Create the offer
-          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
           offers.push(offer);
 
           // Required constructor params for Group
@@ -462,9 +462,8 @@ describe("SnapshotGate", function () {
         let holder = holderByAddress[entry.owner];
 
         // Commit to the offer
-        await expect(
-          snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId)
-        ).to.emit(snapshotGate, "SnapshotTokenCommitted")
+        await expect(snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId))
+          .to.emit(snapshotGate, "SnapshotTokenCommitted")
           .withArgs(entry.owner, offerId, entry.tokenId);
       });
 
@@ -561,10 +560,8 @@ describe("SnapshotGate", function () {
           // Commit to the offer
           await expect(
             snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId, { value: price })
-          )
-            .to.revertedWith("Condition specifies a different tokenId from the one given");
+          ).to.revertedWith("Condition specifies a different tokenId from the one given");
         });
-
       });
     });
 
@@ -640,7 +637,6 @@ describe("SnapshotGate", function () {
         // Expect used value to be one
         expect(response.used.toString()).to.equal("1");
       });
-
     });
 
     context("👉 ownerOf()", async function () {
