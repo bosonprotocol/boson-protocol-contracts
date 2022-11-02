@@ -1,7 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
-const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
@@ -102,7 +101,7 @@ describe("IBosonFundsHandler", function () {
     InterfaceIds = await getInterfaceIds();
 
     // Deploy the mock token
-    [mockToken] = await deployMockTokens(gasLimit, ["Foreign20"]);
+    [mockToken] = await deployMockTokens(["Foreign20"]);
   });
 
   beforeEach(async function () {
@@ -150,7 +149,7 @@ describe("IBosonFundsHandler", function () {
     const [proxy] = proxies;
 
     // Deploy the boson token
-    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+    [bosonToken] = await deployMockTokens(["BosonToken"]);
 
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
@@ -215,7 +214,7 @@ describe("IBosonFundsHandler", function () {
     configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
     // Deploy the mock token
-    [mockToken] = await deployMockTokens(gasLimit, ["Foreign20"]);
+    [mockToken] = await deployMockTokens(["Foreign20"]);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -369,7 +368,7 @@ describe("IBosonFundsHandler", function () {
 
         it("Token address contract does not support transferFrom", async function () {
           // Deploy a contract without the transferFrom
-          [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+          [bosonToken] = await deployMockTokens(["BosonToken"]);
 
           // Attempt to deposit the funds, expecting revert
           await expect(
@@ -402,7 +401,7 @@ describe("IBosonFundsHandler", function () {
 
         it("Received ERC20 token amount differs from the expected value", async function () {
           // Deploy ERC20 with fees
-          const [Foreign20WithFee] = await deployMockTokens(gasLimit, ["Foreign20WithFee"]);
+          const [Foreign20WithFee] = await deployMockTokens(["Foreign20WithFee"]);
 
           // mint tokens and approve
           await Foreign20WithFee.mint(operator.address, depositAmount);
@@ -415,7 +414,7 @@ describe("IBosonFundsHandler", function () {
         });
 
         it("ERC20 transferFrom returns false", async function () {
-          const [foreign20ReturnFalse] = await deployMockTokens(gasLimit, ["Foreign20TransferFromReturnFalse"]);
+          const [foreign20ReturnFalse] = await deployMockTokens(["Foreign20TransferFromReturnFalse"]);
 
           await foreign20ReturnFalse.connect(operator).mint(operator.address, depositAmount);
           await foreign20ReturnFalse.connect(operator).approve(protocolDiamond.address, depositAmount);
@@ -1000,7 +999,7 @@ describe("IBosonFundsHandler", function () {
 
           it("Transfer of funds failed - revert in fallback", async function () {
             // deploy a contract that cannot receive funds
-            const [fallbackErrorContract] = await deployMockTokens(gasLimit, ["FallbackError"]);
+            const [fallbackErrorContract] = await deployMockTokens(["FallbackError"]);
 
             // commit to offer on behalf of some contract
             tx = await exchangeHandler
@@ -1027,7 +1026,7 @@ describe("IBosonFundsHandler", function () {
 
           it("Transfer of funds failed - no payable fallback or receive", async function () {
             // deploy a contract that cannot receive funds
-            const [fallbackErrorContract] = await deployMockTokens(gasLimit, ["WithoutFallbackError"]);
+            const [fallbackErrorContract] = await deployMockTokens(["WithoutFallbackError"]);
 
             // commit to offer on behalf of some contract
             tx = await exchangeHandler
@@ -1071,7 +1070,7 @@ describe("IBosonFundsHandler", function () {
           });
 
           it("Transfer of funds failed - ERC20 transfer returns false", async function () {
-            const [foreign20ReturnFalse] = await deployMockTokens(gasLimit, ["Foreign20TransferReturnFalse"]);
+            const [foreign20ReturnFalse] = await deployMockTokens(["Foreign20TransferReturnFalse"]);
 
             await foreign20ReturnFalse.connect(operator).mint(operator.address, sellerDeposit);
             await foreign20ReturnFalse.connect(operator).approve(protocolDiamond.address, sellerDeposit);
@@ -1430,7 +1429,7 @@ describe("IBosonFundsHandler", function () {
 
           it("Transfer of funds failed - revert in fallback", async function () {
             // deploy a contract that cannot receive funds
-            const [fallbackErrorContract] = await deployMockTokens(gasLimit, ["FallbackError"]);
+            const [fallbackErrorContract] = await deployMockTokens(["FallbackError"]);
 
             // temporarily grant ADMIN role to deployer account
             await accessController.grantRole(Role.ADMIN, deployer.address);
@@ -1448,7 +1447,7 @@ describe("IBosonFundsHandler", function () {
 
           it("Transfer of funds failed - no payable fallback or receive", async function () {
             // deploy a contract that cannot receive funds
-            const [fallbackErrorContract] = await deployMockTokens(gasLimit, ["WithoutFallbackError"]);
+            const [fallbackErrorContract] = await deployMockTokens(["WithoutFallbackError"]);
 
             // temporarily grant ADMIN role to deployer account
             await accessController.grantRole(Role.ADMIN, deployer.address);
@@ -1488,7 +1487,7 @@ describe("IBosonFundsHandler", function () {
     context("👉 getAvailableFunds()", async function () {
       it("Returns info also for ERC20 tokens without the name", async function () {
         // Deploy the mock token with no name
-        [mockToken] = await deployMockTokens(gasLimit, ["Foreign20NoName"]);
+        [mockToken] = await deployMockTokens(["Foreign20NoName"]);
         // top up operators account
         await mockToken.mint(operator.address, "1000000");
         // approve protocol to transfer the tokens
@@ -1739,7 +1738,7 @@ describe("IBosonFundsHandler", function () {
           // length - 1 is different from index when index isn't the first or last element in the list
           // Deploy a new mock token
           let TokenContractFactory = await ethers.getContractFactory("Foreign20");
-          const otherToken = await TokenContractFactory.deploy({ gasLimit });
+          const otherToken = await TokenContractFactory.deploy();
           await otherToken.deployed();
 
           // Add otherToken to DR fees
@@ -1869,7 +1868,7 @@ describe("IBosonFundsHandler", function () {
 
         it("Token address contract does not support transferFrom", async function () {
           // Deploy a contract without the transferFrom
-          [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+          [bosonToken] = await deployMockTokens(["BosonToken"]);
 
           // create an offer with a bad token contrat
           offerToken.exchangeToken = bosonToken.address;
@@ -1960,7 +1959,7 @@ describe("IBosonFundsHandler", function () {
 
         it("Received ERC20 token amount differs from the expected value", async function () {
           // Deploy ERC20 with fees
-          const [Foreign20WithFee] = await deployMockTokens(gasLimit, ["Foreign20WithFee"]);
+          const [Foreign20WithFee] = await deployMockTokens(["Foreign20WithFee"]);
 
           // add to DR fees
           DRFee = ethers.utils.parseUnits("2", "ether").toString();

@@ -40,7 +40,6 @@ module.exports = {
   //  - throwaway HDWallet mnemonic for running unit tests, which require more than one address
   hardhat: {
     mnemonic: process.env.DEPLOYER_HARDHAT_MNEMONIC,
-    gasLimit: parseInt(process.env.DEPLOYER_GAS_LIMIT_TEST),
   },
 
   // Local node
@@ -49,7 +48,6 @@ module.exports = {
   localhost: {
     txNode: process.env.DEPLOYER_LOCAL_TXNODE,
     keys: [process.env.DEPLOYER_LOCAL_KEY],
-    gasLimit: parseInt(process.env.DEPLOYER_GAS_LIMIT_TEST),
     adminAddress: process.env.ADMIN_ADDRESS_LOCAL,
     nftAuthTokenHolders: process.env.AUTH_TOKEN_OWNERS_LOCAL,
   },
@@ -58,7 +56,6 @@ module.exports = {
   test: {
     txNode: process.env.DEPLOYER_TEST_TXNODE,
     keys: [process.env.DEPLOYER_TEST_KEY],
-    gasLimit: parseInt(process.env.DEPLOYER_GAS_LIMIT_TEST),
     adminAddress: process.env.ADMIN_ADDRESS_TEST,
     nftAuthTokenHolders: process.env.AUTH_TOKEN_OWNERS_TEST,
   },
@@ -67,7 +64,6 @@ module.exports = {
   mainnet: {
     txNode: process.env.DEPLOYER_MAINNET_TXNODE,
     keys: [process.env.DEPLOYER_MAINNET_KEY],
-    gasLimit: parseInt(process.env.DEPLOYER_GAS_LIMIT),
     adminAddress: process.env.ADMIN_ADDRESS_MAINNET,
   },
 
@@ -75,7 +71,6 @@ module.exports = {
   mumbai: {
     txNode: process.env.DEPLOYER_MUMBAI_TXNODE,
     keys: [process.env.DEPLOYER_MUMBAI_KEY],
-    gasLimit: parseInt(process.env.DEPLOYER_GAS_LIMIT),
     adminAddress: process.env.ADMIN_ADDRESS_MUMBAI,
   },
 
@@ -83,7 +78,6 @@ module.exports = {
   polygon: {
     txNode: process.env.DEPLOYER_POLYGON_TXNODE,
     keys: [process.env.DEPLOYER_POLYGON_KEY],
-    gasLimit: parseInt(process.env.DEPLOYER_GAS_LIMIT),
     adminAddress: process.env.ADMIN_ADDRESS_POLYGON,
   },
 };

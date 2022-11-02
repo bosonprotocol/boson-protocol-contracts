@@ -1,4 +1,3 @@
-const { gasLimit } = require("../../environments");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect, assert } = require("chai");
@@ -191,7 +190,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-    [mockToken] = await deployMockTokens(gasLimit, ["Foreign20"]);
+    [mockToken] = await deployMockTokens(["Foreign20"]);
 
     // top up operators account
     await mockToken.mint(operator.address, "1000000");
@@ -220,9 +219,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     ];
 
     // Send the DiamondCut transaction
-    const tx = await cutFacetViaDiamond
-      .connect(deployer)
-      .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+    const tx = await cutFacetViaDiamond.connect(deployer).diamondCut(facetCuts, ethers.constants.AddressZero, "0x");
 
     // Wait for transaction to confirm
     const receipt = await tx.wait();

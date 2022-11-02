@@ -1,7 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect, assert } = require("chai");
-const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Bundle = require("../../scripts/domain/Bundle");
@@ -133,7 +132,7 @@ describe("IBosonBundleHandler", function () {
     const [proxy] = proxies;
 
     // Deploy the boson token
-    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+    [bosonToken] = await deployMockTokens(["BosonToken"]);
 
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
@@ -194,7 +193,7 @@ describe("IBosonBundleHandler", function () {
     pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
 
     // Deploy the mock tokens
-    [bosonToken] = await deployMockTokens(gasLimit);
+    [bosonToken] = await deployMockTokens();
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)

@@ -1,7 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { assert, expect } = require("chai");
-const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
@@ -155,7 +154,7 @@ describe("IBosonOrchestrationHandler", function () {
     );
 
     // Deploy the mock tokens
-    [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens(gasLimit);
+    [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens();
 
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
@@ -297,7 +296,7 @@ describe("IBosonOrchestrationHandler", function () {
       authTokenStruct = authToken.toStruct();
 
       // deploy mock auth token and mint one to operator
-      const [mockAuthERC721Contract] = await deployMockTokens(gasLimit, ["Foreign721"]);
+      const [mockAuthERC721Contract] = await deployMockTokens(["Foreign721"]);
       await configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, mockAuthERC721Contract.address);
       await mockAuthERC721Contract.connect(operator).mint(authToken.tokenId, 1);
 

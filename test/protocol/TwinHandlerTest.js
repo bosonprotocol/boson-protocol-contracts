@@ -1,7 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect, assert } = require("chai");
-const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Twin = require("../../scripts/domain/Twin");
@@ -96,7 +95,7 @@ describe("IBosonTwinHandler", function () {
     const [proxy] = proxies;
 
     // Deploy the mock tokens
-    [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens(gasLimit);
+    [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens();
 
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
@@ -340,7 +339,7 @@ describe("IBosonTwinHandler", function () {
         twin.tokenType = TokenType.NonFungibleToken;
 
         // another erc721 token
-        const [foreign721_2] = await deployMockTokens(gasLimit, ["Foreign721"]);
+        const [foreign721_2] = await deployMockTokens(["Foreign721"]);
 
         let twin2 = twin.clone();
         twin2.supplyAvailable = "1500";
@@ -365,7 +364,7 @@ describe("IBosonTwinHandler", function () {
         twin.tokenType = TokenType.NonFungibleToken;
 
         // another erc721 token
-        const [foreign721_2] = await deployMockTokens(gasLimit, ["Foreign721"]);
+        const [foreign721_2] = await deployMockTokens(["Foreign721"]);
 
         let twin2 = twin.clone();
         twin2.supplyAvailable = "1500";
