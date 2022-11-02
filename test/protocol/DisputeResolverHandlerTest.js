@@ -2454,6 +2454,27 @@ describe("DisputeResolverHandler", function () {
           );
       });
 
+      it("Should not emit 'DisputeResolverUpdateApplied' event if caller doesn't especify any field", async function () {
+        disputeResolver.operator = other1.address;
+        await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+        await expect(accountHandler.connect(other1).optInToDisputeResolverUpdate(disputeResolver.id, [])).to.not.emit(
+          accountHandler,
+          "DisputeResolverUpdateApplied"
+        );
+      });
+
+      it("Should not emit 'DisputeResolverUpdateApplied'event if there is no pending update for especified field", async function () {
+        disputeResolver.operator = other1.address;
+        await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+        await expect(
+          accountHandler
+            .connect(other1)
+            .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Clerk])
+        ).to.not.emit(accountHandler, "DisputeResolverUpdateApplied");
+      });
+
       context("💔 Revert Reasons", async function () {
         it("There are no pending updates", async function () {
           disputeResolver.clerk = other1.address;
