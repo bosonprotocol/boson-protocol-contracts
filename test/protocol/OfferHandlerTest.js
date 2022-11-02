@@ -1972,6 +1972,8 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("Creating too many offers", async function () {
+          const gasLimit = 10000000;
+
           // Try to create the more than 100 offers
           offers = new Array(101).fill(offer);
 
@@ -1979,7 +1981,7 @@ describe("IBosonOfferHandler", function () {
           await expect(
             offerHandler
               .connect(operator)
-              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds, { gasLimit })
           ).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
         });
 

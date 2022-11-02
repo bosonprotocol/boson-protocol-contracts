@@ -40,7 +40,6 @@ module.exports = {
   //  - throwaway HDWallet mnemonic for running unit tests, which require more than one address
   hardhat: {
     mnemonic: process.env.DEPLOYER_HARDHAT_MNEMONIC,
-    gasLimit: parseInt(process.env.DEPLOYER_GAS_LIMIT_TEST),
   },
 
   // Local node
