@@ -153,7 +153,12 @@ async function main() {
 
     // Get new selectors from compiled contract
     const selectors = getSelectors(newFacet.contract, true);
-    const newSelectors = selectors.selectors.remove([callData.slice(0, 10)]); // remove initializer from cut
+    let newSelectors;
+    if (!Facets.skipInit.includes(newFacet.name)) {
+      newSelectors = selectors.selectors.remove([callData.slice(0, 10)]);
+    } else {
+      newSelectors = selectors.selectors;
+    }
 
     // Determine actions to be made
     let selectorsToReplace = registeredSelectors.filter((value) => newSelectors.includes(value)); // intersection of old and new selectors

@@ -1,7 +1,7 @@
 {
   "chainId": 80001,
   "env": "mumbai",
-  "protocolVersion": "2.1.0-rc.1",
+  "protocolVersion": "2.1.0",
   "contracts": [
     {
       "name": "AccessController",
@@ -20,12 +20,6 @@
       "address": "0x7385bA3289761f87c6874ba9d34e8025d0450d2A",
       "args": [],
       "interfaceId": "0x1f931c1c"
-    },
-    {
-      "name": "ERC165Facet",
-      "address": "0x39A5ab02C41C789aBCbAa870B4E0906B7b19FD52",
-      "args": [],
-      "interfaceId": "0x2ae6ea10"
     },
     {
       "name": "ProtocolDiamond",
@@ -82,20 +76,8 @@
       "interfaceId": "0xb8667cfd"
     },
     {
-      "name": "SellerHandlerFacet",
-      "address": "0xc8212084e9AE88f3500De4Eb7459000480C17e2F",
-      "args": [],
-      "interfaceId": "0xb8667cfd"
-    },
-    {
       "name": "BuyerHandlerFacet",
       "address": "0xbf8400bc401A27c666Dbde422C5ca472aF64F735",
-      "args": [],
-      "interfaceId": "0xb8667cfd"
-    },
-    {
-      "name": "DisputeResolverHandlerFacet",
-      "address": "0x671F49755d03B8f2E809CE00980c3ECf30A8f145",
       "args": [],
       "interfaceId": "0xb8667cfd"
     },
@@ -185,6 +167,24 @@
       "address": "0xe0b06853a9079D39fe4f2c34D99b1540178fAEdD",
       "args": [],
       "interfaceId": ""
+    },
+    {
+      "name": "ERC165Facet",
+      "address": "0xfa498dD025dccfF3D9C10F8613641d39Ad3e177b",
+      "args": [],
+      "interfaceId": "0x2ae6ea10"
+    },
+    {
+      "name": "SellerHandlerFacet",
+      "address": "0xC078B14faB453B31aAADB0593b34Aa64F0cfAfD1",
+      "args": [],
+      "interfaceId": "0xb8667cfd"
+    },
+    {
+      "name": "DisputeResolverHandlerFacet",
+      "address": "0xA3C1EDd2DDC439117195adb9BEAe381B11692Fe4",
+      "args": [],
+      "interfaceId": "0xb8667cfd"
     }
   ]
 }
