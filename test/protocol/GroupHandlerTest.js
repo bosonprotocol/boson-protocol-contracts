@@ -1,7 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { assert, expect } = require("chai");
-const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Group = require("../../scripts/domain/Group");
@@ -108,7 +107,7 @@ describe("IBosonGroupHandler", function () {
     const [proxy] = proxies;
 
     // Deploy the boson token
-    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+    [bosonToken] = await deployMockTokens(["BosonToken"]);
 
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %

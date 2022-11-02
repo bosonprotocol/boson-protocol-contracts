@@ -10,7 +10,6 @@ jobs:
   mumbai_deploy:
     runs-on: ubuntu-latest
     env:
-      DEPLOYER_GAS_LIMIT: ${{ secrets.DEPLOYER_GAS_LIMIT }}
       DEPLOYER_MUMBAI_TXNODE: ${{ secrets.DEPLOYER_MUMBAI_TXNODE }}
       DEPLOYER_MUMBAI_KEY: ${{ secrets.DEPLOYER_MUMBAI_KEY }}
       DEPLOYER_POLYGONSCAN_API_KEY: ${{ secrets.DEPLOYER_POLYGONSCAN_API_KEY }}

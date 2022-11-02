@@ -1,4 +1,3 @@
-const { gasLimit } = require("../../environments");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect, assert } = require("chai");
@@ -180,7 +179,7 @@ describe("IBosonExchangeHandler", function () {
     [voucherImplementation] = implementations;
 
     // Deploy the mock tokens
-    [foreign20, foreign721, foreign1155] = await deployMockTokens(gasLimit, ["Foreign20", "Foreign721", "Foreign1155"]);
+    [foreign20, foreign721, foreign1155] = await deployMockTokens(["Foreign20", "Foreign721", "Foreign1155"]);
 
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
@@ -258,7 +257,7 @@ describe("IBosonExchangeHandler", function () {
     configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
     // Deploy the mock tokens
-    [foreign20, foreign721, foreign1155] = await deployMockTokens(gasLimit, ["Foreign20", "Foreign721", "Foreign1155"]);
+    [foreign20, foreign721, foreign1155] = await deployMockTokens(["Foreign20", "Foreign721", "Foreign1155"]);
   });
 
   async function upgradeMetaTransactionsHandlerFacet() {
@@ -281,9 +280,7 @@ describe("IBosonExchangeHandler", function () {
     ];
 
     // Send the DiamondCut transaction
-    const tx = await cutFacetViaDiamond
-      .connect(deployer)
-      .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+    const tx = await cutFacetViaDiamond.connect(deployer).diamondCut(facetCuts, ethers.constants.AddressZero, "0x");
 
     // Wait for transaction to confirm
     const receipt = await tx.wait();
@@ -2039,7 +2036,7 @@ describe("IBosonExchangeHandler", function () {
           });
 
           it("should revoke exchange when ERC20 contract transferFrom returns false", async function () {
-            const [foreign20ReturnFalse] = await deployMockTokens(gasLimit, ["Foreign20TransferFromReturnFalse"]);
+            const [foreign20ReturnFalse] = await deployMockTokens(["Foreign20TransferFromReturnFalse"]);
 
             await foreign20ReturnFalse.connect(operator).mint(operator.address, "500");
             await foreign20ReturnFalse.connect(operator).approve(protocolDiamond.address, "100");
@@ -2085,9 +2082,7 @@ describe("IBosonExchangeHandler", function () {
 
             // Deploy contract to test redeem called by another contract
             let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
-            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address, {
-              gasLimit,
-            });
+            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address);
             await testProtocolFunctions.deployed();
 
             await testProtocolFunctions.commit(offerId, { value: price });
@@ -2227,7 +2222,7 @@ describe("IBosonExchangeHandler", function () {
           beforeEach(async function () {
             // Deploy a new ERC721 token
             let TokenContractFactory = await ethers.getContractFactory("Foreign721");
-            other721 = await TokenContractFactory.connect(rando).deploy({ gasLimit });
+            other721 = await TokenContractFactory.connect(rando).deploy();
 
             // Mint enough tokens to cover the offer
             await other721.connect(operator).mint("0", "2");
@@ -2338,9 +2333,7 @@ describe("IBosonExchangeHandler", function () {
           it("should raise a dispute when buyer account is a contract", async function () {
             // Deploy contract to test redeem called by another contract
             let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
-            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address, {
-              gasLimit,
-            });
+            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address);
             await testProtocolFunctions.deployed();
 
             await testProtocolFunctions.commit(offerId, { value: price });
@@ -2519,9 +2512,7 @@ describe("IBosonExchangeHandler", function () {
           it("should raise a dispute when buyer account is a contract", async function () {
             // Deploy contract to test redeem called by another contract
             let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
-            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address, {
-              gasLimit,
-            });
+            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address);
             await testProtocolFunctions.deployed();
 
             await testProtocolFunctions.commit(offerId, { value: price });
@@ -2706,7 +2697,7 @@ describe("IBosonExchangeHandler", function () {
           beforeEach(async function () {
             // Deploy a new ERC721 token
             let TokenContractFactory = await ethers.getContractFactory("Foreign721");
-            other721 = await TokenContractFactory.connect(rando).deploy({ gasLimit });
+            other721 = await TokenContractFactory.connect(rando).deploy();
 
             // Mint enough tokens to cover the offer
             await other721.connect(operator).mint("0", "2");
@@ -2870,9 +2861,7 @@ describe("IBosonExchangeHandler", function () {
 
             // Deploy contract to test redeem called by another contract
             let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
-            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address, {
-              gasLimit,
-            });
+            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address);
             await testProtocolFunctions.deployed();
 
             await testProtocolFunctions.commit(offerId, { value: price });

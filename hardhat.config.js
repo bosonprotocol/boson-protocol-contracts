@@ -49,34 +49,28 @@ module.exports = {
   networks: {
     hardhat: {
       accounts: { mnemonic: environments.hardhat.mnemonic },
-      gas: environments.hardhat.gasLimit,
     },
     localhost: {
       url: environments.localhost.txNode || "http://127.0.0.1:8545",
       accounts: environments.hardhat.mnemonic
         ? { mnemonic: environments.hardhat.mnemonic }
         : environments.localhost.keys,
-      gas: environments.localhost.gasLimit,
     },
     test: {
       url: environments.test.txNode,
       accounts: environments.test.keys,
-      gas: environments.test.gasLimit,
     },
     mainnet: {
       url: environments.mainnet.txNode,
       accounts: environments.mainnet.keys,
-      gas: environments.mainnet.gasLimit,
     },
     mumbai: {
       url: environments.mumbai.txNode,
       accounts: environments.mumbai.keys,
-      gas: environments.mumbai.gasLimit,
     },
     polygon: {
       url: environments.polygon.txNode,
       accounts: environments.polygon.keys,
-      gas: environments.polygon.gasLimit,
     },
   },
   etherscan: {
