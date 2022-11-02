@@ -20,11 +20,9 @@ const {
   mockCondition,
   accountId,
 } = require("../util/mock");
-const { applyPercentage } = require("../util/utils.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const { deploySnapshotGateExample } = require("../../scripts/example/SnapshotGate/deploy-snapshot-gate");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { gasLimit } = require("../../environments");
 
 /**
  *  Test the SnapshotGate example contract
@@ -49,9 +47,9 @@ describe("SnapshotGate", function () {
     holder3,
     holder4,
     holder5;
-  let protocolDiamond, accessController, accountHandler, offerHandler, fundsHandler, groupHandler;
+  let protocolDiamond, accessController, accountHandler, offerHandler, groupHandler;
   let offerId, seller, disputeResolverId;
-  let price, sellerPool;
+  let price, foreign20;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let disputeResolver, disputeResolverFees;
   let snapshotGate;
@@ -59,7 +57,7 @@ describe("SnapshotGate", function () {
   let voucherInitValues;
   let emptyAuthToken;
   let agentId;
-  let offer, offerFees, offers;
+  let offer, offers;
   let offerDates, offerDurations;
   let snapshot, snapshotTokenSupplies, snapshotTokenCount, holders, holderByAddress;
 
@@ -173,14 +171,14 @@ describe("SnapshotGate", function () {
     // Cast Diamond to IBosonOfferHandler
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
 
-    // Cast Diamond to IBosonFundsHandler
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-
     // Cast Diamond to IGroupHandler
     groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
 
     // Deploy the SnapshotGate example
     [snapshotGate] = await deploySnapshotGateExample(["SnapshotGateToken", "SGT", protocolDiamond.address]);
+
+    // Deploy the mock tokens
+    [foreign20] = await deployMockTokens(["Foreign20"]);
 
   });
 
@@ -218,7 +216,10 @@ describe("SnapshotGate", function () {
       expect(disputeResolver.isValid()).is.true;
 
       // Create DisputeResolverFee array so offer creation will succeed
-      disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+      disputeResolverFees = [
+        new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+        new DisputeResolverFee(foreign20.address, "Foriegn20", "0"),
+      ];
 
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
@@ -252,6 +253,12 @@ describe("SnapshotGate", function () {
 
       // Each holder will have a random amount of each token
       for (let holder of holders) {
+
+        // Mint a bunch of exchange tokens for the holder and approve the gate to transfer them
+        const amountToMint = "15000000000000000000";
+        await foreign20.connect(holder).mint(holder.address, amountToMint);
+        await foreign20.connect(holder).approve(snapshotGate.address, amountToMint);
+
         // Create snapshot entry for holder / token
         for (let i = 1; i <= snapshotTokenCount; i++) {
           // The token id
@@ -280,13 +287,10 @@ describe("SnapshotGate", function () {
       // Make 2 passes, creating native token offers and then ERC20 offers
       for (let j = 0; j< 2; j++) {
         for (let i = 1; i <= snapshotTokenCount; i++) {
-          // Beginning of the token range
-          const start = Number((snapshotTokenCount * j)+i);
-
           // The token id
-          const tokenId = start.toString();
-          offerId = i.toString();
-          groupId = i.toString();
+          const tokenId = i.toString(); // first and second batches use same token ids
+          offerId = Number((snapshotTokenCount * j)+i).toString(); // offer id from first or second batch
+          groupId = offerId;
 
           // The supply of this token
           const tokenSupply = snapshotTokenSupplies[tokenId];
@@ -295,11 +299,15 @@ describe("SnapshotGate", function () {
           const mo = await mockOffer();
           ({ offerDates, offerDurations } = mo);
           offer = mo.offer;
-          offerFees = mo.offerFees;
+          price = offer.price;
 
-          // TODO set price in native token if on second pass
+          // Set price in ERC-20 token if on second pass
+          if (j>0){
+            offer.exchangeToken = foreign20.address;
+            offer.buyerCancelPenalty = "0";
+          }
 
-          offerFees.protocolFee = applyPercentage(offer.price, protocolFeePercentage);
+          offer.sellerDeposit = "0";
           offer.quantityAvailable = tokenSupply;
           disputeResolverId = mo.disputeResolverId;
 
@@ -311,15 +319,6 @@ describe("SnapshotGate", function () {
           // Create the offer
           await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
           offers.push(offer);
-
-          // Set used variables
-          price = offer.price;
-          sellerPool = ethers.utils.parseUnits("15", "ether").toString();
-
-          // Deposit seller funds so the commit will succeed
-          await fundsHandler
-            .connect(operator)
-            .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
 
           // Required constructor params for Group
           offerIds = [offerId];
@@ -422,7 +421,7 @@ describe("SnapshotGate", function () {
     });
 
     context("👉 commitToGatedOffer()", async function () {
-      it("should emit a SnapshotTokenCommitted event", async function () {
+      it("should emit a SnapshotTokenCommitted event when price is in native token", async function () {
         // Upload the snapshot
         await snapshotGate.connect(deployer).appendToSnapshot(snapshot);
 
@@ -432,8 +431,8 @@ describe("SnapshotGate", function () {
         // Grab an entry from the snapshot
         let entry = snapshot[Math.floor(snapshot.length / 4)];
 
-        // Commit to the gated offer
-        offerId = entry.tokenId; // Offer, token, and group ids are aligned for the sake of sanity,
+        // Offer, token, and group ids are aligned for the sake of sanity
+        offerId = entry.tokenId;
 
         // Get the account to make the call with
         let holder = holderByAddress[entry.owner];
@@ -446,6 +445,29 @@ describe("SnapshotGate", function () {
           .withArgs(entry.owner, offerId, entry.tokenId);
       });
 
+      it("should emit a SnapshotTokenCommitted event when price is in ERC20 token", async function () {
+        // Upload the snapshot
+        await snapshotGate.connect(deployer).appendToSnapshot(snapshot);
+
+        // Freeze the snapshot
+        await snapshotGate.connect(deployer).freezeSnapshot();
+
+        // Grab an entry from the snapshot
+        let entry = snapshot[Math.floor(snapshot.length / 4)];
+
+        // ERC20 offers are in second batch
+        offerId = String(Number(entry.tokenId) + snapshotTokenCount);
+
+        // Get the account to make the call with
+        let holder = holderByAddress[entry.owner];
+
+        // Commit to the offer
+        await expect(
+          snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId)
+        ).to.emit(snapshotGate, "SnapshotTokenCommitted")
+          .withArgs(entry.owner, offerId, entry.tokenId);
+      });
+
       context("💔 Revert Reasons", async function () {
         it("snapshot is not frozen", async function () {
           // Upload the snapshot but don't freeze
@@ -454,12 +476,13 @@ describe("SnapshotGate", function () {
           // Grab an entry from the snapshot
           let entry = snapshot[Math.floor(snapshot.length / 4)];
 
-          // Commit to the gated offer
-          offerId = entry.tokenId; // Offer, token, and group ids are aligned for the sake of sanity,
+          // Offer, token, and group ids are aligned for the sake of sanity
+          offerId = entry.tokenId;
 
           // Get the account to make the call with
           let caller = holderByAddress[entry.owner];
 
+          // Commit to the offer
           await expect(
             snapshotGate.connect(caller).commitToGatedOffer(caller.address, offerId, entry.tokenId, { value: price })
           ).to.revertedWith("Snapshot is not frozen");
@@ -475,12 +498,13 @@ describe("SnapshotGate", function () {
           // Grab an entry from the snapshot
           let entry = snapshot[Math.floor(snapshot.length / 4)];
 
-          // Commit to the gated offer
-          offerId = entry.tokenId; // Offer, token, and group ids are aligned for the sake of sanity,
+          // Offer, token, and group ids are aligned for the sake of sanity
+          offerId = entry.tokenId;
 
           // Get an account to make the call with that does not have a balance in the snapshot
           let caller = deployer;
 
+          // Commit to the offer
           await expect(
             snapshotGate.connect(caller).commitToGatedOffer(caller.address, offerId, entry.tokenId, { value: price })
           ).to.revertedWith("Buyer held no balance of the given token id at time of snapshot");
@@ -496,8 +520,8 @@ describe("SnapshotGate", function () {
           // Grab an entry from the snapshot
           let entry = snapshot[Math.floor(snapshot.length / 4)];
 
-          // Commit to the gated offer
-          offerId = entry.tokenId; // Offer, token, and group ids are aligned for the sake of sanity,
+          // Offer, token, and group ids are aligned for the sake of sanity,
+          offerId = entry.tokenId;
 
           // Get the account to make the call with
           let holder = holderByAddress[entry.owner];
@@ -514,6 +538,33 @@ describe("SnapshotGate", function () {
             snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId, { value: price })
           ).to.revertedWith("Buyer's balance of the snapshot token id has been used");
         });
+
+        it("condition specifies a different tokenId from the one given", async function () {
+          // Upload the snapshot
+          await snapshotGate.connect(deployer).appendToSnapshot(snapshot);
+
+          // Freeze the snapshot
+          await snapshotGate.connect(deployer).freezeSnapshot();
+
+          // Grab first entry from the snapshot
+          let entry = snapshot[0];
+
+          // Grab second entry from the snapshot
+          let entry2 = snapshot[1];
+
+          // wrong offer id
+          offerId = entry2.tokenId;
+
+          // Get the account to make the call with
+          let holder = holderByAddress[entry.owner];
+
+          // Commit to the offer
+          await expect(
+            snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId, { value: price })
+          )
+            .to.revertedWith("Condition specifies a different tokenId from the one given");
+        });
+
       });
     });
 
@@ -534,7 +585,7 @@ describe("SnapshotGate", function () {
         }
       });
 
-      it("should return expected values after a commit", async function () {
+      it("should return expected values after a commit when price is in native token", async function () {
         // Upload the snapshot
         await snapshotGate.connect(deployer).appendToSnapshot(snapshot);
 
@@ -544,12 +595,15 @@ describe("SnapshotGate", function () {
         // Grab an entry from the snapshot
         let entry = snapshot[Math.floor(snapshot.length / 3)];
 
+        // Get the account to make the call with
+        let holder = holderByAddress[entry.owner];
+
         // Commit to the gated offer
         offerId = entry.tokenId; // Offer, token, and group ids are aligned for the sake of sanity,
-        await snapshotGate.connect(deployer).commitToGatedOffer(entry.owner, offerId, entry.tokenId, { value: price });
+        await snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId, { value: price });
 
         // Check that the committed snapshot token is now marked used
-        const response = await snapshotGate.connect(deployer).checkSnapshot(entry.tokenId, entry.owner);
+        const response = await snapshotGate.connect(rando).checkSnapshot(entry.tokenId, entry.owner);
 
         // Expect owned value to match snapshot value for holder
         expect(response.owned.toString()).to.equal(entry.amount);
@@ -557,6 +611,36 @@ describe("SnapshotGate", function () {
         // Expect used value to be one
         expect(response.used.toString()).to.equal("1");
       });
+
+      it("should return expected values after a commit when price is in native token", async function () {
+        // Upload the snapshot
+        await snapshotGate.connect(deployer).appendToSnapshot(snapshot);
+
+        // Freeze the snapshot
+        await snapshotGate.connect(deployer).freezeSnapshot();
+
+        // Grab an entry from the snapshot
+        let entry = snapshot[Math.floor(snapshot.length / 3)];
+
+        // ERC20 offers are in second batch
+        offerId = String(Number(entry.tokenId) + snapshotTokenCount);
+
+        // Get the account to make the call with
+        let holder = holderByAddress[entry.owner];
+
+        // Commit to the gated offer
+        await snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId);
+
+        // Check that the committed snapshot token is now marked used
+        const response = await snapshotGate.connect(rando).checkSnapshot(entry.tokenId, entry.owner);
+
+        // Expect owned value to match snapshot value for holder
+        expect(response.owned.toString()).to.equal(entry.amount);
+
+        // Expect used value to be one
+        expect(response.used.toString()).to.equal("1");
+      });
+
     });
 
     context("👉 ownerOf()", async function () {

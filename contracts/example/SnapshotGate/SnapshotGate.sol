@@ -37,7 +37,6 @@ import { ERC721 } from "./support/ERC721.sol";
  *     - has maxCommits setting that matches the supply of its corresponding snapshot token
  */
 contract SnapshotGate is BosonTypes, Ownable, ERC721 {
-
     // Event emitted when the snapshot is appended to
     event SnapshotAppended(Holder[] holders);
 
@@ -218,21 +217,17 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
 
         // Determine if offer is priced in native token or ERC20
         if (offer.exchangeToken == address(0)) {
-
             // Make sure the payment amount is correct
             require(msg.value == offer.price, "Insufficient payment");
 
             // Commit to the offer, passing the message value (native)
             IBosonExchangeHandler(protocol).commitToOffer{ value: msg.value }(_buyer, _offerId);
-
         } else {
-
             // Transfer the price into custody of this contract and approve protocol to transfer
             transferFundsToGateAndApproveProtocol(offer.exchangeToken, offer.price);
 
             // Commit to the offer on behalf of the buyer
             IBosonExchangeHandler(protocol).commitToOffer(_buyer, _offerId);
-
         }
 
         // Remove the transaction details
@@ -264,12 +259,14 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
             uint256 tokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
 
             // Make sure that expected amount of tokens was transferred
-            require(tokenBalanceAfter - tokenBalanceBefore == _amount, "Insufficient value received on transfer to gate");
+            require(
+                tokenBalanceAfter - tokenBalanceBefore == _amount,
+                "Insufficient value received on transfer to gate"
+            );
 
             // Approve the protocol to transfer this _amount
             bool success = IERC20(_tokenAddress).approve(protocol, _amount);
             require(success, "Unable to approve protocol to transfer");
-
         }
     }
 
@@ -315,7 +312,7 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
         address owner;
         if (txStatus == TransactionStatus.InTransaction) {
             // Make sure the token id being queried is correct
-            require(tokenId == txDetails.tokenId);
+            require(tokenId == txDetails.tokenId, "Condition specifies a different tokenId from the one given");
             // Report owner as stored buyer if in transaction,
             owner = txDetails.buyer;
         } else {
