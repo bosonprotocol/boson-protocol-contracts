@@ -23,14 +23,25 @@ import "./support/ERC721.sol";
  * - Once a snapshot has been uploaded via one or more calls to appendToSnapshot,
  *   this contract will hold tokens it self-minted, which will be used to gate the offer.
  * - Create Offers to be gated on the protocol
+ *   - the qty available for an offer should match the supply of its corresponding snapshot token
  * - Create Groups on the protocol which
- *   - wrap the offer or offers they are gating
+ *   - wrap their corresponding offers
  *   - have a condition that
  *     - expects a specific token (ERC721)
  *     - uses this contract address as the token address
- *     - uses the appropriate snapshot token id for the gated offer(s)
+ *     - uses the appropriate snapshot token id for the gated offer
+ *     - has maxCommits setting that matches the supply of its corresponding snapshot token
  */
 contract SnapshotGate is Ownable, ERC721 {
+    // Event emitted when the snapshot is appended to
+    event SnapshotAppended(Holder[] holders);
+
+    // Event emitted when the snapshot is frozen
+    event SnapshotFrozen();
+
+    // Event emitted when a buyer commits via this gate
+    event SnapshotTokenCommitted(address indexed buyer, uint256 indexed offerId, uint256 indexed tokenId);
+
     // Token holders and their amounts
     struct Holder {
         uint256 tokenId;
@@ -44,6 +55,7 @@ contract SnapshotGate is Ownable, ERC721 {
         InTransaction
     }
 
+    // Details of in-flight transaction
     struct TransactionDetails {
         address buyer;
         uint256 tokenId;
@@ -58,9 +70,6 @@ contract SnapshotGate is Ownable, ERC721 {
 
     // Address of the Boson Protocol, cast to the exchange handler interface
     IBosonExchangeHandler protocol;
-
-    // The uri template that will be returned for all tokenURIs
-    string tokenUri;
 
     // Is the snapshot frozen
     bool snapshotFrozen;
@@ -84,19 +93,10 @@ contract SnapshotGate is Ownable, ERC721 {
     constructor(
         string memory _name,
         string memory _symbol,
-        string memory _tokenUri,
         address _protocol
     ) ERC721(_name, _symbol) {
         protocol = IBosonExchangeHandler(_protocol);
-        tokenUri = _tokenUri;
         txStatus = TransactionStatus.NotInTransaction;
-    }
-
-    /**
-     *  @dev See {IERC721Metadata-tokenURI}.
-     */
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-        return tokenUri;
     }
 
     /**
@@ -126,6 +126,9 @@ contract SnapshotGate is Ownable, ERC721 {
                 _mint(address(this), tokenId);
             }
         }
+
+        // Notify watchers of state change
+        emit SnapshotAppended(_holders);
     }
 
     /**
@@ -136,19 +139,43 @@ contract SnapshotGate is Ownable, ERC721 {
      * - Snapshot is already frozen
      */
     function freezeSnapshot() external onlyOwner {
+        // Make sure snapshot isn't frozen
         require(!snapshotFrozen, "Snapshot already frozen");
+
+        // Freeze
         snapshotFrozen = true;
+
+        // Notify watchers of state change
+        emit SnapshotFrozen();
     }
 
     /**
-     * @notice Commit to a gated offer
+     * @notice Commit to a gated offer on the Boson Protocol
      *
-     * Accept payment and use it to commit to the offer on behalf of the buyer,
-     * first checking that the buyer is in the snapshot and hasn't used all their commits
+     * Commit to the specified offer on behalf of the buyer,
+     * first checking that the buyer is in the snapshot and
+     * hasn't already used all their available commits.
+     *
+     * Payment must be arranged it the token specified by the
+     * given offer.
+     *
+     * If price is set in the native token, e.g., MATIC on
+     * Polygon, it should be sent to this method in msg.value.
+     *
+     * For all other tokens, advance approval should be done
+     * to allow the protocol to transfer the buyer's tokens to
+     * accept payment.
      *
      * Reverts if:
+     * - Snapshot is not frozen
      * - Buyer doesn't have a balance of the given token in the snapshot
      * - Buyer's balance of the given token in the snapshot has been used
+     * - The protocol reverts for any reason, including but not limited to:
+     *   - invalid offerId
+     *   - insufficient payment or transfer not approved
+     *   - offer condition does not specify this contract as conditional token
+     *   - token id supplied to this method is not the id in the offer condition
+     *   - sold out - offer qty available did not match total supply of snapshot token
      *
      * @param _buyer the buyer address
      * @param _offerId the id of the offer to commit to
@@ -159,6 +186,9 @@ contract SnapshotGate is Ownable, ERC721 {
         uint256 _offerId,
         uint256 _tokenId
     ) external payable statusCheck {
+        // Make sure snapshot is frozen
+        require(snapshotFrozen, "Snapshot is not frozen");
+
         // Find out how many tokens the buyer had at time of snapshot
         uint256 owned = snapshot[_tokenId][_buyer];
         require(owned > 0, "Buyer held no balance of the given token id at time of snapshot");
@@ -178,10 +208,18 @@ contract SnapshotGate is Ownable, ERC721 {
 
         // Remove the transaction details
         delete txDetails;
+
+        // Notify watchers of state change
+        emit SnapshotTokenCommitted(_buyer, _offerId, _tokenId);
     }
 
     /**
      * @notice Check the owned and used amounts for a given holder and snapshot token id
+     *
+     * @param _tokenId - the token id to inspect
+     * @param _holder - the holder address to check the balance of
+     * @return owned - the amount owned
+     * @return used - the amount used so far
      */
     function checkSnapshot(uint256 _tokenId, address _holder) external view returns (uint256 owned, uint256 used) {
         owned = snapshot[_tokenId][_holder];
@@ -189,11 +227,25 @@ contract SnapshotGate is Ownable, ERC721 {
     }
 
     /**
-     * @dev Overriding to report buyer as token owner while within a gate transaction
+     * @dev Token owner is conditional
+     *
+     * Ultimately, this contract will always remain the owner of any tokens minted.
+     *
+     * However, in the one narrow use-case that the protocol is calling midway through
+     * an in-flight commitToGated offer transaction, we want to report the buyer as
+     * the token owner.
+     *
+     * This is similar to a "flash loan" that is paid back at the end of the transaction.
+     * We have verified that the buyer has the right to commit to the offer, so we 'loan'
+     * them the token for the duration of the transaction, so that they are able to commit.
+     * Ownership reverts to this contract at the end of the transaction.
      *
      * Reverts if:
      * - tokenId does not exist
-     * - txStatus is InTransaction and the token id being queried does not match txDetails.tokenId
+     * - a commitToGatedOffer transaction is in-flight and the tokenId does not match txDetails.tokenId
+     *
+     * @param tokenId - the id of the token to check
+     * @return the address of the owner
      */
     function ownerOf(uint256 tokenId) public view virtual override returns (address) {
         // Make sure token exists
