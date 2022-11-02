@@ -609,7 +609,7 @@ describe("SnapshotGate", function () {
         expect(response.used.toString()).to.equal("1");
       });
 
-      it("should return expected values after a commit when price is in native token", async function () {
+      it("should return expected values after a commit when price is in ERC20 token", async function () {
         // Upload the snapshot
         await snapshotGate.connect(deployer).appendToSnapshot(snapshot);
 
