@@ -23,6 +23,8 @@ const {
 const { applyPercentage } = require("../util/utils.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const { deploySnapshotGateExample } = require("../../scripts/example/SnapshotGate/deploy-snapshot-gate");
+const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
+const { gasLimit } = require("../../environments");
 
 /**
  *  Test the SnapshotGate example contract
@@ -179,6 +181,7 @@ describe("SnapshotGate", function () {
 
     // Deploy the SnapshotGate example
     [snapshotGate] = await deploySnapshotGateExample(["SnapshotGateToken", "SGT", protocolDiamond.address]);
+
   });
 
   // All supported Exchange methods
@@ -273,63 +276,72 @@ describe("SnapshotGate", function () {
 
       offers = [];
       groups = [];
-      for (let i = 1; i <= snapshotTokenCount; i++) {
-        // The token id
-        const tokenId = i.toString();
-        offerId = i.toString();
-        groupId = i.toString();
 
-        // The supply of this token
-        const tokenSupply = snapshotTokenSupplies[tokenId];
+      // Make 2 passes, creating native token offers and then ERC20 offers
+      for (let j = 0; j< 2; j++) {
+        for (let i = 1; i <= snapshotTokenCount; i++) {
+          // Beginning of the token range
+          const start = Number((snapshotTokenCount * j)+i);
 
-        // Create the offer
-        const mo = await mockOffer();
-        ({ offerDates, offerDurations } = mo);
-        offer = mo.offer;
-        offerFees = mo.offerFees;
-        offerFees.protocolFee = applyPercentage(offer.price, protocolFeePercentage);
-        offer.quantityAvailable = tokenSupply;
-        disputeResolverId = mo.disputeResolverId;
+          // The token id
+          const tokenId = start.toString();
+          offerId = i.toString();
+          groupId = i.toString();
 
-        // Check if domains are valid
-        expect(offer.isValid()).is.true;
-        expect(offerDates.isValid()).is.true;
-        expect(offerDurations.isValid()).is.true;
+          // The supply of this token
+          const tokenSupply = snapshotTokenSupplies[tokenId];
 
-        // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-        offers.push(offer);
+          // Create the offer
+          const mo = await mockOffer();
+          ({ offerDates, offerDurations } = mo);
+          offer = mo.offer;
+          offerFees = mo.offerFees;
 
-        // Set used variables
-        price = offer.price;
-        sellerPool = ethers.utils.parseUnits("15", "ether").toString();
+          // TODO set price in native token if on second pass
 
-        // Deposit seller funds so the commit will succeed
-        await fundsHandler
-          .connect(operator)
-          .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+          offerFees.protocolFee = applyPercentage(offer.price, protocolFeePercentage);
+          offer.quantityAvailable = tokenSupply;
+          disputeResolverId = mo.disputeResolverId;
 
-        // Required constructor params for Group
-        offerIds = [offerId];
+          // Check if entities are valid
+          expect(offer.isValid()).is.true;
+          expect(offerDates.isValid()).is.true;
+          expect(offerDurations.isValid()).is.true;
 
-        // Create Condition
-        condition = mockCondition({
-          tokenAddress: snapshotGate.address,
-          threshold: "0",
-          maxCommits: tokenSupply,
-          tokenType: TokenType.NonFungibleToken,
-          tokenId: tokenId,
-          method: EvaluationMethod.SpecificToken,
-        });
-        expect(condition.isValid()).to.be.true;
+          // Create the offer
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          offers.push(offer);
 
-        // Create Group
-        group = new Group(groupId, seller.id, offerIds);
-        expect(group.isValid()).is.true;
-        await groupHandler.connect(operator).createGroup(group, condition);
-        groups.push(group);
+          // Set used variables
+          price = offer.price;
+          sellerPool = ethers.utils.parseUnits("15", "ether").toString();
+
+          // Deposit seller funds so the commit will succeed
+          await fundsHandler
+            .connect(operator)
+            .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+
+          // Required constructor params for Group
+          offerIds = [offerId];
+
+          // Create Condition
+          condition = mockCondition({
+            tokenAddress: snapshotGate.address,
+            threshold: "0",
+            maxCommits: tokenSupply,
+            tokenType: TokenType.NonFungibleToken,
+            tokenId: tokenId,
+            method: EvaluationMethod.SpecificToken,
+          });
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(operator).createGroup(group, condition);
+          groups.push(group);
+        }
       }
-
       // End of gated offers creation
     });
 

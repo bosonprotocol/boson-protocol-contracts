@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "../../interfaces/handlers/IBosonExchangeHandler.sol";
-import "./support/ERC721.sol";
+import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
+import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { SafeERC20 } from "../../ext_libs/SafeERC20.sol";
+import { IERC20 } from "../../interfaces/IERC20.sol";
+import { ERC721 } from "./support/ERC721.sol";
 
 /**
  * @title SnapshotGate
@@ -32,7 +36,8 @@ import "./support/ERC721.sol";
  *     - uses the appropriate snapshot token id for the gated offer
  *     - has maxCommits setting that matches the supply of its corresponding snapshot token
  */
-contract SnapshotGate is Ownable, ERC721 {
+contract SnapshotGate is BosonTypes, Ownable, ERC721 {
+
     // Event emitted when the snapshot is appended to
     event SnapshotAppended(Holder[] holders);
 
@@ -68,8 +73,8 @@ contract SnapshotGate is Ownable, ERC721 {
     // This is the transaction details
     TransactionDetails private txDetails;
 
-    // Address of the Boson Protocol, cast to the exchange handler interface
-    IBosonExchangeHandler protocol;
+    // Address of the Boson Protocol
+    address protocol;
 
     // Is the snapshot frozen
     bool snapshotFrozen;
@@ -89,13 +94,16 @@ contract SnapshotGate is Ownable, ERC721 {
         txStatus = TransactionStatus.NotInTransaction;
     }
 
+    // Add safeTransferFrom to IERC20
+    using SafeERC20 for IERC20;
+
     // Constructor
     constructor(
         string memory _name,
         string memory _symbol,
         address _protocol
     ) ERC721(_name, _symbol) {
-        protocol = IBosonExchangeHandler(_protocol);
+        protocol = _protocol;
         txStatus = TransactionStatus.NotInTransaction;
     }
 
@@ -163,16 +171,16 @@ contract SnapshotGate is Ownable, ERC721 {
      * Polygon, it should be sent to this method in msg.value.
      *
      * For all other tokens, advance approval should be done
-     * to allow the protocol to transfer the buyer's tokens to
+     * to allow the protocol to transfer the caller's tokens to
      * accept payment.
      *
      * Reverts if:
      * - Snapshot is not frozen
      * - Buyer doesn't have a balance of the given token in the snapshot
      * - Buyer's balance of the given token in the snapshot has been used
+     * - insufficient payment or transfer not approved
      * - The protocol reverts for any reason, including but not limited to:
      *   - invalid offerId
-     *   - insufficient payment or transfer not approved
      *   - offer condition does not specify this contract as conditional token
      *   - token id supplied to this method is not the id in the offer condition
      *   - sold out - offer qty available did not match total supply of snapshot token
@@ -203,14 +211,66 @@ contract SnapshotGate is Ownable, ERC721 {
         // Track the usage
         committed[_tokenId][_buyer] = ++used;
 
-        // Commit to the offer on behalf of the buyer
-        protocol.commitToOffer{ value: msg.value }(_buyer, _offerId);
+        // Get the offer
+        bool exists;
+        Offer memory offer;
+        (exists, offer, , , , ) = IBosonOfferHandler(protocol).getOffer(_offerId);
+
+        // Determine if offer is priced in native token or ERC20
+        if (offer.exchangeToken == address(0)) {
+
+            // Make sure the payment amount is correct
+            require(msg.value == offer.price, "Insufficient payment");
+
+            // Commit to the offer, passing the message value (native)
+            IBosonExchangeHandler(protocol).commitToOffer{ value: msg.value }(_buyer, _offerId);
+
+        } else {
+
+            // Transfer the price into custody of this contract and approve protocol to transfer
+            transferFundsToGateAndApproveProtocol(offer.exchangeToken, offer.price);
+
+            // Commit to the offer on behalf of the buyer
+            IBosonExchangeHandler(protocol).commitToOffer(_buyer, _offerId);
+
+        }
 
         // Remove the transaction details
         delete txDetails;
 
         // Notify watchers of state change
         emit SnapshotTokenCommitted(_buyer, _offerId, _tokenId);
+    }
+
+    /**
+     * @dev Prepare for payment in ERC20 before commit
+     *
+     * Step 1 - transfer funds into custody of this gate contract, verifying that transfer occurred
+     * Step 2 - approve protocol to transfer those tokens from this contract's custody
+     *
+     * Reverts if
+     * - full amount is not transferred to the gate
+     * - approval of protocol to transfer amount from gate fails
+     */
+    function transferFundsToGateAndApproveProtocol(address _tokenAddress, uint256 _amount) internal {
+        if (_amount > 0) {
+            // Balance before the transfer
+            uint256 tokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
+
+            // Transfer ERC20 tokens from the caller
+            IERC20(_tokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
+
+            // Balance after the transfer
+            uint256 tokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
+
+            // Make sure that expected amount of tokens was transferred
+            require(tokenBalanceAfter - tokenBalanceBefore == _amount, "Insufficient value received on transfer to gate");
+
+            // Approve the protocol to transfer this _amount
+            bool success = IERC20(_tokenAddress).approve(protocol, _amount);
+            require(success, "Unable to approve protocol to transfer");
+
+        }
     }
 
     /**
@@ -252,7 +312,7 @@ contract SnapshotGate is Ownable, ERC721 {
         require(_exists(tokenId), "ERC721: invalid token ID");
 
         // Determine who to report as the owner
-        address owner = super.ownerOf(tokenId);
+        address owner;
         if (txStatus == TransactionStatus.InTransaction) {
             // Make sure the token id being queried is correct
             require(tokenId == txDetails.tokenId);
