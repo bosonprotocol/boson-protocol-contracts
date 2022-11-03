@@ -172,7 +172,7 @@ describe("ProtocolDiamond", async function () {
       });
     });
 
-    context.only("👉 facetAddresses()", async () => {
+    context("👉 facetAddresses()", async () => {
       it("should return three facet addresses", async () => {
         // Make sure the count is correct
         assert.equal(addresses.length, 3);
