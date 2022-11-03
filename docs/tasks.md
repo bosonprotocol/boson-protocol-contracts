@@ -41,6 +41,17 @@ Deploy suite deploys protocol diamond, all facets, client and beacon, and initia
 - **Ethereum Mainnet**. This deploys the built contracts to Ethereum Mainnet.
 ```npm run deploy-suite:ethereum:mainnet```
 
+### Verify suite
+After the protocol contracts are deployed, they should be verified on a block explorer. Verification provides a checkmark in the block explorer and makes the contract source code viewable in the block explorer. We have provided different npm scripts to verify the deployed protocol contracts on different environments. The scripts read a .json file containing contract addresses, which is produced by the deployment scripts.
+
+- **Polygon Mumbai**. These scripts verify the deployed contracts on Polygon Mumbai. The Boson Protocol team uses separate sets of contracts on Polygon Mumbai for the test and staging environments.  
+```npm run verify-suite:polygon:mumbai-test```  
+```npm run verify-suite:polygon:mumbai-staging```
+- **Polygon Mainnet**. This verifies the deployed contracts on Polygon Mainnet.  
+```npm run verify-suite:polygon:mainnet```
+- **Ethereum Mainnet**. This verifies the deployed contracts on Ethereum Mainnet.  
+```npm run verify-suite:ethereum:mainnet```
+
 ### Upgrade facet
 Upgrade existing facets, add new facets or remove existing facets. We provide different npm scripts for different use cases. A script for Hardhat network does not exist. Since contracts are discarded after the deployment, they cannot be upgraded.
 
