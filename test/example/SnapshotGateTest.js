@@ -23,6 +23,7 @@ const {
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const { deploySnapshotGateExample } = require("../../scripts/example/SnapshotGate/deploy-snapshot-gate");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
+const { getEvent } = require("../util/utils");
 
 /**
  *  Test the SnapshotGate example contract
@@ -32,6 +33,7 @@ describe("SnapshotGate", function () {
   let deployer,
     pauser,
     operator,
+    operator2,
     admin,
     clerk,
     treasury,
@@ -48,7 +50,7 @@ describe("SnapshotGate", function () {
     holder4,
     holder5;
   let protocolDiamond, accessController, accountHandler, offerHandler, groupHandler;
-  let offerId, seller, disputeResolverId;
+  let offerId, seller, seller2, disputeResolverId;
   let price, foreign20;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let disputeResolver, disputeResolverFees;
@@ -56,8 +58,8 @@ describe("SnapshotGate", function () {
   let groupId, offerIds, condition, group, groups;
   let voucherInitValues;
   let emptyAuthToken;
-  let agentId;
-  let offer, offers;
+  let sellerId, agentId;
+  let offer, offers, otherSellerOfferId;
   let offerDates, offerDurations;
   let snapshot, snapshotTokenSupplies, snapshotTokenCount, holders, holderByAddress;
 
@@ -72,6 +74,7 @@ describe("SnapshotGate", function () {
       adminDR,
       treasuryDR,
       protocolTreasury,
+      operator2,
       bosonToken,
       holder1,
       holder2,
@@ -175,7 +178,8 @@ describe("SnapshotGate", function () {
     groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
 
     // Deploy the SnapshotGate example
-    [snapshotGate] = await deploySnapshotGateExample(["SnapshotGateToken", "SGT", protocolDiamond.address]);
+    sellerId = "1";
+    [snapshotGate] = await deploySnapshotGateExample(["SnapshotGateToken", "SGT", protocolDiamond.address, sellerId]);
 
     // Deploy the mock tokens
     [foreign20] = await deployMockTokens(["Foreign20"]);
@@ -193,6 +197,10 @@ describe("SnapshotGate", function () {
       seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
+      // Create a second seller
+      seller2 = mockSeller(operator2.address, operator2.address, operator2.address, operator2.address);
+      expect(seller2.isValid()).is.true;
+
       // AuthToken
       emptyAuthToken = mockAuthToken();
       expect(emptyAuthToken.isValid()).is.true;
@@ -203,6 +211,9 @@ describe("SnapshotGate", function () {
 
       // Create the seller
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+      // Create the second seller
+      await accountHandler.connect(operator2).createSeller(seller2, emptyAuthToken, voucherInitValues);
 
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
@@ -307,7 +318,7 @@ describe("SnapshotGate", function () {
 
           offer.sellerDeposit = "0";
           offer.quantityAvailable = tokenSupply;
-          disputeResolverId = mo.disputeResolverId;
+          disputeResolverId = disputeResolver.id;
 
           // Check if entities are valid
           expect(offer.isValid()).is.true;
@@ -342,6 +353,32 @@ describe("SnapshotGate", function () {
         }
       }
       // End of gated offers creation
+
+      // Create second seller offer
+      const mo = await mockOffer();
+      ({ offerDates, offerDurations } = mo);
+      offer = mo.offer;
+      offer.sellerId = "2"; // second seller
+      offer.price = "0";
+      offer.sellerDeposit = "0";
+      offer.quantityAvailable = "5";
+      offer.buyerCancelPenalty = "0";
+      disputeResolverId = "0";
+
+      // Check if entities are valid
+      expect(offer.isValid()).is.true;
+      expect(offerDates.isValid()).is.true;
+      expect(offerDurations.isValid()).is.true;
+
+      // Create the offer
+      let tx = await offerHandler
+        .connect(operator2)
+        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+      offers.push(offer);
+
+      const txReceipt = await tx.wait();
+      const event = getEvent(txReceipt, offerHandler, "OfferCreated");
+      otherSellerOfferId = event.offerId;
     });
 
     afterEach(async function () {
@@ -561,6 +598,30 @@ describe("SnapshotGate", function () {
           await expect(
             snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId, { value: price })
           ).to.revertedWith("Condition specifies a different tokenId from the one given");
+        });
+
+        it("offer is from another seller", async function () {
+          // Upload the snapshot but don't freeze
+          await snapshotGate.connect(deployer).appendToSnapshot(snapshot);
+
+          // Freeze the snapshot
+          await snapshotGate.connect(deployer).freezeSnapshot();
+
+          // Grab an entry from the snapshot
+          let entry = snapshot[Math.floor(snapshot.length / 4)];
+
+          // Offer, token, and group ids are aligned for the sake of sanity
+          offerId = entry.tokenId;
+
+          // Get the account to make the call with
+          let caller = holderByAddress[entry.owner];
+
+          // Commit to the offer
+          await expect(
+            snapshotGate
+              .connect(caller)
+              .commitToGatedOffer(caller.address, otherSellerOfferId, entry.tokenId, { value: price })
+          ).to.revertedWith("Offer is from another seller");
         });
       });
     });

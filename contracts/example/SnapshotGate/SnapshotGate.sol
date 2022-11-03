@@ -75,6 +75,9 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
     // Address of the Boson Protocol
     address protocol;
 
+    // Id of the seller operating the snapshot
+    uint256 sellerId;
+
     // Is the snapshot frozen
     bool snapshotFrozen;
 
@@ -100,9 +103,11 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
     constructor(
         string memory _name,
         string memory _symbol,
-        address _protocol
+        address _protocol,
+        uint256 _sellerId
     ) ERC721(_name, _symbol) {
         protocol = _protocol;
+        sellerId = _sellerId;
         txStatus = TransactionStatus.NotInTransaction;
     }
 
@@ -178,6 +183,7 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
      * - Buyer doesn't have a balance of the given token in the snapshot
      * - Buyer's balance of the given token in the snapshot has been used
      * - insufficient payment or transfer not approved
+     * - offer is from another seller
      * - The protocol reverts for any reason, including but not limited to:
      *   - invalid offerId
      *   - offer condition does not specify this contract as conditional token
@@ -214,6 +220,9 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
         bool exists;
         Offer memory offer;
         (exists, offer, , , , ) = IBosonOfferHandler(protocol).getOffer(_offerId);
+
+        // Make sure the seller id matches
+        require(offer.sellerId == sellerId, "Offer is from another seller");
 
         // Determine if offer is priced in native token or ERC20
         if (offer.exchangeToken == address(0)) {
