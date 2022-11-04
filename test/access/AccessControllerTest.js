@@ -304,7 +304,7 @@ describe("AccessController", function () {
     });
 
     it("Should not emit 'RoleRevoked' event if revoking a role that was not granted", async function () {
-      // Renounce Role, should not emit the event
+      // Revoke Role, should not emit the event
       await expect(accessController.connect(admin).revokeRole(Role.ADMIN, rando.address)).to.not.emit(
         accessController,
         "RoleRevoked"
@@ -452,7 +452,7 @@ describe("AccessController", function () {
     });
 
     it("Should revert if caller tries to grantRole but doesn't have ADMIN role", async function () {
-      // Renounce Role, expecting revert
+      // Grant Role, expecting revert
       await expect(accessController.connect(rando).grantRole(Role.ADMIN, rando.address)).to.be.revertedWith(
         `AccessControl: account ${rando.address.toLowerCase()} is missing role ${Role.ADMIN}`
       );

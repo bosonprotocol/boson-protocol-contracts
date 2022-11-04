@@ -2454,7 +2454,7 @@ describe("DisputeResolverHandler", function () {
           );
       });
 
-      it("Should not emit 'DisputeResolverUpdateApplied' event if caller doesn't especify any field", async function () {
+      it("Should not emit 'DisputeResolverUpdateApplied' event if caller doesn't specify any field", async function () {
         disputeResolver.operator = other1.address;
         await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
 
@@ -2464,7 +2464,7 @@ describe("DisputeResolverHandler", function () {
         );
       });
 
-      it("Should not emit 'DisputeResolverUpdateApplied'event if there is no pending update for especified field", async function () {
+      it("Should not emit 'DisputeResolverUpdateApplied'event if there is no pending update for specified field", async function () {
         disputeResolver.operator = other1.address;
         await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
 

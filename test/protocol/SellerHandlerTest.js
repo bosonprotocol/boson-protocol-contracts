@@ -2199,7 +2199,7 @@ describe("SellerHandler", function () {
 
         it("addresses are the zero address", async function () {
           seller.operator = ethers.constants.AddressZero;
-          seller.admin = ethers.constants.AddressZero;
+          seller.treasury = ethers.constants.AddressZero;
           seller.clerk = ethers.constants.AddressZero;
 
           // Attempt to update a seller, expecting revert
@@ -2631,7 +2631,7 @@ describe("SellerHandler", function () {
           );
       });
 
-      it("Should not emit 'SellerUpdateApplied' event if caller doesn't especify any field", async function () {
+      it("Should not emit 'SellerUpdateApplied' event if caller doesn't specify any field", async function () {
         seller.operator = other1.address;
         await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
@@ -2641,7 +2641,7 @@ describe("SellerHandler", function () {
         );
       });
 
-      it("Should not emit 'SellerUpdateApplied'event if there is no pending update for especified field", async function () {
+      it("Should not emit 'SellerUpdateApplied'event if there is no pending update for specified field", async function () {
         seller.operator = other1.address;
         await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
