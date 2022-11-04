@@ -40,7 +40,7 @@ describe("SellerHandler", function () {
     authTokenOwner,
     protocolTreasury,
     bosonToken;
-  let protocolDiamond, accessController, accountHandler, exchangeHandler, configHandler, pauseHandler, gasLimit;
+  let protocolDiamond, accessController, accountHandler, exchangeHandler, configHandler, pauseHandler;
   let seller,
     sellerStruct,
     seller2,
@@ -102,7 +102,7 @@ describe("SellerHandler", function () {
     );
 
     // Deploy mock ERC721 tokens
-    [mockAuthERC721Contract, mockAuthERC721Contract2] = await deployMockTokens(gasLimit, ["Foreign721", "Foreign721"]);
+    [mockAuthERC721Contract, mockAuthERC721Contract2] = await deployMockTokens(["Foreign721", "Foreign721"]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];

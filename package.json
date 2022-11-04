@@ -1,6 +1,6 @@
 {
   "name": "@bosonprotocol/boson-protocol-contracts",
-  "version": "2.1.0-rc.1",
+  "version": "2.1.0",
   "description": "Boson Protocol core exchange mechanism",
   "author": "Boson Protocol Maintainers",
   "license": "GPL-3.0-or-later",
@@ -57,7 +57,7 @@
     "manage-roles:test": "npx hardhat --network test run scripts/manage-roles.js >> logs/test.manage.roles.txt",
     "natspec-interface-id": "npx hardhat compile && node scripts/util/natspec-interfaceid.js",
     "natspec-interface-id:fix": "npx hardhat compile && node scripts/util/natspec-interfaceid.js --fix",
-    "estimate-limits": "npx hardhat estimate-limits"
+    "estimate-limits": "npx hardhat clean && npx hardhat compile && npx hardhat estimate-limits"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.1",

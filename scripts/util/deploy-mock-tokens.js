@@ -8,18 +8,18 @@ const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmat
 /**
  * Deploy mock tokens for unit tests
  *
- * @param gasLimit - gasLimit for transactions
+ * @param tokens- tokens to deploy
  *
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployMockTokens(gasLimit, tokens = ["BosonToken", "Foreign721", "Foreign1155", "FallbackError"]) {
+async function deployMockTokens(tokens = ["BosonToken", "Foreign721", "Foreign1155", "FallbackError"]) {
   const deployedTokens = [];
 
   // Deploy all the mock tokens
   while (tokens.length) {
     let token = tokens.shift();
     let TokenContractFactory = await ethers.getContractFactory(token);
-    const tokenContract = await TokenContractFactory.deploy({ gasLimit });
+    const tokenContract = await TokenContractFactory.deploy();
     await tokenContract.deployed();
     deployedTokens.push(tokenContract);
   }
@@ -28,23 +28,25 @@ async function deployMockTokens(gasLimit, tokens = ["BosonToken", "Foreign721", 
   return deployedTokens;
 }
 
+/**
+ * Deploy and mint mock auth tokens for unit tests
+ */
 async function deployAndMintMockNFTAuthTokens() {
   console.log("\n Deploying and Minting Mock Auth Tokens");
   console.log(`⛓  Network: ${hre.network.name}\n📅 ${new Date()}`);
 
-  const gasLimit = environments[network].gasLimit;
   let addresses = [];
   let tx1, tx2;
 
   //Deploy a mock NFT to represent the Lens Protocol profile NFT
   let lensTokenContractFactory = await ethers.getContractFactory("MockNFTAuth721");
-  const lensTokenContract = await lensTokenContractFactory.deploy({ gasLimit });
+  const lensTokenContract = await lensTokenContractFactory.deploy();
   await lensTokenContract.deployTransaction.wait(confirmations);
   console.log(`✅ Mock Lens NFT Token deployed to: ${lensTokenContract.address}`);
 
   //Deploy a mock NFT to represent the ENS NFT
   let ensTokenContractFactory = await ethers.getContractFactory("MockNFTAuth721");
-  const ensTokenContract = await ensTokenContractFactory.deploy({ gasLimit });
+  const ensTokenContract = await ensTokenContractFactory.deploy();
   await ensTokenContract.deployTransaction.wait(confirmations);
   console.log(`✅ Mock ENS NFT Token deployed to: ${ensTokenContract.address}`);
 

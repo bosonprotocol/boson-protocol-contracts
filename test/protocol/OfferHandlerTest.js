@@ -1,7 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
-const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Offer = require("../../scripts/domain/Offer");
@@ -147,7 +146,7 @@ describe("IBosonOfferHandler", function () {
     const [proxy] = proxies;
 
     // Deploy the boson token
-    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+    [bosonToken] = await deployMockTokens(["BosonToken"]);
 
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
@@ -1973,6 +1972,8 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("Creating too many offers", async function () {
+          const gasLimit = 10000000;
+
           // Try to create the more than 100 offers
           offers = new Array(101).fill(offer);
 
@@ -1980,7 +1981,7 @@ describe("IBosonOfferHandler", function () {
           await expect(
             offerHandler
               .connect(operator)
-              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds, { gasLimit })
           ).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
         });
 
