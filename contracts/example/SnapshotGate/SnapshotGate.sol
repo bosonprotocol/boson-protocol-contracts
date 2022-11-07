@@ -11,7 +11,7 @@ import { ERC721 } from "./support/ERC721.sol";
 
 /**
  * @title SnapshotGate
- * @notice Gate Boson Protocol offers with a snapshot of ERC1155 holders
+ * @notice Gates Boson Protocol offers with a snapshot of ERC1155 holders.
  *
  * Features:
  * - Maintains one snapshot, allowing batch append until frozen
@@ -27,7 +27,7 @@ import { ERC721 } from "./support/ERC721.sol";
  * - Once a snapshot has been uploaded via one or more calls to appendToSnapshot,
  *   this contract will hold tokens it self-minted, which will be used to gate the offer.
  * - Create Offers to be gated on the protocol
- *   - the qty available for an offer should match the supply of its corresponding snapshot token
+ *   - The qty available for an offer should match the supply of its corresponding snapshot token
  * - Create Groups on the protocol which
  *   - wrap their corresponding offers
  *   - have a condition that
@@ -38,13 +38,18 @@ import { ERC721 } from "./support/ERC721.sol";
  */
 contract SnapshotGate is BosonTypes, Ownable, ERC721 {
     // Event emitted when the snapshot is appended to
-    event SnapshotAppended(Holder[] holders);
+    event SnapshotAppended(Holder[] holders, address executedBy);
 
     // Event emitted when the snapshot is frozen
-    event SnapshotFrozen();
+    event SnapshotFrozen(address executedBy);
 
     // Event emitted when a buyer commits via this gate
-    event SnapshotTokenCommitted(address indexed buyer, uint256 indexed offerId, uint256 indexed tokenId);
+    event SnapshotTokenCommitted(
+        address indexed buyer,
+        uint256 indexed offerId,
+        uint256 indexed tokenId,
+        address executedBy
+    );
 
     // Token holders and their amounts
     struct Holder {
@@ -73,21 +78,21 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
     TransactionDetails private txDetails;
 
     // Address of the Boson Protocol
-    address protocol;
+    address public protocol;
 
     // Id of the seller operating the snapshot
-    uint256 sellerId;
+    uint256 public sellerId;
 
     // Is the snapshot frozen
-    bool snapshotFrozen;
+    bool public snapshotFrozen;
 
     // Track holders in snapshot
     // token id => owner => total owned
-    mapping(uint256 => mapping(address => uint256)) snapshot;
+    mapping(uint256 => mapping(address => uint256)) private snapshot;
 
     // Track committed tokens
     // token id => owner => total committed
-    mapping(uint256 => mapping(address => uint256)) committed;
+    mapping(uint256 => mapping(address => uint256)) private committed;
 
     // Modifier to check whether a gate transaction is in progress
     modifier statusCheck() {
@@ -112,7 +117,9 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
     }
 
     /**
-     * Append a batch of holders to the snapshot
+     * @notice Appends a batch of holders to the snapshot.
+     *
+     * Emits a SnapshotAppended event
      *
      * Reverts if:
      * - Caller is not contract owner
@@ -120,7 +127,7 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
      *
      * @param _holders an array of Holder structs
      */
-    function appendToSnapshot(Holder[] memory _holders) public onlyOwner {
+    function appendToSnapshot(Holder[] calldata _holders) public onlyOwner {
         require(!snapshotFrozen, "Cannot append to frozen snapshot");
         uint256 entriesLength = _holders.length;
 
@@ -140,11 +147,11 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
         }
 
         // Notify watchers of state change
-        emit SnapshotAppended(_holders);
+        emit SnapshotAppended(_holders, msg.sender);
     }
 
     /**
-     * @notice Freezes the snapshot so that no more holders can be appended
+     * @notice Freezes the snapshot so that no more holders can be appended.
      *
      * Reverts if:
      * - Caller is not contract owner
@@ -158,37 +165,37 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
         snapshotFrozen = true;
 
         // Notify watchers of state change
-        emit SnapshotFrozen();
+        emit SnapshotFrozen(msg.sender);
     }
 
     /**
-     * @notice Commit to a gated offer on the Boson Protocol
+     * @notice Commits to a gated offer on the Boson Protocol.
      *
      * Commit to the specified offer on behalf of the buyer,
      * first checking that the buyer is in the snapshot and
      * hasn't already used all their available commits.
      *
-     * Payment must be arranged it the token specified by the
+     * Payment must be arranged in the token specified by the
      * given offer.
      *
      * If price is set in the native token, e.g., MATIC on
      * Polygon, it should be sent to this method in msg.value.
      *
      * For all other tokens, advance approval should be done
-     * to allow the protocol to transfer the caller's tokens to
-     * accept payment.
+     * to allow this contract to transfer the caller's tokens
+     * up to the payment amount.
      *
      * Reverts if:
      * - Snapshot is not frozen
      * - Buyer doesn't have a balance of the given token in the snapshot
      * - Buyer's balance of the given token in the snapshot has been used
-     * - insufficient payment or transfer not approved
-     * - offer is from another seller
+     * - Incorrect payment amount or transfer not approved
+     * - Offer is from another seller
      * - The protocol reverts for any reason, including but not limited to:
-     *   - invalid offerId
-     *   - offer condition does not specify this contract as conditional token
-     *   - token id supplied to this method is not the id in the offer condition
-     *   - sold out - offer qty available did not match total supply of snapshot token
+     *   - Invalid offerId
+     *   - Offer condition does not specify this contract as conditional token
+     *   - Token id supplied to this method is not the id in the offer condition
+     *   - Sold out - offer qty available did not match total supply of snapshot token
      *
      * @param _buyer the buyer address
      * @param _offerId the id of the offer to commit to
@@ -221,13 +228,16 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
         Offer memory offer;
         (exists, offer, , , , ) = IBosonOfferHandler(protocol).getOffer(_offerId);
 
+        // Make sure the offer exists
+        require(exists, "Invalid offer id");
+
         // Make sure the seller id matches
         require(offer.sellerId == sellerId, "Offer is from another seller");
 
         // Determine if offer is priced in native token or ERC20
         if (offer.exchangeToken == address(0)) {
             // Make sure the payment amount is correct
-            require(msg.value == offer.price, "Insufficient payment");
+            require(msg.value == offer.price, "Incorrect payment amount");
 
             // Commit to the offer, passing the message value (native)
             IBosonExchangeHandler(protocol).commitToOffer{ value: msg.value }(_buyer, _offerId);
@@ -243,21 +253,27 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
         delete txDetails;
 
         // Notify watchers of state change
-        emit SnapshotTokenCommitted(_buyer, _offerId, _tokenId);
+        emit SnapshotTokenCommitted(_buyer, _offerId, _tokenId, msg.sender);
     }
 
     /**
-     * @dev Prepare for payment in ERC20 before commit
+     * @dev Prepares for payment in ERC20 before commit.
      *
-     * Step 1 - transfer funds into custody of this gate contract, verifying that transfer occurred
-     * Step 2 - approve protocol to transfer those tokens from this contract's custody
+     * N.B. Caller must have previously approved this contract to transfer the payment amount.
+     *
+     * Step 1 - Transfers funds into custody of this gate contract, verifying that transfer occurred
+     * Step 2 - Approves protocol to transfer those tokens from this contract's custody
      *
      * Reverts if
-     * - full amount is not transferred to the gate
-     * - approval of protocol to transfer amount from gate fails
+     * - Full amount is not transferred to the gate
+     * - Approval of protocol to transfer amount from gate fails
      */
     function transferFundsToGateAndApproveProtocol(address _tokenAddress, uint256 _amount) internal {
         if (_amount > 0) {
+            // Check the allowance
+            uint256 allowance = IERC20(_tokenAddress).allowance(msg.sender, address(this));
+            require(allowance >= _amount, "Insufficient approval for payment transfer");
+
             // Balance before the transfer
             uint256 tokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
 
@@ -268,10 +284,7 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
             uint256 tokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
 
             // Make sure that expected amount of tokens was transferred
-            require(
-                tokenBalanceAfter - tokenBalanceBefore == _amount,
-                "Insufficient value received on transfer to gate"
-            );
+            require(tokenBalanceAfter - tokenBalanceBefore == _amount, "Incorrect value received on transfer to gate");
 
             // Approve the protocol to transfer this _amount
             bool success = IERC20(_tokenAddress).approve(protocol, _amount);
@@ -280,7 +293,7 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
     }
 
     /**
-     * @notice Check the owned and used amounts for a given holder and snapshot token id
+     * @notice Checks the owned and used amounts for a given holder and snapshot token id.
      *
      * @param _tokenId - the token id to inspect
      * @param _holder - the holder address to check the balance of
@@ -293,7 +306,7 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
     }
 
     /**
-     * @dev Token owner is conditional
+     * @dev Returns the owner of the specified token.
      *
      * Ultimately, this contract will always remain the owner of any tokens minted.
      *
@@ -307,29 +320,20 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
      * Ownership reverts to this contract at the end of the transaction.
      *
      * Reverts if:
-     * - tokenId does not exist
-     * - a commitToGatedOffer transaction is in-flight and the tokenId does not match txDetails.tokenId
+     * - TokenId does not exist
+     * - A commitToGatedOffer transaction is in-flight and the tokenId does not match txDetails.tokenId
      *
      * @param tokenId - the id of the token to check
-     * @return the address of the owner
+     * @return owner - the address of the owner
      */
-    function ownerOf(uint256 tokenId) public view virtual override returns (address) {
-        // Make sure token exists
-        require(_exists(tokenId), "ERC721: invalid token ID");
-
-        // Determine who to report as the owner
-        address owner;
+    function ownerOf(uint256 tokenId) public view virtual override returns (address owner) {
+        // Report actual token owner (always this contract) unless transaction is in-flight
+        owner = super.ownerOf(tokenId);
         if (txStatus == TransactionStatus.InTransaction) {
             // Make sure the token id being queried is correct
             require(tokenId == txDetails.tokenId, "Condition specifies a different tokenId from the one given");
-            // Report owner as stored buyer if in transaction,
+            // Report owner as stored buyer if in transaction
             owner = txDetails.buyer;
-        } else {
-            // When not in transaction, return actual owner
-            // (which will always be this contract)
-            owner = super.ownerOf(tokenId);
         }
-
-        return owner;
     }
 }

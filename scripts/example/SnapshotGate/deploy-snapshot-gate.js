@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const environments = require("../../../environments");
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
+const { getFees } = require("../../util/utils");
 
 /**
  * Deploy the SnapshotGate example contract
@@ -19,26 +20,13 @@ const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmat
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deploySnapshotGateExample(snapshotGateArgs) {
-  // constructor args:
-  // string memory _name, string memory _symbol, string memory _tokenUri, address _protocol
-  //const contract = await SnapshotGate.deploy("SnapshotGateToken", "SGT", "", ethers.constants.AddressZero);
-
+async function deploySnapshotGateExample(snapshotGateArgs, maxPriorityFeePerGas) {
   // Deploy the SnapshotGate
   const SnapshotGate = await ethers.getContractFactory("SnapshotGate");
-  const snapshotGate = await SnapshotGate.deploy(...snapshotGateArgs);
+  const snapshotGate = await SnapshotGate.deploy(...snapshotGateArgs, await getFees(maxPriorityFeePerGas));
   await snapshotGate.deployTransaction.wait(confirmations);
 
   return [snapshotGate];
-}
-
-if (require.main === module) {
-  deploySnapshotGateExample()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    });
 }
 
 exports.deploySnapshotGateExample = deploySnapshotGateExample;

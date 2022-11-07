@@ -104,18 +104,11 @@ describe("SnapshotGate", function () {
       protocolDiamond,
       [
         "AccountHandlerFacet",
-        "AgentHandlerFacet",
         "SellerHandlerFacet",
-        "BuyerHandlerFacet",
         "DisputeResolverHandlerFacet",
         "ExchangeHandlerFacet",
         "OfferHandlerFacet",
-        "FundsHandlerFacet",
-        "DisputeHandlerFacet",
-        "TwinHandlerFacet",
-        "BundleHandlerFacet",
         "GroupHandlerFacet",
-        "PauseHandlerFacet",
       ],
       maxPriorityFeePerGas
     );
@@ -241,7 +234,7 @@ describe("SnapshotGate", function () {
       await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // Manufacture snapshot for upload
-      snapshot = []; // { holder : string; tokenId: string; amount: string }[]
+      snapshot = []; // { owner : string; tokenId: string; amount: string }[]
       snapshotTokenSupplies = {}; // map token ids to supplies
       snapshotTokenCount = 5; // create 5 snapshot token ids
       holders = [
@@ -359,11 +352,10 @@ describe("SnapshotGate", function () {
       ({ offerDates, offerDurations } = mo);
       offer = mo.offer;
       offer.sellerId = "2"; // second seller
-      offer.price = "0";
+      offer.price = price;
       offer.sellerDeposit = "0";
       offer.quantityAvailable = "5";
       offer.buyerCancelPenalty = "0";
-      disputeResolverId = "0";
 
       // Check if entities are valid
       expect(offer.isValid()).is.true;
@@ -391,7 +383,21 @@ describe("SnapshotGate", function () {
         // Batch of one
         const batch = snapshot.slice(0, 1);
 
-        await expect(snapshotGate.connect(deployer).appendToSnapshot(batch)).to.emit(snapshotGate, "SnapshotAppended");
+        // Append to snapshot
+        const tx = await snapshotGate.connect(deployer).appendToSnapshot(batch);
+        const txReceipt = await tx.wait();
+        const event = getEvent(txReceipt, snapshotGate, "SnapshotAppended");
+
+        // Check executedBy
+        expect(event.executedBy.toString()).to.equal(deployer.address.toString());
+
+        // Verify batch contents emitted match what was sent
+        for (let i = 0; i < batch.length; i++) {
+          let holder = event.holders[i];
+          expect(holder.owner.toString()).to.equal(batch[i].owner);
+          expect(holder.tokenId.toString()).to.equal(batch[i].tokenId);
+          expect(holder.amount.toString()).to.equal(batch[i].amount);
+        }
       });
 
       it("should allow multiple invocations", async function () {
@@ -400,9 +406,63 @@ describe("SnapshotGate", function () {
         const batch1 = snapshot.slice(0, batchSize);
         const batch2 = snapshot.slice(batchSize + 1);
 
-        await expect(snapshotGate.connect(deployer).appendToSnapshot(batch1)).to.emit(snapshotGate, "SnapshotAppended");
+        // Append first batch
+        let tx = await snapshotGate.connect(deployer).appendToSnapshot(batch1);
+        let txReceipt = await tx.wait();
+        let event = getEvent(txReceipt, snapshotGate, "SnapshotAppended");
 
-        await expect(snapshotGate.connect(deployer).appendToSnapshot(batch2)).to.emit(snapshotGate, "SnapshotAppended");
+        // Check executedBy
+        expect(event.executedBy.toString()).to.equal(deployer.address.toString());
+
+        // Verify batch contents emitted match what was sent
+        for (let i = 0; i < batch1.length; i++) {
+          let holder = event.holders[i];
+          expect(holder.owner.toString()).to.equal(batch1[i].owner);
+          expect(holder.tokenId.toString()).to.equal(batch1[i].tokenId);
+          expect(holder.amount.toString()).to.equal(batch1[i].amount);
+        }
+
+        // Append second batch
+        tx = await snapshotGate.connect(deployer).appendToSnapshot(batch2);
+        txReceipt = await tx.wait();
+        event = getEvent(txReceipt, snapshotGate, "SnapshotAppended");
+
+        // Check executedBy
+        expect(event.executedBy.toString()).to.equal(deployer.address.toString());
+
+        // Verify batch contents emitted match what was sent
+        for (let i = 0; i < batch2.length; i++) {
+          let holder = event.holders[i];
+          expect(holder.owner.toString()).to.equal(batch2[i].owner);
+          expect(holder.tokenId.toString()).to.equal(batch2[i].tokenId);
+          expect(holder.amount.toString()).to.equal(batch2[i].amount);
+        }
+      });
+
+      it("should create custodial tokens for each token in the snapshot", async function () {
+        // Append to snapshot
+        await snapshotGate.connect(deployer).appendToSnapshot(snapshot);
+
+        // Verify tokens were created
+        // Expect the owner of all the tokens to be the gate contract itself
+        for (let i = 1; i <= snapshotTokenCount; i++) {
+          const tokenId = i.toString();
+          const owner = await snapshotGate.ownerOf(tokenId);
+          expect(owner).to.equal(snapshotGate.address);
+        }
+      });
+
+      it("should store snapshot correctly", async function () {
+        // Append to snapshot
+        await snapshotGate.connect(deployer).appendToSnapshot(snapshot);
+
+        // Verify tokens were created
+        // Expect the owner of all the tokens to be the gate contract itself
+        for (let i = 1; i <= snapshotTokenCount; i++) {
+          const tokenId = i.toString();
+          const owner = await snapshotGate.ownerOf(tokenId);
+          expect(owner).to.equal(snapshotGate.address);
+        }
       });
 
       context("💔 Revert Reasons", async function () {
@@ -410,7 +470,7 @@ describe("SnapshotGate", function () {
           // Batch of one
           const batch = snapshot.slice(0, 1);
 
-          // Freeze the snapshot tho
+          // Freeze the snapsho
           await snapshotGate.connect(deployer).freezeSnapshot();
 
           // Attempt to append, expecting revert
@@ -423,7 +483,7 @@ describe("SnapshotGate", function () {
           // Batch of one
           const batch = snapshot.slice(0, 1);
 
-          // Freeze the snapshot tho
+          // Freeze the snapshot
           await snapshotGate.connect(deployer).freezeSnapshot();
 
           // Attempt to append from non-owner wallet, expecting revert
@@ -436,7 +496,18 @@ describe("SnapshotGate", function () {
 
     context("👉 freezeSnapshot()", async function () {
       it("should emit a SnapshotFrozen event", async function () {
-        await expect(snapshotGate.connect(deployer).freezeSnapshot()).to.emit(snapshotGate, "SnapshotFrozen");
+        await expect(snapshotGate.connect(deployer).freezeSnapshot())
+          .to.emit(snapshotGate, "SnapshotFrozen")
+          .withArgs(deployer.address);
+      });
+
+      it("should store true value for snapshotFrozen", async function () {
+        // Freeze the snapshot
+        await snapshotGate.connect(deployer).freezeSnapshot();
+
+        // Check the flag
+        let isFrozen = await snapshotGate.snapshotFrozen();
+        expect(isFrozen).to.be.true;
       });
 
       context("💔 Revert Reasons", async function () {
@@ -479,7 +550,7 @@ describe("SnapshotGate", function () {
           snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId, { value: price })
         )
           .to.emit(snapshotGate, "SnapshotTokenCommitted")
-          .withArgs(entry.owner, offerId, entry.tokenId);
+          .withArgs(entry.owner, offerId, entry.tokenId, holder.address);
       });
 
       it("should emit a SnapshotTokenCommitted event when price is in ERC20 token", async function () {
@@ -501,10 +572,32 @@ describe("SnapshotGate", function () {
         // Commit to the offer
         await expect(snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId))
           .to.emit(snapshotGate, "SnapshotTokenCommitted")
-          .withArgs(entry.owner, offerId, entry.tokenId);
+          .withArgs(entry.owner, offerId, entry.tokenId, holder.address);
       });
 
       context("💔 Revert Reasons", async function () {
+        it("offerId is invalid", async function () {
+          // Upload the snapshot
+          await snapshotGate.connect(deployer).appendToSnapshot(snapshot);
+
+          // Freeze the snapshot
+          await snapshotGate.connect(deployer).freezeSnapshot();
+
+          // Grab an entry from the snapshot
+          let entry = snapshot[Math.floor(snapshot.length / 4)];
+
+          // Invalid offer id
+          offerId = "999";
+
+          // Get the account to make the call with
+          let caller = holderByAddress[entry.owner];
+
+          // Commit to the offer
+          await expect(
+            snapshotGate.connect(caller).commitToGatedOffer(caller.address, offerId, entry.tokenId, { value: price })
+          ).to.revertedWith("Invalid offer id");
+        });
+
         it("snapshot is not frozen", async function () {
           // Upload the snapshot but don't freeze
           await snapshotGate.connect(deployer).appendToSnapshot(snapshot);
@@ -623,6 +716,56 @@ describe("SnapshotGate", function () {
               .commitToGatedOffer(caller.address, otherSellerOfferId, entry.tokenId, { value: price })
           ).to.revertedWith("Offer is from another seller");
         });
+
+        it("incorrect payment is sent when price is in native token", async function () {
+          // Upload the snapshot
+          await snapshotGate.connect(deployer).appendToSnapshot(snapshot);
+
+          // Freeze the snapshot
+          await snapshotGate.connect(deployer).freezeSnapshot();
+
+          // Grab an entry from the snapshot
+          let entry = snapshot[Math.floor(snapshot.length / 4)];
+
+          // Offer, token, and group ids are aligned for the sake of sanity
+          offerId = entry.tokenId;
+
+          // Get the account to make the call with
+          let holder = holderByAddress[entry.owner];
+
+          // Wrong price
+          const halfPrice = ethers.BigNumber.from(price).div(ethers.BigNumber.from(2)).toString();
+
+          // Commit to the offer
+          await expect(
+            snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId, { value: halfPrice })
+          ).to.revertedWith("Incorrect payment amount");
+        });
+
+        it("insufficient approval for payment transfer when price is in ERC20 token", async function () {
+          // Upload the snapshot
+          await snapshotGate.connect(deployer).appendToSnapshot(snapshot);
+
+          // Freeze the snapshot
+          await snapshotGate.connect(deployer).freezeSnapshot();
+
+          // Grab an entry from the snapshot
+          let entry = snapshot[Math.floor(snapshot.length / 4)];
+
+          // ERC20 offers are in second batch
+          offerId = String(Number(entry.tokenId) + snapshotTokenCount);
+
+          // Get the account to make the call with
+          let holder = holderByAddress[entry.owner];
+
+          // Zero out the gate's approval to transfer the holder's payment ERC20 tokens
+          await foreign20.connect(holder).approve(snapshotGate.address, "0");
+
+          // Commit to the offer
+          await expect(
+            snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId)
+          ).to.revertedWith("Insufficient approval for payment transfer");
+        });
       });
     });
 
@@ -711,6 +854,19 @@ describe("SnapshotGate", function () {
           const owner = await snapshotGate.connect(rando).ownerOf(tokenId);
           expect(owner).to.equal(snapshotGate.address);
         }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("tokenId is invalid", async function () {
+          // Upload the snapshot
+          await snapshotGate.connect(deployer).appendToSnapshot(snapshot);
+
+          // Invalid token id (not in snapshot)
+          const tokenId = "999";
+
+          // Check
+          await expect(snapshotGate.ownerOf(tokenId)).to.revertedWith("ERC721: invalid token ID");
+        });
       });
     });
   });
