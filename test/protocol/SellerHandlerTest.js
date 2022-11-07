@@ -2203,7 +2203,7 @@ describe("SellerHandler", function () {
           seller.clerk = ethers.constants.AddressZero;
 
           // Attempt to update a seller, expecting revert
-          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, authToken)).to.revertedWith(
+          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
         });
