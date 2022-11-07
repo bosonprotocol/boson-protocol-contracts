@@ -22,7 +22,7 @@
     }
  */
 exports.Facets = {
-  addOrUpgrade: ["SellerHandlerFacet"],
+  addOrUpgrade: [],
   remove: [],
   skipSelectors: {},
   initArgs: {},
