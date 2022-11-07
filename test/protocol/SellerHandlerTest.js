@@ -906,6 +906,17 @@ describe("SellerHandler", function () {
           ).to.revertedWith(RevertReasons.NOT_OPERATOR_AND_CLERK);
         });
 
+        it("addresses are the zero address", async function () {
+          seller.operator = ethers.constants.AddressZero;
+          seller.treasury = ethers.constants.AddressZero;
+          seller.clerk = ethers.constants.AddressZero;
+
+          // Attempt to update a seller, expecting revert
+          await expect(
+            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+        });
+
         it("Operator address is zero address", async function () {
           seller.operator = ethers.constants.AddressZero;
 
