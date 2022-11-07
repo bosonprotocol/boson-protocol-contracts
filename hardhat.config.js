@@ -44,6 +44,17 @@ task("verify-suite", "Verify contracts on the block explorer")
     await verifySuite(chainId, env, filter);
   });
 
+task(
+  "deploy-suite",
+  "Deploy suite deploys protocol diamond, all facets, client and beacon, and initializes protcol diamond"
+)
+  .addOptionalParam("env", "The deployment environment")
+  .setAction(async ({ env }) => {
+    const { deploySuite } = await lazyImport("./scripts/deploy-suite.js");
+
+    await deploySuite(env);
+  });
+
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {

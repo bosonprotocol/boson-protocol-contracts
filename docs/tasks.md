@@ -34,11 +34,12 @@ Deploy suite deploys protocol diamond, all facets, client and beacon, and initia
 ```npm run deploy-suite:local```
 - **internal test node**. This deploys the built contracts to custom test network. You need to modifiy `.env` with appropriate values for this to work.  
 ```npm run deploy-suite:test```
-- **Polygon Mumbai**. This deploys the built contracts to Polygon Mumbai.  
-```npm run deploy-suite:polygon:mumbai```
-- **Polygon Mainnet**. This deploys the built contracts to Polygon Mainnet.
+- **Polygon Mumbai**. This deploys the built contracts to Polygon Mumbai. The Boson Protocol team uses separate sets of contracts on Polygon Mumbai for the test and staging environments.  
+```npm run deploy-suite:polygon:mumbai-test```  
+```npm run deploy-suite:polygon:mumbai-staging```
+- **Polygon Mainnet**. This deploys the built contracts to Polygon Mainnet.  
 ```npm run deploy-suite:polygon:mainnet```
-- **Ethereum Mainnet**. This deploys the built contracts to Ethereum Mainnet.
+- **Ethereum Mainnet**. This deploys the built contracts to Ethereum Mainnet.  
 ```npm run deploy-suite:ethereum:mainnet```
 
 ### Verify suite
@@ -57,15 +58,15 @@ Upgrade existing facets, add new facets or remove existing facets. We provide di
 
 For upgrade to succeed you need an account with UPGRADER role. Refer to "Manage Roles" to see how to grant it.
 
-- **local network**. This upgrades the existing diamond on a independent instance of local network (e.g. `npx hardhat node`). Upgrade process is described [here](local-development.md#upgrade-facets).
+- **local network**. This upgrades the existing diamond on a independent instance of local network (e.g. `npx hardhat node`). Upgrade process is described [here](local-development.md#upgrade-facets).  
 ```npm run upgrade-facets:local```
 - **internal test node**. This upgrades the existing diamond on a custom test network. You need to modifiy `.env` with appropriate values for this to work.  
 ```npm run upgrade-facets:test```
 - **Polygon Mumbai**. This upgrades the existing diamond on Polygon Mumbai.  
 ```npm run upgrade-facets:polygon:mumbai```
-- **Polygon Mainnet**. This upgrades the existing diamond on Polygon Mainnet.
+- **Polygon Mainnet**. This upgrades the existing diamond on Polygon Mainnet.  
 ```npm run upgrade-facets:polygon:mainnet```
-- **Ethereum Mainnet**. This upgrades the existing diamond on Ethereum Mainnet.
+- **Ethereum Mainnet**. This upgrades the existing diamond on Ethereum Mainnet.  
 ```npm run upgrade-facets:ethereum:mainnet```
 
 ### Deploy mock authentication token
@@ -84,7 +85,7 @@ You cannot run this script agains `hardhat` network, all other networks are supp
 
 - **local network**. This deploys the built contracts to independent instance of local network (e.g. `npx hardhat node`), so the deployed contracts can be used with other contracts/dapps in development. Step-by-step manual to use it is available [here](local-development.md).  
 ```npm run manage-roles:local```
-- **internal test node**. This runs the management script against the custom test network. You need to modifiy `.env` with appropriate values for this to work. 
+- **internal test node**. This runs the management script against the custom test network. You need to modifiy `.env` with appropriate values for this to work.  
 ```npm run manage-roles:test```
 - **Polygon Mumbai**. This runs the management script against the Polygon Mumbai. You need to modifiy `.env` with appropriate values for this to work.  
 ```npm run manage-roles:polygon:mumbai```

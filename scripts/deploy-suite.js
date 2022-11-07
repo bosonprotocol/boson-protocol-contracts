@@ -31,7 +31,7 @@ const AuthTokenType = require("../scripts/domain/AuthTokenType");
  * `npm run deploy-suite:local`
  *
  * Running with hardhat
- * `npx hardhat run --network hardhat scripts/deploy-suite.js`
+ * `npx hardhat deploy-suite --network hardhat --env test`
  */
 
 /**
@@ -73,7 +73,7 @@ function getArgFacetNames() {
   return facets.argFacets;
 }
 
-async function main() {
+async function main(env) {
   // Compile everything (in case run by node)
   await hre.run("compile");
 
@@ -260,7 +260,7 @@ async function main() {
 
   console.log(`✅ Granted roles to appropriate contract and addresses.`);
 
-  const contractsPath = await writeContracts(contracts);
+  const contractsPath = await writeContracts(contracts, env);
   console.log(`✅ Contracts written to ${contractsPath}`);
 
   // Verify on test node if test env
@@ -270,9 +270,4 @@ async function main() {
   }
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+exports.deploySuite = main;
