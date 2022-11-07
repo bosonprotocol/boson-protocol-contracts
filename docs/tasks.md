@@ -62,8 +62,9 @@ For upgrade to succeed you need an account with UPGRADER role. Refer to "Manage 
 ```npm run upgrade-facets:local```
 - **internal test node**. This upgrades the existing diamond on a custom test network. You need to modifiy `.env` with appropriate values for this to work.  
 ```npm run upgrade-facets:test```
-- **Polygon Mumbai**. This upgrades the existing diamond on Polygon Mumbai.  
-```npm run upgrade-facets:polygon:mumbai```
+- **Polygon Mumbai**. This upgrades the existing diamond on Polygon Mumbai. The Boson Protocol team uses separate sets of contracts on Polygon Mumbai for the test and staging environments.  
+```npm run upgrade-facets:polygon:mumbai-test```  
+```npm run upgrade-facets:polygon:mumbai-staging```
 - **Polygon Mainnet**. This upgrades the existing diamond on Polygon Mainnet.  
 ```npm run upgrade-facets:polygon:mainnet```
 - **Ethereum Mainnet**. This upgrades the existing diamond on Ethereum Mainnet.  
@@ -87,8 +88,9 @@ You cannot run this script agains `hardhat` network, all other networks are supp
 ```npm run manage-roles:local```
 - **internal test node**. This runs the management script against the custom test network. You need to modifiy `.env` with appropriate values for this to work.  
 ```npm run manage-roles:test```
-- **Polygon Mumbai**. This runs the management script against the Polygon Mumbai. You need to modifiy `.env` with appropriate values for this to work.  
-```npm run manage-roles:polygon:mumbai```
+- **Polygon Mumbai**. This runs the management script against the Polygon Mumbai. You need to modifiy `.env` with appropriate values for this to work. The Boson Protocol team uses separate sets of contracts on Polygon Mumbai for the test and staging environments.  
+```npm run manage-roles:polygon:mumbai-test```  
+```npm run manage-roles:polygon:mumbai-staging```
 - **Polygon Mainnet**. This runs the management script against the Polygon Mainnet. You need to modifiy `.env` with appropriate values for this to work.  
 ```npm run manage-roles:polygon:mainnet```
 - **Ethereum Mainnet**. This runs the management script against the Ethereum Mainnet. You need to modifiy `.env` with appropriate values for this to work.  

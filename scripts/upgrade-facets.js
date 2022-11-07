@@ -33,12 +33,12 @@ const rl = readline.createInterface({
  *  2. Run the appropriate npm script in package.json to upgrade facets for a given network
  *  3. Save changes to the repo as a record of what was upgraded
  */
-async function main() {
+async function main(env) {
   // Bail now if hardhat network
   if (network === "hardhat") process.exit();
 
   const chainId = (await ethers.provider.getNetwork()).chainId;
-  const contractsFile = readContracts(chainId, network);
+  const contractsFile = readContracts(chainId, network, env);
   let contracts = contractsFile.contracts;
   const interfaceIds = await getInterfaceIds();
   const interfaceIdFromFacetName = (facetName) => interfaceIds[interfaceImplementers[facetName]];
@@ -331,7 +331,7 @@ async function main() {
     }
   }
 
-  const contractsPath = await writeContracts(contracts);
+  const contractsPath = await writeContracts(contracts, env);
   console.log(divider);
   console.log(`✅ Contracts written to ${contractsPath}`);
   console.log(divider);
@@ -357,9 +357,4 @@ async function getUserResponse(question, validResponses) {
   }
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+exports.upgradeFacets = main;

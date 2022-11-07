@@ -44,8 +44,8 @@ async function writeContracts(contracts, env) {
   return path;
 }
 
-function readContracts(chainId, env) {
-  return JSON.parse(fs.readFileSync(getAddressesFilePath(chainId, env), "utf-8"));
+function readContracts(chainId, network, env) {
+  return JSON.parse(fs.readFileSync(getAddressesFilePath(chainId, network, env), "utf-8"));
 }
 
 async function getBaseFee() {
