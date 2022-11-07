@@ -474,11 +474,10 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       it("after initialization all state modifying functions should be whitelisted", async function () {
-        // 
-                // Functions should be enabled
-                for (const func of stateModifyingFunctionsHashes) {
-                  expect(await metaTransactionsHandler.isFunctionWhitelisted(func)).to.be.true;
-                }
+        // Functions should be enabled
+        for (const func of stateModifyingFunctionsHashes) {
+          expect(await metaTransactionsHandler.isFunctionWhitelisted(func)).to.be.true;
+        }
       });
 
       it("should retrun correct value", async function () {
@@ -880,23 +879,21 @@ describe("IBosonMetaTransactionsHandler", function () {
             ).to.revertedWith(RevertReasons.INVALID_FUNCTION_NAME);
           });
 
-          it("Should fail when function name is incorrect, even if selector is correct [collision]", async function () {                       
+          it("Should fail when function name is incorrect, even if selector is correct [collision]", async function () {
             // Prepare a function, which selector collide with another funtion selector
             // In this case certain bytes are appended to redeemVoucher so it gets the same selector as cancelVoucher
-            const fn = `redeemVoucher(uint256)`
+            const fn = `redeemVoucher(uint256)`;
             const fnBytes = ethers.utils.toUtf8Bytes(fn);
-            const collisionBytes = "0a7f0f031e"
-            const collisionBytesBuffer = Buffer.from(collisionBytes,"hex")
-            const fnCollision =  Buffer.concat([fnBytes,collisionBytesBuffer])
-            const sigCollision = ethers.utils.keccak256(fnCollision).slice(0,10)
-            
-            // Prepare the function signature for the facet function.
-            functionSignature = exchangeHandler.interface.encodeFunctionData("cancelVoucher", [
-                1,
-              ]);
+            const collisionBytes = "0a7f0f031e";
+            const collisionBytesBuffer = Buffer.from(collisionBytes, "hex");
+            const fnCollision = Buffer.concat([fnBytes, collisionBytesBuffer]);
+            const sigCollision = ethers.utils.keccak256(fnCollision).slice(0, 10);
 
-              // Make sure that collision actually exists
-            assert.equal(sigCollision,functionSignature.slice(0,10));
+            // Prepare the function signature for the facet function.
+            functionSignature = exchangeHandler.interface.encodeFunctionData("cancelVoucher", [1]);
+
+            // Make sure that collision actually exists
+            assert.equal(sigCollision, functionSignature.slice(0, 10));
 
             // Prepare the message
             message.functionName = fnCollision.toString(); // malicious function name

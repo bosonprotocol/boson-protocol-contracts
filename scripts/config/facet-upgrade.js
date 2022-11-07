@@ -1,5 +1,3 @@
-const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
-
 /**
  * Config file used to upgrade the facets
  *
@@ -24,7 +22,7 @@ const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond
     }
  */
 async function getFacets() {
-   return {
+  return {
     addOrUpgrade: [],
     remove: [],
     skipSelectors: { SellerHandlerFacet: [] },
