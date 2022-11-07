@@ -21,7 +21,10 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Initializes Facet.
      * This function is callable only once.
      */
-    function initialize() public onlyUnInitialized(type(IBosonMetaTransactionsHandler).interfaceId) {
+    function initialize(bytes32[] calldata _functionNameHashes)
+        public
+        onlyUnInitialized(type(IBosonMetaTransactionsHandler).interfaceId)
+    {
         DiamondLib.addSupportedInterface(type(IBosonMetaTransactionsHandler).interfaceId);
 
         // Set types for special metatxs
@@ -47,6 +50,8 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             META_TX_DISPUTE_RESOLUTIONS_TYPEHASH,
             hashDisputeResolutionDetails
         );
+
+        setWhitelistedFunctions(_functionNameHashes, true);
     }
 
     /**
@@ -324,7 +329,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @param _isWhitelisted - new whitelist status
      */
     function setWhitelistedFunctions(bytes32[] calldata _functionNameHashes, bool _isWhitelisted)
-        external
+        public
         override
         onlyRole(ADMIN)
     {

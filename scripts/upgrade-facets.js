@@ -157,7 +157,7 @@ async function main() {
     // Get new selectors from compiled contract
     const selectors = getSelectors(newFacet.contract, true);
     let newSelectors;
-    if (!Facets.skipInit.includes(newFacet.name)) {
+    if (!facets.skipInit.includes(newFacet.name)) {
       newSelectors = selectors.selectors.remove([callData.slice(0, 10)]);
     } else {
       newSelectors = selectors.selectors;
