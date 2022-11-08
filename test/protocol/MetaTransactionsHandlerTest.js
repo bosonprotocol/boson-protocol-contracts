@@ -36,6 +36,7 @@ const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants")
 const {
   getSelectors,
   FacetCutAction,
+  getStateModifyingFunctions,
   getStateModifyingFunctionsHashes,
 } = require("../../scripts/util/diamond-utils.js");
 
@@ -426,7 +427,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       it("should update state", async function () {
         // Functions should be disabled by default
         for (const func of functionHashList) {
-          expect(await metaTransactionsHandler.isFunctionWhitelisted(func)).to.be.false;
+          expect(await metaTransactionsHandler["isFunctionWhitelisted(bytes32)"](func)).to.be.false;
         }
 
         // Enable functions
@@ -434,7 +435,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Functions should be enabled
         for (const func of functionHashList) {
-          expect(await metaTransactionsHandler.isFunctionWhitelisted(func)).to.be.true;
+          expect(await metaTransactionsHandler["isFunctionWhitelisted(bytes32)"](func)).to.be.true;
         }
 
         // Disable functions
@@ -442,7 +443,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Functions should be disabled
         for (const func of functionHashList) {
-          expect(await metaTransactionsHandler.isFunctionWhitelisted(func)).to.be.false;
+          expect(await metaTransactionsHandler["isFunctionWhitelisted(bytes32)"](func)).to.be.false;
         }
       });
 
@@ -456,7 +457,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
     });
 
-    context("👉 isFunctionWhitelisted()", async function () {
+    context("👉 isFunctionWhitelisted(bytes32)", async function () {
       let functionHashList;
       beforeEach(async function () {
         // A list of random functions
@@ -476,14 +477,14 @@ describe("IBosonMetaTransactionsHandler", function () {
       it("after initialization all state modifying functions should be whitelisted", async function () {
         // Functions should be enabled
         for (const func of stateModifyingFunctionsHashes) {
-          expect(await metaTransactionsHandler.isFunctionWhitelisted(func)).to.be.true;
+          expect(await metaTransactionsHandler["isFunctionWhitelisted(bytes32)"](func)).to.be.true;
         }
       });
 
-      it("should retrun correct value", async function () {
+      it("should return correct value", async function () {
         // Functions should be disabled by default
         for (const func of functionHashList) {
-          expect(await metaTransactionsHandler.isFunctionWhitelisted(func)).to.be.false;
+          expect(await metaTransactionsHandler["isFunctionWhitelisted(bytes32)"](func)).to.be.false;
         }
 
         // Enable functions
@@ -491,7 +492,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Functions should be enabled
         for (const func of functionHashList) {
-          expect(await metaTransactionsHandler.isFunctionWhitelisted(func)).to.be.true;
+          expect(await metaTransactionsHandler["isFunctionWhitelisted(bytes32)"](func)).to.be.true;
         }
 
         // Disable functions
@@ -499,7 +500,75 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Functions should be disabled
         for (const func of functionHashList) {
-          expect(await metaTransactionsHandler.isFunctionWhitelisted(func)).to.be.false;
+          expect(await metaTransactionsHandler["isFunctionWhitelisted(bytes32)"](func)).to.be.false;
+        }
+      });
+    });
+
+    context("👉 isFunctionWhitelisted(string)", async function () {
+      let functionList, functionHashList;
+      beforeEach(async function () {
+        // A list of random functions
+        functionList = [
+          "testFunction1(uint256)",
+          "testFunction2(uint256)",
+          "testFunction3((uint256,address,bool))",
+          "testFunction4(uint256[])",
+        ];
+
+        functionHashList = functionList.map((func) => keccak256(toUtf8Bytes(func)));
+
+        // Grant UPGRADER role to admin account
+        await accessController.grantRole(Role.ADMIN, admin.address);
+      });
+
+      it("after initialization all state modifying functions should be whitelisted", async function () {
+        // Cut the protocol handler facets into the Diamond
+        const facetNames = [
+          "SellerHandlerFacet",
+          "DisputeResolverHandlerFacet",
+          "FundsHandlerFacet",
+          "ExchangeHandlerFacet",
+          "OfferHandlerFacet",
+          "TwinHandlerFacet",
+          "DisputeHandlerFacet",
+          "PauseHandlerFacet",
+          "BuyerHandlerFacet",
+        ];
+
+        // Get list of state modifying functions
+        const stateModifyingFunctions = (await getStateModifyingFunctions(facetNames)).filter(
+          (fn) => fn != "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"
+        );
+        console.log(stateModifyingFunctions);
+
+        // Functions should be enabled
+        getStateModifyingFunctions();
+        for (const func of stateModifyingFunctions) {
+          expect(await metaTransactionsHandler["isFunctionWhitelisted(string)"](func)).to.be.true;
+        }
+      });
+
+      it("should return correct value", async function () {
+        // Functions should be disabled by default
+        for (const func of functionList) {
+          expect(await metaTransactionsHandler["isFunctionWhitelisted(string)"](func)).to.be.false;
+        }
+
+        // Enable functions
+        await metaTransactionsHandler.connect(admin).setWhitelistedFunctions(functionHashList, true);
+
+        // Functions should be enabled
+        for (const func of functionList) {
+          expect(await metaTransactionsHandler["isFunctionWhitelisted(string)"](func)).to.be.true;
+        }
+
+        // Disable functions
+        await metaTransactionsHandler.connect(admin).setWhitelistedFunctions(functionHashList, false);
+
+        // Functions should be disabled
+        for (const func of functionList) {
+          expect(await metaTransactionsHandler["isFunctionWhitelisted(string)"](func)).to.be.false;
         }
       });
     });

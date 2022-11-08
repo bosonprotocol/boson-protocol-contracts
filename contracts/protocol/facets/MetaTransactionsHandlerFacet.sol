@@ -353,4 +353,14 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     function isFunctionWhitelisted(bytes32 _functionNameHash) external view override returns (bool isWhitelisted) {
         return protocolMetaTxInfo().isWhitelisted[_functionNameHash];
     }
+
+    /**
+     * @notice Tells if function can be executed as meta transaction or not.
+     *
+     * @param _functionName - function name
+     * @return isWhitelisted - whitelist status
+     */
+    function isFunctionWhitelisted(string calldata _functionName) external view override returns (bool isWhitelisted) {
+        return protocolMetaTxInfo().isWhitelisted[keccak256(abi.encodePacked(_functionName))];
+    }
 }
