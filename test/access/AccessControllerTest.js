@@ -2,23 +2,43 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const Role = require("../../scripts/domain/Role");
+const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
+const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 
 /**
  *  Test the AccessController contract
  */
 describe("AccessController", function () {
   // Shared args
-  let deployer, admin, protocol, upgrader, associate, pauser, client, feeCollector;
+  let deployer, admin, protocol, upgrader, associate, pauser, client, feeCollector, rando;
   let AccessController, accessController, roleAdmin;
+  let InterfaceIds;
+
+  before(async function () {
+    // get interface Ids
+    InterfaceIds = await getInterfaceIds();
+  });
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, admin, protocol, upgrader, associate, pauser, client, feeCollector] = await ethers.getSigners();
+    [deployer, admin, protocol, upgrader, associate, pauser, client, feeCollector, rando] = await ethers.getSigners();
 
     // Deploy the contract
     AccessController = await ethers.getContractFactory("AccessController");
     accessController = await AccessController.deploy();
     await accessController.deployed();
+  });
+
+  context("📋 Interfaces", async function () {
+    context("👉 supportsInterface()", async function () {
+      it("should indicate support for IAccessControl interface", async function () {
+        // Current interfaceId for IAccessControl
+        const support = await accessController.supportsInterface(InterfaceIds.IAccessControl);
+
+        // Test
+        expect(support, "IAccessControl interface not supported").is.true;
+      });
+    });
   });
 
   context("📋 Deployer is limited to initial ADMIN role", async function () {
@@ -282,6 +302,17 @@ describe("AccessController", function () {
         "ADMIN role can't revoke FEE_COLLECTOR role"
       ).is.false;
     });
+
+    it("Should not emit 'RoleRevoked' event if revoking a role that was not granted", async function () {
+      // Revoke Role, should not emit the event
+      await expect(accessController.connect(admin).revokeRole(Role.ADMIN, rando.address)).to.not.emit(
+        accessController,
+        "RoleRevoked"
+      );
+
+      // Test
+      expect(await accessController.hasRole(Role.ADMIN, rando.address)).is.false;
+    });
   });
 
   context("📋 Any roled address can renounce its roles", async function () {
@@ -372,6 +403,17 @@ describe("AccessController", function () {
         "FEE_COLLECTOR role can't renounce FEE_COLLECTOR role"
       ).is.false;
     });
+
+    it("Should not emit 'RoleRevoked' event if renouncing a role that was not granted", async function () {
+      // Renounce Role, should not emit the event
+      await expect(accessController.connect(rando).renounceRole(Role.ADMIN, rando.address)).to.not.emit(
+        accessController,
+        "RoleRevoked"
+      );
+
+      // Test
+      expect(await accessController.hasRole(Role.ADMIN, rando.address)).is.false;
+    });
   });
 
   context("📋 Any address can have multiple roles", async function () {
@@ -398,6 +440,22 @@ describe("AccessController", function () {
       expect(await accessController.hasRole(Role.PAUSER, associate.address)).is.true;
       expect(await accessController.hasRole(Role.CLIENT, associate.address)).is.true;
       expect(await accessController.hasRole(Role.FEE_COLLECTOR, associate.address)).is.true;
+    });
+  });
+
+  context("💔 Revert Reasons", async function () {
+    it("Caller is different from account to be renounced", async function () {
+      // Renounce Role, expecting revert
+      await expect(accessController.connect(admin).renounceRole(Role.ADMIN, deployer.address)).to.be.revertedWith(
+        RevertReasons.CAN_ONLY_REVOKE_SELF
+      );
+    });
+
+    it("Should revert if caller tries to grantRole but doesn't have ADMIN role", async function () {
+      // Grant Role, expecting revert
+      await expect(accessController.connect(rando).grantRole(Role.ADMIN, rando.address)).to.be.revertedWith(
+        `AccessControl: account ${rando.address.toLowerCase()} is missing role ${Role.ADMIN}`
+      );
     });
   });
 });
