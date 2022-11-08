@@ -31,7 +31,8 @@ async function writeContracts(contracts, env) {
     JSON.stringify(
       {
         chainId: chainId,
-        env: network || "",
+        network: network || "",
+        env: env || "",
         protocolVersion: packageFile.version,
         contracts,
       },

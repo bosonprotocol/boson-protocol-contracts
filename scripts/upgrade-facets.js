@@ -49,9 +49,12 @@ async function main(env) {
 
   // Check that package.json version was updated
   if (packageFile.version == contractsFile.protocolVersion) {
-    const answer = await new Promise((resolve) => {
-      rl.question("Protocol version has not been updated. Proceed anyway? (y/n) ", resolve);
-    });
+    const answer = await getUserResponse("Protocol version has not been updated. Proceed anyway? (y/n) ", [
+      "y",
+      "yes",
+      "n",
+      "no",
+    ]);
     switch (answer.toLowerCase()) {
       case "y":
       case "yes":
@@ -346,13 +349,14 @@ const addressNotFound = (address) => {
 };
 
 async function getUserResponse(question, validResponses) {
+  console.error(question);
   const answer = await new Promise((resolve) => {
-    rl.question(question, resolve);
+    rl.question("", resolve);
   });
   if (validResponses.includes(answer)) {
     return answer;
   } else {
-    console.log("Invalid response!");
+    console.error("Invalid response!");
     return await getUserResponse(question, validResponses);
   }
 }
