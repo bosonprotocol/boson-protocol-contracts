@@ -27,12 +27,12 @@ const Role = require("./domain/Role");
  *  2. Run the appropriate npm script in package.json to manage roles for a given network
  *  3. Save changes to the repo as a record of who has what roles
  */
-async function main() {
+async function main(env) {
   // Bail now if hardhat network
   if (network === "hardhat") process.exit();
 
   const chainId = (await hre.ethers.provider.getNetwork()).chainId;
-  const contractsFile = readContracts(chainId, network);
+  const contractsFile = readContracts(chainId, network, env);
 
   const divider = "-".repeat(80);
   console.log(`${divider}\nBoson Protocol Contract Suite Role Manager\n${divider}`);
@@ -104,9 +104,4 @@ async function main() {
   console.log("\n");
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+exports.manageRoles = main;
