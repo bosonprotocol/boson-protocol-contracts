@@ -25,7 +25,7 @@ async function getFacets() {
   return {
     addOrUpgrade: [],
     remove: [],
-    skipSelectors: { SellerHandlerFacet: [] },
+    skipSelectors: {},
     initArgs: {},
     skipInit: [],
   };
