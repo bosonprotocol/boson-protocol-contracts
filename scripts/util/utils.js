@@ -5,8 +5,8 @@ const packageFile = require("../../package.json");
 
 const addressesDirPath = __dirname + `/../../addresses`;
 
-function getAddressesFilePath(chainId, env, suffix) {
-  return `${addressesDirPath}/${chainId}${env ? `-${env.toLowerCase()}` : ""}${suffix ? `-${suffix}` : ""}.json`;
+function getAddressesFilePath(chainId, network, env) {
+  return `${addressesDirPath}/${chainId}${network ? `-${network.toLowerCase()}` : ""}${env ? `-${env}` : ""}.json`;
 }
 
 function delay(ms) {
@@ -18,19 +18,20 @@ function deploymentComplete(name, address, args, interfaceId, contracts) {
   console.log(`✅ ${name} deployed to: ${address}`);
 }
 
-async function writeContracts(contracts) {
+async function writeContracts(contracts, env) {
   if (!fs.existsSync(addressesDirPath)) {
     fs.mkdirSync(addressesDirPath);
   }
 
   const chainId = (await hre.ethers.provider.getNetwork()).chainId;
-  const env = hre.network.name;
-  const path = getAddressesFilePath(chainId, env);
+  const network = hre.network.name;
+  const path = getAddressesFilePath(chainId, network, env);
   fs.writeFileSync(
     path,
     JSON.stringify(
       {
         chainId: chainId,
+        network: network || "",
         env: env || "",
         protocolVersion: packageFile.version,
         contracts,
@@ -44,8 +45,8 @@ async function writeContracts(contracts) {
   return path;
 }
 
-function readContracts(chainId, env) {
-  return JSON.parse(fs.readFileSync(getAddressesFilePath(chainId, env), "utf-8"));
+function readContracts(chainId, network, env) {
+  return JSON.parse(fs.readFileSync(getAddressesFilePath(chainId, network, env), "utf-8"));
 }
 
 async function getBaseFee() {
