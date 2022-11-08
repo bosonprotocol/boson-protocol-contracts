@@ -862,18 +862,16 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         ProtocolLib.ProtocolLookups storage _lookups
     ) internal view {
         // Check that the role is unique to one dispute resolver id across all roles -- not used or is used by this dispute resolver id.
-        if (_role != address(0)) {
-            uint256 check1 = _lookups.disputeResolverIdByOperator[_role];
-            uint256 check2 = _lookups.disputeResolverIdByClerk[_role];
-            uint256 check3 = _lookups.disputeResolverIdByAdmin[_role];
+        uint256 check1 = _lookups.disputeResolverIdByOperator[_role];
+        uint256 check2 = _lookups.disputeResolverIdByClerk[_role];
+        uint256 check3 = _lookups.disputeResolverIdByAdmin[_role];
 
-            require(
-                (check1 == 0 || check1 == _disputeResolverId) &&
-                    (check2 == 0 || check2 == _disputeResolverId) &&
-                    (check3 == 0 || check3 == _disputeResolverId),
-                DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
-            );
-        }
+        require(
+            (check1 == 0 || check1 == _disputeResolverId) &&
+                (check2 == 0 || check2 == _disputeResolverId) &&
+                (check3 == 0 || check3 == _disputeResolverId),
+            DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
+        );
     }
 
     /**

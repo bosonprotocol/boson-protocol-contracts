@@ -88,9 +88,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             (bool bundleForTwinExist, ) = fetchBundleIdByTwin(twinId);
             require(!bundleForTwinExist, BUNDLE_TWIN_MUST_BE_UNIQUE);
 
-            if (_bundle.offerIds.length > 0) {
-                bundleSupplyChecks(offersTotalQuantityAvailable, twinId);
-            }
+            bundleSupplyChecks(offersTotalQuantityAvailable, twinId);
 
             // Push to bundleIdsByTwin mapping
             lookups.bundleIdByTwin[_bundle.twinIds[i]] = bundleId;
