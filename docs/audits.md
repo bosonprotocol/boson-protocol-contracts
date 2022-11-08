@@ -11,4 +11,5 @@ Version 2 of the Boson Protocol is an entirely new codebase and architecture fro
 * [View Report](audits/PeckShield-Audit-Report-Boson-v2.0.pdf)
 
 ### Omniscia
-* [View Report](audits/Omnischia-Audit-Report-v2.0.pdf)
+* [View Report](audits/Omniscia-Audit-Report-v2.0.pdf
+)
