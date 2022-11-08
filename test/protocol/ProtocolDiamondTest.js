@@ -188,6 +188,39 @@ describe("ProtocolDiamond", async function () {
         // ERC165Facet was last cut
         assert.equal(addresses[2], erc165.address);
       });
+
+      it("Should return correct addresses even when selectorCount is greater than 8", async () => {
+        // Deploy Test1Facet to have more selectors
+        Test1Facet = await ethers.getContractFactory("Test1Facet");
+        test1Facet = await Test1Facet.deploy();
+        await test1Facet.deployed();
+
+        // Get the Test1Facet function selectors from the abi
+        selectors = getSelectors(test1Facet);
+
+        // Define the facet cut
+        facetCuts = [
+          {
+            facetAddress: test1Facet.address,
+            action: FacetCutAction.Add,
+            functionSelectors: selectors,
+          },
+        ];
+
+        // Send the DiamondCut transaction
+        await cutFacetViaDiamond
+          .connect(upgrader)
+          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+
+        const addresses = await loupeFacetViaDiamond.facetAddresses();
+
+        assert.equal(addresses[0], diamondLoupe.address);
+        assert.equal(addresses[1], diamondCut.address);
+        assert.equal(addresses[2], erc165.address);
+        assert.equal(addresses[3], test1Facet.address);
+
+        assert.equal(addresses.length, 4);
+      });
     });
 
     context("👉 facetFunctionSelectors() ", async () => {
@@ -787,6 +820,22 @@ describe("ProtocolDiamond", async function () {
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
         ).to.be.revertedWith(RevertReasons.REPLACING_FUNCTION_DOES_NOT_EXIST);
       });
+    });
+
+    it("Should revert when action is not supported", async function () {
+      // Define the facet cuts
+      facetCuts = [
+        {
+          facetAddress: test1Facet.address,
+          action: 3,
+          functionSelectors: getSelectors(test1Facet),
+        },
+      ];
+
+      // Send the DiamondCut transaction
+      await expect(
+        cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
+      ).to.be.reverted;
     });
   });
 
