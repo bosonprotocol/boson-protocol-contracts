@@ -905,6 +905,44 @@ describe("SellerHandler", function () {
             accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.NOT_OPERATOR_AND_CLERK);
         });
+
+        it("addresses are the zero address", async function () {
+          seller.operator = ethers.constants.AddressZero;
+          seller.treasury = ethers.constants.AddressZero;
+          seller.clerk = ethers.constants.AddressZero;
+
+          // Attempt to update a seller, expecting revert
+          await expect(
+            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+        });
+
+        it("Operator address is zero address", async function () {
+          seller.operator = ethers.constants.AddressZero;
+
+          // Attempt to Create a seller with operator == zero address
+          await expect(
+            accountHandler.connect(authTokenOwner).createSeller(seller, emptyAuthToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+        });
+
+        it("Clerk address is zero address", async function () {
+          seller.clerk = ethers.constants.AddressZero;
+
+          // Attempt to Create a seller with clerk == zero address
+          await expect(
+            accountHandler.connect(authTokenOwner).createSeller(seller, emptyAuthToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+        });
+
+        it("Treasury address is zero address", async function () {
+          seller.treasury = ethers.constants.AddressZero;
+
+          // Attempt to Create a seller with treasury == zero address
+          await expect(
+            accountHandler.connect(authTokenOwner).createSeller(seller, emptyAuthToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+        });
       });
     });
 
@@ -2172,11 +2210,38 @@ describe("SellerHandler", function () {
 
         it("addresses are the zero address", async function () {
           seller.operator = ethers.constants.AddressZero;
-          seller.admin = ethers.constants.AddressZero;
+          seller.treasury = ethers.constants.AddressZero;
           seller.clerk = ethers.constants.AddressZero;
 
           // Attempt to update a seller, expecting revert
-          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, authToken)).to.revertedWith(
+          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+        });
+
+        it("Operator is the zero address", async function () {
+          seller.operator = ethers.constants.AddressZero;
+
+          // Attempt to update a seller, expecting revert
+          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+        });
+
+        it("Clerk is the zero address", async function () {
+          seller.clerk = ethers.constants.AddressZero;
+
+          // Attempt to update a seller, expecting revert
+          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+        });
+
+        it("Treasury is the zero address", async function () {
+          seller.treasury = ethers.constants.AddressZero;
+
+          // Attempt to update a seller, expecting revert
+          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
         });
@@ -2575,6 +2640,25 @@ describe("SellerHandler", function () {
             emptyAuthTokenStruct,
             rando.address
           );
+      });
+
+      it("Should not emit 'SellerUpdateApplied' event if caller doesn't specify any field", async function () {
+        seller.operator = other1.address;
+        await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+        await expect(accountHandler.connect(other1).optInToSellerUpdate(seller.id, [])).to.not.emit(
+          accountHandler,
+          "SellerUpdateApplied"
+        );
+      });
+
+      it("Should not emit 'SellerUpdateApplied'event if there is no pending update for specified field", async function () {
+        seller.operator = other1.address;
+        await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+        await expect(
+          accountHandler.connect(other1).optInToSellerUpdate(seller.id, [SellerUpdateFields.Clerk])
+        ).to.not.emit(accountHandler, "SellerUpdateApplied");
       });
 
       context("💔 Revert Reasons", async function () {
