@@ -53,6 +53,7 @@ const otherInterfaces = {
   IERC1155: "0xd9b67a26",
   IERC721: "0x80ac58cd",
   IERC2981: "0x2a55205a",
+  IAccessControl: "0x7965db0b",
 };
 
 async function getInterfaceIds() {

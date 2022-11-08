@@ -132,7 +132,6 @@ contract SellerHandlerFacet is SellerBase {
             }
         } else if (_seller.admin != seller.admin) {
             preUpdateSellerCheck(_seller.id, _seller.admin, lookups);
-            require(_seller.admin != address(0), INVALID_ADDRESS);
             // If admin address exists, admin address owner must approve the update to prevent front-running
             sellerPendingUpdate.admin = _seller.admin;
             needsApproval = true;

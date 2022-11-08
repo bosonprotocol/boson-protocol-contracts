@@ -6,6 +6,7 @@ exports.RevertReasons = {
   ACCESS_DENIED: "Access denied, caller doesn't have role",
   NOT_BUYER_OR_SELLER: "Not buyer or seller",
   NOT_VOUCHER_HOLDER: "Not current voucher holder",
+  CAN_ONLY_REVOKE_SELF: "AccessControl: can only renounce roles for self",
 
   // Pause related
   NO_REGIONS_SPECIFIED: "Must specify at least one region to pause",
