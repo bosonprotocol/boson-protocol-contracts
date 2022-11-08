@@ -49,7 +49,7 @@ describe("SnapshotGate", function () {
     holder3,
     holder4,
     holder5;
-  let protocolDiamond, accessController, accountHandler, offerHandler, groupHandler;
+  let protocolDiamond, accessController, accountHandler, offerHandler, groupHandler, exchangeHandler;
   let offerId, seller, seller2, disputeResolverId;
   let price, foreign20;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
@@ -170,214 +170,211 @@ describe("SnapshotGate", function () {
     // Cast Diamond to IGroupHandler
     groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
 
+    // Cast Diamond to IBosonExchangeHandler
+    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
+
     // Deploy the SnapshotGate example
     sellerId = "1";
     [snapshotGate] = await deploySnapshotGateExample(["SnapshotGateToken", "SGT", protocolDiamond.address, sellerId]);
 
     // Deploy the mock tokens
     [foreign20] = await deployMockTokens(["Foreign20"]);
+
+    // Initial ids for all the things
+    offerId = "1";
+    groupId = "1";
+    agentId = "0"; // agent id is optional while creating an offer
+
+    // Create a valid seller
+    seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+    expect(seller.isValid()).is.true;
+
+    // Create a second seller
+    seller2 = mockSeller(operator2.address, operator2.address, operator2.address, operator2.address);
+    expect(seller2.isValid()).is.true;
+
+    // AuthToken
+    emptyAuthToken = mockAuthToken();
+    expect(emptyAuthToken.isValid()).is.true;
+
+    // VoucherInitValues
+    voucherInitValues = mockVoucherInitValues();
+    expect(voucherInitValues.isValid()).is.true;
+
+    // Create the seller
+    await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+    // Create the second seller
+    await accountHandler.connect(operator2).createSeller(seller2, emptyAuthToken, voucherInitValues);
+
+    // Create a valid dispute resolver
+    disputeResolver = mockDisputeResolver(
+      operatorDR.address,
+      adminDR.address,
+      clerkDR.address,
+      treasuryDR.address,
+      false
+    );
+    expect(disputeResolver.isValid()).is.true;
+
+    // Create DisputeResolverFee array so offer creation will succeed
+    disputeResolverFees = [
+      new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+      new DisputeResolverFee(foreign20.address, "Foriegn20", "0"),
+    ];
+
+    // Make empty seller list, so every seller is allowed
+    const sellerAllowList = [];
+
+    // Register and activate the dispute resolver
+    await accountHandler.connect(adminDR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+    await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+
+    // Manufacture snapshot for upload
+    snapshot = []; // { owner : string; tokenId: string; amount: string }[]
+    snapshotTokenSupplies = {}; // map token ids to supplies
+    snapshotTokenCount = 5; // create 5 snapshot token ids
+    holders = [
+      // holder accounts
+      holder1,
+      holder2,
+      holder3,
+      holder4,
+      holder5,
+    ];
+
+    holderByAddress = {
+      [holder1.address]: holder1,
+      [holder2.address]: holder2,
+      [holder3.address]: holder3,
+      [holder4.address]: holder4,
+      [holder5.address]: holder5,
+    };
+
+    // Each holder will have a random amount of each token
+    for (let holder of holders) {
+      // Mint a bunch of exchange tokens for the holder and approve the gate to transfer them
+      const amountToMint = "15000000000000000000";
+      await foreign20.connect(holder).mint(holder.address, amountToMint);
+      await foreign20.connect(holder).approve(snapshotGate.address, amountToMint);
+
+      // Create snapshot entry for holder / token
+      for (let i = 1; i <= snapshotTokenCount; i++) {
+        // The token id
+        const tokenId = i.toString();
+
+        // Get a random balance 1 - 9
+        const balance = Math.floor(Math.random() * 10) + 1;
+
+        // Track the total supply of each token - corresponding offer's qty available must match
+        snapshotTokenSupplies[tokenId] = String(Number(snapshotTokenSupplies[tokenId] || 0) + balance);
+
+        // Add snapshot entry
+        snapshot.push({
+          owner: holder.address,
+          tokenId: i.toString(),
+          amount: balance.toString(),
+        });
+      }
+    }
+
+    // Create gated offers in a loop
+
+    offers = [];
+    groups = [];
+
+    // Make 2 passes, creating native token offers and then ERC20 offers
+    for (let j = 0; j < 2; j++) {
+      for (let i = 1; i <= snapshotTokenCount; i++) {
+        // The token id
+        const tokenId = i.toString(); // first and second batches use same token ids
+        offerId = Number(snapshotTokenCount * j + i).toString(); // offer id from first or second batch
+        groupId = offerId;
+
+        // The supply of this token
+        const tokenSupply = snapshotTokenSupplies[tokenId];
+
+        // Create the offer
+        const mo = await mockOffer();
+        ({ offerDates, offerDurations } = mo);
+        offer = mo.offer;
+        price = offer.price;
+
+        // Set price in ERC-20 token if on second pass
+        if (j > 0) {
+          offer.exchangeToken = foreign20.address;
+          offer.buyerCancelPenalty = "0";
+        }
+
+        offer.sellerDeposit = "0";
+        offer.quantityAvailable = tokenSupply;
+        disputeResolverId = disputeResolver.id;
+
+        // Check if entities are valid
+        expect(offer.isValid()).is.true;
+        expect(offerDates.isValid()).is.true;
+        expect(offerDurations.isValid()).is.true;
+
+        // Create the offer
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        offers.push(offer);
+
+        // Required constructor params for Group
+        offerIds = [offerId];
+
+        // Create Condition
+        condition = mockCondition({
+          tokenAddress: snapshotGate.address,
+          threshold: "0",
+          maxCommits: tokenSupply,
+          tokenType: TokenType.NonFungibleToken,
+          tokenId: tokenId,
+          method: EvaluationMethod.SpecificToken,
+        });
+        expect(condition.isValid()).to.be.true;
+
+        // Create Group
+        group = new Group(groupId, seller.id, offerIds);
+        expect(group.isValid()).is.true;
+        await groupHandler.connect(operator).createGroup(group, condition);
+        groups.push(group);
+      }
+    }
+    // End of gated offers creation
+
+    // Create second seller offer
+    const mo = await mockOffer();
+    ({ offerDates, offerDurations } = mo);
+    offer = mo.offer;
+    offer.sellerId = "2"; // second seller
+    offer.price = price;
+    offer.sellerDeposit = "0";
+    offer.quantityAvailable = "5";
+    offer.buyerCancelPenalty = "0";
+
+    // Check if entities are valid
+    expect(offer.isValid()).is.true;
+    expect(offerDates.isValid()).is.true;
+    expect(offerDurations.isValid()).is.true;
+
+    // Create the offer
+    let tx = await offerHandler
+      .connect(operator2)
+      .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+    offers.push(offer);
+
+    const txReceipt = await tx.wait();
+    const event = getEvent(txReceipt, offerHandler, "OfferCreated");
+    otherSellerOfferId = event.offerId;
   });
 
-  // All supported Exchange methods
+  afterEach(async function () {
+    // Reset the accountId iterator
+    accountId.next(true);
+  });
+
+  // All supported SnapshotGate methods
   context("📋 SnapshotGate Methods", async function () {
-    beforeEach(async function () {
-      // Initial ids for all the things
-      offerId = "1";
-      groupId = "1";
-      agentId = "0"; // agent id is optional while creating an offer
-
-      // Create a valid seller
-      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
-      expect(seller.isValid()).is.true;
-
-      // Create a second seller
-      seller2 = mockSeller(operator2.address, operator2.address, operator2.address, operator2.address);
-      expect(seller2.isValid()).is.true;
-
-      // AuthToken
-      emptyAuthToken = mockAuthToken();
-      expect(emptyAuthToken.isValid()).is.true;
-
-      // VoucherInitValues
-      voucherInitValues = mockVoucherInitValues();
-      expect(voucherInitValues.isValid()).is.true;
-
-      // Create the seller
-      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
-
-      // Create the second seller
-      await accountHandler.connect(operator2).createSeller(seller2, emptyAuthToken, voucherInitValues);
-
-      // Create a valid dispute resolver
-      disputeResolver = mockDisputeResolver(
-        operatorDR.address,
-        adminDR.address,
-        clerkDR.address,
-        treasuryDR.address,
-        false
-      );
-      expect(disputeResolver.isValid()).is.true;
-
-      // Create DisputeResolverFee array so offer creation will succeed
-      disputeResolverFees = [
-        new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
-        new DisputeResolverFee(foreign20.address, "Foriegn20", "0"),
-      ];
-
-      // Make empty seller list, so every seller is allowed
-      const sellerAllowList = [];
-
-      // Register and activate the dispute resolver
-      await accountHandler
-        .connect(adminDR)
-        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
-
-      // Manufacture snapshot for upload
-      snapshot = []; // { owner : string; tokenId: string; amount: string }[]
-      snapshotTokenSupplies = {}; // map token ids to supplies
-      snapshotTokenCount = 5; // create 5 snapshot token ids
-      holders = [
-        // holder accounts
-        holder1,
-        holder2,
-        holder3,
-        holder4,
-        holder5,
-      ];
-
-      holderByAddress = {
-        [holder1.address]: holder1,
-        [holder2.address]: holder2,
-        [holder3.address]: holder3,
-        [holder4.address]: holder4,
-        [holder5.address]: holder5,
-      };
-
-      // Each holder will have a random amount of each token
-      for (let holder of holders) {
-        // Mint a bunch of exchange tokens for the holder and approve the gate to transfer them
-        const amountToMint = "15000000000000000000";
-        await foreign20.connect(holder).mint(holder.address, amountToMint);
-        await foreign20.connect(holder).approve(snapshotGate.address, amountToMint);
-
-        // Create snapshot entry for holder / token
-        for (let i = 1; i <= snapshotTokenCount; i++) {
-          // The token id
-          const tokenId = i.toString();
-
-          // Get a random balance 1 - 9
-          const balance = Math.floor(Math.random() * 10) + 1;
-
-          // Track the total supply of each token - corresponding offer's qty available must match
-          snapshotTokenSupplies[tokenId] = String(Number(snapshotTokenSupplies[tokenId] || 0) + balance);
-
-          // Add snapshot entry
-          snapshot.push({
-            owner: holder.address,
-            tokenId: i.toString(),
-            amount: balance.toString(),
-          });
-        }
-      }
-
-      // Create gated offers in a loop
-
-      offers = [];
-      groups = [];
-
-      // Make 2 passes, creating native token offers and then ERC20 offers
-      for (let j = 0; j < 2; j++) {
-        for (let i = 1; i <= snapshotTokenCount; i++) {
-          // The token id
-          const tokenId = i.toString(); // first and second batches use same token ids
-          offerId = Number(snapshotTokenCount * j + i).toString(); // offer id from first or second batch
-          groupId = offerId;
-
-          // The supply of this token
-          const tokenSupply = snapshotTokenSupplies[tokenId];
-
-          // Create the offer
-          const mo = await mockOffer();
-          ({ offerDates, offerDurations } = mo);
-          offer = mo.offer;
-          price = offer.price;
-
-          // Set price in ERC-20 token if on second pass
-          if (j > 0) {
-            offer.exchangeToken = foreign20.address;
-            offer.buyerCancelPenalty = "0";
-          }
-
-          offer.sellerDeposit = "0";
-          offer.quantityAvailable = tokenSupply;
-          disputeResolverId = disputeResolver.id;
-
-          // Check if entities are valid
-          expect(offer.isValid()).is.true;
-          expect(offerDates.isValid()).is.true;
-          expect(offerDurations.isValid()).is.true;
-
-          // Create the offer
-          await offerHandler
-            .connect(operator)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-          offers.push(offer);
-
-          // Required constructor params for Group
-          offerIds = [offerId];
-
-          // Create Condition
-          condition = mockCondition({
-            tokenAddress: snapshotGate.address,
-            threshold: "0",
-            maxCommits: tokenSupply,
-            tokenType: TokenType.NonFungibleToken,
-            tokenId: tokenId,
-            method: EvaluationMethod.SpecificToken,
-          });
-          expect(condition.isValid()).to.be.true;
-
-          // Create Group
-          group = new Group(groupId, seller.id, offerIds);
-          expect(group.isValid()).is.true;
-          await groupHandler.connect(operator).createGroup(group, condition);
-          groups.push(group);
-        }
-      }
-      // End of gated offers creation
-
-      // Create second seller offer
-      const mo = await mockOffer();
-      ({ offerDates, offerDurations } = mo);
-      offer = mo.offer;
-      offer.sellerId = "2"; // second seller
-      offer.price = price;
-      offer.sellerDeposit = "0";
-      offer.quantityAvailable = "5";
-      offer.buyerCancelPenalty = "0";
-
-      // Check if entities are valid
-      expect(offer.isValid()).is.true;
-      expect(offerDates.isValid()).is.true;
-      expect(offerDurations.isValid()).is.true;
-
-      // Create the offer
-      let tx = await offerHandler
-        .connect(operator2)
-        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-      offers.push(offer);
-
-      const txReceipt = await tx.wait();
-      const event = getEvent(txReceipt, offerHandler, "OfferCreated");
-      otherSellerOfferId = event.offerId;
-    });
-
-    afterEach(async function () {
-      // Reset the accountId iterator
-      accountId.next(true);
-    });
-
     context("👉 appendToSnapshot()", async function () {
       it("should emit a SnapshotAppended event", async function () {
         // Batch of one
@@ -866,6 +863,35 @@ describe("SnapshotGate", function () {
 
           // Check
           await expect(snapshotGate.ownerOf(tokenId)).to.revertedWith("ERC721: invalid token ID");
+        });
+      });
+    });
+  });
+
+  // Relevant Boson Protocol methods
+  context("📋 Protocol Methods", async function () {
+    context("👉 commitToOffer()", async function () {
+      context("💔 Revert Reasons", async function () {
+        it("buyer is in snapshot but attempts to commit directly on protocol", async function () {
+          // Upload the snapshot
+          await snapshotGate.connect(deployer).appendToSnapshot(snapshot);
+
+          // Freeze the snapshot
+          await snapshotGate.connect(deployer).freezeSnapshot();
+
+          // Grab an entry from the snapshot
+          let entry = snapshot[Math.floor(snapshot.length / 4)];
+
+          // Offer, token, and group ids are aligned for the sake of sanity
+          offerId = entry.tokenId;
+
+          // Get the account to make the call with
+          let holder = holderByAddress[entry.owner];
+
+          // Check that holder cannot commit directly to the offer on the protocol itself
+          await expect(exchangeHandler.connect(holder).commitToOffer(holder.address, offerId)).to.revertedWith(
+            "Caller cannot commit"
+          );
         });
       });
     });
