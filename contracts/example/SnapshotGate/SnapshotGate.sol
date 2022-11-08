@@ -14,11 +14,11 @@ import { ERC721 } from "./support/ERC721.sol";
  * @notice Gates Boson Protocol offers with a snapshot of ERC1155 holders.
  *
  * Features:
- * - Maintains one snapshot, allowing batch append until frozen
- * - Self-mints a ERC721 token for every unique ERC1155 token id found in the snapshot
- * - Commits on behalf of buyers represented in the snapshot, tracking their commits
- * - Upon a successful commit, the holder's snapshot token is considered 'used'
- * - Once a snapshot holder's balance for a token has been used, they cannot commit again
+ * - Maintains a single snapshot, allowing batch append by contract owner until snapshot is frozen.
+ * - Self-mints a custodial ERC-721 token for every unique ERC-1155 token id found in the snapshot.
+ * - Once a snapshot is frozen, proxies buyer "commit to offer" protocol requests, tracking their commits.
+ * - Upon a successful commit, the holder's snapshot token is considered "used".
+ * - Once a snapshot holder's balance for a token has been used, they cannot commit to offers gated by that token id again.
  *
  * Out-of-band setup:
  * - Interrogate an ERC-1155, possibly on another chain, noting each token, its holders, and their balances

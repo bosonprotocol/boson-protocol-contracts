@@ -30,6 +30,7 @@ Done or in progress are:
   - [Domain Model](docs/domain.md) - Entities and their relationships
   - [State Machines](docs/state-machines.md) - State Machines in the Core Exchange Mechanism
   - [Sequences](docs/sequences.md) - Timeline of the simplest exchange
+  - [Examples](docs/examples.md) - Enhancing the capabilities of the protocol with external contracts
   - [Contributing](#contributing) - Guidelines for contributing to this repo
   - [License](#license) - License information
 
