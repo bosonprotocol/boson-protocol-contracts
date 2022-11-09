@@ -39,9 +39,7 @@ task("verify-suite", "Verify contracts on the block explorer")
   .setAction(async ({ chainId, env }) => {
     const { verifySuite } = await lazyImport("./scripts/util/verify-suite");
 
-    // Contract list filter - empty array or use values from the name field of the contract object
-    const filter = [];
-    await verifySuite(chainId, env, filter);
+    await verifySuite(chainId, env);
   });
 
 task(
