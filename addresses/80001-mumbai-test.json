@@ -1,6 +1,7 @@
 {
   "chainId": 80001,
-  "env": "mumbai",
+  "network": "mumbai",
+  "env": "test",
   "protocolVersion": "2.1.0",
   "contracts": [
     {

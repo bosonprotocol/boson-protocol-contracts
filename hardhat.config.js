@@ -44,6 +44,33 @@ task("verify-suite", "Verify contracts on the block explorer")
     await verifySuite(chainId, env, filter);
   });
 
+task(
+  "deploy-suite",
+  "Deploy suite deploys protocol diamond, all facets, client and beacon, and initializes protcol diamond"
+)
+  .addOptionalParam("env", "The deployment environment")
+  .setAction(async ({ env }) => {
+    const { deploySuite } = await lazyImport("./scripts/deploy-suite.js");
+
+    await deploySuite(env);
+  });
+
+task("upgrade-facets", "Upgrade existing facets, add new facets or remove existing facets")
+  .addOptionalParam("env", "The deployment environment")
+  .setAction(async ({ env }) => {
+    const { upgradeFacets } = await lazyImport("./scripts/upgrade-facets.js");
+
+    await upgradeFacets(env);
+  });
+
+task("manage-roles", "Grant or revoke access control roles")
+  .addOptionalParam("env", "The deployment environment")
+  .setAction(async ({ env }) => {
+    const { manageRoles } = await lazyImport("./scripts/manage-roles.js");
+
+    await manageRoles(env);
+  });
+
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {
