@@ -1,3 +1,4 @@
+const hre = require("hardhat");
 const { verifyOnBlockExplorer } = require("./report-verify-deployments");
 const { readContracts } = require("./utils");
 
@@ -6,8 +7,8 @@ const { readContracts } = require("./utils");
  *
  * Usage: npx hardhat verify-suite --network <network> --chain-id <chain id> --env <env>
  *
- *  e.g.: npx hardhat verify-suite --network polygon --chain-id 137 --env polygon
- *      : reads addresses/137-polygon.json
+ *  e.g.: npx hardhat verify-suite --network polygon --chain-id 137 --env prod
+ *      : reads addresses/137-polygon-prod.json
  *      : verifies each contract listed, with the given constructor args
  *
  *  If you need to filter the list of contracts to verify,
@@ -20,10 +21,11 @@ const { readContracts } = require("./utils");
  * @returns {Promise<void>}
  */
 const verifySuite = async (chainId, env, filter = []) => {
-  console.log(chainId, env, filter);
+  const network = hre.network.name;
+  console.log(chainId, network, env, filter);
 
   // Read the contracts for the chain
-  const { contracts } = await readContracts(chainId, env);
+  const { contracts } = await readContracts(chainId, network, env);
 
   console.log("🔍 Verifying contracts on block explorer...");
   while (contracts.length) {
