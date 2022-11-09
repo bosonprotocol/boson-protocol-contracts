@@ -150,7 +150,7 @@ exports.RevertReasons = {
   INVALID_SIGNATURE: "Invalid signature",
   SIGNER_AND_SIGNATURE_DO_NOT_MATCH: "Signer and signature do not match",
   INVALID_FUNCTION_NAME: "Invalid function name",
-  FUNCTION_NOT_WHITELISTED: "Function can not be executed via meta transaction",
+  FUNCTION_NOT_ALLOWLISTED: "Function can not be executed via meta transaction",
 
   // Dispute related
   DISPUTE_PERIOD_HAS_ELAPSED: "Dispute period has already elapsed",

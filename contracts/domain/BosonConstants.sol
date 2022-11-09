@@ -147,7 +147,7 @@ string constant FUNCTION_CALL_NOT_SUCCESSFUL = "Function call not successful";
 string constant SIGNER_AND_SIGNATURE_DO_NOT_MATCH = "Signer and signature do not match";
 string constant INVALID_FUNCTION_NAME = "Invalid function name";
 string constant INVALID_SIGNATURE = "Invalid signature";
-string constant FUNCTION_NOT_WHITELISTED = "Function can not be executed via meta transaction";
+string constant FUNCTION_NOT_ALLOWLISTED = "Function can not be executed via meta transaction";
 
 // Revert Reasons: Dispute related
 string constant DISPUTE_PERIOD_HAS_ELAPSED = "Dispute period has already elapsed";

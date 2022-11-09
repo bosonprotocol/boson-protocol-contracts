@@ -395,7 +395,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
     });
 
-    context("👉 setWhitelistedFunctions()", async function () {
+    context("👉 setAllowlistedFunctions()", async function () {
       let functionHashList;
       beforeEach(async function () {
         // A list of random functions
@@ -412,38 +412,38 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accessController.grantRole(Role.ADMIN, admin.address);
       });
 
-      it("should emit a FunctionsWhitelisted event", async function () {
+      it("should emit a FunctionsAllowlisted event", async function () {
         // Enable functions
-        await expect(metaTransactionsHandler.connect(admin).setWhitelistedFunctions(functionHashList, true))
-          .to.emit(metaTransactionsHandler, "FunctionsWhitelisted")
+        await expect(metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, true))
+          .to.emit(metaTransactionsHandler, "FunctionsAllowlisted")
           .withArgs(functionHashList, true, admin.address);
 
         // Disable functions
-        await expect(metaTransactionsHandler.connect(admin).setWhitelistedFunctions(functionHashList, false))
-          .to.emit(metaTransactionsHandler, "FunctionsWhitelisted")
+        await expect(metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, false))
+          .to.emit(metaTransactionsHandler, "FunctionsAllowlisted")
           .withArgs(functionHashList, false, admin.address);
       });
 
       it("should update state", async function () {
         // Functions should be disabled by default
         for (const func of functionHashList) {
-          expect(await metaTransactionsHandler["isFunctionWhitelisted(bytes32)"](func)).to.be.false;
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.false;
         }
 
         // Enable functions
-        await metaTransactionsHandler.connect(admin).setWhitelistedFunctions(functionHashList, true);
+        await metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, true);
 
         // Functions should be enabled
         for (const func of functionHashList) {
-          expect(await metaTransactionsHandler["isFunctionWhitelisted(bytes32)"](func)).to.be.true;
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.true;
         }
 
         // Disable functions
-        await metaTransactionsHandler.connect(admin).setWhitelistedFunctions(functionHashList, false);
+        await metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, false);
 
         // Functions should be disabled
         for (const func of functionHashList) {
-          expect(await metaTransactionsHandler["isFunctionWhitelisted(bytes32)"](func)).to.be.false;
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.false;
         }
       });
 
@@ -451,13 +451,13 @@ describe("IBosonMetaTransactionsHandler", function () {
         it("caller is not the admin", async function () {
           // Attempt to set new max offer per group, expecting revert
           await expect(
-            metaTransactionsHandler.connect(rando).setWhitelistedFunctions(functionHashList, true)
+            metaTransactionsHandler.connect(rando).setAllowlistedFunctions(functionHashList, true)
           ).to.revertedWith(RevertReasons.ACCESS_DENIED);
         });
       });
     });
 
-    context("👉 isFunctionWhitelisted(bytes32)", async function () {
+    context("👉 isFunctionAllowlisted(bytes32)", async function () {
       let functionHashList;
       beforeEach(async function () {
         // A list of random functions
@@ -474,38 +474,38 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accessController.grantRole(Role.ADMIN, admin.address);
       });
 
-      it("after initialization all state modifying functions should be whitelisted", async function () {
+      it("after initialization all state modifying functions should be allowlisted", async function () {
         // Functions should be enabled
         for (const func of stateModifyingFunctionsHashes) {
-          expect(await metaTransactionsHandler["isFunctionWhitelisted(bytes32)"](func)).to.be.true;
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.true;
         }
       });
 
       it("should return correct value", async function () {
         // Functions should be disabled by default
         for (const func of functionHashList) {
-          expect(await metaTransactionsHandler["isFunctionWhitelisted(bytes32)"](func)).to.be.false;
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.false;
         }
 
         // Enable functions
-        await metaTransactionsHandler.connect(admin).setWhitelistedFunctions(functionHashList, true);
+        await metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, true);
 
         // Functions should be enabled
         for (const func of functionHashList) {
-          expect(await metaTransactionsHandler["isFunctionWhitelisted(bytes32)"](func)).to.be.true;
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.true;
         }
 
         // Disable functions
-        await metaTransactionsHandler.connect(admin).setWhitelistedFunctions(functionHashList, false);
+        await metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, false);
 
         // Functions should be disabled
         for (const func of functionHashList) {
-          expect(await metaTransactionsHandler["isFunctionWhitelisted(bytes32)"](func)).to.be.false;
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.false;
         }
       });
     });
 
-    context("👉 isFunctionWhitelisted(string)", async function () {
+    context("👉 isFunctionAllowlisted(string)", async function () {
       let functionList, functionHashList;
       beforeEach(async function () {
         // A list of random functions
@@ -522,7 +522,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accessController.grantRole(Role.ADMIN, admin.address);
       });
 
-      it("after initialization all state modifying functions should be whitelisted", async function () {
+      it("after initialization all state modifying functions should be allowlisted", async function () {
         // Cut the protocol handler facets into the Diamond
         const facetNames = [
           "SellerHandlerFacet",
@@ -545,30 +545,30 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Functions should be enabled
         getStateModifyingFunctions();
         for (const func of stateModifyingFunctions) {
-          expect(await metaTransactionsHandler["isFunctionWhitelisted(string)"](func)).to.be.true;
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.true;
         }
       });
 
       it("should return correct value", async function () {
         // Functions should be disabled by default
         for (const func of functionList) {
-          expect(await metaTransactionsHandler["isFunctionWhitelisted(string)"](func)).to.be.false;
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.false;
         }
 
         // Enable functions
-        await metaTransactionsHandler.connect(admin).setWhitelistedFunctions(functionHashList, true);
+        await metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, true);
 
         // Functions should be enabled
         for (const func of functionList) {
-          expect(await metaTransactionsHandler["isFunctionWhitelisted(string)"](func)).to.be.true;
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.true;
         }
 
         // Disable functions
-        await metaTransactionsHandler.connect(admin).setWhitelistedFunctions(functionHashList, false);
+        await metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, false);
 
         // Functions should be disabled
         for (const func of functionList) {
-          expect(await metaTransactionsHandler["isFunctionWhitelisted(string)"](func)).to.be.false;
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.false;
         }
       });
     });
@@ -835,8 +835,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           });
 
           it("Should fail when function name is not whitelised", async function () {
-            // Remove function from whitelist
-            await metaTransactionsHandler.setWhitelistedFunctions(
+            // Remove function from allowlist
+            await metaTransactionsHandler.setAllowlistedFunctions(
               [keccak256(toUtf8Bytes(message.functionName))],
               false
             );
@@ -871,7 +871,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.FUNCTION_NOT_WHITELISTED);
+            ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
           });
 
           it("Should fail when function name is not whitelised - incorrect name", async function () {
@@ -908,11 +908,11 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.FUNCTION_NOT_WHITELISTED);
+            ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
           });
 
           it("Should fail when function name is incorrect", async function () {
-            let incorrectFunctionName = "redeemVoucher(uint256)"; // function name is whitelisted, but different than what we encode in next step
+            let incorrectFunctionName = "redeemVoucher(uint256)"; // function name is allowlisted, but different than what we encode in next step
 
             // Prepare the function signature for the facet function.
             functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
@@ -988,7 +988,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.FUNCTION_NOT_WHITELISTED);
+            ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
           });
 
           it("Should fail when replaying a transaction", async function () {
@@ -1264,7 +1264,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               s,
               v
             )
-          ).to.revertedWith(RevertReasons.FUNCTION_NOT_WHITELISTED);
+          ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
         });
 
         context("Reentrancy guard", async function () {

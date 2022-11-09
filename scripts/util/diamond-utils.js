@@ -127,7 +127,7 @@ async function getStateModifyingFunctions(facetNames) {
 }
 
 async function getStateModifyingFunctionsHashes(facetNames, omitFunctions = []) {
-  //  Whitelist contract methods
+  //  Allowlist contract methods
   const stateModifyingFunctions = await getStateModifyingFunctions(facetNames);
   const smf = stateModifyingFunctions.filter((fn) => !omitFunctions.includes(fn));
   return smf.map((smf) => keccak256(toUtf8Bytes(smf)));

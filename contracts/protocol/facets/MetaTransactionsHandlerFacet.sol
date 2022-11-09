@@ -51,7 +51,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             hashDisputeResolutionDetails
         );
 
-        setWhitelistedFunctions(_functionNameHashes, true);
+        setAllowlistedFunctions(_functionNameHashes, true);
     }
 
     /**
@@ -175,7 +175,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      *
      * Reverts if:
      * - Nonce is already used by the msg.sender for another transaction
-     * - Function is not whitelisted to be called using metatransactions
+     * - Function is not allowlisted to be called using metatransactions
      * - Function name does not match the bytes4 version of the function signature
      *
      * @param _functionName - the function name that we want to execute
@@ -193,9 +193,9 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         // Nonce should be unused
         require(!pmti.usedNonce[_userAddress][_nonce], NONCE_USED_ALREADY);
 
-        // Function must be whitelisted
+        // Function must be allowlisted
         bytes32 functionNameHash = keccak256(abi.encodePacked(_functionName));
-        require(pmti.isWhitelisted[functionNameHash], FUNCTION_NOT_WHITELISTED);
+        require(pmti.isAllowlisted[functionNameHash], FUNCTION_NOT_ALLOWLISTED);
 
         // Function name must correspond to selector
         bytes4 destinationFunctionSig = convertBytesToBytes4(_functionSignature);
@@ -270,7 +270,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * Reverts if:
      * - The meta-transactions region of protocol is paused
      * - Nonce is already used by the msg.sender for another transaction
-     * - Function is not whitelisted to be called using metatransactions
+     * - Function is not allowlisted to be called using metatransactions
      * - Function name does not match the bytes4 version of the function signature
      * - sender does not match the recovered signer
      * - Any code executed in the signed transaction reverts
@@ -320,15 +320,15 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     /**
      * @notice Manages allow list of functions that can be executed using metatransactions.
      *
-     * Emits a FunctionsWhitelisted event if successful.
+     * Emits a FunctionsAllowlisted event if successful.
      *
      * Reverts if:
      * - Caller is not a protocol admin
      *
      * @param _functionNameHashes - a list of hashed function names (keccak256)
-     * @param _isWhitelisted - new whitelist status
+     * @param _isAllowlisted - new allowlist status
      */
-    function setWhitelistedFunctions(bytes32[] calldata _functionNameHashes, bool _isWhitelisted)
+    function setAllowlistedFunctions(bytes32[] calldata _functionNameHashes, bool _isAllowlisted)
         public
         override
         onlyRole(ADMIN)
@@ -337,30 +337,30 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
 
         // set new values
         for (uint256 i = 0; i < _functionNameHashes.length; i++) {
-            pmti.isWhitelisted[_functionNameHashes[i]] = _isWhitelisted;
+            pmti.isAllowlisted[_functionNameHashes[i]] = _isAllowlisted;
         }
 
         // Notify external observers
-        emit FunctionsWhitelisted(_functionNameHashes, _isWhitelisted, msgSender());
+        emit FunctionsAllowlisted(_functionNameHashes, _isAllowlisted, msgSender());
     }
 
     /**
      * @notice Tells if function can be executed as meta transaction or not.
      *
      * @param _functionNameHash - hashed function name (keccak256)
-     * @return isWhitelisted - whitelist status
+     * @return isAllowlisted - allowlist status
      */
-    function isFunctionWhitelisted(bytes32 _functionNameHash) external view override returns (bool isWhitelisted) {
-        return protocolMetaTxInfo().isWhitelisted[_functionNameHash];
+    function isFunctionAllowlisted(bytes32 _functionNameHash) external view override returns (bool isAllowlisted) {
+        return protocolMetaTxInfo().isAllowlisted[_functionNameHash];
     }
 
     /**
      * @notice Tells if function can be executed as meta transaction or not.
      *
      * @param _functionName - function name
-     * @return isWhitelisted - whitelist status
+     * @return isAllowlisted - allowlist status
      */
-    function isFunctionWhitelisted(string calldata _functionName) external view override returns (bool isWhitelisted) {
-        return protocolMetaTxInfo().isWhitelisted[keccak256(abi.encodePacked(_functionName))];
+    function isFunctionAllowlisted(string calldata _functionName) external view override returns (bool isAllowlisted) {
+        return protocolMetaTxInfo().isAllowlisted[keccak256(abi.encodePacked(_functionName))];
     }
 }

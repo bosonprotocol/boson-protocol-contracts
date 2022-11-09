@@ -14,5 +14,5 @@ interface IBosonMetaTransactionsEvents {
         uint256 nonce
     );
 
-    event FunctionsWhitelisted(bytes32[] functionNameHashes, bool isWhitelisted, address indexed executedBy);
+    event FunctionsAllowlisted(bytes32[] functionNameHashes, bool isAllowlisted, address indexed executedBy);
 }
