@@ -1,4 +1,4 @@
-[![banner](images/banner.png)](https://bosonprotocol.io)
+[![banner](../images/banner.png)](https://bosonprotocol.io)
 
 <h1 align="center">Boson Protocol V2</h1>
 
@@ -18,7 +18,7 @@ In this unit-tested reference implementation, we gate Boson Protocol Offers with
 
 The protocol itself is not modified in any way. Rather, a standalone `SnapshotGate` contract acts as an intermediary between the seller's offers on the protocol and the holders of the snapshotted token (as of the time of the snapshot).
 
-![SnapshotGate Diagram](images/Boson_Protocol_V2_-_SnapshotGate_Example.png)
+![SnapshotGate Diagram](../images/Boson_Protocol_V2_-_SnapshotGate_Example.png)
 
 
 #### Features
