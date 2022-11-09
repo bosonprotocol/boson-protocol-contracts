@@ -23,6 +23,6 @@ This example answers the question: _How can I token-gate a Boson Protocol Offer 
 
 #### Example components
 * [Details and diagrams](example/SnapshotGate.md)
-* [Contract](../contracts/example/SnapshotGate)
+* [Contract](../contracts/example/SnapshotGate/SnapshotGate.sol)
 * [Deployment script](../scripts/example/SnapshotGate/deploy-snapshot-gate.js)
 * [Unit tests](../test/example/SnapshotGateTest.js)
