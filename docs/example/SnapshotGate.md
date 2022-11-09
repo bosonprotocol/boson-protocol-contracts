@@ -10,7 +10,7 @@
 Token-gate a Boson Protocol Offer on one chain with a token that exists on another chain.
 
 #### Example components
-* [SnapshotGate contract](../../contracts/example/SnapshotGate)
+* [SnapshotGate contract](../../contracts/example/SnapshotGate/SnapshotGate.sol)
 * [Deployment script](../../scripts/example/SnapshotGate/deploy-snapshot-gate.js)
 * [Unit tests](../../test/example/SnapshotGateTest.js)
 
