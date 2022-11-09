@@ -10,9 +10,9 @@
 Token-gate a Boson Protocol Offer on one chain with a token that exists on another chain.
 
 #### Example components
-* [SnapshotGate contract](../contracts/example/SnapshotGate)
-* [Deployment script](../scripts/example/SnapshotGate/deploy-snapshot-gate.js)
-* [Unit tests](../test/example/SnapshotGateTest.js)
+* [SnapshotGate contract](../../contracts/example/SnapshotGate)
+* [Deployment script](../../scripts/example/SnapshotGate/deploy-snapshot-gate.js)
+* [Unit tests](../../test/example/SnapshotGateTest.js)
 
 In this unit-tested reference implementation, we gate Boson Protocol Offers with a "snapshot" of ERC-1155 holders. 
 
