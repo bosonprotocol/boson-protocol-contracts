@@ -25,7 +25,7 @@ const { contractList } = require("../config/contract-verification");
  */
 const verifySuite = async (chainId, env) => {
   const network = hre.network.name;
-  console.log(chainId, network, env, contractList);
+  console.log(chainId, network, env, contractList.length ? contractList : "Verifying everything");
 
   // Read the contracts for the chain
   const { contracts } = await readContracts(chainId, network, env);
@@ -33,7 +33,7 @@ const verifySuite = async (chainId, env) => {
   console.log("🔍 Verifying contracts on block explorer...");
   while (contracts.length) {
     const contract = contracts.shift();
-    if (contractList.length && contractList.includes(contract.name)) {
+    if (!contractList.length || contractList.includes(contract.name)) {
       await verifyOnBlockExplorer(contract);
     }
   }

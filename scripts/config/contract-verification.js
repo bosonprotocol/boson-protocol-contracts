@@ -11,4 +11,4 @@
  * Example:
  * contractList = ["BuyerHandlerFacet","TwinHandlerFacet"]
  */
-exports.contractList = ["BuyerHandlerFacet"];
+exports.contractList = [];
