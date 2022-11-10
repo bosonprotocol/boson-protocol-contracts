@@ -1,7 +1,7 @@
 const shell = require("shelljs");
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { expect } = require("chai");
+const { expect, assert } = require("chai");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Role = require("../../scripts/domain/Role");
@@ -64,8 +64,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   let DRs = [];
   let sellers = [];
-  // let buyers = [];
+  let buyers = [];
   let agents = [];
+  let protocolContractState;
 
   before(async function () {
     // Make accounts available
@@ -121,12 +122,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // Populate protocol with data
     await populateProtocolContract();
 
+    // Get current protocol state, which serves as the reference
+    // We assume that this state is a true one, relying on
+    protocolContractState = await getProtocolContractState();
+
     // // Initial ids for all the things
-    // exchangeId = offerId = "1";
-    // agentId = "0"; // agent id is optional while creating an offer
-
-    // await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
-
     // [mockToken] = await deployMockTokens(["Foreign20"]);
 
     // // top up operators account
@@ -260,21 +260,30 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // raise dispute on some offers
   }
 
-  // async function getProtocolContractState() {
-  //   // get DRs
+  async function getProtocolContractState() {
+    // all id count
+    const totalCount = DRs.length + sellers.length + buyers.length + agents.length;
+    let DRsState = [];
+    let sellerState = [];
+    let buyersState = [];
+    let agentsState = [];
 
-  //   // get agents
+    // Query even the ids where it's not expected to get the entity
+    for (let id = 1; id <= totalCount; id++) {
+      sellerState.push(await accountHandler.connect(rando).getSeller(id));
+      DRsState.push(await accountHandler.connect(rando).getDisputeResolver(id));
+      buyersState.push(await accountHandler.connect(rando).getBuyer(id));
+      agentsState.push(await accountHandler.connect(rando).getAgent(id));
+    }
 
-  //   // get sellers
+    // get offers
 
-  //   // get offers
-
-  //   // get exchanges
-
-  // }
+    // get exchanges
+    return { DRsState, sellerState, buyersState, agentsState };
+  }
 
   // Exchange methods
-  context("📋 Exchange Handler Methods", async function () {
+  context("📋 After upgrade", async function () {
     beforeEach(async function () {
       // // Create a valid dispute resolver
       // disputeResolver = mockDisputeResolver(
@@ -325,20 +334,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       //   .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
     });
 
-    afterEach(async function () {
-      // Reset the accountId iterator
-      accountId.next(true);
+    it.only("State is not affected directly after the update", async function () {
+      // Get protocol state after the upgrade
+      const protocolContractStateAfterUpgrade = await getProtocolContractState();
+
+      // State before and after should be equal
+      assert.deepEqual(protocolContractState, protocolContractStateAfterUpgrade, "state mismatch after upgrade");
     });
 
     context("👉 completeExchange()", async function () {
       beforeEach(async function () {
         // // Commit to offer
         // await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-      });
-
-      it.only("test before", async function () {
-        // Set time forward to the offer's voucherRedeemableFrom
-        console.log("fone");
       });
 
       it("should emit an ExchangeCompleted2 event when buyer calls", async function () {
