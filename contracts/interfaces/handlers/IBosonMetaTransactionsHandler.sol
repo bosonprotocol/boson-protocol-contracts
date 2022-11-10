@@ -60,7 +60,7 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      * - Caller is not a protocol admin
      *
      * @param _functionNameHashes - a list of hashed function names (keccak256)
-     * @param _isAllowlisted - new allowl status
+     * @param _isAllowlisted - new allowlist status
      */
     function setAllowlistedFunctions(bytes32[] calldata _functionNameHashes, bool _isAllowlisted) external;
 
