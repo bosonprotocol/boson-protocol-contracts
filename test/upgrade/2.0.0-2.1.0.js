@@ -1,16 +1,19 @@
 const shell = require("shelljs");
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { expect, assert } = require("chai");
+const { expect } = require("chai");
+const AuthToken = require("../../scripts/domain/AuthToken");
+const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Role = require("../../scripts/domain/Role");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
-// const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
+const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   mockOffer,
   mockDisputeResolver,
-  // mockAuthToken,
-  // mockVoucherInitValues,
-  // mockSeller,
+  mockAuthToken,
+  mockSeller,
+  mockAgent,
   // mockVoucher,
   // mockExchange,
   accountId,
@@ -22,7 +25,6 @@ const {
   applyPercentage,
 } = require("../util/utils.js");
 const { oneWeek, oneMonth } = require("../util/constants");
-const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
 const { readContracts } = require("../../scripts/util/utils");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 
@@ -58,6 +60,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let customSignatureType, message;
   let snapshot;
   let protocolDiamondAddress;
+  let mockAuthERC721Contract;
+
+  let DRs = [];
+  let sellers = [];
+  // let buyers = [];
+  let agents = [];
 
   before(async function () {
     // Make accounts available
@@ -105,23 +113,17 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamondAddress);
     // metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamondAddress);
 
+    // create mock token for auth
+    [mockAuthERC721Contract] = await deployMockTokens(["Foreign721"]);
+    const configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamondAddress);
+    configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, mockAuthERC721Contract.address);
+
     // Populate protocol with data
+    await populateProtocolContract();
 
     // // Initial ids for all the things
     // exchangeId = offerId = "1";
     // agentId = "0"; // agent id is optional while creating an offer
-
-    // // Create a valid seller, then set fields in tests directly
-    // seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
-    // expect(seller.isValid()).is.true;
-
-    // // VoucherInitValues
-    // const voucherInitValues = mockVoucherInitValues();
-    // expect(voucherInitValues.isValid()).is.true;
-
-    // // AuthToken
-    // const emptyAuthToken = mockAuthToken();
-    // expect(emptyAuthToken.isValid()).is.true;
 
     // await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -142,7 +144,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     } else {
       // if tag was not created yet, use the latest code
       console.log(`Checking out latest code`);
-      shell.exec(`git reset --hard HEAD`);
+      shell.exec(`git checkout HEAD contracts`);
     }
 
     // compile old contracts
@@ -161,41 +163,115 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     snapshot = await ethers.provider.send("evm_snapshot", []);
   });
 
+  after(async function () {
+    // revert to latest state of contracts
+    shell.exec(`git checkout HEAD contracts`);
+  });
+
   // beforeEach(async function () {
 
   // });
 
-  async function upgradeExchangeHandlerFacet(mockFacet) {
-    // Upgrade the Exchange Handler Facet functions
-    // DiamondCutFacet
-    const cutFacetViaDiamond = await ethers.getContractAt("DiamondCutFacet", protocolDiamond.address);
+  const entity = {
+    SELLER: 0,
+    DR: 1,
+    AGENT: 2,
+    BUYER: 3,
+  };
 
-    // Deploy MockExchangeHandlerFacet
-    const MockExchangeHandlerFacet = await ethers.getContractFactory(mockFacet);
-    const mockExchangeHandlerFacet = await MockExchangeHandlerFacet.deploy();
-    await mockExchangeHandlerFacet.deployed();
+  async function populateProtocolContract() {
+    const DRcount = 3;
+    const agentCount = 2;
+    const sellerCount = 5;
+    const totalCount = DRcount + agentCount + sellerCount;
+    const creationOrder = [
+      entity.DR,
+      entity.AGENT,
+      entity.SELLER,
+      entity.SELLER,
+      entity.DR,
+      entity.SELLER,
+      entity.DR,
+      entity.SELLER,
+      entity.AGENT,
+      entity.SELLER,
+    ]; // maybe programatically set the random order
 
-    // Define the facet cut
-    const facetCuts = [
-      {
-        facetAddress: mockExchangeHandlerFacet.address,
-        action: FacetCutAction.Replace,
-        functionSelectors: getSelectors(mockExchangeHandlerFacet),
-      },
-    ];
+    for (let i = 0; i < totalCount; i++) {
+      const wallet = ethers.Wallet.createRandom();
+      const connectedWallet = wallet.connect(ethers.provider);
+      //Fund the new wallet
+      let tx = {
+        to: connectedWallet.address,
+        // Convert currency unit from ether to wei
+        value: ethers.utils.parseEther("1"),
+      };
+      await deployer.sendTransaction(tx);
 
-    // Send the DiamondCut transaction
-    const tx = await cutFacetViaDiamond.connect(deployer).diamondCut(facetCuts, ethers.constants.AddressZero, "0x");
+      // create entities
+      switch (creationOrder[i]) {
+        case entity.DR: {
+          const disputeResolver = mockDisputeResolver(wallet.address, wallet.address, wallet.address, wallet.address);
+          const disputeResolverFees = [];
+          const sellerAllowList = [];
+          await accountHandler
+            .connect(connectedWallet)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+          DRs.push({ wallet: connectedWallet, disputeResolver, disputeResolverFees, sellerAllowList });
+          break;
+        }
+        case entity.SELLER: {
+          const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address);
+          let authToken;
+          // randomly decide if auth token is used or not
+          if (Math.random() > 0.5) {
+            // no auth token
+            authToken = mockAuthToken();
+          } else {
+            // use auth token
+            seller.admin = ethers.constants.AddressZero;
+            await mockAuthERC721Contract.connect(connectedWallet).mint(101 * i, 1);
+            authToken = new AuthToken(`${101 * i}`, AuthTokenType.Lens);
+          }
+          // set unique new voucherInitValues
+          const voucherInitValues = new VoucherInitValues(`http://seller${i}.com/uri`, i * 10);
+          await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
+          sellers.push({ wallet: connectedWallet, seller, authToken, voucherInitValues });
+          break;
+        }
+        case entity.AGENT: {
+          const agent = mockAgent(wallet.address);
+          await accountHandler.connect(connectedWallet).createAgent(agent);
+          agents.push({ wallet: connectedWallet, agent });
+          break;
+        }
+      }
+    }
+    // create offers
 
-    // Wait for transaction to confirm
-    const receipt = await tx.wait();
+    // commit to some offers
 
-    // Be certain transaction was successful
-    assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
+    // redeem some offers
 
-    // Cast Diamond to the mock exchange handler facet.
-    mockExchangeHandlerUpgrade = await ethers.getContractAt(mockFacet, protocolDiamond.address);
+    // cancel some offers
+
+    // revoke some offers
+
+    // raise dispute on some offers
   }
+
+  // async function getProtocolContractState() {
+  //   // get DRs
+
+  //   // get agents
+
+  //   // get sellers
+
+  //   // get offers
+
+  //   // get exchanges
+
+  // }
 
   // Exchange methods
   context("📋 Exchange Handler Methods", async function () {
@@ -258,8 +334,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       beforeEach(async function () {
         // // Commit to offer
         // await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-        // // Upgrade Exchange handler facet
-        // await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
       });
 
       it.only("test before", async function () {
@@ -290,9 +364,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Commit to offer, creating a new exchange
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
         }
-
-        // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
 
         for (exchangeId = 1; exchangeId <= 5; exchangeId++) {
           // Redeem voucher
@@ -330,9 +401,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         // Commit to offer
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
-        // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
-
         // Revoke the voucher, expecting event
         await expect(mockExchangeHandlerUpgrade.connect(operator).revokeVoucher(exchange.id))
           .to.emit(mockExchangeHandlerUpgrade, "VoucherRevoked2")
@@ -345,9 +413,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         // Commit to offer, retrieving the event
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
-        // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
-
         // Cancel the voucher, expecting event
         await expect(mockExchangeHandlerUpgrade.connect(buyer).cancelVoucher(exchange.id))
           .to.emit(mockExchangeHandlerUpgrade, "VoucherCanceled2")
@@ -359,9 +424,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       it("should emit an VoucherExpired2 event when anyone calls and voucher has expired", async function () {
         // Commit to offer, retrieving the event
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-        // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
 
         // Set time forward past the voucher's validUntilDate
         await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
@@ -377,9 +439,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       it("should emit a VoucherRedeemed2 event when buyer calls", async function () {
         // Commit to offer
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-        // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
 
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -408,9 +467,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         // New expiry date for extensions
         const validUntilDate = ethers.BigNumber.from(voucher.validUntilDate).add(oneMonth).toString();
-
-        // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
 
         // Extend the voucher, expecting event
         await expect(mockExchangeHandlerUpgrade.connect(operator).extendVoucher(exchange.id, validUntilDate))
@@ -486,9 +542,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
-
-        // Upgrade Exchange handler facet
-        await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
 
         // Redeem voucher
         await mockExchangeHandlerUpgrade.connect(buyer).redeemVoucher(exchangeId);
@@ -796,8 +849,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       context("👉 withdrawFunds()", async function () {
         context("cancelVoucher() is working as expected", async function () {
           it("should emit a FundsWithdrawn event", async function () {
-            // Upgrade Exchange handler facet
-            await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
             // cancel the voucher, so both seller and buyer have something to withdraw
             await mockExchangeHandlerUpgrade.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
             await mockExchangeHandlerUpgrade.connect(buyer).cancelVoucher(++exchangeId); // canceling the voucher in the native currency
@@ -856,8 +907,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         context("cancelVoucher() has a bug and does not finalize any exchange", async function () {
           it("withdrawFunds() should revert", async function () {
-            // Upgrade Exchange handler facet
-            await upgradeExchangeHandlerFacet("MockExchangeHandlerFacetWithDefect");
             // cancel the voucher, so both seller and buyer have something to withdraw
             await mockExchangeHandlerUpgrade.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
             await mockExchangeHandlerUpgrade.connect(buyer).cancelVoucher(++exchangeId); // canceling the voucher in the native currency
