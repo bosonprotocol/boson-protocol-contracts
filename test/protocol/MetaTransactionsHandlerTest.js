@@ -834,7 +834,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             ).to.revertedWith(RevertReasons.REGION_PAUSED);
           });
 
-          it("Should fail when function name is not whitelised", async function () {
+          it("Should fail when function name is not allowlisted", async function () {
             // Remove function from allowlist
             await metaTransactionsHandler.setAllowlistedFunctions(
               [keccak256(toUtf8Bytes(message.functionName))],
@@ -874,7 +874,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
           });
 
-          it("Should fail when function name is not whitelised - incorrect name", async function () {
+          it("Should fail when function name is not allowlisted - incorrect name", async function () {
             let incorrectFunctionName = "createSeller"; // function with this name does not exist (argument types are missing)
 
             // Prepare the function signature for the facet function.
