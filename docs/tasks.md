@@ -43,7 +43,7 @@ Deploy suite deploys protocol diamond, all facets, client and beacon, and initia
 ```npm run deploy-suite:ethereum:mainnet```
 
 ### Verify suite
-After the protocol contracts are deployed, they should be verified on a block explorer. Verification provides a checkmark in the block explorer and makes the contract source code viewable in the block explorer. We have provided different npm scripts to verify the deployed protocol contracts on different environments. The scripts read a .json file containing contract addresses, which is produced by the deployment scripts.
+After the protocol contracts are deployed, they should be verified on a block explorer. Verification provides a checkmark in the block explorer and makes the contract source code viewable in the block explorer. We have provided different npm scripts to verify the deployed protocol contracts on different environments. The scripts read a .json file containing contract addresses, which is produced by the deployment scripts. The default mode is to verify all contracts from that file, however if only a subset of contracts needs to be verified (e.g. after the upgrade), list them in `scripts/config/contract-verification.js`.
 
 - **Polygon Mumbai**. These scripts verify the deployed contracts on Polygon Mumbai. The Boson Protocol team uses separate sets of contracts on Polygon Mumbai for the test and staging environments.  
 ```npm run verify-suite:polygon:mumbai-test```  

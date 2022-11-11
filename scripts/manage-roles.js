@@ -18,7 +18,7 @@ const Role = require("./domain/Role");
  *     the assignments.
  *
  * Process:
- *  1.  Edit scripts/config/role-assignments.js. Addresses will be pulled from /addresses/<chainId>-<network>.json or environments file
+ *  1.  Edit scripts/config/role-assignments.js. Addresses will be pulled from /addresses/<chainId>-<network>.json
  *  1a. Add role assignments following existing config
  *  1b. To remove an existing role assignment, delete role from entry's role array
  *  1b. If removing all roles from a previously-roled entry,
