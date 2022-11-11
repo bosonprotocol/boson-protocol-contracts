@@ -14,6 +14,7 @@ const {
   mockAuthToken,
   mockSeller,
   mockAgent,
+  mockBuyer,
   // mockVoucher,
   // mockExchange,
   accountId,
@@ -67,7 +68,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let buyers = [];
   let agents = [];
   let offers = [];
-  // let exchanges = [];
+  let exchanges = [];
   let protocolContractState;
 
   before(async function () {
@@ -179,7 +180,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     const DRcount = 3;
     const agentCount = 2;
     const sellerCount = 5;
-    const totalCount = DRcount + agentCount + sellerCount;
+    const buyerCount = 5;
+    const totalCount = DRcount + agentCount + sellerCount + buyerCount;
     const creationOrder = [
       entity.DR,
       entity.AGENT,
@@ -191,7 +193,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       entity.SELLER,
       entity.AGENT,
       entity.SELLER,
-    ]; // maybe programatically set the random order
+      entity.BUYER,
+      entity.BUYER,
+      entity.BUYER,
+      entity.BUYER,
+      entity.BUYER,
+    ]; // maybe programatically set the random order, expect for the buyers
 
     for (let i = 0; i < totalCount; i++) {
       const wallet = ethers.Wallet.createRandom();
@@ -251,13 +258,19 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           agents.push({ wallet: connectedWallet, agent });
           break;
         }
+        case entity.BUYER: {
+          // no need to explicitly create buyer, since it's done automatically during commitToOffer
+          const buyer = mockBuyer(wallet.address);
+          buyers.push({ wallet: connectedWallet, buyer });
+          break;
+        }
       }
     }
 
     // create offers - first seller has 5 offers, second 4, third 3 etc
     let offerId = 0;
     for (let i = 0; i < sellers.length; i++) {
-      for (let j = i; j < sellers.length; j++) {
+      for (let j = i; j >= 0; j--) {
         // Mock offer, offerDates and offerDurations
         ({ offer, offerDates, offerDurations } = await mockOffer());
 
@@ -267,7 +280,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         offer.price = `${offerId * 1 * 1000}`;
         offer.sellerDeposit = `${offerId * 1 * 100}`;
         offer.buyerCancelPenalty = `${offerId * 1 * 50}`;
-        offer.quantityAvailable = `${(offerId + 1) * 5}`;
+        offer.quantityAvailable = `${(offerId + 1) * 15}`;
 
         // Default offer is in native token. Change every other to mock token
         if (offerId % 2 == 0) {
@@ -275,9 +288,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         }
 
         // Set unique offer dates based on offer id
-        let now = offerDates.validFrom;
+        const now = offerDates.validFrom;
         offerDates.validFrom = ethers.BigNumber.from(now)
-          .add(oneMonth * offerId)
+          .add(oneMonth + offerId * 1000)
           .toString();
         offerDates.validUntil = ethers.BigNumber.from(now)
           .add(oneMonth * 6 * (offerId + 1))
@@ -298,18 +311,61 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
         offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId });
+
+        // Deposit seller funds so the commit will succeed
+        const sellerPool = ethers.BigNumber.from(offer.quantityAvailable).mul(offer.price).toString();
+        const msgValue = offer.exchangeToken == ethers.constants.AddressZero ? sellerPool : "0";
+        await fundsHandler
+          .connect(sellers[j].wallet)
+          .depositFunds(sellers[j].seller.id, offer.exchangeToken, sellerPool, { value: msgValue });
       }
     }
 
-    // commit to some offers
+    // commit to some offers: first buyer commit to 1 offer, second to 2, third to 3 etc
+    await setNextBlockTimestamp(Number(offers[offers.length - 1].offerDates.validFrom)); // When latest offer is valid, also other ffers are valid
+    let exchangeId = 0;
+    for (let i = 0; i < buyers.length; i++) {
+      for (let j = i; j < buyers.length; j++) {
+        const offerId = i + j + 1; // some offers will be picked multiple times, some never
+        const offerPrice = offers[offerId - 1].offer.price;
+        const buyerWallet = buyers[j].wallet;
+        let msgValue;
+        if (offers[offerId - 1].offer.exchangeToken == ethers.constants.AddressZero) {
+          msgValue = offerPrice;
+        } else {
+          // approve token transfer
+          msgValue = 0;
+          await mockToken.connect(buyerWallet).approve(protocolDiamondAddress, offerPrice);
+        }
+        await mockToken.mint(buyerWallet.address, offerPrice);
+        await exchangeHandler.connect(buyerWallet).commitToOffer(buyerWallet.address, offerId, { value: msgValue });
+        exchanges.push({ exchangeId: ++exchangeId, buyerIndex: j });
+      }
+    }
 
-    // redeem some offers
+    // redeem some vouchers #4
+    for (const id of [2, 5, 11, 8]) {
+      const exchange = exchanges[id];
+      console.log(exchange);
+      await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).redeemVoucher(exchange.exchangeId);
+    }
 
-    // cancel some offers
+    // cancel some vouchers #3
+    for (const id of [10, 3, 13]) {
+      const exchange = exchanges[id];
+      await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).redeemVoucher(exchange.exchangeId);
+    }
 
-    // revoke some offers
+    // revoke some vouchers #2
+    for (const id of [4, 6]) {
+      const exchange = exchanges[id];
+      await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).redeemVoucher(exchange.exchangeId);
+    }
 
-    // raise dispute on some offers
+    // raise dispute on some exchanges #1
+    const id = 5; // must be one of redeemed ones
+    const exchange = exchanges[id];
+    await disputeHandler.connect(buyers[exchange.buyerIndex].wallet).raiseDispute(exchange.exchangeId);
   }
 
   async function getProtocolContractState() {
@@ -335,6 +391,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     }
 
     // get exchanges
+    let exchangesState = [];
+    for (let id = 1; id <= offers.length; id++) {
+      exchangesState.push(await exchangeHandler.connect(rando).getExchange(id));
+    }
+
     return { DRsState, sellerState, buyersState, agentsState, offersState };
   }
 
