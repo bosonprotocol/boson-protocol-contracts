@@ -14,13 +14,22 @@ const { oneMonth, oneDay } = require("../util/constants");
 const { readContracts } = require("../../scripts/util/utils");
 
 /**
- *  Integration test case - After Exchange handler facet upgrade, everything is still operational
+ *  Upgrade test case - After upgrade from 2.0.0 to 2.1.0 everything is still operational
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
   let deployer, rando;
-  let accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, disputeHandler;
-  // bundleHandler, groupHandler, orchestrationHandler, twinHandler, pauseHandler, metaTransactionsHandler,
+  let accessController,
+    accountHandler,
+    exchangeHandler,
+    offerHandler,
+    fundsHandler,
+    disputeHandler,
+    bundleHandler,
+    groupHandler,
+    twinHandler,
+    configHandler;
+  // orchestrationHandler, pauseHandler, metaTransactionsHandler,
   let mockToken;
   let snapshot;
   let protocolDiamondAddress;
@@ -65,20 +74,20 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     // Cast Diamond to interfaces
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
-    // bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamondAddress);
+    bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamondAddress);
     disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamondAddress);
     exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamondAddress);
     fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamondAddress);
-    // groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamondAddress);
+    groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamondAddress);
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamondAddress);
     // orchestrationHandler = await ethers.getContractAt("IBosonOrchestrationHandler", protocolDiamondAddress);
-    // twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamondAddress);
+    twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamondAddress);
     // pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamondAddress);
     // metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamondAddress);
+    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamondAddress);
 
     // create mock token for auth
     [mockAuthERC721Contract] = await deployMockTokens(["Foreign721"]);
-    const configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamondAddress);
     configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, mockAuthERC721Contract.address);
 
     // create mock token for offers
@@ -124,18 +133,35 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     shell.exec(`git checkout HEAD contracts`);
   });
 
-  // beforeEach(async function () {
+  // Exchange methods
+  context("📋 Right After upgrade", async function () {
+    it.only("State is not affected directly after the update", async function () {
+      // Get protocol state after the upgrade
+      const protocolContractStateAfterUpgrade = await getProtocolContractState();
 
-  // });
+      // State before and after should be equal
+      assert.deepEqual(protocolContractState, protocolContractStateAfterUpgrade, "state mismatch after upgrade");
+    });
+  });
 
-  const entity = {
-    SELLER: 0,
-    DR: 1,
-    AGENT: 2,
-    BUYER: 3,
-  };
+  // Create new protocol entities. Existing data should not be affected
+  context.skip("📋 New data after the upgrade do not corrupt data from before the upgrade", async function () {});
 
+  // Test that offers and exchanges from before the upgrade can normally be used
+  context.skip("📋 Interactions after the upgrade still work", async function () {});
+
+  // Test actions that worked in previous version, but should not work anymore, or work differently
+  context.skip("📋 Breaking changes", async function () {});
+
+  // utility functions
   async function populateProtocolContract() {
+    const entity = {
+      SELLER: 0,
+      DR: 1,
+      AGENT: 2,
+      BUYER: 3,
+    };
+
     const DRcount = 3;
     const agentCount = 2;
     const sellerCount = 5;
@@ -327,12 +353,42 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   }
 
   async function getProtocolContractState() {
+    const accountContractState = await getAccountContractState();
+    const offerContractState = await getOfferContractState();
+    const exchangeContractState = await getExchangeContractState();
+    const bundleContractState = await getBundleContractState();
+    const configContractState = await getConfigContractState();
+    const disputeContractState = await getDisputeContractState();
+    const fundsContractState = await getFundsContractState();
+    const groupContractState = await getGroupContractState();
+    const twinContractState = await getTwinContractState();
+    const metaTxContractState = await getMetaTxContractState();
+
+    return {
+      accountContractState,
+      offerContractState,
+      exchangeContractState,
+      bundleContractState,
+      configContractState,
+      disputeContractState,
+      fundsContractState,
+      groupContractState,
+      twinContractState,
+      metaTxContractState,
+    };
+  }
+
+  async function getAccountContractState() {
     // all id count
     const totalCount = DRs.length + sellers.length + buyers.length + agents.length;
     let DRsState = [];
     let sellerState = [];
     let buyersState = [];
     let agentsState = [];
+    let sellerByAddressState = [];
+    let sellerByAuthTokenState = [];
+    let DRbyAddressState = [];
+    let nextAccountId;
 
     // Query even the ids where it's not expected to get the entity
     for (let id = 1; id <= totalCount; id++) {
@@ -342,38 +398,190 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       agentsState.push(await accountHandler.connect(rando).getAgent(id));
     }
 
-    // get offers
-    let offersState = [];
-    for (let id = 1; id <= offers.length; id++) {
-      offersState.push(await offerHandler.connect(rando).getOffer(id));
+    for (const seller of sellers) {
+      const sellerAddress = seller.wallet.address;
+      const sellerAuthToken = seller.authToken;
+
+      sellerByAddressState.push(await accountHandler.connect(rando).getSellerByAddress(sellerAddress));
+      sellerByAuthTokenState.push(await accountHandler.connect(rando).getSellerByAuthToken(sellerAuthToken));
+      DRbyAddressState.push(await accountHandler.connect(rando).getDisputeResolverByAddress(sellerAddress));
     }
 
-    // get exchanges
-    let exchangesState = [];
-    for (let id = 1; id <= offers.length; id++) {
-      exchangesState.push(await exchangeHandler.connect(rando).getExchange(id));
+    for (const DR of DRs) {
+      const DRAddress = DR.wallet.address;
+
+      sellerByAddressState.push(await accountHandler.connect(rando).getSellerByAddress(DRAddress));
+      DRbyAddressState.push(await accountHandler.connect(rando).getDisputeResolverByAddress(DRAddress));
     }
 
-    return { DRsState, sellerState, buyersState, agentsState, offersState };
+    for (const agent of agents) {
+      const agentAddress = agent.wallet.address;
+
+      sellerByAddressState.push(await accountHandler.connect(rando).getSellerByAddress(agentAddress));
+      DRbyAddressState.push(await accountHandler.connect(rando).getDisputeResolverByAddress(agentAddress));
+    }
+
+    for (const buyer of buyers) {
+      const buyerAddress = buyer.wallet.address;
+
+      sellerByAddressState.push(await accountHandler.connect(rando).getSellerByAddress(buyerAddress));
+      DRbyAddressState.push(await accountHandler.connect(rando).getDisputeResolverByAddress(buyerAddress));
+    }
+
+    nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+    return {
+      DRsState,
+      sellerState,
+      buyersState,
+      sellerByAddressState,
+      sellerByAuthTokenState,
+      DRbyAddressState,
+      nextAccountId,
+    };
   }
 
-  // Exchange methods
-  context("📋 Right After upgrade", async function () {
-    it.only("State is not affected directly after the update", async function () {
-      // Get protocol state after the upgrade
-      const protocolContractStateAfterUpgrade = await getProtocolContractState();
+  async function getOfferContractState() {
+    // get offers
+    let offersState = [];
+    let isOfferVoudedState = [];
+    let agentIdByOfferState = [];
+    for (let id = 1; id <= offers.length; id++) {
+      offersState.push(await offerHandler.connect(rando).getOffer(id));
+      isOfferVoudedState.push(await offerHandler.connect(rando).isOfferVoided(id));
+      agentIdByOfferState.push(await offerHandler.connect(rando).getAgentIdByOffer(id));
+    }
 
-      // State before and after should be equal
-      assert.deepEqual(protocolContractState, protocolContractStateAfterUpgrade, "state mismatch after upgrade");
-    });
-  });
+    let nextOfferId = await offerHandler.connect(rando).getNextOfferId();
 
-  // Create new protocol entities. Existing data should not be affected
-  context.skip("📋 New data after the upgrade do not corrupt data from before the upgrade", async function () {});
+    return { offersState, isOfferVoudedState, agentIdByOfferState, nextOfferId };
+  }
 
-  // Test that offers and exchanges from before the upgrade can normally be used
-  context.skip("📋 Interactions after the upgrade still work", async function () {});
+  async function getExchangeContractState() {
+    // get exchanges
+    let exchangesState = [];
+    let exchangeStateState = [];
+    let isExchangeFinalizedState = [];
+    let receiptsState = [];
 
-  // Test actions that worked in previous version, but should not work anymore, or work differently
-  context.skip("📋 Breaking changes", async function () {});
+    for (let id = 1; id <= exchanges.length; id++) {
+      exchangesState.push(await exchangeHandler.connect(rando).getExchange(id));
+      exchangeStateState.push(await exchangeHandler.connect(rando).getExchangeState(id));
+      isExchangeFinalizedState.push(await exchangeHandler.connect(rando).isExchangeFinalized(id));
+      try {
+        receiptsState.push(await exchangeHandler.connect(rando).getReceipt(id));
+      } catch {
+        receiptsState.push(["NOT_FINALIZED"]);
+      }
+    }
+
+    let nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
+    return { exchangesState, exchangeStateState, isExchangeFinalizedState, receiptsState, nextExchangeId };
+  }
+
+  async function getBundleContractState() {
+    // even if there are no bundles explicitly created
+    // just make check that after the update, empty bundles are still returned.
+    // Also this function will be handy if tests are expanded and actually introduce some bundles.
+    let bundlesState = [];
+    let bundleIdByOfferState = [];
+    let bundleIdByTwinState = [];
+    for (let id = 1; id < 15; id++) {
+      bundlesState.push(await bundleHandler.connect(rando).getBundle(id));
+      bundleIdByOfferState.push(await bundleHandler.connect(rando).getBundleIdByOffer(id));
+      bundleIdByTwinState.push(await bundleHandler.connect(rando).getBundleIdByTwin(id));
+    }
+
+    let nextBundleId = await bundleHandler.connect(rando).getNextBundleId();
+    return { bundlesState, bundleIdByOfferState, bundleIdByTwinState, nextBundleId };
+  }
+
+  async function getConfigContractState() {
+    return {
+      tokenAddress: await configHandler.connect(rando).getTokenAddress(),
+      treasuryAddress: await configHandler.connect(rando).getTreasuryAddress(),
+      voucherBeaconAddress: await configHandler.connect(rando).getVoucherBeaconAddress(),
+      beaconProxyAddress: await configHandler.connect(rando).getBeaconProxyAddress(),
+      protocolFeePercentage: await configHandler.connect(rando).getProtocolFeePercentage(),
+      protocolFeeFlatBoson: await configHandler.connect(rando).getProtocolFeeFlatBoson(),
+      maxOffersPerBatch: await configHandler.connect(rando).getMaxOffersPerBatch(),
+      maxOffersPerGroup: await configHandler.connect(rando).getMaxOffersPerGroup(),
+      maxTwinsPerBundle: await configHandler.connect(rando).getMaxTwinsPerBundle(),
+      maxOffersPerBundle: await configHandler.connect(rando).getMaxOffersPerBundle(),
+      maxTokensPerWithdrawal: await configHandler.connect(rando).getMaxTokensPerWithdrawal(),
+      maxFeesPerDisputeResolver: await configHandler.connect(rando).getMaxFeesPerDisputeResolver(),
+      maxEscalationResponsePeriod: await configHandler.connect(rando).getMaxEscalationResponsePeriod(),
+      maxDisputesPerBatch: await configHandler.connect(rando).getMaxDisputesPerBatch(),
+      maxTotalOfferFeePercentage: await configHandler.connect(rando).getMaxTotalOfferFeePercentage(),
+      maxAllowedSellers: await configHandler.connect(rando).getMaxAllowedSellers(),
+      buyerEscalationDepositPercentage: await configHandler.connect(rando).getBuyerEscalationDepositPercentage(),
+      authTokenContractNone: await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.None),
+      authTokenContractCustom: await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.Custom),
+      authTokenContractLens: await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.Lens),
+      authTokenContractENS: await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.ENS),
+      maxExchangesPerBatch: await configHandler.connect(rando).getMaxExchangesPerBatch(),
+      maxRoyaltyPecentage: await configHandler.connect(rando).getMaxRoyaltyPecentage(),
+      maxResolutionPeriod: await configHandler.connect(rando).getMaxResolutionPeriod(),
+      minDisputePeriod: await configHandler.connect(rando).getMinDisputePeriod(),
+      accessControllerAddress: await configHandler.connect(rando).getAccessControllerAddress(),
+    };
+  }
+
+  async function getDisputeContractState() {
+    let disputesState = [];
+    let disputesStatesState = [];
+    let disputeTimeoutState = [];
+    let isDisputeFinalizedState = [];
+    for (let id = 1; id <= exchanges.length; id++) {
+      disputesState.push(await disputeHandler.connect(rando).getDispute(id));
+      disputesStatesState.push(await disputeHandler.connect(rando).getDisputeState(id));
+      disputeTimeoutState.push(await disputeHandler.connect(rando).getDisputeTimeout(id));
+      isDisputeFinalizedState.push(await disputeHandler.connect(rando).isDisputeFinalized(id));
+    }
+
+    return { disputesState, disputesStatesState, disputeTimeoutState, isDisputeFinalizedState };
+  }
+
+  async function getFundsContractState() {
+    // all id count
+    const totalCount = DRs.length + sellers.length + buyers.length + agents.length;
+    let groupsState = [];
+
+    // Query even the ids where it's not expected to get the entity
+    for (let id = 1; id <= totalCount; id++) {
+      groupsState.push(await fundsHandler.connect(rando).getAvailableFunds(id));
+    }
+
+    return { groupsState };
+  }
+
+  async function getGroupContractState() {
+    // even if there are no groups explicitly created
+    // just make check that after the update, empty groups are still returned.
+    // Also this function will be handy if tests are expanded and actually introduce some groups.
+    let groupsState = [];
+    for (let id = 1; id < 15; id++) {
+      groupsState.push(await groupHandler.connect(rando).getGroup(id));
+    }
+
+    let nextGroupId = await groupHandler.connect(rando).getNextGroupId();
+    return { groupsState, nextGroupId };
+  }
+
+  async function getTwinContractState() {
+    // even if there are no twins explicitly created
+    // just make check that after the update, empty twins are still returned.
+    // Also this function will be handy if tests are expanded and actually introduce some twins.
+    let twinsState = [];
+    for (let id = 1; id < 15; id++) {
+      twinsState.push(await twinHandler.connect(rando).getTwin(id));
+    }
+
+    let nextTwinId = await twinHandler.connect(rando).getNextTwinId();
+    return { twinsState, nextTwinId };
+  }
+
+  async function getMetaTxContractState() {
+    return {};
+  }
 });
