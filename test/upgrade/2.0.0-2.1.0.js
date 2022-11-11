@@ -24,7 +24,7 @@ const {
   prepareDataSignatureParameters,
   applyPercentage,
 } = require("../util/utils.js");
-const { oneWeek, oneMonth } = require("../util/constants");
+const { oneWeek, oneMonth, oneDay } = require("../util/constants");
 const { readContracts } = require("../../scripts/util/utils");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 
@@ -66,6 +66,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let sellers = [];
   let buyers = [];
   let agents = [];
+  let offers = [];
+  // let exchanges = [];
   let protocolContractState;
 
   before(async function () {
@@ -119,21 +121,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     const configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamondAddress);
     configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, mockAuthERC721Contract.address);
 
+    // create mock token for offers
+    [mockToken] = await deployMockTokens(["Foreign20"]);
+
     // Populate protocol with data
     await populateProtocolContract();
 
     // Get current protocol state, which serves as the reference
-    // We assume that this state is a true one, relying on
+    // We assume that this state is a true one, relying on our unit and integration tests
     protocolContractState = await getProtocolContractState();
-
-    // // Initial ids for all the things
-    // [mockToken] = await deployMockTokens(["Foreign20"]);
-
-    // // top up operators account
-    // await mockToken.mint(operator.address, "1000000");
-
-    // // approve protocol to transfer the tokens
-    // await mockToken.connect(operator).approve(protocolDiamond.address, "1000000");
 
     // Upgrade protocol
     const newVersion = "v2.1.0";
@@ -147,7 +143,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       shell.exec(`git checkout HEAD contracts`);
     }
 
-    // compile old contracts
+    // compile new contracts
     await hre.run("compile");
     await hre.run("upgrade-facets", { env: "upgrade-test" });
 
@@ -212,12 +208,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       switch (creationOrder[i]) {
         case entity.DR: {
           const disputeResolver = mockDisputeResolver(wallet.address, wallet.address, wallet.address, wallet.address);
-          const disputeResolverFees = [];
+          const disputeResolverFees = [
+            new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+            new DisputeResolverFee(mockToken.address, "MockToken", 0),
+          ];
           const sellerAllowList = [];
           await accountHandler
             .connect(connectedWallet)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
           DRs.push({ wallet: connectedWallet, disputeResolver, disputeResolverFees, sellerAllowList });
+
+          //ADMIN role activates Dispute Resolver
+          await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
           break;
         }
         case entity.SELLER: {
@@ -237,6 +239,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const voucherInitValues = new VoucherInitValues(`http://seller${i}.com/uri`, i * 10);
           await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
           sellers.push({ wallet: connectedWallet, seller, authToken, voucherInitValues });
+
+          // mint mock token to sellers just in case they need them
+          await mockToken.mint(connectedWallet.address, "10000000000");
+          await mockToken.connect(connectedWallet).approve(protocolDiamondAddress, "10000000000");
           break;
         }
         case entity.AGENT: {
@@ -247,7 +253,53 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         }
       }
     }
-    // create offers
+
+    // create offers - first seller has 5 offers, second 4, third 3 etc
+    let offerId = 0;
+    for (let i = 0; i < sellers.length; i++) {
+      for (let j = i; j < sellers.length; j++) {
+        // Mock offer, offerDates and offerDurations
+        ({ offer, offerDates, offerDurations } = await mockOffer());
+
+        // Set unique offer properties based on offer id
+        offer.id = `${++offerId}`;
+        offer.sellerId = sellers[j].seller.id;
+        offer.price = `${offerId * 1 * 1000}`;
+        offer.sellerDeposit = `${offerId * 1 * 100}`;
+        offer.buyerCancelPenalty = `${offerId * 1 * 50}`;
+        offer.quantityAvailable = `${(offerId + 1) * 5}`;
+
+        // Default offer is in native token. Change every other to mock token
+        if (offerId % 2 == 0) {
+          offer.exchangeToken = mockToken.address;
+        }
+
+        // Set unique offer dates based on offer id
+        let now = offerDates.validFrom;
+        offerDates.validFrom = ethers.BigNumber.from(now)
+          .add(oneMonth * offerId)
+          .toString();
+        offerDates.validUntil = ethers.BigNumber.from(now)
+          .add(oneMonth * 6 * (offerId + 1))
+          .toString();
+
+        // Set unique offerDurations based on offer id
+        offerDurations.disputePeriod = `${(offerId + 1) * oneMonth}`;
+        offerDurations.voucherValid = `${(offerId + 1) * oneMonth}`;
+        offerDurations.resolutionPeriod = `${(offerId + 1) * oneDay}`;
+
+        // choose one DR and agent
+        disputeResolverId = DRs[offerId % 3].disputeResolver.id;
+        agentId = agents[offerId % 2].agent.id;
+
+        // create an offer
+        await offerHandler
+          .connect(sellers[j].wallet)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+        offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId });
+      }
+    }
 
     // commit to some offers
 
@@ -277,9 +329,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     }
 
     // get offers
+    let offersState = [];
+    for (let id = 1; id <= offers.length; id++) {
+      offersState.push(await offerHandler.connect(rando).getOffer(id));
+    }
 
     // get exchanges
-    return { DRsState, sellerState, buyersState, agentsState };
+    return { DRsState, sellerState, buyersState, agentsState, offersState };
   }
 
   // Exchange methods
