@@ -32,20 +32,20 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - The dispute resolvers region of protocol is paused
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
-     * - Number of DisputeResolverFee structs in array exceeds max
-     * - DisputeResolverFee array contains duplicates
      * - EscalationResponsePeriod is invalid
      * - Number of seller ids in _sellerAllowList array exceeds max
      * - Some seller does not exist
      * - Some seller id is duplicated
+     * - DisputeResolver is not active (if active == false)
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
-     * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency. Can be empty.
+     * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
+                                     feeAmount will be ignored because protocol doesn't support DR fees yet but DR still needs to provide array of fees to choose supported tokens
      * @param _sellerAllowList - list of ids of sellers that can choose this dispute resolver. If empty, there are no restrictions on which seller can chose it.
      */
     function createDisputeResolver(
         DisputeResolver memory _disputeResolver,
-        DisputeResolverFee[] calldata _disputeResolverFees,
+        DisputeResolverFee[] memory _disputeResolverFees,
         uint256[] calldata _sellerAllowList
     ) external disputeResolversNotPaused nonReentrant {
         // Cache protocol lookups for reference
@@ -59,6 +59,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 _disputeResolver.treasury != address(0),
             INVALID_ADDRESS
         );
+
+        // Check active is not set to false
+        require(_disputeResolver.active, MUST_BE_ACTIVE);
 
         // Scope to avoid stack too deep errors
         {
@@ -125,19 +128,19 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         mapping(address => uint256) storage disputeResolverFeeTokens = lookups.disputeResolverFeeTokenIndex[
             _disputeResolver.id
         ];
+
         for (uint256 i = 0; i < _disputeResolverFees.length; i++) {
             require(
                 disputeResolverFeeTokens[_disputeResolverFees[i].tokenAddress] == 0,
                 DUPLICATE_DISPUTE_RESOLVER_FEES
             );
+            // Protocol doesn't support DR fees yet
+            _disputeResolverFees[i].feeAmount = 0;
             disputeResolverFees.push(_disputeResolverFees[i]);
 
             // Set index mapping. Should be index in disputeResolverFees array + 1
             disputeResolverFeeTokens[_disputeResolverFees[i].tokenAddress] = disputeResolverFees.length;
         }
-
-        // Ignore supplied active flag and set to false. Dispute resolver must be activated by protocol.
-        _disputeResolver.active = false;
 
         storeDisputeResolver(_disputeResolver);
         storeSellerAllowList(disputeResolverId, _sellerAllowList);
@@ -412,8 +415,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      *
      * @param _disputeResolverId - id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
+                                     feeAmount will be ignored because protocol doesn't support DR fees yet but DR still needs to provide array of fees to choose supported tokens
      */
-    function addFeesToDisputeResolver(uint256 _disputeResolverId, DisputeResolverFee[] calldata _disputeResolverFees)
+    function addFeesToDisputeResolver(uint256 _disputeResolverId, DisputeResolverFee[] memory _disputeResolverFees)
         external
         disputeResolversNotPaused
         nonReentrant
@@ -450,6 +454,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_disputeResolverFees[i].tokenAddress] == 0,
                 DUPLICATE_DISPUTE_RESOLVER_FEES
             );
+            // Protocol doesn't support DR fees yet
+            _disputeResolverFees[i].feeAmount = 0;
             disputeResolverFees.push(_disputeResolverFees[i]);
             lookups.disputeResolverFeeTokenIndex[_disputeResolverId][
                 _disputeResolverFees[i].tokenAddress
@@ -648,40 +654,6 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         }
 
         emit AllowedSellersRemoved(_disputeResolverId, _sellerAllowList, sender);
-    }
-
-    /**
-     * @notice Sets the active flag for this dispute resolver to true.
-     *
-     * @dev Only callable by the protocol ADMIN role.
-     *
-     * Emits a DisputeResolverActivated event if successful.
-     *
-     * Reverts if:
-     * - The dispute resolvers region of protocol is paused
-     * - Caller does not have the ADMIN role
-     * - Dispute resolver does not exist
-     *
-     * @param _disputeResolverId - id of the dispute resolver
-     */
-    function activateDisputeResolver(uint256 _disputeResolverId)
-        external
-        disputeResolversNotPaused
-        onlyRole(ADMIN)
-        nonReentrant
-    {
-        bool exists;
-        DisputeResolver storage disputeResolver;
-
-        // Check dispute resolver and dispute resolver fees from disputeResolvers and disputeResolverFees mappings
-        (exists, disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
-
-        // Dispute resolver must already exist
-        require(exists, NO_SUCH_DISPUTE_RESOLVER);
-
-        disputeResolver.active = true;
-
-        emit DisputeResolverActivated(_disputeResolverId, disputeResolver, msgSender());
     }
 
     /**

@@ -154,11 +154,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // is different from 0, it must be checked that dispute resolver exists, supports the exchange token and seller is allowed to choose them.
         DisputeResolutionTerms memory disputeResolutionTerms;
         if (_offer.price != 0 || _offer.sellerDeposit != 0 || _disputeResolverId != 0) {
-            (
-                bool exists,
-                DisputeResolver storage disputeResolver,
-                DisputeResolverFee[] storage disputeResolverFees
-            ) = fetchDisputeResolver(_disputeResolverId);
+            (bool exists, DisputeResolver storage disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
             require(exists && disputeResolver.active, INVALID_DISPUTE_RESOLVER);
 
             // Operate in a block to avoid "stack too deep" error
@@ -177,14 +173,15 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                 uint256 feeIndex = lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_offer.exchangeToken];
                 require(feeIndex > 0, DR_UNSUPPORTED_FEE);
 
-                uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
+                // Protocol doesn't support DR fees yet
+                // uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
 
                 // store DR terms
                 disputeResolutionTerms.disputeResolverId = _disputeResolverId;
                 disputeResolutionTerms.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
-                disputeResolutionTerms.feeAmount = feeAmount;
+                // disputeResolutionTerms.feeAmount = feeAmount;
                 disputeResolutionTerms.buyerEscalationDeposit =
-                    (feeAmount * protocolFees().buyerEscalationDepositPercentage) /
+                    (protocolFees().buyerEscalationDepositPercentage) /
                     10000;
 
                 protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;

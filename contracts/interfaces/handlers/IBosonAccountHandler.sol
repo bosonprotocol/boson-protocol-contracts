@@ -63,15 +63,15 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - The dispute resolvers region of protocol is paused
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
-     * - Number of DisputeResolverFee structs in array exceeds max
-     * - DisputeResolverFee array contains duplicates
      * - EscalationResponsePeriod is invalid
      * - Number of seller ids in _sellerAllowList array exceeds max
      * - Some seller does not exist
      * - Some seller id is duplicated
+     * - DisputeResolver is not active (if active == false)
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
-     * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency. Can be empty.
+    * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
+                                    feeAmount will be ignored because protocol doesn't support DR fees yet but DR still needs to provide array of fees to choose supported tokens
      * @param _sellerAllowList - list of ids of sellers that can choose this dispute resolver. If empty, there are no restrictions on which seller can chose it.
      */
     function createDisputeResolver(
@@ -237,6 +237,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      *
      * @param _disputeResolverId - id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
+                                     feeAmount will be ignored because protocol doesn't support DR fees yet but DR still needs to provide array of fees to choose supported tokens
      */
     function addFeesToDisputeResolver(
         uint256 _disputeResolverId,
@@ -297,22 +298,6 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _sellerAllowList - list of seller ids to remove from allowed list
      */
     function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external;
-
-    /**
-     * @notice Sets the active flag for this dispute resolver to true.
-     *
-     * @dev Only callable by the protocol ADMIN role.
-     *
-     * Emits a DisputeResolverActivated event if successful.
-     *
-     * Reverts if:
-     * - The dispute resolvers region of protocol is paused
-     * - Caller does not have the ADMIN role
-     * - Dispute resolver does not exist
-     *
-     * @param _disputeResolverId - id of the dispute resolver
-     */
-    function activateDisputeResolver(uint256 _disputeResolverId) external;
 
     /**
      * @notice Gets the details about a seller.
