@@ -1,6 +1,8 @@
 const shell = require("shelljs");
+const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const { keccak256 } = ethers.utils;
 const { assert } = require("chai");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
@@ -12,8 +14,7 @@ const { mockOffer, mockDisputeResolver, mockAuthToken, mockSeller, mockAgent, mo
 const { setNextBlockTimestamp } = require("../util/utils.js");
 const { oneMonth, oneDay } = require("../util/constants");
 const { readContracts } = require("../../scripts/util/utils");
-const { keccak256 } = ethers.utils;
-const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
+const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 
 /**
  *  Upgrade test case - After upgrade from 2.0.0 to 2.1.0 everything is still operational
@@ -368,6 +369,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     // get states not accesible by external getters
     const metaTxPrivateContractState = await getMetaTxPrivateContractState();
+    const protocolStatusPrivateContractState = await getProtocolStatusPrivateContractState();
 
     return {
       accountContractState,
@@ -381,6 +383,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       twinContractState,
       metaTxContractState,
       metaTxPrivateContractState,
+      protocolStatusPrivateContractState,
     };
   }
 
@@ -595,7 +598,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     /*
     ProtocolMetaTxInfo storage layout
 
-    #0 [ currentSenderAddress + isMetaTransaction]
+    #0 [ currentSenderAddress + isMetaTransaction ]
     #1 [ domain separator ]
     #2 [ ] // placeholder for usedNonce
     #3 [ cachedChainId ]
@@ -609,7 +612,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     // current sender address + isMetaTransaction (they are packed since they are shorter than one slot)
     // should be always be 0x
-    const inTransactionInfo = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber.add("0")); // currentAddress sender + isMetaTransaction
+    const inTransactionInfo = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber.add("0"));
 
     // domain separator
     const domainSeparator = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber.add("1"));
@@ -663,5 +666,41 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     }
 
     return { inTransactionInfo, domainSeparator, cachedChainId, inputTypesState, hashInfoState };
+  }
+
+  async function getProtocolStatusPrivateContractState() {
+    /*
+    ProtocolStatus storage layout
+
+    #0 [ pauseScenario ]
+    #1 [ reentrancyStatus ]
+    #2 [ ] // placeholder for initializedInterfaces
+    */
+
+    // starting slot
+    const protocolStatusStorageSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.initializers"));
+    const protocolStatusStorageSlotNumber = ethers.BigNumber.from(protocolStatusStorageSlot);
+
+    // pause scenario
+    const pauseScenario = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber.add("0"));
+
+    // reentrancy status
+    // defualt: NOT_ENTERED = 1
+    const reentrancyStatus = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber.add("1"));
+
+    // initializedInterfaces
+    const interfaceIds = await getInterfaceIds();
+
+    const initializedInterfacesState = [];
+    const initializedInterfaces_p = protocolStatusStorageSlotNumber.add("2"); // Base input type storage slot
+    const initializedInterfaces_pBuffer = Buffer.from(initializedInterfaces_p.toHexString().slice(2), "hex");
+    for (const interfaceId of Object.values(interfaceIds)) {
+      const interfaceIdPadd = interfaceId + "00000000000000000000000000000000000000000000000000000000";
+      const keyBuffer = Buffer.from(interfaceIdPadd.slice(2), "hex");
+      const storageSlot = keccak256(Buffer.concat([keyBuffer, initializedInterfaces_pBuffer]));
+      initializedInterfacesState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
+    }
+
+    return { pauseScenario, reentrancyStatus, initializedInterfacesState };
   }
 });
