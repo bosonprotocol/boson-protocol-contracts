@@ -8,7 +8,7 @@
  *          Skip does not apply to facets that are completely removed.
  * - initArgs: if facet initializer expects arguments, provide them here. For no-arg initializers you don't have to specify anything.
  * - skipInit": list of facets for which you want to skip initialization call.
- *
+ * 
  * Example:
     {
       addOrUpgrade: ["Facet1", "Facet2"],
@@ -21,10 +21,14 @@
       skipInit: ["Facet2"],
     }
  */
-exports.Facets = {
-  addOrUpgrade: [],
-  remove: [],
-  skipSelectors: {},
-  initArgs: {},
-  skipInit: [],
-};
+async function getFacets() {
+  return {
+    addOrUpgrade: [],
+    remove: [],
+    skipSelectors: {},
+    initArgs: {},
+    skipInit: [],
+  };
+}
+
+exports.getFacets = getFacets;

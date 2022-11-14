@@ -9,7 +9,7 @@ import { IBosonMetaTransactionsEvents } from "../events/IBosonMetaTransactionsEv
  *
  * @notice Manages incoming meta-transactions in the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xd25fcdc1
+ * The ERC-165 identifier for this interface is: 0xb3e4e803
  */
 interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
     /**
@@ -27,7 +27,7 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      * Reverts if:
      * - The meta-transactions region of protocol is paused
      * - Nonce is already used by the msg.sender for another transaction
-     * - Function signature matches executeMetaTransaction
+     * - Function is not allowlisted to be called using metatransactions
      * - Function name does not match the bytes4 version of the function signature
      * - sender does not match the recovered signer
      * - Any code executed in the signed transaction reverts
@@ -50,4 +50,33 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
         bytes32 _sigS,
         uint8 _sigV
     ) external payable returns (bytes memory);
+
+    /**
+     * @notice Manages allow list of functions that can be executed using metatransactions.
+     *
+     * Emits a FunctionsAllowlisted event if successful.
+     *
+     * Reverts if:
+     * - Caller is not a protocol admin
+     *
+     * @param _functionNameHashes - a list of hashed function names (keccak256)
+     * @param _isAllowlisted - new allowlist status
+     */
+    function setAllowlistedFunctions(bytes32[] calldata _functionNameHashes, bool _isAllowlisted) external;
+
+    /**
+     * @notice Tells if function can be executed as meta transaction or not.
+     *
+     * @param _functionNameHash - hashed function name (keccak256)
+     * @return isAllowlisted - allowlist status
+     */
+    function isFunctionAllowlisted(bytes32 _functionNameHash) external view returns (bool isAllowlisted);
+
+    /**
+     * @notice Tells if function can be executed as meta transaction or not.
+     *
+     * @param _functionName - function name
+     * @return isAllowlisted - allowlist status
+     */
+    function isFunctionAllowlisted(string calldata _functionName) external view returns (bool isAllowlisted);
 }

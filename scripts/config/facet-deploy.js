@@ -1,6 +1,10 @@
+const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
+
 /**
  * Config file used to deploy the facets
  *
+ * Function getFacets() returns the object that is used by the deploy script. To specify custom deployment parameters, modify return value.
+ * Returned value should have the following fields:
  * - noArgFacets: list of facet names that don't expect any argument passed into initializer
  * - argFacets: object that specify facet names and arguments that needs to be passed into initializer in format object {facetName: initializerArguments}
  * 
@@ -13,23 +17,35 @@
     }
  * 
  */
-module.exports = {
-  noArgFacets: [
-    "AccountHandlerFacet",
-    "SellerHandlerFacet",
-    "BuyerHandlerFacet",
-    "DisputeResolverHandlerFacet",
-    "AgentHandlerFacet",
-    "BundleHandlerFacet",
-    "DisputeHandlerFacet",
-    "ExchangeHandlerFacet",
-    "FundsHandlerFacet",
-    "GroupHandlerFacet",
-    "OfferHandlerFacet",
-    "OrchestrationHandlerFacet",
-    "TwinHandlerFacet",
-    "PauseHandlerFacet",
-    "MetaTransactionsHandlerFacet",
-  ],
-  argFacets: {},
-};
+
+const noArgFacetNames = [
+  "AccountHandlerFacet",
+  "SellerHandlerFacet",
+  "BuyerHandlerFacet",
+  "DisputeResolverHandlerFacet",
+  "AgentHandlerFacet",
+  "BundleHandlerFacet",
+  "DisputeHandlerFacet",
+  "ExchangeHandlerFacet",
+  "FundsHandlerFacet",
+  "GroupHandlerFacet",
+  "OfferHandlerFacet",
+  "OrchestrationHandlerFacet",
+  "TwinHandlerFacet",
+  "PauseHandlerFacet",
+];
+
+async function getFacets() {
+  // metaTransactionsHandlerFacet initializer arguments.
+  const MetaTransactionsHandlerFacetInitArgs = await getStateModifyingFunctionsHashes(
+    [...noArgFacetNames, "MetaTransactionsHandlerFacet"],
+    ["executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"]
+  );
+
+  return {
+    noArgFacets: noArgFacetNames,
+    argFacets: { MetaTransactionsHandlerFacet: [MetaTransactionsHandlerFacetInitArgs] },
+  };
+}
+
+exports.getFacets = getFacets;

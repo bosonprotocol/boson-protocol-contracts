@@ -13,4 +13,6 @@ interface IBosonMetaTransactionsEvents {
         string indexed functionName,
         uint256 nonce
     );
+
+    event FunctionsAllowlisted(bytes32[] functionNameHashes, bool isAllowlisted, address indexed executedBy);
 }
