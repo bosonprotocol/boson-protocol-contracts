@@ -99,6 +99,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // Populate protocol with data
     await populateProtocolContract();
 
+    // await getProtocolLookupsPrivateContractState();
+    // process.exit()
+
     // Get current protocol state, which serves as the reference
     // We assume that this state is a true one, relying on our unit and integration tests
     protocolContractState = await getProtocolContractState();
@@ -702,5 +705,107 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     }
 
     return { pauseScenario, reentrancyStatus, initializedInterfacesState };
+  }
+
+  async function getProtocolLookupsPrivateContractState() {
+    /*
+    ProtocolLookups storage layout
+
+    #0  [ ] // placeholder for exchangeIdsByOffer
+    #1  [ ] // placeholder for bundleIdByOffer
+    #2  [ ] // placeholder for bundleIdByTwin
+    #3  [ ] // placeholder for groupIdByOffer
+    #4  [ ] // placeholder for agentIdByOffer
+    #5  [ ] // placeholder for sellerIdByOperator
+    #6  [ ] // placeholder for sellerIdByAdmin
+    #7  [ ] // placeholder for sellerIdByClerk
+    #8  [ ] // placeholder for buyerIdByWallet
+    #9  [ ] // placeholder for disputeResolverIdByOperator
+    #10 [ ] // placeholder for disputeResolverIdByAdmin
+    #11 [ ] // placeholder for disputeResolverIdByClerk
+    #12 [ ] // placeholder for disputeResolverFeeTokenIndex
+    #13 [ ] // placeholder for agentIdByWallet
+    #14 [ ] // placeholder for availableFunds
+    #15 [ ] // placeholder for tokenList
+    #16 [ ] // placeholder for tokenIndexByAccount
+    #17 [ ] // placeholder for cloneAddress
+    #18 [ ] // placeholder for voucherCount
+    #19 [ ] // placeholder for conditionalCommitsByAddress
+    #20 [ ] // placeholder for authTokenContracts
+    #21 [ ] // placeholder for sellerIdByAuthToken
+    #22 [ ] // placeholder for twinRangesBySeller
+    #23 [ ] // placeholder for twinIdsByTokenAddressAndBySeller
+    #24 [ ] // placeholder for twinReceiptsByExchange
+    #25 [ ] // placeholder for allowedSellers
+    #26 [ ] // placeholder for allowedSellerIndex
+    #27 [ ] // placeholder for exchangeCondition
+    #28 [ ] // placeholder for offerIdIndexByGroup
+    #29 [ ] // placeholder for pendingAddressUpdatesBySeller
+    #30 [ ] // placeholder for pendingAuthTokenUpdatesBySeller
+    #31 [ ] // placeholder for pendingAddressUpdatesByDisputeResolver
+    */
+    const paddingType = {
+      NONE: 0,
+      START: 1,
+      END: 2
+    }
+
+    function getMappinStoragePosition(slot, key, padding = paddingType.NONE) {
+      let keyBuffer;
+      switch (padding) {
+        case paddingType.NONE:
+          keyBuffer = ethers.utils.toUtf8Bytes(key);
+          break;
+        case paddingType.START:
+          keyBuffer = Buffer.from(ethers.utils.hexZeroPad(key, 32).toString().slice(2), "hex");
+          break;
+        case paddingType.END:
+          keyBuffer = Buffer.from(key.padEnd(64).slice(2), "hex");
+          break;
+      }
+      const pBuffer = Buffer.from(slot.toHexString().slice(2), "hex");
+      return keccak256(Buffer.concat([keyBuffer, pBuffer]))
+    }
+
+    // starting slot
+    const protocolLookupsSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.lookups"));
+    const protocolLookupsSlotNumber = ethers.BigNumber.from(protocolLookupsSlot);
+
+    // exchangeIdsByOffer and groupIdByOffer
+    let exchangeIdsByOfferState = [];
+    let groupIdByOfferState = [];
+    for (let id = 1; id <= offers.length; id++) {
+      // exchangeIdsByOffer
+      let exchangeIdsByOffer = [];
+      const arraySlot = ethers.BigNumber.from(getMappinStoragePosition(protocolLookupsSlotNumber.add("0"),id,paddingType.START));
+      const arrayLength = ethers.BigNumber.from(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber()
+      const arrayStart = ethers.BigNumber.from(keccak256(arraySlot));
+      for (let i = 0; i < arrayLength; i++) {
+        exchangeIdsByOffer.push(await getStorageAt(protocolDiamondAddress, arrayStart.add(i)))
+      }
+      exchangeIdsByOfferState.push(exchangeIdsByOffer)
+
+      // groupIdByOffer
+      groupIdByOfferState.push(await getStorageAt(protocolDiamondAddress,getMappinStoragePosition(protocolLookupsSlotNumber.add("3"),id,paddingType.START)))
+    }
+   
+     
+    // buyerIdByWallet
+    // disputeResolverFeeTokenIndex
+    // agentIdByWallet
+    // tokenIndexByAccount
+    // cloneAddress
+    // voucherCount
+    // conditionalCommitsByAddress
+    // twinRangesBySeller
+    // twinIdsByTokenAddressAndBySeller
+    // allowedSellerIndex; ? areSellersAllowe
+    // offerIdIndexByGroup
+    // pendingAddressUpdatesBySeller
+    // pendingAuthTokenUpdatesBySeller
+    // pendingAddressUpdatesByDisputeResolver
+    
+
+    return { };
   }
 });
