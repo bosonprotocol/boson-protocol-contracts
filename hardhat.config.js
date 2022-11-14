@@ -26,8 +26,8 @@ task("estimate-limits", "Estimates the maximum values for limits in protocol con
 
 task("create-dispute-resolver", "Creates and activates a dispute resolver")
   .addParam("path", "The path to the dispute resolver json file")
-  .addFlag("createOnly", "Only create the dispute resolver")
-  .addFlag("activateOnly", "Only activate the dispute resolver")
+  // .addFlag("createOnly", "Only create the dispute resolver")
+  // .addFlag("activateOnly", "Only activate the dispute resolver")
   .setAction(async ({ path, createOnly, activateOnly }) => {
     const { createAndActivateDR } = await lazyImport("./scripts/util/create-and-activate-DR");
     await createAndActivateDR(path, createOnly, activateOnly);

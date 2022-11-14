@@ -974,7 +974,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               adminDR.address,
               clerkDR.address,
               treasuryDR.address,
-              false
+              true
             );
             expect(disputeResolver.isValid()).is.true;
 
@@ -986,11 +986,10 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Make empty seller list, so every seller is allowed
             sellerAllowList = [];
 
-            // Register and activate the dispute resolver
+            // Register the dispute resolver
             await accountHandler
               .connect(adminDR)
               .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-            await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
             const { offer, ...mo } = await mockOffer();
             ({ offerDates, offerDurations } = mo);
@@ -1193,7 +1192,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             adminDR.address,
             clerkDR.address,
             treasuryDR.address,
-            false
+            true
           );
           expect(disputeResolver.isValid()).is.true;
 
@@ -1206,11 +1205,10 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Make empty seller list, so every seller is allowed
           sellerAllowList = [];
 
-          // Register and activate the dispute resolver
+          // Register the dispute resolver
           await accountHandler
             .connect(adminDR)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-          await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
           buyerId = accountId.next().value;
 
@@ -2754,7 +2752,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             adminDR.address,
             clerkDR.address,
             treasuryDR.address,
-            false
+            true
           );
           expect(disputeResolver.isValid()).is.true;
 
@@ -2764,11 +2762,10 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Make empty seller list, so every seller is allowed
           sellerAllowList = [];
 
-          // Register and activate the dispute resolver
+          // Register the dispute resolver
           await accountHandler
             .connect(adminDR)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-          await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
           // Valid offer domains
           ({ offer, offerDates, offerDurations } = await mockOffer());
@@ -2992,7 +2989,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             adminDR.address,
             clerkDR.address,
             treasuryDR.address,
-            false
+            true
           );
           expect(disputeResolver.isValid()).is.true;
 
@@ -3007,11 +3004,10 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Make empty seller list, so every seller is allowed
           sellerAllowList = [];
 
-          // Register and activate the dispute resolver
+          // Register the dispute resolver
           await accountHandler
             .connect(adminDR)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-          await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
           const { offer, ...mo } = await mockOffer();
           ({ offerDates, offerDurations } = mo);

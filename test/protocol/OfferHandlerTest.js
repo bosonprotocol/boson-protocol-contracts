@@ -244,13 +244,13 @@ describe("IBosonOfferHandler", function () {
         adminDR.address,
         clerkDR.address,
         treasuryDR.address,
-        false
+        true
       );
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      DRFeeNative = "100";
-      DRFeeToken = "200";
+      DRFeeNative = "0";
+      DRFeeToken = "0";
       disputeResolverFees = [
         new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative),
         new DisputeResolverFee(bosonToken.address, "Boson", DRFeeToken),
@@ -259,11 +259,10 @@ describe("IBosonOfferHandler", function () {
       // Make empty seller list, so every seller is allowed
       sellerAllowList = [];
 
-      // Register and activate the dispute resolver
+      // Register the dispute resolver
       await accountHandler
         .connect(adminDR)
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // The first offer id
       nextOfferId = "1";
@@ -756,7 +755,7 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
-        it("Dispute resolver is not active", async function () {
+        it.skip("Dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
           disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
           await accountHandler
@@ -788,7 +787,7 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
-        it("For absolute zero offer, specified dispute resolver is not active", async function () {
+        it.skip("For absolute zero offer, specified dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
           disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
           await accountHandler
@@ -1446,7 +1445,7 @@ describe("IBosonOfferHandler", function () {
         adminDR.address,
         clerkDR.address,
         treasuryDR.address,
-        false
+        true
       );
       expect(disputeResolver.isValid()).is.true;
 
@@ -1454,18 +1453,17 @@ describe("IBosonOfferHandler", function () {
       sellerAllowList = [];
 
       //Create DisputeResolverFee array so offer creation will succeed
-      DRFeeNative = "100";
-      DRFeeToken = "200";
+      DRFeeNative = "0";
+      DRFeeToken = "0";
       disputeResolverFees = [
         new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative),
         new DisputeResolverFee(bosonToken.address, "Boson", DRFeeToken),
       ];
 
-      // Register and activate the dispute resolver
+      // Register the dispute resolver
       await accountHandler
         .connect(adminDR)
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
       // Necessary to cover all offers resolution periods
       await configHandler.setMaxResolutionPeriod(oneWeek * 5);
@@ -2102,7 +2100,7 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
-        it("For some offer, dispute resolver is not active", async function () {
+        it.skip("For some offer, dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
           disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
           await accountHandler
@@ -2143,7 +2141,7 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
-        it("For some absolute zero offer, specified dispute resolver is not active", async function () {
+        it.skip("For some absolute zero offer, specified dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
           disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
           await accountHandler

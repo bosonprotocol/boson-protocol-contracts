@@ -161,7 +161,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
       adminDR.address,
       clerkDR.address,
       treasuryDR.address,
-      false
+      true
     );
     expect(disputeResolver.isValid()).is.true;
 
@@ -174,9 +174,8 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     // Make empty seller list, so every seller is allowed
     const sellerAllowList = [];
 
-    // Register and activate the dispute resolver
+    // Register the dispute resolver
     await accountHandler.connect(adminDR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-    await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
     // Create a seller account
     ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());

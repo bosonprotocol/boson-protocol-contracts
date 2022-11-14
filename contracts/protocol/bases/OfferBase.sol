@@ -173,7 +173,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                 uint256 feeIndex = lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_offer.exchangeToken];
                 require(feeIndex > 0, DR_UNSUPPORTED_FEE);
 
-                // Protocol doesn't support DR fees yet
                 // uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
 
                 // store DR terms

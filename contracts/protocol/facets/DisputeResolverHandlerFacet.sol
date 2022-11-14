@@ -134,8 +134,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 disputeResolverFeeTokens[_disputeResolverFees[i].tokenAddress] == 0,
                 DUPLICATE_DISPUTE_RESOLVER_FEES
             );
+
             // Protocol doesn't support DR fees yet
-            _disputeResolverFees[i].feeAmount = 0;
+            require(_disputeResolverFees[i].feeAmount == 0, FEE_AMOUNT_NOT_YET_SUPPORTED);
+
             disputeResolverFees.push(_disputeResolverFees[i]);
 
             // Set index mapping. Should be index in disputeResolverFees array + 1

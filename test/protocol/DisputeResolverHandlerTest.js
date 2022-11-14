@@ -609,10 +609,10 @@ describe("DisputeResolverHandler", function () {
         it("Duplicate dispute resolver fees", async function () {
           //Create new DisputeResolverFee array
           disputeResolverFees2 = [
-            new DisputeResolverFee(other1.address, "MockToken1", "100"),
-            new DisputeResolverFee(other2.address, "MockToken2", "200"),
-            new DisputeResolverFee(other3.address, "MockToken3", "300"),
-            new DisputeResolverFee(other2.address, "MockToken2", "200"),
+            new DisputeResolverFee(other1.address, "MockToken1", "0"),
+            new DisputeResolverFee(other3.address, "MockToken3", "0"),
+            new DisputeResolverFee(other2.address, "MockToken2", "0"),
+            new DisputeResolverFee(other2.address, "MockToken2", "0"),
           ];
 
           // Create a dispute resolver
@@ -683,10 +683,19 @@ describe("DisputeResolverHandler", function () {
         it("active is false", async function () {
           disputeResolver.active = false;
 
-          // Attempt to Create a seller, expecting revert
+          // Attempt to Create a DR, expecting revert
           await expect(
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
+        });
+
+        it("Fee amount is not 0", async function () {
+          disputeResolverFees[0].feeAmount = "200";
+
+          // Attempt to Create a DR, expecting revert
+          await expect(
+            accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+          ).to.revertedWith(RevertReasons.FEE_AMOUNT_NOT_YET_SUPPORTED);
         });
       });
     });
@@ -695,9 +704,9 @@ describe("DisputeResolverHandler", function () {
       beforeEach(async function () {
         //Create DisputeResolverFee array
         disputeResolverFees = [
-          new DisputeResolverFee(other1.address, "MockToken1", "100"),
-          new DisputeResolverFee(other2.address, "MockToken2", "200"),
-          new DisputeResolverFee(other3.address, "MockToken3", "300"),
+          new DisputeResolverFee(other1.address, "MockToken1", "0"),
+          new DisputeResolverFee(other2.address, "MockToken2", "0"),
+          new DisputeResolverFee(other3.address, "MockToken3", "0"),
         ];
 
         sellerAllowList = ["1"];
@@ -752,7 +761,7 @@ describe("DisputeResolverHandler", function () {
     context("👉 areSellersAllowed()", async function () {
       beforeEach(async function () {
         //Create DisputeResolverFee array
-        disputeResolverFees = [new DisputeResolverFee(other1.address, "MockToken1", "100")];
+        disputeResolverFees = [new DisputeResolverFee(other1.address, "MockToken1", "0")];
       });
 
       it("Dispute resolver allows all sellers", async function () {
@@ -1618,8 +1627,8 @@ describe("DisputeResolverHandler", function () {
 
         it("Duplicate dispute resolver fees", async function () {
           //Add to DisputeResolverFee array
-          disputeResolverFees.push(new DisputeResolverFee(other4.address, "MockToken4", "400"));
-          disputeResolverFees.push(new DisputeResolverFee(other5.address, "MockToken5", "500"));
+          disputeResolverFees.push(new DisputeResolverFee(other4.address, "MockToken4", "0"));
+          disputeResolverFees.push(new DisputeResolverFee(other5.address, "MockToken5", "0"));
           disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
 
           // Attempt to add fees to the dispute resolver, expecting revert

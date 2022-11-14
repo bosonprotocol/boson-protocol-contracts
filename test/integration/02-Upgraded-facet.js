@@ -240,7 +240,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         adminDR.address,
         clerkDR.address,
         treasuryDR.address,
-        false
+        true
       );
       expect(disputeResolver.isValid()).is.true;
 
@@ -250,11 +250,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
 
-      // Register and activate the dispute resolver
+      // Register the dispute resolver
       await accountHandler
         .connect(adminDR)
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // Create the offer
       const mo = await mockOffer();
@@ -465,7 +464,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   context("📋 Dispute Handler Methods", async function () {
     beforeEach(async function () {
       // Create a valid dispute resolver
-      disputeResolver = mockDisputeResolver(operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address);
+      disputeResolver = mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        true
+      );
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
@@ -475,11 +480,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
 
-      // Register and activate the dispute resolver
+      // Register the dispute resolver
       await accountHandler
         .connect(adminDR)
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // buyer escalation deposit used in multiple tests
       buyerEscalationDepositNative = applyPercentage(DRFeeNative, buyerEscalationDepositPercentage);
@@ -766,11 +770,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         // Make empty seller list, so every seller is allowed
         const sellerAllowList = [];
 
-        // Register and activate the dispute resolver
+        // Register the dispute resolver
         await accountHandler
           .connect(adminDR)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
         // Mock offer
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();

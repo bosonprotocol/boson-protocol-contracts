@@ -44,7 +44,7 @@ const addressNotFound = (address) => {
   process.exit(1);
 };
 
-const createAndActivateDR = async (path, createOnly, activateOnly) => {
+const createAndActivateDR = async (path) => {
   const file = await fs.readFile(path, "utf8");
 
   let { disputeResolver, disputeResolverFees, sellerAllowList, privateKey } = await JSON.parse(file.toString());
@@ -88,54 +88,54 @@ const createAndActivateDR = async (path, createOnly, activateOnly) => {
 
   let tx, receipt;
   // Create dispute resolver
-  if (!activateOnly) {
-    // privateKey
-    let disputeResolverSigner;
+  // if (!activateOnly) {
+  // privateKey
+  let disputeResolverSigner;
 
-    if (!privateKey) {
-      disputeResolverSigner = protocolAdminSigner;
-    } else {
-      disputeResolverSigner = new ethers.Wallet(privateKey, protocolAdminSigner.provider);
-    }
-
-    // create dispute resolver with callers account
-    let initialDisputeResolver = { ...disputeResolver };
-    initialDisputeResolver.admin = disputeResolverSigner.address;
-    initialDisputeResolver.operator = disputeResolverSigner.address;
-    initialDisputeResolver.clerk = disputeResolverSigner.address;
-
-    tx = await accountHandler
-      .connect(disputeResolverSigner)
-      .createDisputeResolver(initialDisputeResolver, disputeResolverFees, sellerAllowList);
-    receipt = await tx.wait(confirmations);
-    initialDisputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverCreated", 1);
-
-    // if caller does not match supplied dispute resolver, update it.
-    // this is primary used when one does not have access to private key of dispute resolver or it does not exist (i.e. DR is a smart contract)
-    if (
-      initialDisputeResolver.admin.toLowerCase() != disputeResolver.admin.toLowerCase() ||
-      initialDisputeResolver.operator.toLowerCase() != disputeResolver.operator.toLowerCase() ||
-      initialDisputeResolver.clerk.toLowerCase() != disputeResolver.clerk.toLowerCase()
-    ) {
-      disputeResolver.id = initialDisputeResolver.id;
-      tx = await accountHandler.connect(disputeResolverSigner).updateDisputeResolver(disputeResolver);
-      receipt = await tx.wait(confirmations);
-      disputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverUpdated", 1);
-    } else {
-      // no need to update on chain
-      disputeResolver = initialDisputeResolver;
-    }
-
-    console.log(`Dispute resolver created with id ${disputeResolver.id}`);
+  if (!privateKey) {
+    disputeResolverSigner = protocolAdminSigner;
+  } else {
+    disputeResolverSigner = new ethers.Wallet(privateKey, protocolAdminSigner.provider);
   }
+
+  // create dispute resolver with callers account
+  let initialDisputeResolver = { ...disputeResolver };
+  initialDisputeResolver.admin = disputeResolverSigner.address;
+  initialDisputeResolver.operator = disputeResolverSigner.address;
+  initialDisputeResolver.clerk = disputeResolverSigner.address;
+
+  tx = await accountHandler
+    .connect(disputeResolverSigner)
+    .createDisputeResolver(initialDisputeResolver, disputeResolverFees, sellerAllowList);
+  receipt = await tx.wait(confirmations);
+  initialDisputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverCreated", 1);
+
+  // if caller does not match supplied dispute resolver, update it.
+  // this is primary used when one does not have access to private key of dispute resolver or it does not exist (i.e. DR is a smart contract)
+  if (
+    initialDisputeResolver.admin.toLowerCase() != disputeResolver.admin.toLowerCase() ||
+    initialDisputeResolver.operator.toLowerCase() != disputeResolver.operator.toLowerCase() ||
+    initialDisputeResolver.clerk.toLowerCase() != disputeResolver.clerk.toLowerCase()
+  ) {
+    disputeResolver.id = initialDisputeResolver.id;
+    tx = await accountHandler.connect(disputeResolverSigner).updateDisputeResolver(disputeResolver);
+    receipt = await tx.wait(confirmations);
+    disputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverUpdated", 1);
+  } else {
+    // no need to update on chain
+    disputeResolver = initialDisputeResolver;
+  }
+
+  console.log(`Dispute resolver created with id ${disputeResolver.id}`);
+  // }
 
   // Activate dispute resolver
-  if (!createOnly) {
-    tx = await accountHandler.connect(protocolAdminSigner).activateDisputeResolver(disputeResolver.id);
-    receipt = await tx.wait(confirmations);
-    disputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverActivated", 1);
-    console.log(`Dispute resolver activated`);
-  }
+  // if (!createOnly) {
+  //   tx = await accountHandler.connect(protocolAdminSigner).activateDisputeResolver(disputeResolver.id);
+  //   receipt = await tx.wait(confirmations);
+  //   disputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverActivated", 1);
+  //   console.log(`Dispute resolver activated`);
+  // }
 
   console.log(disputeResolver);
 };

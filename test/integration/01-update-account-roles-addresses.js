@@ -179,7 +179,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      disputeResolverFeeNative = ethers.utils.parseUnits("1", "ether").toString();
+      disputeResolverFeeNative = "0";
       const disputeResolverFees = [
         new DisputeResolverFee(ethers.constants.AddressZero, "Native", disputeResolverFeeNative),
       ];
@@ -187,11 +187,10 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
 
-      // Register and activate the dispute resolver
+      // Register the dispute resolver
       await accountHandler
         .connect(adminDR)
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       agentAccount = mockAgent(agent.address);
       expect(agentAccount.isValid()).is.true;

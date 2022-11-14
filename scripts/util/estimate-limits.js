@@ -105,9 +105,9 @@ setupEnvironment["maxAllowedSellers"] = async function (sellerCount = 10) {
 
   //Create DisputeResolverFee array
   const disputeResolverFees = [
-    new DisputeResolverFee(other1.address, "MockToken1", "100"),
-    new DisputeResolverFee(other2.address, "MockToken2", "200"),
-    new DisputeResolverFee(other3.address, "MockToken3", "300"),
+    new DisputeResolverFee(other1.address, "MockToken1", "0"),
+    new DisputeResolverFee(other2.address, "MockToken2", "0"),
+    new DisputeResolverFee(other3.address, "MockToken3", "0"),
   ];
 
   const sellerAllowList = [...Array(sellerCount + 1).keys()].slice(1);
@@ -213,15 +213,10 @@ setupEnvironment["maxOffersPerBatch"] = async function (offerCount = 10) {
   );
   await accountHandler.connect(sellerWallet3).createSeller(seller3, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address);
+  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
   await accountHandler
     .connect(dr1)
-    .createDisputeResolver(
-      disputeResolver,
-      [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "100")],
-      []
-    );
-  await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")], []);
 
   const { offer, offerDates, offerDurations } = await mockOffer();
   const offers = new Array(offerCount).fill(offer);
@@ -305,11 +300,7 @@ setupEnvironment["maxOffersPerGroup"] = async function (offerCount = 10) {
   const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address);
   await accountHandler
     .connect(dr1)
-    .createDisputeResolver(
-      disputeResolver,
-      [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "100")],
-      []
-    );
+    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")], []);
   await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
   // Mock offer, offerDates and offerDurations
@@ -642,15 +633,10 @@ setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
 
   await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address);
+  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
   await accountHandler
     .connect(dr1)
-    .createDisputeResolver(
-      disputeResolver,
-      [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "100")],
-      []
-    );
-  await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")], []);
 
   const { offer, offerDates, offerDurations } = await mockOffer();
   offerDates.voucherRedeemableFrom = offerDates.validFrom;

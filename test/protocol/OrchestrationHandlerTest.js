@@ -253,13 +253,13 @@ describe("IBosonOrchestrationHandler", function () {
         adminDR.address,
         clerkDR.address,
         treasuryDR.address,
-        false
+        true
       );
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      DRFeeNative = "100";
-      DRFeeToken = "200";
+      DRFeeNative = "0";
+      DRFeeToken = "0";
       disputeResolverFees = [
         new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative),
         new DisputeResolverFee(bosonToken.address, "Boson", DRFeeToken),
@@ -268,11 +268,10 @@ describe("IBosonOrchestrationHandler", function () {
       // Make empty seller list, so every seller is allowed
       sellerAllowList = [];
 
-      // Register and activate the dispute resolver
+      // Register the dispute resolver
       await accountHandler
         .connect(adminDR)
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // Create a valid seller, then set fields in tests directly
       seller = mockSeller(operator.address, operator.address, clerk.address, treasury.address);
@@ -1451,7 +1450,7 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
-        it("Dispute resolver is not active", async function () {
+        it.skip("Dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
           disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
           disputeResolver.id = "2"; // mock id is 3 because seller was mocked first but here we are creating dispute resolver first
@@ -1499,7 +1498,7 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
-        it("For absolute zero offer, specified dispute resolver is not active", async function () {
+        it.skip("For absolute zero offer, specified dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
           disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
           disputeResolver.id = "2"; // mock id is 3 because seller was mocked first but here we are creating dispute resolver first
