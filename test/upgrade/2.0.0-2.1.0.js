@@ -12,6 +12,8 @@ const { mockOffer, mockDisputeResolver, mockAuthToken, mockSeller, mockAgent, mo
 const { setNextBlockTimestamp } = require("../util/utils.js");
 const { oneMonth, oneDay } = require("../util/constants");
 const { readContracts } = require("../../scripts/util/utils");
+const { keccak256 } = ethers.utils;
+const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 
 /**
  *  Upgrade test case - After upgrade from 2.0.0 to 2.1.0 everything is still operational
@@ -364,6 +366,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     const twinContractState = await getTwinContractState();
     const metaTxContractState = await getMetaTxContractState();
 
+    // get states not accesible by external getters
+    const metaTxPrivateContractState = await getMetaTxPrivateContractState();
+
     return {
       accountContractState,
       offerContractState,
@@ -375,6 +380,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       groupContractState,
       twinContractState,
       metaTxContractState,
+      metaTxPrivateContractState,
     };
   }
 
@@ -583,5 +589,79 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   async function getMetaTxContractState() {
     return {};
+  }
+
+  async function getMetaTxPrivateContractState() {
+    /*
+    ProtocolMetaTxInfo storage layout
+
+    #0 [ currentSenderAddress + isMetaTransaction]
+    #1 [ domain separator ]
+    #2 [ ] // placeholder for usedNonce
+    #3 [ cachedChainId ]
+    #4 [ ] // placeholder for inputType
+    #5 [ ] // placeholder for hashInfo
+    */
+
+    // starting slot
+    const metaTxStorageSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.metaTransactions"));
+    const metaTxStorageSlotNumber = ethers.BigNumber.from(metaTxStorageSlot);
+
+    // current sender address + isMetaTransaction (they are packed since they are shorter than one slot)
+    // should be always be 0x
+    const inTransactionInfo = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber.add("0")); // currentAddress sender + isMetaTransaction
+
+    // domain separator
+    const domainSeparator = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber.add("1"));
+
+    // cached chain id
+    const cachedChainId = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber.add("3"));
+
+    // input type
+    const inputTypeKeys = [
+      "commitToOffer(address,uint256)",
+      "cancelVoucher(uint256)",
+      "redeemVoucher(uint256)",
+      "completeExchange(uint256)",
+      "withdrawFunds(uint256,address[],uint256[])",
+      "retractDispute(uint256)",
+      "raiseDispute(uint256)",
+      "escalateDispute(uint256)",
+      "resolveDispute(uint256,uint256,bytes32,bytes32,uint8)",
+    ];
+
+    const inputTypesState = [];
+    const inputTypes_p = metaTxStorageSlotNumber.add("4"); // Base input type storage slot
+    const inputTypes_pBuffer = Buffer.from(inputTypes_p.toHexString().slice(2), "hex");
+    for (const inputTypeKey of inputTypeKeys) {
+      const storageSlot = keccak256(Buffer.concat([ethers.utils.toUtf8Bytes(inputTypeKey), inputTypes_pBuffer]));
+      inputTypesState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
+    }
+
+    // hashInfo
+    const hashInfoTypes = {
+      Generic: 0,
+      CommitToOffer: 1,
+      Exchange: 2,
+      Funds: 3,
+      RaiseDispute: 4,
+      ResolveDisput: 5,
+    };
+
+    const hashInfoState = [];
+    const hashInfo_p = metaTxStorageSlotNumber.add("5"); // Base hash storage slot
+    const hashInfo_pBuffer = Buffer.from(hashInfo_p.toHexString().slice(2), "hex");
+    for (const hashInfoType of Object.values(hashInfoTypes)) {
+      const keyBuffer = Buffer.from(ethers.utils.hexZeroPad(hashInfoType, 32).toString().slice(2), "hex");
+      const storageSlot = keccak256(Buffer.concat([keyBuffer, hashInfo_pBuffer]));
+
+      // get also hashFunction
+      hashInfoState.push({
+        typeHash: await getStorageAt(protocolDiamondAddress, storageSlot),
+        functionPointer: await getStorageAt(protocolDiamondAddress, ethers.BigNumber.from(storageSlot).add(1)),
+      });
+    }
+
+    return { inTransactionInfo, domainSeparator, cachedChainId, inputTypesState, hashInfoState };
   }
 });
