@@ -69,7 +69,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // Get protocolDiamondAddress
     protocolDiamondAddress = contractsFile.contracts.find((i) => i.name === "ProtocolDiamond").address;
 
-    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
+    // Grant PROTOCOL role to ProtocolDiamond address
     await accessController.grantRole(Role.PROTOCOL, protocolDiamondAddress);
 
     // Cast Diamond to interfaces
@@ -262,9 +262,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         // Set unique offer properties based on offer id
         offer.id = `${++offerId}`;
         offer.sellerId = sellers[j].seller.id;
-        offer.price = `${offerId * 1 * 1000}`;
-        offer.sellerDeposit = `${offerId * 1 * 100}`;
-        offer.buyerCancelPenalty = `${offerId * 1 * 50}`;
+        offer.price = `${offerId * 1000}`;
+        offer.sellerDeposit = `${offerId * 100}`;
+        offer.buyerCancelPenalty = `${offerId * 50}`;
         offer.quantityAvailable = `${(offerId + 1) * 15}`;
 
         // Default offer is in native token. Change every other to mock token
@@ -307,7 +307,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     }
 
     // commit to some offers: first buyer commit to 1 offer, second to 2, third to 3 etc
-    await setNextBlockTimestamp(Number(offers[offers.length - 1].offerDates.validFrom)); // When latest offer is valid, also other ffers are valid
+    await setNextBlockTimestamp(Number(offers[offers.length - 1].offerDates.validFrom)); // When latest offer is valid, also other offers are valid
     let exchangeId = 0;
     for (let i = 0; i < buyers.length; i++) {
       for (let j = i; j < buyers.length; j++) {
@@ -385,6 +385,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let sellerState = [];
     let buyersState = [];
     let agentsState = [];
+    let allowedSellersState = [];
     let sellerByAddressState = [];
     let sellerByAuthTokenState = [];
     let DRbyAddressState = [];
@@ -396,6 +397,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       DRsState.push(await accountHandler.connect(rando).getDisputeResolver(id));
       buyersState.push(await accountHandler.connect(rando).getBuyer(id));
       agentsState.push(await accountHandler.connect(rando).getAgent(id));
+      for (let id2 = 1; id2 <= totalCount; id2++) {
+        allowedSellersState.push(await accountHandler.connect(rando).areSellersAllowed(id2,[id]));
+      }
     }
 
     for (const seller of sellers) {
@@ -444,17 +448,17 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   async function getOfferContractState() {
     // get offers
     let offersState = [];
-    let isOfferVoudedState = [];
+    let isOfferVoidedState = [];
     let agentIdByOfferState = [];
     for (let id = 1; id <= offers.length; id++) {
       offersState.push(await offerHandler.connect(rando).getOffer(id));
-      isOfferVoudedState.push(await offerHandler.connect(rando).isOfferVoided(id));
+      isOfferVoidedState.push(await offerHandler.connect(rando).isOfferVoided(id));
       agentIdByOfferState.push(await offerHandler.connect(rando).getAgentIdByOffer(id));
     }
 
     let nextOfferId = await offerHandler.connect(rando).getNextOfferId();
 
-    return { offersState, isOfferVoudedState, agentIdByOfferState, nextOfferId };
+    return { offersState, isOfferVoidedState, agentIdByOfferState, nextOfferId };
   }
 
   async function getExchangeContractState() {
@@ -486,7 +490,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let bundlesState = [];
     let bundleIdByOfferState = [];
     let bundleIdByTwinState = [];
-    for (let id = 1; id < 15; id++) {
+    for (let id = 1; id < 15; id++) { // until we actually have some bundles, check some arbitrary number to see nothing was put in their place
       bundlesState.push(await bundleHandler.connect(rando).getBundle(id));
       bundleIdByOfferState.push(await bundleHandler.connect(rando).getBundleIdByOffer(id));
       bundleIdByTwinState.push(await bundleHandler.connect(rando).getBundleIdByTwin(id));
@@ -560,7 +564,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // just make check that after the update, empty groups are still returned.
     // Also this function will be handy if tests are expanded and actually introduce some groups.
     let groupsState = [];
-    for (let id = 1; id < 15; id++) {
+    for (let id = 1; id < 15; id++) { // until we actually have some groups, check some arbitrary number to see nothing was put in their place
       groupsState.push(await groupHandler.connect(rando).getGroup(id));
     }
 
@@ -573,7 +577,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // just make check that after the update, empty twins are still returned.
     // Also this function will be handy if tests are expanded and actually introduce some twins.
     let twinsState = [];
-    for (let id = 1; id < 15; id++) {
+    for (let id = 1; id < 15; id++) { // until we actually have some twins, check some arbitrary number to see nothing was put in their place
       twinsState.push(await twinHandler.connect(rando).getTwin(id));
     }
 
