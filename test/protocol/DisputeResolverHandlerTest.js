@@ -680,7 +680,7 @@ describe("DisputeResolverHandler", function () {
           ).to.revertedWith(RevertReasons.NOT_ADMIN_OPERATOR_AND_CLERK);
         });
 
-        it("active is false", async function () {
+        it("Active is false", async function () {
           disputeResolver.active = false;
 
           // Attempt to Create a DR, expecting revert
@@ -1635,6 +1635,15 @@ describe("DisputeResolverHandler", function () {
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
+        });
+
+        it("Fee amount is not 0", async function () {
+          disputeResolverFees = [new DisputeResolverFee(other4.address, "MockToken4", "200")];
+
+          // Attempt to Create a DR, expecting revert
+          await expect(
+            accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
+          ).to.revertedWith(RevertReasons.FEE_AMOUNT_NOT_YET_SUPPORTED);
         });
       });
     });
