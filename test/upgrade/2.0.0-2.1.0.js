@@ -278,6 +278,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       }
     }
 
+    // Make explicit allowed sellers list for some DRs
+    const sellerIds = sellers.map((s) => s.seller.id);
+    for (let i = 0; i < DRs.length; i = i + 2) {
+      const DR = DRs[i];
+      DR.sellerAllowList = sellerIds;
+      await accountHandler.connect(DR.wallet).addSellersToAllowList(DR.disputeResolver.id, sellerIds);
+    }
+
     // create offers - first seller has 5 offers, second 4, third 3 etc
     let offerId = 0;
     for (let i = 0; i < sellers.length; i++) {
@@ -781,34 +789,35 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     /*
     ProtocolLookups storage layout
 
+    Variables marked with X have an external getter and are not handled here
     #0  [ ] // placeholder for exchangeIdsByOffer
-    #1  [ ] // placeholder for bundleIdByOffer
-    #2  [ ] // placeholder for bundleIdByTwin
+    #1  [X] // placeholder for bundleIdByOffer
+    #2  [X] // placeholder for bundleIdByTwin
     #3  [ ] // placeholder for groupIdByOffer
-    #4  [ ] // placeholder for agentIdByOffer
-    #5  [ ] // placeholder for sellerIdByOperator
-    #6  [ ] // placeholder for sellerIdByAdmin
-    #7  [ ] // placeholder for sellerIdByClerk
+    #4  [X] // placeholder for agentIdByOffer
+    #5  [X] // placeholder for sellerIdByOperator
+    #6  [X] // placeholder for sellerIdByAdmin
+    #7  [X] // placeholder for sellerIdByClerk
     #8  [ ] // placeholder for buyerIdByWallet
-    #9  [ ] // placeholder for disputeResolverIdByOperator
-    #10 [ ] // placeholder for disputeResolverIdByAdmin
-    #11 [ ] // placeholder for disputeResolverIdByClerk
+    #9  [X] // placeholder for disputeResolverIdByOperator
+    #10 [X] // placeholder for disputeResolverIdByAdmin
+    #11 [X] // placeholder for disputeResolverIdByClerk
     #12 [ ] // placeholder for disputeResolverFeeTokenIndex
     #13 [ ] // placeholder for agentIdByWallet
-    #14 [ ] // placeholder for availableFunds
-    #15 [ ] // placeholder for tokenList
+    #14 [X] // placeholder for availableFunds
+    #15 [X] // placeholder for tokenList
     #16 [ ] // placeholder for tokenIndexByAccount
     #17 [ ] // placeholder for cloneAddress
     #18 [ ] // placeholder for voucherCount
     #19 [ ] // placeholder for conditionalCommitsByAddress
-    #20 [ ] // placeholder for authTokenContracts
-    #21 [ ] // placeholder for sellerIdByAuthToken
+    #20 [X] // placeholder for authTokenContracts
+    #21 [X] // placeholder for sellerIdByAuthToken
     #22 [ ] // placeholder for twinRangesBySeller
     #23 [ ] // placeholder for twinIdsByTokenAddressAndBySeller
-    #24 [ ] // placeholder for twinReceiptsByExchange
-    #25 [ ] // placeholder for allowedSellers
+    #24 [X] // placeholder for twinReceiptsByExchange
+    #25 [X] // placeholder for allowedSellers
     #26 [ ] // placeholder for allowedSellerIndex
-    #27 [ ] // placeholder for exchangeCondition
+    #27 [X] // placeholder for exchangeCondition
     #28 [ ] // placeholder for offerIdIndexByGroup
     #29 [ ] // placeholder for pendingAddressUpdatesBySeller
     #30 [ ] // placeholder for pendingAuthTokenUpdatesBySeller
@@ -986,7 +995,31 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       twinIdsByTokenAddressAndBySeller.push(twinIds);
     }
 
-    // allowedSellerIndex; ? areSellersAllowe
+    // allowedSellerIndex
+    let allowedSellerIndex = [];
+    for (const DR of DRs) {
+      const firstMappingStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(
+          protocolLookupsSlotNumber.add("26"),
+          ethers.BigNumber.from(DR.disputeResolver.id).toHexString(),
+          paddingType.START
+        )
+      );
+      let sellerStatus = [];
+      for (const seller of sellers) {
+        sellerStatus.push(
+          await getStorageAt(
+            protocolDiamondAddress,
+            getMappinStoragePosition(
+              firstMappingStorageSlot,
+              ethers.BigNumber.from(seller.seller.id).toHexString(),
+              paddingType.START
+            )
+          )
+        );
+      }
+      allowedSellerIndex.push(sellerStatus);
+    }
 
     // offerIdIndexByGroup
     let offerIdIndexByGroup = [];
@@ -1048,6 +1081,23 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       pendingAddressUpdatesByDisputeResolver.push(structFields);
     }
 
-    return {};
+    return {
+      exchangeIdsByOfferState,
+      groupIdByOfferState,
+      buyerIdByWallet,
+      disputeResolverFeeTokenIndex,
+      agentIdByWallet,
+      tokenIndexByAccount,
+      cloneAddress,
+      voucherCount,
+      conditionalCommitsByAddress,
+      twinRangesBySeller,
+      twinIdsByTokenAddressAndBySeller,
+      allowedSellerIndex,
+      offerIdIndexByGroup,
+      pendingAddressUpdatesBySeller,
+      pendingAuthTokenUpdatesBySeller,
+      pendingAddressUpdatesByDisputeResolver,
+    };
   }
 });
