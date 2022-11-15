@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const network = hre.network.name;
-const { Facets } = require("./config/facet-upgrade");
+const { getFacets } = require("./config/facet-upgrade");
 const environments = require("../environments");
 const confirmations = network == "hardhat" ? 1 : environments.confirmations;
 const tipMultiplier = ethers.BigNumber.from(environments.tipMultiplier);
@@ -112,10 +112,13 @@ async function main(env) {
     process.exit(1);
   }
 
+  // Get facets to upgrade
+  const facets = await getFacets();
+
   // Deploy new facets
   const deployedFacets = await deployProtocolHandlerFacets(
     protocolAddress,
-    Facets.addOrUpgrade,
+    facets.addOrUpgrade,
     maxPriorityFeePerGas,
     false
   );
@@ -151,14 +154,14 @@ async function main(env) {
     deploymentComplete(newFacet.name, newFacet.contract.address, [], newFacetInterfaceId, contracts);
 
     // Determine calldata. Depends on whether initialize accepts args or not
-    const callData = Facets.initArgs[newFacet.name]
-      ? newFacet.contract.interface.encodeFunctionData("initialize", Facets.initArgs[newFacet.name])
+    const callData = facets.initArgs[newFacet.name]
+      ? newFacet.contract.interface.encodeFunctionData("initialize", facets.initArgs[newFacet.name])
       : noArgCallData;
 
     // Get new selectors from compiled contract
     const selectors = getSelectors(newFacet.contract, true);
     let newSelectors;
-    if (!Facets.skipInit.includes(newFacet.name)) {
+    if (!facets.skipInit.includes(newFacet.name)) {
       newSelectors = selectors.selectors.remove([callData.slice(0, 10)]);
     } else {
       newSelectors = selectors.selectors;
@@ -170,7 +173,7 @@ async function main(env) {
     let selectorsToAdd = newSelectors.filter((value) => !selectorsToReplace.includes(value)); // unique new selectors
 
     // Skip selectors if set in config
-    let selectorsToSkip = Facets.skipSelectors[newFacet.name] ? Facets.skipSelectors[newFacet.name] : [];
+    let selectorsToSkip = facets.skipSelectors[newFacet.name] ? facets.skipSelectors[newFacet.name] : [];
     selectorsToReplace = removeSelectors(selectorsToReplace, selectorsToSkip);
     selectorsToRemove = removeSelectors(selectorsToRemove, selectorsToSkip);
     selectorsToAdd = removeSelectors(selectorsToAdd, selectorsToSkip);
@@ -205,7 +208,7 @@ async function main(env) {
 
       // Diamond cut - add or replace
       let transactionResponse;
-      if (Facets.skipInit.includes(newFacet.name)) {
+      if (facets.skipInit.includes(newFacet.name)) {
         // Without initialization
         transactionResponse = await diamondCutFacet
           .connect(adminSigner)
@@ -284,7 +287,7 @@ async function main(env) {
   }
 
   // manage facets that are being completely removed
-  for (const facetToRemove of Facets.remove) {
+  for (const facetToRemove of facets.remove) {
     // Get currently registered selectors
     const oldFacet = contracts.find((i) => i.name === facetToRemove);
 

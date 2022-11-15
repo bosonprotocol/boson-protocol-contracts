@@ -21,7 +21,10 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Initializes Facet.
      * This function is callable only once.
      */
-    function initialize() public onlyUnInitialized(type(IBosonMetaTransactionsHandler).interfaceId) {
+    function initialize(bytes32[] calldata _functionNameHashes)
+        public
+        onlyUnInitialized(type(IBosonMetaTransactionsHandler).interfaceId)
+    {
         DiamondLib.addSupportedInterface(type(IBosonMetaTransactionsHandler).interfaceId);
 
         // Set types for special metatxs
@@ -47,6 +50,8 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             META_TX_DISPUTE_RESOLUTIONS_TYPEHASH,
             hashDisputeResolutionDetails
         );
+
+        setAllowlistedFunctions(_functionNameHashes, true);
     }
 
     /**
@@ -170,7 +175,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      *
      * Reverts if:
      * - Nonce is already used by the msg.sender for another transaction
-     * - Function signature matches executeMetaTransaction
+     * - Function is not allowlisted to be called using metatransactions
      * - Function name does not match the bytes4 version of the function signature
      *
      * @param _functionName - the function name that we want to execute
@@ -183,12 +188,18 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         uint256 _nonce,
         address _userAddress
     ) internal view {
-        require(!protocolMetaTxInfo().usedNonce[_userAddress][_nonce], NONCE_USED_ALREADY);
+        ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
 
+        // Nonce should be unused
+        require(!pmti.usedNonce[_userAddress][_nonce], NONCE_USED_ALREADY);
+
+        // Function must be allowlisted
+        bytes32 functionNameHash = keccak256(abi.encodePacked(_functionName));
+        require(pmti.isAllowlisted[functionNameHash], FUNCTION_NOT_ALLOWLISTED);
+
+        // Function name must correspond to selector
         bytes4 destinationFunctionSig = convertBytesToBytes4(_functionSignature);
-        require(destinationFunctionSig != msg.sig, INVALID_FUNCTION_SIGNATURE);
-
-        bytes4 functionNameSig = bytes4(keccak256(abi.encodePacked(_functionName)));
+        bytes4 functionNameSig = bytes4(functionNameHash);
         require(destinationFunctionSig == functionNameSig, INVALID_FUNCTION_NAME);
     }
 
@@ -259,7 +270,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * Reverts if:
      * - The meta-transactions region of protocol is paused
      * - Nonce is already used by the msg.sender for another transaction
-     * - Function signature matches executeMetaTransaction
+     * - Function is not allowlisted to be called using metatransactions
      * - Function name does not match the bytes4 version of the function signature
      * - sender does not match the recovered signer
      * - Any code executed in the signed transaction reverts
@@ -304,5 +315,52 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         );
 
         return executeTx(_userAddress, _functionName, _functionSignature, _nonce);
+    }
+
+    /**
+     * @notice Manages allow list of functions that can be executed using metatransactions.
+     *
+     * Emits a FunctionsAllowlisted event if successful.
+     *
+     * Reverts if:
+     * - Caller is not a protocol admin
+     *
+     * @param _functionNameHashes - a list of hashed function names (keccak256)
+     * @param _isAllowlisted - new allowlist status
+     */
+    function setAllowlistedFunctions(bytes32[] calldata _functionNameHashes, bool _isAllowlisted)
+        public
+        override
+        onlyRole(ADMIN)
+    {
+        ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
+
+        // set new values
+        for (uint256 i = 0; i < _functionNameHashes.length; i++) {
+            pmti.isAllowlisted[_functionNameHashes[i]] = _isAllowlisted;
+        }
+
+        // Notify external observers
+        emit FunctionsAllowlisted(_functionNameHashes, _isAllowlisted, msgSender());
+    }
+
+    /**
+     * @notice Tells if function can be executed as meta transaction or not.
+     *
+     * @param _functionNameHash - hashed function name (keccak256)
+     * @return isAllowlisted - allowlist status
+     */
+    function isFunctionAllowlisted(bytes32 _functionNameHash) external view override returns (bool isAllowlisted) {
+        return protocolMetaTxInfo().isAllowlisted[_functionNameHash];
+    }
+
+    /**
+     * @notice Tells if function can be executed as meta transaction or not.
+     *
+     * @param _functionName - function name
+     * @return isAllowlisted - allowlist status
+     */
+    function isFunctionAllowlisted(string calldata _functionName) external view override returns (bool isAllowlisted) {
+        return protocolMetaTxInfo().isAllowlisted[keccak256(abi.encodePacked(_functionName))];
     }
 }

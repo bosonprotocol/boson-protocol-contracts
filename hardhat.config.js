@@ -37,11 +37,9 @@ task("verify-suite", "Verify contracts on the block explorer")
   .addParam("chainId", "The chain id of the deployed contract address file")
   .addParam("env", "The environment of the contract address file")
   .setAction(async ({ chainId, env }) => {
-    const { verifySuite } = await lazyImport("./scripts/util/verify-suite");
+    const { verifySuite } = await lazyImport("./scripts/verify-suite");
 
-    // Contract list filter - empty array or use values from the name field of the contract object
-    const filter = [];
-    await verifySuite(chainId, env, filter);
+    await verifySuite(chainId, env);
   });
 
 task(
