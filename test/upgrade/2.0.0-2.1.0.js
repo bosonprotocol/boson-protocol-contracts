@@ -9,6 +9,7 @@ const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Role = require("../../scripts/domain/Role");
 const Group = require("../../scripts/domain/Group");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
+const TokenType = require("../../scripts/domain/TokenType.js");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
@@ -19,6 +20,7 @@ const {
   mockAgent,
   mockBuyer,
   mockCondition,
+  mockTwin,
 } = require("../util/mock");
 const { setNextBlockTimestamp } = require("../util/utils.js");
 const { oneMonth, oneDay } = require("../util/constants");
@@ -42,7 +44,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     twinHandler,
     configHandler;
   // orchestrationHandler, pauseHandler, metaTransactionsHandler,
-  let mockToken, mockConditionalToken;
+  let mockToken, mockConditionalToken, mockTwinTokens;
   let snapshot;
   let protocolDiamondAddress;
   let mockAuthERC721Contract;
@@ -53,6 +55,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let agents = [];
   let offers = [];
   let groups = [];
+  let twins = [];
   let exchanges = [];
   let protocolContractState;
 
@@ -104,7 +107,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, mockAuthERC721Contract.address);
 
     // create mock token for offers
-    [mockToken, mockConditionalToken] = await deployMockTokens(["Foreign20", "Foreign20"]);
+    let mockTwin721_1, mockTwin721_2;
+    [mockToken, mockConditionalToken, mockTwin721_1, mockTwin721_2] = await deployMockTokens([
+      "Foreign20",
+      "Foreign20",
+      "Foreign721",
+      "Foreign721",
+    ]);
+    mockTwinTokens = [mockTwin721_1, mockTwin721_2];
 
     // Populate protocol with data
     await populateProtocolContract();
@@ -324,7 +334,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     }
 
     // group some offers
-    // mockConditionalToken
     let groupId = 0;
     for (let i = 0; i < sellers.length; i = i + 2) {
       const seller = sellers[i];
@@ -336,6 +345,26 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       await groupHandler.connect(seller.wallet).createGroup(group, condition);
 
       groups.push(group);
+    }
+
+    // create some twins
+    let twinId = 0;
+    for (let i = 1; i < sellers.length; i = i + 2) {
+      const seller = sellers[i];
+      await mockTwinTokens[0].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
+      await mockTwinTokens[1].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
+      // create multiple ranges
+      const twin = mockTwin(rando.address, TokenType.NonFungibleToken);
+      twin.amount = "0";
+      for (let j = 0; j < 7; j++) {
+        twin.tokenId = `${j * 10000 + i * 100}`;
+        twin.supplyAvailable = `${10 * (i + 1)}`;
+        (twin.tokenAddress = mockTwinTokens[j % 2].address), // oscilate between twins
+          (twin.id = ++twinId);
+        await twinHandler.connect(seller.wallet).createTwin(twin);
+
+        twins.push(twin);
+      }
     }
 
     // commit to some offers: first buyer commit to 1 offer, second to 2, third to 3 etc
@@ -598,11 +627,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   }
 
   async function getGroupContractState() {
-    // even if there are no groups explicitly created
-    // just make check that after the update, empty groups are still returned.
-    // Also this function will be handy if tests are expanded and actually introduce some groups.
     let groupsState = [];
-    for (let id = 1; id < 15; id++) {
+    for (let id = 1; id <= groups.length; id++) {
       groupsState.push(await groupHandler.connect(rando).getGroup(id));
     }
 
@@ -611,11 +637,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   }
 
   async function getTwinContractState() {
-    // even if there are no twins explicitly created
-    // just make check that after the update, empty twins are still returned.
-    // Also this function will be handy if tests are expanded and actually introduce some twins.
     let twinsState = [];
-    for (let id = 1; id < 15; id++) {
+    for (let id = 1; id < twins.length; id++) {
       twinsState.push(await twinHandler.connect(rando).getTwin(id));
     }
 
@@ -922,7 +945,47 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     }
 
     // twinRangesBySeller
+    let twinRangesBySeller = [];
+    for (let id = 1; id <= totalCount; id++) {
+      const firstMappingStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("22"), id, paddingType.START)
+      );
+      let ranges = {};
+      for (let mockTwin of mockTwinTokens) {
+        ranges[mockTwin.address] = [];
+        const arraySlot = getMappinStoragePosition(firstMappingStorageSlot, mockTwin.address, paddingType.START);
+        const arrayLength = ethers.BigNumber.from(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
+        const arrayStart = ethers.BigNumber.from(keccak256(arraySlot));
+        for (let i = 0; i < arrayLength * 2; i = i + 2) {
+          // each BosonTypes.TokenRange has length 2
+          ranges[mockTwin.address].push({
+            start: await getStorageAt(protocolDiamondAddress, arrayStart.add(i)),
+            end: await getStorageAt(protocolDiamondAddress, arrayStart.add(i + 1)),
+          });
+        }
+      }
+      twinRangesBySeller.push(ranges);
+    }
+
     // twinIdsByTokenAddressAndBySeller
+    let twinIdsByTokenAddressAndBySeller = [];
+    for (let id = 1; id <= totalCount; id++) {
+      const firstMappingStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("23"), id, paddingType.START)
+      );
+      let twinIds = {};
+      for (let mockTwin of mockTwinTokens) {
+        twinIds[mockTwin.address] = [];
+        const arraySlot = getMappinStoragePosition(firstMappingStorageSlot, mockTwin.address, paddingType.START);
+        const arrayLength = ethers.BigNumber.from(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
+        const arrayStart = ethers.BigNumber.from(keccak256(arraySlot));
+        for (let i = 0; i < arrayLength; i++) {
+          twinIds[mockTwin.address].push(await getStorageAt(protocolDiamondAddress, arrayStart.add(i)));
+        }
+      }
+      twinIdsByTokenAddressAndBySeller.push(twinIds);
+    }
+
     // allowedSellerIndex; ? areSellersAllowe
 
     // offerIdIndexByGroup
