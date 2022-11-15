@@ -1,5 +1,7 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const keccak256 = ethers.utils.keccak256;
+const toUtf8Bytes = ethers.utils.toUtf8Bytes;
 const { expect, assert } = require("chai");
 
 const Buyer = require("../../scripts/domain/Buyer");
@@ -12,7 +14,10 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
+const {
+  deployProtocolHandlerFacets,
+  deployProtocolHandlerFacetsWithArgs,
+} = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { prepareDataSignatureParameters, setNextBlockTimestamp } = require("../util/utils.js");
@@ -28,7 +33,12 @@ const {
   mockExchange,
 } = require("../util/mock");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
-const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
+const {
+  getSelectors,
+  FacetCutAction,
+  getStateModifyingFunctions,
+  getStateModifyingFunctionsHashes,
+} = require("../../scripts/util/diamond-utils.js");
 
 /**
  *  Test the Boson Meta transactions Handler interface
@@ -99,6 +109,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let voucherInitValues;
   let emptyAuthToken;
   let agentId;
+  let stateModifyingFunctionsHashes;
 
   before(async function () {
     // get interface Ids
@@ -127,20 +138,28 @@ describe("IBosonMetaTransactionsHandler", function () {
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(
+    const facetNames = [
+      "SellerHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "FundsHandlerFacet",
+      "ExchangeHandlerFacet",
+      "OfferHandlerFacet",
+      "TwinHandlerFacet",
+      "DisputeHandlerFacet",
+      "PauseHandlerFacet",
+      "BuyerHandlerFacet",
+    ];
+
+    // Get input arguments for MetaTransactionsHandlerFacet
+    stateModifyingFunctionsHashes = await getStateModifyingFunctionsHashes(
+      [...facetNames, "MetaTransactionsHandlerFacet"],
+      ["executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"]
+    );
+
+    await deployProtocolHandlerFacets(protocolDiamond, [...facetNames], maxPriorityFeePerGas);
+    await deployProtocolHandlerFacetsWithArgs(
       protocolDiamond,
-      [
-        "SellerHandlerFacet",
-        "DisputeResolverHandlerFacet",
-        "FundsHandlerFacet",
-        "ExchangeHandlerFacet",
-        "OfferHandlerFacet",
-        "TwinHandlerFacet",
-        "DisputeHandlerFacet",
-        "MetaTransactionsHandlerFacet",
-        "PauseHandlerFacet",
-        "BuyerHandlerFacet",
-      ],
+      { MetaTransactionsHandlerFacet: [stateModifyingFunctionsHashes] },
       maxPriorityFeePerGas
     );
 
@@ -373,6 +392,184 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = nonce + 1;
         result = await metaTransactionsHandler.connect(rando).isUsedNonce(operator.address, nonce);
         assert.equal(result, expectedResult, "Nonce is used");
+      });
+    });
+
+    context("👉 setAllowlistedFunctions()", async function () {
+      let functionHashList;
+      beforeEach(async function () {
+        // A list of random functions
+        const functionList = [
+          "testFunction1(uint256)",
+          "testFunction2(uint256)",
+          "testFunction3((uint256,address,bool))",
+          "testFunction4(uint256[])",
+        ];
+
+        functionHashList = functionList.map((func) => keccak256(toUtf8Bytes(func)));
+
+        // Grant UPGRADER role to admin account
+        await accessController.grantRole(Role.ADMIN, admin.address);
+      });
+
+      it("should emit a FunctionsAllowlisted event", async function () {
+        // Enable functions
+        await expect(metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, true))
+          .to.emit(metaTransactionsHandler, "FunctionsAllowlisted")
+          .withArgs(functionHashList, true, admin.address);
+
+        // Disable functions
+        await expect(metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, false))
+          .to.emit(metaTransactionsHandler, "FunctionsAllowlisted")
+          .withArgs(functionHashList, false, admin.address);
+      });
+
+      it("should update state", async function () {
+        // Functions should be disabled by default
+        for (const func of functionHashList) {
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.false;
+        }
+
+        // Enable functions
+        await metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, true);
+
+        // Functions should be enabled
+        for (const func of functionHashList) {
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.true;
+        }
+
+        // Disable functions
+        await metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, false);
+
+        // Functions should be disabled
+        for (const func of functionHashList) {
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.false;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("caller is not the admin", async function () {
+          // Attempt to set new max offer per group, expecting revert
+          await expect(
+            metaTransactionsHandler.connect(rando).setAllowlistedFunctions(functionHashList, true)
+          ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+        });
+      });
+    });
+
+    context("👉 isFunctionAllowlisted(bytes32)", async function () {
+      let functionHashList;
+      beforeEach(async function () {
+        // A list of random functions
+        const functionList = [
+          "testFunction1(uint256)",
+          "testFunction2(uint256)",
+          "testFunction3((uint256,address,bool))",
+          "testFunction4(uint256[])",
+        ];
+
+        functionHashList = functionList.map((func) => keccak256(toUtf8Bytes(func)));
+
+        // Grant UPGRADER role to admin account
+        await accessController.grantRole(Role.ADMIN, admin.address);
+      });
+
+      it("after initialization all state modifying functions should be allowlisted", async function () {
+        // Functions should be enabled
+        for (const func of stateModifyingFunctionsHashes) {
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.true;
+        }
+      });
+
+      it("should return correct value", async function () {
+        // Functions should be disabled by default
+        for (const func of functionHashList) {
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.false;
+        }
+
+        // Enable functions
+        await metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, true);
+
+        // Functions should be enabled
+        for (const func of functionHashList) {
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.true;
+        }
+
+        // Disable functions
+        await metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, false);
+
+        // Functions should be disabled
+        for (const func of functionHashList) {
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.false;
+        }
+      });
+    });
+
+    context("👉 isFunctionAllowlisted(string)", async function () {
+      let functionList, functionHashList;
+      beforeEach(async function () {
+        // A list of random functions
+        functionList = [
+          "testFunction1(uint256)",
+          "testFunction2(uint256)",
+          "testFunction3((uint256,address,bool))",
+          "testFunction4(uint256[])",
+        ];
+
+        functionHashList = functionList.map((func) => keccak256(toUtf8Bytes(func)));
+
+        // Grant UPGRADER role to admin account
+        await accessController.grantRole(Role.ADMIN, admin.address);
+      });
+
+      it("after initialization all state modifying functions should be allowlisted", async function () {
+        // Cut the protocol handler facets into the Diamond
+        const facetNames = [
+          "SellerHandlerFacet",
+          "DisputeResolverHandlerFacet",
+          "FundsHandlerFacet",
+          "ExchangeHandlerFacet",
+          "OfferHandlerFacet",
+          "TwinHandlerFacet",
+          "DisputeHandlerFacet",
+          "PauseHandlerFacet",
+          "BuyerHandlerFacet",
+        ];
+
+        // Get list of state modifying functions
+        const stateModifyingFunctions = (await getStateModifyingFunctions(facetNames)).filter(
+          (fn) => fn != "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"
+        );
+        console.log(stateModifyingFunctions);
+
+        // Functions should be enabled
+        getStateModifyingFunctions();
+        for (const func of stateModifyingFunctions) {
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.true;
+        }
+      });
+
+      it("should return correct value", async function () {
+        // Functions should be disabled by default
+        for (const func of functionList) {
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.false;
+        }
+
+        // Enable functions
+        await metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, true);
+
+        // Functions should be enabled
+        for (const func of functionList) {
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.true;
+        }
+
+        // Disable functions
+        await metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, false);
+
+        // Functions should be disabled
+        for (const func of functionList) {
+          expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.false;
+        }
       });
     });
 
@@ -637,8 +834,85 @@ describe("IBosonMetaTransactionsHandler", function () {
             ).to.revertedWith(RevertReasons.REGION_PAUSED);
           });
 
+          it("Should fail when function name is not allowlisted", async function () {
+            // Remove function from allowlist
+            await metaTransactionsHandler.setAllowlistedFunctions(
+              [keccak256(toUtf8Bytes(message.functionName))],
+              false
+            );
+
+            // Prepare the function signature for the facet function.
+            functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+              seller,
+              emptyAuthToken,
+              voucherInitValues,
+            ]);
+
+            // Prepare the message
+            message.functionSignature = functionSignature;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              operator,
+              customTransactionType,
+              "MetaTransaction",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                operator.address,
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
+            ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+          });
+
+          it("Should fail when function name is not allowlisted - incorrect name", async function () {
+            let incorrectFunctionName = "createSeller"; // function with this name does not exist (argument types are missing)
+
+            // Prepare the function signature for the facet function.
+            functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+              seller,
+              emptyAuthToken,
+              voucherInitValues,
+            ]);
+
+            // Prepare the message
+            message.functionName = incorrectFunctionName;
+            message.functionSignature = functionSignature;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              operator,
+              customTransactionType,
+              "MetaTransaction",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                operator.address,
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
+            ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+          });
+
           it("Should fail when function name is incorrect", async function () {
-            let incorrectFunctionName = "createSeller"; // there are no function argument types here.
+            let incorrectFunctionName = "redeemVoucher(uint256)"; // function name is allowlisted, but different than what we encode in next step
 
             // Prepare the function signature for the facet function.
             functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
@@ -672,6 +946,49 @@ describe("IBosonMetaTransactionsHandler", function () {
                 v
               )
             ).to.revertedWith(RevertReasons.INVALID_FUNCTION_NAME);
+          });
+
+          it("Should fail when function name is incorrect, even if selector is correct [collision]", async function () {
+            // Prepare a function, which selector collide with another funtion selector
+            // In this case certain bytes are appended to redeemVoucher so it gets the same selector as cancelVoucher
+            const fn = `redeemVoucher(uint256)`;
+            const fnBytes = ethers.utils.toUtf8Bytes(fn);
+            const collisionBytes = "0a7f0f031e";
+            const collisionBytesBuffer = Buffer.from(collisionBytes, "hex");
+            const fnCollision = Buffer.concat([fnBytes, collisionBytesBuffer]);
+            const sigCollision = ethers.utils.keccak256(fnCollision).slice(0, 10);
+
+            // Prepare the function signature for the facet function.
+            functionSignature = exchangeHandler.interface.encodeFunctionData("cancelVoucher", [1]);
+
+            // Make sure that collision actually exists
+            assert.equal(sigCollision, functionSignature.slice(0, 10));
+
+            // Prepare the message
+            message.functionName = fnCollision.toString(); // malicious function name
+            message.functionSignature = functionSignature; // true function signature
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              operator,
+              customTransactionType,
+              "MetaTransaction",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                operator.address,
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
+            ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
           });
 
           it("Should fail when replaying a transaction", async function () {
@@ -902,6 +1219,14 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        beforeEach(async function () {
+          // Prepare the message
+          message = {};
+          message.nonce = parseInt(nonce);
+          message.from = operator.address;
+          message.contractAddress = metaTransactionsHandler.address;
+        });
+
         it("Should fail when try to call executeMetaTransaction method itself", async function () {
           // Function signature for executeMetaTransaction function.
           functionSignature = metaTransactionsHandler.interface.encodeFunctionData("executeMetaTransaction", [
@@ -939,7 +1264,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               s,
               v
             )
-          ).to.revertedWith(RevertReasons.INVALID_FUNCTION_SIGNATURE);
+          ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
         });
 
         context("Reentrancy guard", async function () {
