@@ -1495,12 +1495,12 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to escalate the dispute, expecting revert
             await expect(
               disputeHandler.connect(buyer).escalateDispute(exchangeId, {
-                value: ethers.BigNumber.from(buyerEscalationDepositNative).sub("1").toString(),
+                value: ethers.BigNumber.from("1").toString(),
               })
             ).to.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
           });
 
-          it("Token address is not a contract", async function () {
+          it.skip("Token address is not a contract", async function () {
             // prepare a disputed exchange
             const mockToken = await createDisputeExchangeWithToken();
 
@@ -1513,12 +1513,12 @@ describe("IBosonDisputeHandler", function () {
             );
           });
 
-          it.only("Token contract reverts for another reason", async function () {
+          it.skip("Token contract reverts for another reason", async function () {
             // prepare a disputed exchange
             const mockToken = await createDisputeExchangeWithToken();
 
             // get rid of some tokens, so buyer has insufficient funds
-            await mockToken.connect(buyer).transfer(other1.address, buyerEscalationDepositNative);
+            await mockToken.connect(buyer).transfer(other1.address, buyerEscalationDepositToken);
 
             // Attempt to commit to an offer, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
