@@ -7,10 +7,19 @@ const { assert } = require("chai");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Role = require("../../scripts/domain/Role");
+const Group = require("../../scripts/domain/Group");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { mockOffer, mockDisputeResolver, mockAuthToken, mockSeller, mockAgent, mockBuyer } = require("../util/mock");
+const {
+  mockOffer,
+  mockDisputeResolver,
+  mockAuthToken,
+  mockSeller,
+  mockAgent,
+  mockBuyer,
+  mockCondition,
+} = require("../util/mock");
 const { setNextBlockTimestamp } = require("../util/utils.js");
 const { oneMonth, oneDay } = require("../util/constants");
 const { readContracts } = require("../../scripts/util/utils");
@@ -33,7 +42,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     twinHandler,
     configHandler;
   // orchestrationHandler, pauseHandler, metaTransactionsHandler,
-  let mockToken;
+  let mockToken, mockConditionalToken;
   let snapshot;
   let protocolDiamondAddress;
   let mockAuthERC721Contract;
@@ -43,6 +52,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let buyers = [];
   let agents = [];
   let offers = [];
+  let groups = [];
   let exchanges = [];
   let protocolContractState;
 
@@ -94,7 +104,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, mockAuthERC721Contract.address);
 
     // create mock token for offers
-    [mockToken] = await deployMockTokens(["Foreign20"]);
+    [mockToken, mockConditionalToken] = await deployMockTokens(["Foreign20", "Foreign20"]);
 
     // Populate protocol with data
     await populateProtocolContract();
@@ -186,7 +196,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       entity.BUYER,
       entity.BUYER,
       entity.BUYER,
-    ]; // maybe programatically set the random order, expect for the buyers
+    ]; // maybe programatically set the random order, except for the buyers
 
     for (let i = 0; i < totalCount; i++) {
       const wallet = ethers.Wallet.createRandom();
@@ -233,7 +243,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // set unique new voucherInitValues
           const voucherInitValues = new VoucherInitValues(`http://seller${i}.com/uri`, i * 10);
           await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
-          sellers.push({ wallet: connectedWallet, seller, authToken, voucherInitValues });
+          sellers.push({ wallet: connectedWallet, seller, authToken, voucherInitValues, offerIds: [] });
 
           // mint mock token to sellers just in case they need them
           await mockToken.mint(connectedWallet.address, "10000000000");
@@ -250,6 +260,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // no need to explicitly create buyer, since it's done automatically during commitToOffer
           const buyer = mockBuyer(wallet.address);
           buyers.push({ wallet: connectedWallet, buyer });
+
+          // mint them conditional token in case they need it
+          await mockConditionalToken.mint(wallet.address, "10");
           break;
         }
       }
@@ -299,6 +312,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
         offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId });
+        sellers[j].offerIds.push(offerId);
 
         // Deposit seller funds so the commit will succeed
         const sellerPool = ethers.BigNumber.from(offer.quantityAvailable).mul(offer.price).toString();
@@ -307,6 +321,21 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           .connect(sellers[j].wallet)
           .depositFunds(sellers[j].seller.id, offer.exchangeToken, sellerPool, { value: msgValue });
       }
+    }
+
+    // group some offers
+    // mockConditionalToken
+    let groupId = 0;
+    for (let i = 0; i < sellers.length; i = i + 2) {
+      const seller = sellers[i];
+      const group = new Group(++groupId, seller.seller.id, seller.offerIds); // group all seller's offers
+      const condition = mockCondition({
+        tokenAddress: mockConditionalToken.address,
+        maxCommits: "10",
+      });
+      await groupHandler.connect(seller.wallet).createGroup(group, condition);
+
+      groups.push(group);
     }
 
     // commit to some offers: first buyer commit to 1 offer, second to 2, third to 3 etc
@@ -792,26 +821,46 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       );
     }
 
-    // buyerIdByWallet + agentIdByWallet
+    // buyerIdByWallet, agentIdByWallet, conditionalCommitsByAddress
     let buyerIdByWallet = [];
     let agentIdByWallet = [];
+    let conditionalCommitsByAddress = [];
 
     const accounts = [...sellers, ...DRs, ...agents, ...buyers];
 
     for (const account of accounts) {
       const accountAddress = account.wallet.address;
+
+      // buyerIdByWallet
       buyerIdByWallet.push(
         await getStorageAt(
           protocolDiamondAddress,
           getMappinStoragePosition(protocolLookupsSlotNumber.add("8"), accountAddress, paddingType.START)
         )
       );
+
+      // agentIdByWallet
       agentIdByWallet.push(
         await getStorageAt(
           protocolDiamondAddress,
           getMappinStoragePosition(protocolLookupsSlotNumber.add("13"), accountAddress, paddingType.START)
         )
       );
+
+      // conditionalCommitsByAddress
+      const firstMappingStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("19"), accountAddress, paddingType.START)
+      );
+      let commitsPerGroup = [];
+      for (let id = 1; id <= groups.length; id++) {
+        commitsPerGroup.push(
+          await getStorageAt(
+            protocolDiamondAddress,
+            getMappinStoragePosition(firstMappingStorageSlot, id, paddingType.START)
+          )
+        );
+      }
+      conditionalCommitsByAddress.push(commitsPerGroup);
     }
 
     // disputeResolverFeeTokenIndex, tokenIndexByAccount, cloneAddress, voucherCount
@@ -872,11 +921,27 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       );
     }
 
-    // conditionalCommitsByAddress
     // twinRangesBySeller
     // twinIdsByTokenAddressAndBySeller
     // allowedSellerIndex; ? areSellersAllowe
+
     // offerIdIndexByGroup
+    let offerIdIndexByGroup = [];
+    for (let id = 1; id <= groups.length; id++) {
+      const firstMappingStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("28"), id, paddingType.START)
+      );
+      let offerInidices = [];
+      for (let id2 = 1; id2 <= offers.length; id2++) {
+        offerInidices.push(
+          await getStorageAt(
+            protocolDiamondAddress,
+            getMappinStoragePosition(firstMappingStorageSlot, id2, paddingType.START)
+          )
+        );
+      }
+      offerIdIndexByGroup.push(offerInidices);
+    }
 
     // pendingAddressUpdatesBySeller, pendingAuthTokenUpdatesBySeller, pendingAddressUpdatesByDisputeResolver
     let pendingAddressUpdatesBySeller = [];
@@ -919,9 +984,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       structFields[6] = await getStorageAt(protocolDiamondAddress, keccak256(structStorageSlot.add(6))); // represents field string metadataUri. Technically this value represents the lenght of the string, but since it should be 0, we don't do further decoding
       pendingAddressUpdatesByDisputeResolver.push(structFields);
     }
-    console.log(pendingAddressUpdatesBySeller);
-    console.log(pendingAuthTokenUpdatesBySeller);
-    console.log(pendingAddressUpdatesByDisputeResolver);
 
     return {};
   }
