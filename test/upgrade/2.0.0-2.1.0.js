@@ -1,17 +1,31 @@
 const shell = require("shelljs");
+const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const { keccak256 } = ethers.utils;
 const { assert } = require("chai");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Role = require("../../scripts/domain/Role");
+const Group = require("../../scripts/domain/Group");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
+const TokenType = require("../../scripts/domain/TokenType.js");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { mockOffer, mockDisputeResolver, mockAuthToken, mockSeller, mockAgent, mockBuyer } = require("../util/mock");
+const {
+  mockOffer,
+  mockDisputeResolver,
+  mockAuthToken,
+  mockSeller,
+  mockAgent,
+  mockBuyer,
+  mockCondition,
+  mockTwin,
+} = require("../util/mock");
 const { setNextBlockTimestamp } = require("../util/utils.js");
 const { oneMonth, oneDay } = require("../util/constants");
 const { readContracts } = require("../../scripts/util/utils");
+const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 
 /**
  *  Upgrade test case - After upgrade from 2.0.0 to 2.1.0 everything is still operational
@@ -30,7 +44,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     twinHandler,
     configHandler;
   // orchestrationHandler, pauseHandler, metaTransactionsHandler,
-  let mockToken;
+  let mockToken, mockConditionalToken, mockTwinTokens;
   let snapshot;
   let protocolDiamondAddress;
   let mockAuthERC721Contract;
@@ -40,6 +54,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let buyers = [];
   let agents = [];
   let offers = [];
+  let groups = [];
+  let twins = [];
   let exchanges = [];
   let protocolContractState;
 
@@ -91,7 +107,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, mockAuthERC721Contract.address);
 
     // create mock token for offers
-    [mockToken] = await deployMockTokens(["Foreign20"]);
+    let mockTwin721_1, mockTwin721_2;
+    [mockToken, mockConditionalToken, mockTwin721_1, mockTwin721_2] = await deployMockTokens([
+      "Foreign20",
+      "Foreign20",
+      "Foreign721",
+      "Foreign721",
+    ]);
+    mockTwinTokens = [mockTwin721_1, mockTwin721_2];
 
     // Populate protocol with data
     await populateProtocolContract();
@@ -183,7 +206,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       entity.BUYER,
       entity.BUYER,
       entity.BUYER,
-    ]; // maybe programatically set the random order, expect for the buyers
+    ]; // maybe programatically set the random order, except for the buyers
 
     for (let i = 0; i < totalCount; i++) {
       const wallet = ethers.Wallet.createRandom();
@@ -230,7 +253,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // set unique new voucherInitValues
           const voucherInitValues = new VoucherInitValues(`http://seller${i}.com/uri`, i * 10);
           await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
-          sellers.push({ wallet: connectedWallet, seller, authToken, voucherInitValues });
+          sellers.push({ wallet: connectedWallet, seller, authToken, voucherInitValues, offerIds: [] });
 
           // mint mock token to sellers just in case they need them
           await mockToken.mint(connectedWallet.address, "10000000000");
@@ -247,9 +270,20 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // no need to explicitly create buyer, since it's done automatically during commitToOffer
           const buyer = mockBuyer(wallet.address);
           buyers.push({ wallet: connectedWallet, buyer });
+
+          // mint them conditional token in case they need it
+          await mockConditionalToken.mint(wallet.address, "10");
           break;
         }
       }
+    }
+
+    // Make explicit allowed sellers list for some DRs
+    const sellerIds = sellers.map((s) => s.seller.id);
+    for (let i = 0; i < DRs.length; i = i + 2) {
+      const DR = DRs[i];
+      DR.sellerAllowList = sellerIds;
+      await accountHandler.connect(DR.wallet).addSellersToAllowList(DR.disputeResolver.id, sellerIds);
     }
 
     // create offers - first seller has 5 offers, second 4, third 3 etc
@@ -296,6 +330,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
         offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId });
+        sellers[j].offerIds.push(offerId);
 
         // Deposit seller funds so the commit will succeed
         const sellerPool = ethers.BigNumber.from(offer.quantityAvailable).mul(offer.price).toString();
@@ -303,6 +338,40 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         await fundsHandler
           .connect(sellers[j].wallet)
           .depositFunds(sellers[j].seller.id, offer.exchangeToken, sellerPool, { value: msgValue });
+      }
+    }
+
+    // group some offers
+    let groupId = 0;
+    for (let i = 0; i < sellers.length; i = i + 2) {
+      const seller = sellers[i];
+      const group = new Group(++groupId, seller.seller.id, seller.offerIds); // group all seller's offers
+      const condition = mockCondition({
+        tokenAddress: mockConditionalToken.address,
+        maxCommits: "10",
+      });
+      await groupHandler.connect(seller.wallet).createGroup(group, condition);
+
+      groups.push(group);
+    }
+
+    // create some twins
+    let twinId = 0;
+    for (let i = 1; i < sellers.length; i = i + 2) {
+      const seller = sellers[i];
+      await mockTwinTokens[0].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
+      await mockTwinTokens[1].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
+      // create multiple ranges
+      const twin = mockTwin(rando.address, TokenType.NonFungibleToken);
+      twin.amount = "0";
+      for (let j = 0; j < 7; j++) {
+        twin.tokenId = `${j * 10000 + i * 100}`;
+        twin.supplyAvailable = `${10 * (i + 1)}`;
+        (twin.tokenAddress = mockTwinTokens[j % 2].address), // oscilate between twins
+          (twin.id = ++twinId);
+        await twinHandler.connect(seller.wallet).createTwin(twin);
+
+        twins.push(twin);
       }
     }
 
@@ -324,7 +393,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         }
         await mockToken.mint(buyerWallet.address, offerPrice);
         await exchangeHandler.connect(buyerWallet).commitToOffer(buyerWallet.address, offerId, { value: msgValue });
-        exchanges.push({ exchangeId: ++exchangeId, buyerIndex: j });
+        exchanges.push({ exchangeId: ++exchangeId, offerId: offerId, buyerIndex: j });
       }
     }
 
@@ -337,13 +406,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // cancel some vouchers #3
     for (const id of [10, 3, 13]) {
       const exchange = exchanges[id];
-      await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).redeemVoucher(exchange.exchangeId);
+      await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).cancelVoucher(exchange.exchangeId);
     }
 
     // revoke some vouchers #2
     for (const id of [4, 6]) {
       const exchange = exchanges[id];
-      await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).redeemVoucher(exchange.exchangeId);
+      const offer = offers.find((o) => o.offer.id == exchange.offerId);
+      const seller = sellers.find((s) => s.seller.id == offer.offer.sellerId);
+      await exchangeHandler.connect(seller.wallet).revokeVoucher(exchange.exchangeId);
     }
 
     // raise dispute on some exchanges #1
@@ -364,6 +435,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     const twinContractState = await getTwinContractState();
     const metaTxContractState = await getMetaTxContractState();
 
+    // get states not accesible by external getters
+    const metaTxPrivateContractState = await getMetaTxPrivateContractState();
+    const protocolStatusPrivateContractState = await getProtocolStatusPrivateContractState();
+    const protocolLookupsPrivateContractState = await getProtocolLookupsPrivateContractState();
+
     return {
       accountContractState,
       offerContractState,
@@ -375,6 +451,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       groupContractState,
       twinContractState,
       metaTxContractState,
+      metaTxPrivateContractState,
+      protocolStatusPrivateContractState,
+      protocolLookupsPrivateContractState,
     };
   }
 
@@ -560,11 +639,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   }
 
   async function getGroupContractState() {
-    // even if there are no groups explicitly created
-    // just make check that after the update, empty groups are still returned.
-    // Also this function will be handy if tests are expanded and actually introduce some groups.
     let groupsState = [];
-    for (let id = 1; id < 15; id++) { // until we actually have some groups, check some arbitrary number to see nothing was put in their place
+    for (let id = 1; id <= groups.length; id++) {
       groupsState.push(await groupHandler.connect(rando).getGroup(id));
     }
 
@@ -573,11 +649,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   }
 
   async function getTwinContractState() {
-    // even if there are no twins explicitly created
-    // just make check that after the update, empty twins are still returned.
-    // Also this function will be handy if tests are expanded and actually introduce some twins.
     let twinsState = [];
-    for (let id = 1; id < 15; id++) { // until we actually have some twins, check some arbitrary number to see nothing was put in their place
+    for (let id = 1; id < twins.length; id++) {
       twinsState.push(await twinHandler.connect(rando).getTwin(id));
     }
 
@@ -587,5 +660,448 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   async function getMetaTxContractState() {
     return {};
+  }
+
+  const paddingType = {
+    NONE: 0,
+    START: 1,
+    END: 2,
+  };
+
+  function getMappinStoragePosition(slot, key, padding = paddingType.NONE) {
+    let keyBuffer;
+    switch (padding) {
+      case paddingType.NONE:
+        keyBuffer = ethers.utils.toUtf8Bytes(key);
+        break;
+      case paddingType.START:
+        keyBuffer = Buffer.from(ethers.utils.hexZeroPad(key, 32).toString().slice(2), "hex");
+        break;
+      case paddingType.END:
+        keyBuffer = Buffer.from(key.slice(2).padEnd(64, "0"), "hex"); // assume key is prefixed with 0x
+        break;
+    }
+    const pBuffer = Buffer.from(slot.toHexString().slice(2), "hex");
+    return keccak256(Buffer.concat([keyBuffer, pBuffer]));
+  }
+
+  async function getMetaTxPrivateContractState() {
+    /*
+    ProtocolMetaTxInfo storage layout
+
+    #0 [ currentSenderAddress + isMetaTransaction ]
+    #1 [ domain separator ]
+    #2 [ ] // placeholder for usedNonce
+    #3 [ cachedChainId ]
+    #4 [ ] // placeholder for inputType
+    #5 [ ] // placeholder for hashInfo
+    */
+
+    // starting slot
+    const metaTxStorageSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.metaTransactions"));
+    const metaTxStorageSlotNumber = ethers.BigNumber.from(metaTxStorageSlot);
+
+    // current sender address + isMetaTransaction (they are packed since they are shorter than one slot)
+    // should be always be 0x
+    const inTransactionInfo = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber.add("0"));
+
+    // domain separator
+    const domainSeparator = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber.add("1"));
+
+    // cached chain id
+    const cachedChainId = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber.add("3"));
+
+    // input type
+    const inputTypeKeys = [
+      "commitToOffer(address,uint256)",
+      "cancelVoucher(uint256)",
+      "redeemVoucher(uint256)",
+      "completeExchange(uint256)",
+      "withdrawFunds(uint256,address[],uint256[])",
+      "retractDispute(uint256)",
+      "raiseDispute(uint256)",
+      "escalateDispute(uint256)",
+      "resolveDispute(uint256,uint256,bytes32,bytes32,uint8)",
+    ];
+
+    const inputTypesState = [];
+    for (const inputTypeKey of inputTypeKeys) {
+      const storageSlot = getMappinStoragePosition(metaTxStorageSlotNumber.add("4"), inputTypeKey, paddingType.NONE);
+      inputTypesState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
+    }
+
+    // hashInfo
+    const hashInfoTypes = {
+      Generic: 0,
+      CommitToOffer: 1,
+      Exchange: 2,
+      Funds: 3,
+      RaiseDispute: 4,
+      ResolveDisput: 5,
+    };
+
+    const hashInfoState = [];
+    for (const hashInfoType of Object.values(hashInfoTypes)) {
+      const storageSlot = getMappinStoragePosition(metaTxStorageSlotNumber.add("5"), hashInfoType, paddingType.START);
+      // get also hashFunction
+      hashInfoState.push({
+        typeHash: await getStorageAt(protocolDiamondAddress, storageSlot),
+        functionPointer: await getStorageAt(protocolDiamondAddress, ethers.BigNumber.from(storageSlot).add(1)),
+      });
+    }
+
+    return { inTransactionInfo, domainSeparator, cachedChainId, inputTypesState, hashInfoState };
+  }
+
+  async function getProtocolStatusPrivateContractState() {
+    /*
+    ProtocolStatus storage layout
+
+    #0 [ pauseScenario ]
+    #1 [ reentrancyStatus ]
+    #2 [ ] // placeholder for initializedInterfaces
+    */
+
+    // starting slot
+    const protocolStatusStorageSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.initializers"));
+    const protocolStatusStorageSlotNumber = ethers.BigNumber.from(protocolStatusStorageSlot);
+
+    // pause scenario
+    const pauseScenario = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber.add("0"));
+
+    // reentrancy status
+    // defualt: NOT_ENTERED = 1
+    const reentrancyStatus = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber.add("1"));
+
+    // initializedInterfaces
+    const interfaceIds = await getInterfaceIds();
+
+    const initializedInterfacesState = [];
+    for (const interfaceId of Object.values(interfaceIds)) {
+      const storageSlot = getMappinStoragePosition(
+        protocolStatusStorageSlotNumber.add("2"),
+        interfaceId,
+        paddingType.END
+      );
+      initializedInterfacesState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
+    }
+
+    return { pauseScenario, reentrancyStatus, initializedInterfacesState };
+  }
+
+  async function getProtocolLookupsPrivateContractState() {
+    /*
+    ProtocolLookups storage layout
+
+    Variables marked with X have an external getter and are not handled here
+    #0  [ ] // placeholder for exchangeIdsByOffer
+    #1  [X] // placeholder for bundleIdByOffer
+    #2  [X] // placeholder for bundleIdByTwin
+    #3  [ ] // placeholder for groupIdByOffer
+    #4  [X] // placeholder for agentIdByOffer
+    #5  [X] // placeholder for sellerIdByOperator
+    #6  [X] // placeholder for sellerIdByAdmin
+    #7  [X] // placeholder for sellerIdByClerk
+    #8  [ ] // placeholder for buyerIdByWallet
+    #9  [X] // placeholder for disputeResolverIdByOperator
+    #10 [X] // placeholder for disputeResolverIdByAdmin
+    #11 [X] // placeholder for disputeResolverIdByClerk
+    #12 [ ] // placeholder for disputeResolverFeeTokenIndex
+    #13 [ ] // placeholder for agentIdByWallet
+    #14 [X] // placeholder for availableFunds
+    #15 [X] // placeholder for tokenList
+    #16 [ ] // placeholder for tokenIndexByAccount
+    #17 [ ] // placeholder for cloneAddress
+    #18 [ ] // placeholder for voucherCount
+    #19 [ ] // placeholder for conditionalCommitsByAddress
+    #20 [X] // placeholder for authTokenContracts
+    #21 [X] // placeholder for sellerIdByAuthToken
+    #22 [ ] // placeholder for twinRangesBySeller
+    #23 [ ] // placeholder for twinIdsByTokenAddressAndBySeller
+    #24 [X] // placeholder for twinReceiptsByExchange
+    #25 [X] // placeholder for allowedSellers
+    #26 [ ] // placeholder for allowedSellerIndex
+    #27 [X] // placeholder for exchangeCondition
+    #28 [ ] // placeholder for offerIdIndexByGroup
+    #29 [ ] // placeholder for pendingAddressUpdatesBySeller
+    #30 [ ] // placeholder for pendingAuthTokenUpdatesBySeller
+    #31 [ ] // placeholder for pendingAddressUpdatesByDisputeResolver
+    */
+
+    // starting slot
+    const protocolLookupsSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.lookups"));
+    const protocolLookupsSlotNumber = ethers.BigNumber.from(protocolLookupsSlot);
+
+    // exchangeIdsByOffer and groupIdByOffer
+    let exchangeIdsByOfferState = [];
+    let groupIdByOfferState = [];
+    for (let id = 1; id <= offers.length; id++) {
+      // exchangeIdsByOffer
+      let exchangeIdsByOffer = [];
+      const arraySlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("0"), id, paddingType.START)
+      );
+      const arrayLength = ethers.BigNumber.from(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
+      const arrayStart = ethers.BigNumber.from(keccak256(arraySlot));
+      for (let i = 0; i < arrayLength; i++) {
+        exchangeIdsByOffer.push(await getStorageAt(protocolDiamondAddress, arrayStart.add(i)));
+      }
+      exchangeIdsByOfferState.push(exchangeIdsByOffer);
+
+      // groupIdByOffer
+      groupIdByOfferState.push(
+        await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(protocolLookupsSlotNumber.add("3"), id, paddingType.START)
+        )
+      );
+    }
+
+    // buyerIdByWallet, agentIdByWallet, conditionalCommitsByAddress
+    let buyerIdByWallet = [];
+    let agentIdByWallet = [];
+    let conditionalCommitsByAddress = [];
+
+    const accounts = [...sellers, ...DRs, ...agents, ...buyers];
+
+    for (const account of accounts) {
+      const accountAddress = account.wallet.address;
+
+      // buyerIdByWallet
+      buyerIdByWallet.push(
+        await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(protocolLookupsSlotNumber.add("8"), accountAddress, paddingType.START)
+        )
+      );
+
+      // agentIdByWallet
+      agentIdByWallet.push(
+        await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(protocolLookupsSlotNumber.add("13"), accountAddress, paddingType.START)
+        )
+      );
+
+      // conditionalCommitsByAddress
+      const firstMappingStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("19"), accountAddress, paddingType.START)
+      );
+      let commitsPerGroup = [];
+      for (let id = 1; id <= groups.length; id++) {
+        commitsPerGroup.push(
+          await getStorageAt(
+            protocolDiamondAddress,
+            getMappinStoragePosition(firstMappingStorageSlot, id, paddingType.START)
+          )
+        );
+      }
+      conditionalCommitsByAddress.push(commitsPerGroup);
+    }
+
+    // disputeResolverFeeTokenIndex, tokenIndexByAccount, cloneAddress, voucherCount
+    let disputeResolverFeeTokenIndex = [];
+    let tokenIndexByAccount = [];
+    let cloneAddress = [];
+    let voucherCount = [];
+
+    // all id count
+    const totalCount = DRs.length + sellers.length + buyers.length + agents.length;
+
+    // loop over all ids even where no data is expected
+    for (let id = 1; id <= totalCount; id++) {
+      // disputeResolverFeeTokenIndex
+      let firstMappingStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("12"), id, paddingType.START)
+      );
+      disputeResolverFeeTokenIndex.push({
+        native: await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(firstMappingStorageSlot, ethers.constants.AddressZero, paddingType.START)
+        ),
+        mockToken: await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(firstMappingStorageSlot, mockToken.address, paddingType.START)
+        ),
+      });
+
+      // tokenIndexByAccount
+      firstMappingStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("16"), id, paddingType.START)
+      );
+      tokenIndexByAccount.push({
+        native: await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(firstMappingStorageSlot, ethers.constants.AddressZero, paddingType.START)
+        ),
+        mockToken: await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(firstMappingStorageSlot, mockToken.address, paddingType.START)
+        ),
+      });
+
+      // cloneAddress
+      cloneAddress.push(
+        await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(protocolLookupsSlotNumber.add("17"), id, paddingType.START)
+        )
+      );
+
+      // voucherCount
+      voucherCount.push(
+        await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(protocolLookupsSlotNumber.add("18"), id, paddingType.START)
+        )
+      );
+    }
+
+    // twinRangesBySeller
+    let twinRangesBySeller = [];
+    for (let id = 1; id <= totalCount; id++) {
+      const firstMappingStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("22"), id, paddingType.START)
+      );
+      let ranges = {};
+      for (let mockTwin of mockTwinTokens) {
+        ranges[mockTwin.address] = [];
+        const arraySlot = getMappinStoragePosition(firstMappingStorageSlot, mockTwin.address, paddingType.START);
+        const arrayLength = ethers.BigNumber.from(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
+        const arrayStart = ethers.BigNumber.from(keccak256(arraySlot));
+        for (let i = 0; i < arrayLength * 2; i = i + 2) {
+          // each BosonTypes.TokenRange has length 2
+          ranges[mockTwin.address].push({
+            start: await getStorageAt(protocolDiamondAddress, arrayStart.add(i)),
+            end: await getStorageAt(protocolDiamondAddress, arrayStart.add(i + 1)),
+          });
+        }
+      }
+      twinRangesBySeller.push(ranges);
+    }
+
+    // twinIdsByTokenAddressAndBySeller
+    let twinIdsByTokenAddressAndBySeller = [];
+    for (let id = 1; id <= totalCount; id++) {
+      const firstMappingStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("23"), id, paddingType.START)
+      );
+      let twinIds = {};
+      for (let mockTwin of mockTwinTokens) {
+        twinIds[mockTwin.address] = [];
+        const arraySlot = getMappinStoragePosition(firstMappingStorageSlot, mockTwin.address, paddingType.START);
+        const arrayLength = ethers.BigNumber.from(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
+        const arrayStart = ethers.BigNumber.from(keccak256(arraySlot));
+        for (let i = 0; i < arrayLength; i++) {
+          twinIds[mockTwin.address].push(await getStorageAt(protocolDiamondAddress, arrayStart.add(i)));
+        }
+      }
+      twinIdsByTokenAddressAndBySeller.push(twinIds);
+    }
+
+    // allowedSellerIndex
+    let allowedSellerIndex = [];
+    for (const DR of DRs) {
+      const firstMappingStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(
+          protocolLookupsSlotNumber.add("26"),
+          ethers.BigNumber.from(DR.disputeResolver.id).toHexString(),
+          paddingType.START
+        )
+      );
+      let sellerStatus = [];
+      for (const seller of sellers) {
+        sellerStatus.push(
+          await getStorageAt(
+            protocolDiamondAddress,
+            getMappinStoragePosition(
+              firstMappingStorageSlot,
+              ethers.BigNumber.from(seller.seller.id).toHexString(),
+              paddingType.START
+            )
+          )
+        );
+      }
+      allowedSellerIndex.push(sellerStatus);
+    }
+
+    // offerIdIndexByGroup
+    let offerIdIndexByGroup = [];
+    for (let id = 1; id <= groups.length; id++) {
+      const firstMappingStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("28"), id, paddingType.START)
+      );
+      let offerInidices = [];
+      for (let id2 = 1; id2 <= offers.length; id2++) {
+        offerInidices.push(
+          await getStorageAt(
+            protocolDiamondAddress,
+            getMappinStoragePosition(firstMappingStorageSlot, id2, paddingType.START)
+          )
+        );
+      }
+      offerIdIndexByGroup.push(offerInidices);
+    }
+
+    // pendingAddressUpdatesBySeller, pendingAuthTokenUpdatesBySeller, pendingAddressUpdatesByDisputeResolver
+    let pendingAddressUpdatesBySeller = [];
+    let pendingAuthTokenUpdatesBySeller = [];
+    let pendingAddressUpdatesByDisputeResolver = [];
+
+    // Although pending address/auth token update is not yet defined in 2.0.0, we can check that storage slots are empty
+    for (let id = 1; id <= totalCount; id++) {
+      // pendingAddressUpdatesBySeller
+      let structStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("29"), id, paddingType.START)
+      );
+      let structFields = [];
+      for (let i = 0; i < 5; i++) {
+        // BosonTypes.Seller has 6 fields, but last bool is packed in one slot with previous field
+        structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot.add(i)));
+      }
+      pendingAddressUpdatesBySeller.push(structFields);
+
+      // pendingAuthTokenUpdatesBySeller
+      structStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("30"), id, paddingType.START)
+      );
+      structFields = [];
+      for (let i = 0; i < 2; i++) {
+        // BosonTypes.AuthToken has 2 fields
+        structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot.add(i)));
+      }
+      pendingAuthTokenUpdatesBySeller.push(structFields);
+
+      // pendingAddressUpdatesByDisputeResolver
+      structStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("31"), id, paddingType.START)
+      );
+      structFields = [];
+      for (let i = 0; i < 8; i++) {
+        // BosonTypes.DisputeResolver has 8 fields
+        structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot.add(i)));
+      }
+      structFields[6] = await getStorageAt(protocolDiamondAddress, keccak256(structStorageSlot.add(6))); // represents field string metadataUri. Technically this value represents the lenght of the string, but since it should be 0, we don't do further decoding
+      pendingAddressUpdatesByDisputeResolver.push(structFields);
+    }
+
+    return {
+      exchangeIdsByOfferState,
+      groupIdByOfferState,
+      buyerIdByWallet,
+      disputeResolverFeeTokenIndex,
+      agentIdByWallet,
+      tokenIndexByAccount,
+      cloneAddress,
+      voucherCount,
+      conditionalCommitsByAddress,
+      twinRangesBySeller,
+      twinIdsByTokenAddressAndBySeller,
+      allowedSellerIndex,
+      offerIdIndexByGroup,
+      pendingAddressUpdatesBySeller,
+      pendingAuthTokenUpdatesBySeller,
+      pendingAddressUpdatesByDisputeResolver,
+    };
   }
 });

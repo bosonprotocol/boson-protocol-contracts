@@ -252,6 +252,10 @@ async function main(env) {
           `Could not find interface id for old facet ${oldFacet.name}.\nYou might need to remove its interfaceId from "supportsInterface" manually.`
         );
       } else {
+        if (oldFacet.interfaceId == newFacetInterfaceId) {
+          // This can happen if interface is shared accross facets and interface was updated already
+          continue;
+        }
         // Remove from smart contract
         await erc165Extended
           .connect(adminSigner)
