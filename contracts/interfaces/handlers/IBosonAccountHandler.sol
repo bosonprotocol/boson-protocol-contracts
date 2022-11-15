@@ -54,7 +54,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function createBuyer(BosonTypes.Buyer memory _buyer) external;
 
     /**
-     * @notice Creates a dispute resolver. Dispute resolver must be activated before it can participate in the protocol.
+     * @notice Creates a dispute resolver.
      *
      * Emits a DisputeResolverCreated event if successful.
      *

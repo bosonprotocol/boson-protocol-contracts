@@ -23,7 +23,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Creates a dispute resolver. Dispute resolver must be activated before it can participate in the protocol.
+     * @notice Creates a dispute resolver.
      *
      * Emits a DisputeResolverCreated event if successful.
      *

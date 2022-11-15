@@ -8,7 +8,7 @@ const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Role = require("../domain/Role");
 
 /**
-Create and activate a dispute resolver
+Create a dispute resolver
 To use this script on the local network make sure to run `npm deploy-suite:local` first
 Usage: npx hardhat create-dispute-resolver --path path/to/json --network <network>
 Path should contain a JSON file with the following:
@@ -21,7 +21,7 @@ Path should contain a JSON file with the following:
   "clerk": string,
   "treasury": string,
   "metadataUri": string,
-  "active": boolean // ignored
+  "active": boolean 
   },
   "disputeResolverFees": [
     {
@@ -44,7 +44,7 @@ const addressNotFound = (address) => {
   process.exit(1);
 };
 
-const createAndActivateDR = async (path) => {
+const createDR = async (path) => {
   const file = await fs.readFile(path, "utf8");
 
   let { disputeResolver, disputeResolverFees, sellerAllowList, privateKey } = await JSON.parse(file.toString());
@@ -88,8 +88,6 @@ const createAndActivateDR = async (path) => {
 
   let tx, receipt;
   // Create dispute resolver
-  // if (!activateOnly) {
-  // privateKey
   let disputeResolverSigner;
 
   if (!privateKey) {
@@ -127,17 +125,8 @@ const createAndActivateDR = async (path) => {
   }
 
   console.log(`Dispute resolver created with id ${disputeResolver.id}`);
-  // }
-
-  // Activate dispute resolver
-  // if (!createOnly) {
-  //   tx = await accountHandler.connect(protocolAdminSigner).activateDisputeResolver(disputeResolver.id);
-  //   receipt = await tx.wait(confirmations);
-  //   disputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverActivated", 1);
-  //   console.log(`Dispute resolver activated`);
-  // }
 
   console.log(disputeResolver);
 };
 
-exports.createAndActivateDR = createAndActivateDR;
+exports.createDR = createDR;

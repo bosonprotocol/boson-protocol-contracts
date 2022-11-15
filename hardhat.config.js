@@ -24,13 +24,11 @@ task("estimate-limits", "Estimates the maximum values for limits in protocol con
   await estimateLimits();
 });
 
-task("create-dispute-resolver", "Creates and activates a dispute resolver")
+task("create-dispute-resolver", "Creates a dispute resolver")
   .addParam("path", "The path to the dispute resolver json file")
-  // .addFlag("createOnly", "Only create the dispute resolver")
-  // .addFlag("activateOnly", "Only activate the dispute resolver")
-  .setAction(async ({ path, createOnly, activateOnly }) => {
-    const { createAndActivateDR } = await lazyImport("./scripts/util/create-and-activate-DR");
-    await createAndActivateDR(path, createOnly, activateOnly);
+  .setAction(async ({ path }) => {
+    const { createDR } = await lazyImport("./scripts/util/create-DR");
+    await createDR(path);
   });
 
 task("verify-suite", "Verify contracts on the block explorer")
