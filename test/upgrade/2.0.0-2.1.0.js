@@ -99,9 +99,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // Populate protocol with data
     await populateProtocolContract();
 
-    // await getProtocolLookupsPrivateContractState();
-    // process.exit()
-
     // Get current protocol state, which serves as the reference
     // We assume that this state is a true one, relying on our unit and integration tests
     protocolContractState = await getProtocolContractState();
@@ -330,7 +327,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         }
         await mockToken.mint(buyerWallet.address, offerPrice);
         await exchangeHandler.connect(buyerWallet).commitToOffer(buyerWallet.address, offerId, { value: msgValue });
-        exchanges.push({ exchangeId: ++exchangeId, buyerIndex: j });
+        exchanges.push({ exchangeId: ++exchangeId, offerId: offerId, buyerIndex: j });
       }
     }
 
@@ -343,13 +340,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // cancel some vouchers #3
     for (const id of [10, 3, 13]) {
       const exchange = exchanges[id];
-      await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).redeemVoucher(exchange.exchangeId);
+      await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).cancelVoucher(exchange.exchangeId);
     }
 
     // revoke some vouchers #2
     for (const id of [4, 6]) {
       const exchange = exchanges[id];
-      await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).redeemVoucher(exchange.exchangeId);
+      const offer = offers.find((o) => o.offer.id == exchange.offerId);
+      const seller = sellers.find((s) => s.seller.id == offer.offer.sellerId);
+      await exchangeHandler.connect(seller.wallet).revokeVoucher(exchange.exchangeId);
     }
 
     // raise dispute on some exchanges #1
@@ -373,6 +372,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // get states not accesible by external getters
     const metaTxPrivateContractState = await getMetaTxPrivateContractState();
     const protocolStatusPrivateContractState = await getProtocolStatusPrivateContractState();
+    const protocolLookupsPrivateContractState = await getProtocolLookupsPrivateContractState();
 
     return {
       accountContractState,
@@ -387,6 +387,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       metaTxContractState,
       metaTxPrivateContractState,
       protocolStatusPrivateContractState,
+      protocolLookupsPrivateContractState,
     };
   }
 
@@ -597,6 +598,29 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     return {};
   }
 
+  const paddingType = {
+    NONE: 0,
+    START: 1,
+    END: 2,
+  };
+
+  function getMappinStoragePosition(slot, key, padding = paddingType.NONE) {
+    let keyBuffer;
+    switch (padding) {
+      case paddingType.NONE:
+        keyBuffer = ethers.utils.toUtf8Bytes(key);
+        break;
+      case paddingType.START:
+        keyBuffer = Buffer.from(ethers.utils.hexZeroPad(key, 32).toString().slice(2), "hex");
+        break;
+      case paddingType.END:
+        keyBuffer = Buffer.from(key.slice(2).padEnd(64, "0"), "hex"); // assume key is prefixed with 0x
+        break;
+    }
+    const pBuffer = Buffer.from(slot.toHexString().slice(2), "hex");
+    return keccak256(Buffer.concat([keyBuffer, pBuffer]));
+  }
+
   async function getMetaTxPrivateContractState() {
     /*
     ProtocolMetaTxInfo storage layout
@@ -637,10 +661,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     ];
 
     const inputTypesState = [];
-    const inputTypes_p = metaTxStorageSlotNumber.add("4"); // Base input type storage slot
-    const inputTypes_pBuffer = Buffer.from(inputTypes_p.toHexString().slice(2), "hex");
     for (const inputTypeKey of inputTypeKeys) {
-      const storageSlot = keccak256(Buffer.concat([ethers.utils.toUtf8Bytes(inputTypeKey), inputTypes_pBuffer]));
+      const storageSlot = getMappinStoragePosition(metaTxStorageSlotNumber.add("4"), inputTypeKey, paddingType.NONE);
       inputTypesState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
     }
 
@@ -655,12 +677,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     };
 
     const hashInfoState = [];
-    const hashInfo_p = metaTxStorageSlotNumber.add("5"); // Base hash storage slot
-    const hashInfo_pBuffer = Buffer.from(hashInfo_p.toHexString().slice(2), "hex");
     for (const hashInfoType of Object.values(hashInfoTypes)) {
-      const keyBuffer = Buffer.from(ethers.utils.hexZeroPad(hashInfoType, 32).toString().slice(2), "hex");
-      const storageSlot = keccak256(Buffer.concat([keyBuffer, hashInfo_pBuffer]));
-
+      const storageSlot = getMappinStoragePosition(metaTxStorageSlotNumber.add("5"), hashInfoType, paddingType.START);
       // get also hashFunction
       hashInfoState.push({
         typeHash: await getStorageAt(protocolDiamondAddress, storageSlot),
@@ -695,12 +713,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     const interfaceIds = await getInterfaceIds();
 
     const initializedInterfacesState = [];
-    const initializedInterfaces_p = protocolStatusStorageSlotNumber.add("2"); // Base input type storage slot
-    const initializedInterfaces_pBuffer = Buffer.from(initializedInterfaces_p.toHexString().slice(2), "hex");
     for (const interfaceId of Object.values(interfaceIds)) {
-      const interfaceIdPadd = interfaceId + "00000000000000000000000000000000000000000000000000000000";
-      const keyBuffer = Buffer.from(interfaceIdPadd.slice(2), "hex");
-      const storageSlot = keccak256(Buffer.concat([keyBuffer, initializedInterfaces_pBuffer]));
+      const storageSlot = getMappinStoragePosition(
+        protocolStatusStorageSlotNumber.add("2"),
+        interfaceId,
+        paddingType.END
+      );
       initializedInterfacesState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
     }
 
@@ -744,28 +762,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     #30 [ ] // placeholder for pendingAuthTokenUpdatesBySeller
     #31 [ ] // placeholder for pendingAddressUpdatesByDisputeResolver
     */
-    const paddingType = {
-      NONE: 0,
-      START: 1,
-      END: 2
-    }
-
-    function getMappinStoragePosition(slot, key, padding = paddingType.NONE) {
-      let keyBuffer;
-      switch (padding) {
-        case paddingType.NONE:
-          keyBuffer = ethers.utils.toUtf8Bytes(key);
-          break;
-        case paddingType.START:
-          keyBuffer = Buffer.from(ethers.utils.hexZeroPad(key, 32).toString().slice(2), "hex");
-          break;
-        case paddingType.END:
-          keyBuffer = Buffer.from(key.padEnd(64).slice(2), "hex");
-          break;
-      }
-      const pBuffer = Buffer.from(slot.toHexString().slice(2), "hex");
-      return keccak256(Buffer.concat([keyBuffer, pBuffer]))
-    }
 
     // starting slot
     const protocolLookupsSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.lookups"));
@@ -777,35 +773,156 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     for (let id = 1; id <= offers.length; id++) {
       // exchangeIdsByOffer
       let exchangeIdsByOffer = [];
-      const arraySlot = ethers.BigNumber.from(getMappinStoragePosition(protocolLookupsSlotNumber.add("0"),id,paddingType.START));
-      const arrayLength = ethers.BigNumber.from(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber()
+      const arraySlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("0"), id, paddingType.START)
+      );
+      const arrayLength = ethers.BigNumber.from(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
       const arrayStart = ethers.BigNumber.from(keccak256(arraySlot));
       for (let i = 0; i < arrayLength; i++) {
-        exchangeIdsByOffer.push(await getStorageAt(protocolDiamondAddress, arrayStart.add(i)))
+        exchangeIdsByOffer.push(await getStorageAt(protocolDiamondAddress, arrayStart.add(i)));
       }
-      exchangeIdsByOfferState.push(exchangeIdsByOffer)
+      exchangeIdsByOfferState.push(exchangeIdsByOffer);
 
       // groupIdByOffer
-      groupIdByOfferState.push(await getStorageAt(protocolDiamondAddress,getMappinStoragePosition(protocolLookupsSlotNumber.add("3"),id,paddingType.START)))
+      groupIdByOfferState.push(
+        await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(protocolLookupsSlotNumber.add("3"), id, paddingType.START)
+        )
+      );
     }
-   
-     
-    // buyerIdByWallet
-    // disputeResolverFeeTokenIndex
-    // agentIdByWallet
-    // tokenIndexByAccount
-    // cloneAddress
-    // voucherCount
+
+    // buyerIdByWallet + agentIdByWallet
+    let buyerIdByWallet = [];
+    let agentIdByWallet = [];
+
+    const accounts = [...sellers, ...DRs, ...agents, ...buyers];
+
+    for (const account of accounts) {
+      const accountAddress = account.wallet.address;
+      buyerIdByWallet.push(
+        await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(protocolLookupsSlotNumber.add("8"), accountAddress, paddingType.START)
+        )
+      );
+      agentIdByWallet.push(
+        await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(protocolLookupsSlotNumber.add("13"), accountAddress, paddingType.START)
+        )
+      );
+    }
+
+    // disputeResolverFeeTokenIndex, tokenIndexByAccount, cloneAddress, voucherCount
+    let disputeResolverFeeTokenIndex = [];
+    let tokenIndexByAccount = [];
+    let cloneAddress = [];
+    let voucherCount = [];
+
+    // all id count
+    const totalCount = DRs.length + sellers.length + buyers.length + agents.length;
+
+    // loop over all ids even where no data is expected
+    for (let id = 1; id <= totalCount; id++) {
+      // disputeResolverFeeTokenIndex
+      let firstMappingStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("12"), id, paddingType.START)
+      );
+      disputeResolverFeeTokenIndex.push({
+        native: await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(firstMappingStorageSlot, ethers.constants.AddressZero, paddingType.START)
+        ),
+        mockToken: await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(firstMappingStorageSlot, mockToken.address, paddingType.START)
+        ),
+      });
+
+      // tokenIndexByAccount
+      firstMappingStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("16"), id, paddingType.START)
+      );
+      tokenIndexByAccount.push({
+        native: await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(firstMappingStorageSlot, ethers.constants.AddressZero, paddingType.START)
+        ),
+        mockToken: await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(firstMappingStorageSlot, mockToken.address, paddingType.START)
+        ),
+      });
+
+      // cloneAddress
+      cloneAddress.push(
+        await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(protocolLookupsSlotNumber.add("17"), id, paddingType.START)
+        )
+      );
+
+      // voucherCount
+      voucherCount.push(
+        await getStorageAt(
+          protocolDiamondAddress,
+          getMappinStoragePosition(protocolLookupsSlotNumber.add("18"), id, paddingType.START)
+        )
+      );
+    }
+
     // conditionalCommitsByAddress
     // twinRangesBySeller
     // twinIdsByTokenAddressAndBySeller
     // allowedSellerIndex; ? areSellersAllowe
     // offerIdIndexByGroup
-    // pendingAddressUpdatesBySeller
-    // pendingAuthTokenUpdatesBySeller
-    // pendingAddressUpdatesByDisputeResolver
-    
 
-    return { };
+    // pendingAddressUpdatesBySeller, pendingAuthTokenUpdatesBySeller, pendingAddressUpdatesByDisputeResolver
+    let pendingAddressUpdatesBySeller = [];
+    let pendingAuthTokenUpdatesBySeller = [];
+    let pendingAddressUpdatesByDisputeResolver = [];
+
+    // Although pending address/auth token update is not yet defined in 2.0.0, we can check that storage slots are empty
+    for (let id = 1; id <= totalCount; id++) {
+      // pendingAddressUpdatesBySeller
+      let structStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("29"), id, paddingType.START)
+      );
+      let structFields = [];
+      for (let i = 0; i < 5; i++) {
+        // BosonTypes.Seller has 6 fields, but last bool is packed in one slot with previous field
+        structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot.add(i)));
+      }
+      pendingAddressUpdatesBySeller.push(structFields);
+
+      // pendingAuthTokenUpdatesBySeller
+      structStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("30"), id, paddingType.START)
+      );
+      structFields = [];
+      for (let i = 0; i < 2; i++) {
+        // BosonTypes.AuthToken has 2 fields
+        structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot.add(i)));
+      }
+      pendingAuthTokenUpdatesBySeller.push(structFields);
+
+      // pendingAddressUpdatesByDisputeResolver
+      structStorageSlot = ethers.BigNumber.from(
+        getMappinStoragePosition(protocolLookupsSlotNumber.add("31"), id, paddingType.START)
+      );
+      structFields = [];
+      for (let i = 0; i < 8; i++) {
+        // BosonTypes.DisputeResolver has 8 fields
+        structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot.add(i)));
+      }
+      structFields[6] = await getStorageAt(protocolDiamondAddress, keccak256(structStorageSlot.add(6))); // represents field string metadataUri. Technically this value represents the lenght of the string, but since it should be 0, we don't do further decoding
+      pendingAddressUpdatesByDisputeResolver.push(structFields);
+    }
+    console.log(pendingAddressUpdatesBySeller);
+    console.log(pendingAuthTokenUpdatesBySeller);
+    console.log(pendingAddressUpdatesByDisputeResolver);
+
+    return {};
   }
 });
