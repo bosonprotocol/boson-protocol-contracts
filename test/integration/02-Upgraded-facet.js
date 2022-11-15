@@ -474,7 +474,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      const DRFeeNative = ethers.utils.parseUnits("1", "ether").toString();
+      const DRFeeNative = "0";
       const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative)];
 
       // Make empty seller list, so every seller is allowed
@@ -757,7 +757,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           adminDR.address,
           clerkDR.address,
           treasuryDR.address,
-          false
+          true
         );
         expect(disputeResolver.isValid()).is.true;
 

@@ -189,7 +189,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       expect(disputeResolver.isValid()).is.true;
 
       // Create DisputeResolverFee array so offer creation will succeed
-      const DRFeeNative = ethers.utils.parseUnits("1", "ether").toString();
+      const DRFeeNative = "0";
       const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative)];
 
       // Make a sellerAllowList

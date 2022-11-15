@@ -166,7 +166,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     expect(disputeResolver.isValid()).is.true;
 
     //Create DisputeResolverFee array so offer creation will succeed
-    disputeResolverFeeNative = ethers.utils.parseUnits("1", "ether").toString();
+    disputeResolverFeeNative = "0";
     const disputeResolverFees = [
       new DisputeResolverFee(ethers.constants.AddressZero, "Native", disputeResolverFeeNative),
     ];
