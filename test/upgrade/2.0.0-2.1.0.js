@@ -477,7 +477,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       buyersState.push(await accountHandler.connect(rando).getBuyer(id));
       agentsState.push(await accountHandler.connect(rando).getAgent(id));
       for (let id2 = 1; id2 <= totalCount; id2++) {
-        allowedSellersState.push(await accountHandler.connect(rando).areSellersAllowed(id2,[id]));
+        allowedSellersState.push(await accountHandler.connect(rando).areSellersAllowed(id2, [id]));
       }
     }
 
@@ -569,7 +569,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let bundlesState = [];
     let bundleIdByOfferState = [];
     let bundleIdByTwinState = [];
-    for (let id = 1; id < 15; id++) { // until we actually have some bundles, check some arbitrary number to see nothing was put in their place
+    for (let id = 1; id < 15; id++) {
+      // until we actually have some bundles, check some arbitrary number to see nothing was put in their place
       bundlesState.push(await bundleHandler.connect(rando).getBundle(id));
       bundleIdByOfferState.push(await bundleHandler.connect(rando).getBundleIdByOffer(id));
       bundleIdByTwinState.push(await bundleHandler.connect(rando).getBundleIdByTwin(id));
