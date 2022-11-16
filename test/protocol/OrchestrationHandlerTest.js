@@ -257,7 +257,7 @@ describe("IBosonOrchestrationHandler", function () {
       );
       expect(disputeResolver.isValid()).is.true;
 
-      //Create DisputeResolverFee array so offer creation will succeed
+      // Create DisputeResolverFee array so offer creation will succeed
       DRFeeNative = "0";
       DRFeeToken = "0";
       disputeResolverFees = [
@@ -1450,6 +1450,7 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
+        // TODO - revisit when account deactivations are supported
         it.skip("Dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
           disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
@@ -1498,6 +1499,7 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
+        // TODO - revisit when account deactivations are supported
         it.skip("For absolute zero offer, specified dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
           disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);

@@ -41,12 +41,12 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
-                                     feeAmount will be ignored because protocol doesn't yet support DR fees but DR still needs to provide array of fees to choose supported tokens
+     *                               feeAmount will be ignored because protocol doesn't yet support fees yet but DR still needs to provide array of fees to choose supported tokens
      * @param _sellerAllowList - list of ids of sellers that can choose this dispute resolver. If empty, there are no restrictions on which seller can chose it.
      */
     function createDisputeResolver(
         DisputeResolver memory _disputeResolver,
-        DisputeResolverFee[] memory _disputeResolverFees,
+        DisputeResolverFee[] calldata _disputeResolverFees,
         uint256[] calldata _sellerAllowList
     ) external disputeResolversNotPaused nonReentrant {
         // Cache protocol lookups for reference
@@ -419,9 +419,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      *
      * @param _disputeResolverId - id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
-                                     feeAmount will be ignored because protocol doesn't yet support DR fees but DR still needs to provide array of fees to choose supported tokens
+     *                               feeAmount will be ignored because protocol doesn't yet support fees yet but DR still needs to provide array of fees to choose supported tokens
      */
-    function addFeesToDisputeResolver(uint256 _disputeResolverId, DisputeResolverFee[] memory _disputeResolverFees)
+    function addFeesToDisputeResolver(uint256 _disputeResolverId, DisputeResolverFee[] calldata _disputeResolverFees)
         external
         disputeResolversNotPaused
         nonReentrant

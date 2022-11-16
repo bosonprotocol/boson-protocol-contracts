@@ -109,7 +109,7 @@ const createDR = async (path) => {
   initialDisputeResolver = getDisputeResolverFromEvent(receipt.events, "DisputeResolverCreated", 1);
 
   // if caller does not match supplied dispute resolver, update it.
-  // this is primary used when one does not have access to private key of dispute resolver or it does not exist (i.e. DR is a smart contract)
+  // this is primarily used when one does not have access to private key of dispute resolver or it does not exist (i.e. DR is a smart contract)
   if (
     initialDisputeResolver.admin.toLowerCase() != disputeResolver.admin.toLowerCase() ||
     initialDisputeResolver.operator.toLowerCase() != disputeResolver.operator.toLowerCase() ||
