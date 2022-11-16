@@ -146,7 +146,7 @@ setupEnvironment["maxFeesPerDisputeResolver"] = async function (feesCount = 10) 
   let disputeResolverFees = [];
   for (let i = 0; i < feesCount; i++) {
     const wallet = ethers.Wallet.createRandom();
-    disputeResolverFees.push(new DisputeResolverFee(wallet.address, `MockToken${i}`, "100"));
+    disputeResolverFees.push(new DisputeResolverFee(wallet.address, `MockToken${i}`, "0"));
   }
 
   // Dispute resolver 2 - used in "addFeesToDisputeResolver"
@@ -635,7 +635,7 @@ setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
     // add token to DR accepted tokens
     await accountHandler
       .connect(dr1)
-      .addFeesToDisputeResolver(disputeResolver.id, [new DisputeResolverFee(tokenContract.address, `Token${i}`, "1")]);
+      .addFeesToDisputeResolver(disputeResolver.id, [new DisputeResolverFee(tokenContract.address, `Token${i}`, "0")]);
 
     // create the offer
     await offerHandler

@@ -5,7 +5,6 @@ const environments = require("../../environments");
 const network = hre.network.name;
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
-const Role = require("../domain/Role");
 
 /**
 Create a dispute resolver
@@ -73,15 +72,6 @@ const createDR = async (path) => {
 
   // Cast protocol diamond to IBosonAccountHandler
   const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolAddress);
-  // Get AccessController abstraction
-  const accessController = await ethers.getContractAt("AccessController", accessControllerAddress);
-
-  const hasRole = await accessController.hasRole(Role.ADMIN, adminAddress);
-
-  if (!hasRole) {
-    console.log("Admin address does not have admin role");
-    process.exit(1);
-  }
 
   // Get signer for admin address
   const protocolAdminSigner = await ethers.getSigner(adminAddress);
