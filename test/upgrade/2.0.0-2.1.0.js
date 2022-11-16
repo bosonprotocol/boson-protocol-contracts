@@ -116,7 +116,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       "Foreign721",
       "Foreign721",
       "Foreign20",
-      "Foreign1155"
+      "Foreign1155",
     ]);
     mockTwinTokens = [mockTwin721_1, mockTwin721_2];
 
@@ -130,7 +130,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     // assert.deepEqual(protocolContractState,protocolContractStatepro, "nono")
     // process.exit()
-   
+
     // Upgrade protocol
     if (newVersion) {
       // checkout the new tag
@@ -391,8 +391,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       const twin1155 = mockTwin(mockTwin1155.address, TokenType.MultiToken);
       await mockTwin1155.connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
       for (let j = 0; j < 3; j++) {
-        twin1155.tokenId = `${j * 30000 + i * 300}`
-        twin1155.amount = i+j;
+        twin1155.tokenId = `${j * 30000 + i * 300}`;
+        twin1155.amount = i + j;
         twin1155.supplyAvailable = `${30 * (i + 1)}`;
         twin1155.id = ++twinId;
         await twinHandler.connect(seller.wallet).createTwin(twin1155);
@@ -449,33 +449,35 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   }
 
   async function getProtocolContractState() {
-    const [accountContractState,
-    offerContractState,
-    exchangeContractState,
-    bundleContractState,
-    configContractState,
-    disputeContractState,
-    fundsContractState,
-    groupContractState,
-    twinContractState,
-    metaTxContractState,
-    metaTxPrivateContractState,
-    protocolStatusPrivateContractState,
-    protocolLookupsPrivateContractState] =
-    await Promise.all([getAccountContractState(),
-    getOfferContractState(),
-    getExchangeContractState(),
-    getBundleContractState(),
-    getConfigContractState(),
-    getDisputeContractState(),
-    getFundsContractState(),
-    getGroupContractState(),
-    getTwinContractState(),
-    getMetaTxContractState(),
-    getMetaTxPrivateContractState(),
-    getProtocolStatusPrivateContractState(),
-    getProtocolLookupsPrivateContractState()])
-
+    const [
+      accountContractState,
+      offerContractState,
+      exchangeContractState,
+      bundleContractState,
+      configContractState,
+      disputeContractState,
+      fundsContractState,
+      groupContractState,
+      twinContractState,
+      metaTxContractState,
+      metaTxPrivateContractState,
+      protocolStatusPrivateContractState,
+      protocolLookupsPrivateContractState,
+    ] = await Promise.all([
+      getAccountContractState(),
+      getOfferContractState(),
+      getExchangeContractState(),
+      getBundleContractState(),
+      getConfigContractState(),
+      getDisputeContractState(),
+      getFundsContractState(),
+      getGroupContractState(),
+      getTwinContractState(),
+      getMetaTxContractState(),
+      getMetaTxPrivateContractState(),
+      getProtocolStatusPrivateContractState(),
+      getProtocolLookupsPrivateContractState(),
+    ]);
 
     return {
       accountContractState,
@@ -510,11 +512,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     // Query even the ids where it's not expected to get the entity
     for (let id = 1; id <= totalCount; id++) {
-      const [singleSellerState, singleDRsState, singleBuyersState, singleAgentsState] = await Promise.all([accountHandlerRando.getSeller(id),
+      const [singleSellerState, singleDRsState, singleBuyersState, singleAgentsState] = await Promise.all([
+        accountHandlerRando.getSeller(id),
         accountHandlerRando.getDisputeResolver(id),
         accountHandlerRando.getBuyer(id),
-        accountHandlerRando.getAgent(id)
-      ])
+        accountHandlerRando.getAgent(id),
+      ]);
       sellerState.push(singleSellerState);
       DRsState.push(singleDRsState);
       buyersState.push(singleBuyersState);
@@ -528,21 +531,25 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       const sellerAddress = seller.wallet.address;
       const sellerAuthToken = seller.authToken;
 
-      const [singleSellerByAddressState,singleSellerByAuthTokenState,singleDRbyAddressState] = await Promise.all([accountHandlerRando.getSellerByAddress(sellerAddress),
+      const [singleSellerByAddressState, singleSellerByAuthTokenState, singleDRbyAddressState] = await Promise.all([
+        accountHandlerRando.getSellerByAddress(sellerAddress),
         accountHandlerRando.getSellerByAuthToken(sellerAuthToken),
-        accountHandlerRando.getDisputeResolverByAddress(sellerAddress)
-      ])
+        accountHandlerRando.getDisputeResolverByAddress(sellerAddress),
+      ]);
       sellerByAddressState.push(singleSellerByAddressState);
       sellerByAuthTokenState.push(singleSellerByAuthTokenState);
       DRbyAddressState.push(singleDRbyAddressState);
     }
 
-    const otherAccounts = [...DRs, ...agents, ...buyers]
+    const otherAccounts = [...DRs, ...agents, ...buyers];
 
     for (const account of otherAccounts) {
       const accountAddress = account.wallet.address;
 
-      const [singleSellerByAddressState, singleDRbyAddressState] = await Promise.all([accountHandlerRando.getSellerByAddress(accountAddress),accountHandlerRando.getDisputeResolverByAddress(accountAddress)])
+      const [singleSellerByAddressState, singleDRbyAddressState] = await Promise.all([
+        accountHandlerRando.getSellerByAddress(accountAddress),
+        accountHandlerRando.getDisputeResolverByAddress(accountAddress),
+      ]);
       sellerByAddressState.push(singleSellerByAddressState);
       DRbyAddressState.push(singleDRbyAddressState);
     }
@@ -560,7 +567,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     };
   }
 
-
   async function getOfferContractState() {
     const offerHandlerRando = offerHandler.connect(rando);
     // get offers
@@ -568,10 +574,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let isOfferVoidedState = [];
     let agentIdByOfferState = [];
     for (let id = 1; id <= offers.length; id++) {
-      const [singleOffersState,singleIsOfferVoidedState,singleAgentIdByOfferState] = await Promise.all([offerHandlerRando.getOffer(id),
+      const [singleOffersState, singleIsOfferVoidedState, singleAgentIdByOfferState] = await Promise.all([
+        offerHandlerRando.getOffer(id),
         offerHandlerRando.isOfferVoided(id),
-        offerHandlerRando.getAgentIdByOffer(id)
-      ])
+        offerHandlerRando.getAgentIdByOffer(id),
+      ]);
       offersState.push(singleOffersState);
       isOfferVoidedState.push(singleIsOfferVoidedState);
       agentIdByOfferState.push(singleAgentIdByOfferState);
@@ -591,10 +598,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let receiptsState = [];
 
     for (let id = 1; id <= exchanges.length; id++) {
-      const [singleExchangesState,singleExchangeStateState,singleIsExchangeFinalizedState] = await Promise.all([exchangeHandlerRando.getExchange(id),
+      const [singleExchangesState, singleExchangeStateState, singleIsExchangeFinalizedState] = await Promise.all([
+        exchangeHandlerRando.getExchange(id),
         exchangeHandlerRando.getExchangeState(id),
-        exchangeHandlerRando.isExchangeFinalized(id)
-      ])
+        exchangeHandlerRando.isExchangeFinalized(id),
+      ]);
       exchangesState.push(singleExchangesState);
       exchangeStateState.push(singleExchangeStateState);
       isExchangeFinalizedState.push(singleIsExchangeFinalizedState);
@@ -609,7 +617,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     return { exchangesState, exchangeStateState, isExchangeFinalizedState, receiptsState, nextExchangeId };
   }
 
-  
   async function getBundleContractState() {
     // even if there are no bundles explicitly created
     // just make check that after the update, empty bundles are still returned.
@@ -621,11 +628,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     for (let id = 1; id < 15; id++) {
       // until we actually have some bundles, check some arbitrary number to see nothing was put in their place
 
-      const [singleBundlesState,singleBundleIdByOfferState,singleBundleIdByTwinState] = await Promise.all([
+      const [singleBundlesState, singleBundleIdByOfferState, singleBundleIdByTwinState] = await Promise.all([
         bundleHandlerRando.getBundle(id),
         bundleHandlerRando.getBundleIdByOffer(id),
-        bundleHandlerRando.getBundleIdByTwin(id)
-      ])
+        bundleHandlerRando.getBundleIdByTwin(id),
+      ]);
       bundlesState.push(singleBundlesState);
       bundleIdByOfferState.push(singleBundleIdByOfferState);
       bundleIdByTwinState.push(singleBundleIdByTwinState);
@@ -638,87 +645,88 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   async function getConfigContractState() {
     const configHandlerRando = configHandler.connect(rando);
     const [
-    tokenAddress,
-    treasuryAddress,
-    voucherBeaconAddress,
-    beaconProxyAddress,
-    protocolFeePercentage,
-    protocolFeeFlatBoson,
-    maxOffersPerBatch,
-    maxOffersPerGroup,
-    maxTwinsPerBundle,
-    maxOffersPerBundle,
-    maxTokensPerWithdrawal,
-    maxFeesPerDisputeResolver,
-    maxEscalationResponsePeriod,
-    maxDisputesPerBatch,
-    maxTotalOfferFeePercentage,
-    maxAllowedSellers,
-    buyerEscalationDepositPercentage,
-    authTokenContractNone,
-    authTokenContractCustom,
-    authTokenContractLens,
-    authTokenContractENS,
-    maxExchangesPerBatch,
-    maxRoyaltyPecentage,
-    maxResolutionPeriod,
-    minDisputePeriod,
-    accessControllerAddress
-  ] = await Promise.all(
-    [configHandlerRando.getTokenAddress(),
-    configHandlerRando.getTreasuryAddress(),
-    configHandlerRando.getVoucherBeaconAddress(),
-    configHandlerRando.getBeaconProxyAddress(),
-    configHandlerRando.getProtocolFeePercentage(),
-    configHandlerRando.getProtocolFeeFlatBoson(),
-    configHandlerRando.getMaxOffersPerBatch(),
-    configHandlerRando.getMaxOffersPerGroup(),
-    configHandlerRando.getMaxTwinsPerBundle(),
-    configHandlerRando.getMaxOffersPerBundle(),
-    configHandlerRando.getMaxTokensPerWithdrawal(),
-    configHandlerRando.getMaxFeesPerDisputeResolver(),
-    configHandlerRando.getMaxEscalationResponsePeriod(),
-    configHandlerRando.getMaxDisputesPerBatch(),
-    configHandlerRando.getMaxTotalOfferFeePercentage(),
-    configHandlerRando.getMaxAllowedSellers(),
-    configHandlerRando.getBuyerEscalationDepositPercentage(),
-    configHandlerRando.getAuthTokenContract(AuthTokenType.None),
-    configHandlerRando.getAuthTokenContract(AuthTokenType.Custom),
-    configHandlerRando.getAuthTokenContract(AuthTokenType.Lens),
-    configHandlerRando.getAuthTokenContract(AuthTokenType.ENS),
-    configHandlerRando.getMaxExchangesPerBatch(),
-    configHandlerRando.getMaxRoyaltyPecentage(),
-    configHandlerRando.getMaxResolutionPeriod(),
-    configHandlerRando.getMinDisputePeriod(),
-    configHandlerRando.getAccessControllerAddress()])
+      tokenAddress,
+      treasuryAddress,
+      voucherBeaconAddress,
+      beaconProxyAddress,
+      protocolFeePercentage,
+      protocolFeeFlatBoson,
+      maxOffersPerBatch,
+      maxOffersPerGroup,
+      maxTwinsPerBundle,
+      maxOffersPerBundle,
+      maxTokensPerWithdrawal,
+      maxFeesPerDisputeResolver,
+      maxEscalationResponsePeriod,
+      maxDisputesPerBatch,
+      maxTotalOfferFeePercentage,
+      maxAllowedSellers,
+      buyerEscalationDepositPercentage,
+      authTokenContractNone,
+      authTokenContractCustom,
+      authTokenContractLens,
+      authTokenContractENS,
+      maxExchangesPerBatch,
+      maxRoyaltyPecentage,
+      maxResolutionPeriod,
+      minDisputePeriod,
+      accessControllerAddress,
+    ] = await Promise.all([
+      configHandlerRando.getTokenAddress(),
+      configHandlerRando.getTreasuryAddress(),
+      configHandlerRando.getVoucherBeaconAddress(),
+      configHandlerRando.getBeaconProxyAddress(),
+      configHandlerRando.getProtocolFeePercentage(),
+      configHandlerRando.getProtocolFeeFlatBoson(),
+      configHandlerRando.getMaxOffersPerBatch(),
+      configHandlerRando.getMaxOffersPerGroup(),
+      configHandlerRando.getMaxTwinsPerBundle(),
+      configHandlerRando.getMaxOffersPerBundle(),
+      configHandlerRando.getMaxTokensPerWithdrawal(),
+      configHandlerRando.getMaxFeesPerDisputeResolver(),
+      configHandlerRando.getMaxEscalationResponsePeriod(),
+      configHandlerRando.getMaxDisputesPerBatch(),
+      configHandlerRando.getMaxTotalOfferFeePercentage(),
+      configHandlerRando.getMaxAllowedSellers(),
+      configHandlerRando.getBuyerEscalationDepositPercentage(),
+      configHandlerRando.getAuthTokenContract(AuthTokenType.None),
+      configHandlerRando.getAuthTokenContract(AuthTokenType.Custom),
+      configHandlerRando.getAuthTokenContract(AuthTokenType.Lens),
+      configHandlerRando.getAuthTokenContract(AuthTokenType.ENS),
+      configHandlerRando.getMaxExchangesPerBatch(),
+      configHandlerRando.getMaxRoyaltyPecentage(),
+      configHandlerRando.getMaxResolutionPeriod(),
+      configHandlerRando.getMinDisputePeriod(),
+      configHandlerRando.getAccessControllerAddress(),
+    ]);
 
     return {
       tokenAddress,
-treasuryAddress,
-voucherBeaconAddress,
-beaconProxyAddress,
-protocolFeePercentage,
-protocolFeeFlatBoson,
-maxOffersPerBatch,
-maxOffersPerGroup,
-maxTwinsPerBundle,
-maxOffersPerBundle,
-maxTokensPerWithdrawal,
-maxFeesPerDisputeResolver,
-maxEscalationResponsePeriod,
-maxDisputesPerBatch,
-maxTotalOfferFeePercentage,
-maxAllowedSellers,
-buyerEscalationDepositPercentage,
-authTokenContractNone,
-authTokenContractCustom,
-authTokenContractLens,
-authTokenContractENS,
-maxExchangesPerBatch,
-maxRoyaltyPecentage,
-maxResolutionPeriod,
-minDisputePeriod,
-accessControllerAddress
+      treasuryAddress,
+      voucherBeaconAddress,
+      beaconProxyAddress,
+      protocolFeePercentage,
+      protocolFeeFlatBoson,
+      maxOffersPerBatch,
+      maxOffersPerGroup,
+      maxTwinsPerBundle,
+      maxOffersPerBundle,
+      maxTokensPerWithdrawal,
+      maxFeesPerDisputeResolver,
+      maxEscalationResponsePeriod,
+      maxDisputesPerBatch,
+      maxTotalOfferFeePercentage,
+      maxAllowedSellers,
+      buyerEscalationDepositPercentage,
+      authTokenContractNone,
+      authTokenContractCustom,
+      authTokenContractLens,
+      authTokenContractENS,
+      maxExchangesPerBatch,
+      maxRoyaltyPecentage,
+      maxResolutionPeriod,
+      minDisputePeriod,
+      accessControllerAddress,
     };
   }
 
@@ -730,12 +738,13 @@ accessControllerAddress
     let isDisputeFinalizedState = [];
 
     for (let id = 1; id <= exchanges.length; id++) {
-      const [singleDisputesState,singleDisputesStatesState,singleDisputeTimeoutState,singleIsDisputeFinalizedState] = await Promise.all([
-        disputeHandlerRando.getDispute(id),
-        disputeHandlerRando.getDisputeState(id),
-        disputeHandlerRando.getDisputeTimeout(id),
-        disputeHandlerRando.isDisputeFinalized(id)
-      ])
+      const [singleDisputesState, singleDisputesStatesState, singleDisputeTimeoutState, singleIsDisputeFinalizedState] =
+        await Promise.all([
+          disputeHandlerRando.getDispute(id),
+          disputeHandlerRando.getDisputeState(id),
+          disputeHandlerRando.getDisputeTimeout(id),
+          disputeHandlerRando.isDisputeFinalized(id),
+        ]);
       disputesState.push(singleDisputesState);
       disputesStatesState.push(singleDisputesStatesState);
       disputeTimeoutState.push(singleDisputeTimeoutState);
@@ -752,7 +761,7 @@ accessControllerAddress
 
     // Query even the ids where it's not expected to get the entity
     const accountIds = [...Array(totalCount + 1).keys()].slice(1);
-    const groupsState = await Promise.all(accountIds.map(id=>fundsHandlerRando.getAvailableFunds(id)))
+    const groupsState = await Promise.all(accountIds.map((id) => fundsHandlerRando.getAvailableFunds(id)));
 
     return { groupsState };
   }
@@ -760,16 +769,16 @@ accessControllerAddress
   async function getGroupContractState() {
     const groupHandlerRando = groupHandler.connect(rando);
     const groupIds = [...Array(groups.length + 1).keys()].slice(1);
-    const groupsState = await Promise.all(groupIds.map(id=>groupHandlerRando.getGroup(id)))
+    const groupsState = await Promise.all(groupIds.map((id) => groupHandlerRando.getGroup(id)));
 
     const nextGroupId = await groupHandlerRando.getNextGroupId();
     return { groupsState, nextGroupId };
   }
 
   async function getTwinContractState() {
-    const twinHandlerRando = twinHandler.connect(rando)
+    const twinHandlerRando = twinHandler.connect(rando);
     const twinIds = [...Array(twins.length + 1).keys()].slice(1);
-    const twinsState = await Promise.all(twinIds.map(id=>twinHandlerRando.getTwin(id)))
+    const twinsState = await Promise.all(twinIds.map((id) => twinHandlerRando.getTwin(id)));
 
     const nextTwinId = await twinHandlerRando.getNextTwinId();
     return { twinsState, nextTwinId };
