@@ -43,7 +43,7 @@ const addressNotFound = (address) => {
   process.exit(1);
 };
 
-const createDR = async (path) => {
+const createDisputeResolver = async (path) => {
   const file = await fs.readFile(path, "utf8");
 
   let { disputeResolver, disputeResolverFees, sellerAllowList, privateKey } = await JSON.parse(file.toString());
@@ -119,4 +119,4 @@ const createDR = async (path) => {
   console.log(disputeResolver);
 };
 
-exports.createDR = createDR;
+exports.createDisputeResolver = createDisputeResolver;

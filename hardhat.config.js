@@ -27,8 +27,8 @@ task("estimate-limits", "Estimates the maximum values for limits in protocol con
 task("create-dispute-resolver", "Creates a dispute resolver")
   .addParam("path", "The path to the dispute resolver json file")
   .setAction(async ({ path }) => {
-    const { createDR } = await lazyImport("./scripts/util/create-DR");
-    await createDR(path);
+    const { createDisputeResolver } = await lazyImport("./scripts/util/create-dispute-resolver");
+    await createDisputeResolver(path);
   });
 
 task("verify-suite", "Verify contracts on the block explorer")
