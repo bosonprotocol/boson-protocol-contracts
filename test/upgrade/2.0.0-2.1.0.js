@@ -52,14 +52,16 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let protocolDiamondAddress;
   let mockAuthERC721Contract;
 
-  let DRs = [];
-  let sellers = [];
-  let buyers = [];
-  let agents = [];
-  let offers = [];
-  let groups = [];
-  let twins = [];
-  let exchanges = [];
+  // variable to store entities during each "populateProtocolContract"
+  // index 0 contains data before the upgrade, index 1 data after upgrade
+  let DRs = [[], []];
+  let sellers = [[], []];
+  let buyers = [[], []];
+  let agents = [[], []];
+  let offers = [[], []];
+  let groups = [[], []];
+  let twins = [[], []];
+  let exchanges = [[], []];
   let protocolContractState;
 
   before(async function () {
@@ -126,10 +128,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // Get current protocol state, which serves as the reference
     // We assume that this state is a true one, relying on our unit and integration tests
     protocolContractState = await getProtocolContractState();
-    // protocolContractStatepro = await getProtocolContractStateWithPromise();
-
-    // assert.deepEqual(protocolContractState,protocolContractStatepro, "nono")
-    // process.exit()
 
     // Upgrade protocol
     if (newVersion) {
@@ -153,7 +151,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   });
 
   afterEach(async function () {
-    // revert to state before path was executed
+    // revert to state right after the upgrade
+    // this is used so the lengthly setup (deploy+upgrade) is done only once
     await ethers.provider.send("evm_revert", [snapshot]);
     snapshot = await ethers.provider.send("evm_snapshot", []);
   });
@@ -165,7 +164,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   // Exchange methods
   context("📋 Right After upgrade", async function () {
-    it.only("State is not affected directly after the update", async function () {
+    it("State is not affected directly after the update", async function () {
       // Get protocol state after the upgrade
       const protocolContractStateAfterUpgrade = await getProtocolContractState();
 
@@ -175,7 +174,65 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   });
 
   // Create new protocol entities. Existing data should not be affected
-  context.skip("📋 New data after the upgrade do not corrupt data from before the upgrade", async function () {});
+  context("📋 New data after the upgrade do not corrupt the data from before the upgrade", async function () {
+    it.only("State is not affected", async function () {
+      await populateProtocolContract(true);
+
+      // Get protocol state after the upgrade
+      // First get the data tha should be in location of old data
+      const protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(0);
+
+      // counters are the only values that should be changed
+      const accountCount = sellers[0].length + DRs[0].length + agents[0].length + buyers[0].length;
+      assert.equal(
+        protocolContractStateAfterUpgradeAndActions.accountContractState.nextAccountId.toNumber(),
+        protocolContractState.accountContractState.nextAccountId.add(accountCount).toNumber(),
+        "nextAccountId mismatch"
+      );
+      assert.equal(
+        protocolContractStateAfterUpgradeAndActions.exchangeContractState.nextExchangeId.toNumber(),
+        protocolContractState.exchangeContractState.nextExchangeId.add(exchanges[0].length).toNumber(),
+        "nextExchangeId mismatch"
+      );
+      assert.equal(
+        protocolContractStateAfterUpgradeAndActions.groupContractState.nextGroupId.toNumber(),
+        protocolContractState.groupContractState.nextGroupId.add(groups[0].length).toNumber(),
+        "nextGroupId mismatch"
+      );
+      assert.equal(
+        protocolContractStateAfterUpgradeAndActions.offerContractState.nextOfferId.toNumber(),
+        protocolContractState.offerContractState.nextOfferId.add(offers[0].length).toNumber(),
+        "nextOfferId mismatch"
+      );
+      assert.equal(
+        protocolContractStateAfterUpgradeAndActions.twinContractState.nextTwinId.toNumber(),
+        protocolContractState.twinContractState.nextTwinId.add(twins[0].length).toNumber(),
+        "nextTwinId mismatch"
+      );
+      // assert.equal(protocolContractStateAfterUpgradeAndActions.bundleContractState.nextBundleId.toNumber(), protocolContractState.bundleContractState.nextBundleId.add([0].length).toNumber())
+
+      // State before and after should be equal
+      // remove nextXXid before comparing. Their correct value is verified already
+      delete protocolContractStateAfterUpgradeAndActions.accountContractState.nextAccountId;
+      delete protocolContractStateAfterUpgradeAndActions.exchangeContractState.nextExchangeId;
+      delete protocolContractStateAfterUpgradeAndActions.groupContractState.nextGroupId;
+      delete protocolContractStateAfterUpgradeAndActions.offerContractState.nextOfferId;
+      delete protocolContractStateAfterUpgradeAndActions.twinContractState.nextTwinId;
+      delete protocolContractState.accountContractState.nextAccountId;
+      delete protocolContractState.exchangeContractState.nextExchangeId;
+      delete protocolContractState.groupContractState.nextGroupId;
+      delete protocolContractState.offerContractState.nextOfferId;
+      delete protocolContractState.twinContractState.nextTwinId;
+      assert.deepEqual(
+        protocolContractState,
+        protocolContractStateAfterUpgradeAndActions,
+        "state mismatch after upgrade"
+      );
+
+      // Verify that new data is not empty
+      // const protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(0);
+    });
+  });
 
   // Test that offers and exchanges from before the upgrade can normally be used
   context.skip("📋 Interactions after the upgrade still work", async function () {});
@@ -184,7 +241,20 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   context.skip("📋 Breaking changes", async function () {});
 
   // utility functions
-  async function populateProtocolContract() {
+  async function populateProtocolContract(afterUpgrade = false) {
+    // populateProtocolContract can be called before and after update
+    // using the same ids would results in clashes in come cases, so use offset to prevent that
+    const dataIndex = afterUpgrade ? 1 : 0;
+    let accountOffset, offerOffset, groupOffset, exchangeOffset, twinOffset;
+    accountOffset = offerOffset = groupOffset = exchangeOffset = twinOffset = 0;
+    if (afterUpgrade) {
+      accountOffset = sellers[0].length + DRs[0].length + agents[0].length + buyers[0].length;
+      offerOffset = offers[0].length;
+      groupOffset = groups[0].length;
+      exchangeOffset = exchanges[0].length;
+      twinOffset = twins[0].length;
+    }
+
     const entity = {
       SELLER: 0,
       DR: 1,
@@ -238,7 +308,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           await accountHandler
             .connect(connectedWallet)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-          DRs.push({ wallet: connectedWallet, disputeResolver, disputeResolverFees, sellerAllowList });
+          DRs[dataIndex].push({ wallet: connectedWallet, disputeResolver, disputeResolverFees, sellerAllowList });
 
           //ADMIN role activates Dispute Resolver
           await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
@@ -246,6 +316,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         }
         case entity.SELLER: {
           const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address);
+          const id = i + accountOffset;
           let authToken;
           // randomly decide if auth token is used or not
           if (Math.random() > 0.5) {
@@ -254,13 +325,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           } else {
             // use auth token
             seller.admin = ethers.constants.AddressZero;
-            await mockAuthERC721Contract.connect(connectedWallet).mint(101 * i, 1);
-            authToken = new AuthToken(`${101 * i}`, AuthTokenType.Lens);
+            await mockAuthERC721Contract.connect(connectedWallet).mint(101 * id, 1);
+            authToken = new AuthToken(`${101 * id}`, AuthTokenType.Lens);
           }
           // set unique new voucherInitValues
-          const voucherInitValues = new VoucherInitValues(`http://seller${i}.com/uri`, i * 10);
+          const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
           await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
-          sellers.push({ wallet: connectedWallet, seller, authToken, voucherInitValues, offerIds: [] });
+          sellers[dataIndex].push({ wallet: connectedWallet, seller, authToken, voucherInitValues, offerIds: [] });
 
           // mint mock token to sellers just in case they need them
           await mockToken.mint(connectedWallet.address, "10000000000");
@@ -270,13 +341,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         case entity.AGENT: {
           const agent = mockAgent(wallet.address);
           await accountHandler.connect(connectedWallet).createAgent(agent);
-          agents.push({ wallet: connectedWallet, agent });
+          agents[dataIndex].push({ wallet: connectedWallet, agent });
           break;
         }
         case entity.BUYER: {
           // no need to explicitly create buyer, since it's done automatically during commitToOffer
           const buyer = mockBuyer(wallet.address);
-          buyers.push({ wallet: connectedWallet, buyer });
+          buyers[dataIndex].push({ wallet: connectedWallet, buyer });
 
           // mint them conditional token in case they need it
           await mockConditionalToken.mint(wallet.address, "10");
@@ -286,23 +357,23 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     }
 
     // Make explicit allowed sellers list for some DRs
-    const sellerIds = sellers.map((s) => s.seller.id);
-    for (let i = 0; i < DRs.length; i = i + 2) {
-      const DR = DRs[i];
+    const sellerIds = sellers[dataIndex].map((s) => s.seller.id);
+    for (let i = 0; i < DRs[dataIndex].length; i = i + 2) {
+      const DR = DRs[dataIndex][i];
       DR.sellerAllowList = sellerIds;
       await accountHandler.connect(DR.wallet).addSellersToAllowList(DR.disputeResolver.id, sellerIds);
     }
 
     // create offers - first seller has 5 offers, second 4, third 3 etc
-    let offerId = 0;
-    for (let i = 0; i < sellers.length; i++) {
+    let offerId = offerOffset;
+    for (let i = 0; i < sellers[dataIndex].length; i++) {
       for (let j = i; j >= 0; j--) {
         // Mock offer, offerDates and offerDurations
         const { offer, offerDates, offerDurations } = await mockOffer();
 
         // Set unique offer properties based on offer id
         offer.id = `${++offerId}`;
-        offer.sellerId = sellers[j].seller.id;
+        offer.sellerId = sellers[dataIndex][j].seller.id;
         offer.price = `${offerId * 1000}`;
         offer.sellerDeposit = `${offerId * 100}`;
         offer.buyerCancelPenalty = `${offerId * 50}`;
@@ -328,30 +399,30 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         offerDurations.resolutionPeriod = `${(offerId + 1) * oneDay}`;
 
         // choose one DR and agent
-        const disputeResolverId = DRs[offerId % 3].disputeResolver.id;
-        const agentId = agents[offerId % 2].agent.id;
+        const disputeResolverId = DRs[dataIndex][offerId % 3].disputeResolver.id;
+        const agentId = agents[dataIndex][offerId % 2].agent.id;
 
         // create an offer
         await offerHandler
-          .connect(sellers[j].wallet)
+          .connect(sellers[dataIndex][j].wallet)
           .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
-        offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId });
-        sellers[j].offerIds.push(offerId);
+        offers[dataIndex].push({ offer, offerDates, offerDurations, disputeResolverId, agentId });
+        sellers[dataIndex][j].offerIds.push(offerId);
 
         // Deposit seller funds so the commit will succeed
         const sellerPool = ethers.BigNumber.from(offer.quantityAvailable).mul(offer.price).toString();
         const msgValue = offer.exchangeToken == ethers.constants.AddressZero ? sellerPool : "0";
         await fundsHandler
-          .connect(sellers[j].wallet)
-          .depositFunds(sellers[j].seller.id, offer.exchangeToken, sellerPool, { value: msgValue });
+          .connect(sellers[dataIndex][j].wallet)
+          .depositFunds(sellers[dataIndex][j].seller.id, offer.exchangeToken, sellerPool, { value: msgValue });
       }
     }
 
     // group some offers
-    let groupId = 0;
-    for (let i = 0; i < sellers.length; i = i + 2) {
-      const seller = sellers[i];
+    let groupId = groupOffset;
+    for (let i = 0; i < sellers[dataIndex].length; i = i + 2) {
+      const seller = sellers[dataIndex][i];
       const group = new Group(++groupId, seller.seller.id, seller.offerIds); // group all seller's offers
       const condition = mockCondition({
         tokenAddress: mockConditionalToken.address,
@@ -359,57 +430,58 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       });
       await groupHandler.connect(seller.wallet).createGroup(group, condition);
 
-      groups.push(group);
+      groups[dataIndex].push(group);
     }
 
     // create some twins
-    let twinId = 0;
-    for (let i = 1; i < sellers.length; i = i + 2) {
-      const seller = sellers[i];
+    let twinId = twinOffset;
+    for (let i = 1; i < sellers[dataIndex].length; i = i + 2) {
+      const seller = sellers[dataIndex][i];
       await mockTwinTokens[0].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
       await mockTwinTokens[1].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
       // create multiple ranges
       const twin721 = mockTwin(rando.address, TokenType.NonFungibleToken);
       twin721.amount = "0";
       for (let j = 0; j < 7; j++) {
-        twin721.tokenId = `${j * 10000 + i * 100}`;
-        twin721.supplyAvailable = `${10 * (i + 1)}`;
+        twin721.tokenId = `${j * 10000 + (i + accountOffset) * 100}`;
+        twin721.supplyAvailable = `${10 * (i + accountOffset + 1)}`;
         twin721.tokenAddress = mockTwinTokens[j % 2].address; // oscilate between twins
         twin721.id = ++twinId;
         await twinHandler.connect(seller.wallet).createTwin(twin721);
 
-        twins.push(twin721);
+        twins[dataIndex].push(twin721);
       }
 
       const twin20 = mockTwin(mockTwin20.address, TokenType.FungibleToken);
       await mockTwin20.connect(seller.wallet).approve(protocolDiamondAddress, 1);
       twin20.id = ++twinId;
-      twin20.amount = i;
+      twin20.amount = i + accountOffset;
       await twinHandler.connect(seller.wallet).createTwin(twin20);
-      twins.push(twin20);
+      twins[dataIndex].push(twin20);
 
       const twin1155 = mockTwin(mockTwin1155.address, TokenType.MultiToken);
       await mockTwin1155.connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
       for (let j = 0; j < 3; j++) {
-        twin1155.tokenId = `${j * 30000 + i * 300}`;
-        twin1155.amount = i + j;
-        twin1155.supplyAvailable = `${30 * (i + 1)}`;
+        twin1155.tokenId = `${j * 30000 + (i + accountOffset) * 300}`;
+        twin1155.amount = i + accountOffset + j;
+        twin1155.supplyAvailable = `${30 * (i + accountOffset + 1)}`;
         twin1155.id = ++twinId;
         await twinHandler.connect(seller.wallet).createTwin(twin1155);
         twins.push(twin1155);
+        twins[dataIndex].push(twin1155);
       }
     }
 
     // commit to some offers: first buyer commit to 1 offer, second to 2, third to 3 etc
-    await setNextBlockTimestamp(Number(offers[offers.length - 1].offerDates.validFrom)); // When latest offer is valid, also other offers are valid
-    let exchangeId = 0;
-    for (let i = 0; i < buyers.length; i++) {
-      for (let j = i; j < buyers.length; j++) {
-        const offerId = i + j + 1; // some offers will be picked multiple times, some never
-        const offerPrice = offers[offerId - 1].offer.price;
-        const buyerWallet = buyers[j].wallet;
+    await setNextBlockTimestamp(Number(offers[dataIndex][offers[dataIndex].length - 1].offerDates.validFrom)); // When latest offer is valid, also other offers are valid
+    let exchangeId = exchangeOffset;
+    for (let i = 0; i < buyers[dataIndex].length; i++) {
+      for (let j = i; j < buyers[dataIndex].length; j++) {
+        const offer = offers[dataIndex][i + j].offer; // some offers will be picked multiple times, some never.
+        const offerPrice = offer.price;
+        const buyerWallet = buyers[dataIndex][j].wallet;
         let msgValue;
-        if (offers[offerId - 1].offer.exchangeToken == ethers.constants.AddressZero) {
+        if (offer.exchangeToken == ethers.constants.AddressZero) {
           msgValue = offerPrice;
         } else {
           // approve token transfer
@@ -417,38 +489,38 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           await mockToken.connect(buyerWallet).approve(protocolDiamondAddress, offerPrice);
         }
         await mockToken.mint(buyerWallet.address, offerPrice);
-        await exchangeHandler.connect(buyerWallet).commitToOffer(buyerWallet.address, offerId, { value: msgValue });
-        exchanges.push({ exchangeId: ++exchangeId, offerId: offerId, buyerIndex: j });
+        await exchangeHandler.connect(buyerWallet).commitToOffer(buyerWallet.address, offer.id, { value: msgValue });
+        exchanges[dataIndex].push({ exchangeId: ++exchangeId, offerId: offer.id, buyerIndex: j });
       }
     }
 
     // redeem some vouchers #4
     for (const id of [2, 5, 11, 8]) {
-      const exchange = exchanges[id];
-      await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).redeemVoucher(exchange.exchangeId);
+      const exchange = exchanges[dataIndex][id];
+      await exchangeHandler.connect(buyers[dataIndex][exchange.buyerIndex].wallet).redeemVoucher(exchange.exchangeId);
     }
 
     // cancel some vouchers #3
     for (const id of [10, 3, 13]) {
-      const exchange = exchanges[id];
-      await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).cancelVoucher(exchange.exchangeId);
+      const exchange = exchanges[dataIndex][id];
+      await exchangeHandler.connect(buyers[dataIndex][exchange.buyerIndex].wallet).cancelVoucher(exchange.exchangeId);
     }
 
     // revoke some vouchers #2
     for (const id of [4, 6]) {
-      const exchange = exchanges[id];
-      const offer = offers.find((o) => o.offer.id == exchange.offerId);
-      const seller = sellers.find((s) => s.seller.id == offer.offer.sellerId);
+      const exchange = exchanges[dataIndex][id];
+      const offer = offers[dataIndex].find((o) => o.offer.id == exchange.offerId);
+      const seller = sellers[dataIndex].find((s) => s.seller.id == offer.offer.sellerId);
       await exchangeHandler.connect(seller.wallet).revokeVoucher(exchange.exchangeId);
     }
 
     // raise dispute on some exchanges #1
     const id = 5; // must be one of redeemed ones
-    const exchange = exchanges[id];
-    await disputeHandler.connect(buyers[exchange.buyerIndex].wallet).raiseDispute(exchange.exchangeId);
+    const exchange = exchanges[dataIndex][id];
+    await disputeHandler.connect(buyers[dataIndex][exchange.buyerIndex].wallet).raiseDispute(exchange.exchangeId);
   }
 
-  async function getProtocolContractState() {
+  async function getProtocolContractState(dataIndex = 0) {
     const [
       accountContractState,
       offerContractState,
@@ -464,19 +536,19 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       protocolStatusPrivateContractState,
       protocolLookupsPrivateContractState,
     ] = await Promise.all([
-      getAccountContractState(),
-      getOfferContractState(),
-      getExchangeContractState(),
-      getBundleContractState(),
+      getAccountContractState(dataIndex),
+      getOfferContractState(dataIndex),
+      getExchangeContractState(dataIndex),
+      getBundleContractState(dataIndex),
       getConfigContractState(),
-      getDisputeContractState(),
-      getFundsContractState(),
-      getGroupContractState(),
-      getTwinContractState(),
-      getMetaTxContractState(),
+      getDisputeContractState(dataIndex),
+      getFundsContractState(dataIndex),
+      getGroupContractState(dataIndex),
+      getTwinContractState(dataIndex),
+      getMetaTxContractState(dataIndex),
       getMetaTxPrivateContractState(),
       getProtocolStatusPrivateContractState(),
-      getProtocolLookupsPrivateContractState(),
+      getProtocolLookupsPrivateContractState(dataIndex),
     ]);
 
     return {
@@ -496,10 +568,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     };
   }
 
-  async function getAccountContractState() {
+  async function getAccountContractState(dataIndex) {
     const accountHandlerRando = accountHandler.connect(rando);
     // all id count
-    const totalCount = DRs.length + sellers.length + buyers.length + agents.length;
+    const totalCount =
+      DRs[dataIndex].length + sellers[dataIndex].length + buyers[dataIndex].length + agents[dataIndex].length;
     let DRsState = [];
     let sellerState = [];
     let buyersState = [];
@@ -527,7 +600,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       }
     }
 
-    for (const seller of sellers) {
+    for (const seller of sellers[dataIndex]) {
       const sellerAddress = seller.wallet.address;
       const sellerAuthToken = seller.authToken;
 
@@ -541,7 +614,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       DRbyAddressState.push(singleDRbyAddressState);
     }
 
-    const otherAccounts = [...DRs, ...agents, ...buyers];
+    const otherAccounts = [...DRs[dataIndex], ...agents[dataIndex], ...buyers[dataIndex]];
 
     for (const account of otherAccounts) {
       const accountAddress = account.wallet.address;
@@ -567,13 +640,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     };
   }
 
-  async function getOfferContractState() {
+  async function getOfferContractState(dataIndex) {
     const offerHandlerRando = offerHandler.connect(rando);
     // get offers
     let offersState = [];
     let isOfferVoidedState = [];
     let agentIdByOfferState = [];
-    for (let id = 1; id <= offers.length; id++) {
+    for (let id = 1; id <= offers[dataIndex].length; id++) {
       const [singleOffersState, singleIsOfferVoidedState, singleAgentIdByOfferState] = await Promise.all([
         offerHandlerRando.getOffer(id),
         offerHandlerRando.isOfferVoided(id),
@@ -589,7 +662,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     return { offersState, isOfferVoidedState, agentIdByOfferState, nextOfferId };
   }
 
-  async function getExchangeContractState() {
+  async function getExchangeContractState(dataIndex) {
     const exchangeHandlerRando = exchangeHandler.connect(rando);
     // get exchanges
     let exchangesState = [];
@@ -597,7 +670,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let isExchangeFinalizedState = [];
     let receiptsState = [];
 
-    for (let id = 1; id <= exchanges.length; id++) {
+    for (let id = 1; id <= exchanges[dataIndex].length; id++) {
       const [singleExchangesState, singleExchangeStateState, singleIsExchangeFinalizedState] = await Promise.all([
         exchangeHandlerRando.getExchange(id),
         exchangeHandlerRando.getExchangeState(id),
@@ -730,14 +803,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     };
   }
 
-  async function getDisputeContractState() {
+  async function getDisputeContractState(dataIndex) {
     const disputeHandlerRando = disputeHandler.connect(rando);
     let disputesState = [];
     let disputesStatesState = [];
     let disputeTimeoutState = [];
     let isDisputeFinalizedState = [];
 
-    for (let id = 1; id <= exchanges.length; id++) {
+    for (let id = 1; id <= exchanges[dataIndex].length; id++) {
       const [singleDisputesState, singleDisputesStatesState, singleDisputeTimeoutState, singleIsDisputeFinalizedState] =
         await Promise.all([
           disputeHandlerRando.getDispute(id),
@@ -754,10 +827,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     return { disputesState, disputesStatesState, disputeTimeoutState, isDisputeFinalizedState };
   }
 
-  async function getFundsContractState() {
+  async function getFundsContractState(dataIndex) {
     const fundsHandlerRando = fundsHandler.connect(rando);
     // all id count
-    const totalCount = DRs.length + sellers.length + buyers.length + agents.length;
+    const totalCount =
+      DRs[dataIndex].length + sellers[dataIndex].length + buyers[dataIndex].length + agents[dataIndex].length;
 
     // Query even the ids where it's not expected to get the entity
     const accountIds = [...Array(totalCount + 1).keys()].slice(1);
@@ -766,18 +840,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     return { groupsState };
   }
 
-  async function getGroupContractState() {
+  async function getGroupContractState(dataIndex) {
     const groupHandlerRando = groupHandler.connect(rando);
-    const groupIds = [...Array(groups.length + 1).keys()].slice(1);
+    const groupIds = [...Array(groups[dataIndex].length + 1).keys()].slice(1);
     const groupsState = await Promise.all(groupIds.map((id) => groupHandlerRando.getGroup(id)));
 
     const nextGroupId = await groupHandlerRando.getNextGroupId();
     return { groupsState, nextGroupId };
   }
 
-  async function getTwinContractState() {
+  async function getTwinContractState(dataIndex) {
     const twinHandlerRando = twinHandler.connect(rando);
-    const twinIds = [...Array(twins.length + 1).keys()].slice(1);
+    const twinIds = [...Array(twins[dataIndex].length + 1).keys()].slice(1);
     const twinsState = await Promise.all(twinIds.map((id) => twinHandlerRando.getTwin(id)));
 
     const nextTwinId = await twinHandlerRando.getNextTwinId();
@@ -892,7 +966,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     return { pauseScenario, reentrancyStatus, initializedInterfacesState };
   }
 
-  async function getProtocolLookupsPrivateContractState() {
+  async function getProtocolLookupsPrivateContractState(dataIndex) {
     /*
     ProtocolLookups storage layout
 
@@ -938,7 +1012,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // exchangeIdsByOffer and groupIdByOffer
     let exchangeIdsByOfferState = [];
     let groupIdByOfferState = [];
-    for (let id = 1; id <= offers.length; id++) {
+    for (let id = 1; id <= offers[dataIndex].length; id++) {
       // exchangeIdsByOffer
       let exchangeIdsByOffer = [];
       const arraySlot = ethers.BigNumber.from(
@@ -965,7 +1039,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let agentIdByWallet = [];
     let conditionalCommitsByAddress = [];
 
-    const accounts = [...sellers, ...DRs, ...agents, ...buyers];
+    const accounts = [...sellers[dataIndex], ...DRs[dataIndex], ...agents[dataIndex], ...buyers[dataIndex]];
 
     for (const account of accounts) {
       const accountAddress = account.wallet.address;
@@ -1009,7 +1083,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let voucherCount = [];
 
     // all id count
-    const totalCount = DRs.length + sellers.length + buyers.length + agents.length;
+    const totalCount =
+      DRs[dataIndex].length + sellers[dataIndex].length + buyers[dataIndex].length + agents[dataIndex].length;
 
     // loop over all ids even where no data is expected
     for (let id = 1; id <= totalCount; id++) {
@@ -1104,7 +1179,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     // allowedSellerIndex
     let allowedSellerIndex = [];
-    for (const DR of DRs) {
+    for (const DR of DRs[dataIndex]) {
       const firstMappingStorageSlot = ethers.BigNumber.from(
         getMappinStoragePosition(
           protocolLookupsSlotNumber.add("26"),
@@ -1113,7 +1188,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         )
       );
       let sellerStatus = [];
-      for (const seller of sellers) {
+      for (const seller of sellers[dataIndex]) {
         sellerStatus.push(
           await getStorageAt(
             protocolDiamondAddress,
@@ -1130,7 +1205,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     // offerIdIndexByGroup
     let offerIdIndexByGroup = [];
-    for (let id = 1; id <= groups.length; id++) {
+    for (let id = 1; id <= groups[dataIndex].length; id++) {
       const firstMappingStorageSlot = ethers.BigNumber.from(
         getMappinStoragePosition(protocolLookupsSlotNumber.add("28"), id, paddingType.START)
       );
