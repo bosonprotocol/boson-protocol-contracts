@@ -177,15 +177,17 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   // Create new protocol entities. Existing data should not be affected
   context("📋 New data after the upgrade do not corrupt the data from before the upgrade", async function () {
-    it.only("State is not affected", async function () {
+    it("State is not affected", async function () {
       await populateProtocolContract(true);
 
       // Get protocol state after the upgrade
       // First get the data tha should be in location of old data
       const protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(0);
 
-      // counters are the only values that should be changed
-      const accountCount = sellers[0].length + DRs[0].length + agents[0].length + buyers[0].length;
+      // Counters are the only values that should be changed
+      // We check that the number increased for expected amount
+      // This also confirms that entities were actually created
+      const accountCount = sellers[1].length + DRs[1].length + agents[1].length + buyers[1].length;
       assert.equal(
         protocolContractStateAfterUpgradeAndActions.accountContractState.nextAccountId.toNumber(),
         protocolContractState.accountContractState.nextAccountId.add(accountCount).toNumber(),
@@ -193,27 +195,27 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       );
       assert.equal(
         protocolContractStateAfterUpgradeAndActions.exchangeContractState.nextExchangeId.toNumber(),
-        protocolContractState.exchangeContractState.nextExchangeId.add(exchanges[0].length).toNumber(),
+        protocolContractState.exchangeContractState.nextExchangeId.add(exchanges[1].length).toNumber(),
         "nextExchangeId mismatch"
       );
       assert.equal(
         protocolContractStateAfterUpgradeAndActions.groupContractState.nextGroupId.toNumber(),
-        protocolContractState.groupContractState.nextGroupId.add(groups[0].length).toNumber(),
+        protocolContractState.groupContractState.nextGroupId.add(groups[1].length).toNumber(),
         "nextGroupId mismatch"
       );
       assert.equal(
         protocolContractStateAfterUpgradeAndActions.offerContractState.nextOfferId.toNumber(),
-        protocolContractState.offerContractState.nextOfferId.add(offers[0].length).toNumber(),
+        protocolContractState.offerContractState.nextOfferId.add(offers[1].length).toNumber(),
         "nextOfferId mismatch"
       );
       assert.equal(
         protocolContractStateAfterUpgradeAndActions.twinContractState.nextTwinId.toNumber(),
-        protocolContractState.twinContractState.nextTwinId.add(twins[0].length).toNumber(),
+        protocolContractState.twinContractState.nextTwinId.add(twins[1].length).toNumber(),
         "nextTwinId mismatch"
       );
       assert.equal(
         protocolContractStateAfterUpgradeAndActions.bundleContractState.nextBundleId.toNumber(),
-        protocolContractState.bundleContractState.nextBundleId.add(bundles[0].length).toNumber()
+        protocolContractState.bundleContractState.nextBundleId.add(bundles[1].length).toNumber()
       );
 
       // State before and after should be equal
@@ -235,9 +237,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         protocolContractStateAfterUpgradeAndActions,
         "state mismatch after upgrade"
       );
-
-      // Verify that new data is not empty
-      // const protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(0);
     });
   });
 
