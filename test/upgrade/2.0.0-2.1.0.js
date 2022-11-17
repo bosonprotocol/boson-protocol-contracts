@@ -22,11 +22,15 @@ const {
   mockBuyer,
   mockCondition,
   mockTwin,
+  mockVoucher,
+  mockExchange,
 } = require("../util/mock");
-const { setNextBlockTimestamp, paddingType, getMappinStoragePosition } = require("../util/utils.js");
+const { getEvent, calculateVoucherExpiry, setNextBlockTimestamp, paddingType, getMappinStoragePosition } = require("../util/utils.js");
 const { oneMonth, oneDay } = require("../util/constants");
 const { readContracts } = require("../../scripts/util/utils");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
+const Exchange = require("../../scripts/domain/Exchange");
+const Voucher = require("../../scripts/domain/Voucher");
 
 const oldVersion = "v2.0.0";
 const newVersion = "v2.1.0";
@@ -241,7 +245,80 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   });
 
   // Test that offers and exchanges from before the upgrade can normally be used
-  context.skip("📋 Interactions after the upgrade still work", async function () {});
+  // Check that correct events are emitted. State is not checked since units and integration test should make sure that event and state are consistent
+  context.only("📋 Interactions after the upgrade still work", async function () {
+    it.only("Commit to old offers", async function () {
+      const offer = offers[0][1].offer; // pick some random offer
+      const offerDates = offers[0][1].offerDates; // pick some random offer
+      const offerDurations = offers[0][1].offerDurations; // pick some random offer
+      const offerPrice = offer.price;
+      const buyer = buyers[0][1];
+      let msgValue;
+      if (offer.exchangeToken == ethers.constants.AddressZero) {
+        msgValue = offerPrice;
+      } else {
+        // approve token transfer
+        msgValue = 0;
+        await mockToken.connect(buyer.wallet).approve(protocolDiamondAddress, offerPrice);
+        await mockToken.mint(buyer.wallet.address, offerPrice);
+      }
+
+      // Commit to offer
+      const tx = await exchangeHandler
+        .connect(buyer.wallet)
+        .commitToOffer(buyer.wallet.address, offer.id, { value: msgValue });
+      const txReceipt = await tx.wait();
+      const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+
+      // Get the block timestamp of the confirmed tx
+      const blockNumber = tx.blockNumber;
+      const block = await ethers.provider.getBlock(blockNumber);
+      offer;
+      // Update the committed date in the expected exchange struct with the block timestamp of the tx
+      const voucher = mockVoucher({
+        committedDate: block.timestamp.toString(),
+        validUntilDate: calculateVoucherExpiry(block, offerDates.voucherRedeemableFrom, offerDurations.voucherValid),
+        redeemedDate: "0",
+      });
+      //  voucher.committedDate = block.timestamp.toString();
+
+      // Update the validUntilDate date in the expected exchange struct
+      //  voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+      const exchange = mockExchange({
+        id: `${exchanges[0].length + 1}`,
+        offerId: offer.id,
+        buyerId: buyer.buyer.id,
+        finalizedDate: "0",
+      });
+
+      // Examine event
+      assert.equal(event.exchangeId.toString(), exchange.id, "Exchange id is incorrect");
+      assert.equal(event.offerId.toString(), offer.id, "Offer id is incorrect");
+      assert.equal(event.buyerId.toString(), buyer.buyer.id, "Buyer id is incorrect");
+
+      // Examine the exchange struct
+      assert.equal(Exchange.fromStruct(event.exchange).toString(), exchange.toString(), "Exchange struct is incorrect");
+
+      // Examine the voucher struct
+      assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
+    });
+
+    it("Redeem old voucher", async function () {});
+
+    it("Revoke old voucher", async function () {});
+
+    it("Cancel old voucher", async function () {});
+
+    it("Old buyer commits to new offer", async function () {
+      // buyer id should be the same
+    });
+
+    it("Update old seller", async function () {});
+
+    it("Update old dispute resolver", async function () {});
+
+    it("Void old offer", async function () {});
+  });
 
   // Test actions that worked in previous version, but should not work anymore, or work differently
   context.skip("📋 Breaking changes", async function () {});
@@ -509,8 +586,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // approve token transfer
           msgValue = 0;
           await mockToken.connect(buyerWallet).approve(protocolDiamondAddress, offerPrice);
+          await mockToken.mint(buyerWallet.address, offerPrice);
         }
-        await mockToken.mint(buyerWallet.address, offerPrice);
         await exchangeHandler.connect(buyerWallet).commitToOffer(buyerWallet.address, offer.id, { value: msgValue });
         exchanges[dataIndex].push({ exchangeId: ++exchangeId, offerId: offer.id, buyerIndex: j });
       }
