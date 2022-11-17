@@ -863,7 +863,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       Exchange: 2,
       Funds: 3,
       RaiseDispute: 4,
-      ResolveDisput: 5,
+      ResolveDispute: 5,
     };
 
     const hashInfoState = [];
@@ -1207,7 +1207,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         // BosonTypes.DisputeResolver has 8 fields
         structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot.add(i)));
       }
-      structFields[6] = await getStorageAt(protocolDiamondAddress, keccak256(structStorageSlot.add(6))); // represents field string metadataUri. Technically this value represents the lenght of the string, but since it should be 0, we don't do further decoding
+      structFields[6] = await getStorageAt(protocolDiamondAddress, keccak256(structStorageSlot.add(6))); // represents field string metadataUri. Technically this value represents the length of the string, but since it should be 0, we don't do further decoding
       pendingAddressUpdatesByDisputeResolver.push(structFields);
     }
 
