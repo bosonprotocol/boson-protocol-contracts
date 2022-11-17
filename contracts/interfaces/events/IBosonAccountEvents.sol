@@ -67,11 +67,5 @@ interface IBosonAccountEvents {
         uint256[] removedSellers,
         address indexed executedBy
     );
-    event DisputeResolverActivated(
-        uint256 indexed disputeResolverId,
-        BosonTypes.DisputeResolver disputeResolver,
-        address indexed executedBy
-    );
-
     event AgentCreated(uint256 indexed agentId, BosonTypes.Agent agent, address indexed executedBy);
 }

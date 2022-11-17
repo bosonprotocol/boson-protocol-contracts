@@ -338,7 +338,7 @@ describe("IBosonExchangeHandler", function () {
         adminDR.address,
         clerkDR.address,
         treasuryDR.address,
-        false
+        true
       );
       expect(disputeResolver.isValid()).is.true;
 
@@ -348,11 +348,10 @@ describe("IBosonExchangeHandler", function () {
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
 
-      // Register and activate the dispute resolver
+      // Register the dispute resolver
       await accountHandler
         .connect(adminDR)
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // Create the offer
       const mo = await mockOffer();
