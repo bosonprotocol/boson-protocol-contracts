@@ -3,7 +3,7 @@ const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { keccak256 } = ethers.utils;
-const { assert } = require("chai");
+const { assert, expect } = require("chai");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Bundle = require("../../scripts/domain/Bundle");
@@ -247,7 +247,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   // Test that offers and exchanges from before the upgrade can normally be used
   // Check that correct events are emitted. State is not checked since units and integration test should make sure that event and state are consistent
   context.only("📋 Interactions after the upgrade still work", async function () {
-    it.only("Commit to old offers", async function () {
+    it("Commit to old offers", async function () {
       const offer = offers[0][1].offer; // pick some random offer
       const offerDates = offers[0][1].offerDates; // pick some random offer
       const offerDurations = offers[0][1].offerDurations; // pick some random offer
@@ -264,6 +264,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       }
 
       // Commit to offer
+      const exchangeId = await exchangeHandler.getNextExchangeId();
       const tx = await exchangeHandler
         .connect(buyer.wallet)
         .commitToOffer(buyer.wallet.address, offer.id, { value: msgValue });
@@ -273,19 +274,17 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Get the block timestamp of the confirmed tx
       const blockNumber = tx.blockNumber;
       const block = await ethers.provider.getBlock(blockNumber);
-      offer;
-      // Update the committed date in the expected exchange struct with the block timestamp of the tx
+
+      // Set expected voucher values
       const voucher = mockVoucher({
         committedDate: block.timestamp.toString(),
         validUntilDate: calculateVoucherExpiry(block, offerDates.voucherRedeemableFrom, offerDurations.voucherValid),
         redeemedDate: "0",
       });
-      //  voucher.committedDate = block.timestamp.toString();
 
-      // Update the validUntilDate date in the expected exchange struct
-      //  voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+      // Set expected exchange values
       const exchange = mockExchange({
-        id: `${exchanges[0].length + 1}`,
+        id: exchangeId.toString(),
         offerId: offer.id,
         buyerId: buyer.buyer.id,
         finalizedDate: "0",
@@ -303,21 +302,94 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
     });
 
-    it("Redeem old voucher", async function () {});
-
-    it("Revoke old voucher", async function () {});
-
-    it("Cancel old voucher", async function () {});
-
-    it("Old buyer commits to new offer", async function () {
-      // buyer id should be the same
+    it("Redeem old voucher", async function () {
+      const exchange = exchanges[0][0]; // some exchange that wasn't redeemed/revoked/canceled yet
+      const buyerWallet = buyers[0][exchange.buyerIndex].wallet;
+      await expect(exchangeHandler.connect(buyerWallet).redeemVoucher(exchange.exchangeId))
+        .to.emit(exchangeHandler, "VoucherRedeemed")
+        .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
     });
 
-    it("Update old seller", async function () {});
+    it("Revoke old voucher", async function () {
+      const exchange = exchanges[0][0]; // some exchange that wasn't redeemed/revoked/canceled yet
+      const buyerWallet = buyers[0][exchange.buyerIndex].wallet;
+      await expect(exchangeHandler.connect(buyerWallet).cancelVoucher(exchange.exchangeId))
+        .to.emit(exchangeHandler, "VoucherCanceled")
+        .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
+    });
 
-    it("Update old dispute resolver", async function () {});
+    it("Cancel old voucher", async function () {
+      const exchange = exchanges[0][0]; // some exchange that wasn't redeemed/revoked/canceled yet
+      const offer = offers[0].find((o) => o.offer.id == exchange.offerId);
+      const seller = sellers[0].find((s) => s.seller.id == offer.offer.sellerId);
+      await expect(exchangeHandler.connect(seller.wallet).revokeVoucher(exchange.exchangeId))
+        .to.emit(exchangeHandler, "VoucherRevoked")
+        .withArgs(exchange.offerId, exchange.exchangeId, seller.wallet.address);
+    });
 
-    it("Void old offer", async function () {});
+    it("Old buyer commits to new offer", async function () {
+      const buyer = buyers[0][2];
+      const offerId = await offerHandler.getNextOfferId();
+      const exchangeId = await exchangeHandler.getNextExchangeId();
+
+      // create some new offer
+      const { offer, offerDates, offerDurations } = await mockOffer();
+      offer.id = offerId.toString();
+      const disputeResolverId = DRs[0][0].disputeResolver.id;
+      const agentId = agents[0][0].agent.id;
+      await offerHandler
+        .connect(sellers[0][2].wallet)
+        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+      await fundsHandler
+        .connect(sellers[0][2].wallet)
+        .depositFunds(sellers[0][2].seller.id, offer.exchangeToken, offer.sellerDeposit, {
+          value: offer.sellerDeposit,
+        });
+
+      // Commit to offer
+      const offerPrice = offer.price;
+      const tx = await exchangeHandler
+        .connect(buyer.wallet)
+        .commitToOffer(buyer.wallet.address, offer.id, { value: offerPrice });
+      const txReceipt = await tx.wait();
+      const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+
+      // Get the block timestamp of the confirmed tx
+      const blockNumber = tx.blockNumber;
+      const block = await ethers.provider.getBlock(blockNumber);
+
+      // Set expected voucher values
+      const voucher = mockVoucher({
+        committedDate: block.timestamp.toString(),
+        validUntilDate: calculateVoucherExpiry(block, offerDates.voucherRedeemableFrom, offerDurations.voucherValid),
+        redeemedDate: "0",
+      });
+
+      // Set expected exchange values
+      const exchange = mockExchange({
+        id: exchangeId.toString(),
+        offerId: offer.id,
+        buyerId: buyer.buyer.id,
+        finalizedDate: "0",
+      });
+
+      // Examine event
+      assert.equal(event.exchangeId.toString(), exchange.id, "Exchange id is incorrect");
+      assert.equal(event.offerId.toString(), offer.id, "Offer id is incorrect");
+      assert.equal(event.buyerId.toString(), buyer.buyer.id, "Buyer id is incorrect");
+
+      // Examine the exchange struct
+      assert.equal(Exchange.fromStruct(event.exchange).toString(), exchange.toString(), "Exchange struct is incorrect");
+
+      // Examine the voucher struct
+      assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
+    });
+
+    it.skip("Update old seller", async function () {});
+
+    it.skip("Update old dispute resolver", async function () {});
+
+    it.skip("Void old offer", async function () {});
   });
 
   // Test actions that worked in previous version, but should not work anymore, or work differently
@@ -376,7 +448,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       let tx = {
         to: connectedWallet.address,
         // Convert currency unit from ether to wei
-        value: ethers.utils.parseEther("1"),
+        value: ethers.utils.parseEther("10"),
       };
       await deployer.sendTransaction(tx);
 
