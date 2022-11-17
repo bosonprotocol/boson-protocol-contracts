@@ -6,6 +6,7 @@ const { keccak256 } = ethers.utils;
 const { assert } = require("chai");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
+const Bundle = require("../../scripts/domain/Bundle");
 const Role = require("../../scripts/domain/Role");
 const Group = require("../../scripts/domain/Group");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
@@ -62,6 +63,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let groups = [[], []];
   let twins = [[], []];
   let exchanges = [[], []];
+  let bundles = [[], []];
   let protocolContractState;
 
   before(async function () {
@@ -209,7 +211,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         protocolContractState.twinContractState.nextTwinId.add(twins[0].length).toNumber(),
         "nextTwinId mismatch"
       );
-      // assert.equal(protocolContractStateAfterUpgradeAndActions.bundleContractState.nextBundleId.toNumber(), protocolContractState.bundleContractState.nextBundleId.add([0].length).toNumber())
+      assert.equal(
+        protocolContractStateAfterUpgradeAndActions.bundleContractState.nextBundleId.toNumber(),
+        protocolContractState.bundleContractState.nextBundleId.add(bundles[0].length).toNumber()
+      );
 
       // State before and after should be equal
       // remove nextXXid before comparing. Their correct value is verified already
@@ -218,11 +223,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       delete protocolContractStateAfterUpgradeAndActions.groupContractState.nextGroupId;
       delete protocolContractStateAfterUpgradeAndActions.offerContractState.nextOfferId;
       delete protocolContractStateAfterUpgradeAndActions.twinContractState.nextTwinId;
+      delete protocolContractStateAfterUpgradeAndActions.bundleContractState.nextBundleId;
       delete protocolContractState.accountContractState.nextAccountId;
       delete protocolContractState.exchangeContractState.nextExchangeId;
       delete protocolContractState.groupContractState.nextGroupId;
       delete protocolContractState.offerContractState.nextOfferId;
       delete protocolContractState.twinContractState.nextTwinId;
+      delete protocolContractState.bundleContractState.nextBundleId;
       assert.deepEqual(
         protocolContractState,
         protocolContractStateAfterUpgradeAndActions,
@@ -245,14 +252,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // populateProtocolContract can be called before and after update
     // using the same ids would results in clashes in come cases, so use offset to prevent that
     const dataIndex = afterUpgrade ? 1 : 0;
-    let accountOffset, offerOffset, groupOffset, exchangeOffset, twinOffset;
-    accountOffset = offerOffset = groupOffset = exchangeOffset = twinOffset = 0;
+    let accountOffset, offerOffset, groupOffset, exchangeOffset, twinOffset, bundleOffset;
+    accountOffset = offerOffset = groupOffset = exchangeOffset = twinOffset = bundleOffset = 0;
     if (afterUpgrade) {
       accountOffset = sellers[0].length + DRs[0].length + agents[0].length + buyers[0].length;
       offerOffset = offers[0].length;
       groupOffset = groups[0].length;
       exchangeOffset = exchanges[0].length;
       twinOffset = twins[0].length;
+      bundleOffset = bundles[0].length;
     }
 
     const entity = {
@@ -433,43 +441,58 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       groups[dataIndex].push(group);
     }
 
-    // create some twins
+    // create some twins and bundles
     let twinId = twinOffset;
+    let bundleId = bundleOffset;
     for (let i = 1; i < sellers[dataIndex].length; i = i + 2) {
       const seller = sellers[dataIndex][i];
+      let twinIds = []; // used for bundle
+
+      // non fungible token
       await mockTwinTokens[0].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
       await mockTwinTokens[1].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
       // create multiple ranges
       const twin721 = mockTwin(rando.address, TokenType.NonFungibleToken);
       twin721.amount = "0";
       for (let j = 0; j < 7; j++) {
-        twin721.tokenId = `${j * 10000 + (i + accountOffset) * 100}`;
-        twin721.supplyAvailable = `${10 * (i + accountOffset + 1)}`;
+        twin721.tokenId = `${j * 1000000 + (i + accountOffset) * 100}`;
+        twin721.supplyAvailable = `${10000 * (i + accountOffset + 1)}`;
         twin721.tokenAddress = mockTwinTokens[j % 2].address; // oscilate between twins
         twin721.id = ++twinId;
         await twinHandler.connect(seller.wallet).createTwin(twin721);
 
         twins[dataIndex].push(twin721);
+        twinIds.push(twinId);
       }
 
+      // fungible
       const twin20 = mockTwin(mockTwin20.address, TokenType.FungibleToken);
       await mockTwin20.connect(seller.wallet).approve(protocolDiamondAddress, 1);
       twin20.id = ++twinId;
       twin20.amount = i + accountOffset;
+      twin20.supplyAvailable = twin20.amount * 100000000;
       await twinHandler.connect(seller.wallet).createTwin(twin20);
       twins[dataIndex].push(twin20);
+      twinIds.push(twinId);
 
+      // multitoken twin
       const twin1155 = mockTwin(mockTwin1155.address, TokenType.MultiToken);
       await mockTwin1155.connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
       for (let j = 0; j < 3; j++) {
         twin1155.tokenId = `${j * 30000 + (i + accountOffset) * 300}`;
         twin1155.amount = i + accountOffset + j;
-        twin1155.supplyAvailable = `${30 * (i + accountOffset + 1)}`;
+        twin1155.supplyAvailable = `${300000 * (i + accountOffset + 1)}`;
         twin1155.id = ++twinId;
         await twinHandler.connect(seller.wallet).createTwin(twin1155);
         twins.push(twin1155);
         twins[dataIndex].push(twin1155);
+        twinIds.push(twinId);
       }
+
+      // create bundle with all seller's twins and offers
+      const bundle = new Bundle(++bundleId, seller.seller.id, seller.offerIds, twinIds);
+      await bundleHandler.connect(seller.wallet).createBundle(bundle);
+      bundles[dataIndex].push(bundle);
     }
 
     // commit to some offers: first buyer commit to 1 offer, second to 2, third to 3 etc
@@ -573,6 +596,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // all id count
     const totalCount =
       DRs[dataIndex].length + sellers[dataIndex].length + buyers[dataIndex].length + agents[dataIndex].length;
+    const offset = dataIndex == 1 ? DRs[0].length + sellers[0].length + buyers[0].length + agents[0].length : 0;
     let DRsState = [];
     let sellerState = [];
     let buyersState = [];
@@ -584,7 +608,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let nextAccountId;
 
     // Query even the ids where it's not expected to get the entity
-    for (let id = 1; id <= totalCount; id++) {
+    for (let id = 1 + offset; id <= totalCount + offset; id++) {
       const [singleSellerState, singleDRsState, singleBuyersState, singleAgentsState] = await Promise.all([
         accountHandlerRando.getSeller(id),
         accountHandlerRando.getDisputeResolver(id),
@@ -595,7 +619,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       DRsState.push(singleDRsState);
       buyersState.push(singleBuyersState);
       agentsState.push(singleAgentsState);
-      for (let id2 = 1; id2 <= totalCount; id2++) {
+      for (let id2 = 1 + offset; id2 <= totalCount + offset; id2++) {
         allowedSellersState.push(await accountHandlerRando.areSellersAllowed(id2, [id]));
       }
     }
@@ -646,7 +670,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let offersState = [];
     let isOfferVoidedState = [];
     let agentIdByOfferState = [];
-    for (let id = 1; id <= offers[dataIndex].length; id++) {
+    for (const offer of offers[dataIndex]) {
+      const id = offer.offer.id;
       const [singleOffersState, singleIsOfferVoidedState, singleAgentIdByOfferState] = await Promise.all([
         offerHandlerRando.getOffer(id),
         offerHandlerRando.isOfferVoided(id),
@@ -670,7 +695,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let isExchangeFinalizedState = [];
     let receiptsState = [];
 
-    for (let id = 1; id <= exchanges[dataIndex].length; id++) {
+    for (const exchange of exchanges[dataIndex]) {
+      const id = exchange.exchangeId;
       const [singleExchangesState, singleExchangeStateState, singleIsExchangeFinalizedState] = await Promise.all([
         exchangeHandlerRando.getExchange(id),
         exchangeHandlerRando.getExchangeState(id),
@@ -690,17 +716,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     return { exchangesState, exchangeStateState, isExchangeFinalizedState, receiptsState, nextExchangeId };
   }
 
-  async function getBundleContractState() {
-    // even if there are no bundles explicitly created
-    // just make check that after the update, empty bundles are still returned.
-    // Also this function will be handy if tests are expanded and actually introduce some bundles.
+  async function getBundleContractState(dataIndex) {
+    // get bundles
     const bundleHandlerRando = bundleHandler.connect(rando);
     let bundlesState = [];
     let bundleIdByOfferState = [];
     let bundleIdByTwinState = [];
-    for (let id = 1; id < 15; id++) {
-      // until we actually have some bundles, check some arbitrary number to see nothing was put in their place
-
+    for (const bundle of bundles[dataIndex]) {
+      const id = bundle.id;
       const [singleBundlesState, singleBundleIdByOfferState, singleBundleIdByTwinState] = await Promise.all([
         bundleHandlerRando.getBundle(id),
         bundleHandlerRando.getBundleIdByOffer(id),
@@ -810,7 +833,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let disputeTimeoutState = [];
     let isDisputeFinalizedState = [];
 
-    for (let id = 1; id <= exchanges[dataIndex].length; id++) {
+    for (const exchange of exchanges[dataIndex]) {
+      const id = exchange.exchangeId;
       const [singleDisputesState, singleDisputesStatesState, singleDisputeTimeoutState, singleIsDisputeFinalizedState] =
         await Promise.all([
           disputeHandlerRando.getDispute(id),
@@ -833,8 +857,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     const totalCount =
       DRs[dataIndex].length + sellers[dataIndex].length + buyers[dataIndex].length + agents[dataIndex].length;
 
+    const offset = dataIndex == 1 ? DRs[0].length + sellers[0].length + buyers[0].length + agents[0].length : 0;
+
     // Query even the ids where it's not expected to get the entity
-    const accountIds = [...Array(totalCount + 1).keys()].slice(1);
+    const accountIds = [...Array(totalCount + offset + 1).keys()].slice(1);
     const groupsState = await Promise.all(accountIds.map((id) => fundsHandlerRando.getAvailableFunds(id)));
 
     return { groupsState };
@@ -842,7 +868,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   async function getGroupContractState(dataIndex) {
     const groupHandlerRando = groupHandler.connect(rando);
-    const groupIds = [...Array(groups[dataIndex].length + 1).keys()].slice(1);
+    const offset = dataIndex == 1 ? groups[0].length : 0;
+    const groupIds = [...Array(groups[dataIndex].length + offset + 1).keys()].slice(1);
     const groupsState = await Promise.all(groupIds.map((id) => groupHandlerRando.getGroup(id)));
 
     const nextGroupId = await groupHandlerRando.getNextGroupId();
@@ -851,7 +878,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   async function getTwinContractState(dataIndex) {
     const twinHandlerRando = twinHandler.connect(rando);
-    const twinIds = [...Array(twins[dataIndex].length + 1).keys()].slice(1);
+    const offset = dataIndex == 1 ? twins[0].length : 0;
+    const twinIds = [...Array(twins[dataIndex].length + offset + 1).keys()].slice(1);
     const twinsState = await Promise.all(twinIds.map((id) => twinHandlerRando.getTwin(id)));
 
     const nextTwinId = await twinHandlerRando.getNextTwinId();
@@ -1012,7 +1040,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // exchangeIdsByOffer and groupIdByOffer
     let exchangeIdsByOfferState = [];
     let groupIdByOfferState = [];
-    for (let id = 1; id <= offers[dataIndex].length; id++) {
+    for (const offer of offers[dataIndex]) {
+      const id = Number(offer.offer.id);
       // exchangeIdsByOffer
       let exchangeIdsByOffer = [];
       const arraySlot = ethers.BigNumber.from(
@@ -1065,7 +1094,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         getMappinStoragePosition(protocolLookupsSlotNumber.add("19"), accountAddress, paddingType.START)
       );
       let commitsPerGroup = [];
-      for (let id = 1; id <= groups.length; id++) {
+      for (const group of groups[dataIndex]) {
+        const id = group.id;
         commitsPerGroup.push(
           await getStorageAt(
             protocolDiamondAddress,
@@ -1085,9 +1115,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // all id count
     const totalCount =
       DRs[dataIndex].length + sellers[dataIndex].length + buyers[dataIndex].length + agents[dataIndex].length;
+    const offset = dataIndex == 1 ? DRs[0].length + sellers[0].length + buyers[0].length + agents[0].length : 0;
+    const startId = 1 + offset;
+    const endId = totalCount + offset;
 
     // loop over all ids even where no data is expected
-    for (let id = 1; id <= totalCount; id++) {
+    for (let id = startId; id <= endId; id++) {
       // disputeResolverFeeTokenIndex
       let firstMappingStorageSlot = ethers.BigNumber.from(
         getMappinStoragePosition(protocolLookupsSlotNumber.add("12"), id, paddingType.START)
@@ -1137,7 +1170,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     // twinRangesBySeller
     let twinRangesBySeller = [];
-    for (let id = 1; id <= totalCount; id++) {
+    for (let id = startId; id <= endId; id++) {
       const firstMappingStorageSlot = ethers.BigNumber.from(
         getMappinStoragePosition(protocolLookupsSlotNumber.add("22"), id, paddingType.START)
       );
@@ -1160,7 +1193,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     // twinIdsByTokenAddressAndBySeller
     let twinIdsByTokenAddressAndBySeller = [];
-    for (let id = 1; id <= totalCount; id++) {
+    for (let id = startId; id <= endId; id++) {
       const firstMappingStorageSlot = ethers.BigNumber.from(
         getMappinStoragePosition(protocolLookupsSlotNumber.add("23"), id, paddingType.START)
       );
@@ -1205,12 +1238,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     // offerIdIndexByGroup
     let offerIdIndexByGroup = [];
-    for (let id = 1; id <= groups[dataIndex].length; id++) {
+    for (const group of groups[dataIndex]) {
+      const id = group.id;
       const firstMappingStorageSlot = ethers.BigNumber.from(
         getMappinStoragePosition(protocolLookupsSlotNumber.add("28"), id, paddingType.START)
       );
       let offerInidices = [];
-      for (let id2 = 1; id2 <= offers.length; id2++) {
+      for (const offer of offers[dataIndex]) {
+        const id2 = Number(offer.offer.id);
         offerInidices.push(
           await getStorageAt(
             protocolDiamondAddress,
@@ -1227,7 +1262,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let pendingAddressUpdatesByDisputeResolver = [];
 
     // Although pending address/auth token update is not yet defined in 2.0.0, we can check that storage slots are empty
-    for (let id = 1; id <= totalCount; id++) {
+    for (let id = startId; id <= endId; id++) {
       // pendingAddressUpdatesBySeller
       let structStorageSlot = ethers.BigNumber.from(
         getMappinStoragePosition(protocolLookupsSlotNumber.add("29"), id, paddingType.START)
