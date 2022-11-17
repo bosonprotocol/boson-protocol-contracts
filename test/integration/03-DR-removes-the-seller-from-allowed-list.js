@@ -179,21 +179,26 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       await accountHandler.connect(other1).createSeller(seller2, emptyAuthToken, voucherInitValues);
 
       // Create a valid dispute resolver
-      disputeResolver = mockDisputeResolver(operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address);
+      disputeResolver = mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        true
+      );
       expect(disputeResolver.isValid()).is.true;
 
       // Create DisputeResolverFee array so offer creation will succeed
-      const DRFeeNative = ethers.utils.parseUnits("1", "ether").toString();
+      const DRFeeNative = "0";
       const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative)];
 
       // Make a sellerAllowList
       const sellerAllowList = ["2", "1"];
 
-      // Register and activate the dispute resolver
+      // Register the dispute resolver
       await accountHandler
         .connect(adminDR)
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // Buyer escalation deposit used in multiple tests
       buyerEscalationDepositNative = applyPercentage(DRFeeNative, buyerEscalationDepositPercentage);

@@ -202,7 +202,7 @@ describe("IBosonGroupHandler", function () {
         adminDR.address,
         clerkDR.address,
         treasuryDR.address,
-        false
+        true
       );
       expect(disputeResolver.isValid()).is.true;
 
@@ -212,11 +212,10 @@ describe("IBosonGroupHandler", function () {
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
 
-      // Register and activate the dispute resolver
+      // Register the dispute resolver
       await accountHandler
         .connect(adminDR)
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // The first group id
       groupId = "1";

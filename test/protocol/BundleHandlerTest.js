@@ -236,7 +236,7 @@ describe("IBosonBundleHandler", function () {
         adminDR.address,
         clerkDR.address,
         treasuryDR.address,
-        false
+        true
       );
       expect(disputeResolver.isValid()).is.true;
 
@@ -246,11 +246,10 @@ describe("IBosonBundleHandler", function () {
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
 
-      // Register and activate the dispute resolver
+      // Register the dispute resolver
       await accountHandler
         .connect(adminDR)
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // create 5 twins
       for (let i = 0; i < 5; i++) {
