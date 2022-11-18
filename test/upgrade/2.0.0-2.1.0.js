@@ -4,6 +4,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { keccak256 } = ethers.utils;
 const { assert, expect } = require("chai");
+const Seller = require("../../scripts/domain/Seller");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Bundle = require("../../scripts/domain/Bundle");
@@ -11,9 +12,10 @@ const Role = require("../../scripts/domain/Role");
 const Group = require("../../scripts/domain/Group");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const TokenType = require("../../scripts/domain/TokenType.js");
-const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
 const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolverUpdateFields");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const { DisputeResolverFee, DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolverFee");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   mockOffer,
@@ -58,7 +60,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     bundleHandler,
     groupHandler,
     twinHandler,
-    configHandler;
+    configHandler,
+    oldHandlers;
   // orchestrationHandler, pauseHandler, metaTransactionsHandler,
   let mockToken, mockConditionalToken, mockTwinTokens, mockTwin20, mockTwin1155;
   let snapshot;
@@ -159,6 +162,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     await hre.run("upgrade-facets", { env: "upgrade-test" });
 
     // Cast to updated interface
+    oldHandlers = { accountHandler: accountHandler }; // store to test old events
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
 
     snapshot = await ethers.provider.send("evm_snapshot", []);
@@ -526,7 +530,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       expectedDisputeResolver.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
       expectedDisputeResolver.treasury = disputeResolver.treasury;
       expectedDisputeResolver.metadataUri = disputeResolver.metadataUri;
-      // expectedDisputeResolver.active = false;
 
       // Update dispute resolver
       await expect(accountHandler.connect(oldDisputeResolver.wallet).updateDisputeResolver(disputeResolver))
@@ -596,7 +599,141 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   });
 
   // Test actions that worked in previous version, but should not work anymore, or work differently
-  context.skip("📋 Breaking changes", async function () {});
+  // Test methods that were added to see that upgrade was succesful
+  context("📋 Breaking changes and new methods", async function () {
+    context("Breaking changes", async function () {
+      it("Seller addresses are not updated in one step, expect for the treasury", async function () {
+        const oldSeller = sellers[0][3];
+
+        const seller = oldSeller.seller.clone();
+
+        seller.admin = admin.address;
+        seller.operator = operator.address;
+        seller.clerk = clerk.address;
+        seller.treasury = treasury.address;
+
+        const authToken = mockAuthToken();
+
+        // Update seller
+        await expect(accountHandler.connect(oldSeller.wallet).updateSeller(seller, authToken)).to.not.emit(
+          oldHandlers.accountHandler,
+          "SellerUpdated"
+        );
+
+        // Querying the seller id should return the old seller
+        const [, sellerStruct, emptyAuthTokenStruct] = await accountHandler
+          .connect(rando)
+          .getSeller(oldSeller.seller.id);
+
+        // Parse into entity
+        const returnedSeller = Seller.fromStruct(sellerStruct);
+        const returnedAuthToken = AuthToken.fromStruct(emptyAuthTokenStruct);
+
+        // Returned values should match the input in createSeller
+        const expectedSeller = oldSeller.seller.clone();
+        expectedSeller.treasury = seller.treasury;
+        for (const [key, value] of Object.entries(expectedSeller)) {
+          assert.equal(JSON.stringify(returnedSeller[key]), JSON.stringify(value), `${key} mismatch`);
+        }
+
+        // Returned auth token values should match the input in createSeller
+        for (const [key, value] of Object.entries(oldSeller.authToken)) {
+          assert.equal(JSON.stringify(returnedAuthToken[key]), JSON.stringify(value), `${key} mismatch`);
+        }
+      });
+
+      it("Dispute resolver is not updated in one step", async function () {
+        const oldDisputeResolver = DRs[0][2];
+
+        const disputeResolver = oldDisputeResolver.disputeResolver.clone();
+
+        // new operator
+        disputeResolver.escalationResponsePeriod = Number(
+          Number(disputeResolver.escalationResponsePeriod) - 100
+        ).toString();
+
+        disputeResolver.operator = operator.address;
+        disputeResolver.admin = admin.address;
+        disputeResolver.clerk = clerk.address;
+        disputeResolver.treasury = treasury.address;
+        disputeResolver.metadataUri = "https://ipfs.io/ipfs/updatedUri";
+        disputeResolver.active = false;
+
+        // Update dispute resolver
+        await expect(
+          accountHandler.connect(oldDisputeResolver.wallet).updateDisputeResolver(disputeResolver)
+        ).to.not.emit(oldHandlers.accountHandler, "DisputeResolverUpdated");
+
+        // Querying the dispute resolver id should return the old dispute resolver
+        // Get the dispute resolver data as structs
+        const [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
+          .connect(rando)
+          .getDisputeResolver(disputeResolver.id);
+
+        // Parse into entity
+        const returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+        const returnedDisputeResolverFeeList = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct);
+
+        // Returned values should match the expectedDisputeResolver
+        const expectedDisputeResolver = oldDisputeResolver.disputeResolver.clone();
+        expectedDisputeResolver.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
+        expectedDisputeResolver.treasury = disputeResolver.treasury;
+        expectedDisputeResolver.metadataUri = disputeResolver.metadataUri;
+        for (const [key, value] of Object.entries(expectedDisputeResolver)) {
+          assert.equal(JSON.stringify(returnedDisputeResolver[key]), JSON.stringify(value), `${key} mismatch`);
+        }
+
+        assert.equal(
+          returnedDisputeResolverFeeList.toString(),
+          new DisputeResolverFeeList(oldDisputeResolver.disputeResolverFees).toString(),
+          "Dispute Resolver Fee List is incorrect"
+        );
+
+        expect(returnedSellerAllowList.toString()).to.eql(
+          oldDisputeResolver.sellerAllowList.toString(),
+          "Allowed list wrong"
+        );
+      });
+    });
+
+    context.skip("New methods", async function () {
+      it("Supported interface can be added", async function () {
+        const seller = sellers[0][0];
+        const offerId = seller.offerIds[0];
+
+        await expect(offerHandler.connect(seller.wallet).voidOffer(offerId))
+          .to.emit(offerHandler, "OfferVoided")
+          .withArgs(offerId, seller.seller.id, seller.wallet.address);
+      });
+
+      it("Supported interface can be removed", async function () {
+        const seller = sellers[0][0];
+        const offerId = seller.offerIds[0];
+
+        await expect(offerHandler.connect(seller.wallet).voidOffer(offerId))
+          .to.emit(offerHandler, "OfferVoided")
+          .withArgs(offerId, seller.seller.id, seller.wallet.address);
+      });
+
+      it("Seller can be updated in two steps", async function () {
+        const seller = sellers[0][0];
+        const offerId = seller.offerIds[0];
+
+        await expect(offerHandler.connect(seller.wallet).voidOffer(offerId))
+          .to.emit(offerHandler, "OfferVoided")
+          .withArgs(offerId, seller.seller.id, seller.wallet.address);
+      });
+
+      it("Dispute resolver can be updated in two steps", async function () {
+        const seller = sellers[0][0];
+        const offerId = seller.offerIds[0];
+
+        await expect(offerHandler.connect(seller.wallet).voidOffer(offerId))
+          .to.emit(offerHandler, "OfferVoided")
+          .withArgs(offerId, seller.seller.id, seller.wallet.address);
+      });
+    });
+  });
 
   // utility functions
   async function populateProtocolContract(afterUpgrade = false) {
@@ -661,7 +798,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const disputeResolver = mockDisputeResolver(wallet.address, wallet.address, wallet.address, wallet.address);
           const disputeResolverFees = [
             new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
-            new DisputeResolverFee(mockToken.address, "MockToken", 0),
+            new DisputeResolverFee(mockToken.address, "MockToken", "0"),
           ];
           const sellerAllowList = [];
           await accountHandler
