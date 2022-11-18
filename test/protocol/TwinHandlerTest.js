@@ -398,6 +398,7 @@ describe("IBosonTwinHandler", function () {
         [exists, storedTwin] = await twinHandler.getTwin(nextTwinId);
         expect(exists).to.be.true;
         expect(storedTwin.id).to.be.equal(nextTwinId);
+        assert.notEqual(storedTwin.id, twin.id, "Twin Id is incorrect");
       });
 
       it("Should ignore twin id set by seller and use nextAccountId on twinIdsByTokenAddressAndBySeller lookup", async function () {

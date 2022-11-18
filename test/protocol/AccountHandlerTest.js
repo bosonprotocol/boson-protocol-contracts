@@ -172,9 +172,9 @@ describe("IBosonAccountHandler", function () {
 
       //Create DisputeResolverFee array
       disputeResolverFees = [
-        new DisputeResolverFee(other1.address, "MockToken1", "100"),
-        new DisputeResolverFee(other2.address, "MockToken2", "200"),
-        new DisputeResolverFee(other3.address, "MockToken3", "300"),
+        new DisputeResolverFee(other1.address, "MockToken1", "0"),
+        new DisputeResolverFee(other2.address, "MockToken2", "0"),
+        new DisputeResolverFee(other3.address, "MockToken3", "0"),
       ];
 
       // Make a sellerAllowList

@@ -78,7 +78,7 @@ This deploys all contract on the local node and prints out all the information a
 ### [Optional] Manage roles
 If you want to perform any of the following:
 - change any of protocol configuration parameters
-- use dispute resolver, which needs to be activated by the admin
+- use dispute resolver
 - set up other roles, needed for some functionalities of the protocol (e.g. PAUSE, FEE_COLLECTOR)
 
 you need to set up the admin account. To do it
