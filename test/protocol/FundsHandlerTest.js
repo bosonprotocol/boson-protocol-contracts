@@ -437,7 +437,7 @@ describe("IBosonFundsHandler", function () {
           adminDR.address,
           clerkDR.address,
           treasuryDR.address,
-          false
+          true
         );
         expect(disputeResolver.isValid()).is.true;
 
@@ -450,11 +450,10 @@ describe("IBosonFundsHandler", function () {
         // Make empty seller list, so every seller is allowed
         const sellerAllowList = [];
 
-        // Register and activate the dispute resolver
+        // Register the dispute resolver
         await accountHandler
           .connect(adminDR)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
         // Mock offer
         const { offer, offerDates, offerDurations, disputeResolverId, offerFees } = await mockOffer();
@@ -1532,12 +1531,12 @@ describe("IBosonFundsHandler", function () {
         adminDR.address,
         clerkDR.address,
         treasuryDR.address,
-        false
+        true
       );
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      DRFee = ethers.utils.parseUnits("1", "ether").toString();
+      DRFee = ethers.utils.parseUnits("0", "ether").toString();
       disputeResolverFees = [
         new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
         new DisputeResolverFee(mockToken.address, "mockToken", DRFee),
@@ -1547,11 +1546,10 @@ describe("IBosonFundsHandler", function () {
       const sellerAllowList = [];
       buyerEscalationDeposit = applyPercentage(DRFee, buyerEscalationDepositPercentage);
 
-      // Register and activate the dispute resolver
+      // Register the dispute resolver
       await accountHandler
         .connect(adminDR)
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       const { offer, ...mo } = await mockOffer();
       offer.quantityAvailable = "2";
@@ -1962,7 +1960,7 @@ describe("IBosonFundsHandler", function () {
           const [Foreign20WithFee] = await deployMockTokens(["Foreign20WithFee"]);
 
           // add to DR fees
-          DRFee = ethers.utils.parseUnits("2", "ether").toString();
+          DRFee = ethers.utils.parseUnits("0", "ether").toString();
           await accountHandler
             .connect(adminDR)
             .addFeesToDisputeResolver(disputeResolverId, [
