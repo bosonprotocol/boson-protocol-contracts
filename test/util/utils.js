@@ -208,5 +208,5 @@ exports.prepareDataSignatureParameters = prepareDataSignatureParameters;
 exports.calculateVoucherExpiry = calculateVoucherExpiry;
 exports.calculateContractAddress = calculateContractAddress;
 exports.applyPercentage = applyPercentage;
-exports.paddingType = paddingType;
 exports.getMappingStoragePosition = getMappingStoragePosition;
+exports.paddingType = paddingType;
