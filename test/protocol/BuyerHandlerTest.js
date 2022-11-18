@@ -430,15 +430,15 @@ describe("BuyerHandler", function () {
           expect(exists).is.true;
 
           // Create a valid dispute resolver
-          disputeResolver = mockDisputeResolver(operator.address, admin.address, clerk.address, treasury.address);
+          disputeResolver = mockDisputeResolver(operator.address, admin.address, clerk.address, treasury.address, true);
           disputeResolver.id = id.add(1).toString();
           expect(disputeResolver.isValid()).is.true;
 
           //Create DisputeResolverFee array
           disputeResolverFees = [
-            new DisputeResolverFee(other1.address, "MockToken1", "100"),
-            new DisputeResolverFee(other2.address, "MockToken2", "200"),
-            new DisputeResolverFee(other3.address, "MockToken3", "300"),
+            new DisputeResolverFee(other1.address, "MockToken1", "0"),
+            new DisputeResolverFee(other2.address, "MockToken2", "0"),
+            new DisputeResolverFee(other3.address, "MockToken3", "0"),
             new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
           ];
 
@@ -449,8 +449,6 @@ describe("BuyerHandler", function () {
           await accountHandler
             .connect(admin)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-
-          await accountHandler.connect(deployer).activateDisputeResolver(++id);
 
           // Mock the offer
           let { offer, offerDates, offerDurations } = await mockOffer();
