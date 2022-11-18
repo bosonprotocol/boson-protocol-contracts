@@ -22,7 +22,7 @@ const {
   mockCondition,
   mockTwin,
 } = require("../util/mock");
-const { setNextBlockTimestamp } = require("../util/utils.js");
+const { setNextBlockTimestamp, paddingType, getMappinStoragePosition } = require("../util/utils.js");
 const { oneMonth, oneDay } = require("../util/constants");
 const { readContracts } = require("../../scripts/util/utils");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -396,7 +396,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         twin1155.supplyAvailable = `${30 * (i + 1)}`;
         twin1155.id = ++twinId;
         await twinHandler.connect(seller.wallet).createTwin(twin1155);
-        twins.push(twin20);
+        twins.push(twin1155);
       }
     }
 
@@ -786,29 +786,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   async function getMetaTxContractState() {
     return {};
-  }
-
-  const paddingType = {
-    NONE: 0,
-    START: 1,
-    END: 2,
-  };
-
-  function getMappinStoragePosition(slot, key, padding = paddingType.NONE) {
-    let keyBuffer;
-    switch (padding) {
-      case paddingType.NONE:
-        keyBuffer = ethers.utils.toUtf8Bytes(key);
-        break;
-      case paddingType.START:
-        keyBuffer = Buffer.from(ethers.utils.hexZeroPad(key, 32).toString().slice(2), "hex");
-        break;
-      case paddingType.END:
-        keyBuffer = Buffer.from(key.slice(2).padEnd(64, "0"), "hex"); // assume key is prefixed with 0x
-        break;
-    }
-    const pBuffer = Buffer.from(slot.toHexString().slice(2), "hex");
-    return keccak256(Buffer.concat([keyBuffer, pBuffer]));
   }
 
   async function getMetaTxPrivateContractState() {

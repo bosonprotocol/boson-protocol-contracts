@@ -178,6 +178,29 @@ function calculateContractAddress(senderAddress, senderNonce) {
   return ethers.utils.getAddress(contract_address);
 }
 
+const paddingType = {
+  NONE: 0,
+  START: 1,
+  END: 2,
+};
+
+function getMappinStoragePosition(slot, key, padding = paddingType.NONE) {
+  let keyBuffer;
+  switch (padding) {
+    case paddingType.NONE:
+      keyBuffer = ethers.utils.toUtf8Bytes(key);
+      break;
+    case paddingType.START:
+      keyBuffer = Buffer.from(ethers.utils.hexZeroPad(key, 32).toString().slice(2), "hex");
+      break;
+    case paddingType.END:
+      keyBuffer = Buffer.from(key.slice(2).padEnd(64, "0"), "hex"); // assume key is prefixed with 0x
+      break;
+  }
+  const pBuffer = Buffer.from(slot.toHexString().slice(2), "hex");
+  return keccak256(Buffer.concat([keyBuffer, pBuffer]));
+}
+
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.eventEmittedWithArgs = eventEmittedWithArgs;
@@ -185,3 +208,5 @@ exports.prepareDataSignatureParameters = prepareDataSignatureParameters;
 exports.calculateVoucherExpiry = calculateVoucherExpiry;
 exports.calculateContractAddress = calculateContractAddress;
 exports.applyPercentage = applyPercentage;
+exports.paddingType = paddingType;
+exports.getMappinStoragePosition = getMappinStoragePosition;
