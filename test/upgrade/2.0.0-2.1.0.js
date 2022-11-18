@@ -62,7 +62,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     twinHandler,
     configHandler,
     oldHandlers;
-  // orchestrationHandler, pauseHandler, metaTransactionsHandler,
+  let ERC165Facet;
   let mockToken, mockConditionalToken, mockTwinTokens, mockTwin20, mockTwin1155;
   let snapshot;
   let protocolDiamondAddress;
@@ -122,6 +122,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamondAddress);
     // metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamondAddress);
     configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamondAddress);
+    ERC165Facet = await ethers.getContractAt("ERC165Facet", protocolDiamondAddress);
 
     // create mock token for auth
     [mockAuthERC721Contract] = await deployMockTokens(["Foreign721"]);
@@ -164,6 +165,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // Cast to updated interface
     oldHandlers = { accountHandler: accountHandler }; // store to test old events
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
+    ERC165Facet = await ethers.getContractAt("ERC165Facet", protocolDiamondAddress);
 
     snapshot = await ethers.provider.send("evm_snapshot", []);
   });
@@ -397,197 +399,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
     });
 
-    it("Update old seller", async function () {
-      const oldSeller = sellers[0][3];
-
-      const seller = oldSeller.seller.clone();
-      seller.treasury = treasury.address;
-      // Treasury is the only values that can be update without address owner authorization
-      let sellerStruct = seller.toStruct();
-
-      seller.admin = admin.address;
-      seller.operator = operator.address;
-      seller.clerk = clerk.address;
-
-      const pendingSellerUpdate = seller.clone();
-      pendingSellerUpdate.id = "0";
-      pendingSellerUpdate.treasury = ethers.constants.AddressZero;
-      pendingSellerUpdate.active = false;
-      let pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
-
-      const authToken = mockAuthToken();
-      const pendingAuthToken = authToken.clone();
-      const oldSellerAuthToken = oldSeller.authToken.toStruct();
-      const pendingAuthTokenStruct = pendingAuthToken.toStruct();
-
-      // Update seller
-      let tx = await accountHandler.connect(oldSeller.wallet).updateSeller(seller, authToken);
-
-      // Testing for the SellerUpdateApplied event
-      await expect(tx)
-        .to.emit(accountHandler, "SellerUpdateApplied")
-        .withArgs(
-          seller.id,
-          sellerStruct,
-          pendingSellerUpdateStruct,
-          oldSellerAuthToken,
-          pendingAuthTokenStruct,
-          oldSeller.wallet.address
-        );
-
-      // Testing for the SellerUpdatePending event
-      await expect(tx)
-        .to.emit(accountHandler, "SellerUpdatePending")
-        .withArgs(seller.id, pendingSellerUpdateStruct, pendingAuthTokenStruct, oldSeller.wallet.address);
-
-      // Update seller operator
-      tx = await accountHandler.connect(operator).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]);
-
-      pendingSellerUpdate.operator = ethers.constants.AddressZero;
-      pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
-      seller.clerk = oldSeller.seller.clerk;
-      seller.admin = oldSeller.seller.admin;
-      sellerStruct = seller.toStruct();
-
-      // Check operator update
-      await expect(tx)
-        .to.emit(accountHandler, "SellerUpdateApplied")
-        .withArgs(
-          seller.id,
-          sellerStruct,
-          pendingSellerUpdateStruct,
-          oldSellerAuthToken,
-          pendingAuthTokenStruct,
-          operator.address
-        );
-
-      // Update seller clerk
-      tx = await accountHandler.connect(clerk).optInToSellerUpdate(seller.id, [SellerUpdateFields.Clerk]);
-
-      pendingSellerUpdate.clerk = ethers.constants.AddressZero;
-      pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
-      seller.clerk = clerk.address;
-      seller.admin = oldSeller.seller.admin;
-      sellerStruct = seller.toStruct();
-
-      // Check operator update
-      await expect(tx)
-        .to.emit(accountHandler, "SellerUpdateApplied")
-        .withArgs(
-          seller.id,
-          sellerStruct,
-          pendingSellerUpdateStruct,
-          oldSellerAuthToken,
-          pendingAuthTokenStruct,
-          clerk.address
-        );
-
-      // Update seller admin
-      tx = await accountHandler.connect(admin).optInToSellerUpdate(seller.id, [SellerUpdateFields.Admin]);
-
-      pendingSellerUpdate.admin = ethers.constants.AddressZero;
-      pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
-      seller.admin = admin.address;
-      sellerStruct = seller.toStruct();
-
-      // Check operator update
-      await expect(tx)
-        .to.emit(accountHandler, "SellerUpdateApplied")
-        .withArgs(
-          seller.id,
-          sellerStruct,
-          pendingSellerUpdateStruct,
-          authToken.toStruct(),
-          pendingAuthTokenStruct,
-          admin.address
-        );
-    });
-
-    it("Update old dispute resolver", async function () {
-      const oldDisputeResolver = DRs[0][1];
-
-      const disputeResolver = oldDisputeResolver.disputeResolver.clone();
-
-      // new operator
-      disputeResolver.escalationResponsePeriod = Number(
-        Number(disputeResolver.escalationResponsePeriod) - 100
-      ).toString();
-
-      disputeResolver.operator = operator.address;
-      disputeResolver.admin = admin.address;
-      disputeResolver.clerk = clerk.address;
-      disputeResolver.treasury = treasury.address;
-      disputeResolver.metadataUri = "https://ipfs.io/ipfs/updatedUri";
-      disputeResolver.active = false;
-
-      const disputeResolverPendingUpdate = disputeResolver.clone();
-      disputeResolverPendingUpdate.id = "0";
-      disputeResolverPendingUpdate.escalationResponsePeriod = "0";
-      disputeResolverPendingUpdate.metadataUri = "";
-      disputeResolverPendingUpdate.treasury = ethers.constants.AddressZero;
-
-      const expectedDisputeResolver = oldDisputeResolver.disputeResolver.clone();
-      expectedDisputeResolver.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
-      expectedDisputeResolver.treasury = disputeResolver.treasury;
-      expectedDisputeResolver.metadataUri = disputeResolver.metadataUri;
-
-      // Update dispute resolver
-      await expect(accountHandler.connect(oldDisputeResolver.wallet).updateDisputeResolver(disputeResolver))
-        .to.emit(accountHandler, "DisputeResolverUpdatePending")
-        .withArgs(disputeResolver.id, disputeResolverPendingUpdate.toStruct(), oldDisputeResolver.wallet.address);
-
-      // Approve operator update
-      expectedDisputeResolver.operator = disputeResolver.operator;
-      disputeResolverPendingUpdate.operator = ethers.constants.AddressZero;
-
-      await expect(
-        accountHandler
-          .connect(operator)
-          .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Operator])
-      )
-        .to.emit(accountHandler, "DisputeResolverUpdateApplied")
-        .withArgs(
-          disputeResolver.id,
-          expectedDisputeResolver.toStruct(),
-          disputeResolverPendingUpdate.toStruct(),
-          operator.address
-        );
-
-      // Approve admin update
-      expectedDisputeResolver.admin = disputeResolver.admin;
-      disputeResolverPendingUpdate.admin = ethers.constants.AddressZero;
-
-      await expect(
-        accountHandler
-          .connect(admin)
-          .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Admin])
-      )
-        .to.emit(accountHandler, "DisputeResolverUpdateApplied")
-        .withArgs(
-          disputeResolver.id,
-          expectedDisputeResolver.toStruct(),
-          disputeResolverPendingUpdate.toStruct(),
-          admin.address
-        );
-
-      // Approve clerk update
-      expectedDisputeResolver.clerk = disputeResolver.clerk;
-      disputeResolverPendingUpdate.clerk = ethers.constants.AddressZero;
-
-      await expect(
-        accountHandler
-          .connect(clerk)
-          .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Clerk])
-      )
-        .to.emit(accountHandler, "DisputeResolverUpdateApplied")
-        .withArgs(
-          disputeResolver.id,
-          expectedDisputeResolver.toStruct(),
-          disputeResolverPendingUpdate.toStruct(),
-          clerk.address
-        );
-    });
-
     it("Void old offer", async function () {
       const seller = sellers[0][0];
       const offerId = seller.offerIds[0];
@@ -696,41 +507,228 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       });
     });
 
-    context.skip("New methods", async function () {
+    context("New methods", async function () {
       it("Supported interface can be added", async function () {
-        const seller = sellers[0][0];
-        const offerId = seller.offerIds[0];
+        const interfaceId = "0xaabbccdd";
 
-        await expect(offerHandler.connect(seller.wallet).voidOffer(offerId))
-          .to.emit(offerHandler, "OfferVoided")
-          .withArgs(offerId, seller.seller.id, seller.wallet.address);
+        // Verify that interface does not exist yet
+        let support = await ERC165Facet.supportsInterface(interfaceId);
+        expect(support, "Interface should not be supported").is.false;
+
+        // Add interface
+        await ERC165Facet.connect(deployer).addSupportedInterface(interfaceId);
+
+        // Verify it was added
+        support = await ERC165Facet.supportsInterface(interfaceId);
+        expect(support, "Interface should be supported").is.true;
       });
 
       it("Supported interface can be removed", async function () {
-        const seller = sellers[0][0];
-        const offerId = seller.offerIds[0];
+        const interfaceId = "0xddccbbaa";
+        // Add interface
+        await ERC165Facet.connect(deployer).addSupportedInterface(interfaceId);
 
-        await expect(offerHandler.connect(seller.wallet).voidOffer(offerId))
-          .to.emit(offerHandler, "OfferVoided")
-          .withArgs(offerId, seller.seller.id, seller.wallet.address);
+        // Verify that interface exist
+        let support = await ERC165Facet.supportsInterface(interfaceId);
+        expect(support, "Interface should be supported").is.true;
+
+        // Remove interface
+        await ERC165Facet.connect(deployer).removeSupportedInterface(interfaceId);
+
+        // Verify it was removed
+        support = await ERC165Facet.supportsInterface(interfaceId);
+        expect(support, "Interface should not be supported").is.false;
       });
 
       it("Seller can be updated in two steps", async function () {
-        const seller = sellers[0][0];
-        const offerId = seller.offerIds[0];
+        const oldSeller = sellers[0][3];
 
-        await expect(offerHandler.connect(seller.wallet).voidOffer(offerId))
-          .to.emit(offerHandler, "OfferVoided")
-          .withArgs(offerId, seller.seller.id, seller.wallet.address);
+        const seller = oldSeller.seller.clone();
+        seller.treasury = treasury.address;
+        // Treasury is the only values that can be update without address owner authorization
+        let sellerStruct = seller.toStruct();
+
+        seller.admin = admin.address;
+        seller.operator = operator.address;
+        seller.clerk = clerk.address;
+
+        const pendingSellerUpdate = seller.clone();
+        pendingSellerUpdate.id = "0";
+        pendingSellerUpdate.treasury = ethers.constants.AddressZero;
+        pendingSellerUpdate.active = false;
+        let pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
+
+        const authToken = mockAuthToken();
+        const pendingAuthToken = authToken.clone();
+        const oldSellerAuthToken = oldSeller.authToken.toStruct();
+        const pendingAuthTokenStruct = pendingAuthToken.toStruct();
+
+        // Update seller
+        let tx = await accountHandler.connect(oldSeller.wallet).updateSeller(seller, authToken);
+
+        // Testing for the SellerUpdateApplied event
+        await expect(tx)
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            pendingSellerUpdateStruct,
+            oldSellerAuthToken,
+            pendingAuthTokenStruct,
+            oldSeller.wallet.address
+          );
+
+        // Testing for the SellerUpdatePending event
+        await expect(tx)
+          .to.emit(accountHandler, "SellerUpdatePending")
+          .withArgs(seller.id, pendingSellerUpdateStruct, pendingAuthTokenStruct, oldSeller.wallet.address);
+
+        // Update seller operator
+        tx = await accountHandler.connect(operator).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]);
+
+        pendingSellerUpdate.operator = ethers.constants.AddressZero;
+        pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
+        seller.clerk = oldSeller.seller.clerk;
+        seller.admin = oldSeller.seller.admin;
+        sellerStruct = seller.toStruct();
+
+        // Check operator update
+        await expect(tx)
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            pendingSellerUpdateStruct,
+            oldSellerAuthToken,
+            pendingAuthTokenStruct,
+            operator.address
+          );
+
+        // Update seller clerk
+        tx = await accountHandler.connect(clerk).optInToSellerUpdate(seller.id, [SellerUpdateFields.Clerk]);
+
+        pendingSellerUpdate.clerk = ethers.constants.AddressZero;
+        pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
+        seller.clerk = clerk.address;
+        seller.admin = oldSeller.seller.admin;
+        sellerStruct = seller.toStruct();
+
+        // Check operator update
+        await expect(tx)
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            pendingSellerUpdateStruct,
+            oldSellerAuthToken,
+            pendingAuthTokenStruct,
+            clerk.address
+          );
+
+        // Update seller admin
+        tx = await accountHandler.connect(admin).optInToSellerUpdate(seller.id, [SellerUpdateFields.Admin]);
+
+        pendingSellerUpdate.admin = ethers.constants.AddressZero;
+        pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
+        seller.admin = admin.address;
+        sellerStruct = seller.toStruct();
+
+        // Check operator update
+        await expect(tx)
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            pendingSellerUpdateStruct,
+            authToken.toStruct(),
+            pendingAuthTokenStruct,
+            admin.address
+          );
       });
 
       it("Dispute resolver can be updated in two steps", async function () {
-        const seller = sellers[0][0];
-        const offerId = seller.offerIds[0];
+        const oldDisputeResolver = DRs[0][1];
 
-        await expect(offerHandler.connect(seller.wallet).voidOffer(offerId))
-          .to.emit(offerHandler, "OfferVoided")
-          .withArgs(offerId, seller.seller.id, seller.wallet.address);
+        const disputeResolver = oldDisputeResolver.disputeResolver.clone();
+
+        // new operator
+        disputeResolver.escalationResponsePeriod = Number(
+          Number(disputeResolver.escalationResponsePeriod) - 100
+        ).toString();
+
+        disputeResolver.operator = operator.address;
+        disputeResolver.admin = admin.address;
+        disputeResolver.clerk = clerk.address;
+        disputeResolver.treasury = treasury.address;
+        disputeResolver.metadataUri = "https://ipfs.io/ipfs/updatedUri";
+        disputeResolver.active = false;
+
+        const disputeResolverPendingUpdate = disputeResolver.clone();
+        disputeResolverPendingUpdate.id = "0";
+        disputeResolverPendingUpdate.escalationResponsePeriod = "0";
+        disputeResolverPendingUpdate.metadataUri = "";
+        disputeResolverPendingUpdate.treasury = ethers.constants.AddressZero;
+
+        const expectedDisputeResolver = oldDisputeResolver.disputeResolver.clone();
+        expectedDisputeResolver.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
+        expectedDisputeResolver.treasury = disputeResolver.treasury;
+        expectedDisputeResolver.metadataUri = disputeResolver.metadataUri;
+
+        // Update dispute resolver
+        await expect(accountHandler.connect(oldDisputeResolver.wallet).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdatePending")
+          .withArgs(disputeResolver.id, disputeResolverPendingUpdate.toStruct(), oldDisputeResolver.wallet.address);
+
+        // Approve operator update
+        expectedDisputeResolver.operator = disputeResolver.operator;
+        disputeResolverPendingUpdate.operator = ethers.constants.AddressZero;
+
+        await expect(
+          accountHandler
+            .connect(operator)
+            .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Operator])
+        )
+          .to.emit(accountHandler, "DisputeResolverUpdateApplied")
+          .withArgs(
+            disputeResolver.id,
+            expectedDisputeResolver.toStruct(),
+            disputeResolverPendingUpdate.toStruct(),
+            operator.address
+          );
+
+        // Approve admin update
+        expectedDisputeResolver.admin = disputeResolver.admin;
+        disputeResolverPendingUpdate.admin = ethers.constants.AddressZero;
+
+        await expect(
+          accountHandler
+            .connect(admin)
+            .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Admin])
+        )
+          .to.emit(accountHandler, "DisputeResolverUpdateApplied")
+          .withArgs(
+            disputeResolver.id,
+            expectedDisputeResolver.toStruct(),
+            disputeResolverPendingUpdate.toStruct(),
+            admin.address
+          );
+
+        // Approve clerk update
+        expectedDisputeResolver.clerk = disputeResolver.clerk;
+        disputeResolverPendingUpdate.clerk = ethers.constants.AddressZero;
+
+        await expect(
+          accountHandler
+            .connect(clerk)
+            .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Clerk])
+        )
+          .to.emit(accountHandler, "DisputeResolverUpdateApplied")
+          .withArgs(
+            disputeResolver.id,
+            expectedDisputeResolver.toStruct(),
+            disputeResolverPendingUpdate.toStruct(),
+            clerk.address
+          );
       });
     });
   });
