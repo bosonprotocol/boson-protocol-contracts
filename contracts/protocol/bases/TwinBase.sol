@@ -139,7 +139,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         twin.tokenType = _twin.tokenType;
 
         // Notify watchers of state change
-        emit TwinCreated(twin.id, sellerId, _twin, sender);
+        emit TwinCreated(twinId, sellerId, _twin, sender);
     }
 
     /**
