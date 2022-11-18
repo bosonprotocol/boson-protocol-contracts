@@ -50,6 +50,10 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         // Twin supply must exist and can't be zero
         require(_twin.supplyAvailable > 0, INVALID_SUPPLY_AVAILABLE);
 
+        // Get the next twinId and increment the counter
+        uint256 twinId = protocolCounters().nextTwinId++;
+        _twin.id = twinId;
+
         if (_twin.tokenType == TokenType.NonFungibleToken) {
             // Check if the token supports IERC721 interface
             require(contractSupportsInterface(_twin.tokenAddress, type(IERC721).interfaceId), INVALID_TOKEN_ADDRESS);
@@ -122,14 +126,11 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             require(_twin.amount > 0 && _twin.amount <= _twin.supplyAvailable, INVALID_AMOUNT);
         }
 
-        // Get the next twinId and increment the counter
-        uint256 twinId = protocolCounters().nextTwinId++;
-
         // Get storage location for twin
         (, Twin storage twin) = fetchTwin(twinId);
 
         // Set twin props individually since memory structs can't be copied to storage
-        twin.id = _twin.id = twinId;
+        twin.id = twinId;
         twin.sellerId = _twin.sellerId = sellerId;
         twin.supplyAvailable = _twin.supplyAvailable;
         twin.amount = _twin.amount;
@@ -138,7 +139,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         twin.tokenType = _twin.tokenType;
 
         // Notify watchers of state change
-        emit TwinCreated(twinId, sellerId, _twin, sender);
+        emit TwinCreated(twin.id, sellerId, _twin, sender);
     }
 
     /**

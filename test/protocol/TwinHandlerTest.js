@@ -1,7 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect, assert } = require("chai");
-
 const Role = require("../../scripts/domain/Role");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
@@ -13,10 +12,12 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { getEvent } = require("../util/utils.js");
+const { getEvent, getMappingStoragePosition, paddingType } = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockOffer, mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues, accountId } = require("../util/mock");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
+const { keccak256 } = ethers.utils;
+const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 
 /**
  *  Test the Boson Twin Handler interface
@@ -379,6 +380,70 @@ describe("IBosonTwinHandler", function () {
 
         // Create another twin with limited supply
         await expect(twinHandler.connect(operator).createTwin(twin2)).not.to.be.reverted;
+      });
+
+      it("Should ignore twin id set by seller and use nextAccountId on twins entity", async function () {
+        twin.id = "666";
+        twin.tokenAddress = bosonToken.address;
+
+        // Approve twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1);
+
+        await twinHandler.connect(operator).createTwin(twin);
+
+        let [exists, storedTwin] = await twinHandler.getTwin("666");
+        expect(exists).to.be.false;
+        expect(storedTwin.id).to.be.equal("0");
+
+        [exists, storedTwin] = await twinHandler.getTwin(nextTwinId);
+        expect(exists).to.be.true;
+        expect(storedTwin.id).to.be.equal(nextTwinId);
+      });
+
+      it("Should ignore twin id set by seller and use nextAccountId on twinIdsByTokenAddressAndBySeller lookup", async function () {
+        twin.id = "666";
+        twin.tokenType = TokenType.NonFungibleToken;
+        twin.tokenAddress = foreign721.address;
+        twin.amount = "0";
+        twin.tokenId = "1";
+        twin.supplyAvailable = "10";
+
+        // Approving the twinHandler contract to transfer seller's tokens
+        await foreign721.connect(operator).mint(twin.tokenId, twin.supplyAvailable);
+        await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+        const tx = await twinHandler.connect(operator).createTwin(twin);
+        const txReceipt = await tx.wait();
+
+        const [id] = getEvent(txReceipt, twinHandler, "TwinCreated");
+
+        // starting slot
+        const protocolLookupsSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.lookups"));
+        const protocolLookupsSlotNumber = ethers.BigNumber.from(protocolLookupsSlot);
+
+        // seller id mapping from twinIdsByTokenAddressAndBySeller
+        const firstMappingSlot = ethers.BigNumber.from(
+          getMappingStoragePosition(
+            protocolLookupsSlotNumber.add("23"),
+            ethers.BigNumber.from(seller.id).toNumber(),
+            paddingType.START
+          )
+        );
+
+        // token address mapping from twinIdsByTokenAddressAndBySeller
+        const secondMappingSlot = getMappingStoragePosition(
+          firstMappingSlot,
+          twin.tokenAddress.toLowerCase(),
+          paddingType.START
+        );
+
+        // first element of twinIds from twinIdsByTokenAddressAndBySeller
+        const firstIdSlot = keccak256(secondMappingSlot);
+        const twinId = await getStorageAt(protocolDiamond.address, firstIdSlot);
+
+        assert.equal(id, nextTwinId, "Twin Id is incorrect");
+        assert.equal(ethers.BigNumber.from(twinId), nextTwinId, "Twin Id is incorrect");
+        assert.notEqual(id, twin.id, "Twin Id is incorrect");
       });
 
       context("💔 Revert Reasons", async function () {
