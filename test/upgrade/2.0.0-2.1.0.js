@@ -22,7 +22,7 @@ const {
   mockCondition,
   mockTwin,
 } = require("../util/mock");
-const { setNextBlockTimestamp, paddingType, getMappinStoragePosition } = require("../util/utils.js");
+const { setNextBlockTimestamp, paddingType, getMappingStoragePosition } = require("../util/utils.js");
 const { oneMonth, oneDay } = require("../util/constants");
 const { readContracts } = require("../../scripts/util/utils");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -829,7 +829,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     const inputTypesState = [];
     for (const inputTypeKey of inputTypeKeys) {
-      const storageSlot = getMappinStoragePosition(metaTxStorageSlotNumber.add("4"), inputTypeKey, paddingType.NONE);
+      const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber.add("4"), inputTypeKey, paddingType.NONE);
       inputTypesState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
     }
 
@@ -845,7 +845,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     const hashInfoState = [];
     for (const hashInfoType of Object.values(hashInfoTypes)) {
-      const storageSlot = getMappinStoragePosition(metaTxStorageSlotNumber.add("5"), hashInfoType, paddingType.START);
+      const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber.add("5"), hashInfoType, paddingType.START);
       // get also hashFunction
       hashInfoState.push({
         typeHash: await getStorageAt(protocolDiamondAddress, storageSlot),
@@ -881,7 +881,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     const initializedInterfacesState = [];
     for (const interfaceId of Object.values(interfaceIds)) {
-      const storageSlot = getMappinStoragePosition(
+      const storageSlot = getMappingStoragePosition(
         protocolStatusStorageSlotNumber.add("2"),
         interfaceId,
         paddingType.END
@@ -942,7 +942,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // exchangeIdsByOffer
       let exchangeIdsByOffer = [];
       const arraySlot = ethers.BigNumber.from(
-        getMappinStoragePosition(protocolLookupsSlotNumber.add("0"), id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber.add("0"), id, paddingType.START)
       );
       const arrayLength = ethers.BigNumber.from(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
       const arrayStart = ethers.BigNumber.from(keccak256(arraySlot));
@@ -955,7 +955,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       groupIdByOfferState.push(
         await getStorageAt(
           protocolDiamondAddress,
-          getMappinStoragePosition(protocolLookupsSlotNumber.add("3"), id, paddingType.START)
+          getMappingStoragePosition(protocolLookupsSlotNumber.add("3"), id, paddingType.START)
         )
       );
     }
@@ -974,7 +974,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       buyerIdByWallet.push(
         await getStorageAt(
           protocolDiamondAddress,
-          getMappinStoragePosition(protocolLookupsSlotNumber.add("8"), accountAddress, paddingType.START)
+          getMappingStoragePosition(protocolLookupsSlotNumber.add("8"), accountAddress, paddingType.START)
         )
       );
 
@@ -982,20 +982,20 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       agentIdByWallet.push(
         await getStorageAt(
           protocolDiamondAddress,
-          getMappinStoragePosition(protocolLookupsSlotNumber.add("13"), accountAddress, paddingType.START)
+          getMappingStoragePosition(protocolLookupsSlotNumber.add("13"), accountAddress, paddingType.START)
         )
       );
 
       // conditionalCommitsByAddress
       const firstMappingStorageSlot = ethers.BigNumber.from(
-        getMappinStoragePosition(protocolLookupsSlotNumber.add("19"), accountAddress, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber.add("19"), accountAddress, paddingType.START)
       );
       let commitsPerGroup = [];
       for (let id = 1; id <= groups.length; id++) {
         commitsPerGroup.push(
           await getStorageAt(
             protocolDiamondAddress,
-            getMappinStoragePosition(firstMappingStorageSlot, id, paddingType.START)
+            getMappingStoragePosition(firstMappingStorageSlot, id, paddingType.START)
           )
         );
       }
@@ -1015,31 +1015,31 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     for (let id = 1; id <= totalCount; id++) {
       // disputeResolverFeeTokenIndex
       let firstMappingStorageSlot = ethers.BigNumber.from(
-        getMappinStoragePosition(protocolLookupsSlotNumber.add("12"), id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber.add("12"), id, paddingType.START)
       );
       disputeResolverFeeTokenIndex.push({
         native: await getStorageAt(
           protocolDiamondAddress,
-          getMappinStoragePosition(firstMappingStorageSlot, ethers.constants.AddressZero, paddingType.START)
+          getMappingStoragePosition(firstMappingStorageSlot, ethers.constants.AddressZero, paddingType.START)
         ),
         mockToken: await getStorageAt(
           protocolDiamondAddress,
-          getMappinStoragePosition(firstMappingStorageSlot, mockToken.address, paddingType.START)
+          getMappingStoragePosition(firstMappingStorageSlot, mockToken.address, paddingType.START)
         ),
       });
 
       // tokenIndexByAccount
       firstMappingStorageSlot = ethers.BigNumber.from(
-        getMappinStoragePosition(protocolLookupsSlotNumber.add("16"), id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber.add("16"), id, paddingType.START)
       );
       tokenIndexByAccount.push({
         native: await getStorageAt(
           protocolDiamondAddress,
-          getMappinStoragePosition(firstMappingStorageSlot, ethers.constants.AddressZero, paddingType.START)
+          getMappingStoragePosition(firstMappingStorageSlot, ethers.constants.AddressZero, paddingType.START)
         ),
         mockToken: await getStorageAt(
           protocolDiamondAddress,
-          getMappinStoragePosition(firstMappingStorageSlot, mockToken.address, paddingType.START)
+          getMappingStoragePosition(firstMappingStorageSlot, mockToken.address, paddingType.START)
         ),
       });
 
@@ -1047,7 +1047,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       cloneAddress.push(
         await getStorageAt(
           protocolDiamondAddress,
-          getMappinStoragePosition(protocolLookupsSlotNumber.add("17"), id, paddingType.START)
+          getMappingStoragePosition(protocolLookupsSlotNumber.add("17"), id, paddingType.START)
         )
       );
 
@@ -1055,7 +1055,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       voucherCount.push(
         await getStorageAt(
           protocolDiamondAddress,
-          getMappinStoragePosition(protocolLookupsSlotNumber.add("18"), id, paddingType.START)
+          getMappingStoragePosition(protocolLookupsSlotNumber.add("18"), id, paddingType.START)
         )
       );
     }
@@ -1064,12 +1064,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let twinRangesBySeller = [];
     for (let id = 1; id <= totalCount; id++) {
       const firstMappingStorageSlot = ethers.BigNumber.from(
-        getMappinStoragePosition(protocolLookupsSlotNumber.add("22"), id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber.add("22"), id, paddingType.START)
       );
       let ranges = {};
       for (let mockTwin of mockTwinTokens) {
         ranges[mockTwin.address] = [];
-        const arraySlot = getMappinStoragePosition(firstMappingStorageSlot, mockTwin.address, paddingType.START);
+        const arraySlot = getMappingStoragePosition(firstMappingStorageSlot, mockTwin.address, paddingType.START);
         const arrayLength = ethers.BigNumber.from(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
         const arrayStart = ethers.BigNumber.from(keccak256(arraySlot));
         for (let i = 0; i < arrayLength * 2; i = i + 2) {
@@ -1087,12 +1087,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let twinIdsByTokenAddressAndBySeller = [];
     for (let id = 1; id <= totalCount; id++) {
       const firstMappingStorageSlot = ethers.BigNumber.from(
-        getMappinStoragePosition(protocolLookupsSlotNumber.add("23"), id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber.add("23"), id, paddingType.START)
       );
       let twinIds = {};
       for (let mockTwin of mockTwinTokens) {
         twinIds[mockTwin.address] = [];
-        const arraySlot = getMappinStoragePosition(firstMappingStorageSlot, mockTwin.address, paddingType.START);
+        const arraySlot = getMappingStoragePosition(firstMappingStorageSlot, mockTwin.address, paddingType.START);
         const arrayLength = ethers.BigNumber.from(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
         const arrayStart = ethers.BigNumber.from(keccak256(arraySlot));
         for (let i = 0; i < arrayLength; i++) {
@@ -1106,7 +1106,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let allowedSellerIndex = [];
     for (const DR of DRs) {
       const firstMappingStorageSlot = ethers.BigNumber.from(
-        getMappinStoragePosition(
+        getMappingStoragePosition(
           protocolLookupsSlotNumber.add("26"),
           ethers.BigNumber.from(DR.disputeResolver.id).toHexString(),
           paddingType.START
@@ -1117,7 +1117,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         sellerStatus.push(
           await getStorageAt(
             protocolDiamondAddress,
-            getMappinStoragePosition(
+            getMappingStoragePosition(
               firstMappingStorageSlot,
               ethers.BigNumber.from(seller.seller.id).toHexString(),
               paddingType.START
@@ -1132,14 +1132,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let offerIdIndexByGroup = [];
     for (let id = 1; id <= groups.length; id++) {
       const firstMappingStorageSlot = ethers.BigNumber.from(
-        getMappinStoragePosition(protocolLookupsSlotNumber.add("28"), id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber.add("28"), id, paddingType.START)
       );
       let offerInidices = [];
       for (let id2 = 1; id2 <= offers.length; id2++) {
         offerInidices.push(
           await getStorageAt(
             protocolDiamondAddress,
-            getMappinStoragePosition(firstMappingStorageSlot, id2, paddingType.START)
+            getMappingStoragePosition(firstMappingStorageSlot, id2, paddingType.START)
           )
         );
       }
@@ -1155,7 +1155,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     for (let id = 1; id <= totalCount; id++) {
       // pendingAddressUpdatesBySeller
       let structStorageSlot = ethers.BigNumber.from(
-        getMappinStoragePosition(protocolLookupsSlotNumber.add("29"), id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber.add("29"), id, paddingType.START)
       );
       let structFields = [];
       for (let i = 0; i < 5; i++) {
@@ -1166,7 +1166,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       // pendingAuthTokenUpdatesBySeller
       structStorageSlot = ethers.BigNumber.from(
-        getMappinStoragePosition(protocolLookupsSlotNumber.add("30"), id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber.add("30"), id, paddingType.START)
       );
       structFields = [];
       for (let i = 0; i < 2; i++) {
@@ -1177,7 +1177,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       // pendingAddressUpdatesByDisputeResolver
       structStorageSlot = ethers.BigNumber.from(
-        getMappinStoragePosition(protocolLookupsSlotNumber.add("31"), id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber.add("31"), id, paddingType.START)
       );
       structFields = [];
       for (let i = 0; i < 8; i++) {

@@ -184,7 +184,7 @@ const paddingType = {
   END: 2,
 };
 
-function getMappinStoragePosition(slot, key, padding = paddingType.NONE) {
+function getMappingStoragePosition(slot, key, padding = paddingType.NONE) {
   let keyBuffer;
   switch (padding) {
     case paddingType.NONE:
@@ -209,4 +209,4 @@ exports.calculateVoucherExpiry = calculateVoucherExpiry;
 exports.calculateContractAddress = calculateContractAddress;
 exports.applyPercentage = applyPercentage;
 exports.paddingType = paddingType;
-exports.getMappinStoragePosition = getMappinStoragePosition;
+exports.getMappingStoragePosition = getMappingStoragePosition;
