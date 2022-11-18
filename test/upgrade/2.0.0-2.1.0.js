@@ -27,7 +27,13 @@ const {
   mockVoucher,
   mockExchange,
 } = require("../util/mock");
-const { getEvent, calculateVoucherExpiry, setNextBlockTimestamp, paddingType, getMappinStoragePosition } = require("../util/utils.js");
+const {
+  getEvent,
+  calculateVoucherExpiry,
+  setNextBlockTimestamp,
+  paddingType,
+  getMappinStoragePosition,
+} = require("../util/utils.js");
 const { oneMonth, oneDay } = require("../util/constants");
 const { readContracts } = require("../../scripts/util/utils");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
