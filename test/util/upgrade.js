@@ -26,6 +26,7 @@ const { oneMonth, oneDay } = require("./constants");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { readContracts } = require("../../scripts/util/utils");
+const { facets } = require("../upgrade/00_config");
 
 // Common vars
 let rando;
@@ -37,7 +38,7 @@ async function deploySuite(deployer, tag) {
   shell.exec(`git checkout ${tag} contracts`);
 
   // run deploy suite, which automatically compiles the contracts
-  await hre.run("deploy-suite", { env: "upgrade-test" });
+  await hre.run("deploy-suite", { env: "upgrade-test", facetConfig: JSON.stringify(facets.deploy[tag]) });
 
   // Read contract info from file
   const chainId = (await hre.ethers.provider.getNetwork()).chainId;
@@ -123,7 +124,7 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces) {
 
   // compile new contracts
   await hre.run("compile");
-  await hre.run("upgrade-facets", { env: "upgrade-test" });
+  await hre.run("upgrade-facets", { env: "upgrade-test", facetConfig: JSON.stringify(facets.upgrade[tag]) });
 
   // Cast to updated interface
   let newHandlers = {};
