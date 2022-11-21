@@ -30,13 +30,4 @@ async function castProtocolClientProxies(protocolClientProxies) {
   return [bosonVoucher];
 }
 
-if (require.main === module) {
-  castProtocolClientProxies()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    });
-}
-
 exports.castProtocolClientProxies = castProtocolClientProxies;
