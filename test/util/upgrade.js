@@ -1,9 +1,11 @@
+const shell = require("shelljs");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { keccak256 } = ethers.utils;
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
+const Role = require("../../scripts/domain/Role");
 const Bundle = require("../../scripts/domain/Bundle");
 const Group = require("../../scripts/domain/Group");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
@@ -18,13 +20,119 @@ const {
   mockBuyer,
   mockCondition,
   mockTwin,
-} = require("../util/mock");
-const { setNextBlockTimestamp, paddingType, getMappingStoragePosition } = require("../util/utils.js");
-const { oneMonth, oneDay } = require("../util/constants");
+} = require("./mock");
+const { setNextBlockTimestamp, paddingType, getMappingStoragePosition } = require("./utils.js");
+const { oneMonth, oneDay } = require("./constants");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
+const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
+const { readContracts } = require("../../scripts/util/utils");
 
 // Common vars
 let rando;
+
+// deploy suite and return deployed contracts
+async function deploySuite(deployer, tag) {
+  // checkout old version
+  console.log(`Checking out version ${tag}`);
+  shell.exec(`git checkout ${tag} contracts`);
+
+  // run deploy suite, which automatically compiles the contracts
+  await hre.run("deploy-suite", { env: "upgrade-test" });
+
+  // Read contract info from file
+  const chainId = (await hre.ethers.provider.getNetwork()).chainId;
+  const contractsFile = readContracts(chainId, "hardhat", "upgrade-test");
+
+  // Get AccessController abstraction
+  const accessControllerInfo = contractsFile.contracts.find((i) => i.name === "AccessController");
+  const accessController = await ethers.getContractAt("AccessController", accessControllerInfo.address);
+
+  // Temporarily grant UPGRADER role to deployer account
+  await accessController.grantRole(Role.UPGRADER, deployer.address);
+
+  // Get protocolDiamondAddress
+  const protocolDiamondAddress = contractsFile.contracts.find((i) => i.name === "ProtocolDiamond").address;
+
+  // Grant PROTOCOL role to ProtocolDiamond address
+  await accessController.grantRole(Role.PROTOCOL, protocolDiamondAddress);
+
+  // Cast Diamond to interfaces
+  const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
+  const bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamondAddress);
+  const disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamondAddress);
+  const exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamondAddress);
+  const fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamondAddress);
+  const groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamondAddress);
+  const offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamondAddress);
+  const orchestrationHandler = await ethers.getContractAt("IBosonOrchestrationHandler", protocolDiamondAddress);
+  const twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamondAddress);
+  const pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamondAddress);
+  const metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamondAddress);
+  const configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamondAddress);
+  const ERC165Facet = await ethers.getContractAt("ERC165Facet", protocolDiamondAddress);
+
+  // create mock token for auth
+  const [mockAuthERC721Contract] = await deployMockTokens(["Foreign721"]);
+  configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, mockAuthERC721Contract.address);
+
+  // create mock token for offers
+  const [mockToken, mockConditionalToken, mockTwin721_1, mockTwin721_2, mockTwin20, mockTwin1155] =
+    await deployMockTokens(["Foreign20", "Foreign20", "Foreign721", "Foreign721", "Foreign20", "Foreign1155"]);
+  const mockTwinTokens = [mockTwin721_1, mockTwin721_2];
+
+  return {
+    protocolDiamondAddress,
+    protocolContracts: {
+      accountHandler,
+      exchangeHandler,
+      offerHandler,
+      fundsHandler,
+      disputeHandler,
+      bundleHandler,
+      groupHandler,
+      twinHandler,
+      configHandler,
+      orchestrationHandler,
+      pauseHandler,
+      metaTransactionsHandler,
+      ERC165Facet,
+    },
+    mockContracts: {
+      mockAuthERC721Contract,
+      mockToken,
+      mockConditionalToken,
+      mockTwinTokens,
+      mockTwin20,
+      mockTwin1155,
+    },
+  };
+}
+
+// upgrade the suite to new version and returns handlers with upgraded interfaces
+// upgradedInterfaces is object { handlerName : "interfaceName"}
+async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces) {
+  if (tag) {
+    // checkout the new tag
+    console.log(`Checking out version ${tag}`);
+    shell.exec(`git checkout ${tag} contracts`);
+  } else {
+    // if tag was not created yet, use the latest code
+    console.log(`Checking out latest code`);
+    shell.exec(`git checkout HEAD contracts`);
+  }
+
+  // compile new contracts
+  await hre.run("compile");
+  await hre.run("upgrade-facets", { env: "upgrade-test" });
+
+  // Cast to updated interface
+  let newHandlers = {};
+  for (const [handlerName, interfaceName] of Object.entries(upgradedInterfaces)) {
+    newHandlers[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
+  }
+
+  return newHandlers;
+}
 
 // populates protocol with some entities
 // returns
@@ -355,7 +463,7 @@ async function populateProtocolContract(
   return { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins };
 }
 
-// Retruns protocol state for provided entities
+// Returns protocol state for provided entities
 async function getProtocolContractState(
   protocolDiamondAddress,
   {
@@ -1145,5 +1253,7 @@ async function getProtocolLookupsPrivateContractState(
   };
 }
 
+exports.deploySuite = deploySuite;
+exports.upgradeSuite = upgradeSuite;
 exports.populateProtocolContract = populateProtocolContract;
 exports.getProtocolContractState = getProtocolContractState;

@@ -4,19 +4,15 @@ const ethers = hre.ethers;
 const { assert, expect } = require("chai");
 const Seller = require("../../scripts/domain/Seller");
 const AuthToken = require("../../scripts/domain/AuthToken");
-const AuthTokenType = require("../../scripts/domain/AuthTokenType");
-const Role = require("../../scripts/domain/Role");
 const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
 const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolverUpdateFields");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolverFee");
-const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockOffer, mockAuthToken, mockVoucher, mockExchange } = require("../util/mock");
 const { getEvent, calculateVoucherExpiry } = require("../util/utils.js");
-const { readContracts } = require("../../scripts/util/utils");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
-const { populateProtocolContract, getProtocolContractState } = require("./utils");
+const { deploySuite, upgradeSuite, populateProtocolContract, getProtocolContractState } = require("../util/upgrade");
 
 const oldVersion = "v2.0.0";
 const newVersion = "v2.1.0";
@@ -27,22 +23,11 @@ const newVersion = "v2.1.0";
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
   let deployer, rando, admin, operator, clerk, treasury;
-  let accessController,
-    accountHandler,
-    exchangeHandler,
-    offerHandler,
-    fundsHandler,
-    disputeHandler,
-    bundleHandler,
-    groupHandler,
-    twinHandler,
-    configHandler,
-    oldHandlers;
+  let accountHandler, exchangeHandler, offerHandler, fundsHandler, oldHandlers;
   let ERC165Facet;
-  let mockToken, mockConditionalToken, mockTwinTokens, mockTwin20, mockTwin1155;
+  let mockToken;
   let snapshot;
-  let protocolDiamondAddress;
-  let mockAuthERC721Contract;
+  let protocolDiamondAddress, protocolContracts, mockContracts;
 
   // reference protocol state
   let protocolContractState;
@@ -52,116 +37,36 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // Make accounts available
     [deployer, rando, admin, operator, clerk, treasury] = await ethers.getSigners();
 
-    // checkout old version
-    console.log(`Checking out version ${oldVersion}`);
-    shell.exec(`git checkout ${oldVersion} contracts`);
+    ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(deployer, oldVersion));
 
-    // run deploy suite, which automatically compiles the contracts
-    await hre.run("deploy-suite", { env: "upgrade-test" });
+    ({ accountHandler, exchangeHandler, offerHandler, fundsHandler, ERC165Facet } = protocolContracts);
 
-    // Read contract info from file
-    const chainId = (await hre.ethers.provider.getNetwork()).chainId;
-    const contractsFile = readContracts(chainId, "hardhat", "upgrade-test");
-
-    // Get AccessController abstraction
-    const accessControllerInfo = contractsFile.contracts.find((i) => i.name === "AccessController");
-    accessController = await ethers.getContractAt("AccessController", accessControllerInfo.address);
-
-    // Temporarily grant UPGRADER role to deployer account
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    // Get protocolDiamondAddress
-    protocolDiamondAddress = contractsFile.contracts.find((i) => i.name === "ProtocolDiamond").address;
-
-    // Grant PROTOCOL role to ProtocolDiamond address
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamondAddress);
-
-    // Cast Diamond to interfaces
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
-    bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamondAddress);
-    disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamondAddress);
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamondAddress);
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamondAddress);
-    groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamondAddress);
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamondAddress);
-    // orchestrationHandler = await ethers.getContractAt("IBosonOrchestrationHandler", protocolDiamondAddress);
-    twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamondAddress);
-    // pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamondAddress);
-    // metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamondAddress);
-    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamondAddress);
-    ERC165Facet = await ethers.getContractAt("ERC165Facet", protocolDiamondAddress);
-
-    // create mock token for auth
-    [mockAuthERC721Contract] = await deployMockTokens(["Foreign721"]);
-    configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, mockAuthERC721Contract.address);
-
-    // create mock token for offers
-    let mockTwin721_1, mockTwin721_2;
-    [mockToken, mockConditionalToken, mockTwin721_1, mockTwin721_2, mockTwin20, mockTwin1155] = await deployMockTokens([
-      "Foreign20",
-      "Foreign20",
-      "Foreign721",
-      "Foreign721",
-      "Foreign20",
-      "Foreign1155",
-    ]);
-    mockTwinTokens = [mockTwin721_1, mockTwin721_2];
+    ({ mockToken } = mockContracts);
 
     // Populate protocol with data
     preUpgradeEntities = await populateProtocolContract(
       deployer,
       protocolDiamondAddress,
-      {
-        accountHandler,
-        exchangeHandler,
-        offerHandler,
-        fundsHandler,
-        disputeHandler,
-        bundleHandler,
-        groupHandler,
-        twinHandler,
-      },
-      { mockToken, mockConditionalToken, mockAuthERC721Contract, mockTwinTokens, mockTwin20, mockTwin1155 }
+      protocolContracts,
+      mockContracts
     );
 
     // Get current protocol state, which serves as the reference
     // We assume that this state is a true one, relying on our unit and integration tests
     protocolContractState = await getProtocolContractState(
       protocolDiamondAddress,
-      {
-        accountHandler,
-        exchangeHandler,
-        offerHandler,
-        fundsHandler,
-        disputeHandler,
-        bundleHandler,
-        groupHandler,
-        twinHandler,
-        configHandler,
-      },
-      { mockToken, mockTwinTokens },
+      protocolContracts,
+      mockContracts,
       preUpgradeEntities
     );
 
     // Upgrade protocol
-    if (newVersion) {
-      // checkout the new tag
-      console.log(`Checking out version ${newVersion}`);
-      shell.exec(`git checkout ${newVersion} contracts`);
-    } else {
-      // if tag was not created yet, use the latest code
-      console.log(`Checking out latest code`);
-      shell.exec(`git checkout HEAD contracts`);
-    }
-
-    // compile new contracts
-    await hre.run("compile");
-    await hre.run("upgrade-facets", { env: "upgrade-test" });
-
-    // Cast to updated interface
     oldHandlers = { accountHandler: accountHandler }; // store to test old events
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
-    ERC165Facet = await ethers.getContractAt("ERC165Facet", protocolDiamondAddress);
+    ({ accountHandler, ERC165Facet } = await upgradeSuite(newVersion, protocolDiamondAddress, {
+      accountHandler: "IBosonAccountHandler",
+      ERC165Facet: "ERC165Facet",
+    }));
+    protocolContracts.accountHandler = accountHandler;
 
     snapshot = await ethers.provider.send("evm_snapshot", []);
   });
@@ -184,18 +89,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Get protocol state after the upgrade
       const protocolContractStateAfterUpgrade = await getProtocolContractState(
         protocolDiamondAddress,
-        {
-          accountHandler,
-          exchangeHandler,
-          offerHandler,
-          fundsHandler,
-          disputeHandler,
-          bundleHandler,
-          groupHandler,
-          twinHandler,
-          configHandler,
-        },
-        { mockToken, mockTwinTokens },
+        protocolContracts,
+        mockContracts,
         preUpgradeEntities
       );
 
@@ -210,35 +105,16 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       postUpgradeEntities = await populateProtocolContract(
         deployer,
         protocolDiamondAddress,
-        {
-          accountHandler,
-          exchangeHandler,
-          offerHandler,
-          fundsHandler,
-          disputeHandler,
-          bundleHandler,
-          groupHandler,
-          twinHandler,
-        },
-        { mockToken, mockConditionalToken, mockAuthERC721Contract, mockTwinTokens, mockTwin20, mockTwin1155 }
+        protocolContracts,
+        mockContracts
       );
 
       // Get protocol state after the upgrade
       // First get the data tha should be in location of old data
       const protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(
         protocolDiamondAddress,
-        {
-          accountHandler,
-          exchangeHandler,
-          offerHandler,
-          fundsHandler,
-          disputeHandler,
-          bundleHandler,
-          groupHandler,
-          twinHandler,
-          configHandler,
-        },
-        { mockToken, mockTwinTokens },
+        protocolContracts,
+        mockContracts,
         preUpgradeEntities
       );
 
