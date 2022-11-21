@@ -145,7 +145,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     // Get current protocol state, which serves as the reference
     // We assume that this state is a true one, relying on our unit and integration tests
-    protocolContractState = await getProtocolContractState();
+    protocolContractState = await getProtocolContractState(0);
 
     // Upgrade protocol
     if (newVersion) {
@@ -186,7 +186,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   context("📋 Right After upgrade", async function () {
     it("State is not affected directly after the update", async function () {
       // Get protocol state after the upgrade
-      const protocolContractStateAfterUpgrade = await getProtocolContractState();
+      const protocolContractStateAfterUpgrade = await getProtocolContractState(0);
 
       // State before and after should be equal
       assert.deepEqual(protocolContractState, protocolContractStateAfterUpgrade, "state mismatch after upgrade");
@@ -199,7 +199,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       await populateProtocolContract(true);
 
       // Get protocol state after the upgrade
-      // First get the data tha should be in location of old data
+      // First get the data that should be in location of old data
       const protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(0);
 
       // Counters are the only values that should be changed
@@ -324,7 +324,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
     });
 
-    it("Revoke old voucher", async function () {
+    it("Cancel old voucher", async function () {
       const exchange = exchanges[0][0]; // some exchange that wasn't redeemed/revoked/canceled yet
       const buyerWallet = buyers[0][exchange.buyerIndex].wallet;
       await expect(exchangeHandler.connect(buyerWallet).cancelVoucher(exchange.exchangeId))
@@ -332,13 +332,22 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
     });
 
-    it("Cancel old voucher", async function () {
+    it("Revoke old voucher", async function () {
       const exchange = exchanges[0][0]; // some exchange that wasn't redeemed/revoked/canceled yet
       const offer = offers[0].find((o) => o.offer.id == exchange.offerId);
       const seller = sellers[0].find((s) => s.seller.id == offer.offer.sellerId);
       await expect(exchangeHandler.connect(seller.wallet).revokeVoucher(exchange.exchangeId))
         .to.emit(exchangeHandler, "VoucherRevoked")
         .withArgs(exchange.offerId, exchange.exchangeId, seller.wallet.address);
+    });
+
+    it("Escalate old dispute", async function () {
+      const exchange = exchanges[0][5]; // exchange for which dispute was raised
+      const buyerWallet = buyers[0][exchange.buyerIndex].wallet;
+      const offer = offers[0].find((o) => o.offer.id == exchange.offerId);
+      await expect(disputeHandler.connect(buyerWallet).escalateDispute(exchange.exchangeId))
+        .to.emit(disputeHandler, "DisputeEscalated")
+        .withArgs(exchange.exchangeId, offer.disputeResolverId, buyerWallet.address);
     });
 
     it("Old buyer commits to new offer", async function () {
@@ -440,7 +449,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         const returnedSeller = Seller.fromStruct(sellerStruct);
         const returnedAuthToken = AuthToken.fromStruct(emptyAuthTokenStruct);
 
-        // Returned values should match the input in createSeller
+        // Returned values should match the input in createSeller, excpt the treasury, which is updated in one step
         const expectedSeller = oldSeller.seller.clone();
         expectedSeller.treasury = seller.treasury;
         for (const [key, value] of Object.entries(expectedSeller)) {
@@ -458,11 +467,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         const disputeResolver = oldDisputeResolver.disputeResolver.clone();
 
-        // new operator
+        // new dispute resolver values
         disputeResolver.escalationResponsePeriod = Number(
           Number(disputeResolver.escalationResponsePeriod) - 100
         ).toString();
-
         disputeResolver.operator = operator.address;
         disputeResolver.admin = admin.address;
         disputeResolver.clerk = clerk.address;
@@ -545,9 +553,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         const seller = oldSeller.seller.clone();
         seller.treasury = treasury.address;
-        // Treasury is the only values that can be update without address owner authorization
-        let sellerStruct = seller.toStruct();
-
         seller.admin = admin.address;
         seller.operator = operator.address;
         seller.clerk = clerk.address;
@@ -556,7 +561,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         pendingSellerUpdate.id = "0";
         pendingSellerUpdate.treasury = ethers.constants.AddressZero;
         pendingSellerUpdate.active = false;
-        let pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
+
+        const expectedSeller = oldSeller.seller.clone();
+        // Treasury is the only value that can be updated without address owner authorization
+        expectedSeller.treasury = seller.treasury;
 
         const authToken = mockAuthToken();
         const pendingAuthToken = authToken.clone();
@@ -571,8 +579,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           .to.emit(accountHandler, "SellerUpdateApplied")
           .withArgs(
             seller.id,
-            sellerStruct,
-            pendingSellerUpdateStruct,
+            expectedSeller.toStruct(),
+            pendingSellerUpdate.toStruct(),
             oldSellerAuthToken,
             pendingAuthTokenStruct,
             oldSeller.wallet.address
@@ -581,24 +589,21 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         // Testing for the SellerUpdatePending event
         await expect(tx)
           .to.emit(accountHandler, "SellerUpdatePending")
-          .withArgs(seller.id, pendingSellerUpdateStruct, pendingAuthTokenStruct, oldSeller.wallet.address);
+          .withArgs(seller.id, pendingSellerUpdate.toStruct(), pendingAuthTokenStruct, oldSeller.wallet.address);
 
         // Update seller operator
         tx = await accountHandler.connect(operator).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]);
 
         pendingSellerUpdate.operator = ethers.constants.AddressZero;
-        pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
-        seller.clerk = oldSeller.seller.clerk;
-        seller.admin = oldSeller.seller.admin;
-        sellerStruct = seller.toStruct();
+        expectedSeller.operator = seller.operator;
 
         // Check operator update
         await expect(tx)
           .to.emit(accountHandler, "SellerUpdateApplied")
           .withArgs(
             seller.id,
-            sellerStruct,
-            pendingSellerUpdateStruct,
+            expectedSeller.toStruct(),
+            pendingSellerUpdate.toStruct(),
             oldSellerAuthToken,
             pendingAuthTokenStruct,
             operator.address
@@ -608,18 +613,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         tx = await accountHandler.connect(clerk).optInToSellerUpdate(seller.id, [SellerUpdateFields.Clerk]);
 
         pendingSellerUpdate.clerk = ethers.constants.AddressZero;
-        pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
-        seller.clerk = clerk.address;
-        seller.admin = oldSeller.seller.admin;
-        sellerStruct = seller.toStruct();
+        expectedSeller.clerk = seller.clerk;
 
         // Check operator update
         await expect(tx)
           .to.emit(accountHandler, "SellerUpdateApplied")
           .withArgs(
             seller.id,
-            sellerStruct,
-            pendingSellerUpdateStruct,
+            expectedSeller.toStruct(),
+            pendingSellerUpdate.toStruct(),
             oldSellerAuthToken,
             pendingAuthTokenStruct,
             clerk.address
@@ -629,17 +631,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         tx = await accountHandler.connect(admin).optInToSellerUpdate(seller.id, [SellerUpdateFields.Admin]);
 
         pendingSellerUpdate.admin = ethers.constants.AddressZero;
-        pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
-        seller.admin = admin.address;
-        sellerStruct = seller.toStruct();
+        expectedSeller.admin = seller.admin;
 
         // Check operator update
         await expect(tx)
           .to.emit(accountHandler, "SellerUpdateApplied")
           .withArgs(
             seller.id,
-            sellerStruct,
-            pendingSellerUpdateStruct,
+            expectedSeller.toStruct(),
+            pendingSellerUpdate.toStruct(),
             authToken.toStruct(),
             pendingAuthTokenStruct,
             admin.address
@@ -651,11 +651,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         const disputeResolver = oldDisputeResolver.disputeResolver.clone();
 
-        // new operator
+        // new dispute resolver values
         disputeResolver.escalationResponsePeriod = Number(
           Number(disputeResolver.escalationResponsePeriod) - 100
         ).toString();
-
         disputeResolver.operator = operator.address;
         disputeResolver.admin = admin.address;
         disputeResolver.clerk = clerk.address;
