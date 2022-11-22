@@ -38,13 +38,4 @@ async function deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas) {
   return [protocolClientImpls, protocolClientBeacons, protocolClientProxies, protocolClients];
 }
 
-if (require.main === module) {
-  deployProtocolClients()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    });
-}
-
 exports.deployProtocolClients = deployProtocolClients;
