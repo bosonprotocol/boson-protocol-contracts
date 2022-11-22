@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const environments = require("../../environments");
-const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
+const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const { getFees } = require("./utils");
 
 /**
@@ -25,15 +25,6 @@ async function deployProtocolClientImpls(maxPriorityFeePerGas) {
   await bosonVoucher.deployTransaction.wait(confirmations);
 
   return [bosonVoucher];
-}
-
-if (require.main === module) {
-  deployProtocolClientImpls()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    });
 }
 
 exports.deployProtocolClientImpls = deployProtocolClientImpls;

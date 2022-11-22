@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const environments = require("../../environments");
-const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
+const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const { getFees } = require("./utils");
 
 /**
@@ -19,7 +19,6 @@ const { getFees } = require("./utils");
  * and deploys a ProtocolClientProxy for each one.
  *
  * @param protocolClients
- * @param protocolClientArgs
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
@@ -42,15 +41,6 @@ async function deployProtocolClientProxies(protocolClients, maxPriorityFeePerGas
   await transactionResponse.wait(confirmations);
 
   return [clientProxy];
-}
-
-if (require.main === module) {
-  deployProtocolClientProxies()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    });
 }
 
 exports.deployProtocolClientProxies = deployProtocolClientProxies;

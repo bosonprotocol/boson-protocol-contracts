@@ -3,7 +3,7 @@ const { getInterfaceIds } = require("../config/supported-interfaces.js");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const environments = require("../../environments");
-const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
+const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const { getFees } = require("./utils");
 
 /**
@@ -59,15 +59,6 @@ async function deployProtocolDiamond(maxPriorityFeePerGas) {
   await protocolDiamond.deployTransaction.wait(confirmations);
 
   return [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs];
-}
-
-if (require.main === module) {
-  deployProtocolDiamond()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    });
 }
 
 exports.deployProtocolDiamond = deployProtocolDiamond;

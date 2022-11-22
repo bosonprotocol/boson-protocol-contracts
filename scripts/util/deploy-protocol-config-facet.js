@@ -23,13 +23,4 @@ async function deployProtocolConfigFacet(diamond, config, maxPriorityFeePerGas) 
   return { facets: [deployedFacet[0].contract], cutTransaction: deployedFacet[0].cutTransaction };
 }
 
-if (require.main === module) {
-  deployProtocolConfigFacet()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    });
-}
-
 exports.deployProtocolConfigFacet = deployProtocolConfigFacet;

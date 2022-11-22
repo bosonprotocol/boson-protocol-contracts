@@ -2,7 +2,7 @@ const { getFacetAddCut } = require("./diamond-utils.js");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const environments = require("../../environments");
-const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
+const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const { getFees } = require("./utils");
 
 /**
@@ -76,15 +76,6 @@ async function deployProtocolHandlerFacetsWithArgs(diamond, facetData, maxPriori
 
   // Return an array of objects with facet name and contract properties
   return deployedFacets;
-}
-
-if (require.main === module) {
-  deployProtocolHandlerFacets()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    });
 }
 
 exports.deployProtocolHandlerFacets = deployProtocolHandlerFacets;
