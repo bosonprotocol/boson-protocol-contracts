@@ -73,7 +73,7 @@
     "@openzeppelin/contracts-upgradeable": "^4.7.1"
   },
   "devDependencies": {
-    "@bosonprotocol/solidoc": "git+https://github.com/bosonprotocol/solidoc.git#fix/improve-layout",
+    "@bosonprotocol/solidoc": "3.0.3",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@nomiclabs/hardhat-etherscan": "^3.1.0",
