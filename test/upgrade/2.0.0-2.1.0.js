@@ -8,11 +8,9 @@ const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
 const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolverUpdateFields");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolverFee");
-const { mockOffer, mockAuthToken, mockVoucher, mockExchange } = require("../util/mock");
-const { getEvent, calculateVoucherExpiry } = require("../util/utils.js");
-const Exchange = require("../../scripts/domain/Exchange");
-const Voucher = require("../../scripts/domain/Voucher");
+const { mockAuthToken } = require("../util/mock");
 const { deploySuite, upgradeSuite, populateProtocolContract, getProtocolContractState } = require("../util/upgrade");
+const { getGenericContext } = require("./01_generic");
 
 const oldVersion = "v2.0.0";
 const newVersion = "v2.1.0";
@@ -23,15 +21,14 @@ const newVersion = "v2.1.0";
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
   let deployer, rando, admin, operator, clerk, treasury;
-  let accountHandler, exchangeHandler, offerHandler, fundsHandler, oldHandlers;
+  let accountHandler, oldHandlers;
   let ERC165Facet;
-  let mockToken;
   let snapshot;
   let protocolDiamondAddress, protocolContracts, mockContracts;
 
   // reference protocol state
   let protocolContractState;
-  let preUpgradeEntities, postUpgradeEntities;
+  let preUpgradeEntities;
 
   before(async function () {
     // Make accounts available
@@ -39,9 +36,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(deployer, oldVersion));
 
-    ({ accountHandler, exchangeHandler, offerHandler, fundsHandler, ERC165Facet } = protocolContracts);
-
-    ({ mockToken } = mockContracts);
+    ({ accountHandler, ERC165Facet } = protocolContracts);
 
     // Populate protocol with data
     preUpgradeEntities = await populateProtocolContract(
@@ -61,7 +56,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     );
 
     // Upgrade protocol
-    oldHandlers = { accountHandler: accountHandler }; // store to test old events
+    oldHandlers = { accountHandler: accountHandler }; // store old handler to test old events
     ({ accountHandler, ERC165Facet } = await upgradeSuite(newVersion, protocolDiamondAddress, {
       accountHandler: "IBosonAccountHandler",
       ERC165Facet: "ERC165Facet",
@@ -69,6 +64,23 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     protocolContracts.accountHandler = accountHandler;
 
     snapshot = await ethers.provider.send("evm_snapshot", []);
+
+    // This context is placed in an uncommon place due to order of test execution.
+    // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
+    // and those values are undefined if this is placed outside "before".
+    // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
+    context(
+      "Generic tests",
+      getGenericContext(
+        deployer,
+        protocolDiamondAddress,
+        protocolContracts,
+        mockContracts,
+        protocolContractState,
+        preUpgradeEntities,
+        snapshot
+      )
+    );
   });
 
   afterEach(async function () {
@@ -81,260 +93,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   after(async function () {
     // revert to latest state of contracts
     shell.exec(`git checkout HEAD contracts`);
-  });
-
-  // Exchange methods
-  context("📋 Right After upgrade", async function () {
-    it("State is not affected directly after the update", async function () {
-      // Get protocol state after the upgrade
-      const protocolContractStateAfterUpgrade = await getProtocolContractState(
-        protocolDiamondAddress,
-        protocolContracts,
-        mockContracts,
-        preUpgradeEntities
-      );
-
-      // State before and after should be equal
-      assert.deepEqual(protocolContractState, protocolContractStateAfterUpgrade, "state mismatch after upgrade");
-    });
-  });
-
-  // Create new protocol entities. Existing data should not be affected
-  context("📋 New data after the upgrade do not corrupt the data from before the upgrade", async function () {
-    it("State is not affected", async function () {
-      postUpgradeEntities = await populateProtocolContract(
-        deployer,
-        protocolDiamondAddress,
-        protocolContracts,
-        mockContracts
-      );
-
-      // Get protocol state after the upgrade
-      // First get the data tha should be in location of old data
-      const protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(
-        protocolDiamondAddress,
-        protocolContracts,
-        mockContracts,
-        preUpgradeEntities
-      );
-
-      // Counters are the only values that should be changed
-      // We check that the number increased for expected amount
-      // This also confirms that entities were actually created
-      const accountCount =
-        postUpgradeEntities.sellers.length +
-        postUpgradeEntities.DRs.length +
-        postUpgradeEntities.agents.length +
-        postUpgradeEntities.buyers.length;
-      assert.equal(
-        protocolContractStateAfterUpgradeAndActions.accountContractState.nextAccountId.toNumber(),
-        protocolContractState.accountContractState.nextAccountId.add(accountCount).toNumber(),
-        "nextAccountId mismatch"
-      );
-      assert.equal(
-        protocolContractStateAfterUpgradeAndActions.exchangeContractState.nextExchangeId.toNumber(),
-        protocolContractState.exchangeContractState.nextExchangeId.add(postUpgradeEntities.exchanges.length).toNumber(),
-        "nextExchangeId mismatch"
-      );
-      assert.equal(
-        protocolContractStateAfterUpgradeAndActions.groupContractState.nextGroupId.toNumber(),
-        protocolContractState.groupContractState.nextGroupId.add(postUpgradeEntities.groups.length).toNumber(),
-        "nextGroupId mismatch"
-      );
-      assert.equal(
-        protocolContractStateAfterUpgradeAndActions.offerContractState.nextOfferId.toNumber(),
-        protocolContractState.offerContractState.nextOfferId.add(postUpgradeEntities.offers.length).toNumber(),
-        "nextOfferId mismatch"
-      );
-      assert.equal(
-        protocolContractStateAfterUpgradeAndActions.twinContractState.nextTwinId.toNumber(),
-        protocolContractState.twinContractState.nextTwinId.add(postUpgradeEntities.twins.length).toNumber(),
-        "nextTwinId mismatch"
-      );
-      assert.equal(
-        protocolContractStateAfterUpgradeAndActions.bundleContractState.nextBundleId.toNumber(),
-        protocolContractState.bundleContractState.nextBundleId.add(postUpgradeEntities.bundles.length).toNumber()
-      );
-
-      // State before and after should be equal
-      // remove nextXXid before comparing. Their correct value is verified already
-      delete protocolContractStateAfterUpgradeAndActions.accountContractState.nextAccountId;
-      delete protocolContractStateAfterUpgradeAndActions.exchangeContractState.nextExchangeId;
-      delete protocolContractStateAfterUpgradeAndActions.groupContractState.nextGroupId;
-      delete protocolContractStateAfterUpgradeAndActions.offerContractState.nextOfferId;
-      delete protocolContractStateAfterUpgradeAndActions.twinContractState.nextTwinId;
-      delete protocolContractStateAfterUpgradeAndActions.bundleContractState.nextBundleId;
-      delete protocolContractState.accountContractState.nextAccountId;
-      delete protocolContractState.exchangeContractState.nextExchangeId;
-      delete protocolContractState.groupContractState.nextGroupId;
-      delete protocolContractState.offerContractState.nextOfferId;
-      delete protocolContractState.twinContractState.nextTwinId;
-      delete protocolContractState.bundleContractState.nextBundleId;
-      assert.deepEqual(
-        protocolContractState,
-        protocolContractStateAfterUpgradeAndActions,
-        "state mismatch after upgrade"
-      );
-    });
-  });
-
-  // Test that offers and exchanges from before the upgrade can normally be used
-  // Check that correct events are emitted. State is not checked since units and integration test should make sure that event and state are consistent
-  context("📋 Interactions after the upgrade still work", async function () {
-    it("Commit to old offers", async function () {
-      const { offer, offerDates, offerDurations } = preUpgradeEntities.offers[1]; // pick some random offer
-      const offerPrice = offer.price;
-      const buyer = preUpgradeEntities.buyers[1];
-      let msgValue;
-      if (offer.exchangeToken == ethers.constants.AddressZero) {
-        msgValue = offerPrice;
-      } else {
-        // approve token transfer
-        msgValue = 0;
-        await mockToken.connect(buyer.wallet).approve(protocolDiamondAddress, offerPrice);
-        await mockToken.mint(buyer.wallet.address, offerPrice);
-      }
-
-      // Commit to offer
-      const exchangeId = await exchangeHandler.getNextExchangeId();
-      const tx = await exchangeHandler
-        .connect(buyer.wallet)
-        .commitToOffer(buyer.wallet.address, offer.id, { value: msgValue });
-      const txReceipt = await tx.wait();
-      const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
-
-      // Get the block timestamp of the confirmed tx
-      const blockNumber = tx.blockNumber;
-      const block = await ethers.provider.getBlock(blockNumber);
-
-      // Set expected voucher values
-      const voucher = mockVoucher({
-        committedDate: block.timestamp.toString(),
-        validUntilDate: calculateVoucherExpiry(block, offerDates.voucherRedeemableFrom, offerDurations.voucherValid),
-        redeemedDate: "0",
-      });
-
-      // Set expected exchange values
-      const exchange = mockExchange({
-        id: exchangeId.toString(),
-        offerId: offer.id,
-        buyerId: buyer.buyer.id,
-        finalizedDate: "0",
-      });
-
-      // Examine event
-      assert.equal(event.exchangeId.toString(), exchange.id, "Exchange id is incorrect");
-      assert.equal(event.offerId.toString(), offer.id, "Offer id is incorrect");
-      assert.equal(event.buyerId.toString(), buyer.buyer.id, "Buyer id is incorrect");
-
-      // Examine the exchange struct
-      assert.equal(Exchange.fromStruct(event.exchange).toString(), exchange.toString(), "Exchange struct is incorrect");
-
-      // Examine the voucher struct
-      assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
-    });
-
-    it("Redeem old voucher", async function () {
-      const exchange = preUpgradeEntities.exchanges[0]; // some exchange that wasn't redeemed/revoked/canceled yet
-      const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
-      await expect(exchangeHandler.connect(buyerWallet).redeemVoucher(exchange.exchangeId))
-        .to.emit(exchangeHandler, "VoucherRedeemed")
-        .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
-    });
-
-    it("Cancel old voucher", async function () {
-      const exchange = preUpgradeEntities.exchanges[0]; // some exchange that wasn't redeemed/revoked/canceled yet
-      const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
-      await expect(exchangeHandler.connect(buyerWallet).cancelVoucher(exchange.exchangeId))
-        .to.emit(exchangeHandler, "VoucherCanceled")
-        .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
-    });
-
-    it("Revoke old voucher", async function () {
-      const exchange = preUpgradeEntities.exchanges[0]; // some exchange that wasn't redeemed/revoked/canceled yet
-      const offer = preUpgradeEntities.offers.find((o) => o.offer.id == exchange.offerId);
-      const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.sellerId);
-      await expect(exchangeHandler.connect(seller.wallet).revokeVoucher(exchange.exchangeId))
-        .to.emit(exchangeHandler, "VoucherRevoked")
-        .withArgs(exchange.offerId, exchange.exchangeId, seller.wallet.address);
-    });
-
-    it("Escalate old dispute", async function () {
-      const exchange = preUpgradeEntities.exchanges[5]; // exchange for which dispute was raised
-      const buyerWallet = buyers[0][exchange.buyerIndex].wallet;
-      const offer = offers[0].find((o) => o.offer.id == exchange.offerId);
-      await expect(disputeHandler.connect(buyerWallet).escalateDispute(exchange.exchangeId))
-        .to.emit(disputeHandler, "DisputeEscalated")
-        .withArgs(exchange.exchangeId, offer.disputeResolverId, buyerWallet.address);
-    });
-
-    it("Old buyer commits to new offer", async function () {
-      const buyer = preUpgradeEntities.buyers[2];
-      const offerId = await offerHandler.getNextOfferId();
-      const exchangeId = await exchangeHandler.getNextExchangeId();
-
-      // create some new offer
-      const { offer, offerDates, offerDurations } = await mockOffer();
-      offer.id = offerId.toString();
-      const disputeResolverId = preUpgradeEntities.DRs[0].disputeResolver.id;
-      const agentId = preUpgradeEntities.agents[0].agent.id;
-      const seller = preUpgradeEntities.sellers[2];
-      await offerHandler
-        .connect(seller.wallet)
-        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-      await fundsHandler
-        .connect(seller.wallet)
-        .depositFunds(seller.seller.id, offer.exchangeToken, offer.sellerDeposit, {
-          value: offer.sellerDeposit,
-        });
-
-      // Commit to offer
-      const offerPrice = offer.price;
-      const tx = await exchangeHandler
-        .connect(buyer.wallet)
-        .commitToOffer(buyer.wallet.address, offer.id, { value: offerPrice });
-      const txReceipt = await tx.wait();
-      const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
-
-      // Get the block timestamp of the confirmed tx
-      const blockNumber = tx.blockNumber;
-      const block = await ethers.provider.getBlock(blockNumber);
-
-      // Set expected voucher values
-      const voucher = mockVoucher({
-        committedDate: block.timestamp.toString(),
-        validUntilDate: calculateVoucherExpiry(block, offerDates.voucherRedeemableFrom, offerDurations.voucherValid),
-        redeemedDate: "0",
-      });
-
-      // Set expected exchange values
-      const exchange = mockExchange({
-        id: exchangeId.toString(),
-        offerId: offer.id,
-        buyerId: buyer.buyer.id,
-        finalizedDate: "0",
-      });
-
-      // Examine event
-      assert.equal(event.exchangeId.toString(), exchange.id, "Exchange id is incorrect");
-      assert.equal(event.offerId.toString(), offer.id, "Offer id is incorrect");
-      assert.equal(event.buyerId.toString(), buyer.buyer.id, "Buyer id is incorrect");
-
-      // Examine the exchange struct
-      assert.equal(Exchange.fromStruct(event.exchange).toString(), exchange.toString(), "Exchange struct is incorrect");
-
-      // Examine the voucher struct
-      assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
-    });
-
-    it("Void old offer", async function () {
-      const seller = preUpgradeEntities.sellers[0];
-      const offerId = seller.offerIds[0];
-
-      await expect(offerHandler.connect(seller.wallet).voidOffer(offerId))
-        .to.emit(offerHandler, "OfferVoided")
-        .withArgs(offerId, seller.seller.id, seller.wallet.address);
-    });
   });
 
   // Test actions that worked in previous version, but should not work anymore, or work differently
