@@ -18,10 +18,10 @@ function getGenericContext(
   snapshot
 ) {
   let postUpgradeEntities;
-  let exchangeHandler, offerHandler, fundsHandler;
+  let exchangeHandler, offerHandler, fundsHandler, disputeHandler;
   let mockToken;
 
-  ({ exchangeHandler, offerHandler, fundsHandler } = protocolContracts);
+  ({ exchangeHandler, offerHandler, fundsHandler, disputeHandler } = protocolContracts);
   ({ mockToken } = mockContracts);
 
   const genericContextFunction = async function () {
@@ -59,7 +59,7 @@ function getGenericContext(
         );
 
         // Get protocol state after the upgrade
-        // First get the data tha should be in location of old data
+        // First get the data that should be in location of old data
         const protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(
           protocolDiamondAddress,
           protocolContracts,
@@ -197,7 +197,7 @@ function getGenericContext(
           .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
       });
 
-      it("Revoke old voucher", async function () {
+      it("Cancel old voucher", async function () {
         const exchange = preUpgradeEntities.exchanges[0]; // some exchange that wasn't redeemed/revoked/canceled yet
         const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
         await expect(exchangeHandler.connect(buyerWallet).cancelVoucher(exchange.exchangeId))
@@ -205,13 +205,22 @@ function getGenericContext(
           .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
       });
 
-      it("Cancel old voucher", async function () {
+      it("Revoke old voucher", async function () {
         const exchange = preUpgradeEntities.exchanges[0]; // some exchange that wasn't redeemed/revoked/canceled yet
         const offer = preUpgradeEntities.offers.find((o) => o.offer.id == exchange.offerId);
         const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.sellerId);
         await expect(exchangeHandler.connect(seller.wallet).revokeVoucher(exchange.exchangeId))
           .to.emit(exchangeHandler, "VoucherRevoked")
           .withArgs(exchange.offerId, exchange.exchangeId, seller.wallet.address);
+      });
+
+      it("Escalate old dispute", async function () {
+        const exchange = preUpgradeEntities.exchanges[5]; // exchange for which dispute was raised
+        const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
+        const offer = preUpgradeEntities.offers.find((o) => o.offer.id == exchange.offerId);
+        await expect(disputeHandler.connect(buyerWallet).escalateDispute(exchange.exchangeId))
+          .to.emit(disputeHandler, "DisputeEscalated")
+          .withArgs(exchange.exchangeId, offer.disputeResolverId, buyerWallet.address);
       });
 
       it("Old buyer commits to new offer", async function () {
