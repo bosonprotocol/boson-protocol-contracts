@@ -47,8 +47,9 @@ async function main(env) {
   console.log(`${divider}\nBoson Protocol Contract Suite Upgrader\n${divider}`);
   console.log(`⛓  Network: ${network}\n📅 ${new Date()}`);
 
+  const { version } = packageFile;
   // Check that package.json version was updated
-  if (packageFile.version == contractsFile.protocolVersion && env !== "upgrade-test") {
+  if (version == contractsFile.protocolVersion && env !== "upgrade-test") {
     const answer = await getUserResponse("Protocol version has not been updated. Proceed anyway? (y/n) ", [
       "y",
       "yes",
@@ -128,11 +129,6 @@ async function main(env) {
   const diamondLoupe = await ethers.getContractAt("DiamondLoupeFacet", protocolAddress);
   const erc165Extended = await ethers.getContractAt("IERC165Extended", protocolAddress);
 
-  // Initialization data for facets with no-arg initializers
-  const noArgInitFunction = "initialize()";
-  const noArgInitInterface = new ethers.utils.Interface([`function ${noArgInitFunction}`]);
-  const noArgCallData = noArgInitInterface.encodeFunctionData("initialize");
-
   // Manage new or upgraded facets
   for (const newFacet of deployedFacets) {
     console.log(`\n📋 Facet: ${newFacet.name}`);
@@ -153,19 +149,10 @@ async function main(env) {
     const newFacetInterfaceId = interfaceIdFromFacetName(newFacet.name);
     deploymentComplete(newFacet.name, newFacet.contract.address, [], newFacetInterfaceId, contracts);
 
-    // Determine calldata. Depends on whether initialize accepts args or not
-    const callData = facets.initArgs[newFacet.name]
-      ? newFacet.contract.interface.encodeFunctionData("initialize", facets.initArgs[newFacet.name])
-      : noArgCallData;
 
     // Get new selectors from compiled contract
     const selectors = getSelectors(newFacet.contract, true);
-    let newSelectors;
-    if (!facets.skipInit.includes(newFacet.name)) {
-      newSelectors = selectors.selectors.remove([callData.slice(0, 10)]);
-    } else {
-      newSelectors = selectors.selectors;
-    }
+    let newSelectors = selectors.selectors;
 
     // Determine actions to be made
     let selectorsToReplace = registeredSelectors.filter((value) => newSelectors.includes(value)); // intersection of old and new selectors
@@ -208,17 +195,21 @@ async function main(env) {
 
       // Diamond cut - add or replace
       let transactionResponse;
-      if (facets.skipInit.includes(newFacet.name)) {
-        // Without initialization
-        transactionResponse = await diamondCutFacet
-          .connect(adminSigner)
-          .diamondCut(facetCut, ethers.constants.AddressZero, "0x", await getFees(maxPriorityFeePerGas));
-      } else {
-        // With initialization
+
+      // Only ProtooclInitializationHandlerFacet should call initialize function
+      if (newFacet.name == 'ProtocolInitializationHandlerFacet') {
+        const callData = newFacet.contract.interface.encodeFunctionData("initialize", [version]);
+        console.log(callData);
+
         transactionResponse = await diamondCutFacet
           .connect(adminSigner)
           .diamondCut(facetCut, newFacetAddress, callData, await getFees(maxPriorityFeePerGas));
+      } else {
+        transactionResponse = await diamondCutFacet
+          .connect(adminSigner)
+          .diamondCut(facetCut, ethers.constants.AddressZero, "0x", await getFees(maxPriorityFeePerGas));
       }
+
       await transactionResponse.wait(confirmations);
     }
 
@@ -245,10 +236,12 @@ async function main(env) {
         .map((selector) => `${selector}: ${selectors.signatureToNameMapping[selector]}`)
         .join("\n\t")}`
     );
+    console.log(selectorsToSkip);
     console.log(`❌ Skipped selectors:\n\t${selectorsToSkip.join("\n\t")}`);
 
     // If something was added or removed, support interface for old interface is not valid anymore
     const erc165 = await ethers.getContractAt("IERC165", protocolAddress);
+    console.log("oldFacet", oldFacet);
     if (oldFacet && (selectorsToAdd.length > 0 || selectorsToRemove.length > 0)) {
       if (!oldFacet.interfaceId) {
         console.log(
