@@ -106,6 +106,12 @@ To perform the upgrade you then
 - Update `version` in `package.json`. If the version in `package.json` matches the existing version in addresses file, you will have to explicitly confirm that you want to proceed.
 - Run `npm run upgrade-facets:local`. This will deploy new facets and make all necessary diamond cuts. It also updates the existing addresses file `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node) and outputs the upgrade log to the console.
 
+### Upgrade clients
+To test the upgrade functionality, you first need to setup upgrader account as described in section [Manage roles](local-development.md#optional-manage-roles)
+
+To perform the upgrade you then
+- Update some of the existing clients
+- Run `npm run upgrade-clients:local`. This will deploy new clients and set implementation address on beacon. It also updates the existing addresses file `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node) and outputs the upgrade log to the console.
 
 ### Using the protocol
 You can find the examples how to use all functions of the protocol in our test files in folder `test/protocol`.
