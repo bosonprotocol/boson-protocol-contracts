@@ -14,6 +14,7 @@ import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
 import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
 import { IClientExternalAddresses } from "../../../interfaces/clients/IClientExternalAddresses.sol";
 import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
+import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchangeHandler.sol";
 
 /**
  * @title BosonVoucher
@@ -39,6 +40,7 @@ import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHa
 contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
     // Describe a reserved range of token ids
     struct Range {
+        uint256 offerId;
         uint256 start; // First token id of range
         uint256 length; // Length of range
         uint256 minted; // Amount pre-minted so far
@@ -52,6 +54,9 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
     // Map an offerId to a Range for pre-minted offers
     mapping(uint256 => Range) private rangeByOfferId;
+
+    // All ranges as an array
+    Range[] private ranges;
 
     /**
      * @notice Initializes the voucher.
@@ -137,12 +142,17 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         // Make sure range start is valid
         require(_startId > 0, INVALID_RANGE_START);
 
-        // See if the offer id is already associated with a range
+        // Get storage slot for the range
         Range storage range = rangeByOfferId[_offerId];
+
+        // Revert if the offer id is already associated with a range
         require(range.length == 0, OFFER_RANGE_ALREADY_RESERVED);
 
         // Store the reserved range
-        rangeByOfferId[_offerId] = Range({ start: _startId, length: _length, minted: 0 });
+        range.offerId = _offerId;
+        range.start = _startId;
+        range.length = _length;
+        ranges.push(range);
     }
 
     /**
@@ -248,7 +258,53 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         if (range.length == 0) {
             owner = super.ownerOf(tokenId);
         } else {
-            owner = exists(tokenId) ? super.ownerOf(tokenId) : super.owner();
+            owner = _exists(tokenId) ? super.ownerOf(tokenId) : super.owner();
+        }
+    }
+
+    /**
+     * @dev See {IERC721-transferFrom}.
+     */
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
+        (bool committable, uint256 offerId) = getPreMintStatus(tokenId);
+
+        if (!committable) {
+            super.transferFrom(from, to, tokenId);
+        } else {
+            // _owner[tokenId] = owner();
+            // super._transfer(from, to, tokenId);
+            // TODO: how can we store owner as seller before doing a super._transfer() ?
+            // worst case, we could copy the ERC721Upgradeable and its dependencies
+            // keep the same storage, but make the balances and owners arrays internal instead of private
+            // so that we can set the owner to the contract owner at this point and then carry on as normal
+        }
+    }
+
+    /**
+     * @dev See {IERC721-safeTransferFrom}.
+     */
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory data
+    ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
+        (bool committable, uint256 offerId) = getPreMintStatus(tokenId);
+
+        if (!committable) {
+            super.safeTransferFrom(from, to, tokenId, data);
+        } else {
+            // _owner[tokenId] = owner();
+            // super._safeTransfer(from, to, tokenId);
+            // TODO: how can we store owner as seller before doing a super._safeTransfer() ?
+            // Can we do it with assembly?
+            // worst case, we could copy the ERC721Upgradeable and its dependencies into the project
+            // keep the same storage, but make the balances and owners arrays internal instead of private
+            // so that we can set the owner to the contract owner at this point and then carry on as normal
         }
     }
 
@@ -308,35 +364,6 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         (bool exists, Seller memory seller) = getBosonSellerByAddress(owner());
 
         return exists ? seller.id : 0;
-    }
-
-    /**
-     * @notice Updates buyer on transfer.
-     *
-     * When an issued voucher is subsequently transferred,
-     * either on the secondary market or just between wallets,
-     * the protocol needs to be alerted to the change of buyer
-     * address.
-     *
-     * The buyer account associated with the exchange will be
-     * replaced. If the new voucher holder already has a
-     * Boson Protocol buyer account, it will be used. Otherwise,
-     * a new buyer account will be created and associated with
-     * the exchange.
-     *
-     * @param from - the address from which the voucher is being transferred
-     * @param to - the address to which the voucher is being transferred
-     * @param tokenId - the tokenId of the voucher that is being transferred
-     */
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 tokenId
-    ) internal override {
-        // Only act when transferring, not minting or burning
-        if (from != address(0) && to != address(0) && from != to) {
-            onVoucherTransferred(tokenId, payable(to));
-        }
     }
 
     /**
@@ -453,5 +480,106 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         _royaltyPercentage = _newRoyaltyPercentage;
 
         emit RoyaltyPercentageChanged(_newRoyaltyPercentage);
+    }
+
+    /**
+     * @notice Performs special case transfer hooks.
+     *
+     * - Commits to pre-minted offers on first transfer.
+     *
+     * When a voucher is pre-minted, the owner is not stored
+     * but the seller is reported as the transferee and owner,
+     * so that it can be found by marketplaces and listed by
+     * the seller for their asking price.
+     *
+     * On the first transfer after pre-minting, this method
+     * will commit to the associated offer on behalf of the
+     * new owner.
+     *
+     * - Updates buyer on subsequent transfers.
+     *
+     * When a voucher with an associated exchange is transferred
+     * either on the secondary market or just between wallets,
+     * the protocol needs to be alerted to the change of buyer
+     * address.
+     *
+     * The buyer account associated with the exchange will be
+     * replaced. If the new voucher holder already has a
+     * Boson Protocol buyer account, it will be used. Otherwise,
+     * a new buyer account will be created and associated with
+     * the exchange.
+     *
+     * @param from - the address from which the voucher is being transferred
+     * @param to - the address to which the voucher is being transferred
+     * @param tokenId - the tokenId of the voucher that is being transferred
+     */
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal override {
+        // Update the buyer associated with the voucher in the protocol
+        // Only when transferring, not minting or burning
+        if (from != address(0) && to != address(0) && from != to) {
+            onVoucherTransferred(tokenId, payable(to));
+        } else {
+            (bool committable, uint256 offerId) = getPreMintStatus(tokenId);
+            if (committable) {
+                address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+                // TODO: uncomment when commitToPreMintedOffer method is available
+                //IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(to, _offerId, tokenId);
+            }
+        }
+    }
+
+    /**
+     * @dev Determines if a token is pre-minted and committable via transfer hook
+     *
+     * Committable means:
+     * - does not yet have an owner
+     * - in a reserved range
+     * - has been pre-minted
+     *
+     * @param _tokenId - the token id to check
+     * @return committable - whether the token is committable
+     * @return offerId - the associated offer id if committable
+     */
+    function getPreMintStatus(uint256 _tokenId) internal view returns (bool committable, uint256 offerId) {
+        // Not committable if token has an owner
+        if (!_exists(_tokenId)) {
+            // If are reserved ranges, search them
+            uint256 length = ranges.length;
+            if (length > 0) {
+                // Binary search the ranges array
+                uint256 low = 0; // Lower bound of search (array index)
+                uint256 high = length; // Upper bound of search
+                while (low < high) {
+                    // Calculate the current midpoint
+                    uint256 mid = (high - low) / 2;
+
+                    // Get the range stored at the midpoint
+                    Range storage range = ranges[mid];
+
+                    // Get the beginning of the range once for reference
+                    uint256 start = range.start;
+                    if (start > _tokenId) {
+                        // Split low and search again if target too high
+                        high = mid;
+                    } else if (start + range.minted - 1 >= _tokenId) {
+                        // Is token in target's minted range?
+                        committable = true;
+                        offerId = range.offerId;
+                        break; // Found!
+                    } else if (start + range.length - 1 >= _tokenId) {
+                        // No? Ok, is it in target's reserved range?
+                        committable = false;
+                        break; // Found!
+                    } else {
+                        // No? It may be in a higher range
+                        low = mid + 1;
+                    }
+                }
+            }
+        }
     }
 }
