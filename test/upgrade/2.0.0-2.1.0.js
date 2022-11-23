@@ -84,14 +84,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   });
 
   afterEach(async function () {
-    // revert to state right after the upgrade
-    // this is used so the lengthly setup (deploy+upgrade) is done only once
+    // Revert to state right after the upgrade.
+    // This is used so the lengthly setup (deploy+upgrade) is done only once.
     await ethers.provider.send("evm_revert", [snapshot]);
     snapshot = await ethers.provider.send("evm_snapshot", []);
   });
 
   after(async function () {
-    // revert to latest state of contracts
+    // Revert to latest state of contracts
     shell.exec(`git checkout HEAD contracts`);
   });
 
@@ -99,7 +99,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   // Test methods that were added to see that upgrade was succesful
   context("📋 Breaking changes and new methods", async function () {
     context("Breaking changes", async function () {
-      it("Seller addresses are not updated in one step, expect for the treasury", async function () {
+      it("Seller addresses are not updated in one step, except for the treasury", async function () {
         const oldSeller = preUpgradeEntities.sellers[3];
 
         const seller = oldSeller.seller.clone();
@@ -144,7 +144,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         const disputeResolver = oldDisputeResolver.disputeResolver.clone();
 
-        // new dispute resolver values
+        // New dispute resolver values
         disputeResolver.escalationResponsePeriod = Number(
           Number(disputeResolver.escalationResponsePeriod) - 100
         ).toString();

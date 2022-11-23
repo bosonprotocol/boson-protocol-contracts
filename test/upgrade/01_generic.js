@@ -7,7 +7,7 @@ const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const { populateProtocolContract, getProtocolContractState } = require("../util/upgrade");
 
-// returns function with test that can be reused in every upgrade
+// Returns function with test that can be reused in every upgrade
 function getGenericContext(
   deployer,
   protocolDiamondAddress,
@@ -26,8 +26,8 @@ function getGenericContext(
 
   const genericContextFunction = async function () {
     afterEach(async function () {
-      // revert to state right after the upgrade
-      // this is used so the lengthly setup (deploy+upgrade) is done only once
+      // Revert to state right after the upgrade.
+      // This is used so the lengthly setup (deploy+upgrade) is done only once.
       await ethers.provider.send("evm_revert", [snapshot]);
       snapshot = await ethers.provider.send("evm_snapshot", []);
     });
@@ -108,7 +108,7 @@ function getGenericContext(
         );
 
         // State before and after should be equal
-        // remove nextXXid before comparing. Their correct value is verified already
+        // Remove nextXXid before comparing. Their correct value is verified already
         delete protocolContractStateAfterUpgradeAndActions.accountContractState.nextAccountId;
         delete protocolContractStateAfterUpgradeAndActions.exchangeContractState.nextExchangeId;
         delete protocolContractStateAfterUpgradeAndActions.groupContractState.nextGroupId;
@@ -228,7 +228,7 @@ function getGenericContext(
         const offerId = await offerHandler.getNextOfferId();
         const exchangeId = await exchangeHandler.getNextExchangeId();
 
-        // create some new offer
+        // Create some new offer
         const { offer, offerDates, offerDurations } = await mockOffer();
         offer.id = offerId.toString();
         const disputeResolverId = preUpgradeEntities.DRs[0].disputeResolver.id;
