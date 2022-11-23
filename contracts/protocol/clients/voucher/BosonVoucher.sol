@@ -2,6 +2,7 @@
 pragma solidity 0.8.9;
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 import { IERC2981Upgradeable } from "@openzeppelin/contracts-upgradeable/interfaces/IERC2981Upgradeable.sol";
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
@@ -18,14 +19,39 @@ import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHa
  * @title BosonVoucher
  * @notice This is the Boson Protocol ERC-721 NFT Voucher contract.
  *
+ * N.B. Although this contract extends OwnableUpgradeable and ERC721Upgradeable,
+ *      that is only for convenience, to avoid conflicts with mixed imports.
+ *
+ *      This is only a logic contract, delegated to by BeaconClientProxy. Thus,
+ *      this contract will never be "upgraded". Rather it will be redeployed
+ *      with changes and the BosonClientBeacon will be advised of the new address.
+ *      Individual seller collections are clones of BeaconClientProxy, which
+ *      asks the BosonClientBeacon for the address of the BosonVoucher contract
+ *      on each call. This allows us to upgrade all voucher collections cheaply,
+ *      and at once.
+ *
  * Key features:
  * - Only PROTOCOL-roled addresses can issue vouchers, i.e., the ProtocolDiamond or an EOA for testing
  * - Minted to the buyer when the buyer commits to an offer
  * - Burned when the buyer redeems the voucher NFT
+ * - Support for pre-minted voucher id ranges
  */
 contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
+    // Describe a reserved range of token ids
+    struct Range {
+        uint256 start; // First token id of range
+        uint256 length; // Length of range
+        uint256 minted; // Amount pre-minted so far
+    }
+
+    // Opensea collection config
     string private _contractURI;
+
+    // Royalty percentage requested by seller (for all offers)
     uint256 private _royaltyPercentage;
+
+    // Map an offerId to a Range for pre-minted offers
+    mapping(uint256 => Range) private rangeByOfferId;
 
     /**
      * @notice Initializes the voucher.
@@ -58,10 +84,22 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * Minted voucher supply is sent to the buyer.
      * Caller must have PROTOCOL role.
      *
+     * Reverts if:
+     * - Exchange id falls within a reserved range
+     *
      * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
      * @param _buyer - the buyer address
      */
     function issueVoucher(uint256 _exchangeId, address _buyer) external override onlyRole(PROTOCOL) {
+        // Get the exchange
+        (, Exchange memory exchange) = getBosonExchange(_exchangeId);
+
+        // See if the offer id is associated with a range
+        Range storage range = rangeByOfferId[exchange.offerId];
+
+        // Revert if exchange id falls within a reserved range
+        require(range.length == 0, EXCHANGE_ID_IN_RESERVED_RANGE);
+
         // Mint the voucher, sending it to the buyer address
         _mint(_buyer, _exchangeId);
     }
@@ -75,6 +113,143 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      */
     function burnVoucher(uint256 _exchangeId) external override onlyRole(PROTOCOL) {
         _burn(_exchangeId);
+    }
+
+    /**
+     * @notice Reserves a range of vouchers to be associated with an offer
+     *
+     * Must happen prior to calling
+     * Caller must have PROTOCOL role.
+     *
+     * Reverts if:
+     * - Start id is not greater than zero
+     * - Offer id is already associated with a range
+     *
+     * @param _offerId - the id of the offer
+     * @param _startId - the first id of the token range
+     * @param _length - the length of the range
+     */
+    function reserveRange(
+        uint256 _offerId,
+        uint256 _startId,
+        uint256 _length
+    ) external onlyRole(PROTOCOL) {
+        // Make sure range start is valid
+        require(_startId > 0, INVALID_RANGE_START);
+
+        // See if the offer id is already associated with a range
+        Range storage range = rangeByOfferId[_offerId];
+        require(range.length == 0, OFFER_RANGE_ALREADY_RESERVED);
+
+        // Store the reserved range
+        rangeByOfferId[_offerId] = Range({ start: _startId, length: _length, minted: 0 });
+    }
+
+    /**
+     * @notice Pre-mints all or part of an offer's reserved vouchers.
+     *
+     * For small offer quantities, this method may only need to be
+     * called once.
+     *
+     * But, if the range is large, e.g., 10k vouchers, block gas limit
+     * could cause the transaction to fail. Thus, in order to support
+     * a batched approach to pre-minting an offer's vouchers,
+     * this method can be called multiple times, until the whole
+     * range is minted.
+     *
+     * A benefit to the batched approach is that the entire reserved
+     * range for an offer need not be pre-minted at one time. A seller
+     * could just mint batches periodically, controlling the amount
+     * that are available on the market at any given time, e.g.,
+     * creating a pre-minted offer with a validity period of one year,
+     * causing the token range to be reserved, but only pre-minting
+     * a certain amount monthly.
+     *
+     * Caller must be contract owner (seller operator address).
+     *
+     * Reverts if:
+     * - Offer id is not associated with a range
+     * - Amount to mint is more than remaining un-minted in range
+     * - Too many to mint in a single transaction, given current block gas limit
+     *
+     * @param _offerId - the id of the offer
+     * @param _amount - the amount to mint
+     */
+    function preMint(uint256 _offerId, uint256 _amount) external onlyOwner {
+        // Get the offer's range
+        Range storage range = rangeByOfferId[_offerId];
+
+        // Revert if id not associated with a range
+        require(range.length == 0, NO_RESERVED_RANGE_FOR_OFFER);
+
+        // Get the first token to mint
+        uint256 start = range.start + range.minted;
+
+        // Revert if no more to mint in range
+        require(range.length > start, INVALID_AMOUNT_TO_MINT);
+
+        // Pre-mint the range to the seller
+        uint256 tokenId;
+        address seller = owner();
+        for (uint256 i = 0; i < _amount; i++) {
+            tokenId = start + i;
+            emit Transfer(address(0), seller, tokenId);
+        }
+
+        // Bump the minted count
+        range.minted += _amount;
+    }
+
+    /**
+     * @notice Gets the number of vouchers left to be pre-minted for an offer.
+     *
+     * @param _offerId - the id of the offer
+     * @return count - the count of pre-minted vouchers in reserved range
+     */
+    function getAvailablePreMints(uint256 _offerId) public view returns (uint256 count) {
+        // Get the offer's range
+        Range storage range = rangeByOfferId[_offerId];
+
+        // Count the number left to be minted
+        count = range.length - range.minted;
+    }
+
+    /**
+     * @dev Returns the owner of the specified token.
+     *
+     * If the token IS a pre-mint, then the actual owner address hasn't been set,
+     * but will be reported as the owner of this contract (the seller).
+     *
+     * If the token IS NOT a pre-mint, then the actual owner will be reported.
+     *
+     * Reverts if:
+     * - Token is not a pre-mint and does not have a stored owner, i.e., invalid token id
+     *
+     * @param tokenId - the id of the token to check
+     * @return owner - the address of the owner
+     */
+    function ownerOf(uint256 tokenId)
+        public
+        view
+        virtual
+        override(ERC721Upgradeable, IERC721Upgradeable)
+        returns (address owner)
+    {
+        // Get the exchange (may not exist, but that's ok)
+        (, Exchange memory exchange) = getBosonExchange(tokenId);
+
+        // See if the offer id is associated with a range.
+        // If exchange doesn't exist, exchange.offerId will be zero
+        Range storage range = rangeByOfferId[exchange.offerId];
+
+        // Report token owner
+        // - stored token owner if one exists
+        // - contract owner if token is reserved but not yet pre-minted
+        if (range.length == 0) {
+            owner = super.ownerOf(tokenId);
+        } else {
+            owner = exists(tokenId) ? super.ownerOf(tokenId) : super.owner();
+        }
     }
 
     /**
