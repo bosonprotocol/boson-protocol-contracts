@@ -22,9 +22,8 @@ async function main(env) {
   // Bail now if hardhat network, unless the upgrade is tested
   if (network === "hardhat" && env !== "upgrade-test") process.exit();
 
-  const chainId = (await ethers.provider.getNetwork()).chainId;
-  const contractsFile = readContracts(chainId, network, env);
-  let contracts = contractsFile.contracts;
+  const { chainId } = await ethers.provider.getNetwork();
+  let { contracts } = readContracts(chainId, network, env);
 
   const divider = "-".repeat(80);
   console.log(`${divider}\nBoson Protocol Client Upgrader\n${divider}`);
