@@ -275,9 +275,9 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         if (!committable) {
             super.transferFrom(from, to, tokenId);
         } else {
-            // _owner[tokenId] = owner();
-            // super._transfer(from, to, tokenId);
-            // TODO: how can we store owner as seller before doing a super._transfer() ?
+            // TODO in order to mimic super._transfer(from, to, tokenId)
+            // we need to manage the private arrays it has access to.
+            // Can we do it with assembly?
             // worst case, we could copy the ERC721Upgradeable and its dependencies
             // keep the same storage, but make the balances and owners arrays internal instead of private
             // so that we can set the owner to the contract owner at this point and then carry on as normal
@@ -298,9 +298,9 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         if (!committable) {
             super.safeTransferFrom(from, to, tokenId, data);
         } else {
-            // _owner[tokenId] = owner();
-            // super._safeTransfer(from, to, tokenId);
-            // TODO: how can we store owner as seller before doing a super._safeTransfer() ?
+
+            // TODO in order to mimic super._safeTransfer(from, to, tokenId)
+            // we need to manage the private arrays it has access to.
             // Can we do it with assembly?
             // worst case, we could copy the ERC721Upgradeable and its dependencies into the project
             // keep the same storage, but make the balances and owners arrays internal instead of private
