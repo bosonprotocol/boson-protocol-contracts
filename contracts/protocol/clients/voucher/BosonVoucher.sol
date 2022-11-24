@@ -46,6 +46,14 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         uint256 minted; // Amount pre-minted so far
     }
 
+    // Struct that is used to manipulate private variables from ERC721UpgradeableStorage
+    struct ERC721UpgradeableStorage {
+        // Mapping from token ID to owner address
+        mapping(uint256 => address) _owners;
+        // Mapping owner address to token count
+        mapping(address => uint256) _balances;
+    }
+
     // Opensea collection config
     string private _contractURI;
 
@@ -190,7 +198,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         Range storage range = rangeByOfferId[_offerId];
 
         // Revert if id not associated with a range
-        require(range.length == 0, NO_RESERVED_RANGE_FOR_OFFER);
+        require(range.length != 0, NO_RESERVED_RANGE_FOR_OFFER);
 
         // Get the first token to mint
         uint256 start = range.start + range.minted;
@@ -272,16 +280,12 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
         (bool committable, uint256 offerId) = getPreMintStatus(tokenId);
 
-        if (!committable) {
-            super.transferFrom(from, to, tokenId);
-        } else {
-            // TODO in order to mimic super._transfer(from, to, tokenId)
-            // we need to manage the private arrays it has access to.
-            // Can we do it with assembly?
-            // worst case, we could copy the ERC721Upgradeable and its dependencies
-            // keep the same storage, but make the balances and owners arrays internal instead of private
-            // so that we can set the owner to the contract owner at this point and then carry on as normal
+        if (committable) {
+            // If offer is commitable, temporary update _balances and _owners, so transfer succedds
+            silentMint(from, tokenId);
         }
+
+        super.transferFrom(from, to, tokenId);
     }
 
     /**
@@ -295,17 +299,39 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
         (bool committable, uint256 offerId) = getPreMintStatus(tokenId);
 
-        if (!committable) {
-            super.safeTransferFrom(from, to, tokenId, data);
-        } else {
-
-            // TODO in order to mimic super._safeTransfer(from, to, tokenId)
-            // we need to manage the private arrays it has access to.
-            // Can we do it with assembly?
-            // worst case, we could copy the ERC721Upgradeable and its dependencies into the project
-            // keep the same storage, but make the balances and owners arrays internal instead of private
-            // so that we can set the owner to the contract owner at this point and then carry on as normal
+        if (committable) {
+            // If offer is commitable, temporary update _balances and _owners, so transfer succedds
+            silentMint(from, tokenId);
         }
+
+        super.safeTransferFrom(from, to, tokenId, data);
+    }
+
+    /*
+     * Returns storage pointer to location of private variables
+     * 0x0000000000000000000000000000000000000000000000000000000000000099 is location of _owners
+     * 0x000000000000000000000000000000000000000000000000000000000000009a is location of _balances
+     *
+     * Since ERC721UpgradeableStorage slot is 0x0000000000000000000000000000000000000000000000000000000000000099
+     * _owners slot is ERC721UpgradeableStorage + 0
+     * _balances slot is ERC721UpgradeableStorage + 1
+     */
+    function getERC721UpgradeableStorage() internal pure returns (ERC721UpgradeableStorage storage ps) {
+        assembly {
+            ps.slot := 0x0000000000000000000000000000000000000000000000000000000000000099
+        }
+    }
+
+    /*
+     * Updates balance and owner, but do not emit Transfer event. Event was already emited during pre-mint.
+     */
+    function silentMint(address from, uint256 tokenId) internal {
+        // get slot of private data
+        ERC721UpgradeableStorage storage ps = getERC721UpgradeableStorage();
+
+        // update data, so transfer will succeed
+        ps._balances[from] += 1;
+        ps._owners[tokenId] = from;
     }
 
     /**
