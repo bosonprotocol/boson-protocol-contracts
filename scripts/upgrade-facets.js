@@ -146,9 +146,9 @@ async function main(env) {
 
     // Remove old entry from contracts
     contracts = contracts.filter((i) => i.name !== newFacet.name);
+
     const newFacetInterfaceId = interfaceIdFromFacetName(newFacet.name);
     deploymentComplete(newFacet.name, newFacet.contract.address, [], newFacetInterfaceId, contracts);
-
 
     // Get new selectors from compiled contract
     const selectors = getSelectors(newFacet.contract, true);
@@ -197,9 +197,8 @@ async function main(env) {
       let transactionResponse;
 
       // Only ProtooclInitializationHandlerFacet should call initialize function
-      if (newFacet.name == 'ProtocolInitializationHandlerFacet') {
+      if (newFacet.name == "ProtocolInitializationHandlerFacet") {
         const callData = newFacet.contract.interface.encodeFunctionData("initialize", [version]);
-        console.log(callData);
 
         transactionResponse = await diamondCutFacet
           .connect(adminSigner)
@@ -236,12 +235,11 @@ async function main(env) {
         .map((selector) => `${selector}: ${selectors.signatureToNameMapping[selector]}`)
         .join("\n\t")}`
     );
-    console.log(selectorsToSkip);
     console.log(`❌ Skipped selectors:\n\t${selectorsToSkip.join("\n\t")}`);
 
     // If something was added or removed, support interface for old interface is not valid anymore
     const erc165 = await ethers.getContractAt("IERC165", protocolAddress);
-    console.log("oldFacet", oldFacet);
+
     if (oldFacet && (selectorsToAdd.length > 0 || selectorsToRemove.length > 0)) {
       if (!oldFacet.interfaceId) {
         console.log(
@@ -269,6 +267,7 @@ async function main(env) {
       }
     }
 
+    console.log("newFacetInterfaceId", newFacetInterfaceId);
     // Check if new facet registered its interface. If not, register it.
     const support = await erc165.supportsInterface(newFacetInterfaceId);
     if (!support) {
@@ -312,26 +311,29 @@ async function main(env) {
     // Logs
     console.log(`💎 Removed selectors:\n\t${selectorsToRemove.join("\n\t")}`);
 
-    // Remove support for old interface
-    if (!oldFacet.interfaceId) {
-      console.log(
-        `Could not find interface id for old facet ${oldFacet.name}.\nYou might need to remove its interfaceId from "supportsInterface" manually.`
-      );
-    } else {
-      // Remove from smart contract
-      await erc165Extended
-        .connect(adminSigner)
-        .removeSupportedInterface(oldFacet.interfaceId, await getFees(maxPriorityFeePerGas));
+    if (oldFacet) {
+      // Remove support for old interface
+      if (!oldFacet.interfaceId) {
+        console.log(
+          `Could not find interface id for old facet ${oldFacet.name}.\nYou might need to remove its interfaceId from "supportsInterface" manually.`
+        );
+      } else {
+        console.log("else");
+        // Remove from smart contract
+        await erc165Extended
+          .connect(adminSigner)
+          .removeSupportedInterface(oldFacet.interfaceId, await getFees(maxPriorityFeePerGas));
 
-      // Check if interface was shared across other facets and update contracts info
-      contracts = contracts.map((entry) => {
-        if (entry.interfaceId == oldFacet.interfaceId) {
-          entry.interfaceId = "";
-        }
-        return entry;
-      });
+        // Check if interface was shared across other facets and update contracts info
+        contracts = contracts.map((entry) => {
+          if (entry.interfaceId == oldFacet.interfaceId) {
+            entry.interfaceId = "";
+          }
+          return entry;
+        });
 
-      console.log(`Removed supported interface ${oldFacet.interfaceId} from supported interfaces.`);
+        console.log(`Removed supported interface ${oldFacet.interfaceId} from supported interfaces.`);
+      }
     }
   }
 

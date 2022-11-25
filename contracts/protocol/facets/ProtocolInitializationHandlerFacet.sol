@@ -7,8 +7,9 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { DisputeResolverHandlerFacet } from "./DisputeResolverHandlerFacet.sol";
 import { TwinHandlerFacet } from "./TwinHandlerFacet.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
+import { DiamondLib } from "../../diamond/DiamondLib.sol";
 
-contract ProtocolInitializationHandlerFacet is ProtocolBase, IBosonProtocolInitializationHandler {
+contract ProtocolInitializationHandlerFacet is  IBosonProtocolInitializationHandler, ProtocolBase {
     /**
      * @notice Initializes the protocol after the deployment.
      * This function is callable only once
@@ -19,12 +20,15 @@ contract ProtocolInitializationHandlerFacet is ProtocolBase, IBosonProtocolIniti
         external
         onlyUnInitialized(type(IBosonProtocolInitializationHandler).interfaceId)
     {
-        string memory version = "2.2.0";
-        if (keccak256(bytes(_version)) == keccak256(bytes(version))) {
+        if (keccak256(bytes(_version)) == keccak256(bytes("2.2.0"))) {
             initV2_2_0();
         }
     }
 
+    /**
+     * @notice Initializes the version 2.2.0.
+     *
+     */
     function initV2_2_0() internal {
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
         status.version = "2.2.0";
@@ -35,6 +39,8 @@ contract ProtocolInitializationHandlerFacet is ProtocolBase, IBosonProtocolIniti
         TwinHandlerFacet twinHandlerFacet = TwinHandlerFacet(address(this));
         twinHandlerFacet.initialize();
 
-        emit Initialized(status.version);
+        DiamondLib.addSupportedInterface(type(IBosonProtocolInitializationHandler).interfaceId);
+
+        emit ProtocolInitialized(status.version);
     }
 }
