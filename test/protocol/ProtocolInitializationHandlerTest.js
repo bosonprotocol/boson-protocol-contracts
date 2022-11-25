@@ -4,6 +4,7 @@ const ethers = hre.ethers;
 
 const Role = require("../../scripts/domain/Role");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
+const { deployProtocolHandlerFacetsWithArgs } = require("../../scripts/util/deploy-protocol-handler-facets");
 const {
   getFacetAddCut,
   getSelectors,
@@ -21,6 +22,7 @@ describe("ProtocolDiamond", async function () {
   let deployer, admin, upgrader, rando;
   let protocolInitializationHandler;
   let protocolDiamond, accessController;
+  let erc165;
 
   before(async function () {
     // get interface Ids
@@ -44,18 +46,19 @@ describe("ProtocolDiamond", async function () {
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
 
     // Cast Diamond to DiamondCutFacet
-    diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", protocolDiamond.address);
+    //diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", protocolDiamond.address);
 
     // Deploy ProtocolInitializationHandler
-    let FacetContractFactory = await ethers.getContractFactory("ProtocolInitializationHandlerFacet");
-    const facetContract = await FacetContractFactory.deploy();
+    //let FacetContractFactory = await ethers.getContractFactory("ProtocolInitializationHandlerFacet");
+    //const facetContract = await FacetContractFactory.deploy();
 
-    await facetContract.deployTransaction.wait();
+    //await facetContract.deployTransaction.wait();
 
     // Initialize ProtocolInitializationHandler
-    const callData = facetContract.interface.encodeFunctionData("initialize", ["2.2.0"]);
-    const facetCut = getFacetAddCut(facetContract);
+    //const callData = facetContract.interface.encodeFunctionData("initialize", ["2.2.0"]);
+    //const facetCut = getFacetAddCut(facetContract);
 
+    /*
     const transactionResponse = await diamondCutFacet.diamondCut(
       [facetCut],
       facetContract.address,
@@ -70,14 +73,29 @@ describe("ProtocolDiamond", async function () {
       "IBosonProtocolInitializationHandler",
       protocolDiamond.address
     );
+  */
+
+    const version = [
+      //version
+      {
+        version: "2.2.0"
+      },
+    ];
+    //await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+
+    const deployedFacet = await deployProtocolHandlerFacetsWithArgs(
+      protocolDiamond,
+      { ProtocolInitializationHandlerFacet: version },
+      maxPriorityFeePerGas
+    );
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
   context("📋 Interfaces", async function () {
     context.only("👉 supportsInterface()", async function () {
-      it("should indicate support for IBosonConfigHandler interface", async function () {
+      it("should indicate support for IBosonProtocolInitializationHandler interface", async function () {
         // Current interfaceId for IBosonConfigHandler
-        support = await erc165.supportsInterface(InterfaceIds.IBosonProtocolInitializationHandler);
+        const support = await erc165.supportsInterface(InterfaceIds.IBosonProtocolInitializationHandler);
 
         // Test
         expect(support, "IBosonProtocolInitializationHandler interface not supported").is.true;

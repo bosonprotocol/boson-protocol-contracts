@@ -17,7 +17,7 @@ contract ProtocolInitializationHandlerFacet is  IBosonProtocolInitializationHand
      * @param _version - version of the protocol
      */
     function initialize(string memory _version)
-        external
+        public
         onlyUnInitialized(type(IBosonProtocolInitializationHandler).interfaceId)
     {
         if (keccak256(bytes(_version)) == keccak256(bytes("2.2.0"))) {
@@ -42,5 +42,9 @@ contract ProtocolInitializationHandlerFacet is  IBosonProtocolInitializationHand
         DiamondLib.addSupportedInterface(type(IBosonProtocolInitializationHandler).interfaceId);
 
         emit ProtocolInitialized(status.version);
+    }
+
+    function getVersion() external pure override returns (string memory version) {
+        version =  "2.2.0";
     }
 }
