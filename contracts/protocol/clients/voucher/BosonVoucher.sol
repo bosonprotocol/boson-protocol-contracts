@@ -38,14 +38,6 @@ import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchan
  * - Support for pre-minted voucher id ranges
  */
 contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
-    // Describe a reserved range of token ids
-    struct Range {
-        uint256 offerId;
-        uint256 start; // First token id of range
-        uint256 length; // Length of range
-        uint256 minted; // Amount pre-minted so far
-    }
-
     // Struct that is used to manipulate private variables from ERC721UpgradeableStorage
     struct ERC721UpgradeableStorage {
         // Mapping from token ID to owner address
@@ -161,6 +153,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         range.start = _startId;
         range.length = _length;
         ranges.push(range);
+
+        emit RangeReserved(_offerId, range);
     }
 
     /**
@@ -224,12 +218,23 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @param _offerId - the id of the offer
      * @return count - the count of pre-minted vouchers in reserved range
      */
-    function getAvailablePreMints(uint256 _offerId) public view returns (uint256 count) {
+    function getAvailablePreMints(uint256 _offerId) external view returns (uint256 count) {
         // Get the offer's range
         Range storage range = rangeByOfferId[_offerId];
 
         // Count the number left to be minted
         count = range.length - range.minted;
+    }
+
+    /**
+     * @notice Gets the range for an offer.
+     *
+     * @param _offerId - the id of the offer
+     * @return range - range struct with information about range start, length and already minted tokens
+     */
+    function getRangeByOfferId(uint256 _offerId) external view returns (Range memory range) {
+        // Get the offer's range
+        return rangeByOfferId[_offerId];
     }
 
     /**

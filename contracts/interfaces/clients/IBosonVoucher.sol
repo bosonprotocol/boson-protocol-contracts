@@ -16,6 +16,15 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     event ContractURIChanged(string contractURI);
     event RoyaltyPercentageChanged(uint256 royaltyPercentage);
     event VoucherInitialized(uint256 indexed sellerId, uint256 indexed royaltyPercentage, string indexed contractURI);
+    event RangeReserved(uint256 indexed offerId, Range range);
+
+    // Describe a reserved range of token ids
+    struct Range {
+        uint256 offerId;
+        uint256 start; // First token id of range
+        uint256 length; // Length of range
+        uint256 minted; // Amount pre-minted so far
+    }
 
     /**
      * @notice Issues a voucher to a buyer.
@@ -102,4 +111,72 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @return royalty percentage
      */
     function getRoyaltyPercentage() external view returns (uint256);
+
+    /**
+     * @notice Reserves a range of vouchers to be associated with an offer
+     *
+     * Must happen prior to calling
+     * Caller must have PROTOCOL role.
+     *
+     * Reverts if:
+     * - Start id is not greater than zero
+     * - Offer id is already associated with a range
+     *
+     * @param _offerId - the id of the offer
+     * @param _startId - the first id of the token range
+     * @param _length - the length of the range
+     */
+    function reserveRange(
+        uint256 _offerId,
+        uint256 _startId,
+        uint256 _length
+    ) external;
+
+    /**
+     * @notice Pre-mints all or part of an offer's reserved vouchers.
+     *
+     * For small offer quantities, this method may only need to be
+     * called once.
+     *
+     * But, if the range is large, e.g., 10k vouchers, block gas limit
+     * could cause the transaction to fail. Thus, in order to support
+     * a batched approach to pre-minting an offer's vouchers,
+     * this method can be called multiple times, until the whole
+     * range is minted.
+     *
+     * A benefit to the batched approach is that the entire reserved
+     * range for an offer need not be pre-minted at one time. A seller
+     * could just mint batches periodically, controlling the amount
+     * that are available on the market at any given time, e.g.,
+     * creating a pre-minted offer with a validity period of one year,
+     * causing the token range to be reserved, but only pre-minting
+     * a certain amount monthly.
+     *
+     * Caller must be contract owner (seller operator address).
+     *
+     * Reverts if:
+     * - Offer id is not associated with a range
+     * - Amount to mint is more than remaining un-minted in range
+     * - Too many to mint in a single transaction, given current block gas limit
+     *
+     * @param _offerId - the id of the offer
+     * @param _amount - the amount to mint
+     */
+    function preMint(uint256 _offerId, uint256 _amount) external;
+
+    /**
+     * @notice Gets the number of vouchers left to be pre-minted for an offer.
+     *
+     * @param _offerId - the id of the offer
+     * @return count - the count of pre-minted vouchers in reserved range
+     */
+    function getAvailablePreMints(uint256 _offerId) external view returns (uint256 count);
+
+    /**
+     * @notice Gets the range for an offer.
+     *
+     * @param _offerId - the id of the offer
+     * @return range - range struct with information about range start, length and already minted tokens
+     */
+    function getRangeByOfferId(uint256 _offerId) external view returns (Range memory range);
 }

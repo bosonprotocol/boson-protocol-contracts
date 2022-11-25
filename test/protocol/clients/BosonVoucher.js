@@ -7,6 +7,7 @@ const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol
 const { deployProtocolHandlerFacets } = require("../../../scripts/util/deploy-protocol-handler-facets.js");
 const Role = require("../../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
+const Range = require("../../../scripts/domain/Range");
 const VoucherInitValues = require("../../../scripts/domain/VoucherInitValues");
 const { mockOffer } = require("../../util/mock.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
@@ -194,6 +195,143 @@ describe("IBosonVoucher", function () {
       expect(balanceAfter.sub(balanceBefore)).eq(1);
     });
   });
+
+  context.skip("premint", function () {
+    // before(function () {
+    //   buyerStruct = mockBuyer(buyer.address).toStruct();
+    //   buyerWallet = buyerStruct[1];
+    // });
+
+    after(async function () {
+      // Reset the accountId iterator
+      accountId.next(true);
+    });
+
+    it.only("safetransferfrom", async function () {
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+
+      console.log("owner address", operator.address);
+      // prepare the VoucherInitValues
+      voucherInitValues = mockVoucherInitValues();
+      const bosonVoucher2 = await ethers.getContractAt("BosonVoucher", bosonVoucher.address);
+
+      await bosonVoucher2.initializeVoucher(seller.id, operator.address, voucherInitValues);
+      // const balanceBefore = await bosonVoucher.balanceOf(buyer.address);
+
+      await bosonVoucher2.connect(protocol).reserveRange(10, 15, 50); // 15 - 65
+
+      let tokenId = 16;
+      await expect(bosonVoucher2.ownerOf(tokenId)).to.be.revertedWith("ERC721: invalid token ID");
+      let ownerOf = await bosonVoucher2.ownerOf(tokenId);
+      console.log(ownerOf);
+
+      await bosonVoucher2.connect(operator).preMint(10, 20); // 15 - 65
+
+      // ownerOf = await bosonVoucher2.ownerOf(tokenId);
+      // console.log(ownerOf)
+
+      // transfer shoud work
+      await bosonVoucher2.connect(operator).transferFrom(operator.address, rando.address, 16);
+      await bosonVoucher2
+        .connect(operator)
+        ["safeTransferFrom(address,address,uint256,bytes)"](operator.address, rando.address, 17, "0x");
+      await bosonVoucher2.connect(operator).setApprovalForAll(rando.address, true);
+      await bosonVoucher2
+        .connect(rando)
+        ["safeTransferFrom(address,address,uint256,bytes)"](operator.address, rando.address, 18, "0x");
+    });
+  });
+
+  context.only("reserveRange()", function () {
+    let offerId, startId, length;
+    let range;
+
+    beforeEach(async function () {
+      const sellerId = 1;
+
+      // prepare the VoucherInitValues
+      voucherInitValues = mockVoucherInitValues();
+      const bosonVoucherInit = await ethers.getContractAt("BosonVoucher", bosonVoucher.address);
+
+      await bosonVoucherInit.initializeVoucher(sellerId, operator.address, voucherInitValues);
+
+      offerId = "5";
+      startId = "10";
+      length = "123";
+
+      range = new Range(offerId, startId, length, "0");
+    });
+
+    it("Should emit event RangeReserved", async function () {
+      // Reserve range, test for event
+      await expect(bosonVoucher.connect(protocol).reserveRange(offerId, startId, length))
+        .to.emit(bosonVoucher, "RangeReserved")
+        .withArgs(offerId, range.toStruct());
+    });
+
+    it("Should update state", async function () {
+      // Reserve range
+      await bosonVoucher.connect(protocol).reserveRange(offerId, startId, length);
+
+      // Get range object from contract
+      const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
+      assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+
+      // Get available premints from contract
+      const availablePremints = await bosonVoucher.getAvailablePreMints(offerId);
+      assert.equal(availablePremints.toString(), length, "Available Premints mismatch");
+    });
+
+    context("💔 Revert Reasons", async function () {
+      it("caller does not have PROTOCOL role", async function () {
+        await expect(bosonVoucher.connect(rando).reserveRange(offerId, startId, length)).to.be.revertedWith(
+          RevertReasons.ACCESS_DENIED
+        );
+      });
+
+      it("Start id is not greater than zero", async function () {
+        // Set start id to 0
+        startId = 0;
+
+        // Try to reserve range, it should fail
+        await expect(bosonVoucher.connect(protocol).reserveRange(offerId, startId, length)).to.be.revertedWith(
+          RevertReasons.INVALID_RANGE_START
+        );
+      });
+
+      it("Offer id is already associated with a range", async function () {
+        // Reserve range for an offer
+        await bosonVoucher.connect(protocol).reserveRange(offerId, startId, length);
+
+        // Try to reserve range for the same offer, it should fail
+        await expect(bosonVoucher.connect(protocol).reserveRange(offerId, startId, length)).to.be.revertedWith(
+          RevertReasons.OFFER_RANGE_ALREADY_RESERVED
+        );
+      });
+    });
+  });
+
+  ("preMint()");
+  ("Should emit Transfer events");
+  ("Should change state");
+  ("Caller is not the owner");
+  ("Offer id is not associated with a range");
+  ("Amount to mint is more than remaining un-minted in range");
+  ("Too many to mint in a single transaction, given current block gas limit");
+  ("getAvailablePreMints()");
+  ("Returns correct values");
+  ("ownerOf()");
+  ("Returns true owner if token exists");
+  ("Returns seller if token is preminted and not transferred yet");
+  ("Reverts for not minted tokens");
+  ("REverts for token in reserved range, if not premited yet");
+  ("Reverts if token was preminted and already burned");
+  ("transferFrom()");
+  ("normal transfer");
+  ("calls on voucher transferred");
+  ("normal transfer when seller is true owner");
+  ("transfer preminted");
+  ("calls commitToPreMintedOffer");
 
   context("burnVoucher()", function () {
     after(async function () {
