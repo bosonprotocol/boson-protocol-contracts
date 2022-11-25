@@ -242,7 +242,7 @@ describe("IBosonVoucher", function () {
     });
   });
 
-  context.only("reserveRange()", function () {
+  context("reserveRange()", function () {
     let offerId, startId, length;
     let range;
 
@@ -311,13 +311,113 @@ describe("IBosonVoucher", function () {
     });
   });
 
-  ("preMint()");
-  ("Should emit Transfer events");
-  ("Should change state");
-  ("Caller is not the owner");
-  ("Offer id is not associated with a range");
-  ("Amount to mint is more than remaining un-minted in range");
-  ("Too many to mint in a single transaction, given current block gas limit");
+  context("preMint()", function () {
+    let offerId, startId, length, amount;
+    let range;
+
+    beforeEach(async function () {
+      const sellerId = 1;
+
+      // prepare the VoucherInitValues
+      voucherInitValues = mockVoucherInitValues();
+      const bosonVoucherInit = await ethers.getContractAt("BosonVoucher", bosonVoucher.address);
+
+      await bosonVoucherInit.initializeVoucher(sellerId, operator.address, voucherInitValues);
+
+      // reserve a range
+      offerId = "5";
+      startId = "10";
+      length = "1000";
+
+      range = new Range(offerId, startId, length, "0");
+
+      await bosonVoucher.connect(protocol).reserveRange(offerId, startId, length);
+
+      // amount to mint
+      amount = 50;
+    });
+
+    it("Should emit Transfer events", async function () {
+      // Premint tokens, test for event
+      const tx = await bosonVoucher.connect(operator).preMint(offerId, amount);
+
+      // Expect an event for every mint
+      for (let i = 0; i < Number(amount); i++) {
+        await expect(tx).to.emit(bosonVoucher,"Transfer").withArgs(ethers.constants.AddressZero,operator.address,i+Number(startId))
+      }
+      
+    });
+
+    it.skip("Should update state", async function () {
+      let sellerBalanceBefore = await bosonVoucher.balanceOf(operator.address);
+
+      // Premint tokens
+      await bosonVoucher.connect(operator).preMint(offerId, amount);
+
+      // Expect an event for every mint
+      for (let i = 0; i < Number(amount); i++) {
+        let tokenId = i+Number(startId);
+        tokenOwner = await bosonVoucher.ownerOf(tokenId); // I suspcet ownerOf does not work correctly
+        assert.equal(tokenOwner, operator.address, `Wrong token owner for token ${tokenId}`);
+      }
+
+      // Token that is inside a range, but wasn't preminted yet should not have an owner 
+      await expect(bosonVoucher.ownerOf(Number(amount)+Number(startId)+1)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+
+      // Seller's balance should be updated for the total mint amount
+      let sellerBalanceAfter = await bosonVoucher.balanceOf(operator.address);
+      console.log("after", sellerBalanceAfter.toString())
+      console.log("before", sellerBalanceBefore.toString())
+      assert.equal(sellerBalanceAfter.toNumber(), sellerBalanceBefore.add(amount).toNumber(), "Balance mismatch")
+
+      // Get available premints from contract
+      const availablePremints = await bosonVoucher.getAvailablePreMints(offerId);
+      assert.equal(availablePremints.toString(), `${Number(length)-Number(amount)}`, "Available Premints mismatch");
+    });
+
+    context("💔 Revert Reasons", async function () {
+      it("Caller is not the owner", async function () {
+        await expect(bosonVoucher.connect(rando).preMint(offerId, amount)).to.be.revertedWith(
+          RevertReasons.OWNABLE_NOT_OWNER
+        );
+      });
+
+      it("Offer id is not associated with a range", async function () {
+        // Set invalid offer id
+        offerId = 15;
+
+        // Try to premint, it should fail
+        await expect(bosonVoucher.connect(operator).preMint(offerId, amount)).to.be.revertedWith(
+          RevertReasons.NO_RESERVED_RANGE_FOR_OFFER
+        );
+      });
+
+      it("Amount to mint is more than remaining un-minted in range", async function () {
+        // Mint 50 tokens
+        await bosonVoucher.connect(operator).preMint(offerId, amount);
+        
+        // Set invalid amount
+        amount = "990" // length is 1000, already minted 50
+
+        // Try to premint, it should fail
+        await expect(bosonVoucher.connect(operator).preMint(offerId, amount)).to.be.revertedWith(
+          RevertReasons.INVALID_AMOUNT_TO_MINT
+        );
+      });
+
+      it.skip("Too many to mint in a single transaction, given current block gas limit", async function () {
+        // TODO: add maxPremintedTokens to voucher and write test for it
+      });
+    });
+  });
+
+  ("");
+  ("");
+  ("");
+  ("");
+  ("");
+  ("");
+  ("");
   ("getAvailablePreMints()");
   ("Returns correct values");
   ("ownerOf()");
@@ -332,6 +432,7 @@ describe("IBosonVoucher", function () {
   ("normal transfer when seller is true owner");
   ("transfer preminted");
   ("calls commitToPreMintedOffer");
+  "nosilenmintallowed"
 
   context("burnVoucher()", function () {
     after(async function () {

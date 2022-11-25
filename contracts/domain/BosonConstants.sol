@@ -109,6 +109,7 @@ string constant NO_RESERVED_RANGE_FOR_OFFER = "Offer id not associated with a re
 string constant OFFER_RANGE_ALREADY_RESERVED = "Offer id already associated with a reserved range";
 string constant INVALID_RANGE_START = "Range start must be greater than zero";
 string constant INVALID_AMOUNT_TO_MINT = "Amount to mint is greater than remaining un-minted in range";
+string constant NO_SILENT_MINT_ALLOWED = "Only owner's mappings can be updated without event";
 
 // Revert Reasons: Twin related
 string constant NO_SUCH_TWIN = "No such twin";
