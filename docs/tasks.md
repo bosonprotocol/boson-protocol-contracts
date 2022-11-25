@@ -53,7 +53,7 @@ After the protocol contracts are deployed, they should be verified on a block ex
 - **Ethereum Mainnet**. This verifies the deployed contracts on Ethereum Mainnet.  
 ```npm run verify-suite:ethereum:mainnet```
 
-### Upgrade facet
+### Upgrade facets
 Upgrade existing facets, add new facets or remove existing facets. We provide different npm scripts for different use cases. A script for Hardhat network does not exist. Since contracts are discarded after the deployment, they cannot be upgraded.
 
 For upgrade to succeed you need an account with UPGRADER role. Refer to [Manage roles](#manage-roles) to see how to grant it.
@@ -70,7 +70,7 @@ For upgrade to succeed you need an account with UPGRADER role. Refer to [Manage 
 - **Ethereum Mainnet**. This upgrades the existing diamond on Ethereum Mainnet.  
 ```npm run upgrade-facets:ethereum:mainnet```
 
-### Upgrade facet
+### Upgrade clients
 Upgrade existing clients (currently only BosonVoucher). Script deploys new implementation and updates address on beacon.  
 We provide different npm scripts for different use cases. A script for Hardhat network does not exist. Since contracts are discarded after the deployment, they cannot be upgraded.  
 For upgrade to succeed you need an account with UPGRADER role. Refer to [Manage roles](#manage-roles) to see how to grant it.

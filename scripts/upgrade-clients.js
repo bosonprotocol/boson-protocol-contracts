@@ -50,6 +50,9 @@ async function main(env) {
   }
   console.log(divider);
 
+  // Get signer for admin address
+  const adminSigner = await ethers.getSigner(adminAddress);
+
   // Get addresses of currently deployed contracts
   const accessControllerAddress = contracts.find((c) => c.name === "AccessController").address;
   if (!accessControllerAddress) {
@@ -77,7 +80,9 @@ async function main(env) {
   // Update implementation address on beacon contract
   console.log(`\n📋 Updating implementation address on beacon`);
   const beacon = await ethers.getContractAt("BosonClientBeacon", beaconAddress);
-  await beacon.setImplementation(bosonVoucherImplementation.address, await getFees(maxPriorityFeePerGas));
+  await beacon
+    .connect(adminSigner)
+    .setImplementation(bosonVoucherImplementation.address, await getFees(maxPriorityFeePerGas));
 
   // Remove old entry from contracts
   contracts = contracts.filter((i) => i.name !== "BosonVoucher Logic");
