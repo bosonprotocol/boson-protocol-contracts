@@ -38,8 +38,6 @@ import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchan
  * - Support for pre-minted voucher id ranges
  */
 contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
-    enum PreMintStatus { NOT_IN_A_RANGE, IN_A_RANGE_NOT_COMMITABLE, COMMITABLE }
-
     // Struct that is used to manipulate private variables from ERC721UpgradeableStorage
     struct ERC721UpgradeableStorage {
         // Mapping from token ID to owner address
@@ -49,6 +47,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 
     // Opensea collection config
+
     string private _contractURI;
 
     // Royalty percentage requested by seller (for all offers)
@@ -58,7 +57,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     mapping(uint256 => Range) private rangeByOfferId;
 
     // All ranges as an array
-    Range[] private ranges;
+    uint256[] private rangeOfferIds;
 
     /**
      * @notice Initializes the voucher.
@@ -154,7 +153,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         range.offerId = _offerId;
         range.start = _startId;
         range.length = _length;
-        ranges.push(range);
+        rangeOfferIds.push(_offerId);
 
         emit RangeReserved(_offerId, range);
     }
@@ -263,7 +262,6 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         override(ERC721Upgradeable, IERC721Upgradeable)
         returns (address owner)
     {
-
         if (_exists(tokenId)) {
             // if tokenId exist, does not matter if vouchers were preminted or not
             owner = super.ownerOf(tokenId);
@@ -275,34 +273,13 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
             //          2.1.1. exchange does not exist (i.e. no first transfer yet): return owner()
             //          2.1.2. exchange exists (voucher was already redeemed/canceled/revoked -> burned): revert
             //      2.2. premint was not called yet: revert
+            (bool committable, ) = getPreMintStatus(tokenId);
 
-            (PreMintStatus status, ) = getPreMintStatus(tokenId);
-
-            if (status == PreMintStatus.NOT_IN_A_RANGE) {
-                revert("ERC721: invalid token ID");
-            } else {
-                // TOKEN IS INSDE A RANGE
-
-                if (status == PreMintStatus.IN_A_RANGE_NOT_COMMITABLE) {
-                    // NOT PREMINTED YET
-                    revert("ERC721: invalid token ID");
-                } else {
-                    // TOKEN IS COMMITABLE
-                    // If exchange exist, it was already commited to and it was burned already (otherwise _exists(tokenId) would be true)
-                    (bool exists, ) = getBosonExchange(tokenId);
-                    if (exists) {
-                        revert("ERC721: invalid token ID");
-                    }
-                    owner = super.owner();
-                }
+            if (committable) {
+                (bool exists, ) = getBosonExchange(tokenId);
+                if (!exists) return super.owner();
             }
-
-            // alternative
-            // if (status = PreMintStatus.COMMITABLE) {
-            //     (bool exists, ) = getBosonExchange(tokenId);
-            //     if (exists) return super.owner();
-            // }
-            // revert("ERC721: invalid token ID");
+            revert("ERC721: invalid token ID");
         }
     }
 
@@ -314,10 +291,10 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         address to,
         uint256 tokenId
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
-        (PreMintStatus status, ) = getPreMintStatus(tokenId);
-        
-        if (status == PreMintStatus.COMMITABLE) {
-            // If offer is commitable, temporary update _owners, so transfer succedds
+        (bool committable, ) = getPreMintStatus(tokenId);
+
+        if (committable) {
+            // If offer is committable, temporary update _owners, so transfer succedds
             silentMint(from, tokenId);
         }
 
@@ -333,10 +310,10 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         uint256 tokenId,
         bytes memory data
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
-        (PreMintStatus status, ) = getPreMintStatus(tokenId);
+        (bool committable, ) = getPreMintStatus(tokenId);
 
-        if (status == PreMintStatus.COMMITABLE) {
-            // If offer is commitable, temporary update _owners, so transfer succedds
+        if (committable) {
+            // If offer is committable, temporary update _owners, so transfer succedds
             silentMint(from, tokenId);
         }
 
@@ -581,15 +558,14 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         // Update the buyer associated with the voucher in the protocol
         // Only when transferring, not minting or burning
         if (from == owner()) {
-            
             (bool exists, ) = getBosonExchange(tokenId);
             if (exists) {
                 // Already committed, treat as a normal transfer
                 onVoucherTransferred(tokenId, payable(to));
             } else {
                 // If this is a transfer of premited token, treat it differently
-                (PreMintStatus status, uint256 offerId) = getPreMintStatus(tokenId);
-                if (status == PreMintStatus.COMMITABLE) {
+                (bool committable, uint256 offerId) = getPreMintStatus(tokenId);
+                if (committable) {
                     address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
                     // TODO: uncomment when commitToPreMintedOffer method is available
                     // IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(to, offerId, tokenId);
@@ -609,14 +585,14 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * - has been pre-minted
      *
      * @param _tokenId - the token id to check
-     * @return status - token pre mint status
+     * @return committable - whether the token is committable
      * @return offerId - the associated offer id if committable
      */
-    function getPreMintStatus(uint256 _tokenId) internal view returns (PreMintStatus status, uint256 offerId) {
+    function getPreMintStatus(uint256 _tokenId) internal view returns (bool committable, uint256 offerId) {
         // Not committable if token has an owner
         if (!_exists(_tokenId)) {
             // If are reserved ranges, search them
-            uint256 length = ranges.length;
+            uint256 length = rangeOfferIds.length;
             if (length > 0) {
                 // Binary search the ranges array
                 uint256 low = 0; // Lower bound of search (array index)
@@ -626,7 +602,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
                     uint256 mid = (high - low) / 2;
 
                     // Get the range stored at the midpoint
-                    Range storage range = ranges[mid];
+                    Range storage range = rangeByOfferId[rangeOfferIds[mid]];
 
                     // Get the beginning of the range once for reference
                     uint256 start = range.start;
@@ -635,12 +611,12 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
                         high = mid;
                     } else if (start + range.minted - 1 >= _tokenId) {
                         // Is token in target's minted range?
-                        status = PreMintStatus.COMMITABLE;
+                        committable = true;
                         offerId = range.offerId;
                         break; // Found!
                     } else if (start + range.length - 1 >= _tokenId) {
                         // No? Ok, is it in target's reserved range?
-                        status = PreMintStatus.IN_A_RANGE_NOT_COMMITABLE;
+                        committable = false;
                         break; // Found!
                     } else {
                         // No? It may be in a higher range
