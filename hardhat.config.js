@@ -61,6 +61,14 @@ task("upgrade-facets", "Upgrade existing facets, add new facets or remove existi
     await upgradeFacets(env, facetConfig);
   });
 
+task("upgrade-clients", "Upgrade existing clients")
+  .addOptionalParam("env", "The deployment environment")
+  .setAction(async ({ env }) => {
+    const { upgradeClients } = await lazyImport("./scripts/upgrade-clients.js");
+
+    await upgradeClients(env);
+  });
+
 task("manage-roles", "Grant or revoke access control roles")
   .addOptionalParam("env", "The deployment environment")
   .setAction(async ({ env }) => {
