@@ -227,7 +227,7 @@ library ProtocolLib {
         // interface id => initialized?
         mapping(bytes4 => bool) initializedInterfaces;
         // Protocol version
-        string version;
+        bytes32 version;
     }
 
     /**

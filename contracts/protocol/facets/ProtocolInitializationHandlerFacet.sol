@@ -9,18 +9,25 @@ import { TwinHandlerFacet } from "./TwinHandlerFacet.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 
-contract ProtocolInitializationHandlerFacet is  IBosonProtocolInitializationHandler, ProtocolBase {
+/**
+ * @title IBosonProtocolInitializationHandler
+ *
+ * @notice Handle initializion of new versions after 2.1.0.
+ *
+ */
+contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandler, ProtocolBase {
     /**
      * @notice Initializes the protocol after the deployment.
      * This function is callable only once
      *
      * @param _version - version of the protocol
      */
-    function initialize(string memory _version)
+    function initialize(bytes32 _version)
         public
         onlyUnInitialized(type(IBosonProtocolInitializationHandler).interfaceId)
     {
-        if (keccak256(bytes(_version)) == keccak256(bytes("2.2.0"))) {
+        bytes32 version = bytes32(bytes("2.2.0"));
+        if (keccak256(abi.encodePacked(_version)) == keccak256(abi.encodePacked(version))) {
             initV2_2_0();
         }
     }
@@ -33,18 +40,17 @@ contract ProtocolInitializationHandlerFacet is  IBosonProtocolInitializationHand
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
         status.version = "2.2.0";
 
-        DisputeResolverHandlerFacet disputeResolverHandlerFacet = DisputeResolverHandlerFacet(address(this));
-        disputeResolverHandlerFacet.initialize();
-
-        TwinHandlerFacet twinHandlerFacet = TwinHandlerFacet(address(this));
-        twinHandlerFacet.initialize();
-
         DiamondLib.addSupportedInterface(type(IBosonProtocolInitializationHandler).interfaceId);
 
         emit ProtocolInitialized(status.version);
     }
 
-    function getVersion() external pure override returns (string memory version) {
-        version =  "2.2.0";
+   /**
+     * @notice Gets the current protocol version.
+     *
+     */
+    function getVersion() external view override returns (bytes32 version) {
+        ProtocolLib.ProtocolStatus storage status = protocolStatus();
+        version = status.version;
     }
 }
