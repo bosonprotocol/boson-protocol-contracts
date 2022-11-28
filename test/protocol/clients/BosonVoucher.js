@@ -35,6 +35,7 @@ describe("IBosonVoucher", function () {
     protocol,
     buyer,
     rando,
+    rando2,
     operator,
     admin,
     clerk,
@@ -60,7 +61,7 @@ describe("IBosonVoucher", function () {
 
   beforeEach(async function () {
     // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
-    [deployer, protocol, buyer, rando, admin, treasury, adminDR, treasuryDR, protocolTreasury, bosonToken] =
+    [deployer, protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR, protocolTreasury, bosonToken] =
       await ethers.getSigners();
 
     // make all account the same
@@ -659,6 +660,17 @@ describe("IBosonVoucher", function () {
               .withArgs(offerId, tokenId, randoBuyer.id, bosonVoucher.address);
           });
 
+          it("Transfer on behalf of should work normally", async function () {
+            // Approve another address to transfer the voucher
+            await bosonVoucher.connect(buyer).setApprovalForAll(rando2.address, true);
+
+            await expect(
+              bosonVoucher.connect(rando2)[selector](buyer.address, rando.address, tokenId, ...additionalArgs)
+            )
+              .to.emit(bosonVoucher, "Transfer")
+              .withArgs(buyer.address, rando.address, tokenId);
+          });
+
           it("If seller is the true owner of voucher, transfer should work same as for others", async function () {
             mockBuyer(); // Call to properly update nextAccountId
             await bosonVoucher.connect(buyer)[selector](buyer.address, operator.address, tokenId, ...additionalArgs);
@@ -728,6 +740,17 @@ describe("IBosonVoucher", function () {
 
           it.skip("Second transfer should behave as normal voucher transfer", async function () {
             // TODO: implement once commitToPreMintedOffer on exchange handler is finished
+          });
+
+          it("Transfer on behalf of should work normally", async function () {
+            // Approve another address to transfer the voucher
+            await bosonVoucher.connect(operator).setApprovalForAll(rando2.address, true);
+
+            await expect(
+              bosonVoucher.connect(rando2)[selector](operator.address, rando.address, tokenId, ...additionalArgs)
+            )
+              .to.emit(bosonVoucher, "Transfer")
+              .withArgs(operator.address, rando.address, tokenId);
           });
 
           context("💔 Revert Reasons", async function () {
