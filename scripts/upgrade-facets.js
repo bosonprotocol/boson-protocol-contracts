@@ -33,7 +33,7 @@ const rl = readline.createInterface({
  *  2. Run the appropriate npm script in package.json to upgrade facets for a given network
  *  3. Save changes to the repo as a record of what was upgraded
  */
-async function main(env) {
+async function main(env, facetConfig) {
   // Bail now if hardhat network, unless the upgrade is tested
   if (network === "hardhat" && env !== "upgrade-test") process.exit();
 
@@ -113,7 +113,14 @@ async function main(env) {
   }
 
   // Get facets to upgrade
-  const facets = await getFacets();
+  let facets;
+  if (facetConfig) {
+    // facetConfig was passed in as a JSON object
+    facets = JSON.parse(facetConfig);
+  } else {
+    // Get values from default config file
+    facets = await getFacets();
+  }
 
   // Deploy new facets
   const deployedFacets = await deployProtocolHandlerFacets(
