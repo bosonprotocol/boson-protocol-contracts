@@ -16,6 +16,8 @@ import { IClientExternalAddresses } from "../../../interfaces/clients/IClientExt
 import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
 import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchangeHandler.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title BosonVoucher
  * @notice This is the Boson Protocol ERC-721 NFT Voucher contract.
@@ -573,15 +575,17 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
                 // Binary search the ranges array
                 uint256 low = 0; // Lower bound of search (array index)
                 uint256 high = length; // Upper bound of search
+
                 while (low < high) {
                     // Calculate the current midpoint
-                    uint256 mid = (high - low) / 2;
+                    uint256 mid = (high + low) / 2;
 
                     // Get the range stored at the midpoint
                     Range storage range = rangeByOfferId[rangeOfferIds[mid]];
 
                     // Get the beginning of the range once for reference
                     uint256 start = range.start;
+
                     if (start > _tokenId) {
                         // Split low and search again if target too high
                         high = mid;
