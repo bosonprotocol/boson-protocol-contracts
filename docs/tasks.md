@@ -53,10 +53,10 @@ After the protocol contracts are deployed, they should be verified on a block ex
 - **Ethereum Mainnet**. This verifies the deployed contracts on Ethereum Mainnet.  
 ```npm run verify-suite:ethereum:mainnet```
 
-### Upgrade facet
+### Upgrade facets
 Upgrade existing facets, add new facets or remove existing facets. We provide different npm scripts for different use cases. A script for Hardhat network does not exist. Since contracts are discarded after the deployment, they cannot be upgraded.
 
-For upgrade to succeed you need an account with UPGRADER role. Refer to "Manage Roles" to see how to grant it.
+For upgrade to succeed you need an account with UPGRADER role. Refer to [Manage roles](#manage-roles) to see how to grant it.
 
 - **local network**. This upgrades the existing diamond on a independent instance of local network (e.g. `npx hardhat node`). Upgrade process is described [here](local-development.md#upgrade-facets).  
 ```npm run upgrade-facets:local```
@@ -69,6 +69,23 @@ For upgrade to succeed you need an account with UPGRADER role. Refer to "Manage 
 ```npm run upgrade-facets:polygon:mainnet```
 - **Ethereum Mainnet**. This upgrades the existing diamond on Ethereum Mainnet.  
 ```npm run upgrade-facets:ethereum:mainnet```
+
+### Upgrade clients
+Upgrade existing clients (currently only BosonVoucher). Script deploys new implementation and updates address on beacon.  
+We provide different npm scripts for different use cases. A script for Hardhat network does not exist. Since contracts are discarded after the deployment, they cannot be upgraded.  
+For upgrade to succeed you need an account with UPGRADER role. Refer to [Manage roles](#manage-roles) to see how to grant it.
+
+- **local network**. This upgrades the clients on a independent instance of local network (e.g. `npx hardhat node`). Upgrade process is described [here](local-development.md#upgrade-clients).  
+```npm run upgrade-clients:local```
+- **internal test node**. This upgrades the clients on a custom test network. You need to modifiy `.env` with appropriate values for this to work.  
+```npm run upgrade-clients:test```
+- **Polygon Mumbai**. This upgrades the clients on Polygon Mumbai. The Boson Protocol team uses separate sets of contracts on Polygon Mumbai for the test and staging environments.  
+```npm run upgrade-clients:polygon:mumbai-test```  
+```npm run upgrade-clients:polygon:mumbai-staging```
+- **Polygon Mainnet**. This upgrades the clients on Polygon Mainnet.  
+```npm run upgrade-clients:polygon:mainnet```
+- **Ethereum Mainnet**. This upgrades the clients on Ethereum Mainnet.  
+```npm run upgrade-clients:ethereum:mainnet```
 
 ### Deploy mock authentication token
 Boson protocol support LENS and ENS as authentication method for seller's admin account. Public networks have LENS and ENS already deployed, but to use that funcionality on custom local or test nodes, you need to deploy the mock contract first. We provide the scripts for the following networks:
