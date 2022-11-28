@@ -125,6 +125,7 @@ exports.RevertReasons = {
   OFFER_RANGE_ALREADY_RESERVED: "Offer id already associated with a reserved range",
   INVALID_RANGE_START: "Range start must be greater than zero",
   INVALID_AMOUNT_TO_MINT: "Amount to mint is greater than remaining un-minted in range",
+  NO_SILENT_MINT_ALLOWED: "Only owner's mappings can be updated without event",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",
@@ -145,6 +146,7 @@ exports.RevertReasons = {
   EOA_FUNCTION_CALL: "Transaction reverted: function call to a non-contract account",
   EOA_FUNCTION_CALL_SAFE_ERC20: "Address: call to non-contract",
   ERC721_NON_EXISTENT: "ERC721: invalid token ID",
+  ERC721_CALLER_NOT_OWNER_OR_APPROVED: "ERC721: caller is not token owner nor approved",
   OWNABLE_NOT_OWNER: "Ownable: caller is not the owner",
   OWNABLE_ZERO_ADDRESS: "Ownable: new owner is the zero address",
   SAFE_ERC20_LOW_LEVEL_CALL: "SafeERC20: low-level call failed",

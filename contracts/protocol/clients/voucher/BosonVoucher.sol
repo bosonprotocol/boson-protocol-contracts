@@ -46,8 +46,12 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         mapping(address => uint256) _balances;
     }
 
-    // Opensea collection config
+    struct PremintStatus {
+        bool committable;
+        uint256 offerId;
+    }
 
+    // Opensea collection config
     string private _contractURI;
 
     // Royalty percentage requested by seller (for all offers)
@@ -58,6 +62,9 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
     // All ranges as an array
     uint256[] private rangeOfferIds;
+
+    // Premint status, used only temporarly in transfers
+    PremintStatus private premintStatus;
 
     /**
      * @notice Initializes the voucher.
@@ -275,10 +282,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
             //      2.2. premint was not called yet: revert
             (bool committable, ) = getPreMintStatus(tokenId);
 
-            if (committable) {
-                (bool exists, ) = getBosonExchange(tokenId);
-                if (!exists) return super.owner();
-            }
+            if (committable) return super.owner();
+
             revert("ERC721: invalid token ID");
         }
     }
@@ -291,11 +296,13 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         address to,
         uint256 tokenId
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
-        (bool committable, ) = getPreMintStatus(tokenId);
+        (bool committable, uint256 offerId) = getPreMintStatus(tokenId);
 
         if (committable) {
             // If offer is committable, temporary update _owners, so transfer succedds
             silentMint(from, tokenId);
+            premintStatus.committable = true;
+            premintStatus.offerId = offerId;
         }
 
         super.transferFrom(from, to, tokenId);
@@ -310,11 +317,13 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         uint256 tokenId,
         bytes memory data
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
-        (bool committable, ) = getPreMintStatus(tokenId);
+        (bool committable, uint256 offerId) = getPreMintStatus(tokenId);
 
         if (committable) {
             // If offer is committable, temporary update _owners, so transfer succedds
             silentMint(from, tokenId);
+            premintStatus.committable = true;
+            premintStatus.offerId = offerId;
         }
 
         super.safeTransferFrom(from, to, tokenId, data);
@@ -558,18 +567,15 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         // Update the buyer associated with the voucher in the protocol
         // Only when transferring, not minting or burning
         if (from == owner()) {
-            (bool exists, ) = getBosonExchange(tokenId);
-            if (exists) {
+            if (premintStatus.committable) {
+                // If this is a transfer of premited token, treat it differently
+                address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+                // TODO: uncomment when commitToPreMintedOffer method is available
+                // IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(to, premintStatus.offerId, tokenId);
+                delete premintStatus;
+            } else {
                 // Already committed, treat as a normal transfer
                 onVoucherTransferred(tokenId, payable(to));
-            } else {
-                // If this is a transfer of premited token, treat it differently
-                (bool committable, uint256 offerId) = getPreMintStatus(tokenId);
-                if (committable) {
-                    address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-                    // TODO: uncomment when commitToPreMintedOffer method is available
-                    // IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(to, offerId, tokenId);
-                }
             }
         } else if (from != address(0) && to != address(0) && from != to) {
             onVoucherTransferred(tokenId, payable(to));
@@ -611,8 +617,13 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
                         high = mid;
                     } else if (start + range.minted - 1 >= _tokenId) {
                         // Is token in target's minted range?
-                        committable = true;
-                        offerId = range.offerId;
+
+                        // If token is in range, but exchange also exists, it is not committable anymore
+                        (bool exists, ) = getBosonExchange(_tokenId);
+                        if (!exists) {
+                            committable = true;
+                            offerId = range.offerId;
+                        }
                         break; // Found!
                     } else if (start + range.length - 1 >= _tokenId) {
                         // No? Ok, is it in target's reserved range?

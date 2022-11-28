@@ -22,7 +22,7 @@ const {
   mockBuyer,
   accountId,
 } = require("../../util/mock");
-const { applyPercentage } = require("../../util/utils.js");
+const { applyPercentage, calculateContractAddress } = require("../../util/utils.js");
 const { waffle } = hre;
 const { deployMockContract } = waffle;
 const FormatTypes = ethers.utils.FormatTypes;
@@ -138,6 +138,15 @@ describe("IBosonVoucher", function () {
     ];
 
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+
+    // Initialize voucher contract
+    const sellerId = 1;
+
+    // prepare the VoucherInitValues
+    voucherInitValues = mockVoucherInitValues();
+    const bosonVoucherInit = await ethers.getContractAt("BosonVoucher", bosonVoucher.address);
+
+    await bosonVoucherInit.initializeVoucher(sellerId, operator.address, voucherInitValues);
   });
 
   // Interface support
@@ -200,65 +209,11 @@ describe("IBosonVoucher", function () {
     });
   });
 
-  context.skip("premint", function () {
-    // before(function () {
-    //   buyerStruct = mockBuyer(buyer.address).toStruct();
-    //   buyerWallet = buyerStruct[1];
-    // });
-
-    after(async function () {
-      // Reset the accountId iterator
-      accountId.next(true);
-    });
-
-    it.only("safetransferfrom", async function () {
-      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
-
-      console.log("owner address", operator.address);
-      // prepare the VoucherInitValues
-      voucherInitValues = mockVoucherInitValues();
-      const bosonVoucher2 = await ethers.getContractAt("BosonVoucher", bosonVoucher.address);
-
-      await bosonVoucher2.initializeVoucher(seller.id, operator.address, voucherInitValues);
-      // const balanceBefore = await bosonVoucher.balanceOf(buyer.address);
-
-      await bosonVoucher2.connect(protocol).reserveRange(10, 15, 50); // 15 - 65
-
-      let tokenId = 16;
-      await expect(bosonVoucher2.ownerOf(tokenId)).to.be.revertedWith("ERC721: invalid token ID");
-      let ownerOf = await bosonVoucher2.ownerOf(tokenId);
-      console.log(ownerOf);
-
-      await bosonVoucher2.connect(operator).preMint(10, 20); // 15 - 65
-
-      // ownerOf = await bosonVoucher2.ownerOf(tokenId);
-      // console.log(ownerOf)
-
-      // transfer shoud work
-      await bosonVoucher2.connect(operator).transferFrom(operator.address, rando.address, 16);
-      await bosonVoucher2
-        .connect(operator)
-        ["safeTransferFrom(address,address,uint256,bytes)"](operator.address, rando.address, 17, "0x");
-      await bosonVoucher2.connect(operator).setApprovalForAll(rando.address, true);
-      await bosonVoucher2
-        .connect(rando)
-        ["safeTransferFrom(address,address,uint256,bytes)"](operator.address, rando.address, 18, "0x");
-    });
-  });
-
   context("reserveRange()", function () {
     let offerId, startId, length;
     let range;
 
     beforeEach(async function () {
-      const sellerId = 1;
-
-      // prepare the VoucherInitValues
-      voucherInitValues = mockVoucherInitValues();
-      const bosonVoucherInit = await ethers.getContractAt("BosonVoucher", bosonVoucher.address);
-
-      await bosonVoucherInit.initializeVoucher(sellerId, operator.address, voucherInitValues);
-
       offerId = "5";
       startId = "10";
       length = "123";
@@ -319,14 +274,6 @@ describe("IBosonVoucher", function () {
     let offerId, startId, length, amount;
 
     beforeEach(async function () {
-      const sellerId = 1;
-
-      // prepare the VoucherInitValues
-      voucherInitValues = mockVoucherInitValues();
-      const bosonVoucherInit = await ethers.getContractAt("BosonVoucher", bosonVoucher.address);
-
-      await bosonVoucherInit.initializeVoucher(sellerId, operator.address, voucherInitValues);
-
       // reserve a range
       offerId = "5";
       startId = "10";
@@ -369,8 +316,6 @@ describe("IBosonVoucher", function () {
 
       // Seller's balance should be updated for the total mint amount
       let sellerBalanceAfter = await bosonVoucher.balanceOf(operator.address);
-      console.log("after", sellerBalanceAfter.toString());
-      console.log("before", sellerBalanceBefore.toString());
       assert.equal(sellerBalanceAfter.toNumber(), sellerBalanceBefore.add(amount).toNumber(), "Balance mismatch");
 
       // Get available premints from contract
@@ -418,14 +363,6 @@ describe("IBosonVoucher", function () {
     let offerId, startId, length, amount;
 
     beforeEach(async function () {
-      const sellerId = 1;
-
-      // prepare the VoucherInitValues
-      voucherInitValues = mockVoucherInitValues();
-      const bosonVoucherInit = await ethers.getContractAt("BosonVoucher", bosonVoucher.address);
-
-      await bosonVoucherInit.initializeVoucher(sellerId, operator.address, voucherInitValues);
-
       // reserve a range
       offerId = "5";
       startId = "10";
@@ -482,14 +419,6 @@ describe("IBosonVoucher", function () {
     let range;
 
     beforeEach(async function () {
-      const sellerId = 1;
-
-      // prepare the VoucherInitValues
-      voucherInitValues = mockVoucherInitValues();
-      const bosonVoucherInit = await ethers.getContractAt("BosonVoucher", bosonVoucher.address);
-
-      await bosonVoucherInit.initializeVoucher(sellerId, operator.address, voucherInitValues);
-
       // reserve a range
       offerId = "5";
       startId = "10";
@@ -499,8 +428,10 @@ describe("IBosonVoucher", function () {
 
       await bosonVoucher.connect(protocol).reserveRange(offerId, startId, length);
 
-      // amount to mint
+      // amount to premint
+      amount = "50";
       range.minted = amount;
+      await bosonVoucher.connect(operator).preMint(offerId, amount);
     });
 
     it("Get range object for offer with reserved range", async function () {
@@ -509,7 +440,7 @@ describe("IBosonVoucher", function () {
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
     });
 
-    it("Get empty range if offer has no reserver ranges", async function () {
+    it("Get empty range if offer has no reserved ranges", async function () {
       // Set invalid offer and empty range
       offerId = "20";
       range = new Range("0", "0", "0", "0");
@@ -524,14 +455,6 @@ describe("IBosonVoucher", function () {
     let offerId, startId, length, amount;
 
     beforeEach(async function () {
-      const sellerId = 1;
-
-      // prepare the VoucherInitValues
-      voucherInitValues = mockVoucherInitValues();
-      const bosonVoucherInit = await ethers.getContractAt("BosonVoucher", bosonVoucher.address);
-
-      await bosonVoucherInit.initializeVoucher(sellerId, operator.address, voucherInitValues);
-
       // reserve a range
       offerId = "5";
       startId = "10";
@@ -628,13 +551,203 @@ describe("IBosonVoucher", function () {
     });
   });
 
-  ("transferFrom()");
-  ("normal transfer");
-  ("calls on voucher transferred");
-  ("normal transfer when seller is true owner");
-  ("transfer preminted");
-  ("calls commitToPreMintedOffer");
-  ("nosilenmintallowed");
+  context("Token transfers", function () {
+    afterEach(async function () {
+      // Reset the accountId iterator
+      accountId.next(true);
+    });
+
+    context("transferFrom()", function () {
+      let tokenId, offerId, startId, length, amount;
+
+      context("Transfer of an actual voucher", async function () {
+        beforeEach(async function () {
+          seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+
+          // Prepare the AuthToken and VoucherInitValues
+          emptyAuthToken = mockAuthToken();
+          voucherInitValues = mockVoucherInitValues();
+          await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          agentId = "0"; // agent id is optional while creating an offer
+
+          // Create a valid dispute resolver
+          disputeResolver = mockDisputeResolver(
+            operatorDR.address,
+            adminDR.address,
+            clerkDR.address,
+            treasuryDR.address,
+            true
+          );
+
+          // Create DisputeResolverFee array so offer creation will succeed
+          disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+          const sellerAllowList = [];
+
+          // Register the dispute resolver
+          await accountHandler
+            .connect(adminDR)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+          const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+          await offerHandler
+            .connect(operator)
+            .createOffer(
+              offer.toStruct(),
+              offerDates.toStruct(),
+              offerDurations.toStruct(),
+              disputeResolverId,
+              agentId
+            );
+          await fundsHandler
+            .connect(admin)
+            .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
+
+          tokenId = offerId = "1";
+          mockBuyer(); // call it just so accountId is correct
+
+          // Update boson voucher address to actual seller's voucher
+          const voucherAddress = calculateContractAddress(accountHandler.address, "1");
+          bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
+        });
+
+        it("Should emit a Transfer event", async function () {
+          await expect(bosonVoucher.connect(buyer).transferFrom(buyer.address, rando.address, tokenId))
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(buyer.address, rando.address, tokenId);
+        });
+
+        it("Should update state", async function () {
+          // Before transfer, buyer should be the owner
+          let tokenOwner = await bosonVoucher.ownerOf(tokenId);
+          assert.equal(tokenOwner, buyer.address, "Buyer is not the owner");
+
+          await bosonVoucher.connect(buyer).transferFrom(buyer.address, rando.address, tokenId);
+
+          // After transfer, rando should be the owner
+          tokenOwner = await bosonVoucher.ownerOf(tokenId);
+          assert.equal(tokenOwner, rando.address, "Rando is not the owner");
+        });
+
+        it("Should call onVoucherTransferred", async function () {
+          const randoBuyer = mockBuyer();
+          await expect(bosonVoucher.connect(buyer).transferFrom(buyer.address, rando.address, tokenId))
+            .to.emit(exchangeHandler, "VoucherTransferred")
+            .withArgs(offerId, tokenId, randoBuyer.id, bosonVoucher.address);
+        });
+
+        it("If seller is the true owner of voucher, transfer should work same as for others", async function () {
+          mockBuyer(); // Call to properly update nextAccountId
+          await bosonVoucher.connect(buyer).transferFrom(buyer.address, operator.address, tokenId);
+
+          const tx = await bosonVoucher.connect(operator).transferFrom(operator.address, rando.address, tokenId);
+
+          await expect(tx).to.emit(bosonVoucher, "Transfer").withArgs(operator.address, rando.address, tokenId);
+
+          const randoBuyer = mockBuyer();
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "VoucherTransferred")
+            .withArgs(offerId, tokenId, randoBuyer.id, bosonVoucher.address);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("From does not own the voucher", async function () {
+            await expect(
+              bosonVoucher.connect(rando).transferFrom(operator.address, rando.address, tokenId)
+            ).to.be.revertedWith(RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
+          });
+        });
+      });
+
+      context("Transfer of a preminted voucher", async function () {
+        beforeEach(async function () {
+          // TODO: when commitToPreMintedOffer is implemented, make proper setup here
+
+          // reserve a range
+          offerId = "5";
+          startId = "10";
+          length = "1000";
+          await bosonVoucher.connect(protocol).reserveRange(offerId, startId, length);
+
+          // amount to premint
+          amount = 50;
+          await bosonVoucher.connect(operator).preMint(offerId, amount);
+
+          tokenId = startId;
+        });
+
+        it("Should emit a Transfer event", async function () {
+          await expect(bosonVoucher.connect(operator).transferFrom(operator.address, rando.address, tokenId))
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(operator.address, rando.address, tokenId);
+        });
+
+        it("Should update state", async function () {
+          // Before transfer, seller should be the owner
+          let tokenOwner = await bosonVoucher.ownerOf(tokenId);
+          assert.equal(tokenOwner, operator.address, "Buyer is not the owner");
+
+          await bosonVoucher.connect(operator).transferFrom(operator.address, rando.address, tokenId);
+
+          // After transfer, rando should be the owner
+          tokenOwner = await bosonVoucher.ownerOf(tokenId);
+          assert.equal(tokenOwner, rando.address, "Rando is not the owner");
+        });
+
+        it.skip("Should call commitToPreMintedOffer", async function () {
+          // TODO: implement once commitToPreMintedOffer on exchange handler is finished
+        });
+
+        it.skip("Second transfer should behave as normal voucher transfer", async function () {
+          // TODO: implement once commitToPreMintedOffer on exchange handler is finished
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("Transfer preminted voucher, but from is not the contract owner", async function () {
+            await expect(
+              bosonVoucher.connect(rando).transferFrom(rando.address, buyer.address, tokenId)
+            ).to.be.revertedWith(RevertReasons.NO_SILENT_MINT_ALLOWED);
+          });
+
+          it("Cannot transfer preminted voucher twice", async function () {
+            // Make first transfer
+            await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+
+            // Second transfer should fail, since voucher has an owner
+            await expect(
+              bosonVoucher.connect(operator).transferFrom(operator.address, rando.address, tokenId)
+            ).to.be.revertedWith(RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
+          });
+
+          it("Transfer preminted voucher, which was burned committed and burned already", async function () {
+            await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+
+            // Simulate burn
+            await bosonVoucher.connect(protocol).burnVoucher(tokenId);
+
+            // Mock protocol that returns true when getExchange is called
+            const exchangeHandlerInterface = exchangeHandler.interface;
+            const exchangeHandlerABI = exchangeHandlerInterface.format(FormatTypes.json);
+
+            const mockProtocol = await deployMockContract(deployer, JSON.parse(exchangeHandlerABI)); //deploys mock
+
+            // Update protocol address on beacon
+            await beacon.connect(deployer).setProtocolAddress(mockProtocol.address);
+
+            // Define what should be returned when getExchange is called
+            await mockProtocol.mock.getExchange.withArgs(tokenId).returns(true, mockExchange(), mockVoucher());
+
+            // None of reserverd but not preminted tokens should have an owner
+            await expect(
+              bosonVoucher.connect(operator).transferFrom(operator.address, rando.address, tokenId)
+            ).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+          });
+        });
+      });
+    });
+  });
 
   context("burnVoucher()", function () {
     after(async function () {
@@ -742,9 +855,9 @@ describe("IBosonVoucher", function () {
   context("transferOwnership()", function () {
     it("should emit OwnershipTransferred", async function () {
       const ownable = await ethers.getContractAt("OwnableUpgradeable", bosonVoucher.address);
-      await expect(bosonVoucher.connect(protocol).transferOwnership(operator.address))
+      await expect(bosonVoucher.connect(protocol).transferOwnership(rando.address))
         .to.emit(ownable, "OwnershipTransferred")
-        .withArgs(ethers.constants.AddressZero, operator.address);
+        .withArgs(operator.address, rando.address);
     });
 
     it("should transfer ownership with success", async function () {
