@@ -16,8 +16,6 @@ import { IClientExternalAddresses } from "../../../interfaces/clients/IClientExt
 import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
 import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchangeHandler.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title BosonVoucher
  * @notice This is the Boson Protocol ERC-721 NFT Voucher contract.
