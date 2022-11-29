@@ -4,17 +4,14 @@ const ethers = hre.ethers;
 
 const Role = require("../../scripts/domain/Role");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const {
-  deployProtocolHandlerFacetsWithArgs,
-  deployProtocolHandlerFacets,
-} = require("../../scripts/util/deploy-protocol-handler-facets");
+const { deployProtocolHandlerFacetsWithArgs } = require("../../scripts/util/deploy-protocol-handler-facets");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces");
 const { maxPriorityFeePerGas } = require("../util/constants");
 
-describe.only("ProtocolInitializationHandler", async function () {
+describe("ProtocolInitializationHandler", async function () {
   // Common vars
   let InterfaceIds;
-  let deployer, admin, rando;
+  let deployer, rando;
   let protocolInitializationHandler;
   let protocolDiamond, accessController;
   let erc165;
@@ -34,15 +31,8 @@ describe.only("ProtocolInitializationHandler", async function () {
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
-    // Temporarily grant UPGRADER role to deployer account
+    // Temporarily grant UPGRADER role to deployer 1ccount
     await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    // Cut the protocol handler facets into the Diamond
-    // await deployProtocolHandlerFacets(
-    //   protocolDiamond,
-    //   ["DisputeResolverHandlerFacet", "TwinHandlerFacet"],
-    //   maxPriorityFeePerGas
-    // );
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
@@ -55,7 +45,7 @@ describe.only("ProtocolInitializationHandler", async function () {
 
   describe("Deploy tests", async function () {
     context("📋 Initializer", async function () {
-      it("should initialize the version 2.1.0 and emit ProtocolInitialized", async function () {
+      it("should initialize the version 2.2.0 and emit ProtocolInitialized", async function () {
         const version = ethers.utils.formatBytes32String("2.2.0");
 
         const [deployedProcolInitializationFacet] = await deployProtocolHandlerFacetsWithArgs(
@@ -93,6 +83,12 @@ describe.only("ProtocolInitializationHandler", async function () {
           expect(support, "IBosonProtocolInitializationHandler interface not supported").is.true;
         });
       });
+    });
+
+    it("Should return the correct version", async function () {
+      const version = await protocolInitializationHandler.connect(rando).getVersion();
+
+      expect(ethers.utils.parseBytes32String(version)).to.equal("2.2.0");
     });
   });
 });
