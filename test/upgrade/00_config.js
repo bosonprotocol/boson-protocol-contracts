@@ -41,4 +41,7 @@ const facets = {
   },
 };
 
+// Versions that have the same deploy config
+facets.deploy["v2.1.0"] = facets.deploy["v2.0.0"];
+
 exports.facets = facets;

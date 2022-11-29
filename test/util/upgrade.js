@@ -1,4 +1,5 @@
 const shell = require("shelljs");
+const fs = require("fs");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
 const ethers = hre.ethers;
@@ -1254,7 +1255,70 @@ async function getProtocolLookupsPrivateContractState(
   };
 }
 
+async function getStorageLayout(contractName) {
+  // Modified code from https://github.com/aurora-is-near/hardhat-storage-layout/tree/v0.1.7
+  const buildInfos = await hre.artifacts.getBuildInfoPaths();
+  const artifactsPath = hre.config.paths.artifacts;
+  const artifacts = buildInfos.map((source) => {
+    const artifact = fs.readFileSync(source);
+    return {
+      source: source.startsWith(artifactsPath) ? source.slice(artifactsPath.length) : source,
+      data: JSON.parse(artifact.toString()),
+    };
+  });
+
+  const { sourceName } = await hre.artifacts.readArtifact(contractName);
+
+  const stateVariables = [];
+  for (const artifactJsonABI of artifacts) {
+    const storage = artifactJsonABI.data.output?.contracts?.[sourceName]?.[contractName]?.storageLayout?.storage;
+    if (!storage) {
+      continue;
+    }
+
+    for (const stateVariable of storage) {
+      stateVariables.push({
+        name: stateVariable.label,
+        slot: stateVariable.slot,
+        offset: stateVariable.offset,
+        type: stateVariable.type,
+      });
+    }
+  }
+  return stateVariables;
+}
+
+function compareStorageLayouts(storageBefore, storageAfter) {
+  // Ald old variables must be present in new layout in the same slots
+  // New variables can be added if they don't affect the layout
+  let storageOk = true;
+  for (const stateVariableBefore of storageBefore) {
+    const { name } = stateVariableBefore;
+    if (name == "__gap") {
+      // __gap is special variable that does not store any data and can potentially be modified
+      // TODO: if changed, validate against new variables
+      continue;
+    }
+    const stateVariableAfter = storageAfter.find((stateVariable) => stateVariable.name === name);
+    if (
+      !stateVariableAfter ||
+      stateVariableAfter.slot != stateVariableBefore.slot ||
+      stateVariableAfter.offset != stateVariableBefore.offset ||
+      stateVariableAfter.type != stateVariableBefore.type
+    ) {
+      storageOk = false;
+      console.error("Storage layout mismatch");
+      console.log("State variable before", stateVariableBefore);
+      console.log("State variable after", stateVariableAfter);
+    }
+  }
+
+  return storageOk;
+}
+
 exports.deploySuite = deploySuite;
 exports.upgradeSuite = upgradeSuite;
 exports.populateProtocolContract = populateProtocolContract;
 exports.getProtocolContractState = getProtocolContractState;
+exports.getStorageLayout = getStorageLayout;
+exports.compareStorageLayouts = compareStorageLayouts;
