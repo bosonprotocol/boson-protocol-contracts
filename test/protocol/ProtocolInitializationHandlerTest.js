@@ -1,4 +1,4 @@
-const { assert, expect } = require("chai");
+const { expect } = require("chai");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 
@@ -23,7 +23,7 @@ describe("ProtocolInitializationHandler", async function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, admin, rando] = await ethers.getSigners();
+    [deployer, rando] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);

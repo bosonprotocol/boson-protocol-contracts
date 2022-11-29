@@ -17,15 +17,22 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
  */
 contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandler, ProtocolBase {
     /**
+     * @notice Modifier to protect initializer function from being invoked twice for a given version.
+     */
+    modifier onlyUnInitializedVersion(bytes32 _version) {
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+        require(!ps.initializedVersions[_version], ALREADY_INITIALIZED);
+        ps.initializedVersions[_version] = true;
+        _;
+    }
+
+    /**
      * @notice Initializes the protocol after the deployment.
      * This function is callable only once
      *
      * @param _version - version of the protocol
      */
-    function initialize(bytes32 _version)
-        public
-        onlyUnInitialized(type(IBosonProtocolInitializationHandler).interfaceId)
-    {
+    function initialize(bytes32 _version) public onlyUnInitializedVersion(_version) {
         bytes32 version = bytes32(bytes("2.2.0"));
         if (keccak256(abi.encodePacked(_version)) == keccak256(abi.encodePacked(version))) {
             initV2_2_0();
@@ -45,7 +52,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         emit ProtocolInitialized(status.version);
     }
 
-   /**
+    /**
      * @notice Gets the current protocol version.
      *
      */

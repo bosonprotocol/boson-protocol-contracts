@@ -128,6 +128,7 @@ async function main(env) {
   const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", protocolAddress);
   const diamondLoupe = await ethers.getContractAt("DiamondLoupeFacet", protocolAddress);
   const erc165Extended = await ethers.getContractAt("IERC165Extended", protocolAddress);
+  const protocolInitializationFacet = await ethers.getContractAt("ProtocolInitializationHandlerFacet", protocolAddress);
 
   // Manage new or upgraded facets
   for (const newFacet of deployedFacets) {
@@ -198,7 +199,9 @@ async function main(env) {
 
       // Only ProtooclInitializationHandlerFacet should call initialize function
       if (newFacet.name == "ProtocolInitializationHandlerFacet") {
-        const callData = newFacet.contract.interface.encodeFunctionData("initialize", [version]);
+        const callData = newFacet.contract.interface.encodeFunctionData("initialize", [
+          ethers.utils.formatBytes32String(version),
+        ]);
 
         transactionResponse = await diamondCutFacet
           .connect(adminSigner)
@@ -318,7 +321,6 @@ async function main(env) {
           `Could not find interface id for old facet ${oldFacet.name}.\nYou might need to remove its interfaceId from "supportsInterface" manually.`
         );
       } else {
-        console.log("else");
         // Remove from smart contract
         await erc165Extended
           .connect(adminSigner)
@@ -336,6 +338,9 @@ async function main(env) {
       }
     }
   }
+
+  const newVersion = await protocolInitializationFacet.getVersion();
+  console.log(`\n📋 New version: ${ethers.utils.parseBytes32String(newVersion)}`);
 
   const contractsPath = await writeContracts(contracts, env);
   console.log(divider);

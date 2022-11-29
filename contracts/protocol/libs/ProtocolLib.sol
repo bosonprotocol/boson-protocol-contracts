@@ -226,7 +226,9 @@ library ProtocolLib {
         uint256 reentrancyStatus;
         // interface id => initialized?
         mapping(bytes4 => bool) initializedInterfaces;
-        // Protocol version
+        // version => initialized?
+        mapping(bytes32 => bool) initializedVersions;
+        // Current protocol version
         bytes32 version;
     }
 

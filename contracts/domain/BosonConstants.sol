@@ -26,7 +26,7 @@ string constant REENTRANCY_GUARD = "ReentrancyGuard: reentrant call";
 uint256 constant NOT_ENTERED = 1;
 uint256 constant ENTERED = 2;
 
-// Revert Reasons: Facet initializer related
+// Revert Reasons: Facet or version initializer related
 string constant ALREADY_INITIALIZED = "Already initialized";
 
 // Revert Reasons: Access related

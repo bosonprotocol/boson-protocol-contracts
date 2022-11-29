@@ -11,7 +11,7 @@ import "../events/IBosonProtocolInitializationEvents.sol";
  * The ERC-165 identifier for this interface is: 0x0d8e6e2c
  */
 interface IBosonProtocolInitializationHandler is IBosonProtocolInitializationEvents {
-   /**
+    /**
      * @notice Gets the current protocol version.
      *
      */

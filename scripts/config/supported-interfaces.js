@@ -23,7 +23,7 @@ const interfaces = [
   "IDiamondLoupe",
   "IERC165",
   "IERC165Extended",
-  "IBosonProtocolInitializationHandler"
+  "IBosonProtocolInitializationHandler",
 ];
 
 const interfaceImplementers = {
@@ -46,7 +46,7 @@ const interfaceImplementers = {
   DiamondCutFacet: "IDiamondCut",
   ERC165Facet: "IERC165Extended",
   ConfigHandlerFacet: "IBosonConfigHandler",
-  ProtocolInitializationHandlerFacet: "IBosonProtocolInitializationHandler"
+  ProtocolInitializationHandlerFacet: "IBosonProtocolInitializationHandler",
 };
 
 // manually add the interfaces that currently cannot be calculated
