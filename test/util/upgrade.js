@@ -22,7 +22,12 @@ const {
   mockCondition,
   mockTwin,
 } = require("./mock");
-const { setNextBlockTimestamp, paddingType, getMappingStoragePosition } = require("./utils.js");
+const {
+  setNextBlockTimestamp,
+  paddingType,
+  getMappingStoragePosition,
+  calculateContractAddress,
+} = require("./utils.js");
 const { oneMonth, oneDay } = require("./constants");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -1316,9 +1321,235 @@ function compareStorageLayouts(storageBefore, storageAfter) {
   return storageOk;
 }
 
+async function populateVoucherContract(
+  deployer,
+  protocolDiamondAddress,
+  { accountHandler, exchangeHandler, offerHandler, fundsHandler },
+  { mockToken }
+) {
+  let DR;
+  let sellers = [];
+  let buyers = [];
+  let offers = [];
+  let bosonVouchers = [];
+  let exchanges = [];
+
+  let voucherIndex = 1;
+
+  const entityType = {
+    SELLER: 0,
+    DR: 1,
+    AGENT: 2,
+    BUYER: 3,
+  };
+
+  const entities = [
+    entityType.DR,
+    entityType.SELLER,
+    entityType.SELLER,
+    entityType.SELLER,
+    entityType.SELLER,
+    entityType.SELLER,
+    entityType.BUYER,
+    entityType.BUYER,
+    entityType.BUYER,
+    entityType.BUYER,
+    entityType.BUYER,
+  ];
+
+  for (const entity of entities) {
+    const wallet = ethers.Wallet.createRandom();
+    const connectedWallet = wallet.connect(ethers.provider);
+    //Fund the new wallet
+    let tx = {
+      to: connectedWallet.address,
+      // Convert currency unit from ether to wei
+      value: ethers.utils.parseEther("10"),
+    };
+    await deployer.sendTransaction(tx);
+
+    // create entities
+    switch (entity) {
+      case entityType.DR: {
+        const disputeResolver = mockDisputeResolver(wallet.address, wallet.address, wallet.address, wallet.address);
+        const disputeResolverFees = [
+          new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+          new DisputeResolverFee(mockToken.address, "MockToken", "0"),
+        ];
+        const sellerAllowList = [];
+        await accountHandler
+          .connect(connectedWallet)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+        DR = {
+          wallet: connectedWallet,
+          id: disputeResolver.id,
+          disputeResolver,
+          disputeResolverFees,
+          sellerAllowList,
+        };
+
+        //ADMIN role activates Dispute Resolver
+        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+        break;
+      }
+      case entityType.SELLER: {
+        const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address);
+        const id = seller.id;
+        let authToken = mockAuthToken();
+
+        // set unique new voucherInitValues
+        const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
+        await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
+
+        // calculate voucher contract address and cast it to contract instance
+        const voucherContractAddress = calculateContractAddress(accountHandler.address, voucherIndex++);
+        const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherContractAddress);
+
+        sellers.push({ wallet: connectedWallet, id, seller, authToken, voucherInitValues, offerIds: [], bosonVoucher });
+        bosonVouchers.push(bosonVoucher);
+
+        // mint mock token to sellers just in case they need them
+        await mockToken.mint(connectedWallet.address, "10000000000");
+        await mockToken.connect(connectedWallet).approve(protocolDiamondAddress, "10000000000");
+        break;
+      }
+      case entityType.BUYER: {
+        // no need to explicitly create buyer, since it's done automatically during commitToOffer
+        const buyer = mockBuyer(wallet.address);
+        buyers.push({ wallet: connectedWallet, id: buyer.id, buyer });
+        break;
+      }
+    }
+  }
+
+  // create offers - first seller has 5 offers, second 4, third 3 etc
+  let offerId = (await offerHandler.getNextOfferId()).toNumber();
+  for (let i = 0; i < sellers.length; i++) {
+    for (let j = i; j >= 0; j--) {
+      // Mock offer, offerDates and offerDurations
+      const { offer, offerDates, offerDurations } = await mockOffer();
+
+      // Set unique offer properties based on offer id
+      offer.id = `${offerId}`;
+      offer.sellerId = sellers[j].seller.id;
+      offer.price = `${offerId * 1000}`;
+      offer.sellerDeposit = `${offerId * 100}`;
+      offer.buyerCancelPenalty = `${offerId * 50}`;
+      offer.quantityAvailable = `${(offerId + 1) * 15}`;
+
+      // Default offer is in native token. Change every other to mock token
+      if (offerId % 2 == 0) {
+        offer.exchangeToken = mockToken.address;
+      }
+
+      // Set unique offer dates based on offer id
+      const now = offerDates.validFrom;
+      offerDates.validFrom = ethers.BigNumber.from(now)
+        .add(oneMonth + offerId * 1000)
+        .toString();
+      offerDates.validUntil = ethers.BigNumber.from(now)
+        .add(oneMonth * 6 * (offerId + 1))
+        .toString();
+
+      // Set unique offerDurations based on offer id
+      offerDurations.disputePeriod = `${(offerId + 1) * oneMonth}`;
+      offerDurations.voucherValid = `${(offerId + 1) * oneMonth}`;
+      offerDurations.resolutionPeriod = `${(offerId + 1) * oneDay}`;
+
+      // choose one DR and agent
+      const disputeResolverId = DR.disputeResolver.id;
+      const agentId = "0";
+
+      // create an offer
+      await offerHandler
+        .connect(sellers[j].wallet)
+        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+      offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId });
+      sellers[j].offerIds.push(offerId);
+
+      // Deposit seller funds so the commit will succeed
+      const sellerPool = ethers.BigNumber.from(offer.quantityAvailable).mul(offer.price).toString();
+      const msgValue = offer.exchangeToken == ethers.constants.AddressZero ? sellerPool : "0";
+      await fundsHandler
+        .connect(sellers[j].wallet)
+        .depositFunds(sellers[j].seller.id, offer.exchangeToken, sellerPool, { value: msgValue });
+
+      offerId++;
+    }
+  }
+
+  // commit to some offers: first buyer commit to 1 offer, second to 2, third to 3 etc
+  await setNextBlockTimestamp(Number(offers[offers.length - 1].offerDates.validFrom)); // When latest offer is valid, also other offers are valid
+  let exchangeId = (await exchangeHandler.getNextExchangeId()).toNumber();
+  for (let i = 0; i < buyers.length; i++) {
+    for (let j = i; j < buyers.length; j++) {
+      const offer = offers[i + j].offer; // some offers will be picked multiple times, some never.
+      const offerPrice = offer.price;
+      const buyerWallet = buyers[j].wallet;
+      let msgValue;
+      if (offer.exchangeToken == ethers.constants.AddressZero) {
+        msgValue = offerPrice;
+      } else {
+        // approve token transfer
+        msgValue = 0;
+        await mockToken.connect(buyerWallet).approve(protocolDiamondAddress, offerPrice);
+        await mockToken.mint(buyerWallet.address, offerPrice);
+      }
+      await exchangeHandler.connect(buyerWallet).commitToOffer(buyerWallet.address, offer.id, { value: msgValue });
+      exchanges.push({ exchangeId: exchangeId, offerId: offer.id, buyerIndex: j });
+      exchangeId++;
+    }
+  }
+
+  return { DR, sellers, buyers, offers, exchanges, bosonVouchers };
+}
+
+async function getVoucherContractState({bosonVouchers, exchanges, sellers, buyers}) {
+  let bosonVouchersState = [];
+  for (const bosonVoucher of bosonVouchers) {
+    
+    // supports interface
+    const interfaceIds = await getInterfaceIds();
+    const suppportstInterface = await Promise.all(
+      [interfaceIds["IBosonVoucher"], interfaceIds["IERC721"], interfaceIds["IERC2981"]].map((i) =>
+        bosonVoucher.supportsInterface(i)
+      )
+    );
+
+    // no arg getters
+    const [sellerId, contractURI, getRoyaltyPercentage, owner, name, symbol] = await Promise.all([
+      bosonVoucher.getSellerId(),
+      bosonVoucher.contractURI(),
+      bosonVoucher.getRoyaltyPercentage(),
+      bosonVoucher.owner(),
+      bosonVoucher.name(),
+      bosonVoucher.symbol(),
+    ]);
+
+    // tokenId related    
+    const tokenIds = exchanges.map(exchange=>exchange.exchangeId) // tokenId and exchangeId are interchangeable
+    const ownerOf = await Promise.all(tokenIds.map(tokenId=>bosonVoucher.ownerOf(tokenId).catch(() => "invalid token")));
+    const tokenURI = await Promise.all(tokenIds.map(tokenId=>bosonVoucher.tokenURI(tokenId).catch(() => "invalid token")));
+    const getApproved = await Promise.all(tokenIds.map(tokenId=>bosonVoucher.getApproved(tokenId).catch(() => "invalid token")));
+    const royaltyInfo = await Promise.all(tokenIds.map(tokenId=>bosonVoucher.royaltyInfo(tokenId,"100").catch(() => "invalid token")));
+
+    // balanceOf(address owner)
+    // isApprovedForAll(address owner, address operator)
+    const addresses = [...sellers, ...buyers].map(acc=>acc.wallet.address);
+    const balanceOf = await Promise.all(addresses.map(address=>bosonVoucher.balanceOf(address)));
+    const isApprovedForAll = await Promise.all(addresses.map(address1=>Promise.all(addresses.map(address2=>bosonVoucher.isApprovedForAll(address1,address2)))));
+    
+    bosonVouchersState.push({ suppportstInterface, sellerId, contractURI, getRoyaltyPercentage, owner, name, symbol, ownerOf, tokenURI, getApproved, royaltyInfo, balanceOf, isApprovedForAll });
+  }
+  return bosonVouchersState;
+}
+
 exports.deploySuite = deploySuite;
 exports.upgradeSuite = upgradeSuite;
 exports.populateProtocolContract = populateProtocolContract;
 exports.getProtocolContractState = getProtocolContractState;
 exports.getStorageLayout = getStorageLayout;
 exports.compareStorageLayouts = compareStorageLayouts;
+exports.populateVoucherContract = populateVoucherContract;
+exports.getVoucherContractState = getVoucherContractState;

@@ -2,9 +2,13 @@ const shell = require("shelljs");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { assert } = require("chai");
-const { mockAuthToken, mockSeller, mockVoucherInitValues } = require("../../util/mock");
-const { calculateContractAddress } = require("../../util/utils.js");
-const { deploySuite, getStorageLayout, compareStorageLayouts } = require("../../util/upgrade");
+const {
+  deploySuite,
+  getStorageLayout,
+  compareStorageLayouts,
+  populateVoucherContract,
+  getVoucherContractState,
+} = require("../../util/upgrade");
 
 const oldVersion = "v2.1.0";
 const newVersion = "preminted-voucher";
@@ -14,12 +18,16 @@ const newVersion = "preminted-voucher";
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
-  let deployer, seller1, seller2, seller3;
-  let accountHandler;
+  let deployer;
+
+  // reference protocol state
+  let voucherContractState;
+  let preUpgradeEntities;
+  let preUpgradeStorageLayout;
 
   before(async function () {
     // Make accounts available
-    [deployer, seller1, seller2, seller3] = await ethers.getSigners();
+    [deployer] = await ethers.getSigners();
 
     // temporary update config, so compiler outputs storage layout
     for (const compiler of hre.config.solidity.compilers) {
@@ -30,40 +38,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       }
     }
 
-    const { protocolContracts } = await deploySuite(deployer, oldVersion);
+    const { protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(deployer, oldVersion);
 
-    const preUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
-
-    ({ accountHandler } = protocolContracts);
-
-    const sellers = [
-      mockSeller(seller1.address, seller1.address, seller1.address, seller1.address),
-      mockSeller(seller2.address, seller2.address, seller2.address, seller2.address),
-      mockSeller(seller3.address, seller3.address, seller3.address, seller3.address),
-    ];
-
-    const [voucherAddress1, voucherAddress2, voucherAddress3] = [
-      calculateContractAddress(accountHandler.address, "1"),
-      calculateContractAddress(accountHandler.address, "2"),
-      calculateContractAddress(accountHandler.address, "3"),
-    ];
-
-    const emptyAuthToken = mockAuthToken();
-    const voucherInitValues = mockVoucherInitValues();
-    await accountHandler.connect(seller1).createSeller(sellers[0], emptyAuthToken, voucherInitValues);
-    await accountHandler.connect(seller2).createSeller(sellers[1], emptyAuthToken, voucherInitValues);
-    await accountHandler.connect(seller3).createSeller(sellers[2], emptyAuthToken, voucherInitValues);
-
-    let [bosonVoucher1, bosonVoucher2, bosonVoucher3] = [
-      await ethers.getContractAt("BosonVoucher", voucherAddress1),
-      await ethers.getContractAt("BosonVoucher", voucherAddress2),
-      await ethers.getContractAt("BosonVoucher", voucherAddress3),
-    ];
-
-    console.log("name pre update");
-    console.log(await bosonVoucher1.name());
-    console.log(await bosonVoucher2.name());
-    console.log(await bosonVoucher3.name());
+    preUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
+    preUpgradeEntities = await populateVoucherContract(deployer, protocolDiamondAddress, protocolContracts, mockContracts);
+    voucherContractState = await getVoucherContractState(preUpgradeEntities);
 
     // Upgrade protocol
     if (newVersion) {
@@ -76,15 +55,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       shell.exec(`git checkout HEAD contracts`);
     }
 
-    // compile new contracts
+    // Upgrade clients
     await hre.run("compile");
-
-    const postUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
-
-    assert(compareStorageLayouts(preUpgradeStorageLayout, postUpgradeStorageLayout), "Upgrade breaks storage layout");
-
-    // test methods on unupdated contracts
-
     await hre.run("upgrade-clients", { env: "upgrade-test" });
   });
 
@@ -93,8 +65,20 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     shell.exec(`git checkout HEAD contracts`);
   });
 
-  // Exchange methods
+  // Voucher state
   context("📋 Right After upgrade", async function () {
-    it("a test", async function () {});
+    it("Old storage layout should be unaffected", async function () {
+        const postUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
+
+        assert(compareStorageLayouts(preUpgradeStorageLayout, postUpgradeStorageLayout), "Upgrade breaks storage layout");
+      });
+
+    it("State is not affected directly after the update", async function () {
+      // Get protocol state after the upgrade
+      const voucherContractStateAfterUpgrade = await getVoucherContractState(preUpgradeEntities);
+
+      // State before and after should be equal
+      assert.deepEqual(voucherContractStateAfterUpgrade, voucherContractState, "state mismatch after upgrade");
+    });
   });
 });
