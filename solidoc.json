@@ -8,8 +8,10 @@
     "IERC721MetadataUpgradeable.json",
     "IERC721ReceiverUpgradeable.json",
     "IERC721EnumerableUpgradeable.json",
+    "IERC165Upgradeable.json",
     "IERC721Upgradeable.json",
     "IERC1155MetadataURIUpgradeable.json",
+    "IERC721MetadataUpgradeable.json",
     "IERC1155ReceiverUpgradeable.json",
     "IERC1155Upgradeable.json" ]
 }
