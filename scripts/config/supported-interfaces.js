@@ -2,8 +2,6 @@
  * ERC-165 identifiers for interfaces implemented by the Boson Protocol
  */
 const { getInterfaceId } = require("../../scripts/util/diamond-utils.js");
-const hre = require("hardhat");
-const ethers = hre.ethers;
 
 const interfaces = [
   "IBosonPauseHandler",
@@ -24,6 +22,11 @@ const interfaces = [
   "IERC165",
   "IERC165Extended",
   "IBosonProtocolInitializationHandler",
+  "IBosonVoucher",
+  "IERC1155",
+  "IERC721",
+  "IERC2981",
+  "IAccessControl",
 ];
 
 const interfaceImplementers = {
@@ -49,22 +52,28 @@ const interfaceImplementers = {
   ProtocolInitializationHandlerFacet: "IBosonProtocolInitializationHandler",
 };
 
-// manually add the interfaces that currently cannot be calculated
-const otherInterfaces = {
-  IBosonVoucher: "0xc2e9f9ff",
-  IERC1155: "0xd9b67a26",
-  IERC721: "0x80ac58cd",
-  IERC2981: "0x2a55205a",
-  IAccessControl: "0x7965db0b",
-};
-
-async function getInterfaceIds() {
+let interfacesCache; // if getInterfaceIds is called multiple times (e.g. during tests), calculate ids only once and store them to cache
+async function getInterfaceIds(useCache = true) {
   let interfaceIds = {};
-  for (const iFace of interfaces) {
-    let contractInstance = await ethers.getContractAt(iFace, ethers.constants.AddressZero);
-    interfaceIds[iFace] = getInterfaceId(contractInstance);
+
+  if (interfacesCache && useCache) {
+    return interfacesCache;
   }
-  return { ...interfaceIds, ...otherInterfaces };
+  // most of interfaces do not inherit others, so base check can be skipped which greatly reduces computation time
+  const skipBaseCheck = interfaces.reduce((skip, iFace) => {
+    skip[iFace] = true;
+    return skip;
+  }, {});
+  ["IBosonVoucher", "IERC1155", "IERC721", "IERC2981", "IAccessControl"].forEach((iFace) => {
+    skipBaseCheck[iFace] = false;
+  });
+
+  for (const iFace of interfaces) {
+    interfaceIds[iFace] = await getInterfaceId(iFace, skipBaseCheck[iFace]);
+  }
+
+  interfacesCache = interfaceIds;
+  return interfaceIds;
 }
 
 exports.getInterfaceIds = getInterfaceIds;

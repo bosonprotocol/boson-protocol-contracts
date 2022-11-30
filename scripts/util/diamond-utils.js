@@ -32,7 +32,8 @@ function getSelectors(contract, returnSignatureToNameMapping = false) {
 }
 
 // get interface id
-function getInterfaceId(contract) {
+async function getInterfaceId(contractName, skipBaseCheck = false) {
+  const contract = await ethers.getContractAt(contractName, ethers.constants.AddressZero);
   const signatures = Object.keys(contract.interface.functions);
   const selectors = signatures.reduce((acc, val) => {
     acc.push(ethers.BigNumber.from(contract.interface.getSighash(val)));
@@ -40,6 +41,24 @@ function getInterfaceId(contract) {
   }, []);
 
   let interfaceId = selectors.reduce((pv, cv) => pv.xor(cv), ethers.BigNumber.from("0x00000000"));
+
+  // If contract inherits other contracts, their interfaces must be xor-ed
+  if (!skipBaseCheck) {
+    // Get base contracts
+    const { sourceName } = await hre.artifacts.readArtifact(contractName);
+    const buildInfo = await hre.artifacts.getBuildInfo(`${sourceName}:${contractName}`);
+
+    const nodes = buildInfo.output?.sources?.[sourceName]?.ast?.nodes;
+    const node = nodes.find((n) => n.baseContracts); // node with information about base contracts
+
+    for (const baseContract of node.baseContracts) {
+      const baseName = baseContract.baseName.name;
+      const baseContractInterfaceId = ethers.BigNumber.from(await getInterfaceId(baseName));
+
+      // Remove interface id of base contracts
+      interfaceId = interfaceId.xor(baseContractInterfaceId);
+    }
+  }
   return interfaceId.isZero() ? "0x00000000" : ethers.utils.hexZeroPad(interfaceId.toHexString(), 4);
 }
 
