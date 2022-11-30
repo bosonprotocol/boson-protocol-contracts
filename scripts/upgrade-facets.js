@@ -47,9 +47,8 @@ async function main(env) {
   console.log(`${divider}\nBoson Protocol Contract Suite Upgrader\n${divider}`);
   console.log(`⛓  Network: ${network}\n📅 ${new Date()}`);
 
-  const { version } = packageFile;
   // Check that package.json version was updated
-  if (version == contractsFile.protocolVersion && env !== "upgrade-test") {
+  if (packageFile.version == contractsFile.protocolVersion && env !== "upgrade-test") {
     const answer = await getUserResponse("Protocol version has not been updated. Proceed anyway? (y/n) ", [
       "y",
       "yes",
@@ -130,6 +129,11 @@ async function main(env) {
   const erc165Extended = await ethers.getContractAt("IERC165Extended", protocolAddress);
   const protocolInitializationFacet = await ethers.getContractAt("ProtocolInitializationHandlerFacet", protocolAddress);
 
+  // Initialization data for facets with no-arg initializers
+  const noArgInitFunction = "initialize()";
+  const noArgInitInterface = new ethers.utils.Interface([`function ${noArgInitFunction}`]);
+  const noArgCallData = noArgInitInterface.encodeFunctionData("initialize");
+
   // Manage new or upgraded facets
   for (const newFacet of deployedFacets) {
     console.log(`\n📋 Facet: ${newFacet.name}`);
@@ -151,9 +155,19 @@ async function main(env) {
     const newFacetInterfaceId = interfaceIdFromFacetName(newFacet.name);
     deploymentComplete(newFacet.name, newFacet.contract.address, [], newFacetInterfaceId, contracts);
 
+    // Determine calldata. Depends on whether initialize accepts args or not
+    const callData = facets.initArgs[newFacet.name]
+      ? newFacet.contract.interface.encodeFunctionData("initialize", facets.initArgs[newFacet.name])
+      : noArgCallData;
+
     // Get new selectors from compiled contract
     const selectors = getSelectors(newFacet.contract, true);
-    let newSelectors = selectors.selectors;
+    let newSelectors;
+    if (!facets.skipInit.includes(newFacet.name)) {
+      newSelectors = selectors.selectors.remove([callData.slice(0, 10)]);
+    } else {
+      newSelectors = selectors.selectors;
+    }
 
     // Determine actions to be made
     let selectorsToReplace = registeredSelectors.filter((value) => newSelectors.includes(value)); // intersection of old and new selectors
@@ -197,21 +211,17 @@ async function main(env) {
       // Diamond cut - add or replace
       let transactionResponse;
 
-      // Only ProtooclInitializationHandlerFacet should call initialize function
-      if (newFacet.name == "ProtocolInitializationHandlerFacet") {
-        const callData = newFacet.contract.interface.encodeFunctionData("initialize", [
-          ethers.utils.formatBytes32String(version),
-        ]);
-
-        transactionResponse = await diamondCutFacet
-          .connect(adminSigner)
-          .diamondCut(facetCut, newFacetAddress, callData, await getFees(maxPriorityFeePerGas));
-      } else {
+      if (facets.skipInit.includes(newFacet.name)) {
+        // Without initialization
         transactionResponse = await diamondCutFacet
           .connect(adminSigner)
           .diamondCut(facetCut, ethers.constants.AddressZero, "0x", await getFees(maxPriorityFeePerGas));
+      } else {
+        // With initialization
+        transactionResponse = await diamondCutFacet
+          .connect(adminSigner)
+          .diamondCut(facetCut, newFacetAddress, callData, await getFees(maxPriorityFeePerGas));
       }
-
       await transactionResponse.wait(confirmations);
     }
 
