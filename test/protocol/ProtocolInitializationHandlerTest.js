@@ -52,7 +52,7 @@ describe("ProtocolInitializationHandler", async function () {
 
   describe("Deploy tests", async function () {
     context("📋 Initializer", async function () {
-      it("should initialize the version 2.2.0 and emit ProtocolInitialized", async function () {
+      it("Should initialize the version 2.2.0 and emit ProtocolInitialized", async function () {
         const version = ethers.utils.formatBytes32String("2.2.0");
 
         const [deployedProcolInitializationFacet] = await deployProtocolHandlerFacetsWithArgs(

@@ -73,7 +73,7 @@ async function getArgFacetNames() {
   return (await getFacets()).argFacets;
 }
 
-async function main(env) {
+async function main(env, facetConfig) {
   // Compile everything (in case run by node)
   await hre.run("compile");
 
@@ -148,11 +148,19 @@ async function main(env) {
   console.log(`\n💎 Deploying and initializing protocol handler facets...`);
 
   // Deploy and cut facets
-  const deployedFacets = await deployProtocolHandlerFacets(
-    protocolDiamond,
-    await getNoArgFacetNames(),
-    maxPriorityFeePerGas
-  );
+  let noArgFacetNames, argFacetNames;
+  if (facetConfig) {
+    // facetConfig was passed in as a JSON object
+    const facetConfigObject = JSON.parse(facetConfig);
+    noArgFacetNames = facetConfigObject.noArgFacets;
+    argFacetNames = facetConfigObject.argFacets;
+  } else {
+    // Get values from default config file
+    noArgFacetNames = await getNoArgFacetNames();
+    argFacetNames = await getArgFacetNames();
+  }
+
+  const deployedFacets = await deployProtocolHandlerFacets(protocolDiamond, noArgFacetNames, maxPriorityFeePerGas);
   for (const deployedFacet of deployedFacets) {
     deploymentComplete(
       deployedFacet.name,
@@ -165,7 +173,7 @@ async function main(env) {
 
   const deployedFacetsWithArgs = await deployProtocolHandlerFacetsWithArgs(
     protocolDiamond,
-    await getArgFacetNames(),
+    argFacetNames,
     maxPriorityFeePerGas
   );
   for (const deployedFacet of deployedFacetsWithArgs) {
