@@ -270,7 +270,6 @@ async function main(env) {
       }
     }
 
-    console.log("newFacetInterfaceId", newFacetInterfaceId);
     // Check if new facet registered its interface. If not, register it.
     const support = await erc165.supportsInterface(newFacetInterfaceId);
     if (!support) {

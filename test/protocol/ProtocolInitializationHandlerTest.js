@@ -7,12 +7,15 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacetsWithArgs } = require("../../scripts/util/deploy-protocol-handler-facets");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces");
 const { maxPriorityFeePerGas } = require("../util/constants");
+const { getFees } = require("../../scripts/util/utils");
+const { getFacetAddCut, getFacetReplaceCut } = require("../../scripts/util/diamond-utils");
+const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 
 describe("ProtocolInitializationHandler", async function () {
   // Common vars
   let InterfaceIds;
   let deployer, rando;
-  let protocolInitializationHandler;
+  let protocolInitializationFacet, diamondCutFacet;
   let protocolDiamond, accessController;
   let erc165;
 
@@ -37,7 +40,11 @@ describe("ProtocolInitializationHandler", async function () {
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
 
-    protocolInitializationHandler = await ethers.getContractAt(
+    // Cast Diamond to DiamondCutFacet
+    diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", protocolDiamond.address);
+
+    // Cast Diamond to ProtocolInitializationFacet
+    protocolInitializationFacet = await ethers.getContractAt(
       "ProtocolInitializationHandlerFacet",
       protocolDiamond.address
     );
@@ -56,7 +63,54 @@ describe("ProtocolInitializationHandler", async function () {
 
         const { cutTransaction } = deployedProcolInitializationFacet;
 
-        await expect(cutTransaction).to.emit(protocolInitializationHandler, "ProtocolInitialized").withArgs(version);
+        await expect(cutTransaction).to.emit(protocolInitializationFacet, "ProtocolInitialized").withArgs(version);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Should revert when calling initialize with same version twice", async function () {
+          const ProtocolInitilizationContractFactory = await ethers.getContractFactory(
+            "ProtocolInitializationHandlerFacet"
+          );
+          const protocolInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
+            await getFees(maxPriorityFeePerGas)
+          );
+          await protocolInitializationFacetDeployed.deployTransaction.wait();
+
+          const version = ethers.utils.formatBytes32String("2.2.0");
+
+          const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initialize", [version]);
+
+          let facetCut = getFacetAddCut(protocolInitializationFacetDeployed, [callData.slice(0, 10)]);
+
+          await diamondCutFacet.diamondCut(
+            [facetCut],
+            protocolInitializationFacetDeployed.address,
+            callData,
+            await getFees(maxPriorityFeePerGas)
+          );
+
+          // Mock a change in the initialize function because diamond cut will revert if contract stay the same
+          const ProtocolInitilizationTestContractFactory = await ethers.getContractFactory(
+            "ProtocolInitializationHandlerTestFacet"
+          );
+
+          const protocolInitializationTestFacet = await ProtocolInitilizationTestContractFactory.deploy(
+            await getFees(maxPriorityFeePerGas)
+          );
+
+          await protocolInitializationTestFacet.deployTransaction.wait();
+
+          facetCut = getFacetReplaceCut(protocolInitializationTestFacet, [callData.slice(0, 10)]);
+
+          const cutTransaction = diamondCutFacet.diamondCut(
+            [facetCut],
+            protocolInitializationTestFacet.address,
+            callData,
+            await getFees(maxPriorityFeePerGas)
+          );
+
+          await expect(cutTransaction).to.be.revertedWith(RevertReasons.ALREADY_INITIALIZED);
+        });
       });
     });
   });
@@ -86,7 +140,7 @@ describe("ProtocolInitializationHandler", async function () {
     });
 
     it("Should return the correct version", async function () {
-      const version = await protocolInitializationHandler.connect(rando).getVersion();
+      const version = await protocolInitializationFacet.connect(rando).getVersion();
 
       expect(ethers.utils.parseBytes32String(version)).to.equal("2.2.0");
     });

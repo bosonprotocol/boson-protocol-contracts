@@ -246,7 +246,7 @@ describe("IBosonBundleHandler", function () {
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
 
-      // Register the dispute resolver
+      // Register and activate the dispute resolver
       await accountHandler
         .connect(adminDR)
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
