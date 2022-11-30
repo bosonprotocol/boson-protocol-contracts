@@ -41,7 +41,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     const { protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(deployer, oldVersion);
 
     preUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
-    preUpgradeEntities = await populateVoucherContract(deployer, protocolDiamondAddress, protocolContracts, mockContracts);
+    preUpgradeEntities = await populateVoucherContract(
+      deployer,
+      protocolDiamondAddress,
+      protocolContracts,
+      mockContracts
+    );
     voucherContractState = await getVoucherContractState(preUpgradeEntities);
 
     // Upgrade protocol
@@ -68,10 +73,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   // Voucher state
   context("📋 Right After upgrade", async function () {
     it("Old storage layout should be unaffected", async function () {
-        const postUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
+      const postUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
 
-        assert(compareStorageLayouts(preUpgradeStorageLayout, postUpgradeStorageLayout), "Upgrade breaks storage layout");
-      });
+      assert(compareStorageLayouts(preUpgradeStorageLayout, postUpgradeStorageLayout), "Upgrade breaks storage layout");
+    });
 
     it("State is not affected directly after the update", async function () {
       // Get protocol state after the upgrade

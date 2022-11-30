@@ -1505,12 +1505,11 @@ async function populateVoucherContract(
   return { DR, sellers, buyers, offers, exchanges, bosonVouchers };
 }
 
-async function getVoucherContractState({bosonVouchers, exchanges, sellers, buyers}) {
+async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buyers }) {
   let bosonVouchersState = [];
   for (const bosonVoucher of bosonVouchers) {
-    
     // supports interface
-    const interfaceIds = await getInterfaceIds();
+    const interfaceIds = await getInterfaceIds(false);
     const suppportstInterface = await Promise.all(
       [interfaceIds["IBosonVoucher"], interfaceIds["IERC721"], interfaceIds["IERC2981"]].map((i) =>
         bosonVoucher.supportsInterface(i)
@@ -1527,20 +1526,46 @@ async function getVoucherContractState({bosonVouchers, exchanges, sellers, buyer
       bosonVoucher.symbol(),
     ]);
 
-    // tokenId related    
-    const tokenIds = exchanges.map(exchange=>exchange.exchangeId) // tokenId and exchangeId are interchangeable
-    const ownerOf = await Promise.all(tokenIds.map(tokenId=>bosonVoucher.ownerOf(tokenId).catch(() => "invalid token")));
-    const tokenURI = await Promise.all(tokenIds.map(tokenId=>bosonVoucher.tokenURI(tokenId).catch(() => "invalid token")));
-    const getApproved = await Promise.all(tokenIds.map(tokenId=>bosonVoucher.getApproved(tokenId).catch(() => "invalid token")));
-    const royaltyInfo = await Promise.all(tokenIds.map(tokenId=>bosonVoucher.royaltyInfo(tokenId,"100").catch(() => "invalid token")));
+    // tokenId related
+    const tokenIds = exchanges.map((exchange) => exchange.exchangeId); // tokenId and exchangeId are interchangeable
+    const ownerOf = await Promise.all(
+      tokenIds.map((tokenId) => bosonVoucher.ownerOf(tokenId).catch(() => "invalid token"))
+    );
+    const tokenURI = await Promise.all(
+      tokenIds.map((tokenId) => bosonVoucher.tokenURI(tokenId).catch(() => "invalid token"))
+    );
+    const getApproved = await Promise.all(
+      tokenIds.map((tokenId) => bosonVoucher.getApproved(tokenId).catch(() => "invalid token"))
+    );
+    const royaltyInfo = await Promise.all(
+      tokenIds.map((tokenId) => bosonVoucher.royaltyInfo(tokenId, "100").catch(() => "invalid token"))
+    );
 
     // balanceOf(address owner)
     // isApprovedForAll(address owner, address operator)
-    const addresses = [...sellers, ...buyers].map(acc=>acc.wallet.address);
-    const balanceOf = await Promise.all(addresses.map(address=>bosonVoucher.balanceOf(address)));
-    const isApprovedForAll = await Promise.all(addresses.map(address1=>Promise.all(addresses.map(address2=>bosonVoucher.isApprovedForAll(address1,address2)))));
-    
-    bosonVouchersState.push({ suppportstInterface, sellerId, contractURI, getRoyaltyPercentage, owner, name, symbol, ownerOf, tokenURI, getApproved, royaltyInfo, balanceOf, isApprovedForAll });
+    const addresses = [...sellers, ...buyers].map((acc) => acc.wallet.address);
+    const balanceOf = await Promise.all(addresses.map((address) => bosonVoucher.balanceOf(address)));
+    const isApprovedForAll = await Promise.all(
+      addresses.map((address1) =>
+        Promise.all(addresses.map((address2) => bosonVoucher.isApprovedForAll(address1, address2)))
+      )
+    );
+
+    bosonVouchersState.push({
+      suppportstInterface,
+      sellerId,
+      contractURI,
+      getRoyaltyPercentage,
+      owner,
+      name,
+      symbol,
+      ownerOf,
+      tokenURI,
+      getApproved,
+      royaltyInfo,
+      balanceOf,
+      isApprovedForAll,
+    });
   }
   return bosonVouchersState;
 }
