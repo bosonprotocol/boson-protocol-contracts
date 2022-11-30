@@ -10,9 +10,9 @@ import { ProtocolBase } from "../protocol/bases/ProtocolBase.sol";
 import { DiamondLib } from "../diamond/DiamondLib.sol";
 
 /**
- * @title IBosonProtocolInitializationHandler
+ * @title IBosonProtocolInitializationTestHandler
  *
- * @notice Handle initializion of new versions after 2.1.0.
+ * @notice Mock changes to IBosonProtocolInitializationHandlerFacet.
  *
  */
 contract ProtocolInitializationHandlerTestFacet is IBosonProtocolInitializationHandler, ProtocolBase {
@@ -28,7 +28,7 @@ contract ProtocolInitializationHandlerTestFacet is IBosonProtocolInitializationH
 
     /**
      * @notice Initializes the protocol after the deployment.
-     * This function is callable only once
+     * This function is callable only once for each version
      *
      * @param _version - version of the protocol
      */

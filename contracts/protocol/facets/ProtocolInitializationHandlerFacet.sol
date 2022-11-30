@@ -28,7 +28,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
 
     /**
      * @notice Initializes the protocol after the deployment.
-     * This function is callable only once
+     * This function is callable only once for each version
      *
      * @param _version - version of the protocol
      */
