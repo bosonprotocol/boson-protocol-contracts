@@ -43,11 +43,11 @@ This pattern gives us some distinct advantages, a few of which are:
 - **Maintainability**: Developers can focus on business logic rather than managing contract collaboration patterns and the potential threats that naturally arise.
 - **Easier to reason about contract storage**: When using Diamonds storage is a first class consideration. With developers working on different facets, it leads us to consider and declare the data that is maintained and visible to each facet in a uniform way. This means facets can share data while not clobbering each other in the shared storage slots of the diamond proxy.
 
-### Voucher rNFT
-![Voucher rNFT](images/Boson_Protocol_V2_-_Voucher_Clones.png)
-The Boson Voucher (rNFT) implementation is built around the OpenZeppelin [Beacon](https://docs.openzeppelin.com/contracts/4.x/api/proxy#beacon) and [ERC721](https://docs.openzeppelin.com/contracts/4.x/api/token/erc721) contracts.
+### Voucher
+![Voucher](images/Boson_Protocol_V2_-_Voucher_Clones.png)
+The Boson Voucher implementation is built around the OpenZeppelin [Beacon](https://docs.openzeppelin.com/contracts/4.x/api/proxy#beacon) and [ERC721](https://docs.openzeppelin.com/contracts/4.x/api/token/erc721) contracts.
 
-Every seller needs their own instance of the Boson Voucher rNFT so that they can manage their collection separately on marketplaces like OpenSea. For this reason, it cannot exist behind the Protocol Diamond, as an ordinary upgradable Facet.
+Every seller needs their own instance of the Boson Voucher so that they can manage their collection separately on marketplaces like OpenSea. For this reason, it cannot exist behind the Protocol Diamond, as an ordinary upgradable Facet.
 
 Still, the Boson Voucher contract must be upgradeable. By using the Beacon Proxy pattern, it can be upgraded for all sellers with a single transaction.
 

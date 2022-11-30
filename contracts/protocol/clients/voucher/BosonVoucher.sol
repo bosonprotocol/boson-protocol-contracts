@@ -16,12 +16,12 @@ import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHa
 
 /**
  * @title BosonVoucher
- * @notice This is the Boson Protocol ERC-721 rNFT Voucher contract.
+ * @notice This is the Boson Protocol ERC-721 Voucher contract.
  *
  * Key features:
  * - Only PROTOCOL-roled addresses can issue vouchers, i.e., the ProtocolDiamond or an EOA for testing
  * - Minted to the buyer when the buyer commits to an offer
- * - Burned when the buyer redeems the voucher rNFT
+ * - Burned when the buyer redeems the voucher
  */
 contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
     string private _contractURI;
@@ -210,8 +210,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @notice Provides royalty info.
      * Called with the sale price to determine how much royalty is owed and to whom.
      *
-     * @param _tokenId - the rNFT asset queried for royalty information
-     * @param _salePrice - the sale price of the rNFT asset specified by _tokenId
+     * @param _tokenId - the voucher queried for royalty information
+     * @param _salePrice - the sale price of the voucher specified by _tokenId
      *
      * @return receiver - address of who should be sent the royalty payment
      * @return royaltyAmount - the royalty payment amount for the given sale price

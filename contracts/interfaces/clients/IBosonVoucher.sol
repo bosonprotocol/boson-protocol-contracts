@@ -8,7 +8,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 /**
  * @title IBosonVoucher
  *
- * @notice This is the interface for the Boson Protocol ERC-721 Voucher rNFT contract.
+ * @notice This is the interface for the Boson Protocol ERC-721 Voucher contract.
  *
  * The ERC-165 identifier for this interface is: 0x2249ca21
  */
