@@ -1,5 +1,4 @@
 const shell = require("shelljs");
-const fs = require("fs");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
 const ethers = hre.ethers;
@@ -1261,36 +1260,12 @@ async function getProtocolLookupsPrivateContractState(
 }
 
 async function getStorageLayout(contractName) {
-  // Modified code from https://github.com/aurora-is-near/hardhat-storage-layout/tree/v0.1.7
-  const buildInfos = await hre.artifacts.getBuildInfoPaths();
-  const artifactsPath = hre.config.paths.artifacts;
-  const artifacts = buildInfos.map((source) => {
-    const artifact = fs.readFileSync(source);
-    return {
-      source: source.startsWith(artifactsPath) ? source.slice(artifactsPath.length) : source,
-      data: JSON.parse(artifact.toString()),
-    };
-  });
-
   const { sourceName } = await hre.artifacts.readArtifact(contractName);
+  const buildInfo = await hre.artifacts.getBuildInfo(`${sourceName}:${contractName}`);
 
-  const stateVariables = [];
-  for (const artifactJsonABI of artifacts) {
-    const storage = artifactJsonABI.data.output?.contracts?.[sourceName]?.[contractName]?.storageLayout?.storage;
-    if (!storage) {
-      continue;
-    }
+  const storage = buildInfo.output?.contracts?.[sourceName]?.[contractName]?.storageLayout?.storage;
 
-    for (const stateVariable of storage) {
-      stateVariables.push({
-        name: stateVariable.label,
-        slot: stateVariable.slot,
-        offset: stateVariable.offset,
-        type: stateVariable.type,
-      });
-    }
-  }
-  return stateVariables;
+  return storage;
 }
 
 function compareStorageLayouts(storageBefore, storageAfter) {
@@ -1298,13 +1273,13 @@ function compareStorageLayouts(storageBefore, storageAfter) {
   // New variables can be added if they don't affect the layout
   let storageOk = true;
   for (const stateVariableBefore of storageBefore) {
-    const { name } = stateVariableBefore;
-    if (name == "__gap") {
+    const { label } = stateVariableBefore;
+    if (label == "__gap") {
       // __gap is special variable that does not store any data and can potentially be modified
       // TODO: if changed, validate against new variables
       continue;
     }
-    const stateVariableAfter = storageAfter.find((stateVariable) => stateVariable.name === name);
+    const stateVariableAfter = storageAfter.find((stateVariable) => stateVariable.label === label);
     if (
       !stateVariableAfter ||
       stateVariableAfter.slot != stateVariableBefore.slot ||
