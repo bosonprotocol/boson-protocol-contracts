@@ -51,7 +51,7 @@ abstract contract BeaconClientBase is BosonTypes {
      * @notice Gets the exchange associated with a voucher
      *
      * @param _exchangeId - the id of the exchange
-     * @return exists - the offer was found
+     * @return exists - the exchange was found
      * @return exchange - the exchange associated with the _exchangeId
      */
     function getBosonExchange(uint256 _exchangeId) internal view returns (bool exists, Exchange memory exchange) {

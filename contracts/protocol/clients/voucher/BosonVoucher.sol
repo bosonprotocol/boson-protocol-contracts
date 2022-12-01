@@ -131,7 +131,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     /**
      * @notice Reserves a range of vouchers to be associated with an offer
      *
-     * Must happen prior to calling
+     * Must happen prior to calling preMint
      * Caller must have PROTOCOL role.
      *
      * Reverts if:
@@ -227,7 +227,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @notice Gets the number of vouchers left to be pre-minted for an offer.
      *
      * @param _offerId - the id of the offer
-     * @return count - the count of pre-minted vouchers in reserved range
+     * @return count - the count of vouchers in reserved range available to be pre-minted
      */
     function getAvailablePreMints(uint256 _offerId) external view returns (uint256 count) {
         // Get the offer's range
@@ -293,7 +293,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         (bool committable, uint256 offerId) = getPreMintStatus(tokenId);
 
         if (committable) {
-            // If offer is committable, temporary update _owners, so transfer succedds
+            // If offer is committable, temporary update _owners, so transfer succeeds
             silentMint(from, tokenId);
             premintStatus.committable = true;
             premintStatus.offerId = offerId;
@@ -314,7 +314,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         (bool committable, uint256 offerId) = getPreMintStatus(tokenId);
 
         if (committable) {
-            // If offer is committable, temporary update _owners, so transfer succedds
+            // If offer is committable, temporary update _owners, so transfer succeeds
             silentMint(from, tokenId);
             premintStatus.committable = true;
             premintStatus.offerId = offerId;
@@ -634,5 +634,11 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
         // update data, so transfer will succeed
         getERC721UpgradeableStorage()._owners[tokenId] = from;
+    }
+
+    function getOwnersStorage() internal pure returns (mapping(uint256 => address) storage ps) {
+        assembly {
+            ps.slot := 0x0000000000000000000000000000000000000000000000000000000000000099
+        }
     }
 }

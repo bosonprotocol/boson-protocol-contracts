@@ -114,7 +114,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     /**
      * @notice Reserves a range of vouchers to be associated with an offer
      *
-     * Must happen prior to calling
+     * Must happen prior to calling preMint
      * Caller must have PROTOCOL role.
      *
      * Reverts if:
@@ -167,7 +167,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @notice Gets the number of vouchers left to be pre-minted for an offer.
      *
      * @param _offerId - the id of the offer
-     * @return count - the count of pre-minted vouchers in reserved range
+     * @return count - the count of vouchers in reserved range available to be pre-minted
      */
     function getAvailablePreMints(uint256 _offerId) external view returns (uint256 count);
 
