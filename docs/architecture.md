@@ -55,4 +55,4 @@ Still, the Boson Voucher contract must be upgradeable. By using the Beacon Proxy
 ![Protocol Clients](images/Boson_Protocol_V2_-_Protocol_Clients.png)
 When contracts need roled access to the Protocol Diamond's functionality, either uni- or bi-directionally, they can be implemented as upgradeable Protocol Clients. This pattern supports a Client that has a one-to-one relationship between its proxy and its logic implementation.
 
-Initially, the Boson Voucher NFT was implemented as an upgradable standalone contract with a one-to-one relationship to its proxy. When the requirement for sellers to have their own voucher collections came to pass, we switched to the Beacon pattern as described above. The pattern for roled, upgradeable standalone client support remains intact if not used at the moment.
+Initially, the Boson Voucher was implemented as an upgradable standalone contract with a one-to-one relationship to its proxy. When the requirement for sellers to have their own voucher collections came to pass, we switched to the Beacon pattern as described above. The pattern for roled, upgradeable standalone client support remains intact if not used at the moment.
