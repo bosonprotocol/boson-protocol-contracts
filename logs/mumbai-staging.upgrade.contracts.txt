@@ -1,0 +1,76 @@
+--------------------------------------------------------------------------------
+Boson Protocol Contract Suite Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Thu Dec 01 2022 07:32:27 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+
+📋 Facet: ERC165Facet
+✅ ERC165Facet deployed to: 0x877BFA1fA72bFe974FD255f0b6D62aAb6d1482f0
+💎 Removed selectors:
+	
+💎 Replaced selectors:
+	0x01ffc9a7: supportsInterface(bytes4)
+💎 Added selectors:
+	0x92552b4a: addSupportedInterface(bytes4)
+	0xb8b3c15a: removeSupportedInterface(bytes4)
+❌ Skipped selectors:
+	
+Could not find interface id for old facet ERC165Facet.
+You might need to remove its interfaceId from "supportsInterface" manually.
+Added new interfaceId 0x2ae6ea10 to supported interfaces.
+
+📋 Facet: AccountHandlerFacet
+✅ AccountHandlerFacet deployed to: 0x59cFcF5003Ea794c2676D5198142a815Cae9D77E
+💎 Removed selectors:
+	
+💎 Replaced selectors:
+	0xab00c0da: getNextAccountId()
+💎 Added selectors:
+	
+❌ Skipped selectors:
+	
+
+📋 Facet: SellerHandlerFacet
+✅ SellerHandlerFacet deployed to: 0x91D0c8e4DcBD558C8F6eDC1713112BA92e34F3Ef
+💎 Removed selectors:
+	
+💎 Replaced selectors:
+	0xaaea2fdc: createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint256))
+	0xd6a9de51: getSeller(uint256)
+	0x2e1528ae: getSellerByAddress(address)
+	0x135bdebd: getSellerByAuthToken((uint256,uint8))
+	0x90b9d701: updateSeller((uint256,address,address,address,address,bool),(uint256,uint8))
+💎 Added selectors:
+	0xf7e469fd: optInToSellerUpdate(uint256,uint8[])
+❌ Skipped selectors:
+	
+Removed supported interface 0x6db2c812 from supported interfaces.
+
+📋 Facet: DisputeResolverHandlerFacet
+✅ DisputeResolverHandlerFacet deployed to: 0x8aaB601E4cFCfAebBBeB99F03b7992AA8c336430
+💎 Removed selectors:
+	
+💎 Replaced selectors:
+	0xa7ef6a7c: activateDisputeResolver(uint256)
+	0xa880fd89: addFeesToDisputeResolver(uint256,(address,string,uint256)[])
+	0x1227dbbb: addSellersToAllowList(uint256,uint256[])
+	0x8236d3c0: areSellersAllowed(uint256,uint256[])
+	0x1843b3a9: createDisputeResolver((uint256,uint256,address,address,address,address,string,bool),(address,string,uint256)[],uint256[])
+	0x9b646e88: getDisputeResolver(uint256)
+	0x6f4fbc16: getDisputeResolverByAddress(address)
+	0x4e534c96: removeFeesFromDisputeResolver(uint256,address[])
+	0xfa92792a: removeSellersFromAllowList(uint256,uint256[])
+	0x125e35ec: updateDisputeResolver((uint256,uint256,address,address,address,address,string,bool))
+💎 Added selectors:
+	0x2230dd12: optInToDisputeResolverUpdate(uint256,uint8[])
+❌ Skipped selectors:
+	
+--------------------------------------------------------------------------------
+✅ Contracts written to /home/klemen/boson/clean/boson-protocol-contracts/scripts/util/../../addresses/80001-mumbai-staging.json
+--------------------------------------------------------------------------------
+
+📋 Diamond upgraded.
+
+
