@@ -4,6 +4,7 @@ const ethers = hre.ethers;
 const { assert } = require("chai");
 const {
   deploySuite,
+  upgradeClients,
   getStorageLayout,
   compareStorageLayouts,
   populateVoucherContract,
@@ -32,7 +33,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // temporary update config, so compiler outputs storage layout
     for (const compiler of hre.config.solidity.compilers) {
       if (compiler.settings.outputSelection["*"]["BosonVoucher"]) {
-        compiler.settings.outputSelection["*"]["BosonVoucher"].push("storageLayout"); // change * to BosonVoucher
+        compiler.settings.outputSelection["*"]["BosonVoucher"].push("storageLayout");
       } else {
         compiler.settings.outputSelection["*"]["BosonVoucher"] = ["storageLayout"];
       }
@@ -49,20 +50,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     );
     voucherContractState = await getVoucherContractState(preUpgradeEntities);
 
-    // Upgrade protocol
-    if (newVersion) {
-      // checkout the new tag
-      console.log(`Checking out version ${newVersion}`);
-      shell.exec(`git checkout ${newVersion} contracts`);
-    } else {
-      // if tag was not created yet, use the latest code
-      console.log(`Checking out latest code`);
-      shell.exec(`git checkout HEAD contracts`);
-    }
-
-    // Upgrade clients
-    await hre.run("compile");
-    await hre.run("upgrade-clients", { env: "upgrade-test" });
+    // upgrade clients
+    await upgradeClients(newVersion);
   });
 
   after(async function () {

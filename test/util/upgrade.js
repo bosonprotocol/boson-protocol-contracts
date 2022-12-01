@@ -140,6 +140,24 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces) {
   return newHandlers;
 }
 
+// upgrade the clients to new version
+async function upgradeClients(tag) {
+  // Upgrade Clients
+  if (tag) {
+    // checkout the new tag
+    console.log(`Checking out version ${tag}`);
+    shell.exec(`git checkout ${tag} contracts`);
+  } else {
+    // if tag was not created yet, use the latest code
+    console.log(`Checking out latest code`);
+    shell.exec(`git checkout HEAD contracts`);
+  }
+
+  // Upgrade clients
+  await hre.run("compile");
+  await hre.run("upgrade-clients", { env: "upgrade-test" });
+}
+
 // populates protocol with some entities
 // returns
 /*   DRs
@@ -1547,6 +1565,7 @@ async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buye
 
 exports.deploySuite = deploySuite;
 exports.upgradeSuite = upgradeSuite;
+exports.upgradeClients = upgradeClients;
 exports.populateProtocolContract = populateProtocolContract;
 exports.getProtocolContractState = getProtocolContractState;
 exports.getStorageLayout = getStorageLayout;
