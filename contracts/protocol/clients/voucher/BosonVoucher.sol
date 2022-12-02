@@ -635,10 +635,4 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         // update data, so transfer will succeed
         getERC721UpgradeableStorage()._owners[tokenId] = from;
     }
-
-    function getOwnersStorage() internal pure returns (mapping(uint256 => address) storage ps) {
-        assembly {
-            ps.slot := 0x0000000000000000000000000000000000000000000000000000000000000099
-        }
-    }
 }
