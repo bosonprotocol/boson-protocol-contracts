@@ -2,7 +2,7 @@
   "chainId": 137,
   "network": "polygon",
   "env": "prod",
-  "protocolVersion": "2.0.0",
+  "protocolVersion": "2.1.0",
   "contracts": [
     {
       "name": "AccessController",
@@ -21,12 +21,6 @@
       "address": "0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9",
       "args": [],
       "interfaceId": "0x1f931c1c"
-    },
-    {
-      "name": "ERC165Facet",
-      "address": "0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294",
-      "args": [],
-      "interfaceId": ""
     },
     {
       "name": "ProtocolDiamond",
@@ -74,34 +68,16 @@
       "interfaceId": "0x2ad335b8"
     },
     {
-      "name": "AccountHandlerFacet",
-      "address": "0xE282Ff84bd704504057eAF78Ac34E4a991b69d83",
-      "args": [],
-      "interfaceId": "0x6db2c812"
-    },
-    {
-      "name": "SellerHandlerFacet",
-      "address": "0x4aA238eF21737E138C4f7D4D722F55680ccB30c9",
-      "args": [],
-      "interfaceId": "0x6db2c812"
-    },
-    {
       "name": "BuyerHandlerFacet",
       "address": "0xabd67624662f05B4fb5084f8edcC2F2A422670bf",
       "args": [],
-      "interfaceId": "0x6db2c812"
-    },
-    {
-      "name": "DisputeResolverHandlerFacet",
-      "address": "0xeD2E929E36484E767E39d9b4F1c190cC179Ed586",
-      "args": [],
-      "interfaceId": "0x6db2c812"
+      "interfaceId": "0xb8667cfd"
     },
     {
       "name": "AgentHandlerFacet",
       "address": "0xe8A57dd8784E6f0CE4C1B51CEf52d04b7C1F1C04",
       "args": [],
-      "interfaceId": "0x6db2c812"
+      "interfaceId": "0xb8667cfd"
     },
     {
       "name": "BundleHandlerFacet",
@@ -183,6 +159,30 @@
       "address": "0x57A12A9F2a81B2b13c20F9F465eA6814F76c7168",
       "args": [],
       "interfaceId": ""
+    },
+    {
+      "name": "ERC165Facet",
+      "address": "0x0B8DDF24AFE9E5e88D511bd6DDe3B730Ee0fb9f9",
+      "args": [],
+      "interfaceId": "0x2ae6ea10"
+    },
+    {
+      "name": "AccountHandlerFacet",
+      "address": "0x064684532182591c97215417dc4F8D8390bBd964",
+      "args": [],
+      "interfaceId": "0xb8667cfd"
+    },
+    {
+      "name": "SellerHandlerFacet",
+      "address": "0xB35eAd4FF67b21AcA228c24baA0721fB19Ee638d",
+      "args": [],
+      "interfaceId": "0xb8667cfd"
+    },
+    {
+      "name": "DisputeResolverHandlerFacet",
+      "address": "0xb27EF1bbeAfaaaD33339D8E12703d6c216c4dF8D",
+      "args": [],
+      "interfaceId": "0xb8667cfd"
     }
   ]
 }
