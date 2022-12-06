@@ -9,7 +9,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xde051f34
+ * The ERC-165 identifier for this interface is: 0x485b5e58
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
     /**
@@ -51,6 +51,15 @@ interface IBosonOfferHandler is IBosonOfferEvents {
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _agentId
+    ) external;
+
+    function createOffer(
+        BosonTypes.Offer memory _offer,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
+        uint256 _agentId,
+        bool _isPreminted
     ) external;
 
     /**
@@ -95,6 +104,15 @@ interface IBosonOfferHandler is IBosonOfferEvents {
         BosonTypes.OfferDurations[] calldata _offerDurations,
         uint256[] calldata _disputeResolverIds,
         uint256[] calldata _agentIds
+    ) external;
+
+    function createOfferBatch(
+        BosonTypes.Offer[] calldata _offers,
+        BosonTypes.OfferDates[] calldata _offerDates,
+        BosonTypes.OfferDurations[] calldata _offerDurations,
+        uint256[] calldata _disputeResolverIds,
+        uint256[] calldata _agentIds,
+        bool[] memory _isPreminted
     ) external;
 
     /**

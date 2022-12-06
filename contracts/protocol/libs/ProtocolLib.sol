@@ -60,6 +60,8 @@ library ProtocolLib {
         uint16 maxTotalOfferFeePercentage;
         // limit the max royalty percentage that can be set by the seller
         uint16 maxRoyaltyPecentage;
+        // limit the max number of vouchers that can be preminted in a single transaction
+        uint256 maxPremintedVouchers;
     }
 
     // Protocol fees storage
@@ -180,6 +182,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.AuthToken) pendingAuthTokenUpdatesBySeller;
         // dispute resolver id => DisputeResolver
         mapping(uint256 => BosonTypes.DisputeResolver) pendingAddressUpdatesByDisputeResolver;
+        // offer id => indicator to tell if preminted or not
+        mapping(uint256 => bool) isOfferPreminted;
     }
 
     // Incrementing id counters
