@@ -10,7 +10,6 @@ const ethers = hre.ethers;
  *          You don't have to specify "initialize()" since it's ignored by default.
  *          Skip does not apply to facets that are completely removed.
  * - initArgs: if facet initializer expects arguments, provide them here. For no-arg initializers you don't have to specify anything.
- * - skipInit": list of facets for which you want to skip initialization call.
  * 
  * Example:
     {
@@ -21,16 +20,14 @@ const ethers = hre.ethers;
         Facet4: ["0xb0b1d2659e8d5846432c66de8615841cc7bcaf49", [2, 3, 5]], 
         Facet5: ["v1.1.0"]
       },
-      skipInit: ["Facet2"],
     }
  */
 async function getFacets() {
   return {
-    addOrUpgrade: ["ProtocolInitializationHandlerFacet"],
-    remove: [],
+    addOrUpgrade: ["DisputeResolverHandlerFacet", "ProtocolInitializationHandlerFacet"],
+    remove: ["OfferHandlerFacet"],
     skipSelectors: {},
-    initArgs: { ProtocolInitializationHandlerFacet: [ethers.utils.formatBytes32String("2.2.0")] },
-    skipInit: [],
+    facetsToInit: { DisputeResolverHandlerFacet: [] },
   };
 }
 

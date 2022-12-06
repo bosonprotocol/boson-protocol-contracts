@@ -31,10 +31,19 @@ contract ProtocolInitializationHandlerTestFacet is IBosonProtocolInitializationH
      * This function is callable only once for each version
      *
      * @param _version - version of the protocol
+     * @param _addresses - list of adresses to call calldata with non clashing interfaces
+     * @param _calldata - list of calldata to send to corresponding addresses.
+     *                    The order of the calldata must match the order of the addresses
+     * @param _isUpgrade - flag to indicate whether this is first deployment or upgrade
+     *
      */
-    function initialize(bytes32 _version) public onlyUnInitializedVersion(_version) {
-        bytes32 version = bytes32(bytes("2.2.0"));
-        if (keccak256(abi.encodePacked(_version)) == keccak256(abi.encodePacked(version))) {
+    function initialize(
+        bytes32 _version,
+        address[] calldata _addresses,
+        bytes[] calldata _calldata,
+        bool _isUpgrade
+    ) public onlyUnInitializedVersion(_version) {
+        if (keccak256(abi.encodePacked(_version)) == keccak256(abi.encodePacked(bytes32(bytes("2.2.0"))))) {
             initV2_2_0();
         } else if (keccak256(abi.encodePacked(_version)) == keccak256(abi.encodePacked(bytes32(bytes("2.2.1"))))) {}
     }

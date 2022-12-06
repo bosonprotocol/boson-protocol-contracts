@@ -47,8 +47,9 @@ async function main(env, facetConfig) {
   console.log(`${divider}\nBoson Protocol Contract Suite Upgrader\n${divider}`);
   console.log(`⛓  Network: ${network}\n📅 ${new Date()}`);
 
+  const { version } = packageFile;
   // Check that package.json version was updated
-  if (packageFile.version == contractsFile.protocolVersion && env !== "upgrade-test") {
+  if (version == contractsFile.protocolVersion && env !== "upgrade-test") {
     const answer = await getUserResponse("Protocol version has not been updated. Proceed anyway? (y/n) ", [
       "y",
       "yes",
@@ -134,12 +135,9 @@ async function main(env, facetConfig) {
   const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", protocolAddress);
   const diamondLoupe = await ethers.getContractAt("DiamondLoupeFacet", protocolAddress);
   const erc165Extended = await ethers.getContractAt("IERC165Extended", protocolAddress);
-  const protocolInitializationFacet = await ethers.getContractAt("ProtocolInitializationHandlerFacet", protocolAddress);
 
-  // Initialization data for facets with no-arg initializers
-  const noArgInitFunction = "initialize()";
-  const noArgInitInterface = new ethers.utils.Interface([`function ${noArgInitFunction}`]);
-  const noArgCallData = noArgInitInterface.encodeFunctionData("initialize");
+  const facetCut = [], facetCutRemove = [];
+  const interfacesToRemove = [], interfacesToAdd = [];
 
   // Manage new or upgraded facets
   for (const newFacet of deployedFacets) {
@@ -162,19 +160,16 @@ async function main(env, facetConfig) {
     const newFacetInterfaceId = interfaceIdFromFacetName(newFacet.name);
     deploymentComplete(newFacet.name, newFacet.contract.address, [], newFacetInterfaceId, contracts);
 
-    // Determine calldata. Depends on whether initialize accepts args or not
-    const callData = facets.initArgs[newFacet.name]
-      ? newFacet.contract.interface.encodeFunctionData("initialize", facets.initArgs[newFacet.name])
-      : noArgCallData;
-
     // Get new selectors from compiled contract
     const selectors = getSelectors(newFacet.contract, true);
     let newSelectors;
-    if (!facets.skipInit.includes(newFacet.name)) {
-      newSelectors = selectors.selectors.remove([callData.slice(0, 10)]);
-    } else {
-      newSelectors = selectors.selectors;
-    }
+
+    // Only ProtocolInitializationHandlerFacet should call initializer directly from diamondCut
+    // if (newFacet.name == "ProtocolInitializationHandlerFacet") {
+    //   newSelectors = selectors.selectors.remove([callData.slice(0, 10)]);
+    // } else {
+    newSelectors = selectors.selectors;
+    // }
 
     // Determine actions to be made
     let selectorsToReplace = registeredSelectors.filter((value) => newSelectors.includes(value)); // intersection of old and new selectors
@@ -207,58 +202,32 @@ async function main(env, facetConfig) {
         selectorsToAdd = removeSelectors(selectorsToAdd, [selectorName]);
       }
     }
-
-    // Adding and replacing are done in one diamond cut
-    if (selectorsToAdd.length > 0 || selectorsToReplace.length > 0) {
-      const newFacetAddress = newFacet.contract.address;
-      let facetCut = [];
-      if (selectorsToAdd.length > 0) facetCut.push([newFacetAddress, FacetCutAction.Add, selectorsToAdd]);
-      if (selectorsToReplace.length > 0) facetCut.push([newFacetAddress, FacetCutAction.Replace, selectorsToReplace]);
-
-      // Diamond cut - add or replace
-      let transactionResponse;
-
-      if (facets.skipInit.includes(newFacet.name)) {
-        // Without initialization
-        transactionResponse = await diamondCutFacet
-          .connect(adminSigner)
-          .diamondCut(facetCut, ethers.constants.AddressZero, "0x", await getFees(maxPriorityFeePerGas));
-      } else {
-        // With initialization
-        transactionResponse = await diamondCutFacet
-          .connect(adminSigner)
-          .diamondCut(facetCut, newFacetAddress, callData, await getFees(maxPriorityFeePerGas));
-      }
-      await transactionResponse.wait(confirmations);
-    }
-
-    // Removing is done in a separate diamond cut
-    if (selectorsToRemove.length > 0) {
-      const removeFacetCut = [ethers.constants.AddressZero, FacetCutAction.Remove, selectorsToRemove];
-
-      // Diamond cut
-      const transactionResponse = await diamondCutFacet
-        .connect(adminSigner)
-        .diamondCut([removeFacetCut], ethers.constants.AddressZero, "0x", await getFees(maxPriorityFeePerGas));
-      await transactionResponse.wait(confirmations);
-    }
-
+    //
     // Logs
-    console.log(`💎 Removed selectors:\n\t${selectorsToRemove.join("\n\t")}`);
+    console.log(`💎 Removing selectors:\n\t${selectorsToRemove.join("\n\t")}`);
     console.log(
-      `💎 Replaced selectors:\n\t${selectorsToReplace
+      `💎 Replacing selectors:\n\t${selectorsToReplace
         .map((selector) => `${selector}: ${selectors.signatureToNameMapping[selector]}`)
         .join("\n\t")}`
     );
     console.log(
-      `💎 Added selectors:\n\t${selectorsToAdd
+      `💎 Adding selectors:\n\t${selectorsToAdd
         .map((selector) => `${selector}: ${selectors.signatureToNameMapping[selector]}`)
         .join("\n\t")}`
     );
-    console.log(`❌ Skipped selectors:\n\t${selectorsToSkip.join("\n\t")}`);
+    console.log(`❌ Skipping selectors:\n\t${selectorsToSkip.join("\n\t")}`);
 
-    // If something was added or removed, support interface for old interface is not valid anymore
-    const erc165 = await ethers.getContractAt("IERC165", protocolAddress);
+
+    const newFacetAddress = newFacet.contract.address;
+    if (selectorsToAdd.length > 0) {
+      facetCut.push([newFacetAddress, FacetCutAction.Add, selectorsToAdd]);
+    }
+    if (selectorsToReplace.length > 0) {
+      facetCut.push([newFacetAddress, FacetCutAction.Replace, selectorsToReplace]);
+    }
+    if (selectorsToRemove.length > 0) {
+      facetCutRemove.push([ethers.constants.AddressZero, FacetCutAction.Remove, selectorsToRemove]);
+    }
 
     if (oldFacet && (selectorsToAdd.length > 0 || selectorsToRemove.length > 0)) {
       if (!oldFacet.interfaceId) {
@@ -270,10 +239,8 @@ async function main(env, facetConfig) {
           // This can happen if interface is shared accross facets and interface was updated already
           continue;
         }
-        // Remove from smart contract
-        await erc165Extended
-          .connect(adminSigner)
-          .removeSupportedInterface(oldFacet.interfaceId, await getFees(maxPriorityFeePerGas));
+
+        interfacesToRemove.push(oldFacet.interfaceId);
 
         // Check if interface was shared across other facets and update contracts info
         contracts = contracts.map((entry) => {
@@ -282,22 +249,16 @@ async function main(env, facetConfig) {
           }
           return entry;
         });
-
-        console.log(`Removed supported interface ${oldFacet.interfaceId} from supported interfaces.`);
       }
-    }
 
-    // Check if new facet registered its interface. If not, register it.
-    const support = await erc165.supportsInterface(newFacetInterfaceId);
-    if (!support) {
-      await erc165Extended
-        .connect(adminSigner)
-        .addSupportedInterface(newFacetInterfaceId, await getFees(maxPriorityFeePerGas));
-      console.log(`Added new interfaceId ${newFacetInterfaceId} to supported interfaces.`);
+      const support = await erc165.supportsInterface(newFacetInterfaceId);
+      if (!support) {
+        interfacesToAdd.push(newFacetInterfaceId);
+      }
     }
   }
 
-  // manage facets that are being completely removed
+  // Manage facets that are being completely removed
   for (const facetToRemove of facets.remove) {
     // Get currently registered selectors
     const oldFacet = contracts.find((i) => i.name === facetToRemove);
@@ -319,16 +280,10 @@ async function main(env, facetConfig) {
     let selectorsToRemove = registeredSelectors; // all selectors must be removed
 
     // Removing the selectors
-    const removeFacetCut = [ethers.constants.AddressZero, FacetCutAction.Remove, selectorsToRemove];
-
-    // Diamond cut
-    const transactionResponse = await diamondCutFacet
-      .connect(adminSigner)
-      .diamondCut([removeFacetCut], ethers.constants.AddressZero, "0x", await getFees(maxPriorityFeePerGas));
-    await transactionResponse.wait(confirmations);
+    facetCutRemove.push([ethers.constants.AddressZero, FacetCutAction.Remove, selectorsToRemove]);
 
     // Logs
-    console.log(`💎 Removed selectors:\n\t${selectorsToRemove.join("\n\t")}`);
+    console.log(`💎 Removing selectors:\n\t${selectorsToRemove.join("\n\t")}`);
 
     if (oldFacet) {
       // Remove support for old interface
@@ -338,10 +293,8 @@ async function main(env, facetConfig) {
         );
       } else {
         // Remove from smart contract
-        await erc165Extended
-          .connect(adminSigner)
-          .removeSupportedInterface(oldFacet.interfaceId, await getFees(maxPriorityFeePerGas));
-
+        interfacesToRemove.push(oldFacet.interfaceId);
+        //
         // Check if interface was shared across other facets and update contracts info
         contracts = contracts.map((entry) => {
           if (entry.interfaceId == oldFacet.interfaceId) {
@@ -349,12 +302,71 @@ async function main(env, facetConfig) {
           }
           return entry;
         });
-
-        console.log(`Removed supported interface ${oldFacet.interfaceId} from supported interfaces.`);
       }
     }
   }
 
+  // Diamond cut - add and replace
+  const protocolInitializationFacet = deployedFacets.find((f) => f.name == "ProtocolInitializationHandlerFacet").contract;
+
+  const calldataList = []; const addresses = [];
+
+  for (const facet in facets.facetsToInit) {
+    const contract = deployedFacets.find((f) => f.name == facet).contract;
+
+    addresses.push(contract.address);
+    calldataList.push(contract.interface.encodeFunctionData("initialize", facets.facetsToInit[facet]));
+  };
+
+  const calldataProtocolInitialization = protocolInitializationFacet.interface.encodeFunctionData("initialize", [
+    // Version
+    ethers.utils.formatBytes32String(version),
+    // Facets to call initializer
+    addresses,
+    // Calldata to facets initializer
+    calldataList,
+    // Is upgrade
+    true
+  ]);
+
+  let transactionResponse;
+
+  // Adding and replacing are done in one diamond cut
+  transactionResponse = await diamondCutFacet
+    .connect(adminSigner)
+    .diamondCut(facetCut, protocolInitializationFacet.address, calldataProtocolInitialization, await getFees(maxPriorityFeePerGas));
+
+  await transactionResponse.wait(confirmations);
+
+  // Removing is done in a separate diamond cut
+  if (facetCutRemove.length > 0) {
+    transactionResponse = await diamondCutFacet
+      .connect(adminSigner)
+      .diamondCut(facetCutRemove, ethers.constants.AddressZero, "0x", await getFees(maxPriorityFeePerGas));
+    await transactionResponse.wait(confirmations);
+  }
+
+  // If something was added or removed, support interface for old interface is not valid anymore
+  const erc165 = await ethers.getContractAt("IERC165", protocolAddress);
+
+  // Remove interfaces
+  for (const interfaceId of interfacesToRemove) {
+    await erc165Extended
+      .connect(adminSigner)
+      .removeSupportedInterface(interfaceId, await getFees(maxPriorityFeePerGas));
+
+    console.log(`Removed supported interface ${interfaceId} from supported interfaces.`);
+  }
+
+  // Register new interfaces
+  for (const interfaceId of interfacesToAdd) {
+    await erc165Extended
+      .connect(adminSigner)
+      .addSupportedInterface(interfaceId, await getFees(maxPriorityFeePerGas));
+    console.log(`Added new interfaceId ${interfaceId} to supported interfaces.`);
+  }
+
+  // @TODO - not working
   const newVersion = await protocolInitializationFacet.getVersion();
   console.log(`\n📋 New version: ${ethers.utils.parseBytes32String(newVersion)}`);
 

@@ -26,8 +26,9 @@ string constant REENTRANCY_GUARD = "ReentrancyGuard: reentrant call";
 uint256 constant NOT_ENTERED = 1;
 uint256 constant ENTERED = 2;
 
-// Revert Reasons: Facet or version initializer related
+// Revert Reasons: Protcol initialization related
 string constant ALREADY_INITIALIZED = "Already initialized";
+string constant PROTOCOL_INITIALIZATION_FAILED = "Protocol initialization failed";
 
 // Revert Reasons: Access related
 string constant ACCESS_DENIED = "Access denied, caller doesn't have role";
