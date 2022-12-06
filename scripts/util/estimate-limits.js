@@ -45,7 +45,6 @@ let deployer,
   other3,
   protocolAdmin,
   feeCollector;
-other1;
 let protocolDiamond,
   accessController,
   accountHandler,
@@ -56,6 +55,7 @@ let protocolDiamond,
   groupHandler,
   offerHandler,
   twinHandler;
+let bosonVoucher;
 let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
 let handlers = {};
 let result = {};
@@ -593,8 +593,9 @@ setupEnvironment["maxDisputesPerBatch"] = async function (exchangesCount = 10) {
 };
 
 /*
-Setup the environment for "maxDisputesPerBatch". The following functions depend on it:
-- expireDisputeBatch
+Setup the environment for "maxTokensPerWithdrawal". The following functions depend on it:
+- withdrawFunds
+- withdrawProtocolFees
 */
 setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
   // Create a seller
@@ -671,6 +672,33 @@ setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
 };
 
 /*
+Setup the environment for "maxPremintedVouchers". The following function depend on it:
+- preMint
+*/
+setupEnvironment["maxPremintedVouchers"] = async function (tokenCount = 10) {
+  // set protocol role
+  await accessController.grantRole(Role.PROTOCOL, deployer.address);
+  // reserve range
+  let offerId = 1;
+  let startId = 10;
+  let length = ethers.constants.MaxUint256.sub(startId);
+  console.log(tokenCount.toString());
+  console.log(length.toString());
+  await bosonVoucher.connect(deployer).reserveRange(offerId, startId, length);
+
+  await bosonVoucher.connect(deployer).transferOwnership(sellerWallet1.address);
+
+  const amounts = new Array(tokenCount);
+
+  const args_1 = [offerId, amounts];
+  const arrayIndex_1 = 1;
+
+  return {
+    preMint: { account: sellerWallet1, args: args_1, arrayIndex: arrayIndex_1 },
+  };
+};
+
+/*
 Invoke the methods that setup the environment and iterate over all limits and pass them to estimation.
 At the end it writes the results to json file.
 */
@@ -732,7 +760,10 @@ async function estimateLimit(limit, inputs, safeGasLimitPercent) {
               adjustedArgs[ai] = args[ai].slice(0, arrayLength);
             }
           } else {
-            adjustedArgs[methodInputs.arrayIndex] = args[methodInputs.arrayIndex].slice(0, arrayLength);
+            // if args contains null values, just use arrayLength instead
+            adjustedArgs[methodInputs.arrayIndex] = args[methodInputs.arrayIndex][0]
+              ? args[methodInputs.arrayIndex].slice(0, arrayLength)
+              : arrayLength;
           }
         }
 
@@ -821,9 +852,10 @@ async function setupCommonEnvironment() {
 
   // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
   const protocolClientArgs = [protocolDiamond.address];
-  const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+  const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, gasLimit);
   const [beacon] = beacons;
   const [proxy] = proxies;
+  [bosonVoucher] = bv;
 
   // Set protocolFees
   protocolFeePercentage = "200"; // 2 %
@@ -855,6 +887,7 @@ async function setupCommonEnvironment() {
       maxRoyaltyPecentage: 1000, //10%
       maxResolutionPeriod: oneMonth,
       minDisputePeriod: oneWeek,
+      maxPremintedVouchers: 100,
     },
     // Protocol fees
     {
@@ -884,6 +917,7 @@ async function setupCommonEnvironment() {
     IBosonFundsHandler: fundsHandler,
     IBosonGroupHandler: groupHandler,
     IBosonOfferHandler: offerHandler,
+    IBosonVoucher: bosonVoucher,
   };
 }
 
