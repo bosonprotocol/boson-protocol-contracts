@@ -205,6 +205,13 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         // Revert if no more to mint in range
         require(range.length >= range.minted + _amount, INVALID_AMOUNT_TO_MINT);
 
+        // Get max amount that can be minted in a single transaction
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+        uint256 maxPremintedVoucher = IBosonConfigHandler(protocolDiamond).getMaxPremintedVouchers();
+
+        // Revert if too many to mint in a single transaction
+        require(_amount <= maxPremintedVoucher, TOO_MANY_TO_MINT);
+
         // Get the first token to mint
         uint256 start = range.start + range.minted;
 
@@ -539,8 +546,11 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
             if (premintStatus.committable) {
                 // If this is a transfer of premited token, treat it differently
                 address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-                // TODO: uncomment when commitToPreMintedOffer method is available
-                // IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(to, premintStatus.offerId, tokenId);
+                IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(
+                    payable(to),
+                    premintStatus.offerId,
+                    tokenId
+                );
                 delete premintStatus;
             } else {
                 // Already committed, treat as a normal transfer
