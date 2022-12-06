@@ -11,7 +11,7 @@ Done or in progress are:
   - ✅ Developer setup and tasks documentation
   - ✅ Role-based access controller contract, with tests
   - ✅ High level architecture documentation 
-  - ✅ Proxied voucher NFT contract
+  - ✅ Proxied voucher contract
   - ✅ Protocol Diamond contract, libs, and facets, with tests
   - ✅ Shared domain model for contracts (minimal)
   - ✅ Domain model expressed in JS, with tests
