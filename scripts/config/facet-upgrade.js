@@ -1,12 +1,12 @@
 /**
  * Config file used to upgrade the facets
  *
- * - addOrUpgrade: list of facets that will be upgraded or added. ProtocolInitializationHandlerFacet must be on the list.
+ * - addOrUpgrade: list of facets that will be upgraded or added. ProtocolInitializationFacet must be on the list.
  * - remove: list of facets that will be completely removed
  * - skipSelectors:  mapping "facetName":"listOfFunctionsToBeSkipped". With this you can specify functions that will be ignored during the update.
  *          You don't have to specify "initialize()" since it's ignored by default.
  *          Skip does not apply to facets that are completely removed.
- * - facetsToInit: list of facets that will be initialized on ProtocolInitializationHandlerFacet. 
+ * - facetsToInit: list of facets that will be initialized on ProtocolInitializationFacet. 
  * - initArgs: if facet initializer expects arguments, provide them here. For no-arg initializers you don't have to specify anything.
  * 
  * Example:
@@ -23,7 +23,7 @@
  */
 async function getFacets() {
   return {
-    addOrUpgrade: ["DisputeResolverHandlerFacet", "ProtocolInitializationHandlerFacet"],
+    addOrUpgrade: ["DisputeResolverHandlerFacet", "ProtocolInitializationFacet"],
     remove: ["OfferHandlerFacet"],
     skipSelectors: {},
     facetsToInit: ["DisputeResolverHandlerFacet"],

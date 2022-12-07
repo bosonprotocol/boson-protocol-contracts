@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity ^0.8.9;
 
-import "../domain/BosonConstants.sol";
-import { IBosonProtocolInitializationHandler } from "../interfaces/handlers/IBosonProtocolInitializationHandler.sol";
-import { ProtocolLib } from "../protocol/libs/ProtocolLib.sol";
-import { DisputeResolverHandlerFacet } from "../protocol/facets/DisputeResolverHandlerFacet.sol";
-import { TwinHandlerFacet } from "../protocol/facets/TwinHandlerFacet.sol";
-import { ProtocolBase } from "../protocol/bases/ProtocolBase.sol";
-import { DiamondLib } from "../diamond/DiamondLib.sol";
+import "../../domain/BosonConstants.sol";
+import { IBosonProtocolInitializationHandler } from "../../interfaces/handlers/IBosonProtocolInitializationHandler.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import { DisputeResolverHandlerFacet } from "./DisputeResolverHandlerFacet.sol";
+import { TwinHandlerFacet } from "./TwinHandlerFacet.sol";
+import { ProtocolBase } from "../bases/ProtocolBase.sol";
+import { DiamondLib } from "../../diamond/DiamondLib.sol";
 
 /**
- * @title IBosonProtocolInitializationTestHandler
+ * @title IBosonProtocolInitializationHandler
  *
- * @notice Mock changes to IBosonProtocolInitializationHandlerFacet.
+ * @notice Handle initializion of new versions after 2.1.0.
  *
  */
-contract ProtocolInitializationHandlerTestFacet is IBosonProtocolInitializationHandler, ProtocolBase {
+contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, ProtocolBase {
     /**
      * @notice Modifier to protect initializer function from being invoked twice for a given version.
      */
@@ -42,9 +42,8 @@ contract ProtocolInitializationHandlerTestFacet is IBosonProtocolInitializationH
         address[] calldata _addresses,
         bytes[] calldata _calldata,
         bool _isUpgrade
-    ) public onlyUnInitializedVersion(_version) {
+    ) public onlyUnInitializedVersion(_version) onlyRole(UPGRADER) {
         for (uint256 i = 0; i < _addresses.length; i++) {
-            // Calling calldata (initialize function) of the corresponding facet
             (bool success, bytes memory error) = _addresses[i].delegatecall(_calldata[i]);
 
             // Handle result
@@ -63,7 +62,7 @@ contract ProtocolInitializationHandlerTestFacet is IBosonProtocolInitializationH
         if (_isUpgrade) {
             if (keccak256(abi.encodePacked(_version)) == keccak256(abi.encodePacked(bytes32(bytes("2.2.0"))))) {
                 initV2_2_0();
-            } else if (keccak256(abi.encodePacked(_version)) == keccak256(abi.encodePacked(bytes32(bytes("2.2.1"))))) {}
+            }
         }
 
         status.version = _version;

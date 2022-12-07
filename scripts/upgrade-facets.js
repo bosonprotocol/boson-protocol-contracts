@@ -136,8 +136,10 @@ async function main(env, facetConfig) {
   const diamondLoupe = await ethers.getContractAt("DiamondLoupeFacet", protocolAddress);
   const erc165Extended = await ethers.getContractAt("IERC165Extended", protocolAddress);
 
-  const facetCut = [], facetCutRemove = [];
-  const interfacesToRemove = [], interfacesToAdd = [];
+  const facetCut = [],
+    facetCutRemove = [];
+  const interfacesToRemove = [],
+    interfacesToAdd = [];
 
   // Manage new or upgraded facets
   for (const newFacet of deployedFacets) {
@@ -164,8 +166,8 @@ async function main(env, facetConfig) {
     const selectors = getSelectors(newFacet.contract, true);
     let newSelectors;
 
-    // Only ProtocolInitializationHandlerFacet should call initializer directly from diamondCut
-    // if (newFacet.name == "ProtocolInitializationHandlerFacet") {
+    // Only ProtocolInitializationFacet should call initializer directly from diamondCut
+    // if (newFacet.name == "ProtocolInitializationFacet") {
     //   newSelectors = selectors.selectors.remove([callData.slice(0, 10)]);
     // } else {
     newSelectors = selectors.selectors;
@@ -216,7 +218,6 @@ async function main(env, facetConfig) {
         .join("\n\t")}`
     );
     console.log(`❌ Skipping selectors:\n\t${selectorsToSkip.join("\n\t")}`);
-
 
     const newFacetAddress = newFacet.contract.address;
     if (selectorsToAdd.length > 0) {
@@ -307,16 +308,19 @@ async function main(env, facetConfig) {
   }
 
   // Diamond cut - add and replace
-  const protocolInitializationFacet = deployedFacets.find((f) => f.name == "ProtocolInitializationHandlerFacet").contract;
+  const protocolInitializationFacet = deployedFacets.find(
+    (f) => f.name == "ProtocolInitializationFacet"
+  ).contract;
 
-  const calldataList = []; const addresses = [];
+  const calldataList = [];
+  const addresses = [];
 
-  for (const facet in facets.facetsToInit) {
+  for (const facet of facets.facetsToInit) {
     const contract = deployedFacets.find((f) => f.name == facet).contract;
 
     addresses.push(contract.address);
-    calldataList.push(contract.interface.encodeFunctionData("initialize", facets.facetsToInit[facet]));
-  };
+    calldataList.push(contract.interface.encodeFunctionData("initialize", facets.initArgs[facet]));
+  }
 
   const calldataProtocolInitialization = protocolInitializationFacet.interface.encodeFunctionData("initialize", [
     // Version
@@ -326,17 +330,25 @@ async function main(env, facetConfig) {
     // Calldata to facets initializer
     calldataList,
     // Is upgrade
-    true
+    true,
   ]);
 
   let transactionResponse;
 
   // Adding and replacing are done in one diamond cut
+  console.log("\n🔪 Diamond cut ++++++++++++");
+  console.log(calldataProtocolInitialization);
   transactionResponse = await diamondCutFacet
     .connect(adminSigner)
-    .diamondCut(facetCut, protocolInitializationFacet.address, calldataProtocolInitialization, await getFees(maxPriorityFeePerGas));
+    .diamondCut(
+      facetCut,
+      protocolInitializationFacet.address,
+      calldataProtocolInitialization,
+      await getFees(maxPriorityFeePerGas)
+    );
 
-  await transactionResponse.wait(confirmations);
+  const response = await transactionResponse.wait(confirmations);
+  console.log("response", response);
 
   // Removing is done in a separate diamond cut
   if (facetCutRemove.length > 0) {
@@ -360,14 +372,13 @@ async function main(env, facetConfig) {
 
   // Register new interfaces
   for (const interfaceId of interfacesToAdd) {
-    await erc165Extended
-      .connect(adminSigner)
-      .addSupportedInterface(interfaceId, await getFees(maxPriorityFeePerGas));
+    await erc165Extended.connect(adminSigner).addSupportedInterface(interfaceId, await getFees(maxPriorityFeePerGas));
     console.log(`Added new interfaceId ${interfaceId} to supported interfaces.`);
   }
 
   // @TODO - not working
   const newVersion = await protocolInitializationFacet.getVersion();
+  console.log(`New version: ${newVersion}`);
   console.log(`\n📋 New version: ${ethers.utils.parseBytes32String(newVersion)}`);
 
   const contractsPath = await writeContracts(contracts, env);

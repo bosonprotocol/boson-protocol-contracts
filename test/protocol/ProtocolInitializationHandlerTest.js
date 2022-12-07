@@ -46,7 +46,7 @@ describe("ProtocolInitializationHandler", async function () {
 
     // Cast Diamond to ProtocolInitializationFacet
     protocolInitializationFacet = await ethers.getContractAt(
-      "ProtocolInitializationHandlerFacet",
+      "ProtocolInitializationFacet",
       protocolDiamond.address
     );
 
@@ -58,7 +58,7 @@ describe("ProtocolInitializationHandler", async function () {
       it("Should initialize version 2.2.0 and emit ProtocolInitialized", async function () {
         const [{ cutTransaction }] = await deployProtocolHandlerFacetsWithArgs(
           protocolDiamond,
-          { ProtocolInitializationHandlerFacet: [version, [], [], true] },
+          { ProtocolInitializationFacet: [version, [], [], true] },
           maxPriorityFeePerGas
         );
 
@@ -68,7 +68,7 @@ describe("ProtocolInitializationHandler", async function () {
       context("💔 Revert Reasons", async function () {
         it("Caller does not have UPGRADER role", async function () {
           const ProtocolInitilizationContractFactory = await ethers.getContractFactory(
-            "ProtocolInitializationHandlerFacet"
+            "ProtocolInitializationFacet"
           );
           const protocolInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
             await getFees(maxPriorityFeePerGas)
@@ -99,7 +99,7 @@ describe("ProtocolInitializationHandler", async function () {
 
         it("Initialize same version twice", async function () {
           const ProtocolInitilizationContractFactory = await ethers.getContractFactory(
-            "ProtocolInitializationHandlerFacet"
+            "ProtocolInitializationFacet"
           );
           const protocolInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
             await getFees(maxPriorityFeePerGas)
@@ -124,7 +124,7 @@ describe("ProtocolInitializationHandler", async function () {
 
           // Mock a change in the initialize function because diamond cut will revert if contract stay the same
           const ProtocolInitilizationTestContractFactory = await ethers.getContractFactory(
-            "ProtocolInitializationHandlerTestFacet"
+            "ProtocolInitializationTestFacet"
           );
 
           const protocolInitializationTestFacet = await ProtocolInitilizationTestContractFactory.deploy(
@@ -153,7 +153,7 @@ describe("ProtocolInitializationHandler", async function () {
     beforeEach(async function () {
       [{ contract: deployedProcolInitializationFacet }] = await deployProtocolHandlerFacetsWithArgs(
         protocolDiamond,
-        { ProtocolInitializationHandlerFacet: [version, [], [], true] },
+        { ProtocolInitializationFacet: [version, [], [], true] },
         maxPriorityFeePerGas
       );
     });
@@ -180,7 +180,7 @@ describe("ProtocolInitializationHandler", async function () {
     it("Should call facet initializer internally when _addresses and _calldata is supplied", async function () {
       // Mock a change in the initialize function because diamond cut will revert if contract stay the same
       const ProtocolInitilizationTestContractFactory = await ethers.getContractFactory(
-        "ProtocolInitializationHandlerTestFacet"
+        "ProtocolInitializationTestFacet"
       );
 
       const protocolInitializationTestFacet = await ProtocolInitilizationTestContractFactory.deploy(

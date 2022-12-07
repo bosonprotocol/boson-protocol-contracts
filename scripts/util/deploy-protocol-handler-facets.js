@@ -61,8 +61,11 @@ async function deployProtocolHandlerFacetsWithArgs(diamond, facetData, maxPriori
     for (let i = 0; i < deployedFacets.length; i++) {
       const deployedFacet = deployedFacets[i];
 
-      const callData = deployedFacet.contract.interface.encodeFunctionData("initialize", facetData[deployedFacet.name]);
-      const facetCut = getFacetAddCut(deployedFacet.contract, [callData.slice(0, 10)]);
+      const callData = deployedFacet.contract.interface.encodeFunctionData(
+        "initializeProtocol",
+        facetData[deployedFacet.name]
+      );
+      const facetCut = getFacetAddCut(deployedFacet.contract);
       const transactionResponse = await diamondCutFacet.diamondCut(
         [facetCut],
         deployedFacet.contract.address,
