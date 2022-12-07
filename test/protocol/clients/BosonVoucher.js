@@ -26,12 +26,11 @@ const { applyPercentage, calculateContractAddress, calculateVoucherExpiry } = re
 const { waffle } = hre;
 const { deployMockContract } = waffle;
 const FormatTypes = ethers.utils.FormatTypes;
-const { BaseContract } = require("ethers");
 
 describe("IBosonVoucher", function () {
   let interfaceIds;
   let protocolDiamond, accessController;
-  let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler;
+  let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler, configHandler;
   let deployer,
     protocol,
     buyer,
@@ -77,29 +76,7 @@ describe("IBosonVoucher", function () {
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
     exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
     fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-
-    function customCreateOffer(...args) {
-      const mintOnDemand =
-        "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256)";
-      const preMint =
-        "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,bool)";
-      return this[args.length == 5 ? mintOnDemand : preMint](...args);
-    }
-
-    function customCreateOfferBatch(...args) {
-      const mintOnDemand =
-        "createOfferBatch((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool)[],(uint256,uint256,uint256,uint256)[],(uint256,uint256,uint256)[],uint256[],uint256[])";
-      const preMint =
-        "createOfferBatch((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool)[],(uint256,uint256,uint256,uint256)[],(uint256,uint256,uint256)[],uint256[],uint256[],bool[])";
-      return this[args.length == 5 ? mintOnDemand : preMint](...args);
-    }
-
-    offerHandler.connect = function (connectArgument) {
-      const contract = BaseContract.prototype.connect.call(this, connectArgument);
-      contract.createOffer = customCreateOffer;
-      contract.createOfferBatch = customCreateOfferBatch;
-      return contract;
-    };
+    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
     // Grant roles
     await accessController.grantRole(Role.PROTOCOL, protocol.address);
@@ -462,6 +439,9 @@ describe("IBosonVoucher", function () {
     });
 
     it("Range is fully minted", async function () {
+      // Adjust config value
+      await configHandler.connect(deployer).setMaxPremintedVouchers(length);
+
       // Premint tokens
       await bosonVoucher.connect(operator).preMint(offerId, length);
 
@@ -566,6 +546,17 @@ describe("IBosonVoucher", function () {
       it("Returns true owner if token exists - via preminted voucher transfer.", async function () {
         let tokenId = "25"; // tokens between 10 and 60 are preminted
 
+        // Mock exhange handler methods (easier and more efficient than creating a real offer)
+        const exchangeHandlerABI = exchangeHandler.interface.format(FormatTypes.json);
+        const mockProtocol = await deployMockContract(deployer, JSON.parse(exchangeHandlerABI)); //deploys mock
+
+        // Update protocol address on beacon
+        await beacon.connect(deployer).setProtocolAddress(mockProtocol.address);
+
+        // Define what should be returned when getExchange and getAccessControllerAddress are called
+        await mockProtocol.mock.getExchange.withArgs(tokenId).returns(false, mockExchange(), mockVoucher());
+        await mockProtocol.mock.commitToPreMintedOffer.returns();
+
         // Transfer preminted token
         await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
 
@@ -588,6 +579,8 @@ describe("IBosonVoucher", function () {
         // Add five more ranges
         // This tests more getPreMintStatus than ownerOf
         // Might even be put into integration tests
+        // Adjust config value
+        await configHandler.connect(deployer).setMaxPremintedVouchers("10000");
 
         let previousOfferId = Number(offerId);
         let previousStartId = Number(startId);
@@ -709,6 +702,24 @@ describe("IBosonVoucher", function () {
         it("Token was preminted, transferred and burned", async function () {
           let tokenId = "26";
 
+          // Mock exhange handler methods (easier and more efficient than creating a real offer)
+          const exchangeHandlerABI = exchangeHandler.interface.format(FormatTypes.json);
+          const configHandlerABI = (
+            await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address)
+          ).interface.format(FormatTypes.json);
+          const mockProtocol = await deployMockContract(deployer, [
+            ...JSON.parse(exchangeHandlerABI),
+            ...JSON.parse(configHandlerABI),
+          ]); //deploys mock
+
+          // Update protocol address on beacon
+          await beacon.connect(deployer).setProtocolAddress(mockProtocol.address);
+
+          // Define what should be returned when getExchange, commitToPreMintedOffer and getAccessControllerAddress are called
+          await mockProtocol.mock.getExchange.withArgs(tokenId).returns(false, mockExchange(), mockVoucher());
+          await mockProtocol.mock.commitToPreMintedOffer.returns();
+          await mockProtocol.mock.getAccessControllerAddress.returns(accessController.address);
+
           // Token owner should be the seller
           let tokenOwner = await bosonVoucher.ownerOf(tokenId);
           assert.equal(tokenOwner, operator.address, "Token owner mismatch");
@@ -723,16 +734,7 @@ describe("IBosonVoucher", function () {
           // Simulate burn
           await bosonVoucher.connect(protocol).burnVoucher(tokenId);
 
-          // Mock protocol that returns true when getExchange is called
-          const exchangeHandlerInterface = exchangeHandler.interface;
-          const exchangeHandlerABI = exchangeHandlerInterface.format(FormatTypes.json);
-
-          const mockProtocol = await deployMockContract(deployer, JSON.parse(exchangeHandlerABI)); //deploys mock
-
-          // Update protocol address on beacon
-          await beacon.connect(deployer).setProtocolAddress(mockProtocol.address);
-
-          // Define what should be returned when getExchange is called
+          // getExchange should return true, since commit happened
           await mockProtocol.mock.getExchange.withArgs(tokenId).returns(true, mockExchange(), mockVoucher());
 
           await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
@@ -903,9 +905,9 @@ describe("IBosonVoucher", function () {
                 offerDates.toStruct(),
                 offerDurations.toStruct(),
                 disputeResolverId,
-                agentId,
-                true
+                agentId
               );
+            await offerHandler.connect(operator).reserveRange(offer.id, offer.quantityAvailable);
             // Pool needs to cover both seller deposit and price
             const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
             await fundsHandler.connect(admin).depositFunds(seller.id, ethers.constants.AddressZero, pool, {

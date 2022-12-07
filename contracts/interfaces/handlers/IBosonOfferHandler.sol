@@ -53,14 +53,22 @@ interface IBosonOfferHandler is IBosonOfferEvents {
         uint256 _agentId
     ) external;
 
-    function createOffer(
-        BosonTypes.Offer memory _offer,
-        BosonTypes.OfferDates calldata _offerDates,
-        BosonTypes.OfferDurations calldata _offerDurations,
-        uint256 _disputeResolverId,
-        uint256 _agentId,
-        bool _isPreminted
-    ) external;
+    /**
+     * @notice Reserves a range of vouchers to be associated with an offer
+     *
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - The exchanges region of protocol is paused
+     * - Lange length is zero
+     * - Range length is greater than quantity available
+     * - Range length is greater than maximum allowed range length
+     * - Call to BosonVoucher.reserveRange() reverts
+     *
+     * @param _offerId - the id of the offer
+     * @param _length - the length of the range
+     */
+    function reserveRange(uint256 _offerId, uint256 _length) external;
 
     /**
      * @notice Creates a batch of offers.
@@ -104,15 +112,6 @@ interface IBosonOfferHandler is IBosonOfferEvents {
         BosonTypes.OfferDurations[] calldata _offerDurations,
         uint256[] calldata _disputeResolverIds,
         uint256[] calldata _agentIds
-    ) external;
-
-    function createOfferBatch(
-        BosonTypes.Offer[] calldata _offers,
-        BosonTypes.OfferDates[] calldata _offerDates,
-        BosonTypes.OfferDurations[] calldata _offerDurations,
-        uint256[] calldata _disputeResolverIds,
-        uint256[] calldata _agentIds,
-        bool[] memory _isPreminted
     ) external;
 
     /**

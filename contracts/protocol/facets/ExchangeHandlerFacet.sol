@@ -54,7 +54,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - Contract at token address does not support ERC20 function transferFrom
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - Received ERC20 token amount differs from the expected value
-     * - Seller has less funds available than sellerDeposit
+     * - Seller has less funds available than sellerDeposit for non preminted offers
+     * - Seller has less funds available than sellerDeposit and price for preminted offers
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
@@ -78,33 +79,113 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Make sure offer exists, is available, and isn't void, expired, or sold out
         require(exists, NO_SUCH_OFFER);
 
+        commitToOfferInternal(_buyer, offer, 0, false);
+    }
+
+    /**
+     * @notice Commits to a preminted offer (first step of an exchange).
+     *
+     * Emits a BuyerCommitted event if successful.
+     *
+     * Reverts if:
+     * - The exchanges region of protocol is paused
+     * - The buyers region of protocol is paused
+     * - Caller is not the voucher contract, owned by the seller
+     * - Exhange exists already
+     * - Offer has been voided
+     * - Offer has expired
+     * - Offer is not yet available for commits
+     * - Buyer account is inactive
+     * - Buyer is token-gated (conditional commit requirements not met or already used)
+     * - Seller has less funds available than sellerDeposit for non preminted offers
+     * - Seller has less funds available than sellerDeposit and price for preminted offers
+     *
+     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
+     * @param _offerId - the id of the offer to commit to
+     * @param _exchangeId - the id of the exchange
+     */
+    function commitToPreMintedOffer(
+        address payable _buyer,
+        uint256 _offerId,
+        uint256 _exchangeId
+    ) external exchangesNotPaused buyersNotPaused nonReentrant {
+        // Fetch the offer info
+        (, Offer storage offer) = fetchOffer(_offerId);
+
+        // Make sure that the voucher was issued on the clone that is making a call
+        require(msg.sender == protocolLookups().cloneAddress[offer.sellerId], ACCESS_DENIED);
+
+        // Exchange must not exist already
+        (bool exists, ) = fetchExchange(_exchangeId);
+        require(!exists, EXCHANGE_ALREADY_EXISTS);
+
+        commitToOfferInternal(_buyer, offer, _exchangeId, true);
+    }
+
+    /**
+     * @notice Commits to an offer. Helper function reused by commitToOffer and commitToPreMintedOffer.
+     *
+     * Emits a BuyerCommitted event if successful.
+     * Issues a voucher to the buyer address for non preminted offers.
+     *
+     * Reverts if:
+     * - Offer has been voided
+     * - Offer has expired
+     * - Offer is not yet available for commits
+     * - Offer's quantity available is zero [for non preminted offers]
+     * - Buyer account is inactive
+     * - Buyer is token-gated (conditional commit requirements not met or already used)
+     * - For non preminted offers:
+     *   - Offer price is in native token and caller does not send enough
+     *   - Offer price is in some ERC20 token and caller also sends native currency
+     *   - Contract at token address does not support ERC20 function transferFrom
+     *   - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     *   - Received ERC20 token amount differs from the expected value
+     *   - Seller has less funds available than sellerDeposit
+     * - Seller has less funds available than sellerDeposit and price for preminted offers
+     *
+     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
+     * @param _offerId - the id of the offer to commit to
+     */
+    function commitToOfferInternal(
+        address payable _buyer,
+        Offer storage _offer,
+        uint256 _exchangeId,
+        bool _isPreminted
+    ) internal {
+        uint256 _offerId = _offer.id;
+        // Make sure offer is available, and isn't void, expired, or sold out
         OfferDates storage offerDates = fetchOfferDates(_offerId);
         require(block.timestamp >= offerDates.validFrom, OFFER_NOT_AVAILABLE);
-        require(!offer.voided, OFFER_HAS_BEEN_VOIDED);
+        require(!_offer.voided, OFFER_HAS_BEEN_VOIDED);
         require(block.timestamp < offerDates.validUntil, OFFER_HAS_EXPIRED);
-        require(offer.quantityAvailable > 0, OFFER_SOLD_OUT);
 
-        // Get next exchange id
-        uint256 exchangeId = protocolCounters().nextExchangeId++;
+        if (!_isPreminted) {
+            // For premnon-preminted offers, quantityAvailable must be greater than zero, since it gets decremented
+            require(_offer.quantityAvailable > 0, OFFER_SOLD_OUT);
+
+            // Get next exchange id for non-preminted offers
+            _exchangeId = protocolCounters().nextExchangeId++;
+        }
 
         // Authorize the buyer to commit if offer is in a conditional group
-        require(authorizeCommit(_buyer, offer, exchangeId), CANNOT_COMMIT);
+        require(authorizeCommit(_buyer, _offer, _exchangeId), CANNOT_COMMIT);
 
         // Fetch or create buyer
         uint256 buyerId = getValidBuyer(_buyer);
 
         // Encumber funds before creating the exchange
-        FundsLib.encumberFunds(_offerId, buyerId);
+        FundsLib.encumberFunds(_offerId, buyerId, _isPreminted);
 
         // Create and store a new exchange
-        Exchange storage exchange = protocolEntities().exchanges[exchangeId];
-        exchange.id = exchangeId;
+        Exchange storage exchange = protocolEntities().exchanges[_exchangeId];
+        exchange.id = _exchangeId;
         exchange.offerId = _offerId;
         exchange.buyerId = buyerId;
         exchange.state = ExchangeState.Committed;
 
         // Create and store a new voucher
-        Voucher storage voucher = protocolEntities().vouchers[exchangeId];
+        Voucher storage voucher = protocolEntities().vouchers[_exchangeId];
         voucher.committedDate = block.timestamp;
 
         // Operate in a block to avoid "stack too deep" error
@@ -123,22 +204,24 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 : startDate + fetchOfferDurations(_offerId).voucherValid;
 
             // Map the offerId to the exchangeId as one-to-many
-            lookups.exchangeIdsByOffer[_offerId].push(exchangeId);
+            lookups.exchangeIdsByOffer[_offerId].push(_exchangeId);
 
-            // Shouldn't decrement if offer is unlimited
-            if (offer.quantityAvailable != type(uint256).max) {
+            // Shouldn't decrement if offer is preminted or unlimited
+            if (!_isPreminted && _offer.quantityAvailable != type(uint256).max) {
                 // Decrement offer's quantity available
-                offer.quantityAvailable--;
+                _offer.quantityAvailable--;
             }
 
-            // Issue voucher
+            // Issue voucher, unless it already exist (for preminted offers)
             lookups.voucherCount[buyerId]++;
-            IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);
-            bosonVoucher.issueVoucher(exchangeId, _buyer);
+            if (!_isPreminted) {
+                IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
+                bosonVoucher.issueVoucher(_exchangeId, _buyer);
+            }
         }
 
         // Notify watchers of state change
-        emit BuyerCommitted(_offerId, buyerId, exchangeId, exchange, voucher, msgSender());
+        emit BuyerCommitted(_offerId, buyerId, _exchangeId, exchange, voucher, msgSender());
     }
 
     /**
