@@ -130,6 +130,7 @@ exports.RevertReasons = {
   INVALID_AMOUNT_TO_MINT: "Amount to mint is greater than remaining un-minted in range",
   NO_SILENT_MINT_ALLOWED: "Only owner's mappings can be updated without event",
   TOO_MANY_TO_MINT: "Exceeded maximum amount to mint in a single transaction",
+  OFFER_EXPIRED_OR_VOIDED: "Offer expired or voided",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",

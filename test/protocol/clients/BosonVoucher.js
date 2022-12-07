@@ -1,6 +1,7 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 
+const DisputeResolutionTerms = require("../../../scripts/domain/DisputeResolutionTerms");
 const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { getInterfaceIds } = require("../../../scripts/config/supported-interfaces.js");
 const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond.js");
@@ -22,7 +23,12 @@ const {
   mockBuyer,
   accountId,
 } = require("../../util/mock");
-const { applyPercentage, calculateContractAddress, calculateVoucherExpiry } = require("../../util/utils.js");
+const {
+  applyPercentage,
+  calculateContractAddress,
+  calculateVoucherExpiry,
+  setNextBlockTimestamp,
+} = require("../../util/utils.js");
 const { waffle } = hre;
 const { deployMockContract } = waffle;
 const FormatTypes = ethers.utils.FormatTypes;
@@ -309,8 +315,24 @@ describe("IBosonVoucher", function () {
 
   context("preMint()", function () {
     let offerId, startId, length, amount;
+    let mockProtocol;
+    let offer, offerDates, offerDurations, offerFees, disputeResolutionTerms;
 
     beforeEach(async function () {
+      mockProtocol = await deployMockProtocol();
+      ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
+      disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
+      await mockProtocol.mock.getExchange.returns(true, mockExchange(), mockVoucher());
+      await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
+      await mockProtocol.mock.getOffer.returns(
+        true,
+        offer,
+        offerDates,
+        offerDurations,
+        disputeResolutionTerms,
+        offerFees
+      );
+
       // reserve a range
       offerId = "5";
       startId = "10";
@@ -391,12 +413,42 @@ describe("IBosonVoucher", function () {
       });
 
       it("Too many to mint in a single transaction", async function () {
+        await mockProtocol.mock.getMaxPremintedVouchers.returns("100");
+
         // Set invalid amount
         amount = "101";
 
         // Try to premint, it should fail
         await expect(bosonVoucher.connect(operator).preMint(offerId, amount)).to.be.revertedWith(
           RevertReasons.TOO_MANY_TO_MINT
+        );
+      });
+
+      it("Offer already expired", async function () {
+        // Skip to after offer expiration
+        await setNextBlockTimestamp(ethers.BigNumber.from(offerDates.validUntil).add(1).toHexString());
+
+        // Try to premint, it should fail
+        await expect(bosonVoucher.connect(operator).preMint(offerId, amount)).to.be.revertedWith(
+          RevertReasons.OFFER_EXPIRED_OR_VOIDED
+        );
+      });
+
+      it("Offer is voided", async function () {
+        // Make offer voided
+        offer.voided = true;
+        await mockProtocol.mock.getOffer.returns(
+          true,
+          offer,
+          offerDates,
+          offerDurations,
+          disputeResolutionTerms,
+          offerFees
+        );
+
+        // Try to premint, it should fail
+        await expect(bosonVoucher.connect(operator).preMint(offerId, amount)).to.be.revertedWith(
+          RevertReasons.OFFER_EXPIRED_OR_VOIDED
         );
       });
     });
@@ -414,6 +466,20 @@ describe("IBosonVoucher", function () {
 
       // amount to mint
       amount = 50;
+
+      const mockProtocol = await deployMockProtocol();
+      const { offer, offerDates, offerDurations, offerFees } = await mockOffer();
+      const disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
+      await mockProtocol.mock.getExchange.returns(true, mockExchange(), mockVoucher());
+      await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
+      await mockProtocol.mock.getOffer.returns(
+        true,
+        offer,
+        offerDates,
+        offerDurations,
+        disputeResolutionTerms,
+        offerFees
+      );
     });
 
     it("If nothing was preminted, return full range", async function () {
@@ -474,6 +540,20 @@ describe("IBosonVoucher", function () {
 
       await bosonVoucher.connect(protocol).reserveRange(offerId, startId, length);
 
+      const mockProtocol = await deployMockProtocol();
+      const { offer, offerDates, offerDurations, offerFees } = await mockOffer();
+      const disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
+      await mockProtocol.mock.getExchange.returns(true, mockExchange(), mockVoucher());
+      await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
+      await mockProtocol.mock.getOffer.returns(
+        true,
+        offer,
+        offerDates,
+        offerDurations,
+        disputeResolutionTerms,
+        offerFees
+      );
+
       // amount to premint
       amount = "50";
       range.minted = amount;
@@ -528,6 +608,20 @@ describe("IBosonVoucher", function () {
         length = "150";
         await bosonVoucher.connect(protocol).reserveRange(offerId, startId, length);
 
+        const mockProtocol = await deployMockProtocol();
+        const { offer, offerDates, offerDurations, offerFees } = await mockOffer();
+        const disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
+        await mockProtocol.mock.getExchange.returns(true, mockExchange(), mockVoucher());
+        await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
+        await mockProtocol.mock.getOffer.returns(
+          true,
+          offer,
+          offerDates,
+          offerDurations,
+          disputeResolutionTerms,
+          offerFees
+        );
+
         // amount to premint
         amount = 50;
         await bosonVoucher.connect(operator).preMint(offerId, amount);
@@ -546,12 +640,7 @@ describe("IBosonVoucher", function () {
       it("Returns true owner if token exists - via preminted voucher transfer.", async function () {
         let tokenId = "25"; // tokens between 10 and 60 are preminted
 
-        // Mock exhange handler methods (easier and more efficient than creating a real offer)
-        const exchangeHandlerABI = exchangeHandler.interface.format(FormatTypes.json);
-        const mockProtocol = await deployMockContract(deployer, JSON.parse(exchangeHandlerABI)); //deploys mock
-
-        // Update protocol address on beacon
-        await beacon.connect(deployer).setProtocolAddress(mockProtocol.address);
+        const mockProtocol = await deployMockProtocol();
 
         // Define what should be returned when getExchange and getAccessControllerAddress are called
         await mockProtocol.mock.getExchange.withArgs(tokenId).returns(false, mockExchange(), mockVoucher());
@@ -703,22 +792,11 @@ describe("IBosonVoucher", function () {
           let tokenId = "26";
 
           // Mock exhange handler methods (easier and more efficient than creating a real offer)
-          const exchangeHandlerABI = exchangeHandler.interface.format(FormatTypes.json);
-          const configHandlerABI = (
-            await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address)
-          ).interface.format(FormatTypes.json);
-          const mockProtocol = await deployMockContract(deployer, [
-            ...JSON.parse(exchangeHandlerABI),
-            ...JSON.parse(configHandlerABI),
-          ]); //deploys mock
-
-          // Update protocol address on beacon
-          await beacon.connect(deployer).setProtocolAddress(mockProtocol.address);
+          const mockProtocol = await deployMockProtocol();
 
           // Define what should be returned when getExchange, commitToPreMintedOffer and getAccessControllerAddress are called
           await mockProtocol.mock.getExchange.withArgs(tokenId).returns(false, mockExchange(), mockVoucher());
           await mockProtocol.mock.commitToPreMintedOffer.returns();
-          await mockProtocol.mock.getAccessControllerAddress.returns(accessController.address);
 
           // Token owner should be the seller
           let tokenOwner = await bosonVoucher.ownerOf(tokenId);
@@ -1033,10 +1111,7 @@ describe("IBosonVoucher", function () {
               await bosonVoucher.connect(protocol).burnVoucher(tokenId);
 
               // Mock protocol that returns true when getExchange is called
-              const exchangeHandlerInterface = exchangeHandler.interface;
-              const exchangeHandlerABI = exchangeHandlerInterface.format(FormatTypes.json);
-
-              const mockProtocol = await deployMockContract(deployer, JSON.parse(exchangeHandlerABI)); //deploys mock
+              const mockProtocol = await deployMockProtocol(); //deploys mock
 
               // Update protocol address on beacon
               await beacon.connect(deployer).setProtocolAddress(mockProtocol.address);
@@ -1478,4 +1553,22 @@ describe("IBosonVoucher", function () {
       accountId.next(true);
     });
   });
+
+  async function deployMockProtocol() {
+    const exchangeHandlerABI = exchangeHandler.interface.format(FormatTypes.json);
+    const configHandlerABI = configHandler.interface.format(FormatTypes.json);
+    const offerHandlerABI = offerHandler.interface.format(FormatTypes.json);
+    const mockProtocol = await deployMockContract(deployer, [
+      ...JSON.parse(exchangeHandlerABI),
+      ...JSON.parse(configHandlerABI),
+      ...JSON.parse(offerHandlerABI),
+    ]); //deploys mock
+
+    // Update protocol address on beacon
+    await beacon.connect(deployer).setProtocolAddress(mockProtocol.address);
+
+    await mockProtocol.mock.getAccessControllerAddress.returns(accessController.address);
+
+    return mockProtocol;
+  }
 });

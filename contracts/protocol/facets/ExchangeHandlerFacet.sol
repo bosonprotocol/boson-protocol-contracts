@@ -145,7 +145,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - Seller has less funds available than sellerDeposit and price for preminted offers
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _offerId - the id of the offer to commit to
+     * @param _offer - storage pointer to the offer
+     * @param _exchangeId - the id of the exchange
+     * @param _isPreminted - whether the offer is preminted
      */
     function commitToOfferInternal(
         address payable _buyer,

@@ -66,6 +66,9 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     // Premint status, used only temporarly in transfers
     PremintStatus private premintStatus;
 
+    // Tell is preminted voucher has already been commited
+    mapping(uint256 => bool) private commited;
+
     /**
      * @notice Initializes the voucher.
      * This function is callable only once.
@@ -191,6 +194,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * - Offer id is not associated with a range
      * - Amount to mint is more than remaining un-minted in range
      * - Too many to mint in a single transaction, given current block gas limit
+     * - Offer already expired
+     * - Offer is voided
      *
      * @param _offerId - the id of the offer
      * @param _amount - the amount to mint
@@ -207,10 +212,14 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
         // Get max amount that can be minted in a single transaction
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        uint256 maxPremintedVoucher = IBosonConfigHandler(protocolDiamond).getMaxPremintedVouchers();
+        uint256 maxPremintedVouchers = IBosonConfigHandler(protocolDiamond).getMaxPremintedVouchers();
 
         // Revert if too many to mint in a single transaction
-        require(_amount <= maxPremintedVoucher, TOO_MANY_TO_MINT);
+        require(_amount <= maxPremintedVouchers, TOO_MANY_TO_MINT);
+
+        // Make sure that offer is not expired or voided
+        (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
+        require(!offer.voided && (offerDates.validUntil > block.timestamp), OFFER_EXPIRED_OR_VOIDED);
 
         // Get the first token to mint
         uint256 start = range.start + range.minted;
@@ -228,6 +237,70 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
         // Update seller's total balance
         getERC721UpgradeableStorage()._balances[seller] += _amount;
+    }
+
+    /**
+     * @notice Burn all or part of an offer's preminted vouchers.
+     * If offer expires or it's voided, the seller can burn the preminted vouchers that were not transferred yet.
+     * This way they will not show in seller's wallet and marketplaces anymore.
+     *
+     * For small offer quantities, this method may only need to be
+     * called once.
+     *
+     * But, if the range is large, e.g., 10k vouchers, block gas limit
+     * could cause the transaction to fail. Thus, in order to support
+     * a batched approach to pre-minting an offer's vouchers,
+     * this method can be called multiple times, until the whole
+     * range is burned.
+     *
+     * Caller must be contract owner (seller operator address).
+     *
+     * Reverts if:
+     * - Offer id is not associated with a range
+     * - Offer is not expired or voided
+     *
+     * @param _offerId - the id of the offer
+     */
+    function burnPremintedVouchers(uint256 _offerId) external onlyOwner {
+        // Get the offer's range
+        Range storage range = rangeByOfferId[_offerId];
+
+        // Revert if id not associated with a range
+        require(range.length != 0, NO_RESERVED_RANGE_FOR_OFFER);
+
+        // Make sure that offer is either expired or voided
+        (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
+        require(offer.voided || (offerDates.validUntil <= block.timestamp), OFFER_STILL_VALID);
+
+        // Get max amount that can be burned in a single transaction
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+        uint256 maxPremintedVouchers = IBosonConfigHandler(protocolDiamond).getMaxPremintedVouchers();
+
+        // Get the first token to burn
+        uint256 start = (range.lastBurnedTokenId == 0) ? range.start : range.lastBurnedTokenId;
+
+        // Get the last token to burn
+        uint256 end = range.minted;
+        if (end > start + maxPremintedVouchers) {
+            end = start + maxPremintedVouchers;
+        }
+
+        // Burn the range
+        address seller = owner();
+        uint256 burned;
+        for (uint256 tokenId = start; tokenId < end; tokenId++) {
+            // Burn only if not already commited
+            if (!commited[tokenId]) {
+                emit Transfer(seller, address(0), tokenId);
+                burned++;
+            }
+        }
+
+        // Update last burned token id
+        range.lastBurnedTokenId = end - 1;
+
+        // Update seller's total balance
+        getERC721UpgradeableStorage()._balances[seller] -= burned;
     }
 
     /**
@@ -373,7 +446,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         override(ERC721Upgradeable, IERC721MetadataUpgradeable)
         returns (string memory)
     {
-        (bool exists, Offer memory offer) = getBosonOffer(_exchangeId);
+        (bool exists, Offer memory offer) = getBosonOfferByExchangeId(_exchangeId);
         return exists ? offer.metadataUri : "";
     }
 
@@ -447,7 +520,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         returns (address receiver, uint256 royaltyAmount)
     {
         // get offer
-        (bool offerExists, Offer memory offer) = getBosonOffer(_tokenId);
+        (bool offerExists, Offer memory offer) = getBosonOfferByExchangeId(_tokenId);
 
         if (offerExists) {
             (, Seller memory seller) = getBosonSeller(offer.sellerId);
@@ -544,6 +617,9 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         // Only when transferring, not minting or burning
         if (from == owner()) {
             if (premintStatus.committable) {
+                // Set the preminted token as committed
+                commited[tokenId] = true;
+
                 // If this is a transfer of premited token, treat it differently
                 address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
                 IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(
@@ -575,8 +651,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @return offerId - the associated offer id if committable
      */
     function getPreMintStatus(uint256 _tokenId) internal view returns (bool committable, uint256 offerId) {
-        // Not committable if token has an owner
-        if (!_exists(_tokenId)) {
+        // Not committable if commited already or if token has an owner
+        if (!commited[_tokenId] && !_exists(_tokenId)) {
             // If are reserved ranges, search them
             uint256 length = rangeOfferIds.length;
             if (length > 0) {
@@ -599,14 +675,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
                         high = mid;
                     } else if (start + range.minted - 1 >= _tokenId) {
                         // Is token in target's minted range?
-
-                        // If token does not exist, is in the range, but exchange also exists, it is not committable anymore
-                        // This happens when preminted voucher was already redeemed/revoked/canceled and therefore burned
-                        (bool exists, ) = getBosonExchange(_tokenId);
-                        if (!exists) {
-                            committable = true;
-                            offerId = range.offerId;
-                        }
+                        committable = true;
+                        offerId = range.offerId;
                         break; // Found!
                     } else if (start + range.length - 1 >= _tokenId) {
                         // No? Ok, is it in target's reserved range?

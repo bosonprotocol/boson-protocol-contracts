@@ -182,6 +182,8 @@ string constant INVALID_RANGE_START = "Range start must be greater than zero";
 string constant INVALID_AMOUNT_TO_MINT = "Amount to mint is greater than remaining un-minted in range";
 string constant NO_SILENT_MINT_ALLOWED = "Only owner's mappings can be updated without event";
 string constant TOO_MANY_TO_MINT = "Exceeded maximum amount to mint in a single transaction";
+string constant OFFER_EXPIRED_OR_VOIDED = "Offer expired or voided";
+string constant OFFER_STILL_VALID = "Offer still valid";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(

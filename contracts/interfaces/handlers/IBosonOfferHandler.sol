@@ -60,6 +60,9 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * Reverts if:
      * - The offers region of protocol is paused
      * - The exchanges region of protocol is paused
+     * - Offer does not exist
+     * - Offer already voided
+     * - Caller is not the seller
      * - Lange length is zero
      * - Range length is greater than quantity available
      * - Range length is greater than maximum allowed range length
