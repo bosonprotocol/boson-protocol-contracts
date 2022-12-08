@@ -53,7 +53,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - The exchanges region of protocol is paused
      * - The buyers region of protocol is paused
      * - Caller is not the voucher contract, owned by the seller
-     * - Exhange exists already
+     * - Exchange exists already
      * - Offer has been voided
      * - Offer has expired
      * - Offer is not yet available for commits

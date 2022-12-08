@@ -1031,7 +1031,7 @@ describe("IBosonVoucher", function () {
         it("Token was preminted, transferred and burned", async function () {
           let tokenId = "26";
 
-          // Mock exhange handler methods (easier and more efficient than creating a real offer)
+          // Mock exchange handler methods (easier and more efficient than creating a real offer)
           const mockProtocol = await deployMockProtocol();
 
           // Define what should be returned when commitToPreMintedOffer is called

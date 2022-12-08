@@ -115,7 +115,11 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         Range storage range = rangeByOfferId[exchange.offerId];
 
         // Revert if exchange id falls within a reserved range
-        require(range.length == 0, EXCHANGE_ID_IN_RESERVED_RANGE);
+        uint256 rangeStart = range.start;
+        require(
+            (_exchangeId < rangeStart) || (_exchangeId >= rangeStart + range.length),
+            EXCHANGE_ID_IN_RESERVED_RANGE
+        );
 
         // Mint the voucher, sending it to the buyer address
         _mint(_buyer, _exchangeId);
