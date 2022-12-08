@@ -66,57 +66,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     }
 
     /**
-     * @notice Reserves a range of vouchers to be associated with an offer
-     *
-     *
-     * Reverts if:
-     * - The offers region of protocol is paused
-     * - The exchanges region of protocol is paused
-     * - Offer does not exist
-     * - Offer already voided
-     * - Caller is not the seller
-     * - Lange length is zero
-     * - Range length is greater than quantity available
-     * - Range length is greater than maximum allowed range length
-     * - Call to BosonVoucher.reserveRange() reverts
-     *
-     * @param _offerId - the id of the offer
-     * @param _length - the length of the range
-     */
-    function reserveRange(uint256 _offerId, uint256 _length)
-        external
-        override
-        nonReentrant
-        offersNotPaused
-        exchangesNotPaused
-    {
-        // Get offer, make sure the caller is the operator
-        Offer storage offer = getValidOffer(_offerId);
-
-        // Prevent reservation of an empty range
-        require(_length > 0, INVALID_RANGE_LENGTH);
-
-        // Cannot reserve more than it's available
-        require(offer.quantityAvailable >= _length, INVALID_RANGE_LENGTH);
-
-        // Prevent reservation of too large range, since it affects exchangeId
-        require(_length < (1 << 128), INVALID_RANGE_LENGTH);
-        // Get starting token id
-        ProtocolLib.ProtocolCounters storage pc = protocolCounters();
-        uint256 _startId = pc.nextExchangeId;
-
-        // Call reserveRange on voucher
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
-        bosonVoucher.reserveRange(_offerId, _startId, _length);
-
-        // increase exchangeIds
-        pc.nextExchangeId = _startId + _length;
-
-        // decrease quantity available
-        offer.quantityAvailable -= _length;
-    }
-
-    /**
      * @notice Creates a batch of offers.
      *
      * Emits an OfferCreated event for every offer if successful.
@@ -174,6 +123,60 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
             // Create offer and update structs values to represent true state
             createOfferInternal(_offers[i], _offerDates[i], _offerDurations[i], _disputeResolverIds[i], _agentIds[i]);
         }
+    }
+
+    /**
+     * @notice Reserves a range of vouchers to be associated with an offer
+     *
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - The exchanges region of protocol is paused
+     * - Offer does not exist
+     * - Offer already voided
+     * - Caller is not the seller
+     * - Range length is zero
+     * - Range length is greater than quantity available
+     * - Range length is greater than maximum allowed range length
+     * - Call to BosonVoucher.reserveRange() reverts
+     *
+     * @param _offerId - the id of the offer
+     * @param _length - the length of the range
+     */
+    function reserveRange(uint256 _offerId, uint256 _length)
+        external
+        override
+        nonReentrant
+        offersNotPaused
+        exchangesNotPaused
+    {
+        // Get offer, make sure the caller is the operator
+        Offer storage offer = getValidOffer(_offerId);
+
+        // Prevent reservation of an empty range
+        require(_length > 0, INVALID_RANGE_LENGTH);
+
+        // Cannot reserve more than it's available
+        require(offer.quantityAvailable >= _length, INVALID_RANGE_LENGTH);
+
+        // Prevent reservation of too large range, since it affects exchangeId
+        require(_length < (1 << 128), INVALID_RANGE_LENGTH);
+        // Get starting token id
+        ProtocolLib.ProtocolCounters storage pc = protocolCounters();
+        uint256 _startId = pc.nextExchangeId;
+
+        // Call reserveRange on voucher
+        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
+        bosonVoucher.reserveRange(_offerId, _startId, _length);
+
+        // increase exchangeIds
+        pc.nextExchangeId = _startId + _length;
+
+        // decrease quantity available
+        offer.quantityAvailable -= _length;
+
+        // Notify external observers
+        emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, msgSender());
     }
 
     /**

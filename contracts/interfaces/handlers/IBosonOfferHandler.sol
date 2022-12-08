@@ -54,26 +54,6 @@ interface IBosonOfferHandler is IBosonOfferEvents {
     ) external;
 
     /**
-     * @notice Reserves a range of vouchers to be associated with an offer
-     *
-     *
-     * Reverts if:
-     * - The offers region of protocol is paused
-     * - The exchanges region of protocol is paused
-     * - Offer does not exist
-     * - Offer already voided
-     * - Caller is not the seller
-     * - Lange length is zero
-     * - Range length is greater than quantity available
-     * - Range length is greater than maximum allowed range length
-     * - Call to BosonVoucher.reserveRange() reverts
-     *
-     * @param _offerId - the id of the offer
-     * @param _length - the length of the range
-     */
-    function reserveRange(uint256 _offerId, uint256 _length) external;
-
-    /**
      * @notice Creates a batch of offers.
      *
      * Emits an OfferCreated event for every offer if successful.
@@ -116,6 +96,26 @@ interface IBosonOfferHandler is IBosonOfferEvents {
         uint256[] calldata _disputeResolverIds,
         uint256[] calldata _agentIds
     ) external;
+
+    /**
+     * @notice Reserves a range of vouchers to be associated with an offer
+     *
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - The exchanges region of protocol is paused
+     * - Offer does not exist
+     * - Offer already voided
+     * - Caller is not the seller
+     * - Range length is zero
+     * - Range length is greater than quantity available
+     * - Range length is greater than maximum allowed range length
+     * - Call to BosonVoucher.reserveRange() reverts
+     *
+     * @param _offerId - the id of the offer
+     * @param _length - the length of the range
+     */
+    function reserveRange(uint256 _offerId, uint256 _length) external;
 
     /**
      * @notice Voids a given offer.
