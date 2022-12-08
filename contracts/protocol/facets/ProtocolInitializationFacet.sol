@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 
+import "hardhat/console.sol";
 import "../../domain/BosonConstants.sol";
 import { IBosonProtocolInitializationHandler } from "../../interfaces/handlers/IBosonProtocolInitializationHandler.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -65,6 +66,8 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
             }
         }
 
+        DiamondLib.addSupportedInterface(type(IBosonProtocolInitializationHandler).interfaceId);
+
         status.version = _version;
         emit ProtocolInitialized(_version);
     }
@@ -73,9 +76,7 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
      * @notice Initializes the version 2.2.0.
      *
      */
-    function initV2_2_0() internal {
-        DiamondLib.addSupportedInterface(type(IBosonProtocolInitializationHandler).interfaceId);
-    }
+    function initV2_2_0() internal {}
 
     /**
      * @notice Gets the current protocol version.

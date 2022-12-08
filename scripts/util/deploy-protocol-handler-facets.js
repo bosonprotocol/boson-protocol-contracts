@@ -38,8 +38,15 @@ async function deployProtocolHandlerFacets(diamond, facetNames, maxPriorityFeePe
  * @param doCut - boolean that tells if cut transaction should be done or not (default: true)
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolHandlerFacetsWithArgs(diamond, facetData, maxPriorityFeePerGas, doCut = true) {
+async function deployProtocolHandlerFacetsWithArgs(
+  diamond,
+  facetData,
+  maxPriorityFeePerGas,
+  doCut = true,
+  protocolInitializationFacet
+) {
   let deployedFacets = [];
+  let facetsToInitialize = {};
 
   // Deploy all handler facets
   for (const facetName of Object.keys(facetData)) {
@@ -47,38 +54,77 @@ async function deployProtocolHandlerFacetsWithArgs(diamond, facetData, maxPriori
     const facetContract = await FacetContractFactory.deploy(await getFees(maxPriorityFeePerGas));
     await facetContract.deployTransaction.wait(confirmations);
 
-    deployedFacets.push({
+    const deployedFacet = {
       name: facetName,
       contract: facetContract,
-    });
+    };
+
+    if (facetName !== "ProtocolInitializationFacet") {
+      const calldata = facetContract.interface.encodeFunctionData("initialize", facetData[facetName]);
+      facetsToInitialize[facetContract.address] = calldata;
+
+      deployedFacet.cut = getFacetAddCut(facetContract, calldata.slice(0, 10));
+    } else {
+      protocolInitializationFacet = facetContract;
+    }
+
+    deployedFacets.push(deployedFacet);
   }
 
+  // Cut the diamond with all facets
   if (doCut) {
-    // Cast Diamond to DiamondCutFacet
-    const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", diamond.address);
+    const version = ethers.utils.formatBytes32String("2.2.0");
 
-    // Cut all the facets into the diamond
-    for (let i = 0; i < deployedFacets.length; i++) {
-      const deployedFacet = deployedFacets[i];
-
-      const callData = deployedFacet.contract.interface.encodeFunctionData(
-        "initializeProtocol",
-        facetData[deployedFacet.name]
-      );
-      const facetCut = getFacetAddCut(deployedFacet.contract);
-      const transactionResponse = await diamondCutFacet.diamondCut(
-        [facetCut],
-        deployedFacet.contract.address,
-        callData,
-        await getFees(maxPriorityFeePerGas)
-      );
-      await transactionResponse.wait(confirmations);
-      deployedFacets[i].cutTransaction = transactionResponse;
-    }
+    await cutDiamond(
+      diamond,
+      deployedFacets,
+      maxPriorityFeePerGas,
+      protocolInitializationFacet,
+      version,
+      facetsToInitialize
+    );
   }
 
   // Return an array of objects with facet name and contract properties
   return deployedFacets;
+}
+
+async function cutDiamond(
+  diamond,
+  deployedFacets,
+  maxPriorityFeePerGas,
+  protocolInitializationFacet,
+  version,
+  facetsToInitialize,
+  isUpgrade = false
+) {
+  const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", diamond.address);
+
+  const args = [version, Object.keys(facetsToInitialize) ?? [], Object.values(facetsToInitialize) ?? [], isUpgrade];
+
+  const calldataProtocolInitialization = protocolInitializationFacet.interface.encodeFunctionData(
+    "initializeProtocol",
+    args
+  );
+
+  // Remove initializeProtocol from selectors if is present
+  deployedFacets = deployedFacets.map((f) => {
+    if (f.name == "ProtocolInitializationFacet") {
+      f.cut = getFacetAddCut(f.contract, [calldataProtocolInitialization.slice(0, 10)]);
+    }
+    return f;
+  });
+
+  const transactionResponse = await diamondCutFacet.diamondCut(
+    deployedFacets.map((facet) => facet.cut),
+    protocolInitializationFacet.address,
+    calldataProtocolInitialization,
+    await getFees(maxPriorityFeePerGas)
+  );
+
+  await transactionResponse.wait(confirmations);
+
+  return transactionResponse;
 }
 
 exports.deployProtocolHandlerFacets = deployProtocolHandlerFacets;

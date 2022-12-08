@@ -15,7 +15,7 @@ import { DiamondLib } from "../diamond/DiamondLib.sol";
  * @notice Mock changes to IBosonProtocolInitializationFacet.
  *
  */
-contract ProtocolInitializationHandlerTestFacet is IBosonProtocolInitializationHandler, ProtocolBase {
+contract ProtocolInitializationTestFacet is IBosonProtocolInitializationHandler, ProtocolBase {
     /**
      * @notice Modifier to protect initializer function from being invoked twice for a given version.
      */

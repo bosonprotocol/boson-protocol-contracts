@@ -308,9 +308,7 @@ async function main(env, facetConfig) {
   }
 
   // Diamond cut - add and replace
-  const protocolInitializationFacet = deployedFacets.find(
-    (f) => f.name == "ProtocolInitializationFacet"
-  ).contract;
+  const protocolInitializationFacet = deployedFacets.find((f) => f.name == "ProtocolInitializationFacet").contract;
 
   const calldataList = [];
   const addresses = [];
