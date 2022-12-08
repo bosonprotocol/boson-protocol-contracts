@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { expect } = require("chai");
+const { expect, assert } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
@@ -18,6 +18,7 @@ const {
   eventEmittedWithArgs,
   prepareDataSignatureParameters,
   applyPercentage,
+  calculateContractAddress,
 } = require("../util/utils.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const {
@@ -27,6 +28,7 @@ const {
   mockSeller,
   mockAuthToken,
   mockAgent,
+  mockBuyer,
   accountId,
 } = require("../util/mock");
 
@@ -181,6 +183,7 @@ describe("IBosonFundsHandler", function () {
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
         minDisputePeriod: oneWeek,
+        maxPremintedVouchers: 1000,
       },
       // Protocol fees
       {
@@ -1689,7 +1692,7 @@ describe("IBosonFundsHandler", function () {
 
         // Check that seller's pool balance was reduced
         sellersAvailableFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-        // native currecny is the second on the list of the available funds and the amount should be decreased for the sellerDeposit
+        // native currency is the second on the list of the available funds and the amount should be decreased for the sellerDeposit
         expect(
           ethers.BigNumber.from(sellersAvailableFundsBefore.funds[1].availableAmount)
             .sub(ethers.BigNumber.from(sellersAvailableFundsAfter.funds[1].availableAmount))
@@ -1847,6 +1850,96 @@ describe("IBosonFundsHandler", function () {
         expect(buyer.wallet).to.eql(rando.address, "Wrong buyer address");
       });
 
+      it("if offer is preminted, only sellers funds are encumbered", async function () {
+        // deposit to seller's pool to cover for the price
+        const buyerId = mockBuyer().id;
+        await mockToken.mint(operator.address, `${2 * price}`);
+        await mockToken.connect(operator).approve(protocolDiamond.address, `${2 * price}`);
+        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, `${2 * price}`);
+        await fundsHandler.connect(operator).depositFunds(seller.id, ethers.constants.AddressZero, `${2 * price}`, {
+          value: `${2 * price}`,
+        });
+
+        // get token balance before the commit
+        const buyerTokenBalanceBefore = await mockToken.balanceOf(buyer.address);
+
+        const sellersAvailableFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+
+        // reserve a range and premint vouchers
+        await offerHandler.connect(operator).reserveRange(offerToken.id, offerToken.quantityAvailable);
+        const voucherCloneAddress = calculateContractAddress(accountHandler.address, "1");
+        const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
+        await bosonVoucher.connect(operator).preMint(offerToken.id, offerToken.quantityAvailable);
+
+        // commit to an offer via shell voucher
+        let tokenId = "1";
+        tx = await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+
+        // it should emit FundsEncumbered event with amount equal to sellerDeposit + price
+        let encumberedFunds = ethers.BigNumber.from(sellerDeposit).add(price);
+        await expect(tx)
+          .to.emit(exchangeHandler, "FundsEncumbered")
+          .withArgs(seller.id, mockToken.address, encumberedFunds, bosonVoucher.address);
+
+        // Check that seller's pool balance was reduced
+        let sellersAvailableFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+        // token is the first on the list of the available funds and the amount should be decreased for the sellerDeposit and price
+        expect(
+          ethers.BigNumber.from(sellersAvailableFundsBefore.funds[0].availableAmount)
+            .sub(ethers.BigNumber.from(sellersAvailableFundsAfter.funds[0].availableAmount))
+            .toString()
+        ).to.eql(encumberedFunds.toString(), "Token seller available funds mismatch");
+
+        // buyer's token balance should stay the same
+        const buyerTokenBalanceAfter = await mockToken.balanceOf(buyer.address);
+        expect(buyerTokenBalanceBefore.toString()).to.eql(
+          buyerTokenBalanceAfter.toString(),
+          "Buyer's token balance should remain the same"
+        );
+
+        // make sure that buyer is actually the buyer of the exchange
+        let exchange;
+        [, exchange] = await exchangeHandler.getExchange(tokenId);
+        expect(exchange.buyerId.toString()).to.eql(buyerId, "Wrong buyer id");
+
+        // get native currency balance before the commit
+        const buyerNativeBalanceBefore = await ethers.provider.getBalance(buyer.address);
+
+        // reserve a range and premint vouchers
+        tokenId = await exchangeHandler.getNextExchangeId();
+        await offerHandler.connect(operator).reserveRange(offerNative.id, offerNative.quantityAvailable);
+        await bosonVoucher.connect(operator).preMint(offerNative.id, offerNative.quantityAvailable);
+
+        // commit to an offer via shell voucher
+        tx = await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+
+        // it should emit FundsEncumbered event with amount equal to sellerDeposit + price
+        encumberedFunds = ethers.BigNumber.from(sellerDeposit).add(price);
+        await expect(tx)
+          .to.emit(exchangeHandler, "FundsEncumbered")
+          .withArgs(seller.id, ethers.constants.AddressZero, encumberedFunds, bosonVoucher.address);
+
+        // buyer's balance should remain the same
+        const buyerNativeBalanceAfter = await ethers.provider.getBalance(buyer.address);
+        expect(buyerNativeBalanceBefore.toString()).to.eql(
+          buyerNativeBalanceAfter.toString(),
+          "Buyer's native balance should remain the same"
+        );
+
+        // Check that seller's pool balance was reduced
+        sellersAvailableFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+        // native currency the second on the list of the available funds and the amount should be decreased for the sellerDeposit and price
+        expect(
+          ethers.BigNumber.from(sellersAvailableFundsBefore.funds[1].availableAmount)
+            .sub(ethers.BigNumber.from(sellersAvailableFundsAfter.funds[1].availableAmount))
+            .toString()
+        ).to.eql(encumberedFunds.toString(), "Native currency seller available funds mismatch");
+
+        // make sure that buyer is actually the buyer of the exchange
+        [, exchange] = await exchangeHandler.getExchange(tokenId);
+        expect(exchange.buyerId.toString()).to.eql(buyerId, "Wrong buyer id");
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Insufficient native currency sent", async function () {
           // Attempt to commit to an offer, expecting revert
@@ -1952,6 +2045,33 @@ describe("IBosonFundsHandler", function () {
           // Attempt to commit to an offer, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price })
+          ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+        });
+
+        it("Seller'a availableFunds is less than the required sellerDeposit + price for preminted offer", async function () {
+          // reserve a range and premint vouchers for offer in tokens
+          await offerHandler.connect(operator).reserveRange(offerToken.id, offerToken.quantityAvailable);
+          const voucherCloneAddress = calculateContractAddress(accountHandler.address, "1");
+          const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
+          await bosonVoucher.connect(operator).preMint(offerToken.id, offerToken.quantityAvailable);
+
+          // Seller's availableFunds is 2*sellerDeposit which is less than sellerDeposit + price.
+          // Add the check in case if the sellerDeposit is changed in the future
+          assert.isBelow(Number(sellerDeposit), Number(price), "Seller's availableFunds is not less than price");
+          // Attempt to commit to an offer via shell voucher, expecting revert
+          let tokenId = "1";
+          await expect(
+            bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
+          ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+
+          // reserve a range and premint vouchers for offer in native currency
+          tokenId = await exchangeHandler.getNextExchangeId();
+          await offerHandler.connect(operator).reserveRange(offerNative.id, offerNative.quantityAvailable);
+          await bosonVoucher.connect(operator).preMint(offerNative.id, offerNative.quantityAvailable);
+
+          // Attempt to commit to an offer, expecting revert
+          await expect(
+            bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
           ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
         });
 
