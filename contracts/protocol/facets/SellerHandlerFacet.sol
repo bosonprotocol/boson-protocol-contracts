@@ -253,7 +253,7 @@ contract SellerHandlerFacet is SellerBase {
                 // Update operator
                 seller.operator = sender;
 
-                // Transfer ownership of NFT voucher contract to new operator
+                // Transfer ownership of voucher contract to new operator
                 IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender);
 
                 // Store new seller id by operator mapping

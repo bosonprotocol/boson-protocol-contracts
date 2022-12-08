@@ -7,7 +7,7 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
 /**
  * @title IBosonVoucher
  *
- * @notice This is the interface for the Boson Protocol ERC-721 Voucher NFT contract.
+ * @notice This is the interface for the Boson Protocol ERC-721 Voucher contract.
  *
  * The ERC-165 identifier for this interface is: 0xec67086d
  */
@@ -79,8 +79,8 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @notice Provides royalty info.
      * Called with the sale price to determine how much royalty is owed and to whom.
      *
-     * @param _tokenId - the NFT asset queried for royalty information
-     * @param _salePrice - the sale price of the NFT asset specified by _tokenId
+     * @param _tokenId - the voucher queried for royalty information
+     * @param _salePrice - the sale price of the voucher specified by _tokenId
      *
      * @return receiver - address of who should be sent the royalty payment
      * @return royaltyAmount - the royalty payment amount for the given sale price

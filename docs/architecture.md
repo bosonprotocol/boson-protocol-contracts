@@ -43,11 +43,11 @@ This pattern gives us some distinct advantages, a few of which are:
 - **Maintainability**: Developers can focus on business logic rather than managing contract collaboration patterns and the potential threats that naturally arise.
 - **Easier to reason about contract storage**: When using Diamonds storage is a first class consideration. With developers working on different facets, it leads us to consider and declare the data that is maintained and visible to each facet in a uniform way. This means facets can share data while not clobbering each other in the shared storage slots of the diamond proxy.
 
-### Voucher NFT
-![Voucher NFT](images/Boson_Protocol_V2_-_Voucher_Clones.png)
+### Voucher
+![Voucher](images/Boson_Protocol_V2_-_Voucher_Clones.png)
 The Boson Voucher implementation is built around the OpenZeppelin [Beacon](https://docs.openzeppelin.com/contracts/4.x/api/proxy#beacon) and [ERC721](https://docs.openzeppelin.com/contracts/4.x/api/token/erc721) contracts.
 
-Every seller needs their own instance of the Boson Voucher NFT so that they can manage their collection separately on marketplaces like OpenSea. For this reason, it cannot exist behind the Protocol Diamond, as an ordinary upgradable Facet.
+Every seller needs their own instance of the Boson Voucher so that they can manage their collection separately on marketplaces like OpenSea. For this reason, it cannot exist behind the Protocol Diamond, as an ordinary upgradable Facet.
 
 Still, the Boson Voucher contract must be upgradeable. By using the Beacon Proxy pattern, it can be upgraded for all sellers with a single transaction.
 
@@ -55,4 +55,4 @@ Still, the Boson Voucher contract must be upgradeable. By using the Beacon Proxy
 ![Protocol Clients](images/Boson_Protocol_V2_-_Protocol_Clients.png)
 When contracts need roled access to the Protocol Diamond's functionality, either uni- or bi-directionally, they can be implemented as upgradeable Protocol Clients. This pattern supports a Client that has a one-to-one relationship between its proxy and its logic implementation.
 
-Initially, the Boson Voucher NFT was implemented as an upgradable standalone contract with a one-to-one relationship to its proxy. When the requirement for sellers to have their own voucher collections came to pass, we switched to the Beacon pattern as described above. The pattern for roled, upgradeable standalone client support remains intact if not used at the moment.
+Initially, the Boson Voucher was implemented as an upgradable standalone contract with a one-to-one relationship to its proxy. When the requirement for sellers to have their own voucher collections came to pass, we switched to the Beacon pattern as described above. The pattern for roled, upgradeable standalone client support remains intact if not used at the moment.

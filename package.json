@@ -27,7 +27,7 @@
     "test:gas-reporter": "npx hardhat test test/domain/** test/access/** test/protocol/**.js test/protocol/clients/**",
     "check:contracts": "solhint 'contracts/**/*.sol' && prettier --list-different contracts/**",
     "check:scripts": "eslint test/** scripts/** '*.js' && prettier --list-different test/** scripts/** '*.js'",
-    "docgen": "npx truffle compile && npx solidoc && rm -rf build",
+    "docgen": "npx truffle compile --contracts_directory contracts/interfaces && npx truffle compile --contracts_directory contracts/domain && npx solidoc && rm -rf build",
     "tidy:contracts": "solhint --fix contracts/**/*.sol && prettier --write contracts/**",
     "tidy:scripts": "eslint --fix test/** scripts/** '*.js' && prettier --write test/** scripts/** '*.js'",
     "size": "npx hardhat size-contracts",
@@ -73,7 +73,7 @@
     "@openzeppelin/contracts-upgradeable": "^4.7.1"
   },
   "devDependencies": {
-    "@bosonprotocol/solidoc": "git+https://github.com/bosonprotocol/solidoc.git#fix/improve-layout",
+    "@bosonprotocol/solidoc": "3.0.3",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@nomiclabs/hardhat-etherscan": "^3.1.0",

@@ -177,8 +177,8 @@ bytes32 constant EIP712_DOMAIN_TYPEHASH = keccak256(
 );
 
 // BosonVoucher
-string constant VOUCHER_NAME = "Boson Voucher";
-string constant VOUCHER_SYMBOL = "BOSON_VOUCHER";
+string constant VOUCHER_NAME = "Boson Voucher (rNFT)";
+string constant VOUCHER_SYMBOL = "BOSON_VOUCHER_RNFT";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(
