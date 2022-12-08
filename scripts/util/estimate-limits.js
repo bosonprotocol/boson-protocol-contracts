@@ -682,8 +682,7 @@ setupEnvironment["maxPremintedVouchers"] = async function (tokenCount = 10) {
   let offerId = 1;
   let startId = 10;
   let length = ethers.constants.MaxUint256.sub(startId);
-  console.log(tokenCount.toString());
-  console.log(length.toString());
+
   await bosonVoucher.connect(deployer).reserveRange(offerId, startId, length);
 
   await bosonVoucher.connect(deployer).transferOwnership(sellerWallet1.address);
