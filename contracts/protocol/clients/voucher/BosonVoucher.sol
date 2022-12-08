@@ -15,6 +15,7 @@ import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
 import { IClientExternalAddresses } from "../../../interfaces/clients/IClientExternalAddresses.sol";
 import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
 import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchangeHandler.sol";
+import "hardhat/console.sol";
 
 /**
  * @title BosonVoucher
@@ -258,10 +259,11 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * Reverts if:
      * - Offer id is not associated with a range
      * - Offer is not expired or voided
+     * - There is nothing to burn
      *
      * @param _offerId - the id of the offer
      */
-    function burnPremintedVouchers(uint256 _offerId) external onlyOwner {
+    function burnPremintedVouchers(uint256 _offerId) external override onlyOwner {
         // Get the offer's range
         Range storage range = rangeByOfferId[_offerId];
 
@@ -277,10 +279,14 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         uint256 maxPremintedVouchers = IBosonConfigHandler(protocolDiamond).getMaxPremintedVouchers();
 
         // Get the first token to burn
-        uint256 start = (range.lastBurnedTokenId == 0) ? range.start : range.lastBurnedTokenId;
+        uint256 start = (range.lastBurnedTokenId == 0) ? range.start : (range.lastBurnedTokenId + 1);
 
         // Get the last token to burn
-        uint256 end = range.minted;
+        uint256 end = range.start + range.minted;
+
+        // End should be greater than start
+        require(end > start, NOTHING_TO_BURN);
+
         if (end > start + maxPremintedVouchers) {
             end = start + maxPremintedVouchers;
         }
@@ -310,6 +316,12 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @return count - the count of vouchers in reserved range available to be pre-minted
      */
     function getAvailablePreMints(uint256 _offerId) external view returns (uint256 count) {
+        // If offer is expired or voided, return 0
+        (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
+        if (offer.voided || (offerDates.validUntil <= block.timestamp)) {
+            return 0;
+        }
+
         // Get the offer's range
         Range storage range = rangeByOfferId[_offerId];
 
@@ -424,6 +436,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         override(ERC721Upgradeable, IERC165Upgradeable)
         returns (bool)
     {
+        console.log("supportsInterface");
+        console.logBytes4(type(IBosonVoucher).interfaceId);
         return (interfaceId == type(IBosonVoucher).interfaceId ||
             interfaceId == type(IERC2981Upgradeable).interfaceId ||
             super.supportsInterface(interfaceId));
@@ -675,8 +689,12 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
                         high = mid;
                     } else if (start + range.minted - 1 >= _tokenId) {
                         // Is token in target's minted range?
-                        committable = true;
-                        offerId = range.offerId;
+
+                        // It is committable if it has not been burned
+                        if (_tokenId > range.lastBurnedTokenId) {
+                            committable = true;
+                            offerId = range.offerId;
+                        }
                         break; // Found!
                     } else if (start + range.length - 1 >= _tokenId) {
                         // No? Ok, is it in target's reserved range?

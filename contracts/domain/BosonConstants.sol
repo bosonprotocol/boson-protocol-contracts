@@ -184,6 +184,7 @@ string constant NO_SILENT_MINT_ALLOWED = "Only owner's mappings can be updated w
 string constant TOO_MANY_TO_MINT = "Exceeded maximum amount to mint in a single transaction";
 string constant OFFER_EXPIRED_OR_VOIDED = "Offer expired or voided";
 string constant OFFER_STILL_VALID = "Offer still valid";
+string constant NOTHING_TO_BURN = "Nothing to burn";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(

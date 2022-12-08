@@ -165,6 +165,31 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     function preMint(uint256 _offerId, uint256 _amount) external;
 
     /**
+     * @notice Burn all or part of an offer's preminted vouchers.
+     * If offer expires or it's voided, the seller can burn the preminted vouchers that were not transferred yet.
+     * This way they will not show in seller's wallet and marketplaces anymore.
+     *
+     * For small offer quantities, this method may only need to be
+     * called once.
+     *
+     * But, if the range is large, e.g., 10k vouchers, block gas limit
+     * could cause the transaction to fail. Thus, in order to support
+     * a batched approach to pre-minting an offer's vouchers,
+     * this method can be called multiple times, until the whole
+     * range is burned.
+     *
+     * Caller must be contract owner (seller operator address).
+     *
+     * Reverts if:
+     * - Offer id is not associated with a range
+     * - Offer is not expired or voided
+     * - There is nothing to burn
+     *
+     * @param _offerId - the id of the offer
+     */
+    function burnPremintedVouchers(uint256 _offerId) external;
+
+    /**
      * @notice Gets the number of vouchers left to be pre-minted for an offer.
      *
      * @param _offerId - the id of the offer
