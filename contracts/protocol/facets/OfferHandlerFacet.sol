@@ -4,8 +4,6 @@ pragma solidity 0.8.9;
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
-import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import "../../domain/BosonConstants.sol";
 
 /**
@@ -150,33 +148,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         offersNotPaused
         exchangesNotPaused
     {
-        // Get offer, make sure the caller is the operator
-        Offer storage offer = getValidOffer(_offerId);
-
-        // Prevent reservation of an empty range
-        require(_length > 0, INVALID_RANGE_LENGTH);
-
-        // Cannot reserve more than it's available
-        require(offer.quantityAvailable >= _length, INVALID_RANGE_LENGTH);
-
-        // Prevent reservation of too large range, since it affects exchangeId
-        require(_length < (1 << 128), INVALID_RANGE_LENGTH);
-        // Get starting token id
-        ProtocolLib.ProtocolCounters storage pc = protocolCounters();
-        uint256 _startId = pc.nextExchangeId;
-
-        // Call reserveRange on voucher
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
-        bosonVoucher.reserveRange(_offerId, _startId, _length);
-
-        // increase exchangeIds
-        pc.nextExchangeId = _startId + _length;
-
-        // decrease quantity available
-        offer.quantityAvailable -= _length;
-
-        // Notify external observers
-        emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, msgSender());
+        reserveRangeInternal(_offerId, _length);
     }
 
     /**
