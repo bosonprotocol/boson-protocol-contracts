@@ -172,12 +172,7 @@ async function main(env, facetConfig) {
     const selectors = getSelectors(newFacet.contract, true);
     let newSelectors;
 
-    // Only ProtocolInitializationFacet should call initializer directly from diamondCut
-    // if (newFacet.name == "ProtocolInitializationFacet") {
-    //   newSelectors = selectors.selectors.remove([callData.slice(0, 10)]);
-    // } else {
     newSelectors = selectors.selectors;
-    // }
 
     // Determine actions to be made
     let selectorsToReplace = registeredSelectors.filter((value) => newSelectors.includes(value)); // intersection of old and new selectors
@@ -319,11 +314,11 @@ async function main(env, facetConfig) {
   const calldataList = [];
   const addresses = [];
 
-  for (const facet of facets.facetsToInit) {
-    const contract = deployedFacets.find((f) => f.name == facet).contract;
+  for (const key in facets.facetsToInit) {
+    const contract = deployedFacets.find((f) => f.name == key).contract;
 
     addresses.push(contract.address);
-    calldataList.push(contract.interface.encodeFunctionData("initialize", facets.initArgs[facet]));
+    calldataList.push(contract.interface.encodeFunctionData("initialize", facets.facetsToInit[key]));
   }
 
   const calldataProtocolInitialization = protocolInitializationFacet.interface.encodeFunctionData(

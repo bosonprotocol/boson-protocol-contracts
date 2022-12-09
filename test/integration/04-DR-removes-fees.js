@@ -17,14 +17,17 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const Role = require("../../scripts/domain/Role");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { oneMonth, oneWeek, maxPriorityFeePerGas } = require("../util/constants");
-const { setNextBlockTimestamp, calculateContractAddress, applyPercentage } = require("../util/utils.js");
+const {
+  setNextBlockTimestamp,
+  calculateContractAddress,
+  applyPercentage,
+  getFacetsWithArgs,
+} = require("../util/utils.js");
 
 /**
- *  Integration test case - exchange and offer operations should remain possible even when token fees are removed from the DR fee list 
-
+ *  Integration test case - exchange and offer operations should remain possible even when token fees are removed from the DR fee list
  */
 describe("[@skip-on-coverage] DR removes fee", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
@@ -63,23 +66,6 @@ describe("[@skip-on-coverage] DR removes fee", function () {
 
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-
-    // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(
-      protocolDiamond,
-      [
-        "AccountHandlerFacet",
-        "SellerHandlerFacet",
-        "BuyerHandlerFacet",
-        "DisputeResolverHandlerFacet",
-        "AgentHandlerFacet",
-        "OfferHandlerFacet",
-        "ExchangeHandlerFacet",
-        "FundsHandlerFacet",
-        "DisputeHandlerFacet",
-      ],
-      maxPriorityFeePerGas
-    );
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
@@ -126,7 +112,24 @@ describe("[@skip-on-coverage] DR removes fee", function () {
       },
     ];
 
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+    const facetNames = [
+      "AccountHandlerFacet",
+      "SellerHandlerFacet",
+      "BuyerHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "AgentHandlerFacet",
+      "OfferHandlerFacet",
+      "ExchangeHandlerFacet",
+      "FundsHandlerFacet",
+      "DisputeHandlerFacet",
+      "ProtocolInitializationFacet",
+      "ConfigHandlerFacet",
+    ];
+
+    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    // Cut the protocol handler facets into the Diamond
+    await deployProtocolHandlerFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);

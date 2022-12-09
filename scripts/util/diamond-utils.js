@@ -1,4 +1,6 @@
 const hre = require("hardhat");
+const { confirmations } = require("../../environments");
+const { getFees } = require("./utils");
 const ethers = hre.ethers;
 const keccak256 = ethers.utils.keccak256;
 const toUtf8Bytes = ethers.utils.toUtf8Bytes;
@@ -133,6 +135,43 @@ async function getStateModifyingFunctionsHashes(facetNames, omitFunctions = []) 
   return smf.map((smf) => keccak256(toUtf8Bytes(smf)));
 }
 
+async function cutDiamond(
+  diamond,
+  deployedFacets,
+  maxPriorityFeePerGas,
+  protocolInitializationFacet,
+  version,
+  facetsToInitialize,
+  isUpgrade = false
+) {
+  const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", diamond.address);
+  const args = [version, Object.keys(facetsToInitialize) ?? [], Object.values(facetsToInitialize) ?? [], isUpgrade];
+
+  const calldataProtocolInitialization = protocolInitializationFacet.interface.encodeFunctionData(
+    "initializeProtocol",
+    args
+  );
+
+  // Add cut to ProtocolInitializationFacet
+  deployedFacets = deployedFacets.map((f) => {
+    if (f.name == "ProtocolInitializationFacet") {
+      f.cut = getFacetAddCut(f.contract, [calldataProtocolInitialization.slice(0, 10)]);
+    }
+    return f;
+  });
+
+  const transactionResponse = await diamondCutFacet.diamondCut(
+    deployedFacets.map((facet) => facet.cut),
+    protocolInitializationFacet.address,
+    calldataProtocolInitialization,
+    await getFees(maxPriorityFeePerGas)
+  );
+
+  await transactionResponse.wait(confirmations);
+
+  return transactionResponse;
+}
+
 exports.getSelectors = getSelectors;
 exports.getSelector = getSelector;
 exports.FacetCutAction = FacetCutAction;
@@ -145,3 +184,4 @@ exports.getFacetRemoveCut = getFacetRemoveCut;
 exports.getInterfaceId = getInterfaceId;
 exports.getStateModifyingFunctions = getStateModifyingFunctions;
 exports.getStateModifyingFunctionsHashes = getStateModifyingFunctionsHashes;
+exports.cutDiamond = cutDiamond;

@@ -194,6 +194,7 @@ describe("DisputeResolverHandler", function () {
       "DisputeResolverHandlerFacet",
       "PauseHandlerFacet",
       "ProtocolInitializationFacet",
+      "ConfigHandlerFacet",
     ];
 
     const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);

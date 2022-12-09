@@ -29,7 +29,12 @@ const {
   mockExchange,
 } = require("../util/mock");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
-const { getSelectors, FacetCutAction, getStateModifyingFunctions } = require("../../scripts/util/diamond-utils.js");
+const {
+  getSelectors,
+  FacetCutAction,
+  getStateModifyingFunctions,
+  getStateModifyingFunctionsHashes,
+} = require("../../scripts/util/diamond-utils.js");
 
 /**
  *  Test the Boson Meta transactions Handler interface
@@ -100,7 +105,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let voucherInitValues;
   let emptyAuthToken;
   let agentId;
-  let stateModifyingFunctionsHashes;
+  let facetNames;
 
   before(async function () {
     // get interface Ids
@@ -179,7 +184,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     ];
 
     // Cut the protocol handler facets into the Diamond
-    const facetNames = [
+    facetNames = [
       "SellerHandlerFacet",
       "DisputeResolverHandlerFacet",
       "FundsHandlerFacet",
@@ -191,9 +196,13 @@ describe("IBosonMetaTransactionsHandler", function () {
       "BuyerHandlerFacet",
       "MetaTransactionsHandlerFacet",
       "ProtocolInitializationFacet",
+      "ConfigHandlerFacet",
     ];
 
     const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    // Remove ConfigHandlerFacet because should not be allowlisted on MetaTransactionHandler
+    facetNames = facetNames.filter((name) => name !== "ConfigHandlerFacet");
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
@@ -456,6 +465,9 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       it("after initialization all state modifying functions should be allowlisted", async function () {
+        const stateModifyingFunctionsHashes = await getStateModifyingFunctionsHashes(facetNames, [
+          "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)",
+        ]);
         // Functions should be enabled
         for (const func of stateModifyingFunctionsHashes) {
           expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.true;
@@ -504,27 +516,11 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       it("after initialization all state modifying functions should be allowlisted", async function () {
-        // Cut the protocol handler facets into the Diamond
-        const facetNames = [
-          "SellerHandlerFacet",
-          "DisputeResolverHandlerFacet",
-          "FundsHandlerFacet",
-          "ExchangeHandlerFacet",
-          "OfferHandlerFacet",
-          "TwinHandlerFacet",
-          "DisputeHandlerFacet",
-          "PauseHandlerFacet",
-          "BuyerHandlerFacet",
-        ];
-
         // Get list of state modifying functions
         const stateModifyingFunctions = (await getStateModifyingFunctions(facetNames)).filter(
           (fn) => fn != "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"
         );
-        console.log(stateModifyingFunctions);
 
-        // Functions should be enabled
-        getStateModifyingFunctions();
         for (const func of stateModifyingFunctions) {
           expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.true;
         }

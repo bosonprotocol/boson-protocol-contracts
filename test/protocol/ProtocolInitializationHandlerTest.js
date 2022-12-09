@@ -102,7 +102,6 @@ describe("ProtocolInitializationHandler", async function () {
           const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initializeProtocol", [
             version,
             [],
-            // calldata
             [],
             true,
           ]);
@@ -181,7 +180,7 @@ describe("ProtocolInitializationHandler", async function () {
       const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [rando.address]);
 
       version = ethers.utils.formatBytes32String("2.3.0");
-      const calldataProtocolInitialization = deployedProtocolInitializationFacet.interface.encodeFunctionData(
+      const calldataProtocolInitialization = deployedProtocolInitializationFacet.contract.interface.encodeFunctionData(
         "initializeProtocol",
         [version, [testFacet.address], [calldataTestFacet], true]
       );
@@ -190,7 +189,7 @@ describe("ProtocolInitializationHandler", async function () {
 
       await diamondCutFacet.diamondCut(
         facetCuts,
-        deployedProtocolInitializationFacet.address,
+        deployedProtocolInitializationFacet.contract.address,
         calldataProtocolInitialization,
         await getFees(maxPriorityFeePerGas)
       );
