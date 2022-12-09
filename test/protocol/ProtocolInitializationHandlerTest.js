@@ -71,7 +71,7 @@ describe("ProtocolInitializationHandler", async function () {
 
           await protocolInitializationFacetDeployed.deployTransaction.wait();
 
-          const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initializeProtocol", [
+          const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initialize", [
             version,
             [],
             [],
@@ -92,6 +92,35 @@ describe("ProtocolInitializationHandler", async function () {
           );
         });
 
+        it("Version is empty", async function () {
+          const ProtocolInitilizationContractFactory = await ethers.getContractFactory("ProtocolInitializationFacet");
+          const protocolInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
+            await getFees(maxPriorityFeePerGas)
+          );
+
+          await protocolInitializationFacetDeployed.deployTransaction.wait();
+
+          const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initialize", [
+            ethers.constants.HashZero,
+            [],
+            [],
+            true,
+          ]);
+
+          let facetCut = getFacetAddCut(protocolInitializationFacetDeployed);
+
+          const cutArgs = [
+            [facetCut],
+            protocolInitializationFacetDeployed.address,
+            callData,
+            await getFees(maxPriorityFeePerGas),
+          ];
+
+          await expect(diamondCutFacet.connect(deployer).diamondCut(...cutArgs)).to.revertedWith(
+            RevertReasons.VERSION_EMPTY
+          );
+        });
+
         it("Initialize same version twice", async function () {
           const ProtocolInitilizationContractFactory = await ethers.getContractFactory("ProtocolInitializationFacet");
           const protocolInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
@@ -99,7 +128,7 @@ describe("ProtocolInitializationHandler", async function () {
           );
           await protocolInitializationFacetDeployed.deployTransaction.wait();
 
-          const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initializeProtocol", [
+          const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initialize", [
             version,
             [],
             [],
@@ -115,7 +144,7 @@ describe("ProtocolInitializationHandler", async function () {
             await getFees(maxPriorityFeePerGas)
           );
 
-          // Mock a new facet to add to diamond so we can call initializeProtocol again
+          // Mock a new facet to add to diamond so we can call initialize again
           let FacetTestFactory = await ethers.getContractFactory("Test3Facet");
           const testFacet = await FacetTestFactory.deploy(await getFees(maxPriorityFeePerGas));
           await testFacet.deployTransaction.wait();
@@ -125,7 +154,7 @@ describe("ProtocolInitializationHandler", async function () {
           facetCut = getFacetAddCut(testFacet, [calldataTestFacet.slice(0, 10)]);
 
           const calldataProtocolInitialization = protocolInitializationFacetDeployed.interface.encodeFunctionData(
-            "initializeProtocol",
+            "initialize",
             [version, [testFacet.address], [calldataTestFacet], true]
           );
 
@@ -181,7 +210,7 @@ describe("ProtocolInitializationHandler", async function () {
 
       version = ethers.utils.formatBytes32String("2.3.0");
       const calldataProtocolInitialization = deployedProtocolInitializationFacet.contract.interface.encodeFunctionData(
-        "initializeProtocol",
+        "initialize",
         [version, [testFacet.address], [calldataTestFacet], true]
       );
 

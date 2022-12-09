@@ -147,10 +147,7 @@ async function cutDiamond(
   const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", diamond.address);
   const args = [version, Object.keys(facetsToInitialize) ?? [], Object.values(facetsToInitialize) ?? [], isUpgrade];
 
-  const calldataProtocolInitialization = protocolInitializationFacet.interface.encodeFunctionData(
-    "initializeProtocol",
-    args
-  );
+  const calldataProtocolInitialization = protocolInitializationFacet.interface.encodeFunctionData("initialize", args);
 
   // Add cut to ProtocolInitializationFacet
   deployedFacets = deployedFacets.map((f) => {

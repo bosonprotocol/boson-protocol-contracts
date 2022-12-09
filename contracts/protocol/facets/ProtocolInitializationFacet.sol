@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.9;
+pragma solidity 0.8.9;
 
-import "hardhat/console.sol";
 import "../../domain/BosonConstants.sol";
 import { IBosonProtocolInitializationHandler } from "../../interfaces/handlers/IBosonProtocolInitializationHandler.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -38,7 +37,7 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
      * @param _isUpgrade - flag to indicate whether this is first deployment or upgrade
      *
      */
-    function initializeProtocol(
+    function initialize(
         bytes32 _version,
         address[] calldata _addresses,
         bytes[] calldata _calldata,

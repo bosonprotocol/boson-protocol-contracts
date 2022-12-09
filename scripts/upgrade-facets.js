@@ -321,19 +321,16 @@ async function main(env, facetConfig) {
     calldataList.push(contract.interface.encodeFunctionData("initialize", facets.facetsToInit[key]));
   }
 
-  const calldataProtocolInitialization = protocolInitializationFacet.interface.encodeFunctionData(
-    "initializeProtocol",
-    [
-      // Version
-      ethers.utils.formatBytes32String(version),
-      // Facets to call initializer
-      addresses,
-      // Calldata to facets initializer
-      calldataList,
-      // Is upgrade
-      true,
-    ]
-  );
+  const calldataProtocolInitialization = protocolInitializationFacet.interface.encodeFunctionData("initialize", [
+    // Version
+    ethers.utils.formatBytes32String(version),
+    // Facets to call initializer
+    addresses,
+    // Calldata to facets initializer
+    calldataList,
+    // Is upgrade
+    true,
+  ]);
 
   let transactionResponse;
 

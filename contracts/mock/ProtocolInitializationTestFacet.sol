@@ -37,12 +37,14 @@ contract ProtocolInitializationTestFacet is IBosonProtocolInitializationHandler,
      * @param _isUpgrade - flag to indicate whether this is first deployment or upgrade
      *
      */
-    function initializeProtocol(
+    function initialize(
         bytes32 _version,
         address[] calldata _addresses,
         bytes[] calldata _calldata,
         bool _isUpgrade
     ) public onlyUnInitializedVersion(_version) {
+        require(_version != bytes32(0), VERSION_MUST_BE_SET);
+
         for (uint256 i = 0; i < _addresses.length; i++) {
             // Calling calldata (initialize function) of the corresponding facet
             (bool success, bytes memory error) = _addresses[i].delegatecall(_calldata[i]);
@@ -66,6 +68,8 @@ contract ProtocolInitializationTestFacet is IBosonProtocolInitializationHandler,
             } else if (keccak256(abi.encodePacked(_version)) == keccak256(abi.encodePacked(bytes32(bytes("2.2.1"))))) {}
         }
 
+        DiamondLib.addSupportedInterface(type(IBosonProtocolInitializationHandler).interfaceId);
+
         status.version = _version;
         emit ProtocolInitialized(_version);
     }
@@ -74,9 +78,7 @@ contract ProtocolInitializationTestFacet is IBosonProtocolInitializationHandler,
      * @notice Initializes the version 2.2.0.
      *
      */
-    function initV2_2_0() internal {
-        DiamondLib.addSupportedInterface(type(IBosonProtocolInitializationHandler).interfaceId);
-    }
+    function initV2_2_0() internal {}
 
     /**
      * @notice Gets the current protocol version.

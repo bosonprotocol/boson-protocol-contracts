@@ -16,6 +16,7 @@ const { getFees } = require("./utils");
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
  * @param doCut - boolean that tells if cut transaction should be done or not (default: true)
  * @param protocolInitializationFacet - ProtocolInitializationFacet contract instance if it was already deployed
+ * @param version - version of the protocol
  * @returns {Promise<(*|*|*)[]>}
  */
 async function deployProtocolHandlerFacets(
@@ -23,7 +24,8 @@ async function deployProtocolHandlerFacets(
   facetData,
   maxPriorityFeePerGas,
   doCut = true,
-  protocolInitializationFacet
+  protocolInitializationFacet,
+  version = "2.2.0"
 ) {
   let deployedFacets = [];
   let facetsToInitialize = {};
@@ -55,9 +57,10 @@ async function deployProtocolHandlerFacets(
   }
 
   let cutTransaction;
+
   // Cut the diamond with all facets
   if (doCut) {
-    const version = ethers.utils.formatBytes32String("2.2.0");
+    version = ethers.utils.formatBytes32String(version);
 
     cutTransaction = await cutDiamond(
       diamond,

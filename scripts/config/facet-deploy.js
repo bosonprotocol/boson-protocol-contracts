@@ -34,7 +34,7 @@ function getConfig() {
  *  {
         Facet4: ["0xb0b1d2659e8d5846432c66de8615841cc7bcaf49", 3, true],  // Facet4 expects address, uint256 and bool
         Facet5: [[2, 3, 5, 7, 11]],                                       // Facet5 uint256 array
-        Facet6: ""                                                        // Facet6 doesn't expect any argument
+        Facet6: []                                                        // Facet6 doesn't expect any argument
     }
  * 
  */

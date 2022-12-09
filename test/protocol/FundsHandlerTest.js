@@ -95,6 +95,7 @@ describe("IBosonFundsHandler", function () {
     expectedAgentAvailableFunds,
     agentAvailableFunds;
   let DRFee, buyerEscalationDeposit;
+  let protocolInitializationFacet;
 
   before(async function () {
     // get interface Ids
@@ -190,7 +191,8 @@ describe("IBosonFundsHandler", function () {
     const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
+    const { deployedFacets } = await deployProtocolHandlerFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
+    protocolInitializationFacet = deployedFacets.find((f) => f.name === "ProtocolInitializationFacet").contract;
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
@@ -867,7 +869,14 @@ describe("IBosonFundsHandler", function () {
           it("Withdraw when dispute is retracted, it emits a FundsWithdrawn event", async function () {
             const facetsToDeploy = await getFacetsWithArgs(["DisputeHandlerFacet"]);
 
-            await deployProtocolHandlerFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
+            await deployProtocolHandlerFacets(
+              protocolDiamond,
+              facetsToDeploy,
+              maxPriorityFeePerGas,
+              true,
+              protocolInitializationFacet,
+              "2.3.0"
+            );
 
             // Cast Diamond to IBosonDisputeHandler
             disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
@@ -2552,7 +2561,14 @@ describe("IBosonFundsHandler", function () {
         beforeEach(async function () {
           const facetsToDeploy = await getFacetsWithArgs(["DisputeHandlerFacet"]);
 
-          await deployProtocolHandlerFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
+          await deployProtocolHandlerFacets(
+            protocolDiamond,
+            facetsToDeploy,
+            maxPriorityFeePerGas,
+            true,
+            protocolInitializationFacet,
+            "2.3.0"
+          );
 
           // Cast Diamond to IBosonDisputeHandler
           disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
