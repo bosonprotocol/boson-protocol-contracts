@@ -58,16 +58,16 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     uint256 private _royaltyPercentage;
 
     // Map an offerId to a Range for pre-minted offers
-    mapping(uint256 => Range) private rangeByOfferId;
+    mapping(uint256 => Range) private _rangeByOfferId;
 
     // All ranges as an array
-    uint256[] private rangeOfferIds;
+    uint256[] private _rangeOfferIds;
 
     // Premint status, used only temporarly in transfers
-    PremintStatus private premintStatus;
+    PremintStatus private _premintStatus;
 
-    // Tell is preminted voucher has already been commited
-    mapping(uint256 => bool) private commited;
+    // Tell is preminted voucher has already been _commited
+    mapping(uint256 => bool) private _commited;
 
     /**
      * @notice Initializes the voucher.
@@ -111,7 +111,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         (, Exchange memory exchange) = getBosonExchange(_exchangeId);
 
         // See if the offer id is associated with a range
-        Range storage range = rangeByOfferId[exchange.offerId];
+        Range storage range = _rangeByOfferId[exchange.offerId];
 
         // Revert if exchange id falls within a reserved range
         uint256 rangeStart = range.start;
@@ -158,7 +158,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         require(_startId > 0, INVALID_RANGE_START);
 
         // Get storage slot for the range
-        Range storage range = rangeByOfferId[_offerId];
+        Range storage range = _rangeByOfferId[_offerId];
 
         // Revert if the offer id is already associated with a range
         require(range.length == 0, OFFER_RANGE_ALREADY_RESERVED);
@@ -167,7 +167,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         range.offerId = _offerId;
         range.start = _startId;
         range.length = _length;
-        rangeOfferIds.push(_offerId);
+        _rangeOfferIds.push(_offerId);
 
         emit RangeReserved(_offerId, range);
     }
@@ -206,7 +206,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      */
     function preMint(uint256 _offerId, uint256 _amount) external onlyOwner {
         // Get the offer's range
-        Range storage range = rangeByOfferId[_offerId];
+        Range storage range = _rangeByOfferId[_offerId];
 
         // Revert if id not associated with a range
         require(range.length != 0, NO_RESERVED_RANGE_FOR_OFFER);
@@ -268,7 +268,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      */
     function burnPremintedVouchers(uint256 _offerId) external override onlyOwner {
         // Get the offer's range
-        Range storage range = rangeByOfferId[_offerId];
+        Range storage range = _rangeByOfferId[_offerId];
 
         // Revert if id not associated with a range
         require(range.length != 0, NO_RESERVED_RANGE_FOR_OFFER);
@@ -290,6 +290,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         // End should be greater than start
         require(end > start, NOTHING_TO_BURN);
 
+        // If amount to burn is more than maxPremintedVouchers, burn only maxPremintedVouchers
         if (end > start + maxPremintedVouchers) {
             end = start + maxPremintedVouchers;
         }
@@ -298,8 +299,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         address seller = owner();
         uint256 burned;
         for (uint256 tokenId = start; tokenId < end; tokenId++) {
-            // Burn only if not already commited
-            if (!commited[tokenId]) {
+            // Burn only if not already _commited
+            if (!_commited[tokenId]) {
                 emit Transfer(seller, address(0), tokenId);
                 burned++;
             }
@@ -326,7 +327,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         }
 
         // Get the offer's range
-        Range storage range = rangeByOfferId[_offerId];
+        Range storage range = _rangeByOfferId[_offerId];
 
         // Count the number left to be minted
         count = range.length - range.minted;
@@ -340,7 +341,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      */
     function getRangeByOfferId(uint256 _offerId) external view returns (Range memory range) {
         // Get the offer's range
-        return rangeByOfferId[_offerId];
+        return _rangeByOfferId[_offerId];
     }
 
     /**
@@ -390,8 +391,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         if (committable) {
             // If offer is committable, temporarily update _owners, so transfer succeeds
             silentMint(from, tokenId);
-            premintStatus.committable = true;
-            premintStatus.offerId = offerId;
+            _premintStatus.committable = true;
+            _premintStatus.offerId = offerId;
         }
 
         super.transferFrom(from, to, tokenId);
@@ -411,8 +412,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         if (committable) {
             // If offer is committable, temporarily update _owners, so transfer succeeds
             silentMint(from, tokenId);
-            premintStatus.committable = true;
-            premintStatus.offerId = offerId;
+            _premintStatus.committable = true;
+            _premintStatus.offerId = offerId;
         }
 
         super.safeTransferFrom(from, to, tokenId, data);
@@ -631,18 +632,18 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         // Update the buyer associated with the voucher in the protocol
         // Only when transferring, not minting or burning
         if (from == owner()) {
-            if (premintStatus.committable) {
+            if (_premintStatus.committable) {
                 // Set the preminted token as committed
-                commited[tokenId] = true;
+                _commited[tokenId] = true;
 
                 // If this is a transfer of premited token, treat it differently
                 address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
                 IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(
                     payable(to),
-                    premintStatus.offerId,
+                    _premintStatus.offerId,
                     tokenId
                 );
-                delete premintStatus;
+                delete _premintStatus;
             } else {
                 // Already committed, treat as a normal transfer
                 onVoucherTransferred(tokenId, payable(to));
@@ -666,10 +667,10 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @return offerId - the associated offer id if committable
      */
     function getPreMintStatus(uint256 _tokenId) internal view returns (bool committable, uint256 offerId) {
-        // Not committable if commited already or if token has an owner
-        if (!commited[_tokenId] && !_exists(_tokenId)) {
+        // Not committable if _commited already or if token has an owner
+        if (!_commited[_tokenId] && !_exists(_tokenId)) {
             // If are reserved ranges, search them
-            uint256 length = rangeOfferIds.length;
+            uint256 length = _rangeOfferIds.length;
             if (length > 0) {
                 // Binary search the ranges array
                 uint256 low = 0; // Lower bound of search (array index)
@@ -680,7 +681,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
                     uint256 mid = (high + low) / 2;
 
                     // Get the range stored at the midpoint
-                    Range storage range = rangeByOfferId[rangeOfferIds[mid]];
+                    Range storage range = _rangeByOfferId[_rangeOfferIds[mid]];
 
                     // Get the beginning of the range once for reference
                     uint256 start = range.start;
