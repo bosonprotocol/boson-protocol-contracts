@@ -1240,7 +1240,7 @@ contract OrchestrationHandlerFacet is
             _voucherInitValues,
             _agentId
         );
-        reserveRangeInternal(_offer.sellerId, _reservedRangeLength);
+        reserveRangeInternal(_offer.id, _reservedRangeLength);
     }
 
     /**
