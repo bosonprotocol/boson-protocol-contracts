@@ -532,7 +532,7 @@ describe("IBosonVoucher", function () {
         assert.equal(tokenOwner, buyer.address, "Token owner mismatch");
       });
 
-      it("Returns true owner if token exists - via transfer shell nft", async function () {
+      it("Returns true owner if token exists - via preminted voucher transfer.", async function () {
         let tokenId = "25"; // tokens between 10 and 60 are preminted
 
         // Transfer preminted token

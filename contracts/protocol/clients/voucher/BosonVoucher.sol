@@ -202,11 +202,11 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         // Revert if id not associated with a range
         require(range.length != 0, NO_RESERVED_RANGE_FOR_OFFER);
 
-        // Get the first token to mint
-        uint256 start = range.start + range.minted;
-
         // Revert if no more to mint in range
         require(range.length >= range.minted + _amount, INVALID_AMOUNT_TO_MINT);
+
+        // Get the first token to mint
+        uint256 start = range.start + range.minted;
 
         // Pre-mint the range to the seller
         uint256 tokenId;
@@ -270,7 +270,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         returns (address owner)
     {
         if (_exists(tokenId)) {
-            // If tokenId exist, it does not matter if vouchers were preminted or not
+            // If tokenId exists, it does not matter if vouchers were preminted or not
             owner = super.ownerOf(tokenId);
         } else {
             // If tokenId does not exist, but offer is commitable, report contract owner as token owner
@@ -293,7 +293,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         (bool committable, uint256 offerId) = getPreMintStatus(tokenId);
 
         if (committable) {
-            // If offer is committable, temporary update _owners, so transfer succeeds
+            // If offer is committable, temporarily update _owners, so transfer succeeds
             silentMint(from, tokenId);
             premintStatus.committable = true;
             premintStatus.offerId = offerId;
@@ -314,7 +314,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         (bool committable, uint256 offerId) = getPreMintStatus(tokenId);
 
         if (committable) {
-            // If offer is committable, temporary update _owners, so transfer succeeds
+            // If offer is committable, temporarily update _owners, so transfer succeeds
             silentMint(from, tokenId);
             premintStatus.committable = true;
             premintStatus.offerId = offerId;
