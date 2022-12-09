@@ -604,6 +604,49 @@ describe("IBosonVoucher", function () {
       );
     });
 
+    it("Should skip all vouchers were already commited", async function () {
+      let commitedVouchers = [11, 14];
+
+      // Transfer some preminted vouchers
+      await mockProtocol.mock.commitToPreMintedOffer.returns();
+      await Promise.all(
+        commitedVouchers.map((tokenId) =>
+          bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
+        )
+      );
+
+      // Burn tokens, test for event
+      let tx = await bosonVoucher.connect(operator).burnPremintedVouchers(offerId);
+
+      // Number of events emitted should be equal to amount of preminted vouchers decreased by length of commited vouchers
+      // We test this to inderectly verify that no events were emitted for commited vouchers
+      assert.equal(
+        (await tx.wait()).events.length,
+        Number(amount) - commitedVouchers.length,
+        "Wrong number of events emitted"
+      );
+
+      // All burned tokens should not have an owner, but commited ones should
+      for (let i = 0; i < Number(amount); i++) {
+        let tokenId = i + Number(startId);
+        if (commitedVouchers.includes(tokenId)) {
+          // Check that owner is buyer.
+          expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
+        } else {
+          // Check that Transfer event was emitted and owner does not exist anymore
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(operator.address, ethers.constants.AddressZero, i + Number(startId));
+          await expect(bosonVoucher.ownerOf(tokenId)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        }
+      }
+
+      // Last burned id should be updated
+      const range = new Range(offerId, startId, length, amount, `${Number(startId) + Number(amount) - 1}`);
+      const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
+      assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+    });
+
     it("Burning is possible if offer not voided, but just expired", async function () {
       // make offer not voided so premint is possible
       offer.voided = false;
