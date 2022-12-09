@@ -329,7 +329,7 @@ describe("SellerHandler", function () {
         [exists] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
         expect(exists).to.be.false;
 
-        // Get Royalty Information for Exchange id i.e. Voucher NFT token id
+        // Get Royalty Information for Exchange id i.e. Voucher token id
         let receiver, royaltyAmount;
         [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
 
@@ -363,7 +363,7 @@ describe("SellerHandler", function () {
         [exists] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
         expect(exists).to.be.false;
 
-        // Get Royalty Information for Exchange id i.e. Voucher NFT token id
+        // Get Royalty Information for Exchange id i.e. Voucher token id
         let receiver, royaltyAmount;
         [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
 
