@@ -117,7 +117,7 @@ describe("ProtocolInitializationHandler", async function () {
           ];
 
           await expect(diamondCutFacet.connect(deployer).diamondCut(...cutArgs)).to.revertedWith(
-            RevertReasons.VERSION_EMPTY
+            RevertReasons.VERSION_MUST_BE_SET
           );
         });
 
@@ -226,6 +226,65 @@ describe("ProtocolInitializationHandler", async function () {
       const testFacetContract = await ethers.getContractAt("Test3Facet", protocolDiamond.address);
 
       expect(await testFacetContract.getTestAddress()).to.equal(rando.address);
+    });
+
+    context("💔 Revert Reasons", async function () {
+      let testFacet, version;
+
+      beforeEach(async function () {
+        let FacetTestFactory = await ethers.getContractFactory("Test3Facet");
+        testFacet = await FacetTestFactory.deploy(await getFees(maxPriorityFeePerGas));
+        await testFacet.deployTransaction.wait();
+
+        version = ethers.utils.formatBytes32String("2.3.0");
+      });
+      it("Delegate call to initialize fails", async function () {
+        const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [testFacet.address]);
+
+        const calldataProtocolInitialization =
+          deployedProtocolInitializationFacet.contract.interface.encodeFunctionData("initialize", [
+            version,
+            [testFacet.address],
+            [calldataTestFacet],
+            true,
+          ]);
+
+        const facetCuts = [getFacetAddCut(testFacet)];
+
+        await expect(
+          diamondCutFacet.diamondCut(
+            facetCuts,
+            deployedProtocolInitializationFacet.contract.address,
+            calldataProtocolInitialization,
+            await getFees(maxPriorityFeePerGas)
+          )
+        ).to.be.revertedWith(RevertReasons.CONTRACT_NOT_ALLOWED);
+      });
+
+      it("Revert with default reason if not supplied by implementation", async () => {
+        // If the caller's address is supplied Test3Facet's initializer will revert with no reason
+        // and so the diamondCut function will supply it's own reason
+        const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [deployer.address]);
+
+        const calldataProtocolInitialization =
+          deployedProtocolInitializationFacet.contract.interface.encodeFunctionData("initialize", [
+            version,
+            [testFacet.address],
+            [calldataTestFacet],
+            true,
+          ]);
+
+        const facetCuts = [getFacetAddCut(testFacet)];
+
+        await expect(
+          diamondCutFacet.diamondCut(
+            facetCuts,
+            deployedProtocolInitializationFacet.contract.address,
+            calldataProtocolInitialization,
+            await getFees(maxPriorityFeePerGas)
+          )
+        ).to.be.revertedWith(RevertReasons.PROTOCOL_INITIALIZATION_FAILED);
+      });
     });
   });
 });

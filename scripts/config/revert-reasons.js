@@ -23,6 +23,8 @@ exports.RevertReasons = {
 
   // Facet initializer related
   ALREADY_INITIALIZED: "Already initialized",
+  PROTOCOL_INITIALIZATION_FAILED: "Protocol initialization failed",
+  VERSION_MUST_BE_SET: "Version cannot be empty",
 
   // Offer related
   NOT_OPERATOR: "Not seller's operator",

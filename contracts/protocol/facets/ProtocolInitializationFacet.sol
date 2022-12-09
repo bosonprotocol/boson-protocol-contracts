@@ -43,6 +43,8 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
         bytes[] calldata _calldata,
         bool _isUpgrade
     ) public onlyUnInitializedVersion(_version) onlyRole(UPGRADER) {
+        require(_version != bytes32(0), VERSION_MUST_BE_SET);
+
         for (uint256 i = 0; i < _addresses.length; i++) {
             (bool success, bytes memory error) = _addresses[i].delegatecall(_calldata[i]);
 

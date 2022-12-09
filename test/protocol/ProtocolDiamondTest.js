@@ -946,7 +946,7 @@ describe("ProtocolDiamond", async function () {
     });
 
     context("💔 Revert Reasons", async function () {
-      it("should revert with reason if supplied by implementation", async () => {
+      it("Should revert with reason if supplied by implementation", async () => {
         // Encode the initialization call
         initFunction = "initialize(address _testAddress)";
         initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
@@ -970,7 +970,7 @@ describe("ProtocolDiamond", async function () {
         ).to.revertedWith(RevertReasons.CONTRACT_NOT_ALLOWED);
       });
 
-      it("should revert with library reason if not supplied by implementation", async () => {
+      it("Should revert with library reason if not supplied by implementation", async () => {
         // Encode the initialization call
         initFunction = "initialize(address _testAddress)";
         initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
@@ -995,7 +995,7 @@ describe("ProtocolDiamond", async function () {
         ).to.revertedWith(RevertReasons.INIT_REVERTED);
       });
 
-      it("should revert if _init is address(0) but _calldata is not empty", async () => {
+      it("_init is address(0) but _calldata is not empty", async () => {
         // Encode the initialization call
         initFunction = "initialize(address _testAddress)";
         initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
@@ -1021,7 +1021,7 @@ describe("ProtocolDiamond", async function () {
         ).to.revertedWith(RevertReasons.INIT_ZERO_ADDRESS_NON_EMPTY_CALLDATA);
       });
 
-      it("should revert if _calldata is empty but _init is not address(0)", async () => {
+      it("Should revert if _calldata is empty but _init is not address(0)", async () => {
         // Get the Test3Facet function selectors from the abi, removing the initializer
         initFunction = "initialize(address _testAddress)";
         selectors = getSelectors(test3Facet).remove([initFunction]);
@@ -1041,7 +1041,7 @@ describe("ProtocolDiamond", async function () {
         ).to.revertedWith(RevertReasons.INIT_EMPTY_CALLDATA_NON_ZERO_ADDRESS);
       });
 
-      it("should revert if _init address has no code", async () => {
+      it("Should revert if _init address has no code", async () => {
         // Encode the initialization call
         initFunction = "initialize(address _testAddress)";
         initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
@@ -1065,7 +1065,7 @@ describe("ProtocolDiamond", async function () {
         ).to.revertedWith(RevertReasons.INIT_ADDRESS_WITH_NO_CODE);
       });
 
-      it("should revert if _accessController is the zero address", async () => {
+      it("Should revert if _accessController is the zero address", async () => {
         // Core interfaces that will be supported at the Diamond address
         const interfaces = [InterfaceIds.IDiamondLoupe, InterfaceIds.IDiamondCut, InterfaceIds.IERC165];
 
