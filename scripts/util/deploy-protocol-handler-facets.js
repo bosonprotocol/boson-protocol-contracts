@@ -16,29 +16,19 @@ const { getFees } = require("./utils");
  * @param doCut - boolean that tells if cut transaction should be done or not (default: true)
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolHandlerFacets(diamond, facetNames, maxPriorityFeePerGas, doCut = true) {
-  // Convert facetNames into expected facetData format
-  let facetData = {};
-  for (const facetName of facetNames) {
-    facetData[facetName] = "";
-  }
-
-  // Make the deployment with generic method
-  return deployProtocolHandlerFacetsWithArgs(diamond, facetData, maxPriorityFeePerGas, doCut);
-}
-
 /**
- * Cut the Protocol Handler facets with initializers with arguments
+ * Cut the Protocol Handler facets
  *
  * Reused between deployment script and unit tests for consistency.
  *
  * @param diamond
  * @param facetData - object with facet names and corresponding initialization arguments {facetName1: initializerArguments1, facetName2: initializerArguments2, ...}
+ *                    if facet doesn't expect any argument, pass empty array
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
  * @param doCut - boolean that tells if cut transaction should be done or not (default: true)
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolHandlerFacetsWithArgs(
+async function deployProtocolHandlerFacets(
   diamond,
   facetData,
   maxPriorityFeePerGas,
@@ -60,10 +50,13 @@ async function deployProtocolHandlerFacetsWithArgs(
     };
 
     if (facetName !== "ProtocolInitializationFacet") {
-      const calldata = facetContract.interface.encodeFunctionData("initialize", facetData[facetName]);
+      const calldata = facetContract.interface.encodeFunctionData(
+        "initialize",
+        facetData[facetName].length && facetData[facetName]
+      );
       facetsToInitialize[facetContract.address] = calldata;
 
-      deployedFacet.cut = getFacetAddCut(facetContract, calldata.slice(0, 10));
+      deployedFacet.cut = getFacetAddCut(facetContract, [calldata.slice(0, 10)]);
     } else {
       protocolInitializationFacet = facetContract;
     }
@@ -71,11 +64,12 @@ async function deployProtocolHandlerFacetsWithArgs(
     deployedFacets.push(deployedFacet);
   }
 
+  let cutTransaction;
   // Cut the diamond with all facets
   if (doCut) {
     const version = ethers.utils.formatBytes32String("2.2.0");
 
-    await cutDiamond(
+    cutTransaction = await cutDiamond(
       diamond,
       deployedFacets,
       maxPriorityFeePerGas,
@@ -86,7 +80,7 @@ async function deployProtocolHandlerFacetsWithArgs(
   }
 
   // Return an array of objects with facet name and contract properties
-  return deployedFacets;
+  return { deployedFacets, cutTransaction };
 }
 
 async function cutDiamond(
@@ -128,4 +122,3 @@ async function cutDiamond(
 }
 
 exports.deployProtocolHandlerFacets = deployProtocolHandlerFacets;
-exports.deployProtocolHandlerFacetsWithArgs = deployProtocolHandlerFacetsWithArgs;

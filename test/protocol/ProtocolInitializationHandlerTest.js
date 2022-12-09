@@ -4,10 +4,7 @@ const ethers = hre.ethers;
 
 const Role = require("../../scripts/domain/Role");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const {
-  deployProtocolHandlerFacetsWithArgs,
-  deployProtocolHandlerFacets,
-} = require("../../scripts/util/deploy-protocol-handler-facets");
+const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces");
 const { maxPriorityFeePerGas } = require("../util/constants");
 const { getFees } = require("../../scripts/util/utils");
@@ -56,7 +53,7 @@ describe("ProtocolInitializationHandler", async function () {
   describe("Deploy tests", async function () {
     context("📋 Initializer", async function () {
       it("Should initialize version 2.2.0 and emit ProtocolInitialized", async function () {
-        const [{ cutTransaction }] = await deployProtocolHandlerFacetsWithArgs(
+        const { cutTransaction } = await deployProtocolHandlerFacets(
           protocolDiamond,
           { ProtocolInitializationFacet: [version, [], [], true] },
           maxPriorityFeePerGas
@@ -147,14 +144,14 @@ describe("ProtocolInitializationHandler", async function () {
   });
 
   describe("After deploy tests", async function () {
-    let deployedProcolInitializationFacet;
-
+    let deployedProtocolInitializationFacet;
     beforeEach(async function () {
-      [{ contract: deployedProcolInitializationFacet }] = await deployProtocolHandlerFacets(
+      const { deployedFacets } = await deployProtocolHandlerFacets(
         protocolDiamond,
-        ["ProtocolInitializationFacet"],
+        { ProtocolInitializationFacet: [version, [], [], true] },
         maxPriorityFeePerGas
       );
+      deployedProtocolInitializationFacet = deployedFacets[0];
     });
 
     // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -176,17 +173,7 @@ describe("ProtocolInitializationHandler", async function () {
       expect(ethers.utils.parseBytes32String(version)).to.equal("2.2.0");
     });
 
-    it("Should call facet initializer internally when _addresses and _calldata is supplied", async function () {
-      // Mock a change in the initialize function because diamond cut will revert if contract stay the same
-      const ProtocolInitilizationTestContractFactory = await ethers.getContractFactory(
-        "ProtocolInitializationTestFacet"
-      );
-
-      const protocolInitializationTestFacet = await ProtocolInitilizationTestContractFactory.deploy(
-        await getFees(maxPriorityFeePerGas)
-      );
-      await protocolInitializationTestFacet.deployTransaction.wait();
-
+    it("Should call facet initializer internally when _addresses and _calldata are supplied", async function () {
       let FacetTestFactory = await ethers.getContractFactory("Test3Facet");
       const testFacet = await FacetTestFactory.deploy(await getFees(maxPriorityFeePerGas));
       await testFacet.deployTransaction.wait();
@@ -194,7 +181,7 @@ describe("ProtocolInitializationHandler", async function () {
       const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [rando.address]);
 
       version = ethers.utils.formatBytes32String("2.3.0");
-      const calldataProtocolInitialization = deployedProcolInitializationFacet.interface.encodeFunctionData(
+      const calldataProtocolInitialization = deployedProtocolInitializationFacet.interface.encodeFunctionData(
         "initializeProtocol",
         [version, [testFacet.address], [calldataTestFacet], true]
       );
@@ -203,7 +190,7 @@ describe("ProtocolInitializationHandler", async function () {
 
       await diamondCutFacet.diamondCut(
         facetCuts,
-        deployedProcolInitializationFacet.address,
+        deployedProtocolInitializationFacet.address,
         calldataProtocolInitialization,
         await getFees(maxPriorityFeePerGas)
       );

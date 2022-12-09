@@ -115,6 +115,7 @@ async function main(env, facetConfig) {
 
   // Get facets to upgrade
   let facets;
+
   if (facetConfig) {
     // facetConfig was passed in as a JSON object
     facets = JSON.parse(facetConfig);
@@ -123,10 +124,15 @@ async function main(env, facetConfig) {
     facets = await getFacets();
   }
 
+  const facetsToDeploy = facets.addOrUpgrade.reduce((obj, key) => {
+    obj[key] = [];
+    return obj;
+  }, {});
+
   // Deploy new facets
-  const deployedFacets = await deployProtocolHandlerFacets(
+  const { deployedFacets } = await deployProtocolHandlerFacets(
     protocolAddress,
-    facets.addOrUpgrade,
+    facetsToDeploy,
     maxPriorityFeePerGas,
     false
   );
@@ -295,7 +301,7 @@ async function main(env, facetConfig) {
       } else {
         // Remove from smart contract
         interfacesToRemove.push(oldFacet.interfaceId);
-        //
+
         // Check if interface was shared across other facets and update contracts info
         contracts = contracts.map((entry) => {
           if (entry.interfaceId == oldFacet.interfaceId) {
@@ -320,22 +326,23 @@ async function main(env, facetConfig) {
     calldataList.push(contract.interface.encodeFunctionData("initialize", facets.initArgs[facet]));
   }
 
-  const calldataProtocolInitialization = protocolInitializationFacet.interface.encodeFunctionData("initialize", [
-    // Version
-    ethers.utils.formatBytes32String(version),
-    // Facets to call initializer
-    addresses,
-    // Calldata to facets initializer
-    calldataList,
-    // Is upgrade
-    true,
-  ]);
+  const calldataProtocolInitialization = protocolInitializationFacet.interface.encodeFunctionData(
+    "initializeProtocol",
+    [
+      // Version
+      ethers.utils.formatBytes32String(version),
+      // Facets to call initializer
+      addresses,
+      // Calldata to facets initializer
+      calldataList,
+      // Is upgrade
+      true,
+    ]
+  );
 
   let transactionResponse;
 
   // Adding and replacing are done in one diamond cut
-  console.log("\n🔪 Diamond cut ++++++++++++");
-  console.log(calldataProtocolInitialization);
   transactionResponse = await diamondCutFacet
     .connect(adminSigner)
     .diamondCut(
@@ -345,8 +352,7 @@ async function main(env, facetConfig) {
       await getFees(maxPriorityFeePerGas)
     );
 
-  const response = await transactionResponse.wait(confirmations);
-  console.log("response", response);
+  await transactionResponse.wait(confirmations);
 
   // Removing is done in a separate diamond cut
   if (facetCutRemove.length > 0) {

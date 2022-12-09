@@ -14,13 +14,9 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const {
-  deployProtocolHandlerFacets,
-  deployProtocolHandlerFacetsWithArgs,
-} = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { prepareDataSignatureParameters, setNextBlockTimestamp } = require("../util/utils.js");
+const { prepareDataSignatureParameters, setNextBlockTimestamp, getFacetsWithArgs } = require("../util/utils.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const {
   mockOffer,
@@ -33,12 +29,7 @@ const {
   mockExchange,
 } = require("../util/mock");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
-const {
-  getSelectors,
-  FacetCutAction,
-  getStateModifyingFunctions,
-  getStateModifyingFunctionsHashes,
-} = require("../../scripts/util/diamond-utils.js");
+const { getSelectors, FacetCutAction, getStateModifyingFunctions } = require("../../scripts/util/diamond-utils.js");
 
 /**
  *  Test the Boson Meta transactions Handler interface
@@ -137,32 +128,6 @@ describe("IBosonMetaTransactionsHandler", function () {
     // Temporarily grant PAUSER role to pauser account
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
-    // Cut the protocol handler facets into the Diamond
-    const facetNames = [
-      "SellerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "FundsHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "TwinHandlerFacet",
-      "DisputeHandlerFacet",
-      "PauseHandlerFacet",
-      "BuyerHandlerFacet",
-    ];
-
-    // Get input arguments for MetaTransactionsHandlerFacet
-    stateModifyingFunctionsHashes = await getStateModifyingFunctionsHashes(
-      [...facetNames, "MetaTransactionsHandlerFacet"],
-      ["executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"]
-    );
-
-    await deployProtocolHandlerFacets(protocolDiamond, [...facetNames], maxPriorityFeePerGas);
-    await deployProtocolHandlerFacetsWithArgs(
-      protocolDiamond,
-      { MetaTransactionsHandlerFacet: [stateModifyingFunctionsHashes] },
-      maxPriorityFeePerGas
-    );
-
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
     const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
@@ -213,10 +178,26 @@ describe("IBosonMetaTransactionsHandler", function () {
       },
     ];
 
-    // Deploy the Config facet, initializing the protocol config
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+    // Cut the protocol handler facets into the Diamond
+    const facetNames = [
+      "SellerHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "FundsHandlerFacet",
+      "ExchangeHandlerFacet",
+      "OfferHandlerFacet",
+      "TwinHandlerFacet",
+      "DisputeHandlerFacet",
+      "PauseHandlerFacet",
+      "BuyerHandlerFacet",
+      "MetaTransactionsHandlerFacet",
+      "ProtocolInitializationFacet",
+    ];
 
-    // Cast Diamond to IERC165
+    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    // Cut the protocol handler facets into the Diamond
+    await deployProtocolHandlerFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
+
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers

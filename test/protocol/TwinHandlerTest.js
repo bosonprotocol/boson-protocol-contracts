@@ -10,9 +10,8 @@ const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.j
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { getEvent, getMappingStoragePosition, paddingType } = require("../util/utils.js");
+const { getEvent, getMappingStoragePosition, paddingType, getFacetsWithArgs } = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockOffer, mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues, accountId } = require("../util/mock");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
@@ -74,21 +73,6 @@ describe("IBosonTwinHandler", function () {
     // Temporarily grant PAUSER role to pauser account
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
-    // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(
-      protocolDiamond,
-      [
-        "AccountHandlerFacet",
-        "SellerHandlerFacet",
-        "TwinHandlerFacet",
-        "BundleHandlerFacet",
-        "OfferHandlerFacet",
-        "DisputeResolverHandlerFacet",
-        "PauseHandlerFacet",
-      ],
-      maxPriorityFeePerGas
-    );
-
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
     const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
@@ -136,9 +120,23 @@ describe("IBosonTwinHandler", function () {
         buyerEscalationDepositPercentage,
       },
     ];
-    // Deploy the Config facet, initializing the protocol config
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
 
+    const facetNames = [
+      "AccountHandlerFacet",
+      "SellerHandlerFacet",
+      "TwinHandlerFacet",
+      "BundleHandlerFacet",
+      "OfferHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "PauseHandlerFacet",
+      "ProtocolInitializationFacet",
+      "ConfigHandlerFacet",
+    ];
+
+    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    // Cut the protocol handler facets into the Diamond
+    await deployProtocolHandlerFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
 

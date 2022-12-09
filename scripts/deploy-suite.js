@@ -7,18 +7,13 @@ const tipMultiplier = ethers.BigNumber.from(environments.tipMultiplier);
 const tipSuggestion = "1500000000"; // ethers.js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = ethers.BigNumber.from(tipSuggestion).mul(tipMultiplier);
 
-const protocolConfig = require("./config/protocol-parameters");
 const authTokenAddresses = require("./config/auth-token-addresses");
 const { getFacets } = require("./config/facet-deploy");
 
 const Role = require("./domain/Role");
 const { deployProtocolDiamond } = require("./util/deploy-protocol-diamond.js");
 const { deployProtocolClients } = require("./util/deploy-protocol-clients.js");
-const { deployProtocolConfigFacet } = require("./util/deploy-protocol-config-facet.js");
-const {
-  deployProtocolHandlerFacets,
-  deployProtocolHandlerFacetsWithArgs,
-} = require("./util/deploy-protocol-handler-facets.js");
+const { deployProtocolHandlerFacets } = require("./util/deploy-protocol-handler-facets.js");
 const { verifyOnTestEnv } = require("./util/report-verify-deployments");
 const { getInterfaceIds, interfaceImplementers } = require("./config/supported-interfaces.js");
 const { deploymentComplete, getFees, writeContracts } = require("./util/utils");
@@ -35,42 +30,11 @@ const AuthTokenType = require("../scripts/domain/AuthTokenType");
  */
 
 /**
- * Get the configuration data to be passed to the ConfigHandlerFacet initializer
- * @returns {{tokenAddress: string, treasuryAddress: string, voucherAddress: string, feePercentage: string, maxOffersPerGroup: string, maxTwinsPerBundle: string, maxOffersPerBundle: string}}
- */
-function getConfig() {
-  return [
-    {
-      token: protocolConfig.TOKEN[network],
-      treasury: protocolConfig.TREASURY[network],
-      voucherBeacon: protocolConfig.BEACON[network],
-      beaconProxy: protocolConfig.BEACON_PROXY[network],
-    },
-    protocolConfig.limits,
-    protocolConfig.fees,
-  ];
-}
-
-/**
  * Get the contract addresses for supported NFT Auth token contracts
  * @returns {lensAddress: string, ensAddress: string}
  */
 function getAuthTokenContracts() {
   return { lensAddress: authTokenAddresses.LENS[network], ensAddress: authTokenAddresses.ENS[network] };
-}
-
-/**
- * Get a list of no-arg initializer facet names to be cut into the Diamond
- */
-async function getNoArgFacetNames() {
-  return (await getFacets()).noArgFacets;
-}
-
-/**
- * Get a list of facet names to be cut into the Diamond
- */
-async function getArgFacetNames() {
-  return (await getFacets()).argFacets;
 }
 
 async function main(env, facetConfig) {
@@ -89,8 +53,6 @@ async function main(env, facetConfig) {
   console.log(`${divider}\nBoson Protocol V2 Contract Suite Deployer\n${divider}`);
   console.log(`⛓  Network: ${network}\n📅 ${new Date()}`);
 
-  // Get the protocol config
-  const config = getConfig();
   const authTokenContracts = getAuthTokenContracts();
 
   // Get the accounts
@@ -134,49 +96,33 @@ async function main(env, facetConfig) {
   console.log(`\n💎 Deploying and initializing config facet...`);
 
   // Cut the ConfigHandlerFacet facet into the Diamond
-  const {
-    facets: [configHandlerFacet],
-  } = await deployProtocolConfigFacet(protocolDiamond, config, maxPriorityFeePerGas);
-  deploymentComplete(
-    "ConfigHandlerFacet",
-    configHandlerFacet.address,
-    [],
-    interfaceIdFromFacetName("ConfigHandlerFacet"),
-    contracts
-  );
+  // const {
+  //   facets: [configHandlerFacet],
+  // } = await deployProtocolConfigFacet(protocolDiamond, config, maxPriorityFeePerGas);
+  // deploymentComplete(
+  //   "ConfigHandlerFacet",
+  //   configHandlerFacet.address,
+  //   [],
+  //   interfaceIdFromFacetName("ConfigHandlerFacet"),
+  //   contracts
+  // );
 
   console.log(`\n💎 Deploying and initializing protocol handler facets...`);
 
   // Deploy and cut facets
-  let noArgFacetNames, argFacetNames;
+  let argFacetNames;
+
   if (facetConfig) {
     // facetConfig was passed in as a JSON object
     const facetConfigObject = JSON.parse(facetConfig);
-    noArgFacetNames = facetConfigObject.noArgFacets;
-    argFacetNames = facetConfigObject.argFacets;
+    argFacetNames = facetConfigObject;
   } else {
     // Get values from default config file
-    noArgFacetNames = await getNoArgFacetNames();
-    argFacetNames = await getArgFacetNames();
+    argFacetNames = await getFacets();
   }
 
-  const deployedFacets = await deployProtocolHandlerFacets(protocolDiamond, noArgFacetNames, maxPriorityFeePerGas);
+  const { deployedFacets } = await deployProtocolHandlerFacets(protocolDiamond, argFacetNames, maxPriorityFeePerGas);
   for (const deployedFacet of deployedFacets) {
-    deploymentComplete(
-      deployedFacet.name,
-      deployedFacet.contract.address,
-      [],
-      interfaceIdFromFacetName(deployedFacet.name),
-      contracts
-    );
-  }
-
-  const deployedFacetsWithArgs = await deployProtocolHandlerFacetsWithArgs(
-    protocolDiamond,
-    argFacetNames,
-    maxPriorityFeePerGas
-  );
-  for (const deployedFacet of deployedFacetsWithArgs) {
     deploymentComplete(
       deployedFacet.name,
       deployedFacet.contract.address,
