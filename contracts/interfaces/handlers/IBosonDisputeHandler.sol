@@ -115,18 +115,9 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * - Dispute was escalated and escalation period has elapsed
      *
      * @param _exchangeId  - the id of the associated exchange
-     * @param _buyerPercent - percentage of the pot that goes to the buyer
-     * @param _sigR - r part of the signer's signature
-     * @param _sigS - s part of the signer's signature
-     * @param _sigV - v part of the signer's signature
+     * @param _percent - percentage of the pot that goes to the buyer
      */
-    function resolveDispute(
-        uint256 _exchangeId,
-        uint256 _buyerPercent,
-        bytes32 _sigR,
-        bytes32 _sigS,
-        uint8 _sigV
-    ) external;
+    function resolveDispute(uint256 _exchangeId, uint256 _percent) external;
 
     /**
      * @notice Puts the dispute into the Escalated state.
@@ -211,14 +202,12 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @return dispute - the dispute details. See {BosonTypes.Dispute}
      * @return disputeDates - the dispute dates details {BosonTypes.DisputeDates}
      */
-    function getDispute(uint256 _exchangeId)
+    function getDispute(
+        uint256 _exchangeId
+    )
         external
         view
-        returns (
-            bool exists,
-            BosonTypes.Dispute memory dispute,
-            BosonTypes.DisputeDates memory disputeDates
-        );
+        returns (bool exists, BosonTypes.Dispute memory dispute, BosonTypes.DisputeDates memory disputeDates);
 
     /**
      * @notice Gets the state of a given dispute.
