@@ -218,11 +218,11 @@ describe("IBosonVoucher", function () {
         expect(balanceAfter.sub(balanceBefore)).eq(1);
       });
 
-      it.only("issueVoucher should revert if exchange id falls within a pre-minted offer's range", async function () {
+      it("issueVoucher should revert if exchange id falls within a pre-minted offer's range", async function () {
         const offerId = "5";
         const startId = "10";
         const length = "123";
-        const tokenId = "7"; // token wihthin reserved range
+        const tokenId = "15"; // token wihthin reserved range
 
         // Deploy mock protocol
         const mockProtocol = await deployMockProtocol();
@@ -844,6 +844,7 @@ describe("IBosonVoucher", function () {
         });
       });
     });
+
     context("With preminted tokens", async function () {
       beforeEach(async function () {
         // reserve a range
@@ -872,6 +873,10 @@ describe("IBosonVoucher", function () {
 
       it("Returns true owner if token exists - via issue voucher", async function () {
         let tokenId = "100000";
+
+        // Define what should be returned when getExchange is called
+        await mockProtocol.mock.getExchange.withArgs(tokenId).returns(true, mockExchange({ offerId }), mockVoucher());
+
         // Issue ordinary voucher
         await bosonVoucher.connect(protocol).issueVoucher(tokenId, buyer.address);
 

@@ -15,7 +15,6 @@ import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
 import { IClientExternalAddresses } from "../../../interfaces/clients/IClientExternalAddresses.sol";
 import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
 import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchangeHandler.sol";
-import "hardhat/console.sol";
 
 /**
  * @title BosonVoucher
@@ -440,8 +439,6 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         override(ERC721Upgradeable, IERC165Upgradeable)
         returns (bool)
     {
-        console.log("supportsInterface");
-        console.logBytes4(type(IBosonVoucher).interfaceId);
         return (interfaceId == type(IBosonVoucher).interfaceId ||
             interfaceId == type(IERC2981Upgradeable).interfaceId ||
             super.supportsInterface(interfaceId));

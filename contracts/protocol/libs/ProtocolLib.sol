@@ -182,8 +182,6 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.AuthToken) pendingAuthTokenUpdatesBySeller;
         // dispute resolver id => DisputeResolver
         mapping(uint256 => BosonTypes.DisputeResolver) pendingAddressUpdatesByDisputeResolver;
-        // offer id => indicator to tell if preminted or not
-        mapping(uint256 => bool) isOfferPreminted;
     }
 
     // Incrementing id counters

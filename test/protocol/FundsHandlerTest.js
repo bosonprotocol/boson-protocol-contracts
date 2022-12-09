@@ -1871,7 +1871,7 @@ describe("IBosonFundsHandler", function () {
         const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
         await bosonVoucher.connect(operator).preMint(offerToken.id, offerToken.quantityAvailable);
 
-        // commit to an offer via shell voucher
+        // commit to an offer via preminted voucher
         let tokenId = "1";
         tx = await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
 
@@ -1910,7 +1910,7 @@ describe("IBosonFundsHandler", function () {
         await offerHandler.connect(operator).reserveRange(offerNative.id, offerNative.quantityAvailable);
         await bosonVoucher.connect(operator).preMint(offerNative.id, offerNative.quantityAvailable);
 
-        // commit to an offer via shell voucher
+        // commit to an offer via preminted voucher
         tx = await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
 
         // it should emit FundsEncumbered event with amount equal to sellerDeposit + price
@@ -2058,7 +2058,7 @@ describe("IBosonFundsHandler", function () {
           // Seller's availableFunds is 2*sellerDeposit which is less than sellerDeposit + price.
           // Add the check in case if the sellerDeposit is changed in the future
           assert.isBelow(Number(sellerDeposit), Number(price), "Seller's availableFunds is not less than price");
-          // Attempt to commit to an offer via shell voucher, expecting revert
+          // Attempt to commit to an offer via preminted voucher, expecting revert
           let tokenId = "1";
           await expect(
             bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
