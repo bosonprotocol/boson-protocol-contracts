@@ -149,7 +149,7 @@ async function main(env, facetConfig) {
   // Cast Diamond to the IBosonConfigHandler interface for further interaction with it
   const bosonConfigHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
-  // Add Voucher NFT addresses to protocol config
+  // Add Voucher addresses to protocol config
   transactionResponse = await bosonConfigHandler.setVoucherBeaconAddress(
     bosonClientBeacon.address,
     await getFees(maxPriorityFeePerGas)
