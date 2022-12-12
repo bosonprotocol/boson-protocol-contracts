@@ -5,7 +5,7 @@ const protocolConfig = require("./protocol-parameters");
 
 /**
  * Get the configuration data to be passed to the ConfigHandlerFacet initializer
- * @returns {{tokenAddress: string, treasuryAddress: string, voucherAddress: string, feePercentage: string, maxOffersPerGroup: string, maxTwinsPerBundle: string, maxOffersPerBundle: string}}
+ * @returns { addresses, limits, fees }
  */
 function getConfig() {
   return [
@@ -38,7 +38,6 @@ function getConfig() {
     }
  * 
  */
-
 const noArgFacetNames = [
   "AccountHandlerFacet",
   "SellerHandlerFacet",

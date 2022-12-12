@@ -55,7 +55,7 @@ describe("ProtocolInitializationHandler", async function () {
       it("Should initialize version 2.2.0 and emit ProtocolInitialized", async function () {
         const { cutTransaction } = await deployProtocolHandlerFacets(
           protocolDiamond,
-          { ProtocolInitializationFacet: [version, [], [], true] },
+          { ProtocolInitializationFacet: [] },
           maxPriorityFeePerGas
         );
 
@@ -63,22 +63,24 @@ describe("ProtocolInitializationHandler", async function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        it("Caller does not have UPGRADER role", async function () {
+        let protocolInitializationFacetDeployed;
+        beforeEach(async function () {
           const ProtocolInitilizationContractFactory = await ethers.getContractFactory("ProtocolInitializationFacet");
-          const protocolInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
+          protocolInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
             await getFees(maxPriorityFeePerGas)
           );
 
           await protocolInitializationFacetDeployed.deployTransaction.wait();
-
+        });
+        it("Addresses and calldata length mismatch", async function () {
           const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initialize", [
             version,
-            [],
+            [rando.address],
             [],
             true,
           ]);
 
-          let facetCut = getFacetAddCut(protocolInitializationFacetDeployed);
+          let facetCut = getFacetAddCut(protocolInitializationFacetDeployed, [callData.slice(0, 10)]);
 
           const cutArgs = [
             [facetCut],
@@ -87,19 +89,12 @@ describe("ProtocolInitializationHandler", async function () {
             await getFees(maxPriorityFeePerGas),
           ];
 
-          await expect(diamondCutFacet.connect(rando).diamondCut(...cutArgs)).to.revertedWith(
-            RevertReasons.ONLY_UPGRADER
+          await expect(diamondCutFacet.connect(deployer).diamondCut(...cutArgs)).to.revertedWith(
+            RevertReasons.ADDRESSES_AND_CALLDATA_MUST_BE_SAME_LENGTH
           );
         });
 
         it("Version is empty", async function () {
-          const ProtocolInitilizationContractFactory = await ethers.getContractFactory("ProtocolInitializationFacet");
-          const protocolInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
-            await getFees(maxPriorityFeePerGas)
-          );
-
-          await protocolInitializationFacetDeployed.deployTransaction.wait();
-
           const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initialize", [
             ethers.constants.HashZero,
             [],
@@ -107,7 +102,7 @@ describe("ProtocolInitializationHandler", async function () {
             true,
           ]);
 
-          let facetCut = getFacetAddCut(protocolInitializationFacetDeployed);
+          let facetCut = getFacetAddCut(protocolInitializationFacetDeployed, [callData.slice(0, 10)]);
 
           const cutArgs = [
             [facetCut],
@@ -122,12 +117,6 @@ describe("ProtocolInitializationHandler", async function () {
         });
 
         it("Initialize same version twice", async function () {
-          const ProtocolInitilizationContractFactory = await ethers.getContractFactory("ProtocolInitializationFacet");
-          const protocolInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
-            await getFees(maxPriorityFeePerGas)
-          );
-          await protocolInitializationFacetDeployed.deployTransaction.wait();
-
           const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initialize", [
             version,
             [],

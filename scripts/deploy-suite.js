@@ -95,33 +95,28 @@ async function main(env, facetConfig) {
 
   console.log(`\n💎 Deploying and initializing config facet...`);
 
-  // Cut the ConfigHandlerFacet facet into the Diamond
-  // const {
-  //   facets: [configHandlerFacet],
-  // } = await deployProtocolConfigFacet(protocolDiamond, config, maxPriorityFeePerGas);
-  // deploymentComplete(
-  //   "ConfigHandlerFacet",
-  //   configHandlerFacet.address,
-  //   [],
-  //   interfaceIdFromFacetName("ConfigHandlerFacet"),
-  //   contracts
-  // );
-
   console.log(`\n💎 Deploying and initializing protocol handler facets...`);
 
   // Deploy and cut facets
-  let argFacetNames;
+  let facetData;
 
   if (facetConfig) {
     // facetConfig was passed in as a JSON object
     const facetConfigObject = JSON.parse(facetConfig);
-    argFacetNames = facetConfigObject;
+    facetData = facetConfigObject;
   } else {
     // Get values from default config file
-    argFacetNames = await getFacets();
+    facetData = await getFacets();
   }
 
-  const { deployedFacets } = await deployProtocolHandlerFacets(protocolDiamond, argFacetNames, maxPriorityFeePerGas);
+  const { deployedFacets } = await deployProtocolHandlerFacets(
+    protocolDiamond,
+    facetData,
+    maxPriorityFeePerGas,
+    true,
+    undefined,
+    "2.0.0"
+  );
   for (const deployedFacet of deployedFacets) {
     deploymentComplete(
       deployedFacet.name,

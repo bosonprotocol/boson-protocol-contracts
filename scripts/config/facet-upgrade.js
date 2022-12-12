@@ -23,8 +23,8 @@
  */
 async function getFacets() {
   return {
-    addOrUpgrade: ["DisputeResolverHandlerFacet", "ProtocolInitializationFacet"],
-    remove: ["OfferHandlerFacet"],
+    addOrUpgrade: [],
+    remove: [],
     skipSelectors: {},
     facetsToInit: { DisputeResolverHandlerFacet: [] },
   };

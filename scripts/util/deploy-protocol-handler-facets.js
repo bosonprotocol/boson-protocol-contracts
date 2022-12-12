@@ -25,10 +25,14 @@ async function deployProtocolHandlerFacets(
   maxPriorityFeePerGas,
   doCut = true,
   protocolInitializationFacet,
-  version = "2.2.0"
+  version = "2.0.0"
 ) {
   let deployedFacets = [];
   let facetsToInitialize = {};
+
+  if (protocolInitializationFacet) {
+    delete facetData.ProtocolInitializationFacet;
+  }
 
   // Deploy all handler facets
   for (const facetName of Object.keys(facetData)) {
@@ -49,7 +53,7 @@ async function deployProtocolHandlerFacets(
       facetsToInitialize[facetContract.address] = calldata;
 
       deployedFacet.cut = getFacetAddCut(facetContract, [calldata.slice(0, 10)]);
-    } else {
+    } else if (!protocolInitializationFacet) {
       protocolInitializationFacet = facetContract;
     }
 
@@ -68,7 +72,8 @@ async function deployProtocolHandlerFacets(
       maxPriorityFeePerGas,
       protocolInitializationFacet,
       version,
-      facetsToInitialize
+      facetsToInitialize,
+      false
     );
   }
 

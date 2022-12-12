@@ -875,7 +875,7 @@ describe("IBosonFundsHandler", function () {
               maxPriorityFeePerGas,
               true,
               protocolInitializationFacet,
-              "2.3.0"
+              "2.2.0"
             );
 
             // Cast Diamond to IBosonDisputeHandler

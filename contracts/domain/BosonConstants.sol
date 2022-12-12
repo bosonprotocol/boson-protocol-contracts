@@ -30,6 +30,7 @@ uint256 constant ENTERED = 2;
 string constant ALREADY_INITIALIZED = "Already initialized";
 string constant PROTOCOL_INITIALIZATION_FAILED = "Protocol initialization failed";
 string constant VERSION_MUST_BE_SET = "Version cannot be empty";
+string constant ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH = "Addresses and calldata must be same length";
 
 // Revert Reasons: Access related
 string constant ACCESS_DENIED = "Access denied, caller doesn't have role";

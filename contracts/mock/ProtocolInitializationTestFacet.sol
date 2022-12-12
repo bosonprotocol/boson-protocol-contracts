@@ -4,8 +4,6 @@ pragma solidity 0.8.9;
 import "../domain/BosonConstants.sol";
 import { IBosonProtocolInitializationHandler } from "../interfaces/handlers/IBosonProtocolInitializationHandler.sol";
 import { ProtocolLib } from "../protocol/libs/ProtocolLib.sol";
-import { DisputeResolverHandlerFacet } from "../protocol/facets/DisputeResolverHandlerFacet.sol";
-import { TwinHandlerFacet } from "../protocol/facets/TwinHandlerFacet.sol";
 import { ProtocolBase } from "../protocol/bases/ProtocolBase.sol";
 import { DiamondLib } from "../diamond/DiamondLib.sol";
 
@@ -31,7 +29,7 @@ contract ProtocolInitializationTestFacet is IBosonProtocolInitializationHandler,
      * This function is callable only once for each version
      *
      * @param _version - version of the protocol
-     * @param _addresses - list of adresses to call calldata with non clashing interfaces
+     * @param _addresses - list of adresses to call calldata with initializers
      * @param _calldata - list of calldata to send to corresponding addresses
      *                    _calldata order must match _addresses order
      * @param _isUpgrade - flag to indicate whether this is first deployment or upgrade
@@ -42,8 +40,9 @@ contract ProtocolInitializationTestFacet is IBosonProtocolInitializationHandler,
         address[] calldata _addresses,
         bytes[] calldata _calldata,
         bool _isUpgrade
-    ) public onlyUnInitializedVersion(_version) {
+    ) external onlyUnInitializedVersion(_version) {
         require(_version != bytes32(0), VERSION_MUST_BE_SET);
+        require(_addresses.length == _calldata.length, ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH);
 
         for (uint256 i = 0; i < _addresses.length; i++) {
             // Calling calldata (initialize function) of the corresponding facet
@@ -63,7 +62,7 @@ contract ProtocolInitializationTestFacet is IBosonProtocolInitializationHandler,
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
 
         if (_isUpgrade) {
-            if (keccak256(abi.encodePacked(_version)) == keccak256(abi.encodePacked(bytes32(bytes("2.2.0"))))) {
+            if (_version == bytes32("2.2.0")) {
                 initV2_2_0();
             } else if (keccak256(abi.encodePacked(_version)) == keccak256(abi.encodePacked(bytes32(bytes("2.2.1"))))) {}
         }
