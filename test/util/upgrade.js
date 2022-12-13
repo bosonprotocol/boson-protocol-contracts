@@ -1318,7 +1318,8 @@ async function populateVoucherContract(
   deployer,
   protocolDiamondAddress,
   { accountHandler, exchangeHandler, offerHandler, fundsHandler },
-  { mockToken }
+  { mockToken },
+  existingEntities
 ) {
   let DR;
   let sellers = [];
@@ -1329,88 +1330,101 @@ async function populateVoucherContract(
 
   let voucherIndex = 1;
 
-  const entityType = {
-    SELLER: 0,
-    DR: 1,
-    AGENT: 2,
-    BUYER: 3,
-  };
-
-  const entities = [
-    entityType.DR,
-    entityType.SELLER,
-    entityType.SELLER,
-    entityType.SELLER,
-    entityType.SELLER,
-    entityType.SELLER,
-    entityType.BUYER,
-    entityType.BUYER,
-    entityType.BUYER,
-    entityType.BUYER,
-    entityType.BUYER,
-  ];
-
-  for (const entity of entities) {
-    const wallet = ethers.Wallet.createRandom();
-    const connectedWallet = wallet.connect(ethers.provider);
-    //Fund the new wallet
-    let tx = {
-      to: connectedWallet.address,
-      // Convert currency unit from ether to wei
-      value: ethers.utils.parseEther("10"),
+  if (existingEntities) {
+    // If existing entities are provided, we use them instead of creating new ones
+    ({ DR, sellers, buyers, offers, bosonVouchers } = existingEntities);
+  } else {
+    const entityType = {
+      SELLER: 0,
+      DR: 1,
+      AGENT: 2,
+      BUYER: 3,
     };
-    await deployer.sendTransaction(tx);
 
-    // create entities
-    switch (entity) {
-      case entityType.DR: {
-        const disputeResolver = mockDisputeResolver(wallet.address, wallet.address, wallet.address, wallet.address);
-        const disputeResolverFees = [
-          new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
-          new DisputeResolverFee(mockToken.address, "MockToken", "0"),
-        ];
-        const sellerAllowList = [];
-        await accountHandler
-          .connect(connectedWallet)
-          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-        DR = {
-          wallet: connectedWallet,
-          id: disputeResolver.id,
-          disputeResolver,
-          disputeResolverFees,
-          sellerAllowList,
-        };
+    const entities = [
+      entityType.DR,
+      entityType.SELLER,
+      entityType.SELLER,
+      entityType.SELLER,
+      entityType.SELLER,
+      entityType.SELLER,
+      entityType.BUYER,
+      entityType.BUYER,
+      entityType.BUYER,
+      entityType.BUYER,
+      entityType.BUYER,
+    ];
 
-        //ADMIN role activates Dispute Resolver
-        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
-        break;
-      }
-      case entityType.SELLER: {
-        const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address);
-        const id = seller.id;
-        let authToken = mockAuthToken();
+    for (const entity of entities) {
+      const wallet = ethers.Wallet.createRandom();
+      const connectedWallet = wallet.connect(ethers.provider);
+      //Fund the new wallet
+      let tx = {
+        to: connectedWallet.address,
+        // Convert currency unit from ether to wei
+        value: ethers.utils.parseEther("10"),
+      };
+      await deployer.sendTransaction(tx);
 
-        // set unique new voucherInitValues
-        const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
-        await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
+      // create entities
+      switch (entity) {
+        case entityType.DR: {
+          const disputeResolver = mockDisputeResolver(wallet.address, wallet.address, wallet.address, wallet.address);
+          const disputeResolverFees = [
+            new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+            new DisputeResolverFee(mockToken.address, "MockToken", "0"),
+          ];
+          const sellerAllowList = [];
+          await accountHandler
+            .connect(connectedWallet)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+          DR = {
+            wallet: connectedWallet,
+            id: disputeResolver.id,
+            disputeResolver,
+            disputeResolverFees,
+            sellerAllowList,
+          };
 
-        // calculate voucher contract address and cast it to contract instance
-        const voucherContractAddress = calculateContractAddress(accountHandler.address, voucherIndex++);
-        const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherContractAddress);
+          //ADMIN role activates Dispute Resolver
+          await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+          break;
+        }
+        case entityType.SELLER: {
+          const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address);
+          const id = seller.id;
+          let authToken = mockAuthToken();
 
-        sellers.push({ wallet: connectedWallet, id, seller, authToken, voucherInitValues, offerIds: [], bosonVoucher });
-        bosonVouchers.push(bosonVoucher);
+          // set unique new voucherInitValues
+          const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
+          await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
 
-        // mint mock token to sellers just in case they need them
-        await mockToken.mint(connectedWallet.address, "10000000000");
-        await mockToken.connect(connectedWallet).approve(protocolDiamondAddress, "10000000000");
-        break;
-      }
-      case entityType.BUYER: {
-        // no need to explicitly create buyer, since it's done automatically during commitToOffer
-        const buyer = mockBuyer(wallet.address);
-        buyers.push({ wallet: connectedWallet, id: buyer.id, buyer });
-        break;
+          // calculate voucher contract address and cast it to contract instance
+          const voucherContractAddress = calculateContractAddress(accountHandler.address, voucherIndex++);
+          const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherContractAddress);
+
+          sellers.push({
+            wallet: connectedWallet,
+            id,
+            seller,
+            authToken,
+            voucherInitValues,
+            offerIds: [],
+            bosonVoucher,
+          });
+          bosonVouchers.push(bosonVoucher);
+
+          // mint mock token to sellers just in case they need them
+          await mockToken.mint(connectedWallet.address, "10000000000");
+          await mockToken.connect(connectedWallet).approve(protocolDiamondAddress, "10000000000");
+          break;
+        }
+        case entityType.BUYER: {
+          // no need to explicitly create buyer, since it's done automatically during commitToOffer
+          const buyer = mockBuyer(wallet.address);
+          buyers.push({ wallet: connectedWallet, id: buyer.id, buyer });
+          break;
+        }
       }
     }
   }

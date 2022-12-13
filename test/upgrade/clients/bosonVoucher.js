@@ -17,7 +17,7 @@ const newVersion = "preminted-voucher";
 /**
  *  Upgrade test case - After upgrade from 2.0.0 to 2.1.0 everything is still operational
  */
-describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
+describe("[@skip-on-coverage] After client upgrade, everything is still operational", function () {
   // Common vars
   let deployer;
 
@@ -25,6 +25,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let voucherContractState;
   let preUpgradeEntities;
   let preUpgradeStorageLayout;
+  let protocolDiamondAddress, protocolContracts, mockContracts;
 
   before(async function () {
     // Make accounts available
@@ -39,7 +40,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       }
     }
 
-    const { protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(deployer, oldVersion);
+    ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(deployer, oldVersion));
 
     preUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
     preUpgradeEntities = await populateVoucherContract(
@@ -73,6 +74,52 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       // State before and after should be equal
       assert.deepEqual(voucherContractStateAfterUpgrade, voucherContractState, "state mismatch after upgrade");
+    });
+  });
+
+  // Create new vocuher data. Existing data should not be affected
+  context("📋 New data after the upgrade do not corrupt the data from before the upgrade", async function () {
+    it.only("State is not affected", async function () {
+      await populateVoucherContract(
+        deployer,
+        protocolDiamondAddress,
+        protocolContracts,
+        mockContracts,
+        preUpgradeEntities
+      );
+
+      // Get protocol state after the upgrade. Get the data that should be in location of old data.
+      const voucherContractStateAfterUpgradeAndActions = await getVoucherContractState(preUpgradeEntities);
+
+      // The only thing that should change are buyers's balances, since they comitted to new offers and they got vouchers for them.
+      // Modify the post upgrade state to reflect the expected changes
+      const { buyers, sellers } = preUpgradeEntities;
+      const entities = [...sellers, ...buyers];
+      for (let i = 0; i < buyers.length; i++) {
+        // loop matches the loop in populateVoucherContract
+        for (let j = i; j < buyers.length; j++) {
+          const offer = preUpgradeEntities.offers[i + j].offer;
+          const sellerId = ethers.BigNumber.from(offer.sellerId).toHexString();
+
+          // Find the voucher data for the seller
+          const voucherData = voucherContractStateAfterUpgradeAndActions.find(
+            (vd) => vd.sellerId.toHexString() == sellerId
+          );
+
+          const buyerWallet = buyers[j].wallet;
+          const buyerIndex = entities.findIndex((e) => e.wallet.address == buyerWallet.address);
+
+          // Update the balance of the buyer
+          voucherData.balanceOf[buyerIndex] = voucherData.balanceOf[buyerIndex].sub(1);
+        }
+      }
+
+      // State before and after should be equal
+      assert.deepEqual(
+        voucherContractState,
+        voucherContractStateAfterUpgradeAndActions,
+        "state mismatch after upgrade"
+      );
     });
   });
 });
