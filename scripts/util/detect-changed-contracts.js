@@ -16,7 +16,7 @@ Detects is contract changed between two versions
 5. Compares bytecodes. If bytecode is different, or it does not exists in either branch, it is considered changed
 
 @param {string} referenceCommit - commit/tag/branch to compare to
-@param {string} targetCommit - commit/tag/branch to compare. If not provided, it will compare to current branch
+@param {string} targetCommit - commit/tag/branch to compare. If not provided, it will compare to current branch.
 */
 async function detectChangedContract(referenceCommit, targetCommit) {
   // By default compiler adds metadata ipfs hash to the end of bytecode.
@@ -121,4 +121,4 @@ async function getBytecodes() {
   return byteCodes;
 }
 
-detectChangedContract("v2.1.0");
+exports.detectChangedContract = detectChangedContract;

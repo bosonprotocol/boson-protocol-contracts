@@ -77,6 +77,18 @@ task("manage-roles", "Grant or revoke access control roles")
     await manageRoles(env);
   });
 
+task("detect-contract-changes", "Detects which contracts have changed between two versions")
+  .addPositionalParam("referenceCommit", "Commit/tag/branch to compare to")
+  .addOptionalPositionalParam(
+    "targetCommit",
+    "Commit/tag/branch to compare. If not provided, it will compare to current branch."
+  )
+  .setAction(async ({ referenceCommit, targetCommit }) => {
+    const { detectChangedContract } = await lazyImport("./scripts/util/detect-changed-contracts.js");
+
+    await detectChangedContract(referenceCommit, targetCommit);
+  });
+
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {
