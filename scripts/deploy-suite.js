@@ -13,7 +13,7 @@ const { getFacets } = require("./config/facet-deploy");
 const Role = require("./domain/Role");
 const { deployProtocolDiamond } = require("./util/deploy-protocol-diamond.js");
 const { deployProtocolClients } = require("./util/deploy-protocol-clients.js");
-const { deployProtocolHandlerFacets } = require("./util/deploy-protocol-handler-facets.js");
+const { deployAndCutFacets } = require("./util/deploy-protocol-handler-facets.js");
 const { verifyOnTestEnv } = require("./util/report-verify-deployments");
 const { getInterfaceIds, interfaceImplementers } = require("./config/supported-interfaces.js");
 const { deploymentComplete, getFees, writeContracts } = require("./util/utils");
@@ -93,8 +93,6 @@ async function main(env, facetConfig) {
   );
   await transactionResponse.wait(confirmations);
 
-  console.log(`\n💎 Deploying and initializing config facet...`);
-
   console.log(`\n💎 Deploying and initializing protocol handler facets...`);
 
   // Deploy and cut facets
@@ -109,14 +107,8 @@ async function main(env, facetConfig) {
     facetData = await getFacets();
   }
 
-  const { deployedFacets } = await deployProtocolHandlerFacets(
-    protocolDiamond,
-    facetData,
-    maxPriorityFeePerGas,
-    true,
-    undefined,
-    "2.0.0"
-  );
+  let { deployedFacets } = await deployAndCutFacets(protocolDiamond.address, facetData, maxPriorityFeePerGas);
+
   for (const deployedFacet of deployedFacets) {
     deploymentComplete(
       deployedFacet.name,
@@ -149,7 +141,7 @@ async function main(env, facetConfig) {
   // Cast Diamond to the IBosonConfigHandler interface for further interaction with it
   const bosonConfigHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
-  // Add Voucher addresses to protocol config
+  // Add Voucher NFT addresses to protocol config
   transactionResponse = await bosonConfigHandler.setVoucherBeaconAddress(
     bosonClientBeacon.address,
     await getFees(maxPriorityFeePerGas)

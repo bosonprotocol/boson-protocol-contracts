@@ -2,7 +2,6 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const fs = require("fs");
 const packageFile = require("../../package.json");
-
 const addressesDirPath = __dirname + `/../../addresses`;
 
 function getAddressesFilePath(chainId, network, env) {

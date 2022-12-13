@@ -38,6 +38,7 @@ function getInterfaceId(contract) {
     acc.push(ethers.BigNumber.from(contract.interface.getSighash(val)));
     return acc;
   }, []);
+
   let interfaceId = selectors.reduce((pv, cv) => pv.xor(cv), ethers.BigNumber.from("0x00000000"));
   return interfaceId.isZero() ? "0x00000000" : ethers.utils.hexZeroPad(interfaceId.toHexString(), 4);
 }
@@ -137,19 +138,23 @@ async function getStateModifyingFunctionsHashes(facetNames, omitFunctions = []) 
 
 async function cutDiamond(
   diamond,
-  deployedFacets,
   maxPriorityFeePerGas,
+  deployedFacets,
   protocolInitializationFacet,
   version,
-  facetsToInitialize,
   isUpgrade = false
 ) {
-  const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", diamond.address);
-  const args = [version, Object.keys(facetsToInitialize) ?? [], Object.values(facetsToInitialize) ?? [], isUpgrade];
-
+  version = ethers.utils.formatBytes32String(version);
+  const facetsToInitialize = deployedFacets.filter((facet) => facet.initialize) ?? [];
+  const args = [
+    version,
+    facetsToInitialize.map((facet) => facet.contract.address),
+    facetsToInitialize.map((facet) => facet.initialize),
+    isUpgrade,
+  ];
   const calldataProtocolInitialization = protocolInitializationFacet.interface.encodeFunctionData("initialize", args);
 
-  // Add cut to ProtocolInitializationFacet
+  // Add ProtocolInitializationFacet cut
   deployedFacets = deployedFacets.map((f) => {
     if (f.name == "ProtocolInitializationFacet") {
       f.cut = getFacetAddCut(f.contract, [calldataProtocolInitialization.slice(0, 10)]);
@@ -157,8 +162,15 @@ async function cutDiamond(
     return f;
   });
 
+  const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", diamond);
+
+  console.log(args);
+  console.log(calldataProtocolInitialization);
   const transactionResponse = await diamondCutFacet.diamondCut(
-    deployedFacets.map((facet) => facet.cut),
+    [
+      ...deployedFacets.filter((f) => f.cutAdd).map((f) => f.cutAdd),
+      ...deployedFacets.filter((f) => f.cutReplace).map((f) => f.cutReplace),
+    ],
     protocolInitializationFacet.address,
     calldataProtocolInitialization,
     await getFees(maxPriorityFeePerGas)

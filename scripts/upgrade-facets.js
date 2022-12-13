@@ -7,8 +7,8 @@ const confirmations = network == "hardhat" ? 1 : environments.confirmations;
 const tipMultiplier = ethers.BigNumber.from(environments.tipMultiplier);
 const tipSuggestion = "1500000000"; // ethers.js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = ethers.BigNumber.from(tipSuggestion).mul(tipMultiplier);
-const { deployProtocolHandlerFacets } = require("./util/deploy-protocol-handler-facets.js");
-const { FacetCutAction, getSelectors, removeSelectors } = require("./util/diamond-utils.js");
+const { deployProtocolFacets } = require("./util/deploy-protocol-handler-facets.js");
+const { FacetCutAction, getSelectors, removeSelectors, cutDiamond } = require("./util/diamond-utils.js");
 const { deploymentComplete, getFees, readContracts, writeContracts } = require("./util/utils.js");
 const { getInterfaceIds, interfaceImplementers } = require("./config/supported-interfaces.js");
 const Role = require("./domain/Role");
@@ -48,6 +48,7 @@ async function main(env, facetConfig) {
   console.log(`⛓  Network: ${network}\n📅 ${new Date()}`);
 
   const { version } = packageFile;
+
   // Check that package.json version was updated
   if (version == contractsFile.protocolVersion && env !== "upgrade-test") {
     const answer = await getUserResponse("Protocol version has not been updated. Proceed anyway? (y/n) ", [
@@ -124,26 +125,15 @@ async function main(env, facetConfig) {
     facets = await getFacets();
   }
 
-  const facetsToDeploy = facets.addOrUpgrade.reduce((obj, key) => {
-    obj[key] = [];
-    return obj;
-  }, {});
-
   // Deploy new facets
-  const { deployedFacets } = await deployProtocolHandlerFacets(
-    protocolAddress,
-    facetsToDeploy,
-    maxPriorityFeePerGas,
-    false
-  );
+  const deployedFacets = await deployProtocolFacets(facets.addOrUpgrade, facets.facetsToInit, maxPriorityFeePerGas);
 
   // Cast Diamond to DiamondCutFacet, DiamondLoupeFacet and IERC165Extended
   const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", protocolAddress);
   const diamondLoupe = await ethers.getContractAt("DiamondLoupeFacet", protocolAddress);
   const erc165Extended = await ethers.getContractAt("IERC165Extended", protocolAddress);
 
-  const facetCut = [],
-    facetCutRemove = [];
+  const facetCutRemove = [];
   const interfacesToRemove = [],
     interfacesToAdd = [];
 
@@ -170,9 +160,14 @@ async function main(env, facetConfig) {
 
     // Get new selectors from compiled contract
     const selectors = getSelectors(newFacet.contract, true);
-    let newSelectors;
+    let newSelectors = selectors.selectors;
 
-    newSelectors = selectors.selectors;
+    // Initialization data for facets with no-arg initializers
+    const noArgInitFunction = "initialize()";
+    const noArgInitInterface = new ethers.utils.Interface([`function ${noArgInitFunction}`]);
+    const noArgCallData = noArgInitInterface.encodeFunctionData("initialize");
+
+    newSelectors = selectors.selectors.remove([newFacet.initialize?.slice(0, 10) || noArgCallData]);
 
     // Determine actions to be made
     let selectorsToReplace = registeredSelectors.filter((value) => newSelectors.includes(value)); // intersection of old and new selectors
@@ -205,7 +200,7 @@ async function main(env, facetConfig) {
         selectorsToAdd = removeSelectors(selectorsToAdd, [selectorName]);
       }
     }
-    //
+
     // Logs
     console.log(`💎 Removing selectors:\n\t${selectorsToRemove.join("\n\t")}`);
     console.log(
@@ -222,10 +217,10 @@ async function main(env, facetConfig) {
 
     const newFacetAddress = newFacet.contract.address;
     if (selectorsToAdd.length > 0) {
-      facetCut.push([newFacetAddress, FacetCutAction.Add, selectorsToAdd]);
+      deployedFacets.addCut = [newFacetAddress, FacetCutAction.Add, selectorsToAdd];
     }
     if (selectorsToReplace.length > 0) {
-      facetCut.push([newFacetAddress, FacetCutAction.Replace, selectorsToReplace]);
+      deployedFacets.addReplace = [newFacetAddress, FacetCutAction.Replace, selectorsToReplace];
     }
     if (selectorsToRemove.length > 0) {
       facetCutRemove.push([ethers.constants.AddressZero, FacetCutAction.Remove, selectorsToRemove]);
@@ -308,41 +303,34 @@ async function main(env, facetConfig) {
     }
   }
 
-  // Diamond cut - add and replace
-  const protocolInitializationFacet = deployedFacets.find((f) => f.name == "ProtocolInitializationFacet").contract;
+  // Get ProtocolInitializationFacet from deployedFacets if added/replaced in this upgrade or get it from contracts if already deployed
+  const protocolInitializationName = "ProtocolInitializationFacet";
+  const protocolInitializationDeployed = deployedFacets.find((f) => f.name == protocolInitializationName);
 
-  const calldataList = [];
-  const addresses = [];
+  let protocolInitializationFacet;
 
-  for (const key in facets.facetsToInit) {
-    const contract = deployedFacets.find((f) => f.name == key).contract;
-
-    addresses.push(contract.address);
-    calldataList.push(contract.interface.encodeFunctionData("initialize", facets.facetsToInit[key]));
+  if (protocolInitializationDeployed) {
+    protocolInitializationFacet = protocolInitializationDeployed.contract;
+  } else {
+    protocolInitializationFacet = await ethers.getContractAt(
+      protocolInitializationName,
+      contracts.find((i) => i.name == protocolInitializationName).address
+    );
   }
 
-  const calldataProtocolInitialization = protocolInitializationFacet.interface.encodeFunctionData("initialize", [
-    // Version
-    ethers.utils.formatBytes32String(version),
-    // Facets to call initializer
-    addresses,
-    // Calldata to facets initializer
-    calldataList,
-    // Is upgrade
-    true,
-  ]);
+  if (!protocolInitializationFacet) {
+    console.error("Could not find ProtocolInitializationFacet");
+    process.exit(1);
+  }
 
-  let transactionResponse;
-
-  // Adding and replacing are done in one diamond cut
-  transactionResponse = await diamondCutFacet
-    .connect(adminSigner)
-    .diamondCut(
-      facetCut,
-      protocolInitializationFacet.address,
-      calldataProtocolInitialization,
-      await getFees(maxPriorityFeePerGas)
-    );
+  let transactionResponse = await cutDiamond(
+    diamondCutFacet.address,
+    maxPriorityFeePerGas,
+    deployedFacets,
+    protocolInitializationFacet,
+    version,
+    true
+  );
 
   await transactionResponse.wait(confirmations);
 
