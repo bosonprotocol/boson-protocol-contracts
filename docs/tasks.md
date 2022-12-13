@@ -204,3 +204,11 @@ Parameters:
 - targetCommit [optional] - commit/tag/branch to compare. If not provided, it will compare to current branch.
 
 Script prints out the list of contracts that were created, deleted or changed between specified commits.
+
+Examples: 
+
+```
+npx hardhat detect-contract-changes v2.1.0 v2.2.0    // get changes between two tags
+npx hardhat detect-contract-changes b4d4277          // get changes between a commit and current branch (HEAD)
+npx hardhat detect-contract-changes v2.1.0 branch-1  // get changes a tag and another branch
+```
