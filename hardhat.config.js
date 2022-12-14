@@ -77,7 +77,7 @@ task("manage-roles", "Grant or revoke access control roles")
     await manageRoles(env);
   });
 
-task("detect-contract-changes", "Detects which contracts have changed between two versions")
+task("detect-changed-contracts", "Detects which contracts have changed between two versions")
   .addPositionalParam("referenceCommit", "Commit/tag/branch to compare to")
   .addOptionalPositionalParam(
     "targetCommit",

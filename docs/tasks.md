@@ -197,7 +197,7 @@ npx hardhat create-dispute-resolver --path "path/to/dispute_resolver.json" --net
 Script that helps you find out, which contracts were changed between two commits. This is extremely useful before doing the upgrade to make sure all facets that were changed actually get upgraded.
 
 Run script with  
-```npx hardhat detect-contract-changes referenceCommit [targetCommit]```
+```npx hardhat detect-changed-contracts referenceCommit [targetCommit]```
 
 Parameters: 
 - referenceCommit [required] - commit/tag/branch to compare to
@@ -208,7 +208,7 @@ Script prints out the list of contracts that were created, deleted or changed be
 Examples: 
 
 ```
-npx hardhat detect-contract-changes v2.1.0 v2.2.0    // get changes between two tags
-npx hardhat detect-contract-changes b4d4277          // get changes between a commit and current branch (HEAD)
-npx hardhat detect-contract-changes v2.1.0 branch-1  // get changes a tag and another branch
+npx hardhat detect-changed-contracts v2.1.0 v2.2.0    // get changes between two tags
+npx hardhat detect-changed-contracts b4d4277          // get changes between a commit and current branch (HEAD)
+npx hardhat detect-changed-contracts v2.1.0 branch-1  // get changes a tag and another branch
 ```
