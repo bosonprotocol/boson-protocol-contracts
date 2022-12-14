@@ -1355,6 +1355,21 @@ describe("IBosonOfferHandler", function () {
           .withArgs(id, offer.sellerId, firstTokenId + 2, lastTokenId + 2, operator.address);
       });
 
+      it("It's possible to reserve a range with maximum allowed length", async function () {
+        // Create an unlimited offer
+        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+        await offerHandler
+          .connect(operator)
+          .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
+        // Set maximum allowed length
+        length = ethers.BigNumber.from(2).pow(128).sub(1);
+        await expect(offerHandler.connect(operator).reserveRange(nextOfferId, length)).to.emit(
+          offerHandler,
+          "RangeReserved"
+        );
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol

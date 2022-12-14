@@ -163,7 +163,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         require(block.timestamp < offerDates.validUntil, OFFER_HAS_EXPIRED);
 
         if (!_isPreminted) {
-            // For premnon-preminted offers, quantityAvailable must be greater than zero, since it gets decremented
+            // For non-preminted offers, quantityAvailable must be greater than zero, since it gets decremented
             require(_offer.quantityAvailable > 0, OFFER_SOLD_OUT);
 
             // Get next exchange id for non-preminted offers

@@ -1042,7 +1042,7 @@ describe("IBosonExchangeHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
         });
 
-        it.skip("should not be able to commit directly if whole offer preminted", async function () {
+        it("should not be able to commit directly if whole offer preminted", async function () {
           // Create an offer with only 1 item
           offer.quantityAvailable = "1";
           await offerHandler
@@ -3339,7 +3339,7 @@ describe("IBosonExchangeHandler", function () {
         ).to.not.emit(exchangeHandler, "VoucherTransferred");
       });
 
-      it.skip("Should not be triggered when first transfer of preminted voucher happens", async function () {
+      it("Should not be triggered when first transfer of preminted voucher happens", async function () {
         // Transfer voucher, expecting event
         await expect(
           bosonVoucherClone.connect(buyer).transferFrom(buyer.address, buyer.address, exchange.id)

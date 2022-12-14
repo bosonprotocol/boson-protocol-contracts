@@ -304,6 +304,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
         // Prevent reservation of too large range, since it affects exchangeId
         require(_length < (1 << 128), INVALID_RANGE_LENGTH);
+
         // Get starting token id
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
         uint256 _startId = pc.nextExchangeId;

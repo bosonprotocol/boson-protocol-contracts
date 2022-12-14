@@ -79,7 +79,7 @@ library FundsLib {
         address exchangeToken = offer.exchangeToken;
         uint256 price = offer.price;
 
-        // if offer is not preminted, validate incoming payment
+        // if offer is non-preminted, validate incoming payment
         if (!_isPreminted) {
             validateIncomingPayment(exchangeToken, price);
             emit FundsEncumbered(_buyerId, exchangeToken, price, sender);

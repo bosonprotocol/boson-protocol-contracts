@@ -66,8 +66,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     // Premint status, used only temporarly in transfers
     PremintStatus private _premintStatus;
 
-    // Tell is preminted voucher has already been _commited
-    mapping(uint256 => bool) private _commited;
+    // Tell is preminted voucher has already been _committed
+    mapping(uint256 => bool) private _committed;
 
     /**
      * @notice Initializes the voucher.
@@ -299,8 +299,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         address seller = owner();
         uint256 burned;
         for (uint256 tokenId = start; tokenId < end; tokenId++) {
-            // Burn only if not already _commited
-            if (!_commited[tokenId]) {
+            // Burn only if not already _committed
+            if (!_committed[tokenId]) {
                 emit Transfer(seller, address(0), tokenId);
                 burned++;
             }
@@ -634,7 +634,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         if (from == owner()) {
             if (_premintStatus.committable) {
                 // Set the preminted token as committed
-                _commited[tokenId] = true;
+                _committed[tokenId] = true;
 
                 // If this is a transfer of premited token, treat it differently
                 address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
@@ -667,8 +667,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @return offerId - the associated offer id if committable
      */
     function getPreMintStatus(uint256 _tokenId) internal view returns (bool committable, uint256 offerId) {
-        // Not committable if _commited already or if token has an owner
-        if (!_commited[_tokenId] && !_exists(_tokenId)) {
+        // Not committable if _committed already or if token has an owner
+        if (!_committed[_tokenId] && !_exists(_tokenId)) {
             // If are reserved ranges, search them
             uint256 length = _rangeOfferIds.length;
             if (length > 0) {
