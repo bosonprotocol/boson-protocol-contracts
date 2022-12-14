@@ -131,6 +131,10 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
     /**
      * @notice Puts the dispute into the Escalated state.
      *
+     * Caller must send (or for ERC20, approve the transfer of) the
+     * buyer escalation deposit percentage of the offer price, which
+     * will be added to the pot for resolution.
+     *
      * Emits a DisputeEscalated event if successful.
      *
      * Reverts if:

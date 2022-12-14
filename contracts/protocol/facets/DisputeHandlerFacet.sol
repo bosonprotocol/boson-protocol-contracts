@@ -37,7 +37,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function raiseDispute(uint256 _exchangeId) external override disputesNotPaused nonReentrant {
+    function raiseDispute(uint256 _exchangeId) external override nonReentrant {
         // Get the exchange, should be in redeemed state
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Redeemed);
 
@@ -298,6 +298,10 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     /**
      * @notice Puts the dispute into the Escalated state.
      *
+     * Caller must send (or for ERC20, approve the transfer of) the
+     * buyer escalation deposit percentage of the offer price, which
+     * will be added to the pot for resolution.
+     *
      * Emits a DisputeEscalated event if successful.
      *
      * Reverts if:
@@ -316,46 +320,8 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function escalateDispute(uint256 _exchangeId) external payable override disputesNotPaused nonReentrant {
-        // Get the exchange, should be in disputed state
-        (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
-
-        // Make sure the caller is buyer associated with the exchange
-        checkBuyer(exchange.buyerId);
-
-        // Fetch the dispute and dispute dates
-        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
-
-        // make sure the dispute not expired already
-        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
-
-        // Make sure the dispute is in the resolving state
-        require(dispute.state == DisputeState.Resolving, INVALID_STATE);
-
-        // Fetch the dispute resolution terms from the storage
-        DisputeResolutionTerms storage disputeResolutionTerms = fetchDisputeResolutionTerms(exchange.offerId);
-
-        // absolute zero offers can be without DR. In that case we prevent escalation
-        require(disputeResolutionTerms.disputeResolverId > 0, ESCALATION_NOT_ALLOWED);
-
-        // fetch offer to get info about dispute resolver id
-        (, Offer storage offer) = fetchOffer(exchange.offerId);
-
-        // make sure buyer sent enough funds to proceed
-        FundsLib.validateIncomingPayment(offer.exchangeToken, disputeResolutionTerms.buyerEscalationDeposit);
-
-        // fetch the escalation period from the storage
-        uint256 escalationResponsePeriod = disputeResolutionTerms.escalationResponsePeriod;
-
-        // store the time of escalation
-        disputeDates.escalated = block.timestamp;
-        disputeDates.timeout = block.timestamp + escalationResponsePeriod;
-
-        // Set the dispute state
-        dispute.state = DisputeState.Escalated;
-
-        // Notify watchers of state change
-        emit DisputeEscalated(_exchangeId, disputeResolutionTerms.disputeResolverId, msgSender());
+    function escalateDispute(uint256 _exchangeId) external payable override nonReentrant {
+        escalateDisputeInternal(_exchangeId);
     }
 
     /**
