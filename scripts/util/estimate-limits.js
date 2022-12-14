@@ -28,7 +28,7 @@ const {
   mockTwin,
   accountId,
 } = require("../../test/util/mock");
-const { setNextBlockTimestamp } = require("../../test/util/utils.js");
+const { setNextBlockTimestamp, calculateContractAddress } = require("../../test/util/utils.js");
 
 // Common vars
 let deployer,
@@ -676,20 +676,42 @@ Setup the environment for "maxPremintedVouchers". The following function depend 
 - preMint
 */
 setupEnvironment["maxPremintedVouchers"] = async function (tokenCount = 10) {
-  // set protocol role
-  await accessController.grantRole(Role.PROTOCOL, deployer.address);
+  // Create a seller
+  // Required constructor params
+  const agentId = "0"; // agent id is optional while creating an offer
+
+  const seller1 = mockSeller(
+    sellerWallet1.address,
+    sellerWallet1.address,
+    sellerWallet1.address,
+    sellerWallet1.address
+  );
+  const voucherInitValues = mockVoucherInitValues();
+  const emptyAuthToken = mockAuthToken();
+
+  await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
+
+  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
+  await accountHandler
+    .connect(dr1)
+    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")], []);
+
+  // create the offer
+  const { offer, offerDates, offerDurations } = await mockOffer();
+  offer.quantityAvailable = ethers.constants.MaxUint256;
+  await offerHandler.connect(sellerWallet1).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
   // reserve range
-  let offerId = 1;
-  let startId = 10;
-  let length = ethers.constants.MaxUint256.sub(startId);
+  let length = ethers.BigNumber.from(2).pow(128).sub(1);
+  await offerHandler.connect(sellerWallet1).reserveRange(offer.id, length);
 
-  await bosonVoucher.connect(deployer).reserveRange(offerId, startId, length);
+  // update bosonVoucher address
+  handlers.IBosonVoucher = bosonVoucher.attach(calculateContractAddress(accountHandler.address, seller1.id));
 
-  await bosonVoucher.connect(deployer).transferOwnership(sellerWallet1.address);
-
+  // make an empty array of length tokenCount
   const amounts = new Array(tokenCount);
 
-  const args_1 = [offerId, amounts];
+  const args_1 = [offer.id, amounts];
   const arrayIndex_1 = 1;
 
   return {
@@ -773,6 +795,7 @@ async function estimateLimit(limit, inputs, safeGasLimitPercent) {
           console.log("Length:", arrayLength, "Gas:", gasEstimate.toNumber());
           gasEstimates.push([gasEstimate.toNumber(), arrayLength]);
         } catch (e) {
+          // console.log(e)
           console.log("Block gas limit already hit");
           break;
         }
