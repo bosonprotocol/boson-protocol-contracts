@@ -1,4 +1,4 @@
-const { getFacetAddCut, cutDiamond } = require("./diamond-utils.js");
+const { getFacetAddCut, cutDiamond, getInitiliazerData, getInitiliazeCalldata } = require("./diamond-utils.js");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const environments = require("../../environments");
@@ -21,11 +21,18 @@ async function deployAndCutFacets(diamond, facetData, maxPriorityFeePerGas) {
   const facetNames = Object.keys(facetData);
   let deployedFacets = await deployProtocolFacets(facetNames, facetData, maxPriorityFeePerGas);
 
+  const facetsToInit = deployedFacets.filter((facet) => facet.initialize) ?? [];
+
+  const initializationFacet = deployedFacets.find((f) => f.name == "ProtocolInitializationFacet").contract;
+
+  const initializeCalldata = getInitiliazeCalldata(facetsToInit, "2.0.0", false, initializationFacet);
+
   deployedFacets = deployedFacets.map((facet) => {
-    // Facet cut to ProtocolInitializationFacet is added on cutDiamodn function
-    if (facet.name != "ProtocolInitializationFacet") {
-      facet.cutAdd = getFacetAddCut(facet.contract, [facet.initialize && facet.initialize.slice(0, 10)] || []);
-    }
+    const cut =
+      facet.name == "ProtocolInitializationFacet"
+        ? getFacetAddCut(facet.contract, [initializeCalldata.slice(0, 10)])
+        : getFacetAddCut(facet.contract, [facet.initialize && facet.initialize.slice(0, 10)] || []);
+    facet.cut.push(cut);
     return facet;
   });
 
@@ -33,9 +40,8 @@ async function deployAndCutFacets(diamond, facetData, maxPriorityFeePerGas) {
     diamond,
     maxPriorityFeePerGas,
     deployedFacets,
-    deployedFacets.find((f) => f.name == "ProtocolInitializationFacet").contract,
-    "2.0.0",
-    false
+    initializationFacet.address,
+    initializeCalldata
   );
 
   return { deployedFacets, cutTransaction };
@@ -66,6 +72,7 @@ async function deployProtocolFacets(facetNames, facetsToInit, maxPriorityFeePerG
     const deployedFacet = {
       name: facetName,
       contract: facetContract,
+      cut: [],
     };
 
     if (facetsToInit[facetName] && facetName !== "ProtocolInitializationFacet") {

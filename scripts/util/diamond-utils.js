@@ -136,43 +136,27 @@ async function getStateModifyingFunctionsHashes(facetNames, omitFunctions = []) 
   return smf.map((smf) => keccak256(toUtf8Bytes(smf)));
 }
 
-async function cutDiamond(
-  diamond,
-  maxPriorityFeePerGas,
-  deployedFacets,
-  protocolInitializationFacet,
-  version,
-  isUpgrade = false
-) {
+// Get ProtocolInitializationFacet initialize calldata to be send on diamondCut
+function getInitiliazeCalldata(facetsToInitialize, version, isUpgrade, initializationFacet) {
   version = ethers.utils.formatBytes32String(version);
-  const facetsToInitialize = deployedFacets.filter((facet) => facet.initialize) ?? [];
-  const args = [
-    version,
-    facetsToInitialize.map((facet) => facet.contract.address),
-    facetsToInitialize.map((facet) => facet.initialize),
-    isUpgrade,
-  ];
-  const calldataProtocolInitialization = protocolInitializationFacet.interface.encodeFunctionData("initialize", args);
+  const addresses = facetsToInitialize.map((f) => f.contract.address);
+  const calldata = facetsToInitialize.map((f) => f.initialize);
 
-  // Add ProtocolInitializationFacet cut
-  deployedFacets = deployedFacets.map((f) => {
-    if (f.name == "ProtocolInitializationFacet") {
-      f.cut = getFacetAddCut(f.contract, [calldataProtocolInitialization.slice(0, 10)]);
-    }
-    return f;
-  });
+  return initializationFacet.interface.encodeFunctionData("initialize", [version, addresses, calldata, isUpgrade]);
+}
 
+async function cutDiamond(diamond, maxPriorityFeePerGas, deployedFacets, initializationAddress, initializeCalldata) {
   const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", diamond);
 
-  console.log(args);
-  console.log(calldataProtocolInitialization);
+  const cut = deployedFacets.reduce((acc, val) => {
+    val.cut.forEach((c) => acc.push(c));
+    return acc;
+  }, []);
+
   const transactionResponse = await diamondCutFacet.diamondCut(
-    [
-      ...deployedFacets.filter((f) => f.cutAdd).map((f) => f.cutAdd),
-      ...deployedFacets.filter((f) => f.cutReplace).map((f) => f.cutReplace),
-    ],
-    protocolInitializationFacet.address,
-    calldataProtocolInitialization,
+    cut,
+    initializationAddress,
+    initializeCalldata,
     await getFees(maxPriorityFeePerGas)
   );
 
@@ -194,3 +178,4 @@ exports.getInterfaceId = getInterfaceId;
 exports.getStateModifyingFunctions = getStateModifyingFunctions;
 exports.getStateModifyingFunctionsHashes = getStateModifyingFunctionsHashes;
 exports.cutDiamond = cutDiamond;
+exports.getInitiliazeCalldata = getInitiliazeCalldata;
