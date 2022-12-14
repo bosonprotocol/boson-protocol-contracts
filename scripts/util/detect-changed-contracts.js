@@ -1,5 +1,6 @@
 const hre = require("hardhat");
 const shell = require("shelljs");
+const { getInterfaceIds, interfaceImplementers } = require("../config/supported-interfaces.js");
 
 const prefix = "contracts/";
 
@@ -44,6 +45,7 @@ async function detectChangedContract(referenceCommit, targetCommit) {
 
   // Get reference bytecodes
   const referenceBytecodes = await getBytecodes();
+  const referenceInterfaceIds = await getInterfaceIds();
 
   // Checkout new version
   targetCommit = targetCommit || "HEAD";
@@ -56,6 +58,7 @@ async function detectChangedContract(referenceCommit, targetCommit) {
 
   // get target bytecodes
   const targetBytecodes = await getBytecodes();
+  const targetInterfaceIds = await getInterfaceIds();
 
   // Compare bytecodes
   const referenceContractList = Object.keys(referenceBytecodes);
@@ -70,7 +73,9 @@ async function detectChangedContract(referenceCommit, targetCommit) {
   let changedContracts = [];
   for (const contract of overlappingContracts) {
     if (referenceBytecodes[contract] != targetBytecodes[contract]) {
-      changedContracts.push(contract);
+      const interfaceImplementer = interfaceImplementers[contract];
+      const interfaceChange = referenceInterfaceIds[interfaceImplementer] != targetInterfaceIds[interfaceImplementer];
+      changedContracts.push({ name: contract, interfaceChange });
     }
   }
 
