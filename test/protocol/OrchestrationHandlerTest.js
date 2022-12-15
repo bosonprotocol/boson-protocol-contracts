@@ -396,7 +396,6 @@ describe("IBosonOrchestrationHandler", function () {
         // Commit to offer and put exchange all the way to dispute
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
         await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
-        await orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId);
 
         return mockToken;
       }
@@ -469,8 +468,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(exchangeId, disputeResolverId, buyer.address);
       });
 
-      // TODO: working my way from here down...
-      it.skip("should update state", async function () {
+      it("should update state", async function () {
         // Protocol balance before
         const escrowBalanceBefore = await ethers.provider.getBalance(protocolDiamond.address);
 
@@ -482,7 +480,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Get the block timestamp of the confirmed tx and set escalatedDate
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
-        escalatedDate = block.timestamp.toString();
+        disputedDate = escalatedDate = block.timestamp.toString();
         timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
 
         dispute = new Dispute(exchangeId, DisputeState.Escalated, "0");
@@ -499,6 +497,7 @@ describe("IBosonOrchestrationHandler", function () {
         for (const [key, value] of Object.entries(dispute)) {
           expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
         }
+
         for (const [key, value] of Object.entries(disputeDates)) {
           expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
         }
@@ -517,14 +516,14 @@ describe("IBosonOrchestrationHandler", function () {
         );
       });
 
-      it.skip("should be possible to pay escalation deposit in ERC20 token", async function () {
+      it("should be possible to pay escalation deposit in ERC20 token", async function () {
         const mockToken = await createDisputeExchangeWithToken();
 
         // Protocol balance before
         const escrowBalanceBefore = await mockToken.balanceOf(protocolDiamond.address);
 
         // Escalate the dispute, testing for the event
-        await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId))
+        await expect(orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId))
           .to.emit(disputeHandler, "DisputeEscalated")
           .withArgs(exchangeId, disputeResolverId, buyer.address);
 
@@ -536,7 +535,7 @@ describe("IBosonOrchestrationHandler", function () {
         );
       });
 
-      context.skip("💔 Revert Reasons", async function () {
+      context("💔 Revert Reasons", async function () {
         /*
          * Reverts if:
          * - The disputes region of protocol is paused
@@ -556,16 +555,20 @@ describe("IBosonOrchestrationHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
           // Attempt to raise a dispute, expecting revert
-          await expect(orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId)).to.revertedWith(
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(
+            orchestrationHandler
+              .connect(buyer)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
         it("Caller is not the buyer for the given exchange id", async function () {
           // Attempt to retract the dispute, expecting revert
-          await expect(disputeHandler.connect(rando).escalateDispute(exchangeId), {
-            value: buyerEscalationDepositNative,
-          }).to.revertedWith(RevertReasons.NOT_VOUCHER_HOLDER);
+          await expect(
+            orchestrationHandler
+              .connect(rando)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.revertedWith(RevertReasons.NOT_VOUCHER_HOLDER);
         });
 
         it("Exchange id does not exist", async function () {
@@ -573,9 +576,11 @@ describe("IBosonOrchestrationHandler", function () {
           const exchangeId = "666";
 
           // Attempt to raise a dispute, expecting revert
-          await expect(orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId)).to.revertedWith(
-            RevertReasons.NO_SUCH_EXCHANGE
-          );
+          await expect(
+            orchestrationHandler
+              .connect(buyer)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
         });
 
         it("exchange is not in a redeemed state - completed", async function () {
@@ -596,9 +601,11 @@ describe("IBosonOrchestrationHandler", function () {
           await exchangeHandler.connect(operator).completeExchange(exchangeId);
 
           // Attempt to raise a dispute, expecting revert
-          await expect(orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId)).to.revertedWith(
-            RevertReasons.INVALID_STATE
-          );
+          await expect(
+            orchestrationHandler
+              .connect(buyer)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.revertedWith(RevertReasons.INVALID_STATE);
         });
 
         it("exchange is not in a redeemed state - disputed already", async function () {
@@ -606,9 +613,11 @@ describe("IBosonOrchestrationHandler", function () {
           await orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId);
 
           // Attempt to raise a dispute, expecting revert
-          await expect(orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId)).to.revertedWith(
-            RevertReasons.INVALID_STATE
-          );
+          await expect(
+            orchestrationHandler
+              .connect(buyer)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.revertedWith(RevertReasons.INVALID_STATE);
         });
 
         it("The dispute period has already elapsed", async function () {
@@ -620,127 +629,11 @@ describe("IBosonOrchestrationHandler", function () {
           await setNextBlockTimestamp(voucherRedeemedDate.add(disputePeriod).add(1).toNumber());
 
           // Attempt to raise a dispute, expecting revert
-          await expect(orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId)).to.revertedWith(
-            RevertReasons.DISPUTE_PERIOD_HAS_ELAPSED
-          );
-        });
-
-        it("Dispute resolver is not specified (absolute zero offer)", async function () {
-          // Create and absolute zero offer without DR
-          // Prepare an absolute zero offer
-          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = "0";
-          offer.id++;
-          disputeResolverId = "0";
-
-          // Create a new offer
-          await offerHandler
-            .connect(operator)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-
-          // Commit to offer and put exchange all the way to dispute
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
-          await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
-          await orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId);
-
-          // Attempt to escalate the dispute, expecting revert
-          await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
-            RevertReasons.ESCALATION_NOT_ALLOWED
-          );
-        });
-
-        it.skip("Insufficient native currency sent", async function () {
-          // Attempt to escalate the dispute, expecting revert
           await expect(
-            disputeHandler.connect(buyer).escalateDispute(exchangeId, {
-              value: ethers.BigNumber.from(buyerEscalationDepositNative).sub("1").toString(),
-            })
-          ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
-        });
-
-        it("Native currency sent together with ERC20 token transfer", async function () {
-          await createDisputeExchangeWithToken();
-
-          // Attempt to escalate the dispute, expecting revert
-          await expect(
-            disputeHandler.connect(buyer).escalateDispute(exchangeId, {
-              value: ethers.BigNumber.from("1").toString(),
-            })
-          ).to.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
-        });
-
-        it.skip("Token address is not a contract", async function () {
-          // prepare a disputed exchange
-          const mockToken = await createDisputeExchangeWithToken();
-
-          // self destruct a contract
-          await mockToken.destruct();
-
-          // Attempt to commit to an offer, expecting revert
-          await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
-            RevertReasons.EOA_FUNCTION_CALL
-          );
-        });
-
-        it.skip("Token contract reverts for another reason", async function () {
-          // prepare a disputed exchange
-          const mockToken = await createDisputeExchangeWithToken();
-
-          // get rid of some tokens, so buyer has insufficient funds
-          await mockToken.connect(buyer).transfer(other1.address, buyerEscalationDepositToken);
-
-          // Attempt to commit to an offer, expecting revert
-          await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
-            RevertReasons.ERC20_EXCEEDS_BALANCE
-          );
-
-          // not approved
-          await mockToken
-            .connect(buyer)
-            .approve(protocolDiamond.address, ethers.BigNumber.from(buyerEscalationDepositToken).sub("1").toString());
-
-          // Attempt to commit to an offer, expecting revert
-          await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
-            RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE
-          );
-        });
-
-        it.skip("Received ERC20 token amount differs from the expected value", async function () {
-          // Deploy ERC20 with fees
-          const [Foreign20WithFee] = await deployMockTokens(["Foreign20WithFee"]);
-
-          // add to DR fees
-          DRFeeToken = ethers.utils.parseUnits("2", "ether").toString();
-          await accountHandler
-            .connect(adminDR)
-            .addFeesToDisputeResolver(disputeResolverId, [
-              new DisputeResolverFee(Foreign20WithFee.address, "Foreign20WithFee", "0"),
-            ]);
-
-          // Create an offer with ERC20 with fees
-          // Prepare an absolute zero offer
-          offer.exchangeToken = Foreign20WithFee.address;
-          offer.sellerDeposit = offer.price = offer.buyerCancelPenalty = "0";
-          offer.id++;
-
-          // Create a new offer
-          await offerHandler
-            .connect(operator)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-
-          // mint tokens and approve
-          buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
-          await Foreign20WithFee.mint(buyer.address, buyerEscalationDepositToken);
-          await Foreign20WithFee.connect(buyer).approve(protocolDiamond.address, buyerEscalationDepositToken);
-
-          // Commit to offer and put exchange all the way to dispute
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
-          await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
-          await orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId);
-
-          // Attempt to escalate the dispute, expecting revert
-          await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
-            RevertReasons.INSUFFICIENT_VALUE_RECEIVED
-          );
+            orchestrationHandler
+              .connect(buyer)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.revertedWith(RevertReasons.DISPUTE_PERIOD_HAS_ELAPSED);
         });
       });
     });
