@@ -1462,11 +1462,17 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("Range length is greater than maximum allowed range length", async function () {
+          // Create an unlimited offer
+          offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
           // Set length to more than maximum allowed range length
           length = ethers.BigNumber.from(2).pow(128);
 
           // Attempt to reserve a range, expecting revert
-          await expect(offerHandler.connect(operator).reserveRange(id, length)).to.revertedWith(
+          await expect(offerHandler.connect(operator).reserveRange(nextOfferId, length)).to.revertedWith(
             RevertReasons.INVALID_RANGE_LENGTH
           );
         });
