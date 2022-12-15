@@ -17,7 +17,14 @@ const {
   getFacetAddCut,
   getFacetReplaceCut,
 } = require("./util/diamond-utils.js");
-const { deploymentComplete, getFees, readContracts, writeContracts, checkRole } = require("./util/utils.js");
+const {
+  deploymentComplete,
+  getFees,
+  readContracts,
+  writeContracts,
+  checkRole,
+  addressNotFound,
+} = require("./util/utils.js");
 const { getInterfaceIds, interfaceImplementers } = require("./config/supported-interfaces.js");
 const Role = require("./domain/Role");
 const packageFile = require("../package.json");
@@ -168,6 +175,7 @@ async function main(env, facetConfig) {
       const noArgCallData = noArgInitInterface.encodeFunctionData("initialize");
 
       try {
+        // slice to get function selector (first 4 bytes)
         newSelectors = selectors.selectors.remove([newFacet.initialize?.slice(0, 10) || noArgCallData]);
       } catch {
         // @TODO handle when facet has no initialize function or initialize has parameters
@@ -305,8 +313,10 @@ async function main(env, facetConfig) {
       switch (protocolInitializationAction) {
         case FacetCutAction.Add:
           f.cutAdd = getFacetAddCut(f.contract, [initializeCalldata.slice(0, 10)]);
+          break;
         case FacetCutAction.Replace:
           f.cutReplace = getFacetReplaceCut(f.contract, [initializeCalldata.slice(0, 10)]);
+          break;
       }
     }
     return f;
@@ -378,11 +388,6 @@ async function main(env, facetConfig) {
   console.log(`\n📋 Diamond upgraded.`);
   console.log("\n");
 }
-
-const addressNotFound = (address) => {
-  console.log(`${address} address not found for network ${network}`);
-  process.exit(1);
-};
 
 async function getUserResponse(question, validResponses) {
   console.error(question);

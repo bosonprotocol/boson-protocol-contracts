@@ -1,4 +1,3 @@
-const ethers = require("ethers");
 const { addressIsValid, bytes4ArrayIsValid } = require("../util/validations.js");
 
 /**

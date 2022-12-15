@@ -15,5 +15,5 @@ interface IBosonProtocolInitializationHandler is IBosonProtocolInitializationEve
      * @notice Gets the current protocol version.
      *
      */
-    function getVersion() external view returns (bytes32 oersion);
+    function getVersion() external view returns (string memory version);
 }

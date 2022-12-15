@@ -1,4 +1,4 @@
-const { getFacetAddCut, cutDiamond, getInitiliazerData, getInitiliazeCalldata } = require("./diamond-utils.js");
+const { getFacetAddCut, cutDiamond, getInitiliazeCalldata } = require("./diamond-utils.js");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const environments = require("../../environments");
@@ -14,18 +14,20 @@ const { getFees } = require("./utils");
  * @param facetData - object with facet names and corresponding initialization arguments {facetName1: initializerArguments1, facetName2: initializerArguments2, ...}
  *                    if facet doesn't expect any argument, pass empty array
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
- * @param doCut - boolean that tells if cut transaction should be done or not (default: true)
+ * * @param protocolInitializationFacet - ProtocolInitializationFacet contract instance if it was already deployed
+ * @param version - version of the protocol
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployAndCutFacets(diamond, facetData, maxPriorityFeePerGas) {
+async function deployAndCutFacets(diamond, facetData, maxPriorityFeePerGas, version, initializationFacet) {
   const facetNames = Object.keys(facetData);
   let deployedFacets = await deployProtocolFacets(facetNames, facetData, maxPriorityFeePerGas);
 
   const facetsToInit = deployedFacets.filter((facet) => facet.initialize) ?? [];
 
-  const initializationFacet = deployedFacets.find((f) => f.name == "ProtocolInitializationFacet").contract;
+  initializationFacet =
+    initializationFacet || deployedFacets.find((f) => f.name == "ProtocolInitializationFacet").contract;
 
-  const initializeCalldata = getInitiliazeCalldata(facetsToInit, "2.0.0", false, initializationFacet);
+  const initializeCalldata = getInitiliazeCalldata(facetsToInit, version ?? "2.0.0", false, initializationFacet);
 
   deployedFacets = deployedFacets.map((facet) => {
     const cut =
@@ -49,15 +51,13 @@ async function deployAndCutFacets(diamond, facetData, maxPriorityFeePerGas) {
 
 /**
  * Cut the Protocol Handler facets
- * @TODO
+ *
  * Reused between deployment script and unit tests for consistency.
  *
- * @param facetData - object with facet names and corresponding initialization arguments {facetName1: initializerArguments1, facetName2: initializerArguments2, ...}
- *                    if facet doesn't expect any argument, pass empty array
+ * @param facetNames - array of facet names to deploy
+ * @param facetsToInit - object with facet names and corresponding initialization arguments {facetName1: initializerArguments1, facetName2: initializerArguments2, ...}
+ *                       provide only for facets that should be initialized
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
- * @param doCut - boolean that tells if cut transaction should be done or not (default: true)
- * @param protocolInitializationFacet - ProtocolInitializationFacet contract instance if it was already deployed
- * @param version - version of the protocol
  * @returns {Promise<(*|*|*)[]>}
  */
 async function deployProtocolFacets(facetNames, facetsToInit, maxPriorityFeePerGas) {
@@ -87,7 +87,7 @@ async function deployProtocolFacets(facetNames, facetsToInit, maxPriorityFeePerG
     deployedFacets.push(deployedFacet);
   }
 
-  // Return an array of objects with facet name and contract properties
+  // Return an array of objects with facet name, contract properties and initialize calldata
   return deployedFacets;
 }
 

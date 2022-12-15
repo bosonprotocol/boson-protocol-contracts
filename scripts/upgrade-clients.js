@@ -6,7 +6,14 @@ const tipMultiplier = ethers.BigNumber.from(environments.tipMultiplier);
 const tipSuggestion = "1500000000"; // ethers.js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = ethers.BigNumber.from(tipSuggestion).mul(tipMultiplier);
 const { deployProtocolClientImpls } = require("./util/deploy-protocol-client-impls.js");
-const { deploymentComplete, getFees, readContracts, writeContracts, checkRole } = require("./util/utils.js");
+const {
+  deploymentComplete,
+  getFees,
+  readContracts,
+  writeContracts,
+  checkRole,
+  addressNotFound,
+} = require("./util/utils.js");
 const Role = require("./domain/Role");
 
 /**
@@ -85,10 +92,5 @@ async function main(env) {
   console.log(`\n📋 Client upgraded.`);
   console.log("\n");
 }
-
-const addressNotFound = (address) => {
-  console.log(`${address} address not found for network ${network}`);
-  process.exit(1);
-};
 
 exports.upgradeClients = main;

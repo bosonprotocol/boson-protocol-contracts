@@ -1,5 +1,5 @@
 const { FacetCutAction } = require("../util/diamond-utils.js");
-const { bigNumberIsValid, booleanIsValid, addressIsValid, enumIsValid } = require("../util/validations.js");
+const { addressIsValid, enumIsValid, bytes4ArrayIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: FacetCut

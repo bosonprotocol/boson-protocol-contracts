@@ -87,6 +87,10 @@ async function checkRole(contracts, role, address) {
     process.exit(1);
   }
 }
+const addressNotFound = (address) => {
+  console.log(`${address} address not found for network ${hre.network.name}`);
+  process.exit(1);
+};
 
 exports.getAddressesFilePath = getAddressesFilePath;
 exports.writeContracts = writeContracts;
@@ -97,3 +101,4 @@ exports.getBaseFee = getBaseFee;
 exports.getMaxFeePerGas = getMaxFeePerGas;
 exports.getFees = getFees;
 exports.checkRole = checkRole;
+exports.addressNotFound = addressNotFound;

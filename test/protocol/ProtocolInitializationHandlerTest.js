@@ -190,7 +190,8 @@ describe("ProtocolInitializationHandler", async function () {
     it("Should return the correct version", async function () {
       const version = await protocolInitializationFacet.connect(rando).getVersion();
 
-      expect(ethers.utils.parseBytes32String(version)).to.equal("2.2.0");
+      // slice because of unicode escape notation
+      expect(version.slice(0, 5)).to.equal("2.2.0");
     });
 
     it("Should call facet initializer internally when _addresses and _calldata are supplied", async function () {

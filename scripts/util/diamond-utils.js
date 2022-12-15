@@ -136,7 +136,7 @@ async function getStateModifyingFunctionsHashes(facetNames, omitFunctions = []) 
   return smf.map((smf) => keccak256(toUtf8Bytes(smf)));
 }
 
-// Get ProtocolInitializationFacet initialize calldata to be send on diamondCut
+// Get ProtocolInitializationFacet initialize calldata to be called on diamondCut
 function getInitiliazeCalldata(facetsToInitialize, version, isUpgrade, initializationFacet) {
   version = ethers.utils.formatBytes32String(version);
   const addresses = facetsToInitialize.map((f) => f.contract.address);
@@ -145,6 +145,7 @@ function getInitiliazeCalldata(facetsToInitialize, version, isUpgrade, initializ
   return initializationFacet.interface.encodeFunctionData("initialize", [version, addresses, calldata, isUpgrade]);
 }
 
+// Cut diamond with facets to be added, replaced and removed
 async function cutDiamond(diamond, maxPriorityFeePerGas, deployedFacets, initializationAddress, initializeCalldata) {
   const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", diamond);
 

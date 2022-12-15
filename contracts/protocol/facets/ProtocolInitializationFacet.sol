@@ -29,8 +29,8 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
      * This function is callable only once for each version
      *
      * @param _version - version of the protocol
-     * @param _addresses - list of adresses to call calldata with initializers
-     * @param _calldata - list of calldata to send to corresponding addresses
+     * @param _addresses - array of facet addresses to call initialize methods
+     * @param _calldata -  array of facets initialize methods encoded as calldata
      *                    _calldata order must match _addresses order
      * @param _isUpgrade - flag to indicate whether this is first deployment or upgrade
      *
@@ -44,6 +44,7 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
         require(_version != bytes32(0), VERSION_MUST_BE_SET);
         require(_addresses.length == _calldata.length, ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH);
 
+        // Delegate call to initialize methods of facets declared in _addresses
         for (uint256 i = 0; i < _addresses.length; i++) {
             (bool success, bytes memory error) = _addresses[i].delegatecall(_calldata[i]);
 
@@ -53,6 +54,7 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
                     // bubble up the error
                     revert(string(error));
                 } else {
+                    // Reverts with default message
                     revert(PROTOCOL_INITIALIZATION_FAILED);
                 }
             }
@@ -82,8 +84,8 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
      * @notice Gets the current protocol version.
      *
      */
-    function getVersion() external view override returns (bytes32 version) {
+    function getVersion() external view override returns (string memory version) {
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
-        version = status.version;
+        version = string(abi.encodePacked(status.version));
     }
 }
