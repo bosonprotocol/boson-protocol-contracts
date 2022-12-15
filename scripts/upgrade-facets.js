@@ -234,6 +234,7 @@ async function main(env, facetConfig) {
         });
       }
 
+      const erc165 = await ethers.getContractAt("IERC165", protocolAddress);
       const support = await erc165.supportsInterface(newFacetInterfaceId);
       if (!support) {
         interfacesToAdd.push(newFacetInterfaceId);
@@ -323,9 +324,6 @@ async function main(env, facetConfig) {
 
   interfacesToAdd.length && console.log(`📋 Added interfaces:\n\t${interfacesToAdd.join("\n\t")}`);
   interfacesToRemove.length && console.log(`💀 Removed interfaces:\n\t${interfacesToRemove.join("\n\t")}`);
-
-  // If something was added or removed, support interface for old interface is not valid anymore
-  const erc165 = await ethers.getContractAt("IERC165", protocolAddress);
 
   console.log(divider);
 

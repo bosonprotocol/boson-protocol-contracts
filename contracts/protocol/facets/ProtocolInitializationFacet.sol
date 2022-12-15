@@ -33,6 +33,8 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
      * @param _calldata -  array of facets initialize methods encoded as calldata
      *                    _calldata order must match _addresses order
      * @param _isUpgrade - flag to indicate whether this is first deployment or upgrade
+     * @param interfacesToRemove - array of interfaces to remove from the diamond
+     * @param interfacesToAdd - array of interfaces to add to the diamond
      */
     function initialize(
         bytes32 _version,

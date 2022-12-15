@@ -13,7 +13,7 @@ const Group = require("../domain/Group");
 const EvaluationMethod = require("../domain/EvaluationMethod");
 const { DisputeResolverFee } = require("../domain/DisputeResolverFee");
 const { deployProtocolDiamond } = require("../util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../util/deploy-protocol-handler-facets.js");
+const { deployAndCutFacets } = require("../util/deploy-protocol-handler-facets.js");
 const { deployProtocolClients } = require("../util/deploy-protocol-clients");
 const { deployMockTokens } = require("../util/deploy-mock-tokens");
 const { oneWeek, oneMonth } = require("../../test/util/constants");
@@ -867,7 +867,7 @@ async function setupCommonEnvironment() {
   const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 
   // Cut the protocol handler facets into the Diamond
-  await deployProtocolHandlerFacets(protocolDiamond, facetsToDeploy, gasLimit);
+  await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, gasLimit);
   // Cast Diamond to handlers
   accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
   bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);

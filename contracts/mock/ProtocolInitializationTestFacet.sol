@@ -33,13 +33,17 @@ contract ProtocolInitializationTestFacet is IBosonProtocolInitializationHandler,
      * @param _calldata -  array of facets initialize methods encoded as calldata
      *                    _calldata order must match _addresses order
      * @param _isUpgrade - flag to indicate whether this is first deployment or upgrade
+     * @param interfacesToRemove - array of interfaces to remove from the diamond
+     * @param interfacesToAdd - array of interfaces to add to the diamond
      *
      */
     function initialize(
         bytes32 _version,
         address[] calldata _addresses,
         bytes[] calldata _calldata,
-        bool _isUpgrade
+        bool _isUpgrade,
+        bytes4[] calldata interfacesToRemove,
+        bytes4[] calldata interfacesToAdd
     ) external onlyUnInitializedVersion(_version) {
         require(_version != bytes32(0), VERSION_MUST_BE_SET);
         require(_addresses.length == _calldata.length, ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH);
@@ -59,16 +63,16 @@ contract ProtocolInitializationTestFacet is IBosonProtocolInitializationHandler,
             }
         }
 
-        ProtocolLib.ProtocolStatus storage status = protocolStatus();
-
         if (_isUpgrade) {
             if (_version == bytes32("2.2.0")) {
                 initV2_2_0();
             } else if (keccak256(abi.encodePacked(_version)) == keccak256(abi.encodePacked(bytes32(bytes("2.2.1"))))) {}
         }
 
-        DiamondLib.addSupportedInterface(type(IBosonProtocolInitializationHandler).interfaceId);
+        removeInterfaces(interfacesToRemove);
+        addInterfaces(interfacesToAdd);
 
+        ProtocolLib.ProtocolStatus storage status = protocolStatus();
         status.version = _version;
         emit ProtocolInitialized(_version);
     }
@@ -86,5 +90,17 @@ contract ProtocolInitializationTestFacet is IBosonProtocolInitializationHandler,
     function getVersion() external view override returns (string memory version) {
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
         version = string(abi.encodePacked(status.version));
+    }
+
+    function addInterfaces(bytes4[] calldata _interfaces) internal {
+        for (uint256 i = 0; i < _interfaces.length; i++) {
+            DiamondLib.addSupportedInterface(_interfaces[i]);
+        }
+    }
+
+    function removeInterfaces(bytes4[] calldata _interfaces) internal {
+        for (uint256 i = 0; i < _interfaces.length; i++) {
+            DiamondLib.removeSupportedInterface(_interfaces[i]);
+        }
     }
 }
