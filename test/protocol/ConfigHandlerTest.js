@@ -9,7 +9,7 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const { getFacetsWithArgs } = require("../util/utils");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 
 /**
  *  Test the Boson Config Handler interface
@@ -125,11 +125,7 @@ describe("IBosonConfigHandler", function () {
         const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 
         // Cut the protocol handler facets into the Diamond
-        const { cutTransaction } = await deployProtocolHandlerFacets(
-          protocolDiamond,
-          facetsToDeploy,
-          maxPriorityFeePerGas
-        );
+        const { cutTransaction } = await deployAndCutFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
 
         await expect(cutTransaction)
           .to.emit(configHandler, "TokenAddressChanged")
@@ -254,7 +250,7 @@ describe("IBosonConfigHandler", function () {
       const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 
       // Cut the protocol handler facets into the Diamond
-      await deployProtocolHandlerFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
+      await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
     });
 
     // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)

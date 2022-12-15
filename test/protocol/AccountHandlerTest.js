@@ -6,7 +6,6 @@ const Role = require("../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const {
@@ -19,6 +18,7 @@ const {
   accountId,
 } = require("../util/mock");
 const { getFacetsWithArgs } = require("../util/utils");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 
 /**
  *  Test the Boson Account Handler interface
@@ -121,7 +121,7 @@ describe("IBosonAccountHandler", function () {
     const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
+    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);

@@ -4,7 +4,7 @@ const ethers = hre.ethers;
 const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { getInterfaceIds } = require("../../../scripts/config/supported-interfaces.js");
 const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../../scripts/util/deploy-protocol-handler-facets.js");
+const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets.js");
 const Role = require("../../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const VoucherInitValues = require("../../../scripts/domain/VoucherInitValues");
@@ -131,7 +131,7 @@ describe("IBosonVoucher", function () {
     const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
+    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
   });
 
   // Interface support

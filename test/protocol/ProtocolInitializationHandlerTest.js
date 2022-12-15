@@ -4,7 +4,7 @@ const ethers = hre.ethers;
 
 const Role = require("../../scripts/domain/Role");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces");
 const { maxPriorityFeePerGas } = require("../util/constants");
 const { getFees } = require("../../scripts/util/utils");
@@ -53,8 +53,8 @@ describe("ProtocolInitializationHandler", async function () {
   describe("Deploy tests", async function () {
     context("📋 Initializer", async function () {
       it("Should initialize version 2.2.0 and emit ProtocolInitialized", async function () {
-        const { cutTransaction } = await deployProtocolHandlerFacets(
-          protocolDiamond,
+        const { cutTransaction } = await deployAndCutFacets(
+          protocolDiamond.address,
           { ProtocolInitializationFacet: [] },
           maxPriorityFeePerGas
         );
@@ -163,10 +163,13 @@ describe("ProtocolInitializationHandler", async function () {
   describe("After deploy tests", async function () {
     let deployedProtocolInitializationFacet;
     beforeEach(async function () {
-      const { deployedFacets } = await deployProtocolHandlerFacets(
-        protocolDiamond,
+      version = "2.2.0";
+
+      const { deployedFacets } = await deployAndCutFacets(
+        protocolDiamond.address,
         { ProtocolInitializationFacet: [version, [], [], true] },
-        maxPriorityFeePerGas
+        maxPriorityFeePerGas,
+        version
       );
       deployedProtocolInitializationFacet = deployedFacets[0];
     });

@@ -25,7 +25,7 @@ const {
   mockCondition,
   accountId,
 } = require("../util/mock");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 
 /**
  *  Test the Boson Group Handler interface
@@ -147,7 +147,7 @@ describe("IBosonGroupHandler", function () {
     const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
+    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);

@@ -8,7 +8,7 @@ const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
@@ -191,7 +191,7 @@ describe("IBosonFundsHandler", function () {
     const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 
     // Cut the protocol handler facets into the Diamond
-    const { deployedFacets } = await deployProtocolHandlerFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
+    const { deployedFacets } = await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
     protocolInitializationFacet = deployedFacets.find((f) => f.name === "ProtocolInitializationFacet").contract;
 
     // Cast Diamond to IERC165
@@ -867,15 +867,15 @@ describe("IBosonFundsHandler", function () {
           });
 
           it("Withdraw when dispute is retracted, it emits a FundsWithdrawn event", async function () {
+            // ProtocolInitializationFacet has to be passed to deploy function works
             const facetsToDeploy = await getFacetsWithArgs(["DisputeHandlerFacet"]);
 
-            await deployProtocolHandlerFacets(
-              protocolDiamond,
+            await deployAndCutFacets(
+              protocolDiamond.address,
               facetsToDeploy,
               maxPriorityFeePerGas,
-              true,
-              protocolInitializationFacet,
-              "2.2.0"
+              "2.1.0",
+              protocolInitializationFacet
             );
 
             // Cast Diamond to IBosonDisputeHandler
@@ -2559,15 +2559,15 @@ describe("IBosonFundsHandler", function () {
 
       context("Final state DISPUTED", async function () {
         beforeEach(async function () {
+          // ProtocolInitializationFacet has to be passed to deploy function works
           const facetsToDeploy = await getFacetsWithArgs(["DisputeHandlerFacet"]);
 
-          await deployProtocolHandlerFacets(
-            protocolDiamond,
+          await deployAndCutFacets(
+            protocolDiamond.address,
             facetsToDeploy,
             maxPriorityFeePerGas,
-            true,
-            protocolInitializationFacet,
-            "2.3.0"
+            "2.1.0",
+            protocolInitializationFacet
           );
 
           // Cast Diamond to IBosonDisputeHandler

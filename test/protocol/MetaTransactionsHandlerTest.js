@@ -14,7 +14,7 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { prepareDataSignatureParameters, setNextBlockTimestamp, getFacetsWithArgs } = require("../util/utils.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
@@ -205,7 +205,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     facetNames = facetNames.filter((name) => name !== "ConfigHandlerFacet");
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
+    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
 
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
 
