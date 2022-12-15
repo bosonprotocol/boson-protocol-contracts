@@ -61,7 +61,7 @@ async function main(env) {
   const adminSigner = await ethers.getSigner(adminAddress);
 
   // Get addresses of currently deployed Beacon contract
-  const beaconAddress = contracts.find((c) => c.name === "BosonVoucher Beacon").address;
+  const beaconAddress = contracts.find((c) => c.name === "BosonVoucher Beacon")?.address;
   if (!beaconAddress) {
     return addressNotFound("BosonVoucher Beacon");
   }

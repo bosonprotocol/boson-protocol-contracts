@@ -137,16 +137,37 @@ async function getStateModifyingFunctionsHashes(facetNames, omitFunctions = []) 
 }
 
 // Get ProtocolInitializationFacet initialize calldata to be called on diamondCut
-function getInitiliazeCalldata(facetsToInitialize, version, isUpgrade, initializationFacet) {
+function getInitializeCalldata(
+  facetsToInitialize,
+  version,
+  isUpgrade,
+  initializationFacet,
+  interfacesToRemove = [],
+  interfacesToAdd = []
+) {
   version = ethers.utils.formatBytes32String(version);
   const addresses = facetsToInitialize.map((f) => f.contract.address);
   const calldata = facetsToInitialize.map((f) => f.initialize);
 
-  return initializationFacet.interface.encodeFunctionData("initialize", [version, addresses, calldata, isUpgrade]);
+  return initializationFacet.interface.encodeFunctionData("initialize", [
+    version,
+    addresses,
+    calldata,
+    isUpgrade,
+    interfacesToRemove,
+    interfacesToAdd,
+  ]);
 }
 
 // Cut diamond with facets to be added, replaced and removed
-async function cutDiamond(diamond, maxPriorityFeePerGas, deployedFacets, initializationAddress, initializeCalldata) {
+async function cutDiamond(
+  diamond,
+  maxPriorityFeePerGas,
+  deployedFacets,
+  initializationAddress,
+  initializeCalldata,
+  facetsToRemove = []
+) {
   const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", diamond);
 
   const cut = deployedFacets.reduce((acc, val) => {
@@ -154,8 +175,9 @@ async function cutDiamond(diamond, maxPriorityFeePerGas, deployedFacets, initial
     return acc;
   }, []);
 
+  console.log(cut);
   const transactionResponse = await diamondCutFacet.diamondCut(
-    cut,
+    [...cut, ...facetsToRemove],
     initializationAddress,
     initializeCalldata,
     await getFees(maxPriorityFeePerGas)
@@ -179,4 +201,4 @@ exports.getInterfaceId = getInterfaceId;
 exports.getStateModifyingFunctions = getStateModifyingFunctions;
 exports.getStateModifyingFunctionsHashes = getStateModifyingFunctionsHashes;
 exports.cutDiamond = cutDiamond;
-exports.getInitiliazeCalldata = getInitiliazeCalldata;
+exports.getInitializeCalldata = getInitializeCalldata;

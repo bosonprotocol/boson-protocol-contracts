@@ -1,4 +1,4 @@
-const { getFacetAddCut, cutDiamond, getInitiliazeCalldata } = require("./diamond-utils.js");
+const { getFacetAddCut, cutDiamond, getInitializeCalldata } = require("./diamond-utils.js");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const environments = require("../../environments");
@@ -16,9 +16,18 @@ const { getFees } = require("./utils");
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
  * * @param protocolInitializationFacet - ProtocolInitializationFacet contract instance if it was already deployed
  * @param version - version of the protocol
+ * @param initializationFacet - optional initialization facet if it was already deployed
+ * @param interfacesToAdd - optional interfaces to add to the diamond
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployAndCutFacets(diamond, facetData, maxPriorityFeePerGas, version, initializationFacet) {
+async function deployAndCutFacets(
+  diamond,
+  facetData,
+  maxPriorityFeePerGas,
+  version,
+  initializationFacet,
+  interfacesToAdd = []
+) {
   const facetNames = Object.keys(facetData);
   let deployedFacets = await deployProtocolFacets(facetNames, facetData, maxPriorityFeePerGas);
 
@@ -27,7 +36,14 @@ async function deployAndCutFacets(diamond, facetData, maxPriorityFeePerGas, vers
   initializationFacet =
     initializationFacet || deployedFacets.find((f) => f.name == "ProtocolInitializationFacet").contract;
 
-  const initializeCalldata = getInitiliazeCalldata(facetsToInit, version ?? "2.0.0", false, initializationFacet);
+  const initializeCalldata = getInitializeCalldata(
+    facetsToInit,
+    version ?? "2.0.0",
+    false,
+    initializationFacet,
+    undefined,
+    interfacesToAdd
+  );
 
   deployedFacets = deployedFacets.map((facet) => {
     const cut =

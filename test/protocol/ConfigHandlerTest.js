@@ -125,7 +125,11 @@ describe("IBosonConfigHandler", function () {
         const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 
         // Cut the protocol handler facets into the Diamond
-        const { cutTransaction } = await deployAndCutFacets(protocolDiamond, facetsToDeploy, maxPriorityFeePerGas);
+        const { cutTransaction } = await deployAndCutFacets(
+          protocolDiamond.address,
+          facetsToDeploy,
+          maxPriorityFeePerGas
+        );
 
         await expect(cutTransaction)
           .to.emit(configHandler, "TokenAddressChanged")

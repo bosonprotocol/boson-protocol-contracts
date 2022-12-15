@@ -5,7 +5,7 @@ const ethers = hre.ethers;
 const Role = require("../../scripts/domain/Role");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
-const { getInterfaceIds } = require("../../scripts/config/supported-interfaces");
+const { getInterfaceIds, interfaceImplementers } = require("../../scripts/config/supported-interfaces");
 const { maxPriorityFeePerGas } = require("../util/constants");
 const { getFees } = require("../../scripts/util/utils");
 const { getFacetAddCut } = require("../../scripts/util/diamond-utils");
@@ -78,6 +78,8 @@ describe("ProtocolInitializationHandler", async function () {
             [rando.address],
             [],
             true,
+            [],
+            [],
           ]);
 
           let facetCut = getFacetAddCut(protocolInitializationFacetDeployed, [callData.slice(0, 10)]);
@@ -100,6 +102,8 @@ describe("ProtocolInitializationHandler", async function () {
             [],
             [],
             true,
+            [],
+            [],
           ]);
 
           let facetCut = getFacetAddCut(protocolInitializationFacetDeployed, [callData.slice(0, 10)]);
@@ -122,6 +126,8 @@ describe("ProtocolInitializationHandler", async function () {
             [],
             [],
             true,
+            [],
+            [],
           ]);
 
           let facetCut = getFacetAddCut(protocolInitializationFacetDeployed, [callData.slice(0, 10)]);
@@ -144,7 +150,7 @@ describe("ProtocolInitializationHandler", async function () {
 
           const calldataProtocolInitialization = protocolInitializationFacetDeployed.interface.encodeFunctionData(
             "initialize",
-            [version, [testFacet.address], [calldataTestFacet], true]
+            [version, [testFacet.address], [calldataTestFacet], true, [], []]
           );
 
           const cutTransaction = diamondCutFacet.diamondCut(
@@ -165,11 +171,15 @@ describe("ProtocolInitializationHandler", async function () {
     beforeEach(async function () {
       version = "2.2.0";
 
+      const interfaceId = InterfaceIds[interfaceImplementers["ProtocolInitializationFacet"]];
+
       const { deployedFacets } = await deployAndCutFacets(
         protocolDiamond.address,
         { ProtocolInitializationFacet: [version, [], [], true] },
         maxPriorityFeePerGas,
-        version
+        version,
+        undefined,
+        [interfaceId]
       );
       deployedProtocolInitializationFacet = deployedFacets[0];
     });
@@ -204,7 +214,7 @@ describe("ProtocolInitializationHandler", async function () {
       version = ethers.utils.formatBytes32String("2.3.0");
       const calldataProtocolInitialization = deployedProtocolInitializationFacet.contract.interface.encodeFunctionData(
         "initialize",
-        [version, [testFacet.address], [calldataTestFacet], true]
+        [version, [testFacet.address], [calldataTestFacet], true, [], []]
       );
 
       const facetCuts = [getFacetAddCut(testFacet)];
@@ -240,6 +250,8 @@ describe("ProtocolInitializationHandler", async function () {
             [testFacet.address],
             [calldataTestFacet],
             true,
+            [],
+            [],
           ]);
 
         const facetCuts = [getFacetAddCut(testFacet)];
@@ -254,7 +266,7 @@ describe("ProtocolInitializationHandler", async function () {
         ).to.be.revertedWith(RevertReasons.CONTRACT_NOT_ALLOWED);
       });
 
-      it("Revert with default reason if not supplied by implementation", async () => {
+      it("Default reason if not supplied by implementation", async () => {
         // If the caller's address is supplied Test3Facet's initializer will revert with no reason
         // and so the diamondCut function will supply it's own reason
         const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [deployer.address]);
@@ -265,6 +277,8 @@ describe("ProtocolInitializationHandler", async function () {
             [testFacet.address],
             [calldataTestFacet],
             true,
+            [],
+            [],
           ]);
 
         const facetCuts = [getFacetAddCut(testFacet)];

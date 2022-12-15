@@ -72,7 +72,7 @@ async function getFees() {
 // Check if account has a role
 async function checkRole(contracts, role, address) {
   // Get addresses of currently deployed AccessController contract
-  const accessControllerAddress = contracts.find((c) => c.name === "AccessController").address;
+  const accessControllerAddress = contracts.find((c) => c.name === "AccessController")?.address;
   if (!accessControllerAddress) {
     return addressNotFound("AccessController");
   }
