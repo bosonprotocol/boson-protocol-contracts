@@ -27,9 +27,9 @@
     "test/domain/DisputeResolverTest.js",
     "test/access/AccessControllerTest.js",
     "test/protocol/PauseHandlerTest.js",
-    "test/protocol/clients/ClientExternalAddreses.js",
+    "test/protocol/clients/ClientExternalAddressesTest.js",
     "test/protocol/AccountHandlerTest.js",
-    "test/protocol/clients/BosonVoucher.js",
+    "test/protocol/clients/BosonVoucherTest.js",
     "test/protocol/ProtocolDiamondTest.js",
     "test/protocol/AgentHandlerTest.js",
     "test/protocol/BuyerHandlerTest.js",
@@ -51,5 +51,6 @@
   [
     "test/protocol/ExchangeHandlerTest.js",
     "test/protocol/OrchestrationHandlerTest.js"
+    "test/protocol/ProtocolInitializationHandlerTest.js"
   ]
 ]
