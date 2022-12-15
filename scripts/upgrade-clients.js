@@ -59,6 +59,7 @@ async function main(env) {
     return addressNotFound("BosonVoucher Beacon");
   }
 
+  // Validate that admin has UPGRADER role
   checkRole(contracts, Role.UPGRADER, adminAddress);
 
   // Deploy Protocol Client implementation contracts

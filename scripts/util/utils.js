@@ -14,7 +14,7 @@ function delay(ms) {
 
 function deploymentComplete(name, address, args, interfaceId, contracts) {
   contracts.push({ name, address, args, interfaceId });
-  // console.log(`✅ ${name} deployed to: ${address}`);
+  console.log(`✅ ${name} deployed to: ${address}`);
 }
 
 async function writeContracts(contracts, env) {

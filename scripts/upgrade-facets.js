@@ -139,8 +139,6 @@ async function main(env, facetConfig) {
 
   // Manage new or upgraded facets
   for (const [index, newFacet] of deployedFacets.entries()) {
-    console.log(`\n📋 Facet: ${newFacet.name}`);
-
     // Get currently registered selectors
     const oldFacet = contracts.find((i) => i.name === newFacet.name);
     let registeredSelectors;
@@ -172,9 +170,8 @@ async function main(env, facetConfig) {
       try {
         newSelectors = selectors.selectors.remove([newFacet.initialize?.slice(0, 10) || noArgCallData]);
       } catch {
-        // @TODO handle
-        // Facet has no initialize function or initialize has parameters
-        console.log(newFacet.contract.interface.getFunction("initialize"));
+        // @TODO handle when facet has no initialize function or initialize has parameters
+        // console.log(newFacet.contract.interface.getFunction("initialize"));
       }
     } else {
       // Set action for protocol initialization
@@ -213,20 +210,6 @@ async function main(env, facetConfig) {
       }
     }
 
-    // Logs
-    // console.log(`💎 Removing selectors:\n\t${selectorsToRemove.join("\n\t")}`);
-    // console.log(
-    //   `💎 Replacing selectors:\n\t${selectorsToReplace
-    //     .map((selector) => `${selector}: ${selectors.signatureToNameMapping[selector]}`)
-    //     .join("\n\t")}`
-    // );
-    // console.log(
-    //   `💎 Adding selectors:\n\t${selectorsToAdd
-    //     .map((selector) => `${selector}: ${selectors.signatureToNameMapping[selector]}`)
-    //     .join("\n\t")}`
-    // );
-    // console.log(`❌ Skipping selectors:\n\t${selectorsToSkip.join("\n\t")}`);
-
     const newFacetAddress = newFacet.contract.address;
     if (selectorsToAdd.length > 0) {
       deployedFacets[index].cut.push([newFacetAddress, FacetCutAction.Add, selectorsToAdd]);
@@ -235,7 +218,7 @@ async function main(env, facetConfig) {
       deployedFacets[index].cut.push([newFacetAddress, FacetCutAction.Replace, selectorsToReplace]);
     }
     if (selectorsToRemove.length > 0) {
-      facetCutRemove.push([ethers.constants.AddressZero, FacetCutAction.Remove, selectorsToRemove]);
+      deployedFacets[index].cut.push([ethers.constants.AddressZero, FacetCutAction.Remove, selectorsToRemove]);
     }
 
     if (oldFacet && (selectorsToAdd.length > 0 || selectorsToRemove.length > 0)) {
@@ -280,7 +263,6 @@ async function main(env, facetConfig) {
       // Facet does not exist, skip next steps
       continue;
     }
-    // console.log(`\n📋💀 Facet removal: ${facetToRemove}`);
 
     // Remove old entry from contracts
     contracts = contracts.filter((i) => i.name !== facetToRemove);
@@ -290,9 +272,6 @@ async function main(env, facetConfig) {
 
     // Removing the selectors
     facetCutRemove.push([ethers.constants.AddressZero, FacetCutAction.Remove, selectorsToRemove]);
-
-    // Logs
-    // console.log(`💎 Removing selectors:\n\t${selectorsToRemove.join("\n\t")}`);
 
     if (oldFacet) {
       // Remove support for old interface
@@ -341,30 +320,7 @@ async function main(env, facetConfig) {
     initializeCalldata
   );
 
-  for (const facet of deployedFacets) {
-    console.log(`\n📋 Facet: ${facet.name}`);
-    // console.log(`💎 Removed selectors:\n\t${selectorsToRemove.join("\n\t")}`);
-
-    let { cut } = facet;
-    cut = cut.map((c) => {
-      const facetCut = new FacetCut(c);
-      return facetCut.toObject();
-    });
-    console.log(cut);
-
-    // console.log(
-    //   `💎 Replaced selectors:\n\t${cut.filter(c => c.action == FacetCutAction.Replace).map(c => {
-    //     const { selectors } = c;
-    //   `${selector}: ${selectors.signatureToNameMapping[selector]}`}).join("\n\t")}`)
-    // console.log(
-    //   `💎 Adding selectors:\n\t${selectorsToAdd
-    //     .map((selector) => `${selector}: ${selectors.signatureToNameMapping[selector]}`)
-    //     .join("\n\t")}`
-    // );
-    // console.log(`❌ Skipping selectors:\n\t${selectorsToSkip.join("\n\t")}`);
-  }
-
-  // Removing is done in a separate diamond cut
+  // Completed deleed facets is done in a separate diamond cut
   if (facetCutRemove.length > 0) {
     transactionResponse = await diamondCutFacet
       .connect(adminSigner)
@@ -372,8 +328,27 @@ async function main(env, facetConfig) {
     await transactionResponse.wait(confirmations);
   }
 
+  // Logs
+  for (const facet of deployedFacets) {
+    console.log(`\n📋 Facet: ${facet.name}`);
+
+    let { cut } = facet;
+    cut = cut.map((c) => {
+      const facetCut = FacetCut.fromStruct(c);
+      return facetCut.toObject();
+    });
+
+    const selectors = getSelectors(facet.contract, true);
+    logFacetCut(cut, selectors);
+  }
+
+  console.log(`\n💀 Removed facets:\n\t${facets.remove.join("\n\t")}`);
+
   // If something was added or removed, support interface for old interface is not valid anymore
   const erc165 = await ethers.getContractAt("IERC165", protocolAddress);
+
+  console.log(divider);
+  console.log(`\n🛠️ Interfaces update:`);
 
   // Remove interfaces
   for (const interfaceId of interfacesToRemove) {
@@ -443,6 +418,20 @@ const getInitializationFacet = async (deployedFacets, contracts) => {
   }
 
   return protocolInitializationFacet;
+};
+
+const logFacetCut = (cut, selectors) => {
+  for (const action in FacetCutAction) {
+    cut
+      .filter((c) => c.action == FacetCutAction[action])
+      .forEach((c) => {
+        console.log(
+          `💎 ${action} selectors:\n\t${c.functionSelectors
+            .map((selector) => `${selectors.signatureToNameMapping[selector]}: ${selector}`)
+            .join("\n\t")}`
+        );
+      });
+  }
 };
 
 exports.upgradeFacets = main;
