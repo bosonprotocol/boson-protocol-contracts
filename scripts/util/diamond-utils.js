@@ -175,7 +175,6 @@ async function cutDiamond(
     return acc;
   }, []);
 
-  console.log(cut);
   const transactionResponse = await diamondCutFacet.diamondCut(
     [...cut, ...facetsToRemove],
     initializationAddress,

@@ -187,13 +187,43 @@ describe("ProtocolInitializationHandler", async function () {
     // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
     context("📋 Interfaces", async function () {
       context("👉 supportsInterface()", async function () {
-        it("should indicate support for IBosonProtocolInitializationHandler interface", async function () {
-          // Current interfaceId for IBosonConfigHandler
+        it("Should indicate support for IBosonProtocolInitializationHandler interface", async function () {
+          // Current interfaceId for IBosonProtocolInitializationHandler
           const support = await erc165.supportsInterface(InterfaceIds.IBosonProtocolInitializationHandler);
 
           // Test
           expect(support, "IBosonProtocolInitializationHandler interface not supported").is.true;
         });
+      });
+
+      it("Should remove interfaces when supplied", async function () {
+        const configHandlerInterface = InterfaceIds[interfaceImplementers["ConfigHandlerFacet"]];
+        const accountInterface = InterfaceIds[interfaceImplementers["AccountHandlerFacet"]];
+
+        version = ethers.utils.formatBytes32String("2.3.0");
+        const calldataProtocolInitialization =
+          deployedProtocolInitializationFacet.contract.interface.encodeFunctionData("initialize", [
+            version,
+            [],
+            [],
+            true,
+            [configHandlerInterface, accountInterface],
+            [],
+          ]);
+
+        await diamondCutFacet.diamondCut(
+          [],
+          deployedProtocolInitializationFacet.contract.address,
+          calldataProtocolInitialization,
+          await getFees(maxPriorityFeePerGas)
+        );
+
+        let support = await erc165.supportsInterface(InterfaceIds.IBosonConfigHandler);
+
+        expect(support, "IBosonConfigHandler interface supported").is.false;
+
+        support = await erc165.supportsInterface(InterfaceIds.IBosonAccountHandler);
+        expect(support, "IBosonAccountHandler interface supported").is.false;
       });
     });
 

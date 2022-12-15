@@ -23,12 +23,11 @@ function getConfig() {
 /**
  * Config file used to deploy the facets
  *
- * @param config - optional configuration data to be passed to the ConfigHandlerFacet initializer
  * Function getFacets() returns the object that is used by the deploy script. To specify custom deployment parameters, modify return value.
- * Returned value should have the following fields:
- * - noArgFacets: list of facet names that don't expect any argument passed into initializer
- * - argFacets: object that specify facet names and arguments that needs to be passed into initializer in format object {facetName: initializerArguments}
- *               if facet doesn't expect any argument, pass empty array
+*
+ * @param config - optional configuration data to be passed to the ConfigHandlerFacet initializer
+ * @returns {Object} - object with facet names as keys and arrays of arguments as values to be passed into initializer
+ *              return empty array for facet that doesn't expect any argument 
  * 
  * Example:
  *  {
@@ -65,15 +64,15 @@ async function getFacets(config) {
     ["executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"]
   );
 
-  const argFacets = noArgFacetNames.reduce((acc, facetName) => {
+  const facetArgs = noArgFacetNames.reduce((acc, facetName) => {
     acc[facetName] = [];
     return acc;
   }, {});
 
-  argFacets["ConfigHandlerFacet"] = ConfigHandlerFacetInitArgs;
-  argFacets["MetaTransactionsHandlerFacet"] = [MetaTransactionsHandlerFacetInitArgs];
+  facetArgs["ConfigHandlerFacet"] = ConfigHandlerFacetInitArgs;
+  facetArgs["MetaTransactionsHandlerFacet"] = [MetaTransactionsHandlerFacetInitArgs];
 
-  return argFacets;
+  return facetArgs;
 }
 
 exports.getFacets = getFacets;

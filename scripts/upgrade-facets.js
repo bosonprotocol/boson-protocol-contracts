@@ -296,21 +296,6 @@ async function main(env, facetConfig) {
     interfacesToAdd
   );
 
-  // Remove initialize function from ProtocolInitializationFacet cut
-  // deployedFacets = deployedFacets.map((f) => {
-  //   if (f.name == "ProtocolInitializationFacet") {
-  //     f.cut = f.cut.map(c => {
-  //       let [, action, selectors] = c;
-  //       console.log(action, selectors);
-  //       selectors = selectors.filter(s => s != initializeCalldata.slice(0, 10));
-  //       c[2] = selectors;
-  //       console.log("selectors", selectors);
-  //       return c;
-  //     })
-  //     return f;
-  //   }
-  // });
-
   await cutDiamond(
     diamondCutFacet.address,
     maxPriorityFeePerGas,
