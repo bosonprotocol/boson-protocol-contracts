@@ -30,6 +30,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @notice Raises a dispute.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - Caller does not hold a voucher for the given exchange id
      * - Exchange does not exist
      * - Exchange is not in a Redeemed state

@@ -17,6 +17,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
      * @notice Raises a dispute
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - Caller does not hold a voucher for the given exchange id
      * - Exchange does not exist
      * - Dispute period has elapsed already
