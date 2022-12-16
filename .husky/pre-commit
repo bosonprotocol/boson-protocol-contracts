@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+npm run tidy:scripts
+npm run tidy:contracts
+npm run natspec-interface-id:fix
