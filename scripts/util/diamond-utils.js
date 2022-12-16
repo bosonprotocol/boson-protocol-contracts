@@ -1,5 +1,6 @@
 const hre = require("hardhat");
 const { confirmations } = require("../../environments");
+const FacetCutAction = require("../domain/FacetCutAction");
 const { getFees } = require("./utils");
 const ethers = hre.ethers;
 const keccak256 = ethers.utils.keccak256;
@@ -10,8 +11,6 @@ const toUtf8Bytes = ethers.utils.toUtf8Bytes;
  *
  * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
  */
-const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
-
 // get function selectors from ABI
 function getSelectors(contract, returnSignatureToNameMapping = false) {
   const signatures = Object.keys(contract.interface.functions);

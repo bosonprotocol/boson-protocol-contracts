@@ -14,7 +14,6 @@ const { getFees } = require("./utils");
  * @param facetData - object with facet names and corresponding initialization arguments {facetName1: initializerArguments1, facetName2: initializerArguments2, ...}
  *                    if facet doesn't expect any argument, pass empty array
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
- * * @param protocolInitializationFacet - ProtocolInitializationFacet contract instance if it was already deployed
  * @param version - optional version of the protocol
  * @param initializationFacet - optional initialization facet if it was already deployed
  * @param interfacesToAdd - optional interfaces to add to the diamond

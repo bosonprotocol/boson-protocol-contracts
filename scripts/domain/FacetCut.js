@@ -1,5 +1,5 @@
-const { FacetCutAction } = require("../util/diamond-utils.js");
 const { addressIsValid, enumIsValid, bytes4ArrayIsValid } = require("../util/validations.js");
+const FacetCutAction = require("./FacetCutAction.js");
 
 /**
  * Boson Protocol Domain Entity: FacetCut
@@ -14,7 +14,6 @@ class FacetCut {
         bytes4 functionSelectors;
     }
     */
-
   constructor(facetAddress, action, functionSelectors) {
     this.facetAddress = facetAddress;
     this.action = action;
@@ -87,7 +86,7 @@ class FacetCut {
    * @returns {boolean}
    */
   facetAddressIsValid() {
-    return addressIsValid(this.functionSelectors);
+    return addressIsValid(this.facetAddress);
   }
 
   /**
@@ -113,7 +112,7 @@ class FacetCut {
    * @returns {boolean}
    */
   isValid() {
-    return this.facetAddressIsValid() && this.actionIsValid() && this.functionSelectors();
+    return this.facetAddressIsValid() && this.actionIsValid() && this.functionSelectorsIsValid();
   }
 }
 
