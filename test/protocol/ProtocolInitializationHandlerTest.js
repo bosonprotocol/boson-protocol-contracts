@@ -47,7 +47,7 @@ describe("ProtocolInitializationHandler", async function () {
     // Cast Diamond to ProtocolInitializationFacet
     protocolInitializationFacet = await ethers.getContractAt("ProtocolInitializationFacet", protocolDiamond.address);
 
-    version = ethers.utils.formatBytes32String("2.2.0");
+    version = "2.2.0";
   });
 
   describe("Deploy tests", async function () {
@@ -73,6 +73,8 @@ describe("ProtocolInitializationHandler", async function () {
           await protocolInitializationFacetDeployed.deployTransaction.wait();
         });
         it("Addresses and calldata length mismatch", async function () {
+          version = ethers.utils.formatBytes32String("2.2.0");
+
           const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initialize", [
             version,
             [rando.address],
@@ -121,6 +123,8 @@ describe("ProtocolInitializationHandler", async function () {
         });
 
         it("Initialize same version twice", async function () {
+          version = ethers.utils.formatBytes32String("2.2.0");
+
           const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initialize", [
             version,
             [],

@@ -74,7 +74,7 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
 
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
         status.version = _version;
-        emit ProtocolInitialized(_version);
+        emit ProtocolInitialized(string(abi.encodePacked(_version)));
     }
 
     /**

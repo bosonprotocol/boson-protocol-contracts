@@ -7,5 +7,5 @@ pragma solidity 0.8.9;
  * @notice Defines events related to initialization of the protocol.
  */
 interface IBosonProtocolInitializationEvents {
-    event ProtocolInitialized(bytes32 version);
+    event ProtocolInitialized(string version);
 }

@@ -48,8 +48,8 @@ contract ProtocolInitializationTestFacet is IBosonProtocolInitializationHandler,
         require(_version != bytes32(0), VERSION_MUST_BE_SET);
         require(_addresses.length == _calldata.length, ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH);
 
+        // Delegate call to initialize methods of facets declared in _addresses
         for (uint256 i = 0; i < _addresses.length; i++) {
-            // Calling calldata (initialize function) of the corresponding facet
             (bool success, bytes memory error) = _addresses[i].delegatecall(_calldata[i]);
 
             // Handle result
@@ -74,7 +74,7 @@ contract ProtocolInitializationTestFacet is IBosonProtocolInitializationHandler,
 
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
         status.version = _version;
-        emit ProtocolInitialized(_version);
+        emit ProtocolInitialized(string(abi.encodePacked(_version)));
     }
 
     /**
