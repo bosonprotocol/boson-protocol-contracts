@@ -146,16 +146,16 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * - Offer id is already associated with a range
      *
      * @param _offerId - the id of the offer
-     * @param _startId - the first id of the token range
+     * @param _start - the first id of the token range
      * @param _length - the length of the range
      */
     function reserveRange(
         uint256 _offerId,
-        uint256 _startId,
+        uint256 _start,
         uint256 _length
     ) external onlyRole(PROTOCOL) {
         // Make sure range start is valid
-        require(_startId > 0, INVALID_RANGE_START);
+        require(_start > 0, INVALID_RANGE_START);
 
         // Get storage slot for the range
         Range storage range = _rangeByOfferId[_offerId];
@@ -165,7 +165,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
         // Store the reserved range
         range.offerId = _offerId;
-        range.start = _startId;
+        range.start = _start;
         range.length = _length;
         _rangeOfferIds.push(_offerId);
 
@@ -314,7 +314,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 
     /**
-     * @notice Gets the number of vouchers left to be pre-minted for an offer.
+     * @notice Gets the number of vouchers available to be pre-minted for an offer.
      *
      * @param _offerId - the id of the offer
      * @return count - the count of vouchers in reserved range available to be pre-minted
@@ -341,36 +341,36 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      */
     function getRangeByOfferId(uint256 _offerId) external view returns (Range memory range) {
         // Get the offer's range
-        return _rangeByOfferId[_offerId];
+        range = _rangeByOfferId[_offerId];
     }
 
     /**
      * @dev Returns the owner of the specified token.
      *
      * If the token IS a pre-mint, then the actual owner address hasn't been set,
-     * but will be reported as the owner of this contract (the seller).
+     * but will be reported as the owner of this contract (the seller operator).
      *
      * If the token IS NOT a pre-mint, then the actual owner will be reported.
      *
      * Reverts if:
      * - Token is not a pre-mint and does not have a stored owner, i.e., invalid token id
      *
-     * @param tokenId - the id of the token to check
+     * @param _tokenId - the id of the token to check
      * @return owner - the address of the owner
      */
-    function ownerOf(uint256 tokenId)
+    function ownerOf(uint256 _tokenId)
         public
         view
         virtual
         override(ERC721Upgradeable, IERC721Upgradeable)
         returns (address owner)
     {
-        if (_exists(tokenId)) {
-            // If tokenId exists, it does not matter if vouchers were preminted or not
-            owner = super.ownerOf(tokenId);
+        if (_exists(_tokenId)) {
+            // If _tokenId exists, it does not matter if vouchers were preminted or not
+            return super.ownerOf(_tokenId);
         } else {
-            // If tokenId does not exist, but offer is commitable, report contract owner as token owner
-            (bool committable, ) = getPreMintStatus(tokenId);
+            // If _tokenId does not exist, but offer is commitable, report contract owner as token owner
+            (bool committable, ) = getPreMintStatus(_tokenId);
             if (committable) return super.owner();
 
             // Otherwise revert
@@ -382,41 +382,41 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @dev See {IERC721-transferFrom}.
      */
     function transferFrom(
-        address from,
-        address to,
-        uint256 tokenId
+        address _from,
+        address _to,
+        uint256 _tokenId
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
-        (bool committable, uint256 offerId) = getPreMintStatus(tokenId);
+        (bool committable, uint256 offerId) = getPreMintStatus(_tokenId);
 
         if (committable) {
             // If offer is committable, temporarily update _owners, so transfer succeeds
-            silentMint(from, tokenId);
+            silentMint(_from, _tokenId);
             _premintStatus.committable = true;
             _premintStatus.offerId = offerId;
         }
 
-        super.transferFrom(from, to, tokenId);
+        super.transferFrom(_from, _to, _tokenId);
     }
 
     /**
      * @dev See {IERC721-safeTransferFrom}.
      */
     function safeTransferFrom(
-        address from,
-        address to,
-        uint256 tokenId,
-        bytes memory data
+        address _from,
+        address _to,
+        uint256 _tokenId,
+        bytes memory _data
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
-        (bool committable, uint256 offerId) = getPreMintStatus(tokenId);
+        (bool committable, uint256 offerId) = getPreMintStatus(_tokenId);
 
         if (committable) {
             // If offer is committable, temporarily update _owners, so transfer succeeds
-            silentMint(from, tokenId);
+            silentMint(_from, _tokenId);
             _premintStatus.committable = true;
             _premintStatus.offerId = offerId;
         }
 
-        super.safeTransferFrom(from, to, tokenId, data);
+        super.safeTransferFrom(_from, _to, _tokenId, _data);
     }
 
     /**
@@ -434,15 +434,15 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      *
      * 0x2a55205a represents ERC2981 interface id
      */
-    function supportsInterface(bytes4 interfaceId)
+    function supportsInterface(bytes4 _interfaceId)
         public
         view
         override(ERC721Upgradeable, IERC165Upgradeable)
         returns (bool)
     {
-        return (interfaceId == type(IBosonVoucher).interfaceId ||
-            interfaceId == type(IERC2981Upgradeable).interfaceId ||
-            super.supportsInterface(interfaceId));
+        return (_interfaceId == type(IBosonVoucher).interfaceId ||
+            _interfaceId == type(IERC2981Upgradeable).interfaceId ||
+            super.supportsInterface(_interfaceId));
     }
 
     /**
@@ -481,11 +481,15 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @notice Transfers ownership of the contract to a new account (`newOwner`).
      * Can only be called by the protocol. Change is done by calling `updateSeller` on the protocol.
      *
-     * @param newOwner - the address to which ownership of the voucher contract will be transferred
+     * @param _newOwner - the address to which ownership of the voucher contract will be transferred
      */
-    function transferOwnership(address newOwner) public override(IBosonVoucher, OwnableUpgradeable) onlyRole(PROTOCOL) {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        _transferOwnership(newOwner);
+    function transferOwnership(address _newOwner)
+        public
+        override(IBosonVoucher, OwnableUpgradeable)
+        onlyRole(PROTOCOL)
+    {
+        require(_newOwner != address(0), "Ownable: new owner is the zero address");
+        _transferOwnership(_newOwner);
     }
 
     /**
@@ -620,36 +624,36 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * a new buyer account will be created and associated with
      * the exchange.
      *
-     * @param from - the address from which the voucher is being transferred
-     * @param to - the address to which the voucher is being transferred
-     * @param tokenId - the tokenId of the voucher that is being transferred
+     * @param _from - the address from which the voucher is being transferred
+     * @param _to - the address to which the voucher is being transferred
+     * @param _tokenId - the tokenId of the voucher that is being transferred
      */
     function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 tokenId
+        address _from,
+        address _to,
+        uint256 _tokenId
     ) internal override {
         // Update the buyer associated with the voucher in the protocol
         // Only when transferring, not minting or burning
-        if (from == owner()) {
+        if (_from == owner()) {
             if (_premintStatus.committable) {
                 // Set the preminted token as committed
-                _committed[tokenId] = true;
+                _committed[_tokenId] = true;
 
-                // If this is a transfer of premited token, treat it differently
+                // If this is a transfer of preminted token, treat it differently
                 address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
                 IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(
-                    payable(to),
+                    payable(_to),
                     _premintStatus.offerId,
-                    tokenId
+                    _tokenId
                 );
                 delete _premintStatus;
             } else {
                 // Already committed, treat as a normal transfer
-                onVoucherTransferred(tokenId, payable(to));
+                onVoucherTransferred(_tokenId, payable(_to));
             }
-        } else if (from != address(0) && to != address(0) && from != to) {
-            onVoucherTransferred(tokenId, payable(to));
+        } else if (_from != address(0) && _to != address(0) && _from != _to) {
+            onVoucherTransferred(_tokenId, payable(_to));
         }
     }
 
@@ -729,10 +733,10 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     /*
      * Updates balance and owner, but do not emit Transfer event. Event was already emited during pre-mint.
      */
-    function silentMint(address from, uint256 tokenId) internal {
-        require(from == owner(), NO_SILENT_MINT_ALLOWED);
+    function silentMint(address _from, uint256 _tokenId) internal {
+        require(_from == owner(), NO_SILENT_MINT_ALLOWED);
 
         // update data, so transfer will succeed
-        getERC721UpgradeableStorage()._owners[tokenId] = from;
+        getERC721UpgradeableStorage()._owners[_tokenId] = _from;
     }
 }

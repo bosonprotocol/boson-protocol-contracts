@@ -87,11 +87,11 @@ library FundsLib {
 
         // decrease available funds
         uint256 sellerId = offer.sellerId;
-        uint256 sellerDeposit = offer.sellerDeposit + (_isPreminted ? price : 0); // for preminted offer, encumber also price from seller's available funds
-        decreaseAvailableFunds(sellerId, exchangeToken, sellerDeposit);
+        uint256 sellerFundsEncumbered = offer.sellerDeposit + (_isPreminted ? price : 0); // for preminted offer, encumber also price from seller's available funds
+        decreaseAvailableFunds(sellerId, exchangeToken, sellerFundsEncumbered);
 
         // notify external observers
-        emit FundsEncumbered(sellerId, exchangeToken, sellerDeposit, sender);
+        emit FundsEncumbered(sellerId, exchangeToken, sellerFundsEncumbered, sender);
     }
 
     /**

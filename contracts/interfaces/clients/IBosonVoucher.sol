@@ -123,12 +123,12 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * - Offer id is already associated with a range
      *
      * @param _offerId - the id of the offer
-     * @param _startId - the first id of the token range
+     * @param _start - the first id of the token range
      * @param _length - the length of the range
      */
     function reserveRange(
         uint256 _offerId,
-        uint256 _startId,
+        uint256 _start,
         uint256 _length
     ) external;
 
@@ -190,7 +190,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     function burnPremintedVouchers(uint256 _offerId) external;
 
     /**
-     * @notice Gets the number of vouchers left to be pre-minted for an offer.
+     * @notice Gets the number of vouchers available to be pre-minted for an offer.
      *
      * @param _offerId - the id of the offer
      * @return count - the count of vouchers in reserved range available to be pre-minted

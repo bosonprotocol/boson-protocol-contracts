@@ -2324,10 +2324,15 @@ describe("IBosonOrchestrationHandler", function () {
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
           range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+
+          // Voucher clone contract
+          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         });
 
         it("should emit an OfferCreated, a GroupCreated and a RangeReserved events", async function () {
           // Create a preminted offer with condition, testing for the events
+
           const tx = await orchestrationHandler
             .connect(operator)
             .createPremintedOfferWithCondition(
@@ -2373,9 +2378,6 @@ describe("IBosonOrchestrationHandler", function () {
           assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
           assert.equal(eventGroupCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
           assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
-
-          // Voucher clone contract
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
           // RangeReserved event (on voucher contract)
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
@@ -2443,8 +2445,6 @@ describe("IBosonOrchestrationHandler", function () {
           }
 
           // Voucher clone contract
-          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
           const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
           assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
           const availablePremints = await bosonVoucher.getAvailablePreMints(offer.id);
