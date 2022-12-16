@@ -563,7 +563,7 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Caller is not the buyer for the given exchange id", async function () {
-          // Attempt to retract the dispute, expecting revert
+          // Attempt to raise and escalate the dispute, expecting revert
           await expect(
             orchestrationHandler
               .connect(rando)
