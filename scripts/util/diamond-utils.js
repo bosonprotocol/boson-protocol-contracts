@@ -1,5 +1,6 @@
 const hre = require("hardhat");
-const { confirmations } = require("../../environments");
+const environments = "../../environments.js";
+const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const FacetCutAction = require("../domain/FacetCutAction");
 const { getFees } = require("./utils");
 const ethers = hre.ethers;
