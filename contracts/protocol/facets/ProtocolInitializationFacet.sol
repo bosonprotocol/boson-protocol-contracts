@@ -17,7 +17,7 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
     /**
      * @notice Modifier to protect initializer function from being invoked twice for a given version.
      */
-    modifier onlyUnInitializedVersion(bytes32 _version) {
+    modifier onlyUninitializedVersion(bytes32 _version) {
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
         require(!ps.initializedVersions[_version], ALREADY_INITIALIZED);
         ps.initializedVersions[_version] = true;
@@ -43,7 +43,7 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
         bool _isUpgrade,
         bytes4[] calldata interfacesToRemove,
         bytes4[] calldata interfacesToAdd
-    ) external onlyUnInitializedVersion(_version) {
+    ) external onlyUninitializedVersion(_version) {
         require(_version != bytes32(0), VERSION_MUST_BE_SET);
         require(_addresses.length == _calldata.length, ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH);
 
@@ -63,6 +63,7 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
             }
         }
 
+        ProtocolLib.ProtocolStatus storage status = protocolStatus();
         if (_isUpgrade) {
             if (_version == bytes32("2.2.0")) {
                 initV2_2_0();
@@ -72,7 +73,6 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
         removeInterfaces(interfacesToRemove);
         addInterfaces(interfacesToAdd);
 
-        ProtocolLib.ProtocolStatus storage status = protocolStatus();
         status.version = _version;
         emit ProtocolInitialized(string(abi.encodePacked(_version)));
     }

@@ -17,7 +17,7 @@ contract ProtocolInitializationTestFacet is IBosonProtocolInitializationHandler,
     /**
      * @notice Modifier to protect initializer function from being invoked twice for a given version.
      */
-    modifier onlyUnInitializedVersion(bytes32 _version) {
+    modifier onlyUninitializedVersion(bytes32 _version) {
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
         require(!ps.initializedVersions[_version], ALREADY_INITIALIZED);
         ps.initializedVersions[_version] = true;
@@ -44,7 +44,7 @@ contract ProtocolInitializationTestFacet is IBosonProtocolInitializationHandler,
         bool _isUpgrade,
         bytes4[] calldata interfacesToRemove,
         bytes4[] calldata interfacesToAdd
-    ) external onlyUnInitializedVersion(_version) {
+    ) external onlyUninitializedVersion(_version) {
         require(_version != bytes32(0), VERSION_MUST_BE_SET);
         require(_addresses.length == _calldata.length, ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH);
 

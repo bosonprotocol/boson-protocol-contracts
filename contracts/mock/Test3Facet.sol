@@ -14,14 +14,14 @@ import { TestFacetLib } from "./TestFacetLib.sol";
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract Test3Facet {
-    modifier onlyUnInitialized() {
+    modifier onlyUninitialized() {
         TestFacetLib.TestFacetStorage storage tfs = TestFacetLib.testFacetStorage();
         require(!tfs.initialized, ALREADY_INITIALIZED);
         tfs.initialized = true;
         _;
     }
 
-    function initialize(address _testAddress) public onlyUnInitialized {
+    function initialize(address _testAddress) public onlyUninitialized {
         // for testing revert with reason
         require(!AddressUpgradeable.isContract(_testAddress), "Address cannot be a contract");
 
