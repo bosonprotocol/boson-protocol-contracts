@@ -1,6 +1,7 @@
 [
   [
     "test/domain/FacetTest.js",
+    "test/domain/FacetCutTest.js",
     "test/domain/AuthTokenTest.js",
     "test/domain/OfferFeesTest.js",
     "test/domain/BuyerTest.js",
@@ -50,7 +51,7 @@
   ],
   [
     "test/protocol/ExchangeHandlerTest.js",
-    "test/protocol/OrchestrationHandlerTest.js"
+    "test/protocol/OrchestrationHandlerTest.js",
     "test/protocol/ProtocolInitializationHandlerTest.js"
   ]
 ]
