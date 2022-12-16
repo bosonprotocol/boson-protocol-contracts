@@ -887,7 +887,7 @@ describe("IBosonVoucher", function () {
         });
       });
     });
-
+    
     context("With preminted tokens", async function () {
       beforeEach(async function () {
         // reserve a range

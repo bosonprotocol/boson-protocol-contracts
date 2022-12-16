@@ -31,3 +31,14 @@
 * At the time of escalation, the buyer must make a small deposit (a percentage of the dispute resolver fee) as a spam prevention measure. That deposit will be added to the pot (all committed funds from both parties for the current exchange) that will be split according to the dispute resolver's decision.
 * In this scenario, the buyer has received damaged or otherwise unacceptable goods. Since the Dispute Period has not yet elapsed, the buyer raises a dispute. In an off-chain discussion, the two parties fail to arrive at a resolution, expressed as the percentage of the pot that the buyer will receive. The example in the diagram shows a 100% refund for the buyer being decided upon by the dispute resolver.
 * Regardless of the resolution, neither party must withdraw funds immediately nor in any particular order. Funds unencumbered at the end of an exchange accumulate for the buyer and seller, so they may withdraw all available funds from finalized exchanges at any time. The seller may leave it in the protocol to back their deposits for future exchanges.
+
+## Preminted Voucher Sequences
+![Preminted Voucher Sequences](images/Boson_Protocol_V2_-_Preminted_Vouchers.png)
+
+### About this diagram
+* This diagram shows the process of pre-minting a range of vouchers for an offer and what happens when a pre-minted voucher is purchased on an exchange.
+* Pre-minting really just reserves a range of exchange / voucher token ids for use with a particular offer. The entire quantity available of the offer doesn't have to be pre-minted.
+* When a pre-minted voucher is purchased on a marketplace, a transfer hook is called, causing the offer to be committed to on behalf of the buyer.
+* The marketplace takes its cut of the sale and sends the remainder to the operator address of the seller (who is the de facto owner of all pre-minted vouchers and thus has the authority to list the items on marketplaces).
+* Meanwhile, the offer price is encumbered from the seller's deposit pool, for buyer assurance.
+* If only part of an offer's quantity available is pre-minted, the balance will be available for commit directly on the protocol.
