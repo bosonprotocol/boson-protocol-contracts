@@ -29,7 +29,7 @@ interface IBosonOrchestrationHandler is
      * buyer escalation deposit percentage of the offer price, which
      * will be added to the pot for resolution.
      *
-     * Emits a DisputeEscalated event if successful.
+     * Emits a DisputeRaised and a DisputeEscalated event if successful.
      *
      * Reverts if:
      * - The disputes region of protocol is paused
