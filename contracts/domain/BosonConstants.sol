@@ -107,6 +107,12 @@ string constant VOUCHER_STILL_VALID = "Voucher still valid";
 string constant VOUCHER_HAS_EXPIRED = "Voucher has expired";
 string constant TOO_MANY_EXCHANGES = "Exceeded maximum exchanges in a single transaction";
 string constant EXCHANGE_IS_NOT_IN_A_FINAL_STATE = "Exchange is not in a final state";
+string constant EXCHANGE_ID_IN_RESERVED_RANGE = "Exchange id falls within a pre-minted offer's range";
+string constant NO_RESERVED_RANGE_FOR_OFFER = "Offer id not associated with a reserved range";
+string constant OFFER_RANGE_ALREADY_RESERVED = "Offer id already associated with a reserved range";
+string constant INVALID_RANGE_START = "Range start must be greater than zero";
+string constant INVALID_AMOUNT_TO_MINT = "Amount to mint is greater than remaining un-minted in range";
+string constant NO_SILENT_MINT_ALLOWED = "Only owner's mappings can be updated without event";
 
 // Revert Reasons: Twin related
 string constant NO_SUCH_TWIN = "No such twin";
