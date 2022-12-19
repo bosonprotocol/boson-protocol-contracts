@@ -26,6 +26,7 @@ exports.RevertReasons = {
   PROTOCOL_INITIALIZATION_FAILED: "Protocol initialization failed",
   VERSION_MUST_BE_SET: "Version cannot be empty",
   ADDRESSES_AND_CALLDATA_MUST_BE_SAME_LENGTH: "Addresses and calldata must be same length",
+  WRONG_CURRENT_VERSION: "Wrong current protocol versions",
 
   // Offer related
   NOT_OPERATOR: "Not seller's operator",

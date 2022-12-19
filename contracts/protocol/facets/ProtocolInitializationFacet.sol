@@ -8,7 +8,7 @@ import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 
 /**
- * @title IBosonProtocolInitializationHandler
+ * @title BosonProtocolInitializationHandler
  *
  * @notice Handle initializion of new versions after 2.1.0.
  *
@@ -29,22 +29,22 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
      * This function is callable only once for each version
      *
      * @param _version - version of the protocol
-     * @param _initializationData - data for initialization of the protocol, using this facet
      * @param _addresses - array of facet addresses to call initialize methods
      * @param _calldata -  array of facets initialize methods encoded as calldata
      *                    _calldata order must match _addresses order
      * @param _isUpgrade - flag to indicate whether this is first deployment or upgrade
-     * @param interfacesToRemove - array of interfaces to remove from the diamond
-     * @param interfacesToAdd - array of interfaces to add to the diamond
+     * @param _initializationData - data for initialization of the protocol, using this facet (only if _isUpgrade == true)
+     * @param _interfacesToRemove - array of interfaces to remove from the diamond
+     * @param _interfacesToAdd - array of interfaces to add to the diamond
      */
     function initialize(
         bytes32 _version,
-        bytes calldata _initializationData,
         address[] calldata _addresses,
         bytes[] calldata _calldata,
         bool _isUpgrade,
-        bytes4[] calldata interfacesToRemove,
-        bytes4[] calldata interfacesToAdd
+        bytes calldata _initializationData,
+        bytes4[] calldata _interfacesToRemove,
+        bytes4[] calldata _interfacesToAdd
     ) external onlyUninitializedVersion(_version) {
         require(_version != bytes32(0), VERSION_MUST_BE_SET);
         require(_addresses.length == _calldata.length, ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH);
@@ -72,8 +72,8 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
             }
         }
 
-        removeInterfaces(interfacesToRemove);
-        addInterfaces(interfacesToAdd);
+        removeInterfaces(_interfacesToRemove);
+        addInterfaces(_interfacesToAdd);
 
         status.version = _version;
         emit ProtocolInitialized(string(abi.encodePacked(_version)));

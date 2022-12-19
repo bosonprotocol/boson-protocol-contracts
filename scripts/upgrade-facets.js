@@ -164,7 +164,7 @@ async function main(env, facetConfig) {
       }
     } else {
       const signature = newFacet.contract.interface.getSighash(
-        "initialize(bytes32,address[],bytes[],bool,bytes4[],bytes4[])"
+        "initialize(bytes32,address[],bytes[],bool,bytes,bytes4[],bytes4[])"
       );
       newSelectors = selectors.selectors.remove([signature]);
     }
@@ -292,6 +292,7 @@ async function main(env, facetConfig) {
     facetsToInit,
     version,
     true,
+    facets.initializationData ?? "0x",
     protocolInitializationFacet,
     interfacesToRemove,
     interfacesToAdd
