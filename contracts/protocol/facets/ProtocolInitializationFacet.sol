@@ -29,6 +29,7 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
      * This function is callable only once for each version
      *
      * @param _version - version of the protocol
+     * @param _initializationData - data for initialization of the protocol, using this facet
      * @param _addresses - array of facet addresses to call initialize methods
      * @param _calldata -  array of facets initialize methods encoded as calldata
      *                    _calldata order must match _addresses order
@@ -38,6 +39,7 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
      */
     function initialize(
         bytes32 _version,
+        bytes calldata _initializationData,
         address[] calldata _addresses,
         bytes[] calldata _calldata,
         bool _isUpgrade,
@@ -66,7 +68,7 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
         if (_isUpgrade) {
             if (_version == bytes32("2.2.0")) {
-                initV2_2_0();
+                initV2_2_0(_initializationData);
             }
         }
 
@@ -80,8 +82,20 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
     /**
      * @notice Initializes the version 2.2.0.
      *
+     * V2.2.0 adds the limit for the number of preminted vouchers. Cannot be initialized with ConfigHandlerFacet.initialize since it would reset the counters.
+     *
+     * @param _initializationData - data representing uint256 _maxPremintedVouchers
      */
-    function initV2_2_0() internal {}
+    function initV2_2_0(bytes calldata _initializationData) internal {
+        // v2.2.0 can only be initialized if the current version does not exist yet
+        require(protocolStatus().version == 0x0, WRONG_CURRENT_VERSION);
+
+        // Initialize limits.maxPremintedVouchers (configHandlerFacet initializer)
+        uint256 _maxPremintedVouchers = abi.decode(_initializationData, (uint256));
+        require(_maxPremintedVouchers != 0, VALUE_ZERO_NOT_ALLOWED);
+        protocolLimits().maxPremintedVouchers = _maxPremintedVouchers;
+        emit MaxPremintedVouchersChanged(_maxPremintedVouchers, msgSender());
+    }
 
     /**
      * @notice Gets the current protocol version.
