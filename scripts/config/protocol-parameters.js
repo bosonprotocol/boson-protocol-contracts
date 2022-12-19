@@ -27,6 +27,7 @@ module.exports = {
     maxRoyaltyPecentage: "10000", //100%
     maxResolutionPeriod: ninetyDays,
     minDisputePeriod: oneWeek,
+    maxPremintedVouchers: "10000",
   },
 
   // Boson Token (ERC-20) contract address

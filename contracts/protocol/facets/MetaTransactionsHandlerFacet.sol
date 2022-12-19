@@ -23,7 +23,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      */
     function initialize(bytes32[] calldata _functionNameHashes)
         public
-        onlyUnInitialized(type(IBosonMetaTransactionsHandler).interfaceId)
+        onlyUninitialized(type(IBosonMetaTransactionsHandler).interfaceId)
     {
         DiamondLib.addSupportedInterface(type(IBosonMetaTransactionsHandler).interfaceId);
 

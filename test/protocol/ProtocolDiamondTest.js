@@ -886,25 +886,25 @@ describe("ProtocolDiamond", async function () {
         assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
       });
 
-      it("should call an initializer function if supplied", async () => {
+      it("Should call an initializer function if supplied", async () => {
         // Make sure function selectors for the facet are correct
         result = await loupeFacetViaDiamond.facetFunctionSelectors(test3Facet.address);
         assert.sameMembers(result, selectors);
       });
 
-      it("should store initializer state in diamond storage slot when modifier runs", async () => {
+      it("Should store initializer state in diamond storage slot when modifier runs", async () => {
         // Make sure initializer state got stored when modifier ran
         result = await test3ViaDiamond.isInitialized();
         assert.equal(result, true, "Initializer state not stored");
       });
 
-      it("should store initializer argument in diamond storage slot when method runs", async () => {
+      it("Should store initializer argument in diamond storage slot when method runs", async () => {
         // Make sure argument passed to initializer got stored when method ran
         result = await test3ViaDiamond.getTestAddress();
         assert.equal(result, rando.address, "Initializer argument not stored");
       });
 
-      it("should call an initializer function on diamond itself", async () => {
+      it("Should call an initializer function on diamond itself", async () => {
         // Deploy mock version of Protocol Diamond with immutable functions and initialzer
 
         // Core interfaces that will be supported at the Diamond address
@@ -946,7 +946,7 @@ describe("ProtocolDiamond", async function () {
     });
 
     context("💔 Revert Reasons", async function () {
-      it("should revert with reason if supplied by implementation", async () => {
+      it("Reason supplied by implementation", async () => {
         // Encode the initialization call
         initFunction = "initialize(address _testAddress)";
         initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
@@ -970,7 +970,7 @@ describe("ProtocolDiamond", async function () {
         ).to.revertedWith(RevertReasons.CONTRACT_NOT_ALLOWED);
       });
 
-      it("should revert with library reason if not supplied by implementation", async () => {
+      it("Library reason if not supplied by implementation", async () => {
         // Encode the initialization call
         initFunction = "initialize(address _testAddress)";
         initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
@@ -995,7 +995,7 @@ describe("ProtocolDiamond", async function () {
         ).to.revertedWith(RevertReasons.INIT_REVERTED);
       });
 
-      it("should revert if _init is address(0) but _calldata is not empty", async () => {
+      it("_init is address(0) but _calldata is not empty", async () => {
         // Encode the initialization call
         initFunction = "initialize(address _testAddress)";
         initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
@@ -1021,7 +1021,7 @@ describe("ProtocolDiamond", async function () {
         ).to.revertedWith(RevertReasons.INIT_ZERO_ADDRESS_NON_EMPTY_CALLDATA);
       });
 
-      it("should revert if _calldata is empty but _init is not address(0)", async () => {
+      it("_calldata is empty but _init is not address(0)", async () => {
         // Get the Test3Facet function selectors from the abi, removing the initializer
         initFunction = "initialize(address _testAddress)";
         selectors = getSelectors(test3Facet).remove([initFunction]);
@@ -1041,7 +1041,7 @@ describe("ProtocolDiamond", async function () {
         ).to.revertedWith(RevertReasons.INIT_EMPTY_CALLDATA_NON_ZERO_ADDRESS);
       });
 
-      it("should revert if _init address has no code", async () => {
+      it("_init address has no code", async () => {
         // Encode the initialization call
         initFunction = "initialize(address _testAddress)";
         initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
@@ -1065,7 +1065,7 @@ describe("ProtocolDiamond", async function () {
         ).to.revertedWith(RevertReasons.INIT_ADDRESS_WITH_NO_CODE);
       });
 
-      it("should revert if _accessController is the zero address", async () => {
+      it("_accessController is the zero address", async () => {
         // Core interfaces that will be supported at the Diamond address
         const interfaces = [InterfaceIds.IDiamondLoupe, InterfaceIds.IDiamondCut, InterfaceIds.IERC165];
 

@@ -73,7 +73,8 @@ For upgrade to succeed you need an account with UPGRADER role. Refer to [Manage 
 ### Upgrade clients
 Upgrade existing clients (currently only BosonVoucher). Script deploys new implementation and updates address on beacon.  
 We provide different npm scripts for different use cases. A script for Hardhat network does not exist. Since contracts are discarded after the deployment, they cannot be upgraded.  
-For upgrade to succeed you need an account with UPGRADER role. Refer to [Manage roles](#manage-roles) to see how to grant it.
+For upgrade to succeed you need an account with UPGRADER role. Refer to [Manage roles](#manage-roles) to see how to grant it.  
+If you are not sure which contracts were changed since last deployment/upgrade, refer to [Detect changed contract](#detect-changed-contract) to see how to get the list of changed contracts.
 
 - **local network**. This upgrades the clients on a independent instance of local network (e.g. `npx hardhat node`). Upgrade process is described [here](local-development.md#upgrade-clients).  
 ```npm run upgrade-clients:local```
@@ -192,6 +193,22 @@ Example:
 npx hardhat create-dispute-resolver --path "path/to/dispute_resolver.json" --network localhost
 ```
 
+### Detect changed contract
+Script that helps you find out, which contracts were changed between two commits. This is extremely useful before doing the upgrade to make sure all facets that were changed actually get upgraded.
 
+Run script with  
+```npx hardhat detect-changed-contracts referenceCommit [targetCommit]```
 
+Parameters: 
+- referenceCommit [required] - commit/tag/branch to compare to
+- targetCommit [optional] - commit/tag/branch to compare. If not provided, it will compare to current branch.
 
+Script prints out the list of contracts that were created, deleted or changed between specified commits.
+
+Examples: 
+
+```
+npx hardhat detect-changed-contracts v2.1.0 v2.2.0    // get changes between two tags
+npx hardhat detect-changed-contracts b4d4277          // get changes between a commit and current branch (HEAD)
+npx hardhat detect-changed-contracts v2.1.0 branch-1  // get changes a tag and another branch
+```

@@ -17,7 +17,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      * @notice Initializes facet.
      * This function is callable only once.
      */
-    function initialize() public onlyUnInitialized(type(IBosonTwinHandler).interfaceId) {
+    function initialize() public onlyUninitialized(type(IBosonTwinHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonTwinHandler).interfaceId);
     }
 

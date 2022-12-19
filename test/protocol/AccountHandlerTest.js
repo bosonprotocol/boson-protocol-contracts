@@ -6,8 +6,6 @@ const Role = require("../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const {
@@ -19,6 +17,8 @@ const {
   mockAgent,
   accountId,
 } = require("../util/mock");
+const { getFacetsWithArgs } = require("../util/utils");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 
 /**
  *  Test the Boson Account Handler interface
@@ -63,19 +63,6 @@ describe("IBosonAccountHandler", function () {
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
 
-    // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(
-      protocolDiamond,
-      [
-        "AccountHandlerFacet",
-        "SellerHandlerFacet",
-        "BuyerHandlerFacet",
-        "DisputeResolverHandlerFacet",
-        "AgentHandlerFacet",
-      ],
-      maxPriorityFeePerGas
-    );
-
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
     const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
@@ -112,6 +99,7 @@ describe("IBosonAccountHandler", function () {
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
         minDisputePeriod: oneWeek,
+        maxPremintedVouchers: 10000,
       },
       // Protocol fees
       {
@@ -121,7 +109,20 @@ describe("IBosonAccountHandler", function () {
       },
     ];
 
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+    const facetNames = [
+      "AccountHandlerFacet",
+      "SellerHandlerFacet",
+      "BuyerHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "AgentHandlerFacet",
+      "ProtocolInitializationFacet",
+      "ConfigHandlerFacet",
+    ];
+
+    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    // Cut the protocol handler facets into the Diamond
+    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);

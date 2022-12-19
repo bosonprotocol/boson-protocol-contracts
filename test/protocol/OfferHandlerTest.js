@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { expect } = require("chai");
+const { assert, expect } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
 const Offer = require("../../scripts/domain/Offer");
@@ -10,14 +10,14 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const OfferFees = require("../../scripts/domain/OfferFees");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
+const Range = require("../../scripts/domain/Range");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { applyPercentage } = require("../util/utils.js");
+const { applyPercentage, getFacetsWithArgs, calculateContractAddress } = require("../util/utils.js");
 const { oneWeek, oneMonth, oneDay, maxPriorityFeePerGas } = require("../util/constants");
 const {
   mockOffer,
@@ -55,6 +55,8 @@ describe("IBosonOfferHandler", function () {
     offerHandler,
     configHandler,
     pauseHandler,
+    exchangeHandler,
+    fundsHandler,
     bosonToken,
     offerStruct,
     key,
@@ -126,19 +128,6 @@ describe("IBosonOfferHandler", function () {
     // Temporarily grant PAUSER role to pauser account
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
-    // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(
-      protocolDiamond,
-      [
-        "SellerHandlerFacet",
-        "AgentHandlerFacet",
-        "DisputeResolverHandlerFacet",
-        "OfferHandlerFacet",
-        "PauseHandlerFacet",
-      ],
-      maxPriorityFeePerGas
-    );
-
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
     const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
@@ -178,6 +167,7 @@ describe("IBosonOfferHandler", function () {
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
         minDisputePeriod: oneWeek,
+        maxPremintedVouchers: 1000,
       },
       // Protocol fees
       {
@@ -187,7 +177,22 @@ describe("IBosonOfferHandler", function () {
       },
     ];
 
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+    const facetNames = [
+      "SellerHandlerFacet",
+      "AgentHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "OfferHandlerFacet",
+      "PauseHandlerFacet",
+      "ProtocolInitializationFacet",
+      "ConfigHandlerFacet",
+      "FundsHandlerFacet",
+      "ExchangeHandlerFacet",
+    ];
+
+    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    // Cut the protocol handler facets into the Diamond
+    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
@@ -203,6 +208,12 @@ describe("IBosonOfferHandler", function () {
 
     //Cast Diamond to IBosonPauseHandler
     pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
+
+    //Cast Diamond to IBosonExchangeHandler
+    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
+
+    //Cast Diamond to IBosonFundsHandler
+    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -1260,6 +1271,219 @@ describe("IBosonOfferHandler", function () {
               RevertReasons.OFFER_PERIOD_INVALID
             );
           });
+        });
+      });
+    });
+
+    context("👉 reserveRange()", async function () {
+      let firstTokenId, lastTokenId, length, range;
+      let bosonVoucher;
+
+      beforeEach(async function () {
+        // Create an offer
+        offer.quantityAvailable = "200";
+        await offerHandler
+          .connect(operator)
+          .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
+        // id of the current offer and increment nextOfferId
+        id = nextOfferId++;
+
+        // expected address of the first clone
+        const voucherCloneAddress = calculateContractAddress(accountHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
+
+        length = 100;
+        firstTokenId = 1;
+        lastTokenId = firstTokenId + length - 1;
+        range = new Range(id.toString(), firstTokenId.toString(), length.toString(), "0", "0");
+      });
+
+      it("should emit an RangeReserved event", async function () {
+        // Reserve a range, testing for the event
+        const tx = await offerHandler.connect(operator).reserveRange(id, length);
+
+        await expect(tx)
+          .to.emit(offerHandler, "RangeReserved")
+          .withArgs(id, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+
+        await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(id, range.toStruct());
+      });
+
+      it("should update state", async function () {
+        // Get the offer and nextExchangeId before reservation
+        [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+        const quantityAvailableBefore = offerStruct.quantityAvailable;
+        const nextExchangeIdBefore = await exchangeHandler.getNextExchangeId();
+
+        // Reserve a range
+        await offerHandler.connect(operator).reserveRange(id, length);
+
+        // Quantity available should be updated
+        [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+        const quantityAvailableAfter = offerStruct.quantityAvailable;
+        assert.equal(
+          quantityAvailableBefore.sub(quantityAvailableAfter).toNumber(),
+          length,
+          "Quantity available mismatch"
+        );
+
+        // nextExchangeId should be updated
+        const nextExchangeIdAfter = await exchangeHandler.getNextExchangeId();
+        assert.equal(nextExchangeIdAfter.sub(nextExchangeIdBefore).toNumber(), length, "nextExchangeId mismatch");
+
+        // Get range object from the voucher contract
+        const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(id));
+        assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+      });
+
+      it("it's possible to reserve range even if somebody already commited to", async function () {
+        // Deposit seller funds so the commit will succeed
+        const sellerPool = ethers.BigNumber.from(offer.sellerDeposit).mul(2);
+        await fundsHandler
+          .connect(operator)
+          .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+
+        // Commit to the offer twice
+        await exchangeHandler.connect(rando).commitToOffer(rando.address, id, { value: price });
+        await exchangeHandler.connect(rando).commitToOffer(rando.address, id, { value: price });
+
+        // Reserve a range, testing for the event
+        await expect(offerHandler.connect(operator).reserveRange(id, length))
+          .to.emit(offerHandler, "RangeReserved")
+          .withArgs(id, offer.sellerId, firstTokenId + 2, lastTokenId + 2, operator.address);
+      });
+
+      it("It's possible to reserve a range with maximum allowed length", async function () {
+        // Create an unlimited offer
+        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+        await offerHandler
+          .connect(operator)
+          .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
+        // Set maximum allowed length
+        length = ethers.BigNumber.from(2).pow(128).sub(1);
+        await expect(offerHandler.connect(operator).reserveRange(nextOfferId, length)).to.emit(
+          offerHandler,
+          "RangeReserved"
+        );
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("The offers region of protocol is paused", async function () {
+          // Pause the offers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
+
+          // Attempt to reserve a range, expecting revert
+          await expect(offerHandler.connect(operator).reserveRange(id, length)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
+        it("The exchanges region of protocol is paused", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
+
+          // Attempt to reserve a range, expecting revert
+          await expect(offerHandler.connect(operator).reserveRange(id, length)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
+        it("Offer does not exist", async function () {
+          // Set invalid id
+          id = "444";
+
+          // Attempt to reserve a range, expecting revert
+          await expect(offerHandler.connect(operator).reserveRange(id, length)).to.revertedWith(
+            RevertReasons.NO_SUCH_OFFER
+          );
+
+          // Set invalid id
+          id = "0";
+
+          // Attempt to reserve a range, expecting revert
+          await expect(offerHandler.connect(operator).reserveRange(id, length)).to.revertedWith(
+            RevertReasons.NO_SUCH_OFFER
+          );
+        });
+
+        it("Offer already voided", async function () {
+          // Void the offer first
+          await offerHandler.connect(operator).voidOffer(id);
+
+          // Attempt to reserve a range, expecting revert
+          await expect(offerHandler.connect(operator).reserveRange(id, length)).to.revertedWith(
+            RevertReasons.OFFER_HAS_BEEN_VOIDED
+          );
+        });
+
+        it("Caller is not seller", async function () {
+          // caller is not the operator of any seller
+          // Attempt to reserve a range, expecting revert
+          await expect(offerHandler.connect(rando).reserveRange(id, length)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+
+          // caller is an operator of another seller
+          // Create a valid seller, then set fields in tests directly
+          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+
+          // AuthToken
+          emptyAuthToken = mockAuthToken();
+          expect(emptyAuthToken.isValid()).is.true;
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          // Attempt to reserve a range, expecting revert
+          await expect(offerHandler.connect(rando).reserveRange(id, length)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+        });
+
+        it("Range length is zero", async function () {
+          // Set length to zero
+          length = 0;
+
+          // Attempt to reserve a range, expecting revert
+          await expect(offerHandler.connect(operator).reserveRange(id, length)).to.revertedWith(
+            RevertReasons.INVALID_RANGE_LENGTH
+          );
+        });
+
+        it("Range length is greater than quantity available", async function () {
+          // Set length to zero
+          length = Number(offer.quantityAvailable) + 1;
+
+          // Attempt to reserve a range, expecting revert
+          await expect(offerHandler.connect(operator).reserveRange(id, length)).to.revertedWith(
+            RevertReasons.INVALID_RANGE_LENGTH
+          );
+        });
+
+        it("Range length is greater than maximum allowed range length", async function () {
+          // Create an unlimited offer
+          offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
+          // Set length to more than maximum allowed range length
+          length = ethers.BigNumber.from(2).pow(128);
+
+          // Attempt to reserve a range, expecting revert
+          await expect(offerHandler.connect(operator).reserveRange(nextOfferId, length)).to.revertedWith(
+            RevertReasons.INVALID_RANGE_LENGTH
+          );
+        });
+
+        it("Call to BosonVoucher.reserveRange() reverts", async function () {
+          // Reserve a range
+          await offerHandler.connect(operator).reserveRange(id, length);
+
+          // Attempt to reserve the same range again, expecting revert
+          await expect(offerHandler.connect(operator).reserveRange(id, length)).to.revertedWith(
+            RevertReasons.OFFER_RANGE_ALREADY_RESERVED
+          );
         });
       });
     });

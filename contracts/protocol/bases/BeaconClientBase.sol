@@ -41,11 +41,34 @@ abstract contract BeaconClientBase is BosonTypes {
      * @return exists - the offer was found
      * @return offer - the offer associated with the _exchangeId
      */
-    function getBosonOffer(uint256 _exchangeId) internal view returns (bool exists, Offer memory offer) {
+    function getBosonOfferByExchangeId(uint256 _exchangeId) internal view returns (bool exists, Offer memory offer) {
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-
         (, Exchange memory exchange, ) = IBosonExchangeHandler(protocolDiamond).getExchange(_exchangeId);
         (exists, offer, , , , ) = IBosonOfferHandler(protocolDiamond).getOffer(exchange.offerId);
+    }
+
+    /**
+     * @notice Gets the info about the offer associated with a voucher's exchange
+     *
+     * @param _offerId - the offer id
+     * @return offer - the offer associated with the _offerId
+     * @return offerDates - the offer dates associated with the _offerId
+     */
+    function getBosonOffer(uint256 _offerId) internal view returns (Offer memory offer, OfferDates memory offerDates) {
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+        (, offer, offerDates, , , ) = IBosonOfferHandler(protocolDiamond).getOffer(_offerId);
+    }
+
+    /**
+     * @notice Gets the exchange associated with a voucher
+     *
+     * @param _exchangeId - the id of the exchange
+     * @return exists - the exchange was found
+     * @return exchange - the exchange associated with the _exchangeId
+     */
+    function getBosonExchange(uint256 _exchangeId) internal view returns (bool exists, Exchange memory exchange) {
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+        (exists, exchange, ) = IBosonExchangeHandler(protocolDiamond).getExchange(_exchangeId);
     }
 
     /**
