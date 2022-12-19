@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-npm run tidy:scripts
-npm run tidy:contracts
+find . -name '*.js' -not -path '*/node_modules/*' | xargs git diff --cached --name-only | xargs npm run tidy:scripts
+git diff --cached --name-only | grep contracts | xargs npm run tidy:contracts
 npm run natspec-interface-id:fix
