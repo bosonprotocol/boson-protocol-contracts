@@ -13,65 +13,17 @@ import { PausableBase } from "../bases/PausableBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 
 /**
- * @title OrchestrationHandlerFacet
+ * @title OrchestrationHandlerFacet1
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction.
  */
-contract OrchestrationHandlerFacet is
-    PausableBase,
-    SellerBase,
-    OfferBase,
-    GroupBase,
-    TwinBase,
-    BundleBase,
-    DisputeBase,
-    IBosonOrchestrationHandler
-{
+contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, GroupBase, TwinBase, BundleBase {
     /**
      * @notice Initializes facet.
      * This function is callable only once.
      */
     function initialize() public onlyUninitialized(type(IBosonOrchestrationHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonOrchestrationHandler).interfaceId);
-    }
-
-    /**
-     * @notice Raises a dispute and immediately escalates it.
-     *
-     * Caller must send (or for ERC20, approve the transfer of) the
-     * buyer escalation deposit percentage of the offer price, which
-     * will be added to the pot for resolution.
-     *
-     * Emits a DisputeRaised and a DisputeEscalated event if successful.
-     *
-     * Reverts if:
-     * - The disputes region of protocol is paused
-     * - The orchestration region of protocol is paused
-     * - Caller is not the buyer for the given exchange id
-     * - Exchange does not exist
-     * - Exchange is not in a Redeemed state
-     * - Dispute period has elapsed already
-     * - Dispute resolver is not specified (absolute zero offer)
-     * - Offer price is in native token and caller does not send enough
-     * - Offer price is in some ERC20 token and caller also sends native currency
-     * - If contract at token address does not support ERC20 function transferFrom
-     * - If calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - Received ERC20 token amount differs from the expected value
-     *
-     * @param _exchangeId - the id of the associated exchange
-     */
-    function raiseAndEscalateDispute(uint256 _exchangeId) external payable orchestrationNotPaused nonReentrant {
-        // Get the exchange, should be in redeemed state
-        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Redeemed);
-
-        // Get the offer, which will exist if the exchange does
-        (, Offer storage offer) = fetchOffer(exchange.offerId);
-
-        // Raise the dispute
-        raiseDisputeInternal(exchange, voucher, offer.sellerId);
-
-        // Escalate the dispute
-        escalateDisputeInternal(_exchangeId);
     }
 
     /**
@@ -137,7 +89,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) public override sellersNotPaused offersNotPaused orchestrationNotPaused nonReentrant {
+    ) public sellersNotPaused offersNotPaused orchestrationNotPaused nonReentrant {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
     }
@@ -212,7 +164,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override {
+    ) external {
         createSellerAndOffer(
             _seller,
             _offer,
@@ -271,7 +223,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         Condition calldata _condition,
         uint256 _agentId
-    ) public override offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
+    ) public offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
         // Create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -339,7 +291,7 @@ contract OrchestrationHandlerFacet is
         uint256 _reservedRangeLength,
         Condition calldata _condition,
         uint256 _agentId
-    ) public override {
+    ) public {
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
         reserveRangeInternal(_offer.id, _reservedRangeLength);
     }
@@ -392,7 +344,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         uint256 _groupId,
         uint256 _agentId
-    ) public override offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
+    ) public offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
         // Create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -457,7 +409,7 @@ contract OrchestrationHandlerFacet is
         uint256 _reservedRangeLength,
         uint256 _groupId,
         uint256 _agentId
-    ) external override {
+    ) external {
         createOfferAddToGroup(_offer, _offerDates, _offerDurations, _disputeResolverId, _groupId, _agentId);
         reserveRangeInternal(_offer.id, _reservedRangeLength);
     }
@@ -515,7 +467,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         Twin memory _twin,
         uint256 _agentId
-    ) public override offersNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused nonReentrant {
+    ) public offersNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused nonReentrant {
         // Create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -583,7 +535,7 @@ contract OrchestrationHandlerFacet is
         uint256 _reservedRangeLength,
         Twin memory _twin,
         uint256 _agentId
-    ) public override {
+    ) public {
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
         reserveRangeInternal(_offer.id, _reservedRangeLength);
     }
@@ -648,7 +600,7 @@ contract OrchestrationHandlerFacet is
         Condition calldata _condition,
         Twin memory _twin,
         uint256 _agentId
-    ) public override twinsNotPaused bundlesNotPaused {
+    ) public twinsNotPaused bundlesNotPaused {
         // Create offer with condition first
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
         // Create twin and pack everything into a bundle
@@ -720,7 +672,7 @@ contract OrchestrationHandlerFacet is
         Condition calldata _condition,
         Twin memory _twin,
         uint256 _agentId
-    ) public override {
+    ) public {
         createOfferWithConditionAndTwinAndBundle(
             _offer,
             _offerDates,
@@ -804,7 +756,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) public override sellersNotPaused {
+    ) public sellersNotPaused {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
     }
@@ -885,7 +837,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override {
+    ) external {
         createSellerAndOfferWithCondition(
             _seller,
             _offer,
@@ -979,7 +931,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) public override sellersNotPaused {
+    ) public sellersNotPaused {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
     }
@@ -1068,7 +1020,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override sellersNotPaused {
+    ) external sellersNotPaused {
         createSellerAndOfferAndTwinWithBundle(
             _seller,
             _offer,
@@ -1166,7 +1118,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) public override sellersNotPaused {
+    ) public sellersNotPaused {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferWithConditionAndTwinAndBundle(
             _offer,
@@ -1268,7 +1220,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override sellersNotPaused {
+    ) external sellersNotPaused {
         createSellerAndOfferWithConditionAndTwinAndBundle(
             _seller,
             _offer,
