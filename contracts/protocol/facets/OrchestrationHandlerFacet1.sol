@@ -10,21 +10,14 @@ import { OfferBase } from "../bases/OfferBase.sol";
 import { TwinBase } from "../bases/TwinBase.sol";
 import { BundleBase } from "../bases/BundleBase.sol";
 import { PausableBase } from "../bases/PausableBase.sol";
+import { DisputeBase } from "../bases/DisputeBase.sol";
 
 /**
- * @title OrchestrationHandlerFacet
+ * @title OrchestrationHandlerFacet1
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction.
  */
-contract OrchestrationHandlerFacet is
-    PausableBase,
-    SellerBase,
-    OfferBase,
-    GroupBase,
-    TwinBase,
-    BundleBase,
-    IBosonOrchestrationHandler
-{
+contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, GroupBase, TwinBase, BundleBase {
     /**
      * @notice Initializes facet.
      * This function is callable only once.
@@ -96,7 +89,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) public override sellersNotPaused offersNotPaused orchestrationNotPaused nonReentrant {
+    ) public sellersNotPaused offersNotPaused orchestrationNotPaused nonReentrant {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
     }
@@ -171,7 +164,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override {
+    ) external {
         createSellerAndOffer(
             _seller,
             _offer,
@@ -230,7 +223,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         Condition calldata _condition,
         uint256 _agentId
-    ) public override offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
+    ) public offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
         // Create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -298,7 +291,7 @@ contract OrchestrationHandlerFacet is
         uint256 _reservedRangeLength,
         Condition calldata _condition,
         uint256 _agentId
-    ) public override {
+    ) public {
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
         reserveRangeInternal(_offer.id, _reservedRangeLength);
     }
@@ -351,7 +344,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         uint256 _groupId,
         uint256 _agentId
-    ) public override offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
+    ) public offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
         // Create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -416,7 +409,7 @@ contract OrchestrationHandlerFacet is
         uint256 _reservedRangeLength,
         uint256 _groupId,
         uint256 _agentId
-    ) external override {
+    ) external {
         createOfferAddToGroup(_offer, _offerDates, _offerDurations, _disputeResolverId, _groupId, _agentId);
         reserveRangeInternal(_offer.id, _reservedRangeLength);
     }
@@ -474,7 +467,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         Twin memory _twin,
         uint256 _agentId
-    ) public override offersNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused nonReentrant {
+    ) public offersNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused nonReentrant {
         // Create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -542,7 +535,7 @@ contract OrchestrationHandlerFacet is
         uint256 _reservedRangeLength,
         Twin memory _twin,
         uint256 _agentId
-    ) public override {
+    ) public {
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
         reserveRangeInternal(_offer.id, _reservedRangeLength);
     }
@@ -607,7 +600,7 @@ contract OrchestrationHandlerFacet is
         Condition calldata _condition,
         Twin memory _twin,
         uint256 _agentId
-    ) public override twinsNotPaused bundlesNotPaused {
+    ) public twinsNotPaused bundlesNotPaused {
         // Create offer with condition first
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
         // Create twin and pack everything into a bundle
@@ -679,7 +672,7 @@ contract OrchestrationHandlerFacet is
         Condition calldata _condition,
         Twin memory _twin,
         uint256 _agentId
-    ) public override {
+    ) public {
         createOfferWithConditionAndTwinAndBundle(
             _offer,
             _offerDates,
@@ -763,7 +756,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) public override sellersNotPaused {
+    ) public sellersNotPaused {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
     }
@@ -844,7 +837,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override {
+    ) external {
         createSellerAndOfferWithCondition(
             _seller,
             _offer,
@@ -938,7 +931,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) public override sellersNotPaused {
+    ) public sellersNotPaused {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
     }
@@ -1027,7 +1020,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override sellersNotPaused {
+    ) external sellersNotPaused {
         createSellerAndOfferAndTwinWithBundle(
             _seller,
             _offer,
@@ -1125,7 +1118,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) public override sellersNotPaused {
+    ) public sellersNotPaused {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferWithConditionAndTwinAndBundle(
             _offer,
@@ -1227,7 +1220,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override sellersNotPaused {
+    ) external sellersNotPaused {
         createSellerAndOfferWithConditionAndTwinAndBundle(
             _seller,
             _offer,

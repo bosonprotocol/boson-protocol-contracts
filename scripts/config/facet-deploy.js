@@ -49,7 +49,8 @@ const noArgFacetNames = [
   "FundsHandlerFacet",
   "GroupHandlerFacet",
   "OfferHandlerFacet",
-  "OrchestrationHandlerFacet",
+  "OrchestrationHandlerFacet1",
+  "OrchestrationHandlerFacet2",
   "TwinHandlerFacet",
   "PauseHandlerFacet",
   "ProtocolInitializationFacet", // args are generated on cutDiamond function

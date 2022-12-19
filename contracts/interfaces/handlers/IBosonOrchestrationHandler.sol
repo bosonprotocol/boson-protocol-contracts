@@ -13,7 +13,7 @@ import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  *
- * The ERC-165 identifier for this interface is: 0x97ba52ac
+ * The ERC-165 identifier for this interface is: 0x6fa524ec
  */
 interface IBosonOrchestrationHandler is
     IBosonAccountEvents,
@@ -22,6 +22,33 @@ interface IBosonOrchestrationHandler is
     IBosonTwinEvents,
     IBosonBundleEvents
 {
+    /**
+     * @notice Raises a dispute and immediately escalates it.
+     *
+     * Caller must send (or for ERC20, approve the transfer of) the
+     * buyer escalation deposit percentage of the offer price, which
+     * will be added to the pot for resolution.
+     *
+     * Emits a DisputeRaised and a DisputeEscalated event if successful.
+     *
+     * Reverts if:
+     * - The disputes region of protocol is paused
+     * - The orchestration region of protocol is paused
+     * - Caller is not the buyer for the given exchange id
+     * - Exchange does not exist
+     * - Exchange is not in a Redeemed state
+     * - Dispute period has elapsed already
+     * - Dispute resolver is not specified (absolute zero offer)
+     * - Offer price is in native token and caller does not send enough
+     * - Offer price is in some ERC20 token and caller also sends native currency
+     * - If contract at token address does not support ERC20 function transferFrom
+     * - If calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Received ERC20 token amount differs from the expected value
+     *
+     * @param _exchangeId - the id of the associated exchange
+     */
+    function raiseAndEscalateDispute(uint256 _exchangeId) external payable;
+
     /**
      * @notice Creates a seller (with optional auth token) and an offer in a single transaction.
      *
