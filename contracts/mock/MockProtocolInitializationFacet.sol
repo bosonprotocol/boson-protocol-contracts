@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 /**
  * @title MockBosonProtocolInitializationHandler
  *
- * @notice Simulates state of the protocol in tests before v 2.1.0.
+ * @notice Simulates state of the protocol in tests before v2.1.0.
  *
  */
 contract MockProtocolInitializationFacet {

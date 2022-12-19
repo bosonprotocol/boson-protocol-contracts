@@ -383,14 +383,12 @@ describe("ProtocolInitializationHandler", async function () {
       );
 
       // Deploy v2.2.0 facets
-      const deployedFacets = await deployProtocolFacets(
+      [{ contract: deployedProtocolInitializationFacet }, { contract: configHandler }] = await deployProtocolFacets(
         ["ProtocolInitializationFacet", "ConfigHandlerFacet"],
-        { ProtocolInitializationFacet: [version, [], [], true] },
+        {},
         await getFees(maxPriorityFeePerGas)
       );
 
-      deployedProtocolInitializationFacet = deployedFacets[0];
-      configHandler = deployedFacets[1].contract;
       version = ethers.utils.formatBytes32String("2.2.0");
 
       // Prepare cut data, and attach correct address to configHandler
@@ -399,7 +397,7 @@ describe("ProtocolInitializationHandler", async function () {
     });
 
     it("Should emit MaxPremintedVouchersChanged event", async function () {
-      const calldataProtocolInitialization = deployedProtocolInitializationFacet.contract.interface.encodeFunctionData(
+      const calldataProtocolInitialization = deployedProtocolInitializationFacet.interface.encodeFunctionData(
         "initialize",
         [version, [], [], true, initializationData, [], []]
       );
@@ -408,7 +406,7 @@ describe("ProtocolInitializationHandler", async function () {
       await expect(
         diamondCutFacet.diamondCut(
           [facetCut],
-          deployedProtocolInitializationFacet.contract.address,
+          deployedProtocolInitializationFacet.address,
           calldataProtocolInitialization,
           await getFees(maxPriorityFeePerGas)
         )
@@ -418,7 +416,7 @@ describe("ProtocolInitializationHandler", async function () {
     });
 
     it("Should update state", async function () {
-      const calldataProtocolInitialization = deployedProtocolInitializationFacet.contract.interface.encodeFunctionData(
+      const calldataProtocolInitialization = deployedProtocolInitializationFacet.interface.encodeFunctionData(
         "initialize",
         [version, [], [], true, initializationData, [], []]
       );
@@ -426,7 +424,7 @@ describe("ProtocolInitializationHandler", async function () {
       // Make the cut, check the event
       await diamondCutFacet.diamondCut(
         [facetCut],
-        deployedProtocolInitializationFacet.contract.address,
+        deployedProtocolInitializationFacet.address,
         calldataProtocolInitialization,
         await getFees(maxPriorityFeePerGas)
       );
@@ -441,22 +439,16 @@ describe("ProtocolInitializationHandler", async function () {
         maxPremintedVouchers = "0";
         initializationData = ethers.utils.defaultAbiCoder.encode(["uint256"], [maxPremintedVouchers]);
 
-        const calldataProtocolInitialization =
-          deployedProtocolInitializationFacet.contract.interface.encodeFunctionData("initialize", [
-            version,
-            [],
-            [],
-            true,
-            initializationData,
-            [],
-            [],
-          ]);
+        const calldataProtocolInitialization = deployedProtocolInitializationFacet.interface.encodeFunctionData(
+          "initialize",
+          [version, [], [], true, initializationData, [], []]
+        );
 
         // make diamond cut, expect revert
         await expect(
           diamondCutFacet.diamondCut(
             [facetCut],
-            deployedProtocolInitializationFacet.contract.address,
+            deployedProtocolInitializationFacet.address,
             calldataProtocolInitialization,
             await getFees(maxPriorityFeePerGas)
           )
@@ -467,7 +459,9 @@ describe("ProtocolInitializationHandler", async function () {
         // Deploy higher version
         version = "2.3.0";
         const interfaceId = InterfaceIds[interfaceImplementers["ProtocolInitializationFacet"]];
-        const { deployedFacets } = await deployAndCutFacets(
+        const {
+          deployedFacets: [{ contract: deployedProtocolInitializationFacet }],
+        } = await deployAndCutFacets(
           protocolDiamond.address,
           { ProtocolInitializationFacet: [version, [], [], true] },
           maxPriorityFeePerGas,
@@ -475,26 +469,19 @@ describe("ProtocolInitializationHandler", async function () {
           undefined,
           [interfaceId]
         );
-        deployedProtocolInitializationFacet = deployedFacets[0];
 
         // Prepare 2.2.0 deployment
         version = ethers.utils.formatBytes32String("2.2.0");
-        const calldataProtocolInitialization =
-          deployedProtocolInitializationFacet.contract.interface.encodeFunctionData("initialize", [
-            version,
-            [],
-            [],
-            true,
-            initializationData,
-            [],
-            [],
-          ]);
+        const calldataProtocolInitialization = deployedProtocolInitializationFacet.interface.encodeFunctionData(
+          "initialize",
+          [version, [], [], true, initializationData, [], []]
+        );
 
         // make diamond cut, expect revert
         await expect(
           diamondCutFacet.diamondCut(
             [facetCut],
-            deployedProtocolInitializationFacet.contract.address,
+            deployedProtocolInitializationFacet.address,
             calldataProtocolInitialization,
             await getFees(maxPriorityFeePerGas)
           )

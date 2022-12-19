@@ -29,8 +29,8 @@ async function getFacets() {
     addOrUpgrade: [],
     remove: [],
     skipSelectors: {},
-    facetsToInit: { DisputeResolverHandlerFacet: [] },
-    initializationData: "0x0000000000000000000000000000000000000000000000000000000000000012",
+    facetsToInit: {},
+    initializationData: "0x",
   };
 }
 
