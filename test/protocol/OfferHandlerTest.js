@@ -186,6 +186,7 @@ describe("IBosonOfferHandler", function () {
       "ProtocolInitializationFacet",
       "ConfigHandlerFacet",
       "FundsHandlerFacet",
+      "ExchangeHandlerFacet",
     ];
 
     const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
