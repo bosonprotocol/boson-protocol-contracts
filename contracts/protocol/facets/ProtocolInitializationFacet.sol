@@ -8,7 +8,7 @@ import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 
 /**
- * @title IBosonProtocolInitializationHandler
+ * @title BosonProtocolInitializationHandler
  *
  * @notice Handle initializion of new versions after 2.1.0.
  *
@@ -33,16 +33,18 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
      * @param _calldata -  array of facets initialize methods encoded as calldata
      *                    _calldata order must match _addresses order
      * @param _isUpgrade - flag to indicate whether this is first deployment or upgrade
-     * @param interfacesToRemove - array of interfaces to remove from the diamond
-     * @param interfacesToAdd - array of interfaces to add to the diamond
+     * @param _initializationData - data for initialization of the protocol, using this facet (only if _isUpgrade == true)
+     * @param _interfacesToRemove - array of interfaces to remove from the diamond
+     * @param _interfacesToAdd - array of interfaces to add to the diamond
      */
     function initialize(
         bytes32 _version,
         address[] calldata _addresses,
         bytes[] calldata _calldata,
         bool _isUpgrade,
-        bytes4[] calldata interfacesToRemove,
-        bytes4[] calldata interfacesToAdd
+        bytes calldata _initializationData,
+        bytes4[] calldata _interfacesToRemove,
+        bytes4[] calldata _interfacesToAdd
     ) external onlyUninitializedVersion(_version) {
         require(_version != bytes32(0), VERSION_MUST_BE_SET);
         require(_addresses.length == _calldata.length, ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH);
@@ -66,12 +68,12 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
         if (_isUpgrade) {
             if (_version == bytes32("2.2.0")) {
-                initV2_2_0();
+                initV2_2_0(_initializationData);
             }
         }
 
-        removeInterfaces(interfacesToRemove);
-        addInterfaces(interfacesToAdd);
+        removeInterfaces(_interfacesToRemove);
+        addInterfaces(_interfacesToAdd);
 
         status.version = _version;
         emit ProtocolInitialized(string(abi.encodePacked(_version)));
@@ -80,8 +82,20 @@ contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, Pro
     /**
      * @notice Initializes the version 2.2.0.
      *
+     * V2.2.0 adds the limit for the number of preminted vouchers. Cannot be initialized with ConfigHandlerFacet.initialize since it would reset the counters.
+     *
+     * @param _initializationData - data representing uint256 _maxPremintedVouchers
      */
-    function initV2_2_0() internal {}
+    function initV2_2_0(bytes calldata _initializationData) internal {
+        // v2.2.0 can only be initialized if the current version does not exist yet
+        require(protocolStatus().version == 0x0, WRONG_CURRENT_VERSION);
+
+        // Initialize limits.maxPremintedVouchers (configHandlerFacet initializer)
+        uint256 _maxPremintedVouchers = abi.decode(_initializationData, (uint256));
+        require(_maxPremintedVouchers != 0, VALUE_ZERO_NOT_ALLOWED);
+        protocolLimits().maxPremintedVouchers = _maxPremintedVouchers;
+        emit MaxPremintedVouchersChanged(_maxPremintedVouchers, msgSender());
+    }
 
     /**
      * @notice Gets the current protocol version.
