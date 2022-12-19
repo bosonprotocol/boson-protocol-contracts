@@ -15,11 +15,19 @@ To follow the manual and to get your local environment running you'll need to ha
 - Node v16.14.x
 - NPM v8.4.x
 
-## Clone the repo
+## Fork our repo
+- Navigate to [bosonprotocol/boson-protocol-contracts on GitHub](https://github.com/bosonprotocol/boson-protocol-contracts)
+- If this is your first time forking a repository on GitHub, follow [the instructions](https://docs.github.com/en/get-started/quickstart/fork-a-repo#forking-a-repository) there.
+- Fork our repo to your GitHub account, e.g. `myaccount/boson-protocol-contracts`
 
-Start by cloning this repository.
+## Clone your forked repo locally
+Assuming your fork is `myaccount/boson-protocol-contracts`, you can clone the repo locally with:
 
-`git clone git@github.com:bosonprotocol/boson-protocol-contracts.git`
+`git clone git@github.com:myaccount/boson-protocol-contracts.git`
+
+You may now make branches locally, commit to them, and push them to your fork. 
+
+Should you wish to make a contribution to the protocol, you can create a pull request that seeks to merge a branch of your fork into the Boson Protocol `main` branch. Read more about [making contributions from a fork](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) in the GitHub docs.
 
 ### Install required Node modules
 All NPM resources are project local. No global installs required.
