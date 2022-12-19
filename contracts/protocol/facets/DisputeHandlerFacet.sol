@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
+// CHANGES IN THIS CONTRACT ARE IMPLEMENTED FOR INOFRMATION PURPOSES AND SHOULD NOT BE USED IN PRODUCTION
 
 import "../../domain/BosonConstants.sol";
 import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHandler.sol";
@@ -9,12 +10,18 @@ import { DisputeBase } from "../bases/DisputeBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
+import { Address } from "../../ext_libs/Address.sol";
+import { IEscalationResolver } from "../../interfaces/escalation/IEscalationResolver.sol";
+import { IEscalatable } from "../../interfaces/escalation/IEscalatable.sol";
+
 /**
  * @title DisputeHandlerFacet
  *
  * @notice Handles disputes associated with exchanges within the protocol.
  */
-contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
+contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler, IEscalationResolver {
+    using Address for address;
+
     bytes32 private constant RESOLUTION_TYPEHASH =
         keccak256(bytes("Resolution(uint256 exchangeId,uint256 buyerPercentBasisPoints)")); // needed for verification during the resolveDispute
 
@@ -107,12 +114,10 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @param _exchangeId - the id of the associated exchange
      * @param _newDisputeTimeout - new date when resolution period ends
      */
-    function extendDisputeTimeout(uint256 _exchangeId, uint256 _newDisputeTimeout)
-        external
-        override
-        disputesNotPaused
-        nonReentrant
-    {
+    function extendDisputeTimeout(
+        uint256 _exchangeId,
+        uint256 _newDisputeTimeout
+    ) external override disputesNotPaused nonReentrant {
         // Verify that the caller is the seller. Get exchange -> get offer id -> get seller id -> get operator address and compare to msg.sender
         // Get the exchange, should be in disputed state
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
@@ -226,20 +231,11 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * - Dispute was escalated and escalation period has elapsed
      *
      * @param _exchangeId  - the id of the associated exchange
-     * @param _buyerPercent - percentage of the pot that goes to the buyer
-     * @param _sigR - r part of the signer's signature
-     * @param _sigS - s part of the signer's signature
-     * @param _sigV - v part of the signer's signature
+     * @param _percent - percentage of the pot that goes to the buyer or seller
      */
-    function resolveDispute(
-        uint256 _exchangeId,
-        uint256 _buyerPercent,
-        bytes32 _sigR,
-        bytes32 _sigS,
-        uint8 _sigV
-    ) external override disputesNotPaused nonReentrant {
+    function resolveDispute(uint256 _exchangeId, uint256 _percent) external override disputesNotPaused nonReentrant {
         // buyer should get at most 100%
-        require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
+        require(_percent <= 10000, INVALID_BUYER_PERCENT);
 
         // Get the exchange, should be in disputed state
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
@@ -261,38 +257,30 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
             // get seller id to check if caller is the seller
             (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
 
-            // variable to store who the expected signer is
-            address expectedSigner;
-
             // find out if the caller is the seller or the buyer, and which address should be the signer
             if (exists && offer.sellerId == sellerId) {
                 // caller is the seller
-                // get the buyer's address, which should be the signer of the resolution
-                (, Buyer storage buyer) = fetchBuyer(exchange.buyerId);
-                expectedSigner = buyer.wallet;
+                dispute.sellerPercent = _percent;
+                dispute.sellerPercentSet = true;
             } else {
+                // caller is the buyer
                 uint256 buyerId;
                 (exists, buyerId) = getBuyerIdByWallet(msgSender());
                 require(exists && buyerId == exchange.buyerId, NOT_BUYER_OR_SELLER);
 
-                // caller is the buyer
-                // get the seller's address, which should be the signer of the resolution
-                (, Seller storage seller, ) = fetchSeller(offer.sellerId);
-                expectedSigner = seller.operator;
+                dispute.buyerPercent = _percent;
+                dispute.buyerPercentSet = true;
             }
-
-            // verify that the signature belongs to the expectedSigner
-            require(
-                EIP712Lib.verify(expectedSigner, hashResolution(_exchangeId, _buyerPercent), _sigR, _sigS, _sigV),
-                SIGNER_AND_SIGNATURE_DO_NOT_MATCH
-            );
         }
 
-        // finalize the dispute
-        finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Resolved, _buyerPercent);
-
-        // Notify watchers of state change
-        emit DisputeResolved(_exchangeId, _buyerPercent, msgSender());
+        if (
+            dispute.buyerPercentSet && dispute.sellerPercentSet && dispute.sellerPercent + dispute.buyerPercent == 10000
+        ) {
+            // finalize the dispute
+            finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Resolved, dispute.buyerPercent);
+            // Notify watchers of state change
+            emit DisputeResolved(_exchangeId, dispute.buyerPercent, msgSender());
+        }
     }
 
     /**
@@ -344,6 +332,26 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         // make sure buyer sent enough funds to proceed
         FundsLib.validateIncomingPayment(offer.exchangeToken, disputeResolutionTerms.buyerEscalationDeposit);
 
+        // Fetch DR to check if Escalatable interface is implemented
+        (bool exists, DisputeResolver memory disputeResolver, ) = fetchDisputeResolver(
+            disputeResolutionTerms.disputeResolverId
+        );
+        // Dispute resolver must already exist
+        require(exists, NO_SUCH_DISPUTE_RESOLVER);
+
+        if (disputeResolver.operator.isContract()) {
+            require(dispute.buyerPercentSet, "At least buyer percent must be set");
+
+            IEscalatable escalatable = IEscalatable(disputeResolver.operator);
+            // check if the fee set in Boson Protocol is equal to the external escalation cost
+            require(
+                disputeResolutionTerms.feeAmount == escalatable.escalationCost(),
+                "DR Fee and external escalation cost must be equal"
+            );
+
+            escalatable.escalateDispute(_exchangeId, dispute.buyerPercent, dispute.sellerPercent);
+        }
+
         // fetch the escalation period from the storage
         uint256 escalationResponsePeriod = disputeResolutionTerms.escalationResponsePeriod;
 
@@ -375,12 +383,10 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @param _exchangeId  - the id of the associated exchange
      * @param _buyerPercent - percentage of the pot that goes to the buyer
      */
-    function decideDispute(uint256 _exchangeId, uint256 _buyerPercent)
-        external
-        override
-        disputesNotPaused
-        nonReentrant
-    {
+    function decideDispute(
+        uint256 _exchangeId,
+        uint256 _buyerPercent
+    ) external override(IBosonDisputeHandler, IEscalationResolver) disputesNotPaused nonReentrant {
         // Buyer should get at most 100%
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
@@ -411,7 +417,9 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function refuseEscalatedDispute(uint256 _exchangeId) external override disputesNotPaused nonReentrant {
+    function refuseEscalatedDispute(
+        uint256 _exchangeId
+    ) external override(IBosonDisputeHandler, IEscalationResolver) disputesNotPaused nonReentrant {
         // Make sure the dispute is valid and the caller is the dispute resolver
         (Exchange storage exchange, Dispute storage dispute, DisputeDates storage disputeDates) = disputeResolverChecks(
             _exchangeId
@@ -503,16 +511,9 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @return dispute - the dispute details. See {BosonTypes.Dispute}
      * @return disputeDates - the dispute dates details {BosonTypes.DisputeDates}
      */
-    function getDispute(uint256 _exchangeId)
-        external
-        view
-        override
-        returns (
-            bool exists,
-            Dispute memory dispute,
-            DisputeDates memory disputeDates
-        )
-    {
+    function getDispute(
+        uint256 _exchangeId
+    ) external view override returns (bool exists, Dispute memory dispute, DisputeDates memory disputeDates) {
         return fetchDispute(_exchangeId);
     }
 
@@ -580,15 +581,9 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function disputeResolverChecks(uint256 _exchangeId)
-        internal
-        view
-        returns (
-            Exchange storage exchange,
-            Dispute storage dispute,
-            DisputeDates storage disputeDates
-        )
-    {
+    function disputeResolverChecks(
+        uint256 _exchangeId
+    ) internal view returns (Exchange storage exchange, Dispute storage dispute, DisputeDates storage disputeDates) {
         // Get the exchange, should be in disputed state
         (exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
