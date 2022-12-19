@@ -1,5 +1,4 @@
-const ethers = require("ethers");
-const { addressIsValid } = require("../util/validations.js");
+const { addressIsValid, bytes4ArrayIsValid } = require("../util/validations.js");
 
 /**
  * Diamond Standard Domain Entity: Facet
@@ -61,17 +60,7 @@ class Facet {
    * @returns {boolean}
    */
   functionSelectorsIsValid() {
-    let { functionSelectors } = this;
-    let valid = false;
-    try {
-      valid =
-        Array.isArray(functionSelectors) &&
-        functionSelectors.length > 0 &&
-        functionSelectors.filter(
-          (selector) => ethers.BigNumber.from(selector).gte("0") && ethers.BigNumber.from(selector).lte("4294967295") // max bytes4 value
-        ).length === functionSelectors.length;
-    } catch (e) {}
-    return valid;
+    return bytes4ArrayIsValid(this.functionSelectors);
   }
 
   /**

@@ -5,6 +5,7 @@ const environments = require("../../environments");
 const network = hre.network.name;
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const { addressNotFound } = require("./utils");
 
 /**
 Create a dispute resolver
@@ -36,11 +37,6 @@ Path should contain a JSON file with the following:
 
 const getDisputeResolverFromEvent = (events, eventName, index) => {
   return DisputeResolver.fromStruct(events.find((e) => e.event === eventName).args[index]);
-};
-
-const addressNotFound = (address) => {
-  console.log(`${address} address not found for network ${network}`);
-  process.exit(1);
 };
 
 const createDisputeResolver = async (path) => {

@@ -21,7 +21,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @notice Facet Initializer
      * This function is callable only once.
      */
-    function initialize() public onlyUnInitialized(type(IBosonFundsHandler).interfaceId) {
+    function initialize() public onlyUninitialized(type(IBosonFundsHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonFundsHandler).interfaceId);
     }
 

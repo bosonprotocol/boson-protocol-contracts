@@ -16,7 +16,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * @notice Initializes facet.
      * This function is callable only once.
      */
-    function initialize() public onlyUnInitialized(type(IBosonBundleHandler).interfaceId) {
+    function initialize() public onlyUninitialized(type(IBosonBundleHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonBundleHandler).interfaceId);
     }
 

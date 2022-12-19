@@ -101,8 +101,9 @@ To perform the upgrade you then
   - "addOrUpgrade" is the list of facets that will be upgraded or added,
   - "remove": list of facets that will be completely removed
   - "skipSelectors" allows you to specify methods that will be ignored during the process.
-  - "initArgs": if facet initializer expects arguments, provide them here. For no-arg initializers you don't have to specify anything.
-  - "skipInit": list of facets for which you want to skip initialization call.
+  - "facetsToInit": list of facets that will be initialized on ProtocolInitializationFacet. 
+                  if facet initializer expects arguments, provide them here. For no-arg initializers pass an empty array.
+                  You don't have to provide ProtocolInitializationFacet args here because they are generated on cut function.
 - Update `version` in `package.json`. If the version in `package.json` matches the existing version in addresses file, you will have to explicitly confirm that you want to proceed.
 - Run `npm run upgrade-facets:local`. This will deploy new facets and make all necessary diamond cuts. It also updates the existing addresses file `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node) and outputs the upgrade log to the console.
 
