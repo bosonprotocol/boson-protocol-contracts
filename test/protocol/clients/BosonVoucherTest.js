@@ -4,13 +4,13 @@ const ethers = hre.ethers;
 const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { getInterfaceIds } = require("../../../scripts/config/supported-interfaces.js");
 const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../../scripts/util/deploy-protocol-handler-facets.js");
+const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets.js");
 const Role = require("../../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const Range = require("../../../scripts/domain/Range");
 const VoucherInitValues = require("../../../scripts/domain/VoucherInitValues");
+
 const { mockOffer, mockExchange, mockVoucher } = require("../../util/mock.js");
-const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const { assert, expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants");
@@ -22,7 +22,7 @@ const {
   mockBuyer,
   accountId,
 } = require("../../util/mock");
-const { applyPercentage, calculateContractAddress } = require("../../util/utils.js");
+const { applyPercentage, getFacetsWithArgs, calculateContractAddress } = require("../../util/utils.js");
 const { waffle } = hre;
 const { deployMockContract } = waffle;
 const FormatTypes = ethers.utils.FormatTypes;
@@ -82,19 +82,6 @@ describe("IBosonVoucher", function () {
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
-    // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(
-      protocolDiamond,
-      [
-        "ExchangeHandlerFacet",
-        "OfferHandlerFacet",
-        "SellerHandlerFacet",
-        "DisputeResolverHandlerFacet",
-        "FundsHandlerFacet",
-      ],
-      maxPriorityFeePerGas
-    );
-
     const protocolClientArgs = [protocolDiamond.address];
     const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
     [bosonVoucher] = bv;
@@ -138,7 +125,20 @@ describe("IBosonVoucher", function () {
       },
     ];
 
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+    const facetNames = [
+      "ExchangeHandlerFacet",
+      "OfferHandlerFacet",
+      "SellerHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "FundsHandlerFacet",
+      "ProtocolInitializationFacet",
+      "ConfigHandlerFacet",
+    ];
+
+    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    // Cut the protocol handler facets into the Diamond
+    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
 
     // Initialize voucher contract
     const sellerId = 1;

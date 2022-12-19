@@ -1,4 +1,8 @@
 const hre = require("hardhat");
+const environments = "../../environments.js";
+const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
+const FacetCutAction = require("../domain/FacetCutAction");
+const { getFees } = require("./utils");
 const ethers = hre.ethers;
 const keccak256 = ethers.utils.keccak256;
 const toUtf8Bytes = ethers.utils.toUtf8Bytes;
@@ -8,8 +12,6 @@ const toUtf8Bytes = ethers.utils.toUtf8Bytes;
  *
  * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
  */
-const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
-
 // get function selectors from ABI
 function getSelectors(contract, returnSignatureToNameMapping = false) {
   const signatures = Object.keys(contract.interface.functions);
@@ -36,6 +38,7 @@ function getInterfaceId(contract) {
     acc.push(ethers.BigNumber.from(contract.interface.getSighash(val)));
     return acc;
   }, []);
+
   let interfaceId = selectors.reduce((pv, cv) => pv.xor(cv), ethers.BigNumber.from("0x00000000"));
   return interfaceId.isZero() ? "0x00000000" : ethers.utils.hexZeroPad(interfaceId.toHexString(), 4);
 }
@@ -133,6 +136,57 @@ async function getStateModifyingFunctionsHashes(facetNames, omitFunctions = []) 
   return smf.map((smf) => keccak256(toUtf8Bytes(smf)));
 }
 
+// Get ProtocolInitializationFacet initialize calldata to be called on diamondCut
+function getInitializeCalldata(
+  facetsToInitialize,
+  version,
+  isUpgrade,
+  initializationFacet,
+  interfacesToRemove = [],
+  interfacesToAdd = []
+) {
+  version = ethers.utils.formatBytes32String(version);
+  const addresses = facetsToInitialize.map((f) => f.contract.address);
+  const calldata = facetsToInitialize.map((f) => f.initialize);
+
+  return initializationFacet.interface.encodeFunctionData("initialize", [
+    version,
+    addresses,
+    calldata,
+    isUpgrade,
+    interfacesToRemove,
+    interfacesToAdd,
+  ]);
+}
+
+// Cut diamond with facets to be added, replaced and removed
+async function cutDiamond(
+  diamond,
+  maxPriorityFeePerGas,
+  deployedFacets,
+  initializationAddress,
+  initializeCalldata,
+  facetsToRemove = []
+) {
+  const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", diamond);
+
+  const cut = deployedFacets.reduce((acc, val) => {
+    val.cut.forEach((c) => acc.push(c));
+    return acc;
+  }, []);
+
+  const transactionResponse = await diamondCutFacet.diamondCut(
+    [...cut, ...facetsToRemove],
+    initializationAddress,
+    initializeCalldata,
+    await getFees(maxPriorityFeePerGas)
+  );
+
+  await transactionResponse.wait(confirmations);
+
+  return transactionResponse;
+}
+
 exports.getSelectors = getSelectors;
 exports.getSelector = getSelector;
 exports.FacetCutAction = FacetCutAction;
@@ -145,3 +199,5 @@ exports.getFacetRemoveCut = getFacetRemoveCut;
 exports.getInterfaceId = getInterfaceId;
 exports.getStateModifyingFunctions = getStateModifyingFunctions;
 exports.getStateModifyingFunctionsHashes = getStateModifyingFunctionsHashes;
+exports.cutDiamond = cutDiamond;
+exports.getInitializeCalldata = getInitializeCalldata;

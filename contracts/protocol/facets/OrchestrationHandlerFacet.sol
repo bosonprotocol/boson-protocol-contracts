@@ -31,7 +31,7 @@ contract OrchestrationHandlerFacet is
      * @notice Initializes facet.
      * This function is callable only once.
      */
-    function initialize() public onlyUnInitialized(type(IBosonOrchestrationHandler).interfaceId) {
+    function initialize() public onlyUninitialized(type(IBosonOrchestrationHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonOrchestrationHandler).interfaceId);
     }
 

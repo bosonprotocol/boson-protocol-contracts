@@ -17,7 +17,7 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      * @notice Initializes facet.
      * This function is callable only once.
      */
-    function initialize() public onlyUnInitialized(type(IBosonPauseHandler).interfaceId) {
+    function initialize() public onlyUninitialized(type(IBosonPauseHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonPauseHandler).interfaceId);
     }
 

@@ -17,7 +17,7 @@ contract AccountHandlerFacet is ProtocolBase {
      * @notice Initializes facet.
      * This function is callable only once.
      */
-    function initialize() public onlyUnInitialized(type(IBosonAccountHandler).interfaceId) {
+    function initialize() public onlyUninitialized(type(IBosonAccountHandler).interfaceId) {
         // The IBosonAccountHandler interface is contributed to by multiple facets which don't have their own interfaces.
         // This facet doesn't extend the interface since it doesn't implement all the methods.
         // However, it is logically responsible for registering the interface.

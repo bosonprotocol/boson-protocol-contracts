@@ -27,7 +27,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ProtocolLib.ProtocolAddresses calldata _addresses,
         ProtocolLib.ProtocolLimits calldata _limits,
         ProtocolLib.ProtocolFees calldata _fees
-    ) public onlyUnInitialized(type(IBosonConfigHandler).interfaceId) {
+    ) public onlyUninitialized(type(IBosonConfigHandler).interfaceId) {
         // Register supported interfaces
         DiamondLib.addSupportedInterface(type(IBosonConfigHandler).interfaceId);
 
