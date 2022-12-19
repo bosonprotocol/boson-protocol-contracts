@@ -9,7 +9,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x2ad335b8
+ * The ERC-165 identifier for this interface is: 0xe393ad01
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
     /**
@@ -464,6 +464,22 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Gets the minimum dispute period a seller can specify.
      */
     function getMinDisputePeriod() external view returns (uint256);
+
+    /**
+     * @notice Sets the maximum number of vouchers that can be preminted in a single transaction.
+     *
+     * Emits a MaxPremintedVouchersChanged event if successful.
+     *
+     * Reverts if the _maxPremintedVouchers is zero.
+     *
+     * @param _maxPremintedVouchers - the maximum number of vouchers
+     */
+    function setMaxPremintedVouchers(uint256 _maxPremintedVouchers) external;
+
+    /**
+     * @notice Gets the maximum number of vouchers that can be preminted in a single transaction.
+     */
+    function getMaxPremintedVouchers() external view returns (uint256);
 
     /**
      * @notice Sets the access controller address.

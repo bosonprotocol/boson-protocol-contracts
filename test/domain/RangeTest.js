@@ -7,7 +7,7 @@ const Range = require("../../scripts/domain/Range");
 describe("Range", function () {
   // Suite-wide scope
   let range, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let offerId, start, length, minted;
+  let offerId, start, length, minted, lastBurnedTokenId;
 
   beforeEach(async function () {
     // Required constructor params
@@ -15,6 +15,7 @@ describe("Range", function () {
     start = "15";
     length = "20000";
     minted = "1500";
+    lastBurnedTokenId = "1";
   });
 
   context("📋 Constructor", async function () {
@@ -24,6 +25,7 @@ describe("Range", function () {
       expect(range.startIsValid()).is.true;
       expect(range.lengthIsValid()).is.true;
       expect(range.mintedIsValid()).is.true;
+      expect(range.lastBurnedTokenIdIsValid()).is.true;
       expect(range.isValid()).is.true;
     });
   });
@@ -31,7 +33,7 @@ describe("Range", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid range, then set fields in tests directly
-      range = new Range(offerId, start, length, minted);
+      range = new Range(offerId, start, length, minted, lastBurnedTokenId);
       expect(range.isValid()).is.true;
     });
 
@@ -87,16 +89,6 @@ describe("Range", function () {
       range.start = "126";
       expect(range.startIsValid()).is.true;
       expect(range.isValid()).is.true;
-
-      // Valid field value
-      range.start = null;
-      expect(range.startIsValid()).is.true;
-      expect(range.isValid()).is.true;
-
-      // Valid field value
-      range.start = undefined;
-      expect(range.startIsValid()).is.true;
-      expect(range.isValid()).is.true;
     });
 
     it("Always present, length must be the string representation of a BigNumber", async function () {
@@ -124,19 +116,9 @@ describe("Range", function () {
       range.length = "126";
       expect(range.lengthIsValid()).is.true;
       expect(range.isValid()).is.true;
-
-      // Valid field value
-      range.length = null;
-      expect(range.lengthIsValid()).is.true;
-      expect(range.isValid()).is.true;
-
-      // Valid field value
-      range.length = undefined;
-      expect(range.lengthIsValid()).is.true;
-      expect(range.isValid()).is.true;
     });
 
-    it("Always present, minted must be the string representation of a BigNumber", async function () {
+    it("If present, minted must be the string representation of a BigNumber", async function () {
       // Invalid field value
       range.minted = "zedzdeadbaby";
       expect(range.mintedIsValid()).is.false;
@@ -162,12 +144,39 @@ describe("Range", function () {
       expect(range.mintedIsValid()).is.true;
       expect(range.isValid()).is.true;
     });
+
+    it("If present, lastBurnedTokenId must be the string representation of a BigNumber", async function () {
+      // Invalid field value
+      range.lastBurnedTokenId = "zedzdeadbaby";
+      expect(range.lastBurnedTokenIdIsValid()).is.false;
+      expect(range.isValid()).is.false;
+
+      // Invalid field value
+      range.lastBurnedTokenId = new Date();
+      expect(range.lastBurnedTokenIdIsValid()).is.false;
+      expect(range.isValid()).is.false;
+
+      // Invalid field value
+      range.lastBurnedTokenId = 12;
+      expect(range.lastBurnedTokenIdIsValid()).is.false;
+      expect(range.isValid()).is.false;
+
+      // Valid field value
+      range.lastBurnedTokenId = "0";
+      expect(range.lastBurnedTokenIdIsValid()).is.true;
+      expect(range.isValid()).is.true;
+
+      // Valid field value
+      range.lastBurnedTokenId = "126";
+      expect(range.lastBurnedTokenIdIsValid()).is.true;
+      expect(range.isValid()).is.true;
+    });
   });
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid range, then set fields in tests directly
-      range = new Range(offerId, start, length, minted);
+      range = new Range(offerId, start, length, minted, lastBurnedTokenId);
       expect(range.isValid()).is.true;
 
       // Get plain object
@@ -176,10 +185,11 @@ describe("Range", function () {
         start,
         length,
         minted,
+        lastBurnedTokenId,
       };
 
       // Struct representation
-      struct = [offerId, start, length, minted];
+      struct = [offerId, start, length, minted, lastBurnedTokenId];
     });
 
     context("👉 Static", async function () {

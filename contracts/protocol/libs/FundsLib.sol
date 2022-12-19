@@ -45,6 +45,7 @@ library FundsLib {
 
     /**
      * @notice Takes in the offer id and buyer id and encumbers buyer's and seller's funds during the commitToOffer.
+     * If offer is preminted, caller's funds are not encumbered, but the price is covered from the seller's funds.
      *
      * Emits FundsEncumbered event if successful.
      *
@@ -53,15 +54,24 @@ library FundsLib {
      * - Offer price is in some ERC20 token and caller also sends native currency
      * - Contract at token address does not support ERC20 function transferFrom
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - Seller has less funds available than sellerDeposit
+     * - Seller has less funds available than sellerDeposit for non preminted offers
+     * - Seller has less funds available than sellerDeposit and price for preminted offers
      * - Received ERC20 token amount differs from the expected value
      *
      * @param _offerId - id of the offer with the details
      * @param _buyerId - id of the buyer
+     * @param _isPreminted - flag indicating if the offer is preminted
      */
-    function encumberFunds(uint256 _offerId, uint256 _buyerId) internal {
+    function encumberFunds(
+        uint256 _offerId,
+        uint256 _buyerId,
+        bool _isPreminted
+    ) internal {
         // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
+
+        // get message sender
+        address sender = EIP712Lib.msgSender();
 
         // fetch offer to get the exchange token, price and seller
         // this will be called only from commitToOffer so we expect that exchange actually exist
@@ -69,20 +79,19 @@ library FundsLib {
         address exchangeToken = offer.exchangeToken;
         uint256 price = offer.price;
 
-        // validate buyer inputs
-        validateIncomingPayment(exchangeToken, price);
+        // if offer is non-preminted, validate incoming payment
+        if (!_isPreminted) {
+            validateIncomingPayment(exchangeToken, price);
+            emit FundsEncumbered(_buyerId, exchangeToken, price, sender);
+        }
 
         // decrease available funds
         uint256 sellerId = offer.sellerId;
-        uint256 sellerDeposit = offer.sellerDeposit;
-        decreaseAvailableFunds(sellerId, exchangeToken, sellerDeposit);
-
-        // get message sender
-        address sender = EIP712Lib.msgSender();
+        uint256 sellerFundsEncumbered = offer.sellerDeposit + (_isPreminted ? price : 0); // for preminted offer, encumber also price from seller's available funds
+        decreaseAvailableFunds(sellerId, exchangeToken, sellerFundsEncumbered);
 
         // notify external observers
-        emit FundsEncumbered(_buyerId, exchangeToken, price, sender);
-        emit FundsEncumbered(sellerId, exchangeToken, sellerDeposit, sender);
+        emit FundsEncumbered(sellerId, exchangeToken, sellerFundsEncumbered, sender);
     }
 
     /**

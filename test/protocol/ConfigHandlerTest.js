@@ -32,7 +32,8 @@ describe("IBosonConfigHandler", function () {
     maxTotalOfferFeePercentage,
     maxRoyaltyPecentage,
     maxResolutionPeriod,
-    minDisputePeriod;
+    minDisputePeriod,
+    maxPremintedVouchers;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let erc165, protocolDiamond, accessController, configHandler;
   let authTokenContract;
@@ -76,6 +77,7 @@ describe("IBosonConfigHandler", function () {
     maxRoyaltyPecentage = 1000; // 10%
     maxResolutionPeriod = oneMonth;
     minDisputePeriod = oneWeek;
+    maxPremintedVouchers = 10000;
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
@@ -111,6 +113,7 @@ describe("IBosonConfigHandler", function () {
             maxRoyaltyPecentage,
             maxResolutionPeriod,
             minDisputePeriod,
+            maxPremintedVouchers,
           },
           //Protocol fees
           {
@@ -210,6 +213,10 @@ describe("IBosonConfigHandler", function () {
         await expect(cutTransaction)
           .to.emit(configHandler, "MinDisputePeriodChanged")
           .withArgs(minDisputePeriod, deployer.address);
+
+        await expect(cutTransaction)
+          .to.emit(configHandler, "MaxPremintedVouchersChanged")
+          .withArgs(maxPremintedVouchers, deployer.address);
       });
     });
   });
@@ -241,6 +248,7 @@ describe("IBosonConfigHandler", function () {
           maxRoyaltyPecentage,
           maxResolutionPeriod,
           minDisputePeriod,
+          maxPremintedVouchers,
         },
         // Protocol fees
         {
@@ -1144,6 +1152,44 @@ describe("IBosonConfigHandler", function () {
         });
       });
 
+      context("👉 setMaxPremintedVouchers()", async function () {
+        beforeEach(async function () {
+          // set new value
+          maxPremintedVouchers = 50000;
+        });
+
+        it("should emit a MaxPremintedVouchersChanged event", async function () {
+          // Set new minumum dispute period
+          await expect(configHandler.connect(deployer).setMaxPremintedVouchers(maxPremintedVouchers))
+            .to.emit(configHandler, "MaxPremintedVouchersChanged")
+            .withArgs(maxPremintedVouchers, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new minumum dispute period
+          await configHandler.connect(deployer).setMaxPremintedVouchers(maxPremintedVouchers);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxPremintedVouchers()).to.equal(maxPremintedVouchers);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new value, expecting revert
+            await expect(configHandler.connect(rando).setMaxPremintedVouchers(maxPremintedVouchers)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+
+          it("maxPremintedVouchers is zero", async function () {
+            maxPremintedVouchers = 0;
+            await expect(configHandler.connect(deployer).setMaxPremintedVouchers(maxPremintedVouchers)).to.revertedWith(
+              RevertReasons.VALUE_ZERO_NOT_ALLOWED
+            );
+          });
+        });
+      });
+
       context("👉 setAccessControllerAddress()", async function () {
         beforeEach(async function () {
           // set new value
@@ -1282,6 +1328,10 @@ describe("IBosonConfigHandler", function () {
         expect(await configHandler.connect(rando).getMinDisputePeriod()).to.equal(
           minDisputePeriod,
           "Invalid min dispute period"
+        );
+        expect(await configHandler.connect(rando).getMaxPremintedVouchers()).to.equal(
+          maxPremintedVouchers,
+          "Invalid max preminted vouchers"
         );
       });
     });
