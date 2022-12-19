@@ -33,6 +33,7 @@ interface IBosonOrchestrationHandler is
      *
      * Reverts if:
      * - The disputes region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - Caller is not the buyer for the given exchange id
      * - Exchange does not exist
      * - Exchange is not in a Redeemed state
