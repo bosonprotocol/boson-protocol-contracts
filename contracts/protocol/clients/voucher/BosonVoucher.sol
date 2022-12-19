@@ -488,7 +488,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         override(IBosonVoucher, OwnableUpgradeable)
         onlyRole(PROTOCOL)
     {
-        require(_newOwner != address(0), "Ownable: new owner is the zero address");
+        require(_newOwner != address(0), OWNABLE_ZERO_ADDRESS);
         _transferOwnership(_newOwner);
     }
 
@@ -590,7 +590,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         uint16 maxRoyaltyPecentage = IBosonConfigHandler(protocolDiamond).getMaxRoyaltyPecentage();
 
         // make sure that new royalty percentage does not exceed the max value set in the protocol
-        require(_newRoyaltyPercentage <= maxRoyaltyPecentage, "ERC2981: royalty fee exceeds protocol limit");
+        require(_newRoyaltyPercentage <= maxRoyaltyPecentage, ROYALTY_FEE_INVALID);
 
         _royaltyPercentage = _newRoyaltyPercentage;
 
