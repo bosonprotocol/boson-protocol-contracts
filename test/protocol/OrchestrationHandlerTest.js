@@ -22,10 +22,9 @@ const Range = require("../../scripts/domain/Range");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { getEvent, applyPercentage, calculateContractAddress } = require("../util/utils.js");
+const { getEvent, applyPercentage, calculateContractAddress, getFacetsWithArgs } = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL, maxPriorityFeePerGas } = require("../util/constants");
 const {
@@ -138,25 +137,6 @@ describe("IBosonOrchestrationHandler", function () {
     // Grant PROTOCOL role to ProtocolDiamond address
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
 
-    // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(
-      protocolDiamond,
-      [
-        "SellerHandlerFacet",
-        "AgentHandlerFacet",
-        "DisputeResolverHandlerFacet",
-        "ExchangeHandlerFacet",
-        "OfferHandlerFacet",
-        "GroupHandlerFacet",
-        "TwinHandlerFacet",
-        "BundleHandlerFacet",
-        "OrchestrationHandlerFacet",
-        "PauseHandlerFacet",
-        "AccountHandlerFacet",
-      ],
-      maxPriorityFeePerGas
-    );
-
     // Deploy the mock tokens
     [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens();
 
@@ -203,7 +183,27 @@ describe("IBosonOrchestrationHandler", function () {
         buyerEscalationDepositPercentage,
       },
     ];
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+
+    const facetNames = [
+      "SellerHandlerFacet",
+      "AgentHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "ExchangeHandlerFacet",
+      "OfferHandlerFacet",
+      "GroupHandlerFacet",
+      "TwinHandlerFacet",
+      "BundleHandlerFacet",
+      "OrchestrationHandlerFacet",
+      "PauseHandlerFacet",
+      "AccountHandlerFacet",
+      "ProtocolInitializationFacet",
+      "ConfigHandlerFacet",
+    ];
+
+    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    // Cut the protocol handler facets into the Diamond
+    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);

@@ -6,9 +6,10 @@ const Role = require("../../scripts/domain/Role");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
+const { getFacetsWithArgs } = require("../util/utils");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 
 /**
  *  Test the Boson Config Handler interface
@@ -122,9 +123,14 @@ describe("IBosonConfigHandler", function () {
           },
         ];
 
-        const { cutTransaction } = await deployProtocolConfigFacet(
-          protocolDiamond,
-          protocolConfig,
+        const facetNames = ["ProtocolInitializationFacet", "ConfigHandlerFacet"];
+
+        const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+        // Cut the protocol handler facets into the Diamond
+        const { cutTransaction } = await deployAndCutFacets(
+          protocolDiamond.address,
+          facetsToDeploy,
           maxPriorityFeePerGas
         );
 
@@ -251,7 +257,12 @@ describe("IBosonConfigHandler", function () {
           buyerEscalationDepositPercentage,
         },
       ];
-      await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+      const facetNames = ["ProtocolInitializationFacet", "ConfigHandlerFacet"];
+
+      const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+      // Cut the protocol handler facets into the Diamond
+      await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
     });
 
     // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)

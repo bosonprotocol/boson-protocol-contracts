@@ -13,8 +13,7 @@ const Group = require("../domain/Group");
 const EvaluationMethod = require("../domain/EvaluationMethod");
 const { DisputeResolverFee } = require("../domain/DisputeResolverFee");
 const { deployProtocolDiamond } = require("../util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../util/deploy-protocol-handler-facets.js");
-const { deployProtocolConfigFacet } = require("../util/deploy-protocol-config-facet.js");
+const { deployAndCutFacets } = require("../util/deploy-protocol-handler-facets.js");
 const { deployProtocolClients } = require("../util/deploy-protocol-clients");
 const { deployMockTokens } = require("../util/deploy-mock-tokens");
 const { oneWeek, oneMonth } = require("../../test/util/constants");
@@ -28,7 +27,7 @@ const {
   mockTwin,
   accountId,
 } = require("../../test/util/mock");
-const { setNextBlockTimestamp, calculateContractAddress } = require("../../test/util/utils.js");
+const { setNextBlockTimestamp, getFacetsWithArgs, calculateContractAddress } = require("../../test/util/utils.js");
 
 // Common vars
 let deployer,
@@ -858,20 +857,6 @@ async function setupCommonEnvironment() {
   // This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
   await accessController.grantRole(Role.ADMIN, protocolAdmin.address);
 
-  // Cut the protocol handler facets into the Diamond
-  await deployProtocolHandlerFacets(protocolDiamond, [
-    "AccountHandlerFacet",
-    "BundleHandlerFacet",
-    "DisputeHandlerFacet",
-    "DisputeResolverHandlerFacet",
-    "ExchangeHandlerFacet",
-    "FundsHandlerFacet",
-    "GroupHandlerFacet",
-    "OfferHandlerFacet",
-    "SellerHandlerFacet",
-    "TwinHandlerFacet",
-  ]);
-
   // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
   const protocolClientArgs = [protocolDiamond.address];
   const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, gasLimit);
@@ -919,8 +904,25 @@ async function setupCommonEnvironment() {
     },
   ];
 
-  await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+  const facetNames = [
+    "AccountHandlerFacet",
+    "BundleHandlerFacet",
+    "DisputeHandlerFacet",
+    "DisputeResolverHandlerFacet",
+    "ExchangeHandlerFacet",
+    "FundsHandlerFacet",
+    "GroupHandlerFacet",
+    "OfferHandlerFacet",
+    "SellerHandlerFacet",
+    "TwinHandlerFacet",
+    "ProtocolInitializationFacet",
+    "ConfigHandlerFacet",
+  ];
 
+  const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+  // Cut the protocol handler facets into the Diamond
+  await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, gasLimit);
   // Cast Diamond to handlers
   accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
   bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);

@@ -16,7 +16,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @notice Initializes facet.
      * This function is callable only once.
      */
-    function initialize() public onlyUnInitialized(type(IBosonOfferHandler).interfaceId) {
+    function initialize() public onlyUninitialized(type(IBosonOfferHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonOfferHandler).interfaceId);
     }
 

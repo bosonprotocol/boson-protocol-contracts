@@ -22,7 +22,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @notice Initializes Facet.
      * This function is callable only once.
      */
-    function initialize() public onlyUnInitialized(type(IBosonDisputeHandler).interfaceId) {
+    function initialize() public onlyUninitialized(type(IBosonDisputeHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonDisputeHandler).interfaceId);
     }
 

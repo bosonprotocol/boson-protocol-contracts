@@ -6,7 +6,14 @@ const tipMultiplier = ethers.BigNumber.from(environments.tipMultiplier);
 const tipSuggestion = "1500000000"; // ethers.js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = ethers.BigNumber.from(tipSuggestion).mul(tipMultiplier);
 const { deployProtocolClientImpls } = require("./util/deploy-protocol-client-impls.js");
-const { deploymentComplete, getFees, readContracts, writeContracts } = require("./util/utils.js");
+const {
+  deploymentComplete,
+  getFees,
+  readContracts,
+  writeContracts,
+  checkRole,
+  addressNotFound,
+} = require("./util/utils.js");
 const Role = require("./domain/Role");
 
 /**
@@ -53,25 +60,14 @@ async function main(env) {
   // Get signer for admin address
   const adminSigner = await ethers.getSigner(adminAddress);
 
-  // Get addresses of currently deployed contracts
-  const accessControllerAddress = contracts.find((c) => c.name === "AccessController").address;
-  if (!accessControllerAddress) {
-    return addressNotFound("AccessController");
-  }
-  const beaconAddress = contracts.find((c) => c.name === "BosonVoucher Beacon").address;
+  // Get addresses of currently deployed Beacon contract
+  const beaconAddress = contracts.find((c) => c.name === "BosonVoucher Beacon")?.address;
   if (!beaconAddress) {
     return addressNotFound("BosonVoucher Beacon");
   }
 
-  // Get AccessController abstraction
-  const accessController = await ethers.getContractAt("AccessController", accessControllerAddress);
-
-  // Check that caller has upgrader role.
-  const hasRole = await accessController.hasRole(Role.UPGRADER, adminAddress);
-  if (!hasRole) {
-    console.log("Admin address does not have UPGRADER role");
-    process.exit(1);
-  }
+  // Validate that admin has UPGRADER role
+  checkRole(contracts, Role.UPGRADER, adminAddress);
 
   // Deploy Protocol Client implementation contracts
   console.log(`\n📋 Deploying new logic contract`);
@@ -96,10 +92,5 @@ async function main(env) {
   console.log(`\n📋 Client upgraded.`);
   console.log("\n");
 }
-
-const addressNotFound = (address) => {
-  console.log(`${address} address not found for network ${network}`);
-  process.exit(1);
-};
 
 exports.upgradeClients = main;

@@ -29,14 +29,14 @@ contract TestInitializableDiamond is ProtocolDiamond {
         bytes4[] memory _interfaceIds
     ) payable ProtocolDiamond(_accessController, _facetCuts, _interfaceIds) {}
 
-    modifier onlyUnInitialized() {
+    modifier onlyUninitialized() {
         TestFacetLib.TestFacetStorage storage tfs = TestFacetLib.testFacetStorage();
         require(!tfs.initialized, ALREADY_INITIALIZED);
         tfs.initialized = true;
         _;
     }
 
-    function initialize(address _testAddress) public onlyUnInitialized {
+    function initialize(address _testAddress) public onlyUninitialized {
         TestFacetLib.TestFacetStorage storage tfs = TestFacetLib.testFacetStorage();
         tfs.testAddress = _testAddress;
     }

@@ -28,7 +28,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @notice Initializes facet.
      * This function is callable only once.
      */
-    function initialize() public onlyUnInitialized(type(IBosonExchangeHandler).interfaceId) {
+    function initialize() public onlyUninitialized(type(IBosonExchangeHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonExchangeHandler).interfaceId);
     }
 

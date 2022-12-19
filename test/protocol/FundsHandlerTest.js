@@ -8,8 +8,7 @@ const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
@@ -19,6 +18,7 @@ const {
   prepareDataSignatureParameters,
   applyPercentage,
   calculateContractAddress,
+  getFacetsWithArgs,
 } = require("../util/utils.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const {
@@ -97,6 +97,7 @@ describe("IBosonFundsHandler", function () {
     expectedAgentAvailableFunds,
     agentAvailableFunds;
   let DRFee, buyerEscalationDeposit;
+  let protocolInitializationFacet;
 
   before(async function () {
     // get interface Ids
@@ -126,23 +127,6 @@ describe("IBosonFundsHandler", function () {
 
     // Temporarily grant PAUSER role to pauser account
     await accessController.grantRole(Role.PAUSER, pauser.address);
-
-    // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(
-      protocolDiamond,
-      [
-        "SellerHandlerFacet",
-        "BuyerHandlerFacet",
-        "AgentHandlerFacet",
-        "DisputeResolverHandlerFacet",
-        "FundsHandlerFacet",
-        "ExchangeHandlerFacet",
-        "OfferHandlerFacet",
-        "PauseHandlerFacet",
-        "AccountHandlerFacet",
-      ],
-      maxPriorityFeePerGas
-    );
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
@@ -193,7 +177,25 @@ describe("IBosonFundsHandler", function () {
       },
     ];
 
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+    const facetNames = [
+      "SellerHandlerFacet",
+      "BuyerHandlerFacet",
+      "AgentHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "FundsHandlerFacet",
+      "ExchangeHandlerFacet",
+      "OfferHandlerFacet",
+      "PauseHandlerFacet",
+      "AccountHandlerFacet",
+      "ProtocolInitializationFacet",
+      "ConfigHandlerFacet",
+    ];
+
+    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    // Cut the protocol handler facets into the Diamond
+    const { deployedFacets } = await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+    protocolInitializationFacet = deployedFacets.find((f) => f.name === "ProtocolInitializationFacet").contract;
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
@@ -868,7 +870,16 @@ describe("IBosonFundsHandler", function () {
           });
 
           it("Withdraw when dispute is retracted, it emits a FundsWithdrawn event", async function () {
-            await deployProtocolHandlerFacets(protocolDiamond, ["DisputeHandlerFacet"], maxPriorityFeePerGas);
+            // ProtocolInitializationFacet has to be passed to deploy function works
+            const facetsToDeploy = await getFacetsWithArgs(["DisputeHandlerFacet"]);
+
+            await deployAndCutFacets(
+              protocolDiamond.address,
+              facetsToDeploy,
+              maxPriorityFeePerGas,
+              "2.1.0",
+              protocolInitializationFacet
+            );
 
             // Cast Diamond to IBosonDisputeHandler
             disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
@@ -2668,7 +2679,16 @@ describe("IBosonFundsHandler", function () {
 
       context("Final state DISPUTED", async function () {
         beforeEach(async function () {
-          await deployProtocolHandlerFacets(protocolDiamond, ["DisputeHandlerFacet"], maxPriorityFeePerGas);
+          // ProtocolInitializationFacet has to be passed to deploy function works
+          const facetsToDeploy = await getFacetsWithArgs(["DisputeHandlerFacet"]);
+
+          await deployAndCutFacets(
+            protocolDiamond.address,
+            facetsToDeploy,
+            maxPriorityFeePerGas,
+            "2.1.0",
+            protocolInitializationFacet
+          );
 
           // Cast Diamond to IBosonDisputeHandler
           disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);

@@ -5,11 +5,10 @@ const { expect } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { setNextBlockTimestamp, applyPercentage } = require("../util/utils.js");
+const { setNextBlockTimestamp, applyPercentage, getFacetsWithArgs } = require("../util/utils.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const {
   mockOffer,
@@ -69,21 +68,6 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
     // Temporarily grant PAUSER role to pauser account
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
-    // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(
-      protocolDiamond,
-      [
-        "SellerHandlerFacet",
-        "BuyerHandlerFacet",
-        "DisputeResolverHandlerFacet",
-        "ExchangeHandlerFacet",
-        "OfferHandlerFacet",
-        "FundsHandlerFacet",
-        "DisputeHandlerFacet",
-      ],
-      maxPriorityFeePerGas
-    );
-
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
     const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
@@ -133,8 +117,22 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       },
     ];
 
-    // Deploy the Config facet, initializing the protocol config
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+    const facetNames = [
+      "SellerHandlerFacet",
+      "BuyerHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "ExchangeHandlerFacet",
+      "OfferHandlerFacet",
+      "FundsHandlerFacet",
+      "DisputeHandlerFacet",
+      "ProtocolInitializationFacet",
+      "ConfigHandlerFacet",
+    ];
+
+    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    // Cut the protocol handler facets into the Diamond
+    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
