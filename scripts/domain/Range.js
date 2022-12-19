@@ -12,14 +12,16 @@ class Range {
       uint256 start;
       uint256 length;
       uint256 minted;
+      uint256 lastBurnedTokenId;
       }
   */
 
-  constructor(offerId, start, length, minted) {
+  constructor(offerId, start, length, minted, lastBurnedTokenId) {
     this.offerId = offerId;
     this.start = start;
     this.length = length;
     this.minted = minted;
+    this.lastBurnedTokenId = lastBurnedTokenId;
   }
 
   /**
@@ -28,8 +30,8 @@ class Range {
    * @returns {Range}
    */
   static fromObject(o) {
-    const { offerId, start, length, minted } = o;
-    return new Range(offerId, start, length, minted);
+    const { offerId, start, length, minted, lastBurnedTokenId } = o;
+    return new Range(offerId, start, length, minted, lastBurnedTokenId);
   }
 
   /**
@@ -38,16 +40,17 @@ class Range {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let offerId, start, length, minted;
+    let offerId, start, length, minted, lastBurnedTokenId;
 
     // destructure struct
-    [offerId, start, length, minted] = struct;
+    [offerId, start, length, minted, lastBurnedTokenId] = struct;
 
     return Range.fromObject({
       offerId: offerId.toString(),
       start: start.toString(),
       length: length.toString(),
       minted: minted.toString(),
+      lastBurnedTokenId: lastBurnedTokenId.toString(),
     });
   }
 
@@ -72,7 +75,7 @@ class Range {
    * @returns {string}
    */
   toStruct() {
-    return [this.offerId, this.start, this.length, this.minted];
+    return [this.offerId, this.start, this.length, this.minted, this.lastBurnedTokenId];
   }
 
   /**
@@ -94,11 +97,11 @@ class Range {
 
   /**
    * Is this Range instance's start field valid?
-   * If present, must be a string representation of a big number
+   * Must be a string representation of a big number
    * @returns {boolean}
    */
   startIsValid() {
-    return bigNumberIsValid(this.start, { optional: true });
+    return bigNumberIsValid(this.start);
   }
 
   /**
@@ -107,7 +110,7 @@ class Range {
    * @returns {boolean}
    */
   lengthIsValid() {
-    return bigNumberIsValid(this.length, { optional: true });
+    return bigNumberIsValid(this.length);
   }
 
   /**
@@ -116,7 +119,16 @@ class Range {
    * @returns {boolean}
    */
   mintedIsValid() {
-    return bigNumberIsValid(this.minted);
+    return bigNumberIsValid(this.minted, { optional: true });
+  }
+
+  /**
+   * Is this Range instance's lastBurnedTokenId field valid?
+   * If present, must be a string representation of a big number
+   * @returns {boolean}
+   */
+  lastBurnedTokenIdIsValid() {
+    return bigNumberIsValid(this.lastBurnedTokenId, { optional: true });
   }
 
   /**
@@ -124,7 +136,13 @@ class Range {
    * @returns {boolean}
    */
   isValid() {
-    return this.offerIdIsValid() && this.startIsValid() && this.lengthIsValid() && this.mintedIsValid();
+    return (
+      this.offerIdIsValid() &&
+      this.startIsValid() &&
+      this.lengthIsValid() &&
+      this.mintedIsValid() &&
+      this.lastBurnedTokenIdIsValid()
+    );
   }
 }
 

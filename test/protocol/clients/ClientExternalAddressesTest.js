@@ -1,16 +1,17 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 
+const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets.js");
 const { gasLimit } = require("../../../environments");
 const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolClientImpls } = require("../../../scripts/util/deploy-protocol-client-impls.js");
 const { deployProtocolClientBeacons } = require("../../../scripts/util/deploy-protocol-client-beacons.js");
-const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const Role = require("../../../scripts/domain/Role");
 const { expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants.js");
+const { getFacetsWithArgs } = require("../../util/utils.js");
 
 describe("IClientExternalAddresses", function () {
   let accessController, protocolDiamond;
@@ -64,6 +65,7 @@ describe("IClientExternalAddresses", function () {
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
         minDisputePeriod: oneWeek,
+        maxPremintedVouchers: 10000,
       },
       // Protocol fees
       {
@@ -73,7 +75,12 @@ describe("IClientExternalAddresses", function () {
       },
     ];
 
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+    const facetNames = ["ConfigHandlerFacet", "ProtocolInitializationFacet"];
+
+    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    // Cut the protocol handler facets into the Diamond
+    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
   });
 
   // Interface support

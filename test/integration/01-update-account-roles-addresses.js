@@ -16,8 +16,7 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const Role = require("../../scripts/domain/Role");
 const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { oneMonth, oneWeek, maxPriorityFeePerGas } = require("../util/constants");
@@ -26,6 +25,7 @@ const {
   calculateContractAddress,
   prepareDataSignatureParameters,
   applyPercentage,
+  getFacetsWithArgs,
 } = require("../util/utils.js");
 const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolverUpdateFields");
 
@@ -68,23 +68,6 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
 
-    // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(
-      protocolDiamond,
-      [
-        "AccountHandlerFacet",
-        "SellerHandlerFacet",
-        "BuyerHandlerFacet",
-        "DisputeResolverHandlerFacet",
-        "AgentHandlerFacet",
-        "OfferHandlerFacet",
-        "ExchangeHandlerFacet",
-        "FundsHandlerFacet",
-        "DisputeHandlerFacet",
-      ],
-      maxPriorityFeePerGas
-    );
-
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
     const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
@@ -121,6 +104,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
         minDisputePeriod: oneWeek,
+        maxPremintedVouchers: 10000,
       },
       // Protocol fees
       {
@@ -130,7 +114,24 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       },
     ];
 
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+    const facetNames = [
+      "AccountHandlerFacet",
+      "SellerHandlerFacet",
+      "BuyerHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "AgentHandlerFacet",
+      "OfferHandlerFacet",
+      "ExchangeHandlerFacet",
+      "FundsHandlerFacet",
+      "DisputeHandlerFacet",
+      "ProtocolInitializationFacet",
+      "ConfigHandlerFacet",
+    ];
+
+    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    // Cut the protocol handler facets into the Diamond
+    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);

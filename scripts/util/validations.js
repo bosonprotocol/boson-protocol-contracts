@@ -98,9 +98,29 @@ function stringIsValid(string) {
   return valid;
 }
 
+function bytes4IsValid(bytes4) {
+  let valid = false;
+  try {
+    valid = ethers.BigNumber.from(bytes4).gte("0") && ethers.BigNumber.from(bytes4).lte("4294967295"); // max bytes4 value
+  } catch (e) {}
+  return valid;
+}
+
+function bytes4ArrayIsValid(bytes4Array) {
+  let valid = false;
+  try {
+    valid =
+      Array.isArray(bytes4Array) &&
+      bytes4Array.length > 0 &&
+      bytes4Array.filter((b) => bytes4IsValid(b)).length === bytes4Array.length;
+  } catch (e) {}
+  return valid;
+}
+
 exports.bigNumberIsValid = bigNumberIsValid;
 exports.enumIsValid = enumIsValid;
 exports.addressIsValid = addressIsValid;
 exports.booleanIsValid = booleanIsValid;
 exports.bigNumberArrayIsValid = bigNumberArrayIsValid;
 exports.stringIsValid = stringIsValid;
+exports.bytes4ArrayIsValid = bytes4ArrayIsValid;

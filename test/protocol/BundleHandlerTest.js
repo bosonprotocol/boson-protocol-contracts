@@ -9,9 +9,8 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
-const { getEvent } = require("../util/utils.js");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
+const { getEvent, getFacetsWithArgs } = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const {
@@ -109,22 +108,6 @@ describe("IBosonBundleHandler", function () {
     // Temporarily grant PAUSER role to pauser account
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
-    // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(
-      protocolDiamond,
-      [
-        "SellerHandlerFacet",
-        "DisputeResolverHandlerFacet",
-        "TwinHandlerFacet",
-        "OfferHandlerFacet",
-        "BundleHandlerFacet",
-        "ExchangeHandlerFacet",
-        "FundsHandlerFacet",
-        "PauseHandlerFacet",
-      ],
-      maxPriorityFeePerGas
-    );
-
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
     const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
@@ -164,6 +147,7 @@ describe("IBosonBundleHandler", function () {
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
         minDisputePeriod: oneWeek,
+        maxPremintedVouchers: 10000,
       },
       // Protocol fees
       {
@@ -172,8 +156,24 @@ describe("IBosonBundleHandler", function () {
         buyerEscalationDepositPercentage,
       },
     ];
-    // Deploy the Config facet, initializing the protocol config
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+
+    const facetNames = [
+      "SellerHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "TwinHandlerFacet",
+      "OfferHandlerFacet",
+      "BundleHandlerFacet",
+      "ExchangeHandlerFacet",
+      "FundsHandlerFacet",
+      "PauseHandlerFacet",
+      "ProtocolInitializationFacet",
+      "ConfigHandlerFacet",
+    ];
+
+    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    // Cut the protocol handler facets into the Diamond
+    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
