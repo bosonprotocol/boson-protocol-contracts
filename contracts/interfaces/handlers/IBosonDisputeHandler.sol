@@ -17,6 +17,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @notice Raises a dispute.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - Caller does not hold a voucher for the given exchange id
      * - Exchange does not exist
      * - Exchange is not in a Redeemed state
@@ -130,6 +131,10 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
 
     /**
      * @notice Puts the dispute into the Escalated state.
+     *
+     * Caller must send (or for ERC20, approve the transfer of) the
+     * buyer escalation deposit percentage of the offer price, which
+     * will be added to the pot for resolution.
      *
      * Emits a DisputeEscalated event if successful.
      *
