@@ -18,13 +18,13 @@ const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTe
 const TokenType = require("../../scripts/domain/TokenType");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
+const Range = require("../../scripts/domain/Range");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { getEvent, applyPercentage, calculateContractAddress } = require("../util/utils.js");
+const { getEvent, applyPercentage, calculateContractAddress, getFacetsWithArgs } = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL, maxPriorityFeePerGas } = require("../util/constants");
 const {
@@ -38,6 +38,10 @@ const {
   mockCondition,
   accountId,
 } = require("../util/mock");
+const { setNextBlockTimestamp } = require("../util/utils");
+const Dispute = require("../../scripts/domain/Dispute");
+const DisputeState = require("../../scripts/domain/DisputeState");
+const DisputeDates = require("../../scripts/domain/DisputeDates");
 
 /**
  *  Test the Boson Orchestration Handler interface
@@ -47,6 +51,8 @@ describe("IBosonOrchestrationHandler", function () {
   let InterfaceIds;
   let deployer,
     pauser,
+    buyer,
+    admin,
     rando,
     operator,
     clerk,
@@ -68,6 +74,8 @@ describe("IBosonOrchestrationHandler", function () {
     groupHandler,
     twinHandler,
     bundleHandler,
+    disputeHandler,
+    fundsHandler,
     orchestrationHandler,
     configHandler,
     pauseHandler,
@@ -95,6 +103,14 @@ describe("IBosonOrchestrationHandler", function () {
   let authToken, authTokenStruct, emptyAuthToken, emptyAuthTokenStruct;
   let agent, agentId;
   let sellerAllowList, allowedSellersToAdd;
+  let buyerEscalationDepositNative, buyerEscalationDepositToken;
+  let price, quantityAvailable, sellerDeposit, voucherRedeemableFrom;
+  let disputePeriod, escalationPeriod;
+  let buyerId, exchangeId, disputeResolverId;
+  let blockNumber, block, disputedDate, timeout, dispute, disputeDates;
+  let disputeStruct, disputeDatesStruct;
+  let returnedDispute, returnedDisputeDates;
+  let newTime, voucherStruct, escalatedDate, response;
 
   before(async function () {
     // get interface Ids
@@ -106,8 +122,9 @@ describe("IBosonOrchestrationHandler", function () {
     [
       deployer,
       pauser,
-      operator,
+      admin,
       treasury,
+      buyer,
       rando,
       other1,
       other2,
@@ -118,7 +135,7 @@ describe("IBosonOrchestrationHandler", function () {
     ] = await ethers.getSigners();
 
     // make all account the same
-    clerk = operator;
+    clerk = operator = admin;
     operatorDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
@@ -127,6 +144,9 @@ describe("IBosonOrchestrationHandler", function () {
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
+    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
+    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
     //Grant ADMIN role to and address that can call restricted functions.
     //This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
     await accessController.grantRole(Role.ADMIN, protocolAdmin.address);
@@ -134,24 +154,8 @@ describe("IBosonOrchestrationHandler", function () {
     // Temporarily grant PAUSER role to pauser account
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
-    // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(
-      protocolDiamond,
-      [
-        "SellerHandlerFacet",
-        "AgentHandlerFacet",
-        "DisputeResolverHandlerFacet",
-        "ExchangeHandlerFacet",
-        "OfferHandlerFacet",
-        "GroupHandlerFacet",
-        "TwinHandlerFacet",
-        "BundleHandlerFacet",
-        "OrchestrationHandlerFacet",
-        "PauseHandlerFacet",
-        "AccountHandlerFacet",
-      ],
-      maxPriorityFeePerGas
-    );
+    // Grant PROTOCOL role to ProtocolDiamond address
+    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
 
     // Deploy the mock tokens
     [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens();
@@ -190,6 +194,7 @@ describe("IBosonOrchestrationHandler", function () {
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
         minDisputePeriod: oneWeek,
+        maxPremintedVouchers: 10000,
       },
       // Protocol fees
       {
@@ -198,7 +203,30 @@ describe("IBosonOrchestrationHandler", function () {
         buyerEscalationDepositPercentage,
       },
     ];
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+
+    const facetNames = [
+      "SellerHandlerFacet",
+      "AgentHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "ExchangeHandlerFacet",
+      "OfferHandlerFacet",
+      "GroupHandlerFacet",
+      "TwinHandlerFacet",
+      "BundleHandlerFacet",
+      "DisputeHandlerFacet",
+      "FundsHandlerFacet",
+      "OrchestrationHandlerFacet1",
+      "OrchestrationHandlerFacet2",
+      "PauseHandlerFacet",
+      "AccountHandlerFacet",
+      "ProtocolInitializationFacet",
+      "ConfigHandlerFacet",
+    ];
+
+    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    // Cut the protocol handler facets into the Diamond
+    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
@@ -220,6 +248,12 @@ describe("IBosonOrchestrationHandler", function () {
 
     // Cast Diamond to IBosonBundleHandler
     bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonDisputeHandler
+    disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonFundsHandler
+    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
 
     // Cast Diamond to IBosonOrchestrationHandler
     orchestrationHandler = await ethers.getContractAt("IBosonOrchestrationHandler", protocolDiamond.address);
@@ -256,6 +290,7 @@ describe("IBosonOrchestrationHandler", function () {
         true
       );
       expect(disputeResolver.isValid()).is.true;
+      disputeResolverId = disputeResolver.id;
 
       // Create DisputeResolverFee array so offer creation will succeed
       DRFeeNative = "0";
@@ -305,8 +340,6 @@ describe("IBosonOrchestrationHandler", function () {
       // Mock offer, offerDates and offerDurations
       ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
       offer.sellerId = seller.id;
-      offerDates.validFrom = ethers.BigNumber.from(Date.now()).toString();
-      offerDates.validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString();
 
       // Check if domains are valid
       expect(offer.isValid()).is.true;
@@ -318,7 +351,7 @@ describe("IBosonOrchestrationHandler", function () {
       offerDatesStruct = offerDates.toStruct();
       offerDurationsStruct = offerDurations.toStruct();
 
-      // Set despute resolution terms
+      // Set dispute resolution terms
       disputeResolutionTerms = new DisputeResolutionTerms(
         disputeResolver.id,
         disputeResolver.escalationResponsePeriod,
@@ -337,6 +370,278 @@ describe("IBosonOrchestrationHandler", function () {
     afterEach(async function () {
       // Reset the accountId iterator
       accountId.next(true);
+    });
+
+    context("👉 raiseAndEscalateDispute()", async function () {
+      async function createDisputeExchangeWithToken() {
+        // utility function that deploys a mock token, creates a offer with it, creates an exchange and push it into escalated state
+        // deploy a mock token
+        const [mockToken] = await deployMockTokens(["Foreign20"]);
+
+        // add to DR fees
+        DRFeeToken = "0";
+        await accountHandler
+          .connect(adminDR)
+          .addFeesToDisputeResolver(disputeResolverId, [
+            new DisputeResolverFee(mockToken.address, "MockToken", DRFeeToken),
+          ]);
+
+        // create an offer with a mock token contract
+        offer.exchangeToken = mockToken.address;
+        offer.sellerDeposit = offer.price = offer.buyerCancelPenalty = "0";
+        offer.id++;
+
+        // create an offer with erc20 exchange token
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+        // mint tokens to buyer and approve the protocol
+        buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
+        await mockToken.mint(buyer.address, buyerEscalationDepositToken);
+        await mockToken.connect(buyer).approve(protocolDiamond.address, buyerEscalationDepositToken);
+
+        // Commit to offer and put exchange all the way to dispute
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+        await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
+
+        return mockToken;
+      }
+
+      beforeEach(async function () {
+        // Create the seller and offer
+        await orchestrationHandler
+          .connect(operator)
+          .createSellerAndOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolver.id,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId
+          );
+
+        // buyer escalation deposit used in multiple tests
+        buyerEscalationDepositNative = applyPercentage(DRFeeNative, buyerEscalationDepositPercentage);
+
+        // Set used variables
+        price = offer.price;
+        quantityAvailable = offer.quantityAvailable;
+        sellerDeposit = offer.sellerDeposit;
+        voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+        disputePeriod = offerDurations.disputePeriod;
+        escalationPeriod = disputeResolver.escalationResponsePeriod;
+
+        // Deposit seller funds so the commit will succeed
+        const fundsToDeposit = ethers.BigNumber.from(sellerDeposit).mul(quantityAvailable);
+        await fundsHandler
+          .connect(operator)
+          .depositFunds(seller.id, ethers.constants.AddressZero, fundsToDeposit, { value: fundsToDeposit });
+
+        buyerId = accountId.next().value;
+
+        exchangeId = "1";
+
+        // Commit to offer, creating a new exchange
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, nextOfferId, { value: price });
+
+        // Set time forward to the offer's voucherRedeemableFrom
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+        // Redeem voucher
+        await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+      });
+
+      it("should emit a DisputeRaised event", async function () {
+        // Raise and Escalate a dispute, testing for the event
+        await expect(
+          orchestrationHandler
+            .connect(buyer)
+            .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+        )
+          .to.emit(disputeHandler, "DisputeRaised")
+          .withArgs(exchangeId, buyerId, seller.id, buyer.address);
+      });
+
+      it("should emit a DisputeEscalated event", async function () {
+        // Raise and Escalate a dispute, testing for the event
+        await expect(
+          orchestrationHandler
+            .connect(buyer)
+            .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+        )
+          .to.emit(disputeHandler, "DisputeEscalated")
+          .withArgs(exchangeId, disputeResolverId, buyer.address);
+      });
+
+      it("should update state", async function () {
+        // Protocol balance before
+        const escrowBalanceBefore = await ethers.provider.getBalance(protocolDiamond.address);
+
+        // Raise and escalate the dispute
+        tx = await orchestrationHandler
+          .connect(buyer)
+          .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+
+        // Get the block timestamp of the confirmed tx and set escalatedDate
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+        disputedDate = escalatedDate = block.timestamp.toString();
+        timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
+
+        dispute = new Dispute(exchangeId, DisputeState.Escalated, "0");
+        disputeDates = new DisputeDates(disputedDate, escalatedDate, "0", timeout);
+
+        // Get the dispute as a struct
+        [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchangeId);
+
+        // Parse into entities
+        returnedDispute = Dispute.fromStruct(disputeStruct);
+        returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+
+        // Returned values should match the expected dispute and dispute dates
+        for (const [key, value] of Object.entries(dispute)) {
+          expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
+        }
+
+        for (const [key, value] of Object.entries(disputeDates)) {
+          expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Get the dispute state
+        [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
+
+        // It should match DisputeState.Escalated
+        assert.equal(response, DisputeState.Escalated, "Dispute state is incorrect");
+
+        // Protocol balance should increase for buyer escalation deposit
+        const escrowBalanceAfter = await ethers.provider.getBalance(protocolDiamond.address);
+        expect(escrowBalanceAfter.sub(escrowBalanceBefore)).to.equal(
+          buyerEscalationDepositNative,
+          "Escrow balance mismatch"
+        );
+      });
+
+      it("should be possible to pay escalation deposit in ERC20 token", async function () {
+        const mockToken = await createDisputeExchangeWithToken();
+
+        // Protocol balance before
+        const escrowBalanceBefore = await mockToken.balanceOf(protocolDiamond.address);
+
+        // Escalate the dispute, testing for the event
+        await expect(orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId))
+          .to.emit(disputeHandler, "DisputeEscalated")
+          .withArgs(exchangeId, disputeResolverId, buyer.address);
+
+        // Protocol balance should increase for buyer escalation deposit
+        const escrowBalanceAfter = await mockToken.balanceOf(protocolDiamond.address);
+        expect(escrowBalanceAfter.sub(escrowBalanceBefore)).to.equal(
+          buyerEscalationDepositToken,
+          "Escrow balance mismatch"
+        );
+      });
+
+      context("💔 Revert Reasons", async function () {
+        /*
+         * Reverts if:
+         * - The disputes region of protocol is paused
+         * - Caller is not the buyer for the given exchange id
+         * - Exchange does not exist
+         * - Exchange is not in a Redeemed state
+         * - Dispute period has elapsed already
+         * - Dispute resolver is not specified (absolute zero offer)
+         * - Offer price is in native token and caller does not send enough
+         * - Offer price is in some ERC20 token and caller also sends native currency
+         * - If contract at token address does not support ERC20 function transferFrom
+         * - If calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+         * - Received ERC20 token amount differs from the expected value
+         */
+        it("The disputes region of protocol is paused", async function () {
+          // Pause the disputes region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
+
+          // Attempt to raise a dispute, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(buyer)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("Caller is not the buyer for the given exchange id", async function () {
+          // Attempt to raise and escalate the dispute, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(rando)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.revertedWith(RevertReasons.NOT_VOUCHER_HOLDER);
+        });
+
+        it("Exchange id does not exist", async function () {
+          // An invalid exchange id
+          const exchangeId = "666";
+
+          // Attempt to raise a dispute, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(buyer)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+        });
+
+        it("exchange is not in a redeemed state - completed", async function () {
+          const blockNumber = await ethers.provider.getBlockNumber();
+          const block = await ethers.provider.getBlock(blockNumber);
+          const currentTime = block.timestamp;
+
+          // Set time forward to run out the dispute period
+          newTime = Number((voucherRedeemableFrom + Number(disputePeriod) + 1).toString().substring(0, 11));
+
+          if (newTime <= currentTime) {
+            newTime += currentTime;
+          }
+
+          await setNextBlockTimestamp(newTime);
+
+          // Complete exchange
+          await exchangeHandler.connect(operator).completeExchange(exchangeId);
+
+          // Attempt to raise a dispute, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(buyer)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.revertedWith(RevertReasons.INVALID_STATE);
+        });
+
+        it("exchange is not in a redeemed state - disputed already", async function () {
+          // Raise a dispute, put it into DISPUTED state
+          await orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId);
+
+          // Attempt to raise a dispute, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(buyer)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.revertedWith(RevertReasons.INVALID_STATE);
+        });
+
+        it("The dispute period has already elapsed", async function () {
+          // Get the redemption date
+          [, , voucherStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
+          const voucherRedeemedDate = voucherStruct.redeemedDate;
+
+          // Set time forward past the dispute period
+          await setNextBlockTimestamp(voucherRedeemedDate.add(disputePeriod).add(1).toNumber());
+
+          // Attempt to raise a dispute, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(buyer)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.revertedWith(RevertReasons.DISPUTE_PERIOD_HAS_ELAPSED);
+        });
+      });
     });
 
     context("👉 createSellerAndOffer()", async function () {
@@ -919,6 +1224,158 @@ describe("IBosonOrchestrationHandler", function () {
           );
       });
 
+      context("Preminted offer - createSellerAndPremintedOffer()", async function () {
+        let firstTokenId, lastTokenId, reservedRangeLength, range;
+
+        beforeEach(async function () {
+          offer.quantityAvailable = reservedRangeLength = 100;
+          offerStruct = offer.toStruct();
+          firstTokenId = 1;
+          lastTokenId = firstTokenId + reservedRangeLength - 1;
+          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+        });
+
+        it("should emit a SellerCreated, OfferCreated and RangeReserved events with auth token", async function () {
+          seller.admin = ethers.constants.AddressZero;
+          sellerStruct = seller.toStruct();
+
+          // Create a seller and a preminted offer, testing for the event
+          tx = await orchestrationHandler
+            .connect(operator)
+            .createSellerAndPremintedOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              authToken,
+              voucherInitValues,
+              agentId
+            );
+
+          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+
+          await expect(tx)
+            .to.emit(orchestrationHandler, "SellerCreated")
+            .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, operator.address);
+
+          await expect(tx)
+            .to.emit(orchestrationHandler, "OfferCreated")
+            .withArgs(
+              nextOfferId,
+              offer.sellerId,
+              offerStruct,
+              offerDatesStruct,
+              offerDurationsStruct,
+              disputeResolutionTermsStruct,
+              offerFeesStruct,
+              agentId,
+              operator.address
+            );
+
+          await expect(tx)
+            .to.emit(orchestrationHandler, "RangeReserved")
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+
+          // Voucher clone contract
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+          await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+          await expect(tx)
+            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
+            .withArgs(voucherInitValues.royaltyPercentage);
+
+          await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
+
+          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+          await expect(tx)
+            .to.emit(bosonVoucher, "OwnershipTransferred")
+            .withArgs(ethers.constants.AddressZero, operator.address);
+        });
+
+        it("should update state", async function () {
+          seller.admin = ethers.constants.AddressZero;
+          sellerStruct = seller.toStruct();
+
+          // Create a seller and a preminted offer
+          await orchestrationHandler
+            .connect(operator)
+            .createSellerAndPremintedOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              authToken,
+              voucherInitValues,
+              agentId
+            );
+
+          // Get the seller as a struct
+          [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
+
+          // Parse into entity
+          let returnedSeller = Seller.fromStruct(sellerStruct);
+          let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
+
+          // Returned values should match the input in createSellerAndOffer
+          for ([key, value] of Object.entries(seller)) {
+            expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Returned auth token values should match the input in createSellerAndOffer
+          for ([key, value] of Object.entries(authToken)) {
+            expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the offer as a struct
+          [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+            .connect(rando)
+            .getOffer(offer.id);
+
+          // Parse into entities
+          let returnedOffer = Offer.fromStruct(offerStruct);
+          let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+          let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+          let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
+
+          // Quantity available should be 0, since whole range is reserved
+          offer.quantityAvailable = "0";
+
+          // Returned values should match the input in createSellerAndOffer
+          for ([key, value] of Object.entries(offer)) {
+            expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDates)) {
+            expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDurations)) {
+            expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(disputeResolutionTerms)) {
+            expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Voucher clone contract
+          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+          expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+          expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+          expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+          const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
+          assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+          const availablePremints = await bosonVoucher.getAvailablePreMints(offer.id);
+          assert.equal(availablePremints.toString(), reservedRangeLength, "Available Premints mismatch");
+        });
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The orchestration region of protocol is paused", async function () {
           // Pause the orchestration region of the protocol
@@ -1195,8 +1652,15 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Valid until date is not in the future", async function () {
+          // Get the current block info
+          const blockNumber = await ethers.provider.getBlockNumber();
+          const block = await ethers.provider.getBlock(blockNumber);
+
           // Set until date in the past
-          offerDates.validUntil = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
+          offerDates.validUntil = ethers.BigNumber.from(block.timestamp)
+            .sub(oneMonth * 6)
+            .toString(); // 6 months ago
+
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
@@ -1575,6 +2039,72 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId
               )
           ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
+        });
+
+        it("Reserved range length is zero", async function () {
+          // Set reserved range length to zero
+          let reservedRangeLength = "0";
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndPremintedOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                reservedRangeLength,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
+        });
+
+        it("Reserved range length is greater than quantity available", async function () {
+          // Set reserved range length to more than quantity available
+          let reservedRangeLength = Number(offer.quantityAvailable) + 1;
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndPremintedOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                reservedRangeLength,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
+        });
+
+        it("Reserved range length is greater than maximum allowed range length", async function () {
+          // Set reserved range length to more than maximum allowed range length
+          let reservedRangeLength = ethers.BigNumber.from(2).pow(128).sub(1);
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndPremintedOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                reservedRangeLength,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
         });
       });
 
@@ -2089,6 +2619,143 @@ describe("IBosonOrchestrationHandler", function () {
           assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
           assert.equal(eventGroupCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
           assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+        });
+      });
+
+      context("Preminted offer - createPremintedOfferWithCondition()", async function () {
+        let firstTokenId, lastTokenId, reservedRangeLength, range;
+
+        beforeEach(async function () {
+          offer.quantityAvailable = reservedRangeLength = 100;
+          offerStruct = offer.toStruct();
+          firstTokenId = 1;
+          lastTokenId = firstTokenId + reservedRangeLength - 1;
+          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+
+          // Voucher clone contract
+          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        });
+
+        it("should emit an OfferCreated, a GroupCreated and a RangeReserved events", async function () {
+          // Create a preminted offer with condition, testing for the events
+
+          const tx = await orchestrationHandler
+            .connect(operator)
+            .createPremintedOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              condition,
+              agentId
+            );
+
+          // OfferCreated event
+          await expect(tx)
+            .to.emit(orchestrationHandler, "OfferCreated")
+            .withArgs(
+              nextOfferId,
+              seller.id,
+              offerStruct,
+              offerDatesStruct,
+              offerDurationsStruct,
+              disputeResolutionTermsStruct,
+              offerFeesStruct,
+              agentId,
+              operator.address
+            );
+
+          // RangeReserved event (on protocol contract)
+          await expect(tx)
+            .to.emit(orchestrationHandler, "RangeReserved")
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+
+          // Events with structs that contain arrays must be tested differently
+          const txReceipt = await tx.wait();
+
+          // GroupCreated event
+          const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
+          const groupInstance = Group.fromStruct(eventGroupCreated.group);
+          // Validate the instance
+          expect(groupInstance.isValid()).to.be.true;
+
+          assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
+          assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+          assert.equal(eventGroupCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
+          assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+
+          // RangeReserved event (on voucher contract)
+          await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
+        });
+
+        it("should update state", async function () {
+          // Create a preminted offer with condition
+          await orchestrationHandler
+            .connect(operator)
+            .createPremintedOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              condition,
+              agentId
+            );
+
+          // Get the offer as a struct
+          [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+            .connect(rando)
+            .getOffer(offer.id);
+
+          // Parse into entities
+          let returnedOffer = Offer.fromStruct(offerStruct);
+          let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+          let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+          let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
+
+          // Quantity available should be 0, since whole range is reserved
+          offer.quantityAvailable = "0";
+
+          // Returned values should match the input in createSellerAndOffer
+          for ([key, value] of Object.entries(offer)) {
+            expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDates)) {
+            expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDurations)) {
+            expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(disputeResolutionTerms)) {
+            expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the group as a struct
+          [, groupStruct, conditionStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
+
+          // Parse into entity
+          const returnedGroup = Group.fromStruct(groupStruct);
+
+          // Returned values should match what is expected for the silently created group
+          for ([key, value] of Object.entries(group)) {
+            expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Parse into entity
+          const returnedCondition = Condition.fromStruct(conditionStruct);
+
+          // Returned values should match the condition
+          for ([key, value] of Object.entries(condition)) {
+            expect(JSON.stringify(returnedCondition[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Voucher clone contract
+          const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
+          assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+          const availablePremints = await bosonVoucher.getAvailablePreMints(offer.id);
+          assert.equal(availablePremints.toString(), reservedRangeLength, "Available Premints mismatch");
         });
       });
 
@@ -2618,6 +3285,141 @@ describe("IBosonOrchestrationHandler", function () {
         });
       });
 
+      context("Preminted offer - createPremintedOfferAddToGroup()", async function () {
+        let firstTokenId, lastTokenId, reservedRangeLength, range;
+
+        beforeEach(async function () {
+          offer.quantityAvailable = reservedRangeLength = 100;
+          offerStruct = offer.toStruct();
+          firstTokenId = 1;
+          lastTokenId = firstTokenId + reservedRangeLength - 1;
+          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+
+          // Voucher clone contract
+          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        });
+
+        it("should emit an OfferCreated, a GroupUpdated and a RangeReserved events", async function () {
+          // Create a preminted offer, add it to the group, testing for the events
+          const tx = await orchestrationHandler
+            .connect(operator)
+            .createPremintedOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              nextGroupId,
+              agentId
+            );
+
+          // OfferCreated event
+          await expect(tx)
+            .to.emit(orchestrationHandler, "OfferCreated")
+            .withArgs(
+              nextOfferId,
+              seller.id,
+              offerStruct,
+              offerDatesStruct,
+              offerDurationsStruct,
+              disputeResolutionTermsStruct,
+              offerFeesStruct,
+              agentId,
+              operator.address
+            );
+
+          // RangeReserved event (on protocol contract)
+          await expect(tx)
+            .to.emit(orchestrationHandler, "RangeReserved")
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+
+          // Events with structs that contain arrays must be tested differently
+          const txReceipt = await tx.wait();
+
+          // GroupUpdated event
+          const eventGroupUpdated = getEvent(txReceipt, orchestrationHandler, "GroupUpdated");
+          const groupInstance = Group.fromStruct(eventGroupUpdated.group);
+          // Validate the instance
+          expect(groupInstance.isValid()).to.be.true;
+
+          assert.equal(eventGroupUpdated.groupId.toString(), group.id, "Group Id is incorrect");
+          assert.equal(eventGroupUpdated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+          assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+
+          // RangeReserved event (on voucher contract)
+          await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
+        });
+
+        it("should update state", async function () {
+          // Create a preminted offer, add it to the group
+          await orchestrationHandler
+            .connect(operator)
+            .createPremintedOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              nextGroupId,
+              agentId
+            );
+
+          // Get the offer as a struct
+          [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+            .connect(rando)
+            .getOffer(offer.id);
+
+          // Parse into entities
+          let returnedOffer = Offer.fromStruct(offerStruct);
+          let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+          let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+          let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
+
+          // Quantity available should be 0, since whole range is reserved
+          offer.quantityAvailable = "0";
+
+          // Returned values should match the input in createSellerAndOffer
+          for ([key, value] of Object.entries(offer)) {
+            expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDates)) {
+            expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDurations)) {
+            expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(disputeResolutionTerms)) {
+            expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the group as a struct
+          [, groupStruct, conditionStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
+
+          // Parse into entity
+          const returnedGroup = Group.fromStruct(groupStruct);
+
+          // Returned values should match what is expected for the update group
+          for ([key, value] of Object.entries(group)) {
+            expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Parse into entity
+          const returnedCondition = Condition.fromStruct(conditionStruct);
+
+          // Returned values should match the condition
+          for ([key, value] of Object.entries(condition)) {
+            expect(JSON.stringify(returnedCondition[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Voucher clone contract
+          const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
+          assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+          const availablePremints = await bosonVoucher.getAvailablePreMints(offer.id);
+          assert.equal(availablePremints.toString(), reservedRangeLength, "Available Premints mismatch");
+        });
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The orchestration region of protocol is paused", async function () {
           // Pause the orchestration region of the protocol
@@ -3136,6 +3938,154 @@ describe("IBosonOrchestrationHandler", function () {
           assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
           assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
           assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+        });
+      });
+
+      context("Preminted offer - createPremintedOfferAndTwinWithBundle()", async function () {
+        let firstTokenId, lastTokenId, reservedRangeLength, range;
+
+        beforeEach(async function () {
+          offer.quantityAvailable = reservedRangeLength = 1;
+          offerStruct = offer.toStruct();
+          firstTokenId = 1;
+          lastTokenId = firstTokenId + reservedRangeLength - 1;
+          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+
+          // Voucher clone contract
+          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        });
+
+        it("should emit an OfferCreated, a TwinCreated, a BundleCreated and a RangeReserved events", async function () {
+          // Create a preminted offer, a twin and a bundle, testing for the events
+          const tx = await orchestrationHandler
+            .connect(operator)
+            .createPremintedOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              twin,
+              agentId
+            );
+
+          // OfferCreated event
+          await expect(tx)
+            .to.emit(orchestrationHandler, "OfferCreated")
+            .withArgs(
+              nextOfferId,
+              seller.id,
+              offerStruct,
+              offerDatesStruct,
+              offerDurationsStruct,
+              disputeResolutionTermsStruct,
+              offerFeesStruct,
+              agentId,
+              operator.address
+            );
+
+          // RangeReserved event (on protocol contract)
+          await expect(tx)
+            .to.emit(orchestrationHandler, "RangeReserved")
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+
+          // Events with structs that contain arrays must be tested differently
+          const txReceipt = await tx.wait();
+
+          // TwinCreated event
+          const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
+          const twinInstance = Twin.fromStruct(eventTwinCreated.twin);
+          // Validate the instance
+          expect(twinInstance.isValid()).to.be.true;
+
+          assert.equal(eventTwinCreated.twinId.toString(), twin.id, "Twin Id is incorrect");
+          assert.equal(eventTwinCreated.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
+          assert.equal(twinInstance.toString(), twin.toString(), "Twin struct is incorrect");
+
+          // BundleCreated event
+          const eventBundleCreated = getEvent(txReceipt, orchestrationHandler, "BundleCreated");
+          const bundleInstance = Bundle.fromStruct(eventBundleCreated.bundle);
+          // Validate the instance
+          expect(bundleInstance.isValid()).to.be.true;
+
+          assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
+          assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+          assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+
+          // RangeReserved event (on voucher contract)
+          await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
+        });
+
+        it("should update state", async function () {
+          // Create a preminted offer, a twin and a bundle
+          await orchestrationHandler
+            .connect(operator)
+            .createPremintedOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              twin,
+              agentId
+            );
+
+          // Get the offer as a struct
+          [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+            .connect(rando)
+            .getOffer(offer.id);
+
+          // Parse into entities
+          let returnedOffer = Offer.fromStruct(offerStruct);
+          let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+          let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+          let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
+
+          // Quantity available should be 0, since whole range is reserved
+          offer.quantityAvailable = "0";
+
+          // Returned values should match the input in createSellerAndOffer
+          for ([key, value] of Object.entries(offer)) {
+            expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDates)) {
+            expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDurations)) {
+            expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(disputeResolutionTerms)) {
+            expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the twin as a struct
+          [, twinStruct] = await twinHandler.connect(rando).getTwin(nextTwinId);
+
+          // Parse into entity
+          const returnedTwin = Twin.fromStruct(twinStruct);
+
+          // Returned values should match the input in createOfferAndTwinWithBundle
+          for ([key, value] of Object.entries(twin)) {
+            expect(JSON.stringify(returnedTwin[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the bundle as a struct
+          [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleId);
+
+          // Parse into entity
+          let returnedBundle = Bundle.fromStruct(bundleStruct);
+
+          // Returned values should match what is expected for the silently created bundle
+          for ([key, value] of Object.entries(bundle)) {
+            expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Voucher clone contract
+          const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
+          assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+          const availablePremints = await bosonVoucher.getAvailablePreMints(offer.id);
+          assert.equal(availablePremints.toString(), reservedRangeLength, "Available Premints mismatch");
         });
       });
 
@@ -3873,6 +4823,185 @@ describe("IBosonOrchestrationHandler", function () {
         });
       });
 
+      context("Preminted offer - createPremintedOfferWithConditionAndTwinAndBundle()", async function () {
+        let firstTokenId, lastTokenId, reservedRangeLength, range;
+
+        beforeEach(async function () {
+          offer.quantityAvailable = reservedRangeLength = 1;
+          offerStruct = offer.toStruct();
+          firstTokenId = 1;
+          lastTokenId = firstTokenId + reservedRangeLength - 1;
+          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+
+          // Voucher clone contract
+          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        });
+
+        it("should emit an OfferCreated, a GroupCreated, a TwinCreated, a BundleCreated and a RangeReserved events", async function () {
+          // Create a preminted offer with condition, twin and bundle
+          const tx = await orchestrationHandler
+            .connect(operator)
+            .createPremintedOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              condition,
+              twin,
+              agentId
+            );
+
+          // OfferCreated event
+          await expect(tx)
+            .to.emit(orchestrationHandler, "OfferCreated")
+            .withArgs(
+              nextOfferId,
+              seller.id,
+              offerStruct,
+              offerDatesStruct,
+              offerDurationsStruct,
+              disputeResolutionTermsStruct,
+              offerFeesStruct,
+              agentId,
+              operator.address
+            );
+
+          // RangeReserved event (on protocol contract)
+          await expect(tx)
+            .to.emit(orchestrationHandler, "RangeReserved")
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+
+          // Events with structs that contain arrays must be tested differently
+          const txReceipt = await tx.wait();
+
+          // GroupCreated event
+          const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
+          const groupInstance = Group.fromStruct(eventGroupCreated.group);
+          // Validate the instance
+          expect(groupInstance.isValid()).to.be.true;
+
+          assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
+          assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+          assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+
+          // TwinCreated event
+          const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
+          const twinInstance = Twin.fromStruct(eventTwinCreated.twin);
+          // Validate the instance
+          expect(twinInstance.isValid()).to.be.true;
+
+          assert.equal(eventTwinCreated.twinId.toString(), twin.id, "Twin Id is incorrect");
+          assert.equal(eventTwinCreated.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
+          assert.equal(twinInstance.toString(), twin.toString(), "Twin struct is incorrect");
+
+          // BundleCreated event
+          const eventBundleCreated = getEvent(txReceipt, orchestrationHandler, "BundleCreated");
+          const bundleInstance = Bundle.fromStruct(eventBundleCreated.bundle);
+          // Validate the instance
+          expect(bundleInstance.isValid()).to.be.true;
+
+          assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
+          assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+          assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+
+          // RangeReserved event (on voucher contract)
+          await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
+        });
+
+        it("should update state", async function () {
+          // Create a preminted offer with condition, twin and bundle
+          await orchestrationHandler
+            .connect(operator)
+            .createPremintedOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              condition,
+              twin,
+              agentId
+            );
+
+          // Get the offer as a struct
+          [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+            .connect(rando)
+            .getOffer(offer.id);
+
+          // Parse into entities
+          let returnedOffer = Offer.fromStruct(offerStruct);
+          let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+          let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+          let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
+
+          // Quantity available should be 0, since whole range is reserved
+          offer.quantityAvailable = "0";
+
+          // Returned values should match the input in createSellerAndOffer
+          for ([key, value] of Object.entries(offer)) {
+            expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDates)) {
+            expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDurations)) {
+            expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(disputeResolutionTerms)) {
+            expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the group as a struct
+          [, groupStruct, conditionStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
+
+          // Parse into entity
+          const returnedGroup = Group.fromStruct(groupStruct);
+
+          // Returned values should match what is expected for the silently created group
+          for ([key, value] of Object.entries(group)) {
+            expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Parse into entity
+          const returnedCondition = Condition.fromStruct(conditionStruct);
+
+          // Returned values should match the condition
+          for ([key, value] of Object.entries(condition)) {
+            expect(JSON.stringify(returnedCondition[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the twin as a struct
+          [, twinStruct] = await twinHandler.connect(rando).getTwin(nextTwinId);
+
+          // Parse into entity
+          const returnedTwin = Twin.fromStruct(twinStruct);
+
+          // Returned values should match the input in createOfferWithConditionAndTwinAndBundle
+          for ([key, value] of Object.entries(twin)) {
+            expect(JSON.stringify(returnedTwin[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the bundle as a struct
+          [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleId);
+
+          // Parse into entity
+          let returnedBundle = Bundle.fromStruct(bundleStruct);
+
+          // Returned values should match what is expected for the silently created bundle
+          for ([key, value] of Object.entries(bundle)) {
+            expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Voucher clone contract
+          const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
+          assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+          const availablePremints = await bosonVoucher.getAvailablePreMints(offer.id);
+          assert.equal(availablePremints.toString(), reservedRangeLength, "Available Premints mismatch");
+        });
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The orchestration region of protocol is paused", async function () {
           // Pause the orchestration region of the protocol
@@ -4383,6 +5512,187 @@ describe("IBosonOrchestrationHandler", function () {
           assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
           assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
           assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+        });
+      });
+
+      context("Preminted offer - createSellerAndPremintedOfferWithCondition()", async function () {
+        let firstTokenId, lastTokenId, reservedRangeLength, range;
+
+        beforeEach(async function () {
+          offer.quantityAvailable = reservedRangeLength = 100;
+          offerStruct = offer.toStruct();
+          firstTokenId = 1;
+          lastTokenId = firstTokenId + reservedRangeLength - 1;
+          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+        });
+
+        it("should emit a SellerCreated, an OfferCreated, a GroupCreated and a RangeReserved event", async function () {
+          // Create a seller and a preminted offer with condition, testing for the events
+          const tx = await orchestrationHandler
+            .connect(operator)
+            .createSellerAndPremintedOfferWithCondition(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              condition,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId
+            );
+
+          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+
+          // SellerCreated and OfferCreated RangeReserved events
+          await expect(tx)
+            .to.emit(orchestrationHandler, "SellerCreated")
+            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+
+          await expect(tx)
+            .to.emit(orchestrationHandler, "OfferCreated")
+            .withArgs(
+              nextOfferId,
+              seller.id,
+              offerStruct,
+              offerDatesStruct,
+              offerDurationsStruct,
+              disputeResolutionTermsStruct,
+              offerFeesStruct,
+              agentId,
+              operator.address
+            );
+
+          await expect(tx)
+            .to.emit(orchestrationHandler, "RangeReserved")
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+
+          // Events with structs that contain arrays must be tested differently
+          const txReceipt = await tx.wait();
+
+          // GroupCreated event
+          const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
+          const groupInstance = Group.fromStruct(eventGroupCreated.group);
+          // Validate the instance
+          expect(groupInstance.isValid()).to.be.true;
+
+          assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
+          assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+          assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+
+          // Voucher clone contract
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+          await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+          await expect(tx)
+            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
+            .withArgs(voucherInitValues.royaltyPercentage);
+
+          await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
+
+          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+          await expect(tx)
+            .to.emit(bosonVoucher, "OwnershipTransferred")
+            .withArgs(ethers.constants.AddressZero, operator.address);
+        });
+
+        it("should update state", async function () {
+          // Create a seller and an offer with condition
+          await orchestrationHandler
+            .connect(operator)
+            .createSellerAndPremintedOfferWithCondition(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              condition,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId
+            );
+
+          // Get the seller as a struct
+          [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
+
+          // Parse into entity
+          let returnedSeller = Seller.fromStruct(sellerStruct);
+          let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
+
+          // Returned values should match the input in createSellerAndOfferWithCondition
+          for ([key, value] of Object.entries(seller)) {
+            expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Returned auth token values should match the input in createSeller
+          for ([key, value] of Object.entries(emptyAuthToken)) {
+            expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the offer as a struct
+          [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+            .connect(rando)
+            .getOffer(offer.id);
+
+          // Parse into entities
+          let returnedOffer = Offer.fromStruct(offerStruct);
+          let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+          let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+          let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
+
+          // Quantity available should be 0, since whole range is reserved
+          offer.quantityAvailable = "0";
+
+          // Returned values should match the input in createSellerAndOffer
+          for ([key, value] of Object.entries(offer)) {
+            expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDates)) {
+            expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDurations)) {
+            expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(disputeResolutionTerms)) {
+            expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the group as a struct
+          [, groupStruct, conditionStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
+
+          // Parse into entity
+          const returnedGroup = Group.fromStruct(groupStruct);
+
+          // Returned values should match what is expected for the silently created group
+          for ([key, value] of Object.entries(group)) {
+            expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Parse into entity
+          const returnedCondition = Condition.fromStruct(conditionStruct);
+
+          // Returned values should match the condition
+          for ([key, value] of Object.entries(condition)) {
+            expect(JSON.stringify(returnedCondition[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Voucher clone contract
+          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+          expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+          expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+          expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+          const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
+          assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+          const availablePremints = await bosonVoucher.getAvailablePreMints(offer.id);
+          assert.equal(availablePremints.toString(), reservedRangeLength, "Available Premints mismatch");
         });
       });
 
@@ -4952,6 +6262,208 @@ describe("IBosonOrchestrationHandler", function () {
           assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
           assert.equal(eventBundleCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
           assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+        });
+      });
+
+      context("Preminted offer - createSellerAndPremintedOfferAndTwinWithBundle()", async function () {
+        let firstTokenId, lastTokenId, reservedRangeLength, range;
+
+        beforeEach(async function () {
+          offer.quantityAvailable = reservedRangeLength = 1;
+          offerStruct = offer.toStruct();
+          firstTokenId = 1;
+          lastTokenId = firstTokenId + reservedRangeLength - 1;
+          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+        });
+
+        it("should emit a SellerCreated, an OfferCreated, a TwinCreated, a BundleCreated and RangeReserved event", async function () {
+          // Approving the twinHandler contract to transfer seller's tokens
+          await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
+          // Create a seller, a preminted offer with condition and a twin with bundle, testing for the events
+          const tx = await orchestrationHandler
+            .connect(operator)
+            .createSellerAndPremintedOfferAndTwinWithBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId
+            );
+
+          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+
+          // SellerCreated, OfferCreated and RangeReserved events
+          await expect(tx)
+            .to.emit(orchestrationHandler, "SellerCreated")
+            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+
+          await expect(tx)
+            .to.emit(orchestrationHandler, "OfferCreated")
+            .withArgs(
+              nextOfferId,
+              seller.id,
+              offerStruct,
+              offerDatesStruct,
+              offerDurationsStruct,
+              disputeResolutionTermsStruct,
+              offerFeesStruct,
+              agentId,
+              operator.address
+            );
+
+          await expect(tx)
+            .to.emit(orchestrationHandler, "RangeReserved")
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+
+          // Events with structs that contain arrays must be tested differently
+          const txReceipt = await tx.wait();
+
+          // TwinCreated event
+          const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
+          const twinInstance = Twin.fromStruct(eventTwinCreated.twin);
+          // Validate the instance
+          expect(twinInstance.isValid()).to.be.true;
+
+          assert.equal(eventTwinCreated.twinId.toString(), twin.id, "Twin Id is incorrect");
+          assert.equal(eventTwinCreated.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
+          assert.equal(eventTwinCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
+          assert.equal(twinInstance.toString(), twin.toString(), "Twin struct is incorrect");
+
+          // BundleCreated event
+          const eventBundleCreated = getEvent(txReceipt, orchestrationHandler, "BundleCreated");
+          const bundleInstance = Bundle.fromStruct(eventBundleCreated.bundle);
+          // Validate the instance
+          expect(bundleInstance.isValid()).to.be.true;
+
+          assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
+          assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+          assert.equal(eventBundleCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
+          assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+
+          // Voucher clone contract
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+          await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+          await expect(tx)
+            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
+            .withArgs(voucherInitValues.royaltyPercentage);
+
+          await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
+
+          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+          await expect(tx)
+            .to.emit(bosonVoucher, "OwnershipTransferred")
+            .withArgs(ethers.constants.AddressZero, operator.address);
+        });
+
+        it("should update state", async function () {
+          // Approving the twinHandler contract to transfer seller's tokens
+          await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
+          // Create a seller, a preminted offer with condition and a twin with bundle, testing for the events
+          await orchestrationHandler
+            .connect(operator)
+            .createSellerAndPremintedOfferAndTwinWithBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId
+            );
+
+          // Get the seller as a struct
+          [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
+
+          // Parse into entity
+          let returnedSeller = Seller.fromStruct(sellerStruct);
+          let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
+
+          // Returned values should match the input in createSellerAndOfferAndTwinWithBundle
+          for ([key, value] of Object.entries(seller)) {
+            expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Returned auth token values should match the input in createSeller
+          for ([key, value] of Object.entries(emptyAuthToken)) {
+            expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the offer as a struct
+          [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+            .connect(rando)
+            .getOffer(offer.id);
+
+          // Parse into entities
+          let returnedOffer = Offer.fromStruct(offerStruct);
+          let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+          let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+          let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
+
+          // Quantity available should be 0, since whole range is reserved
+          offer.quantityAvailable = "0";
+
+          // Returned values should match the input in createSellerAndOffer
+          for ([key, value] of Object.entries(offer)) {
+            expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDates)) {
+            expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDurations)) {
+            expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(disputeResolutionTerms)) {
+            expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the twin as a struct
+          [, twinStruct] = await twinHandler.connect(rando).getTwin(nextTwinId);
+
+          // Parse into entity
+          const returnedTwin = Twin.fromStruct(twinStruct);
+
+          // Returned values should match the input in createSellerAndOfferAndTwinWithBundle
+          for ([key, value] of Object.entries(twin)) {
+            expect(JSON.stringify(returnedTwin[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the bundle as a struct
+          [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleId);
+
+          // Parse into entity
+          let returnedBundle = Bundle.fromStruct(bundleStruct);
+
+          // Returned values should match what is expected for the silently created bundle
+          for ([key, value] of Object.entries(bundle)) {
+            expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Voucher clone contract
+          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+          expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+          expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+          expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+          const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
+          assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+          const availablePremints = await bosonVoucher.getAvailablePreMints(offer.id);
+          assert.equal(availablePremints.toString(), reservedRangeLength, "Available Premints mismatch");
         });
       });
 
@@ -5620,6 +7132,237 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(tx)
             .to.emit(bosonVoucher, "OwnershipTransferred")
             .withArgs(ethers.constants.AddressZero, operator.address);
+        });
+      });
+
+      context("Preminted offer - createSellerAndPremintedOfferWithConditionAndTwinAndBundle()", async function () {
+        let firstTokenId, lastTokenId, reservedRangeLength, range;
+
+        beforeEach(async function () {
+          offer.quantityAvailable = reservedRangeLength = 1;
+          offerStruct = offer.toStruct();
+          firstTokenId = 1;
+          lastTokenId = firstTokenId + reservedRangeLength - 1;
+          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+        });
+
+        it("should emit a SellerCreated, an OfferCreated, a GroupCreated, a TwinCreated, a BundleCreated and a RangeReserved event", async function () {
+          // Approving the twinHandler contract to transfer seller's tokens
+          await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
+          // Create a seller, a preminted offer with condition, twin and bundle
+          const tx = await orchestrationHandler
+            .connect(operator)
+            .createSellerAndPremintedOfferWithConditionAndTwinAndBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              condition,
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId
+            );
+
+          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+
+          // SellerCreated, OfferCreated and RangeReserved events
+          await expect(tx)
+            .to.emit(orchestrationHandler, "SellerCreated")
+            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+
+          await expect(tx)
+            .to.emit(orchestrationHandler, "OfferCreated")
+            .withArgs(
+              nextOfferId,
+              seller.id,
+              offerStruct,
+              offerDatesStruct,
+              offerDurationsStruct,
+              disputeResolutionTermsStruct,
+              offerFeesStruct,
+              agentId,
+              operator.address
+            );
+
+          await expect(tx)
+            .to.emit(orchestrationHandler, "RangeReserved")
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+
+          // Events with structs that contain arrays must be tested differently
+          const txReceipt = await tx.wait();
+
+          // GroupCreated event
+          const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
+          const groupInstance = Group.fromStruct(eventGroupCreated.group);
+          // Validate the instance
+          expect(groupInstance.isValid()).to.be.true;
+
+          assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
+          assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+          assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+
+          // TwinCreated event
+          const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
+          const twinInstance = Twin.fromStruct(eventTwinCreated.twin);
+          // Validate the instance
+          expect(twinInstance.isValid()).to.be.true;
+
+          assert.equal(eventTwinCreated.twinId.toString(), twin.id, "Twin Id is incorrect");
+          assert.equal(eventTwinCreated.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
+          assert.equal(twinInstance.toString(), twin.toString(), "Twin struct is incorrect");
+
+          // BundleCreated event
+          const eventBundleCreated = getEvent(txReceipt, orchestrationHandler, "BundleCreated");
+          const bundleInstance = Bundle.fromStruct(eventBundleCreated.bundle);
+          // Validate the instance
+          expect(bundleInstance.isValid()).to.be.true;
+
+          assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
+          assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+          assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+
+          // Voucher clone contract
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+          await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+          await expect(tx)
+            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
+            .withArgs(voucherInitValues.royaltyPercentage);
+
+          await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
+
+          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+          await expect(tx)
+            .to.emit(bosonVoucher, "OwnershipTransferred")
+            .withArgs(ethers.constants.AddressZero, operator.address);
+        });
+
+        it("should update state", async function () {
+          // Approving the twinHandler contract to transfer seller's tokens
+          await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
+          // Create a seller, a preminted offer with condition, twin and bundle
+          await orchestrationHandler
+            .connect(operator)
+            .createSellerAndPremintedOfferWithConditionAndTwinAndBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              reservedRangeLength,
+              condition,
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId
+            );
+
+          // Get the seller as a struct
+          [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
+
+          // Parse into entity
+          let returnedSeller = Seller.fromStruct(sellerStruct);
+          let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
+
+          // Returned values should match the input in createSellerAndOfferWithConditionAndTwinAndBundle
+          for ([key, value] of Object.entries(seller)) {
+            expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Returned auth token values should match the input in createSeller
+          for ([key, value] of Object.entries(emptyAuthToken)) {
+            expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the offer as a struct
+          [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+            .connect(rando)
+            .getOffer(offer.id);
+
+          // Parse into entities
+          let returnedOffer = Offer.fromStruct(offerStruct);
+          let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+          let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+          let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
+
+          // Quantity available should be 0, since whole range is reserved
+          offer.quantityAvailable = "0";
+
+          // Returned values should match the input in createSellerAndOffer
+          for ([key, value] of Object.entries(offer)) {
+            expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDates)) {
+            expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDurations)) {
+            expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(disputeResolutionTerms)) {
+            expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the group as a struct
+          [, groupStruct, conditionStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
+
+          // Parse into entity
+          const returnedGroup = Group.fromStruct(groupStruct);
+
+          // Returned values should match what is expected for the silently created group
+          for ([key, value] of Object.entries(group)) {
+            expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Parse into entity
+          const returnedCondition = Condition.fromStruct(conditionStruct);
+
+          // Returned values should match the condition
+          for ([key, value] of Object.entries(condition)) {
+            expect(JSON.stringify(returnedCondition[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the twin as a struct
+          [, twinStruct] = await twinHandler.connect(rando).getTwin(nextTwinId);
+
+          // Parse into entity
+          const returnedTwin = Twin.fromStruct(twinStruct);
+
+          // Returned values should match the input in createSellerAndOfferWithConditionAndTwinAndBundle
+          for ([key, value] of Object.entries(twin)) {
+            expect(JSON.stringify(returnedTwin[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Get the bundle as a struct
+          [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleId);
+
+          // Parse into entity
+          let returnedBundle = Bundle.fromStruct(bundleStruct);
+
+          // Returned values should match what is expected for the silently created bundle
+          for ([key, value] of Object.entries(bundle)) {
+            expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
+          }
+
+          // Voucher clone contract
+          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+          expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+          expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+          expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+          const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
+          assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+          const availablePremints = await bosonVoucher.getAvailablePreMints(offer.id);
+          assert.equal(availablePremints.toString(), reservedRangeLength, "Available Premints mismatch");
         });
       });
 

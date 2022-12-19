@@ -2,7 +2,6 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const fs = require("fs");
 const packageFile = require("../../package.json");
-
 const addressesDirPath = __dirname + `/../../addresses`;
 
 function getAddressesFilePath(chainId, network, env) {
@@ -70,6 +69,29 @@ async function getFees() {
   return { gasPrice: newGasPrice };
 }
 
+// Check if account has a role
+async function checkRole(contracts, role, address) {
+  // Get addresses of currently deployed AccessController contract
+  const accessControllerAddress = contracts.find((c) => c.name === "AccessController")?.address;
+  if (!accessControllerAddress) {
+    return addressNotFound("AccessController");
+  }
+
+  // Get AccessController abstraction
+  const accessController = await ethers.getContractAt("AccessController", accessControllerAddress);
+
+  // Check that caller has upgrader role.
+  const hasRole = await accessController.hasRole(role, address);
+  if (!hasRole) {
+    console.log("Admin address does not have UPGRADER role");
+    process.exit(1);
+  }
+}
+const addressNotFound = (address) => {
+  console.log(`${address} address not found for network ${hre.network.name}`);
+  process.exit(1);
+};
+
 exports.getAddressesFilePath = getAddressesFilePath;
 exports.writeContracts = writeContracts;
 exports.readContracts = readContracts;
@@ -78,3 +100,5 @@ exports.deploymentComplete = deploymentComplete;
 exports.getBaseFee = getBaseFee;
 exports.getMaxFeePerGas = getMaxFeePerGas;
 exports.getFees = getFees;
+exports.checkRole = checkRole;
+exports.addressNotFound = addressNotFound;

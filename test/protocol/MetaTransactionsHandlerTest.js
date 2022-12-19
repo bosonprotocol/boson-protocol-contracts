@@ -14,13 +14,9 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const {
-  deployProtocolHandlerFacets,
-  deployProtocolHandlerFacetsWithArgs,
-} = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { prepareDataSignatureParameters, setNextBlockTimestamp } = require("../util/utils.js");
+const { prepareDataSignatureParameters, setNextBlockTimestamp, getFacetsWithArgs } = require("../util/utils.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const {
   mockOffer,
@@ -109,7 +105,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let voucherInitValues;
   let emptyAuthToken;
   let agentId;
-  let stateModifyingFunctionsHashes;
+  let facetNames;
 
   before(async function () {
     // get interface Ids
@@ -136,32 +132,6 @@ describe("IBosonMetaTransactionsHandler", function () {
 
     // Temporarily grant PAUSER role to pauser account
     await accessController.grantRole(Role.PAUSER, pauser.address);
-
-    // Cut the protocol handler facets into the Diamond
-    const facetNames = [
-      "SellerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "FundsHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "TwinHandlerFacet",
-      "DisputeHandlerFacet",
-      "PauseHandlerFacet",
-      "BuyerHandlerFacet",
-    ];
-
-    // Get input arguments for MetaTransactionsHandlerFacet
-    stateModifyingFunctionsHashes = await getStateModifyingFunctionsHashes(
-      [...facetNames, "MetaTransactionsHandlerFacet"],
-      ["executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"]
-    );
-
-    await deployProtocolHandlerFacets(protocolDiamond, [...facetNames], maxPriorityFeePerGas);
-    await deployProtocolHandlerFacetsWithArgs(
-      protocolDiamond,
-      { MetaTransactionsHandlerFacet: [stateModifyingFunctionsHashes] },
-      maxPriorityFeePerGas
-    );
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [protocolDiamond.address];
@@ -204,6 +174,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
         minDisputePeriod: oneWeek,
+        maxPremintedVouchers: 10000,
       },
       // Protocol fees
       {
@@ -213,10 +184,30 @@ describe("IBosonMetaTransactionsHandler", function () {
       },
     ];
 
-    // Deploy the Config facet, initializing the protocol config
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, maxPriorityFeePerGas);
+    // Cut the protocol handler facets into the Diamond
+    facetNames = [
+      "SellerHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "FundsHandlerFacet",
+      "ExchangeHandlerFacet",
+      "OfferHandlerFacet",
+      "TwinHandlerFacet",
+      "DisputeHandlerFacet",
+      "PauseHandlerFacet",
+      "BuyerHandlerFacet",
+      "MetaTransactionsHandlerFacet",
+      "ProtocolInitializationFacet",
+      "ConfigHandlerFacet",
+    ];
 
-    // Cast Diamond to IERC165
+    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    // Remove ConfigHandlerFacet because should not be allowlisted on MetaTransactionHandler
+    facetNames = facetNames.filter((name) => name !== "ConfigHandlerFacet");
+
+    // Cut the protocol handler facets into the Diamond
+    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
@@ -475,6 +466,9 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       it("after initialization all state modifying functions should be allowlisted", async function () {
+        const stateModifyingFunctionsHashes = await getStateModifyingFunctionsHashes(facetNames, [
+          "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)",
+        ]);
         // Functions should be enabled
         for (const func of stateModifyingFunctionsHashes) {
           expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.true;
@@ -523,27 +517,11 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       it("after initialization all state modifying functions should be allowlisted", async function () {
-        // Cut the protocol handler facets into the Diamond
-        const facetNames = [
-          "SellerHandlerFacet",
-          "DisputeResolverHandlerFacet",
-          "FundsHandlerFacet",
-          "ExchangeHandlerFacet",
-          "OfferHandlerFacet",
-          "TwinHandlerFacet",
-          "DisputeHandlerFacet",
-          "PauseHandlerFacet",
-          "BuyerHandlerFacet",
-        ];
-
         // Get list of state modifying functions
         const stateModifyingFunctions = (await getStateModifyingFunctions(facetNames)).filter(
           (fn) => fn != "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"
         );
-        console.log(stateModifyingFunctions);
 
-        // Functions should be enabled
-        getStateModifyingFunctions();
         for (const func of stateModifyingFunctions) {
           expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.true;
         }

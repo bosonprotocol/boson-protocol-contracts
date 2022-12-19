@@ -27,7 +27,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ProtocolLib.ProtocolAddresses calldata _addresses,
         ProtocolLib.ProtocolLimits calldata _limits,
         ProtocolLib.ProtocolFees calldata _fees
-    ) public onlyUnInitialized(type(IBosonConfigHandler).interfaceId) {
+    ) public onlyUninitialized(type(IBosonConfigHandler).interfaceId) {
         // Register supported interfaces
         DiamondLib.addSupportedInterface(type(IBosonConfigHandler).interfaceId);
 
@@ -53,6 +53,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxRoyaltyPecentage(_limits.maxRoyaltyPecentage);
         setMaxResolutionPeriod(_limits.maxResolutionPeriod);
         setMinDisputePeriod(_limits.minDisputePeriod);
+        setMaxPremintedVouchers(_limits.maxPremintedVouchers);
 
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -732,6 +733,30 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getMinDisputePeriod() external view override returns (uint256) {
         return protocolLimits().minDisputePeriod;
+    }
+
+    /**
+     * @notice Sets the maximum number of vouchers that can be preminted in a single transaction.
+     *
+     * Emits a MaxPremintedVouchersChanged event if successful.
+     *
+     * Reverts if the _maxPremintedVouchers is zero.
+     *
+     * @param _maxPremintedVouchers - the maximum number of vouchers
+     */
+    function setMaxPremintedVouchers(uint256 _maxPremintedVouchers) public override onlyRole(ADMIN) nonReentrant {
+        // Make sure _maxPremintedVouchers is greater than 0
+        checkNonZero(_maxPremintedVouchers);
+
+        protocolLimits().maxPremintedVouchers = _maxPremintedVouchers;
+        emit MaxPremintedVouchersChanged(_maxPremintedVouchers, msgSender());
+    }
+
+    /**
+     * @notice Gets the maximum number of vouchers that can be preminted in a single transaction.
+     */
+    function getMaxPremintedVouchers() external view override returns (uint256) {
+        return protocolLimits().maxPremintedVouchers;
     }
 
     /**

@@ -1,5 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const { getFacets } = require("../../scripts/config/facet-deploy.js");
 const { keccak256, RLP } = ethers.utils;
 
 function getEvent(receipt, factory, eventName) {
@@ -201,6 +202,15 @@ function getMappingStoragePosition(slot, key, padding = paddingType.NONE) {
   return keccak256(Buffer.concat([keyBuffer, pBuffer]));
 }
 
+async function getFacetsWithArgs(facetNames, config) {
+  const facets = await getFacets(config);
+  const keys = Object.keys(facets).filter((key) => facetNames.includes(key));
+  return keys.reduce((obj, key) => {
+    obj[key] = facets[key];
+    return obj;
+  }, {});
+}
+
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.eventEmittedWithArgs = eventEmittedWithArgs;
@@ -210,3 +220,4 @@ exports.calculateContractAddress = calculateContractAddress;
 exports.applyPercentage = applyPercentage;
 exports.getMappingStoragePosition = getMappingStoragePosition;
 exports.paddingType = paddingType;
+exports.getFacetsWithArgs = getFacetsWithArgs;

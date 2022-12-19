@@ -49,5 +49,6 @@ exports.limitsToEstimate = {
         removeSellersFromAllowList: "IBosonAccountHandler",
       },
     },
+    { name: "maxPremintedVouchers", methods: { preMint: "IBosonVoucher" } },
   ],
 };

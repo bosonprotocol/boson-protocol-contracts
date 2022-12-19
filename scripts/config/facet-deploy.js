@@ -1,23 +1,42 @@
+const hre = require("hardhat");
+const network = hre.network.name;
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
+const protocolConfig = require("./protocol-parameters");
+
+/**
+ * Get the configuration data to be passed to the ConfigHandlerFacet initializer
+ * @returns { addresses, limits, fees }
+ */
+function getConfig() {
+  return [
+    {
+      token: protocolConfig.TOKEN[network],
+      treasury: protocolConfig.TREASURY[network],
+      voucherBeacon: protocolConfig.BEACON[network],
+      beaconProxy: protocolConfig.BEACON_PROXY[network],
+    },
+    protocolConfig.limits,
+    protocolConfig.fees,
+  ];
+}
 
 /**
  * Config file used to deploy the facets
  *
  * Function getFacets() returns the object that is used by the deploy script. To specify custom deployment parameters, modify return value.
- * Returned value should have the following fields:
- * - noArgFacets: list of facet names that don't expect any argument passed into initializer
- * - argFacets: object that specify facet names and arguments that needs to be passed into initializer in format object {facetName: initializerArguments}
+*
+ * @param config - optional configuration data to be passed to the ConfigHandlerFacet initializer
+ * @returns {Object} - object with facet names as keys and arrays of arguments as values to be passed into initializer
+ *              return empty array for facet that doesn't expect any argument 
  * 
- * Example: 
-    {
-      noArgFacets: ["Facet1", "Facet2", "Facet3"],
-      argFacets: { 
+ * Example:
+ *  {
         Facet4: ["0xb0b1d2659e8d5846432c66de8615841cc7bcaf49", 3, true],  // Facet4 expects address, uint256 and bool
-        Facet5: [[2, 3, 5, 7, 11]] },                                     // Facet5 uint256 array
+        Facet5: [[2, 3, 5, 7, 11]],                                       // Facet5 uint256 array
+        Facet6: []                                                        // Facet6 doesn't expect any argument
     }
  * 
  */
-
 const noArgFacetNames = [
   "AccountHandlerFacet",
   "SellerHandlerFacet",
@@ -30,22 +49,31 @@ const noArgFacetNames = [
   "FundsHandlerFacet",
   "GroupHandlerFacet",
   "OfferHandlerFacet",
-  "OrchestrationHandlerFacet",
+  "OrchestrationHandlerFacet1",
+  "OrchestrationHandlerFacet2",
   "TwinHandlerFacet",
   "PauseHandlerFacet",
+  "ProtocolInitializationFacet", // args are generated on cutDiamond function
 ];
 
-async function getFacets() {
+async function getFacets(config) {
+  const ConfigHandlerFacetInitArgs = config ?? getConfig();
+
   // metaTransactionsHandlerFacet initializer arguments.
   const MetaTransactionsHandlerFacetInitArgs = await getStateModifyingFunctionsHashes(
     [...noArgFacetNames, "MetaTransactionsHandlerFacet"],
     ["executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"]
   );
 
-  return {
-    noArgFacets: noArgFacetNames,
-    argFacets: { MetaTransactionsHandlerFacet: [MetaTransactionsHandlerFacetInitArgs] },
-  };
+  const facetArgs = noArgFacetNames.reduce((acc, facetName) => {
+    acc[facetName] = [];
+    return acc;
+  }, {});
+
+  facetArgs["ConfigHandlerFacet"] = ConfigHandlerFacetInitArgs;
+  facetArgs["MetaTransactionsHandlerFacet"] = [MetaTransactionsHandlerFacetInitArgs];
+
+  return facetArgs;
 }
 
 exports.getFacets = getFacets;
