@@ -190,6 +190,7 @@ describe("IBosonExchangeHandler", function () {
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
         minDisputePeriod: oneWeek,
+        maxPremintedVouchers: 1000,
       },
       // Protocol fees
       {
@@ -794,6 +795,253 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("offer sold", async function () {
+          // Create an offer with only 1 item
+          offer.quantityAvailable = "1";
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          // Commit to offer, so it's not availble anymore
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, ++offerId, { value: price });
+
+          // Attempt to commit to the sold out offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
+        });
+      });
+    });
+
+    context("👉 commitToPremintedOffer()", async function () {
+      let tokenId;
+      beforeEach(async function () {
+        // Reserve range
+        await offerHandler.connect(operator).reserveRange(offer.id, offer.quantityAvailable);
+
+        // expected address of the first clone
+        const voucherCloneAddress = calculateContractAddress(accountHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
+        await bosonVoucher.connect(operator).preMint(offer.id, offer.quantityAvailable);
+
+        tokenId = "1";
+      });
+
+      it("should emit a BuyerCommitted event", async function () {
+        // Commit to preminted offer, retrieving the event
+        tx = await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+        txReceipt = await tx.wait();
+        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        voucher.committedDate = block.timestamp.toString();
+
+        // Update the validUntilDate date in the expected exchange struct
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        // Examine event
+        assert.equal(event.exchangeId.toString(), exchangeId, "Exchange id is incorrect");
+        assert.equal(event.offerId.toString(), offerId, "Offer id is incorrect");
+        assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
+
+        // Examine the exchange struct
+        assert.equal(
+          Exchange.fromStruct(event.exchange).toString(),
+          exchange.toString(),
+          "Exchange struct is incorrect"
+        );
+
+        // Examine the voucher struct
+        assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
+      });
+
+      it("should not increment the next exchange id counter", async function () {
+        // Get the next exchange id
+        let nextExchangeIdBefore = await exchangeHandler.connect(rando).getNextExchangeId();
+
+        // Commit to preminted offer, creating a new exchange
+        await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+
+        // Get the next exchange id and ensure it was incremented by the creation of the offer
+        nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
+        expect(nextExchangeId).to.equal(nextExchangeIdBefore);
+      });
+
+      it("should not issue a new voucher on the clone", async function () {
+        // Get next exchange id
+        nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
+
+        // Voucher with nextExchangeId should not exist
+        await expect(bosonVoucher.ownerOf(nextExchangeId)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+
+        // Commit to preminted offer, creating a new exchange
+        await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+
+        // Voucher with nextExchangeId still should not exist
+        await expect(bosonVoucher.ownerOf(nextExchangeId)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+      });
+
+      it("ERC2981: issued voucher should have royalty fees", async function () {
+        // set non zero royalty percentage
+        const royaltyPercentage = "10";
+        await bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage);
+
+        // Before voucher is transferred, it should have zero royalty fee
+        let [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(tokenId, offer.price);
+        assert.equal(receiver, ethers.constants.AddressZero, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), "0", "Royalty amount is incorrect");
+
+        // Commit to preminted offer, creating a new exchange
+        await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+
+        // After voucher is transferred, it should have royalty fee
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(tokenId, offer.price);
+        assert.equal(receiver, treasury.address, "Recipient address is incorrect");
+        assert.equal(
+          royaltyAmount.toString(),
+          applyPercentage(offer.price, royaltyPercentage),
+          "Royalty amount is incorrect"
+        );
+      });
+
+      it("Should not decrement quantityAvailable", async function () {
+        // Offer qunantityAvailable should be decremented
+        let [, offer] = await offerHandler.connect(rando).getOffer(offerId);
+        const quantityAvailableBefore = offer.quantityAvailable;
+
+        // Commit to preminted offer
+        await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+
+        // Offer qunantityAvailable should be decremented
+        [, offer] = await offerHandler.connect(rando).getOffer(offerId);
+        assert.equal(
+          offer.quantityAvailable.toString(),
+          quantityAvailableBefore.toString(),
+          "Quantity available should not change"
+        );
+      });
+
+      it("should still be possible to commit if offer is not fully preminted", async function () {
+        // Create a new offer
+        offerId = await offerHandler.getNextOfferId();
+        const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+
+        // Create the offer
+        offer.quantityAvailable = "10";
+        const rangeLength = "5";
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+        // Deposit seller funds so the commit will succeed
+        await fundsHandler
+          .connect(rando)
+          .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+
+        // reserve half of the offer, so it's still possible to commit directly
+        await offerHandler.connect(operator).reserveRange(offerId, rangeLength);
+
+        // Commit to offer directly
+        expect(
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: offer.price })
+        ).to.emit(exchangeHandler, "BuyerCommitted");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("The exchanges region of protocol is paused", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
+
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("The buyers region of protocol is paused", async function () {
+          // Pause the buyers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
+
+          // Attempt to create a buyer, expecting revert
+          await expect(
+            bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("Caller is not the voucher contract, owned by the seller", async function () {
+          // Attempt to commit to preminted offer, expecting revert
+          await expect(
+            exchangeHandler.connect(rando).commitToPreMintedOffer(buyer.address, offerId, tokenId)
+          ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+        });
+
+        it("Exchange exists already", async function () {
+          // Commit to preminted offer, creating a new exchange
+          await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+
+          // impersonate voucher contract and give it some funds
+          const impersonatedBosonVoucher = await ethers.getImpersonatedSigner(bosonVoucher.address);
+          await ethers.provider.send("hardhat_setBalance", [
+            impersonatedBosonVoucher.address,
+            ethers.utils.parseEther("10").toHexString(),
+          ]);
+
+          // Simulate a second commit with the same token id
+          await expect(
+            exchangeHandler.connect(impersonatedBosonVoucher).commitToPreMintedOffer(buyer.address, offerId, tokenId)
+          ).to.revertedWith(RevertReasons.EXCHANGE_ALREADY_EXISTS);
+        });
+
+        it("offer is voided", async function () {
+          // Void the offer first
+          await offerHandler.connect(operator).voidOffer(offerId);
+
+          // Attempt to commit to the voided offer, expecting revert
+          await expect(
+            bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
+          ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+        });
+
+        it("offer is not yet available for commits", async function () {
+          // Create an offer with staring date in the future
+          // get current block timestamp
+          const block = await ethers.provider.getBlock("latest");
+          const now = block.timestamp.toString();
+
+          // Get next offer id
+          offerId = await offerHandler.getNextOfferId();
+          // set validFrom date in the past
+          offerDates.validFrom = ethers.BigNumber.from(now)
+            .add(oneMonth * 6)
+            .toString(); // 6 months in the future
+          offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom).add(10).toString(); // just after the valid from so it succeeds.
+
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+          // Reserve a range and premint vouchers
+          tokenId = await exchangeHandler.getNextExchangeId();
+          await offerHandler.connect(operator).reserveRange(offerId, "1");
+          await bosonVoucher.connect(operator).preMint(offerId, "1");
+
+          // Attempt to commit to the not availabe offer, expecting revert
+          await expect(
+            bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
+          ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
+        });
+
+        it("offer has expired", async function () {
+          // Go past offer expiration date
+          await setNextBlockTimestamp(Number(offerDates.validUntil));
+
+          // Attempt to commit to the expired offer, expecting revert
+          await expect(
+            bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
+          ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+        });
+
+        it("should not be able to commit directly if whole offer preminted", async function () {
           // Create an offer with only 1 item
           offer.quantityAvailable = "1";
           await offerHandler
@@ -3084,6 +3332,13 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("Should not be triggered when from and to addresses are the same", async function () {
+        // Transfer voucher, expecting event
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(buyer.address, buyer.address, exchange.id)
+        ).to.not.emit(exchangeHandler, "VoucherTransferred");
+      });
+
+      it("Should not be triggered when first transfer of preminted voucher happens", async function () {
         // Transfer voucher, expecting event
         await expect(
           bosonVoucherClone.connect(buyer).transferFrom(buyer.address, buyer.address, exchange.id)

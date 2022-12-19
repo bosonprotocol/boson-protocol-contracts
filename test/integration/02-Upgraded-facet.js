@@ -128,6 +128,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
         minDisputePeriod: oneWeek,
+        maxPremintedVouchers: 10000,
       },
       // Protocol fees
       {

@@ -9,7 +9,7 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
  *
  * @notice This is the interface for the Boson Protocol ERC-721 Voucher contract.
  *
- * The ERC-165 identifier for this interface is: 0xec67086d
+ * The ERC-165 identifier for this interface is: 0xc2e9f9ff
  */
 interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     event ContractURIChanged(string contractURI);
@@ -23,6 +23,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
         uint256 start; // First token id of range
         uint256 length; // Length of range
         uint256 minted; // Amount pre-minted so far
+        uint256 lastBurnedTokenId; // Last burned token id
     }
 
     /**
@@ -122,12 +123,12 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * - Offer id is already associated with a range
      *
      * @param _offerId - the id of the offer
-     * @param _startId - the first id of the token range
+     * @param _start - the first id of the token range
      * @param _length - the length of the range
      */
     function reserveRange(
         uint256 _offerId,
-        uint256 _startId,
+        uint256 _start,
         uint256 _length
     ) external;
 
@@ -164,7 +165,32 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     function preMint(uint256 _offerId, uint256 _amount) external;
 
     /**
-     * @notice Gets the number of vouchers left to be pre-minted for an offer.
+     * @notice Burn all or part of an offer's preminted vouchers.
+     * If offer expires or it's voided, the seller can burn the preminted vouchers that were not transferred yet.
+     * This way they will not show in seller's wallet and marketplaces anymore.
+     *
+     * For small offer quantities, this method may only need to be
+     * called once.
+     *
+     * But, if the range is large, e.g., 10k vouchers, block gas limit
+     * could cause the transaction to fail. Thus, in order to support
+     * a batched approach to pre-minting an offer's vouchers,
+     * this method can be called multiple times, until the whole
+     * range is burned.
+     *
+     * Caller must be contract owner (seller operator address).
+     *
+     * Reverts if:
+     * - Offer id is not associated with a range
+     * - Offer is not expired or voided
+     * - There is nothing to burn
+     *
+     * @param _offerId - the id of the offer
+     */
+    function burnPremintedVouchers(uint256 _offerId) external;
+
+    /**
+     * @notice Gets the number of vouchers available to be pre-minted for an offer.
      *
      * @param _offerId - the id of the offer
      * @return count - the count of vouchers in reserved range available to be pre-minted
