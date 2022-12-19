@@ -16,7 +16,7 @@ To follow the manual and to get your local environment running you'll need to ha
 - NPM v8.4.x
 
 ## Fork our repo
-- Navigate to [bosonprotocol/boson-protocol-contracts on GitHub](https://github.com/bosonprotocol/boson-protocol-contracts)
+- Navigate to [bosonprotocol/boson-protocol-contracts](https://github.com/bosonprotocol/boson-protocol-contracts) on GitHub.
 - If this is your first time forking a repository on GitHub, follow [the instructions](https://docs.github.com/en/get-started/quickstart/fork-a-repo#forking-a-repository) there.
 - Fork our repo to your GitHub account, e.g. `myaccount/boson-protocol-contracts`
 
