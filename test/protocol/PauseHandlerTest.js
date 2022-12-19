@@ -43,7 +43,7 @@ describe("IBosonPauseHandler", function () {
     // Temporarily grant PAUSER role to pauser account
     await accessController.grantRole(Role.PAUSER, pauser.address);
 
-    const facetNames = ["PauseHandlerFacet", "ProtocolInitializationFacet"];
+    const facetNames = ["PauseHandlerFacet", "ProtocolInitializationHandlerFacet"];
 
     const facetsToDeploy = await getFacetsWithArgs(facetNames);
 

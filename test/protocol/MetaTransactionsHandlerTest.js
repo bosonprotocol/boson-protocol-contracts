@@ -196,7 +196,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       "PauseHandlerFacet",
       "BuyerHandlerFacet",
       "MetaTransactionsHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

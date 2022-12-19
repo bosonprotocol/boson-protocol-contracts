@@ -33,7 +33,7 @@ async function deployAndCutFacets(
   const facetsToInit = deployedFacets.filter((facet) => facet.initialize) ?? [];
 
   initializationFacet =
-    initializationFacet || deployedFacets.find((f) => f.name == "ProtocolInitializationFacet").contract;
+    initializationFacet || deployedFacets.find((f) => f.name == "ProtocolInitializationHandlerFacet").contract;
 
   const initializeCalldata = getInitializeCalldata(
     facetsToInit,
@@ -47,7 +47,7 @@ async function deployAndCutFacets(
 
   deployedFacets = deployedFacets.map((facet) => {
     const cut =
-      facet.name == "ProtocolInitializationFacet"
+      facet.name == "ProtocolInitializationHandlerFacet"
         ? getFacetAddCut(facet.contract, [initializeCalldata.slice(0, 10)])
         : getFacetAddCut(facet.contract, [facet.initialize && facet.initialize.slice(0, 10)] || []);
     facet.cut.push(cut);
@@ -91,7 +91,7 @@ async function deployProtocolFacets(facetNames, facetsToInit, maxPriorityFeePerG
       cut: [],
     };
 
-    if (facetsToInit[facetName] && facetName !== "ProtocolInitializationFacet") {
+    if (facetsToInit[facetName] && facetName !== "ProtocolInitializationHandlerFacet") {
       const calldata = facetContract.interface.encodeFunctionData(
         "initialize",
         facetsToInit[facetName].length && facetsToInit[facetName]

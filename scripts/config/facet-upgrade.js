@@ -6,10 +6,10 @@
  * - skipSelectors:  mapping "facetName":"listOfFunctionsToBeSkipped". With this you can specify functions that will be ignored during the update.
  *          You don't have to specify "initialize()" since it's ignored by default.
  *          Skip does not apply to facets that are completely removed.
- * - facetsToInit: list of facets that will be initialized on ProtocolInitializationFacet. 
+ * - facetsToInit: list of facets that will be initialized on ProtocolInitializationHandlerFacet. 
  *                 if facet initializer expects arguments, provide them here. For no-arg initializers pass an empty array.
- *                 You don't have to provide ProtocolInitializationFacet args here because they are generated on cut function.
- * - initializationData: ABI encoded data that is initialized directly on ProtocolInitializationFacet and not on any other facet, using versions specific init function.
+ *                 You don't have to provide ProtocolInitializationHandlerFacet args here because they are generated on cut function.
+ * - initializationData: ABI encoded data that is initialized directly on ProtocolInitializationHandlerFacet and not on any other facet, using versions specific init function.
  * 
  * Example:
     {

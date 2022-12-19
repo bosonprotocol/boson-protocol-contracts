@@ -125,7 +125,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       "OfferHandlerFacet",
       "FundsHandlerFacet",
       "DisputeHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

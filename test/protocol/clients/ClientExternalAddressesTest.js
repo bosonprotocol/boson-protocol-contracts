@@ -75,7 +75,7 @@ describe("IClientExternalAddresses", function () {
       },
     ];
 
-    const facetNames = ["ConfigHandlerFacet", "ProtocolInitializationFacet"];
+    const facetNames = ["ConfigHandlerFacet", "ProtocolInitializationHandlerFacet"];
 
     const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 

@@ -151,7 +151,7 @@ describe("SnapshotGate", function () {
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
       "GroupHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

@@ -7,7 +7,7 @@ pragma solidity 0.8.9;
  * @notice Simulates state of the protocol in tests before v2.1.0.
  *
  */
-contract MockProtocolInitializationFacet {
+contract MockProtocolInitializationHandlerFacet {
     /**
      * @notice No-op function to simulate state of the protocol in tests before v 2.1.0., but still compatible with new deploy script.
      */

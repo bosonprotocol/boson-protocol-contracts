@@ -13,7 +13,7 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
  * @notice Handle initializion of new versions after 2.1.0.
  *
  */
-contract ProtocolInitializationFacet is IBosonProtocolInitializationHandler, ProtocolBase {
+contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandler, ProtocolBase {
     /**
      * @notice Modifier to protect initializer function from being invoked twice for a given version.
      */

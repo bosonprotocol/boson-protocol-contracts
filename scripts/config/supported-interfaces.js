@@ -46,7 +46,7 @@ const interfaceImplementers = {
   DiamondCutFacet: "IDiamondCut",
   ERC165Facet: "IERC165Extended",
   ConfigHandlerFacet: "IBosonConfigHandler",
-  ProtocolInitializationFacet: "IBosonProtocolInitializationHandler",
+  ProtocolInitializationHandlerFacet: "IBosonProtocolInitializationHandler",
 };
 
 // manually add the interfaces that currently cannot be calculated
