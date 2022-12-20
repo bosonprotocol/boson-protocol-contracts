@@ -2,6 +2,7 @@
 pragma solidity 0.8.9;
 
 import "../events/IBosonProtocolInitializationEvents.sol";
+import "../events/IBosonConfigEvents.sol";
 
 /**
  * @title IBosonProtocolInitializationHandler
@@ -10,7 +11,7 @@ import "../events/IBosonProtocolInitializationEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x0d8e6e2c
  */
-interface IBosonProtocolInitializationHandler is IBosonProtocolInitializationEvents {
+interface IBosonProtocolInitializationHandler is IBosonProtocolInitializationEvents, IBosonConfigEvents {
     /**
      * @notice Gets the current protocol version.
      *

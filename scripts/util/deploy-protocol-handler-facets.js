@@ -39,6 +39,7 @@ async function deployAndCutFacets(
     facetsToInit,
     version ?? "2.0.0",
     false,
+    "0x", // no initialization data
     initializationFacet,
     undefined,
     interfacesToAdd

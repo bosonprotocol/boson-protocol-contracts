@@ -141,6 +141,7 @@ function getInitializeCalldata(
   facetsToInitialize,
   version,
   isUpgrade,
+  initializationData,
   initializationFacet,
   interfacesToRemove = [],
   interfacesToAdd = []
@@ -154,6 +155,7 @@ function getInitializeCalldata(
     addresses,
     calldata,
     isUpgrade,
+    initializationData,
     interfacesToRemove,
     interfacesToAdd,
   ]);
