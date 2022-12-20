@@ -1,57 +1,34 @@
 [
   [
-    "test/domain/FacetTest.js",
-    "test/domain/FacetCutTest.js",
-    "test/domain/AuthTokenTest.js",
-    "test/domain/OfferFeesTest.js",
-    "test/domain/BuyerTest.js",
-    "test/domain/ConditionTest.js",
     "test/domain/OfferDurationsTest.js",
-    "test/domain/DisputeTest.js",
-    "test/domain/VoucherInitValuesTest.js",
+    "test/domain/FacetCutTest.js",
     "test/domain/OfferDatesTest.js",
-    "test/domain/BundleTest.js",
-    "test/domain/ExchangeTest.js",
-    "test/domain/GroupTest.js",
-    "test/domain/DisputeResolutionTermsTest.js",
-    "test/domain/OfferTest.js",
-    "test/domain/DisputeDatesTest.js",
-    "test/domain/FundsTest.js",
-    "test/domain/TwinReceiptTest.js",
-    "test/domain/TwinTest.js",
-    "test/domain/VoucherTest.js",
-    "test/domain/DisputeResolverFeeTest.js",
-    "test/protocol/clients/BeaconClientProxy.js",
     "test/domain/AgentTest.js",
-    "test/domain/SellerTest.js",
+    "test/domain/TwinReceiptTest.js",
+    "test/domain/AuthTokenTest.js",
+    "test/domain/GroupTest.js",
+    "test/domain/FundsTest.js",
+    "test/domain/SellerTest.js"
+  ],
+  [
+    "test/domain/FacetTest.js",
+    "test/domain/BuyerTest.js",
+    "test/domain/RangeTest.js",
+    "test/domain/ExchangeTest.js",
+    "test/domain/BundleTest.js",
+    "test/domain/VoucherInitValuesTest.js",
     "test/domain/ReceiptTest.js",
+    "test/domain/TwinTest.js",
+    "test/domain/OfferTest.js"
+  ],
+  [
+    "test/domain/OfferFeesTest.js",
+    "test/domain/VoucherTest.js",
+    "test/domain/DisputeTest.js",
+    "test/domain/ConditionTest.js",
+    "test/domain/DisputeDatesTest.js",
     "test/domain/DisputeResolverTest.js",
-    "test/access/AccessControllerTest.js",
-    "test/protocol/PauseHandlerTest.js",
-    "test/protocol/clients/ClientExternalAddressesTest.js",
-    "test/protocol/AccountHandlerTest.js",
-    "test/protocol/clients/BosonVoucherTest.js",
-    "test/protocol/ProtocolDiamondTest.js",
-    "test/protocol/AgentHandlerTest.js",
-    "test/protocol/BuyerHandlerTest.js",
-    "test/protocol/TwinHandlerTest.js",
-    "test/protocol/ConfigHandlerTest.js",
-    "test/protocol/SellerHandlerTest.js"
-  ],
-  [
-    "test/protocol/BundleHandlerTest.js",
-    "test/protocol/DisputeResolverHandlerTest.js",
-    "test/protocol/GroupHandlerTest.js",
-    "test/protocol/MetaTransactionsHandlerTest.js",
-    "test/protocol/OfferHandlerTest.js"
-  ],
-  [
-    "test/protocol/FundsHandlerTest.js",
-    "test/protocol/DisputeHandlerTest.js"
-  ],
-  [
-    "test/protocol/ExchangeHandlerTest.js",
-    "test/protocol/OrchestrationHandlerTest.js",
-    "test/protocol/ProtocolInitializationHandlerTest.js"
+    "test/domain/DisputeResolverFeeTest.js",
+    "test/domain/DisputeResolutionTermsTest.js"
   ]
 ]
