@@ -91,7 +91,7 @@ describe("AgentHandler", function () {
       "AccountHandlerFacet",
       "AgentHandlerFacet",
       "PauseHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

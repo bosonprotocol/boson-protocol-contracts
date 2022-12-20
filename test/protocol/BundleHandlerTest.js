@@ -166,7 +166,7 @@ describe("IBosonBundleHandler", function () {
       "ExchangeHandlerFacet",
       "FundsHandlerFacet",
       "PauseHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

@@ -187,7 +187,7 @@ describe("IBosonFundsHandler", function () {
       "OfferHandlerFacet",
       "PauseHandlerFacet",
       "AccountHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 
@@ -195,7 +195,7 @@ describe("IBosonFundsHandler", function () {
 
     // Cut the protocol handler facets into the Diamond
     const { deployedFacets } = await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
-    protocolInitializationFacet = deployedFacets.find((f) => f.name === "ProtocolInitializationFacet").contract;
+    protocolInitializationFacet = deployedFacets.find((f) => f.name === "ProtocolInitializationHandlerFacet").contract;
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
@@ -870,7 +870,7 @@ describe("IBosonFundsHandler", function () {
           });
 
           it("Withdraw when dispute is retracted, it emits a FundsWithdrawn event", async function () {
-            // ProtocolInitializationFacet has to be passed to deploy function works
+            // ProtocolInitializationHandlerFacet has to be passed to deploy function works
             const facetsToDeploy = await getFacetsWithArgs(["DisputeHandlerFacet"]);
 
             await deployAndCutFacets(
@@ -2679,7 +2679,7 @@ describe("IBosonFundsHandler", function () {
 
       context("Final state DISPUTED", async function () {
         beforeEach(async function () {
-          // ProtocolInitializationFacet has to be passed to deploy function works
+          // ProtocolInitializationHandlerFacet has to be passed to deploy function works
           const facetsToDeploy = await getFacetsWithArgs(["DisputeHandlerFacet"]);
 
           await deployAndCutFacets(

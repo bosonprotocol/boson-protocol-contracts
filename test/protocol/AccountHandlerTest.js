@@ -115,7 +115,7 @@ describe("IBosonAccountHandler", function () {
       "BuyerHandlerFacet",
       "DisputeResolverHandlerFacet",
       "AgentHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

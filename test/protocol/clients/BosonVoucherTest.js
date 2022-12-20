@@ -140,7 +140,7 @@ describe("IBosonVoucher", function () {
       "SellerHandlerFacet",
       "DisputeResolverHandlerFacet",
       "FundsHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

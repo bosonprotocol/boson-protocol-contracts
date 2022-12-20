@@ -183,7 +183,7 @@ describe("IBosonOfferHandler", function () {
       "DisputeResolverHandlerFacet",
       "OfferHandlerFacet",
       "PauseHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
       "FundsHandlerFacet",
       "ExchangeHandlerFacet",

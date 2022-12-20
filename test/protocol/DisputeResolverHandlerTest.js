@@ -194,7 +194,7 @@ describe("DisputeResolverHandler", function () {
       "SellerHandlerFacet",
       "DisputeResolverHandlerFacet",
       "PauseHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

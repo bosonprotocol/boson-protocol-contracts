@@ -136,7 +136,7 @@ async function getStateModifyingFunctionsHashes(facetNames, omitFunctions = []) 
   return smf.map((smf) => keccak256(toUtf8Bytes(smf)));
 }
 
-// Get ProtocolInitializationFacet initialize calldata to be called on diamondCut
+// Get ProtocolInitializationHandlerFacet initialize calldata to be called on diamondCut
 function getInitializeCalldata(
   facetsToInitialize,
   version,
