@@ -148,7 +148,7 @@ describe("SellerHandler", function () {
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
       "PauseHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

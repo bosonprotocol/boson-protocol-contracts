@@ -123,7 +123,7 @@ describe("IBosonConfigHandler", function () {
           },
         ];
 
-        const facetNames = ["ProtocolInitializationFacet", "ConfigHandlerFacet"];
+        const facetNames = ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet"];
 
         const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 
@@ -257,7 +257,7 @@ describe("IBosonConfigHandler", function () {
           buyerEscalationDepositPercentage,
         },
       ];
-      const facetNames = ["ProtocolInitializationFacet", "ConfigHandlerFacet"];
+      const facetNames = ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet"];
 
       const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 

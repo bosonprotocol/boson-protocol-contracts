@@ -124,7 +124,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       "ExchangeHandlerFacet",
       "FundsHandlerFacet",
       "DisputeHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

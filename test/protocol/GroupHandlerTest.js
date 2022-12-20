@@ -141,7 +141,7 @@ describe("IBosonGroupHandler", function () {
       "OfferHandlerFacet",
       "GroupHandlerFacet",
       "PauseHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

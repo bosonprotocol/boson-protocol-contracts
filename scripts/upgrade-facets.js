@@ -150,7 +150,7 @@ async function main(env, facetConfig) {
     const selectors = getSelectors(newFacet.contract, true);
     let newSelectors = selectors.selectors;
 
-    if (newFacet.name !== "ProtocolInitializationFacet") {
+    if (newFacet.name !== "ProtocolInitializationHandlerFacet") {
       // Initialization data for facets with no-arg initializers
       const noArgInitFunction = "initialize()";
       const noArgInitInterface = new ethers.utils.Interface([`function ${noArgInitFunction}`]);
@@ -285,7 +285,7 @@ async function main(env, facetConfig) {
     }
   }
 
-  // Get ProtocolInitializationFacet from deployedFacets when added/replaced in this upgrade or get it from contracts if already deployed
+  // Get ProtocolInitializationHandlerFacet from deployedFacets when added/replaced in this upgrade or get it from contracts if already deployed
   let protocolInitializationFacet = await getInitializationFacet(deployedFacets, contracts);
   const facetsToInit = deployedFacets.filter((facet) => facet.initialize) ?? [];
   const initializeCalldata = getInitializeCalldata(
@@ -328,8 +328,8 @@ async function main(env, facetConfig) {
 
   console.log(divider);
 
-  // Cast diamond to ProtocolInitializationFacet
-  protocolInitializationFacet = await ethers.getContractAt("ProtocolInitializationFacet", protocolAddress);
+  // Cast diamond to ProtocolInitializationHandlerFacet
+  protocolInitializationFacet = await ethers.getContractAt("ProtocolInitializationHandlerFacet", protocolAddress);
   const newVersion = await protocolInitializationFacet.getVersion();
   console.log(`\n📋 New version: ${newVersion}`);
 
@@ -358,7 +358,7 @@ async function getUserResponse(question, validResponses) {
 const getInitializationFacet = async (deployedFacets, contracts) => {
   let protocolInitializationFacet;
 
-  const protocolInitializationName = "ProtocolInitializationFacet";
+  const protocolInitializationName = "ProtocolInitializationHandlerFacet";
   const protocolInitializationDeployed = deployedFacets.find((f) => f.name == protocolInitializationName);
 
   if (protocolInitializationDeployed) {
@@ -371,7 +371,7 @@ const getInitializationFacet = async (deployedFacets, contracts) => {
   }
 
   if (!protocolInitializationFacet) {
-    console.error("Could not find ProtocolInitializationFacet");
+    console.error("Could not find ProtocolInitializationHandlerFacet");
     process.exit(1);
   }
 

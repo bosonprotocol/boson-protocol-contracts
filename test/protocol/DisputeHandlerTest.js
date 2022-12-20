@@ -173,7 +173,7 @@ describe("IBosonDisputeHandler", function () {
       "FundsHandlerFacet",
       "DisputeHandlerFacet",
       "PauseHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

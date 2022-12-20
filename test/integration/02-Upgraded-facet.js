@@ -148,7 +148,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       "OfferHandlerFacet",
       "FundsHandlerFacet",
       "DisputeHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

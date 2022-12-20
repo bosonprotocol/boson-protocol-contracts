@@ -219,7 +219,7 @@ describe("IBosonOrchestrationHandler", function () {
       "OrchestrationHandlerFacet2",
       "PauseHandlerFacet",
       "AccountHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

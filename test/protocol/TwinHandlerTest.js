@@ -130,7 +130,7 @@ describe("IBosonTwinHandler", function () {
       "OfferHandlerFacet",
       "DisputeResolverHandlerFacet",
       "PauseHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

@@ -915,7 +915,7 @@ async function setupCommonEnvironment() {
     "OfferHandlerFacet",
     "SellerHandlerFacet",
     "TwinHandlerFacet",
-    "ProtocolInitializationFacet",
+    "ProtocolInitializationHandlerFacet",
     "ConfigHandlerFacet",
   ];
 

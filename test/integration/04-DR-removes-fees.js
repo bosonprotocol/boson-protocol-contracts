@@ -123,7 +123,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
       "ExchangeHandlerFacet",
       "FundsHandlerFacet",
       "DisputeHandlerFacet",
-      "ProtocolInitializationFacet",
+      "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
     ];
 

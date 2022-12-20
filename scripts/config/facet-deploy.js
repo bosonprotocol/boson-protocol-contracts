@@ -53,7 +53,7 @@ const noArgFacetNames = [
   "OrchestrationHandlerFacet2",
   "TwinHandlerFacet",
   "PauseHandlerFacet",
-  "ProtocolInitializationFacet", // args are generated on cutDiamond function
+  "ProtocolInitializationHandlerFacet", // args are generated on cutDiamond function
 ];
 
 async function getFacets(config) {
