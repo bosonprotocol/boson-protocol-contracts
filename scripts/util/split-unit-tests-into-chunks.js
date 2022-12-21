@@ -1,36 +1,34 @@
 // Script to split tests into chunks. Used on `test/util/generate-test-chunks.sh`
 const fs = require("fs");
+const { findFiles } = require("./find-test-files");
+const shell = require("shelljs");
 
-// The number of chunks to split the tests into
-const chunks = process.argv[2];
-// The path to the temporary file with the outputs of `time` command, created on `test/util/generate-test-chunks.sh` (`time-report.txt`)
-const timeReportFile = process.argv[3];
-// A list of tests to split
-let files = JSON.parse(process.argv[4]);
+/**
+Run unit tests and generates chunks of tests with approximatly the same execution time in order to run them in parallel on GHA
 
-fs.readFile(timeReportFile, "utf8", (_, data) => {
-  // Each line contains the result of `time` command for a test following the same order of `files` list
-  const lines = data.split("\n");
+@param {number} chunks - Number of chunks to divide the tests into
+*/
+const splitUnitTestsIntoChunks = async (chunks) => {
+  let files = await findFiles("test", ["integration", "util", "upgrade"]);
 
-  // Map the list of test names to a list of objects containing the test name and the time it took to run
-  files = files.map((file, index) => {
-    const line = lines[index];
+  files = files.map((f) => {
+    const startTime = Date.now();
+    shell.exec(`npx hardhat test ${f}`);
+    const endTime = Date.now();
 
-    if (line) {
-      const time = Number(line.split(" ")[5].replace("s", ""));
-      return { name: file, time };
-    }
+    const time = endTime - startTime;
+    return { name: f, time };
   });
 
-  // Remove undefined values from the list if any and sort the list by the time it took to run
-  files = files.filter((result) => !!result).sort((a, b) => a.time - b.time);
+  // Sort the list by the time it took to run
+  files = files.sort((a, b) => a.time - b.time);
 
   // Sum the total time of all tests
   const timeTotal = files.reduce((acc, result) => {
     return acc + parseFloat(result.time);
   }, 0);
 
-  console.log(`Total tests execution time: ${timeTotal}s`);
+  console.log(`Total unit tests execution time: ${timeTotal}s`);
 
   // Calculate the average time that each chunk should take
   const timePerChunk = timeTotal / chunks;
@@ -59,5 +57,8 @@ fs.readFile(timeReportFile, "utf8", (_, data) => {
 
   console.log("Chunks", filesByChunk);
 
+  // Save output to test-chunks.txt file
   fs.writeFileSync("./test/util/test-chunks.txt", JSON.stringify(filesByChunk, null, 2));
-});
+};
+
+exports.splitUnitTestsIntoChunks = splitUnitTestsIntoChunks;

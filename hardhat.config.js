@@ -89,6 +89,14 @@ task("detect-changed-contracts", "Detects which contracts have changed between t
     await detectChangedContract(referenceCommit, targetCommit);
   });
 
+task("split-unit-tests-into-chunks", "Splits unit tests into chunks")
+  .addPositionalParam("chunks", "Number of chunks to divide the tests into")
+  .setAction(async ({ chunks }) => {
+    const { splitUnitTestsIntoChunks } = await lazyImport("./scripts/util/split-unit-tests-into-chunks.js");
+
+    await splitUnitTestsIntoChunks(chunks);
+  });
+
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {
