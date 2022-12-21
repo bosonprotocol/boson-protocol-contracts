@@ -1,4 +1,3 @@
-const shell = require("shelljs");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { assert, expect } = require("chai");
@@ -7,7 +6,6 @@ const {
   upgradeSuite,
   upgradeClients,
   getStorageLayout,
-  compareStorageLayouts,
   populateVoucherContract,
   getVoucherContractState,
 } = require("../../util/upgrade");
@@ -22,9 +20,12 @@ const {
 const { calculateContractAddress } = require("../../util/utils");
 const Range = require("../../../scripts/domain/Range");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
+const { getGenericContext } = require("./01_generic");
 
 const oldVersion = "v2.1.0";
 const newVersion = "HEAD";
+// Script that was used to deploy v2.1.0 was created after v2.1.0 tag was created.
+// This is the commit hash when deployment happened, so it represents the state of the code at that time.
 const v2_1_0_scripts = "b02a583ddb720bbe36fa6e29c344d35e957deb8b";
 
 let snapshot;
@@ -86,6 +87,24 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
     }));
 
     snapshot = await ethers.provider.send("evm_snapshot", []);
+
+    // This context is placed in an uncommon place due to order of test execution.
+    // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
+    // and those values are undefined if this is placed outside "before".
+    // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
+    context(
+      "Generic tests",
+      getGenericContext(
+        deployer,
+        protocolDiamondAddress,
+        protocolContracts,
+        mockContracts,
+        voucherContractState,
+        preUpgradeEntities,
+        preUpgradeStorageLayout,
+        snapshot
+      )
+    );
   });
 
   afterEach(async function () {
@@ -96,79 +115,6 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
     // Reset the accountId iterator
     accountId.next(true);
-  });
-
-  after(async function () {
-    // revert to latest state of contracts
-    shell.exec(`rm -rf contracts/*`);
-    shell.exec(`git checkout HEAD contracts`);
-    shell.exec(`git reset HEAD contracts`);
-    shell.exec(`rm -rf scripts/*`);
-    shell.exec(`git checkout HEAD scripts`);
-    shell.exec(`git reset HEAD scripts`);
-  });
-
-  // Voucher state
-  context("📋 Right After upgrade", async function () {
-    it("Old storage layout should be unaffected", async function () {
-      const postUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
-
-      assert(compareStorageLayouts(preUpgradeStorageLayout, postUpgradeStorageLayout), "Upgrade breaks storage layout");
-    });
-
-    it("State is not affected directly after the update", async function () {
-      // Get protocol state after the upgrade
-      const voucherContractStateAfterUpgrade = await getVoucherContractState(preUpgradeEntities);
-
-      // State before and after should be equal
-      assert.deepEqual(voucherContractStateAfterUpgrade, voucherContractState, "state mismatch after upgrade");
-    });
-  });
-
-  // Create new vocuher data. Existing data should not be affected
-  context("📋 New data after the upgrade do not corrupt the data from before the upgrade", async function () {
-    it("State is not affected", async function () {
-      await populateVoucherContract(
-        deployer,
-        protocolDiamondAddress,
-        protocolContracts,
-        mockContracts,
-        preUpgradeEntities
-      );
-
-      // Get protocol state after the upgrade. Get the data that should be in location of old data.
-      const voucherContractStateAfterUpgradeAndActions = await getVoucherContractState(preUpgradeEntities);
-
-      // The only thing that should change are buyers's balances, since they comitted to new offers and they got vouchers for them.
-      // Modify the post upgrade state to reflect the expected changes
-      const { buyers, sellers } = preUpgradeEntities;
-      const entities = [...sellers, ...buyers];
-      for (let i = 0; i < buyers.length; i++) {
-        // loop matches the loop in populateVoucherContract
-        for (let j = i; j < buyers.length; j++) {
-          const offer = preUpgradeEntities.offers[i + j].offer;
-          const sellerId = ethers.BigNumber.from(offer.sellerId).toHexString();
-
-          // Find the voucher data for the seller
-          const voucherData = voucherContractStateAfterUpgradeAndActions.find(
-            (vd) => vd.sellerId.toHexString() == sellerId
-          );
-
-          const buyerWallet = buyers[j].wallet;
-          const buyerIndex = entities.findIndex((e) => e.wallet.address == buyerWallet.address);
-
-          // Update the balance of the buyer
-          voucherData.balanceOf[buyerIndex] = voucherData.balanceOf[buyerIndex].sub(1);
-        }
-      }
-
-      // State before and after should be equal
-      assert.deepEqual(
-        voucherContractState,
-        voucherContractStateAfterUpgradeAndActions,
-        "state mismatch after upgrade"
-      );
-    });
   });
 
   // Test methods that were added to see that upgrade was succesful
@@ -209,7 +155,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       await offerHandler
         .connect(operator)
         .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
-      console.log(2);
+
       await fundsHandler
         .connect(operator)
         .depositFunds(sellerId, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });

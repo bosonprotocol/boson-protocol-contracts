@@ -38,6 +38,20 @@ const facets = {
       initArgs: {},
       skipInit: ["ERC165Facet"],
     },
+    HEAD: {
+      // HEAD is a special tag that is used to test upgrades to the latest version
+      addOrUpgrade: [
+        "ProtocolInitializationHandlerFacet",
+        "OfferHandlerFacet",
+        "ExchangeHandlerFacet",
+        "ConfigHandlerFacet",
+        "DisputeResolverHandlerFacet",
+      ],
+      remove: [],
+      skipSelectors: {},
+      facetsToInit: {},
+      initializationData: "0x0000000000000000000000000000000000000000000000000000000000005555",
+    },
   },
 };
 
