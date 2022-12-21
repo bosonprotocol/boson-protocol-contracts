@@ -37,6 +37,18 @@ cd boson-protocol-contracts
 npm install
 ```
 
+### Prepare git pre-hooks
+Pre-hooks are scripts that runs automatically before each [git hook](https://git-scm.com/docs/githooks) execution. 
+We use the pre-commit hook to ensure that all new code follows the style guidelines defined in [eslint](../.eslintrc.json) and [prettier](../.prettierrc) configuration files before it is committed to the repository.
+The pre-commit hook is also used to verify and fix [natspec interface ids](./tasks.md#verify-natspec-interface-ids)
+
+The [Husky](https://typicode.github.io/husky) library is used to manage pre-hooks scripts.
+To make husky work, you must run:
+
+```
+npx husky install
+```
+
 ### Configure Environment
 - Copy [.env.example](../.env.example) to `.env` and edit to suit.
 - For local development, only the values in section `# Local node env specific ` are important
