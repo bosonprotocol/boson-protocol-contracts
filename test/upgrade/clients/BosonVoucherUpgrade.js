@@ -12,10 +12,11 @@ const {
 } = require("../../util/upgrade");
 
 const oldVersion = "v2.1.0";
-const newVersion = "preminted-voucher";
+const newVersion = "HEAD";
+const v2_1_0_scripts = "b02a583ddb720bbe36fa6e29c344d35e957deb8b";
 
 /**
- *  Upgrade test case - After upgrade from 2.0.0 to 2.1.0 everything is still operational
+ *  Upgrade test case - After upgrade from 2.1.0 to 2.2.0 everything is still operational
  */
 describe("[@skip-on-coverage] After client upgrade, everything is still operational", function () {
   // Common vars
@@ -40,7 +41,11 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       }
     }
 
-    ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(deployer, oldVersion));
+    ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(
+      deployer,
+      oldVersion,
+      v2_1_0_scripts
+    ));
 
     preUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
     preUpgradeEntities = await populateVoucherContract(
@@ -57,7 +62,12 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
   after(async function () {
     // revert to latest state of contracts
+    shell.exec(`rm -rf contracts/*`);
     shell.exec(`git checkout HEAD contracts`);
+    shell.exec(`git reset HEAD contracts`);
+    shell.exec(`rm -rf scripts/*`);
+    shell.exec(`git checkout HEAD scripts`);
+    shell.exec(`git reset HEAD scripts`);
   });
 
   // Voucher state
@@ -79,7 +89,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
   // Create new vocuher data. Existing data should not be affected
   context("📋 New data after the upgrade do not corrupt the data from before the upgrade", async function () {
-    it.only("State is not affected", async function () {
+    it("State is not affected", async function () {
       await populateVoucherContract(
         deployer,
         protocolDiamondAddress,

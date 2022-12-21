@@ -37,10 +37,15 @@ const { facets } = require("../upgrade/00_config");
 let rando;
 
 // deploy suite and return deployed contracts
-async function deploySuite(deployer, tag) {
+async function deploySuite(deployer, tag, scriptsTag) {
   // checkout old version
   console.log(`Checking out version ${tag}`);
+  shell.exec(`rm -rf contracts/*`);
   shell.exec(`git checkout ${tag} contracts`);
+  if (scriptsTag) {
+    shell.exec(`rm -rf scripts/*`);
+    shell.exec(`git checkout ${scriptsTag} scripts`);
+  }
 
   // run deploy suite, which automatically compiles the contracts
   await hre.run("deploy-suite", { env: "upgrade-test", facetConfig: JSON.stringify(facets.deploy[tag]) });
@@ -117,6 +122,8 @@ async function deploySuite(deployer, tag) {
 // upgrade the suite to new version and returns handlers with upgraded interfaces
 // upgradedInterfaces is object { handlerName : "interfaceName"}
 async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces) {
+  shell.exec(`rm -rf contracts/*`);
+  shell.exec(`git checkout HEAD scripts`);
   if (tag) {
     // checkout the new tag
     console.log(`Checking out version ${tag}`);
@@ -143,6 +150,8 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces) {
 // upgrade the clients to new version
 async function upgradeClients(tag) {
   // Upgrade Clients
+  shell.exec(`rm -rf contracts/*`);
+  shell.exec(`git checkout HEAD scripts`);
   if (tag) {
     // checkout the new tag
     console.log(`Checking out version ${tag}`);
