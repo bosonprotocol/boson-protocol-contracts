@@ -123,6 +123,7 @@ async function deploySuite(deployer, tag, scriptsTag) {
 // upgradedInterfaces is object { handlerName : "interfaceName"}
 async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces) {
   shell.exec(`rm -rf contracts/*`);
+  shell.exec(`rm -rf scripts/*`);
   shell.exec(`git checkout HEAD scripts`);
   if (tag) {
     // checkout the new tag

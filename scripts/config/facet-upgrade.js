@@ -26,11 +26,17 @@
  */
 async function getFacets() {
   return {
-    addOrUpgrade: [],
+    addOrUpgrade: [
+      "ProtocolInitializationHandlerFacet",
+      "OfferHandlerFacet",
+      "ExchangeHandlerFacet",
+      "ConfigHandlerFacet",
+      "DisputeResolverHandlerFacet",
+    ],
     remove: [],
     skipSelectors: {},
     facetsToInit: {},
-    initializationData: "0x",
+    initializationData: "0x0000000000000000000000000000000000000000000000000000000000005555",
   };
 }
 
