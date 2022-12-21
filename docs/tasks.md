@@ -127,7 +127,7 @@ Contracts and scripts are linted using `solhint` and `eslint` respectively and p
   npm run tidy:scripts
   ```
 
-**NOTE**: If you want to contribute to this repository by opening a PR, make sure that this scripts are run first, otherwise PR checks will fail.
+**NOTE**: These scripts are run whenever you try to commit something.
 
 ### Size the contracts
 This builds the contracts calculates their byte size. Useful to make sure the contracts are not over the limit of 24kb.
@@ -149,6 +149,8 @@ It outputs the list of files with errors of two types:
 
 Script will try to automatically fix the wrong interfaces if you run it with
 ```npm run natspec-interface-id:fix```, however this cannot fix the missing interface ids.
+
+**NOTE**: This script is run whenever you try to commit something.
 
 ### Create dispute resolver
 
