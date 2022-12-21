@@ -214,3 +214,17 @@ npx hardhat detect-changed-contracts v2.1.0 v2.2.0    // get changes between two
 npx hardhat detect-changed-contracts b4d4277          // get changes between a commit and current branch (HEAD)
 npx hardhat detect-changed-contracts v2.1.0 branch-1  // get changes a tag and another branch
 ```
+
+### Split unit tests into chunks
+
+Run unit tests and generates chunks of tests with approximatly the same execution time in order to run them in parallel on Github Actions.
+This script must be run wherever we add new unit test files.
+
+Run script with
+```npx hardhat split-unit-tests-into-chunks chunks```
+
+Parameters: 
+- chunks [required] - Number of chunks to divide the tests into
+
+Example: ```npx hardhat split-unit-tests-into-chunks 4```
+
