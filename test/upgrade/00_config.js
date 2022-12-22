@@ -50,7 +50,7 @@ const facets = {
       remove: [],
       skipSelectors: {},
       facetsToInit: {},
-      initializationData: "0x0000000000000000000000000000000000000000000000000000000000005555",
+      initializationData: "0x0000000000000000000000000000000000000000000000000000000000005555", // input for initV2_2_0, representing maxPremintedVoucher (0x5555=21845)
     },
   },
 };

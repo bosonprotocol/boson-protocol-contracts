@@ -1297,7 +1297,7 @@ async function getStorageLayout(contractName) {
 }
 
 function compareStorageLayouts(storageBefore, storageAfter) {
-  // Ald old variables must be present in new layout in the same slots
+  // All old variables must be present in new layout in the same slots
   // New variables can be added if they don't affect the layout
   let storageOk = true;
   for (const stateVariableBefore of storageBefore) {
