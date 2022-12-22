@@ -37,6 +37,7 @@ async function detectChangedContract(referenceCommit, targetCommit) {
 
   // Checkout old version
   console.log(`Checking out version ${referenceCommit}`);
+  shell.exec(`rm -rf contracts`);
   shell.exec(`git checkout ${referenceCommit} contracts`);
 
   // Compile old version
@@ -49,16 +50,21 @@ async function detectChangedContract(referenceCommit, targetCommit) {
 
   // Checkout new version
   targetCommit = targetCommit || "HEAD";
+  shell.exec(`rm -rf contracts`);
   console.log(`Checking out version ${targetCommit}`);
   shell.exec(`git checkout ${targetCommit} contracts`);
 
   // Compile new version
   await hre.run("clean");
-  await hre.run("compile");
+  // If some contract was removed, compilation succeeds, but afterwards it falsely reports missing artifacts
+  // This is a workaround to ignore the error
+  try {
+    await hre.run("compile");
+  } catch {}
 
   // get target bytecodes
   const targetBytecodes = await getBytecodes();
-  const targetInterfaceIds = await getInterfaceIds();
+  const targetInterfaceIds = await getInterfaceIds(false);
 
   // Compare bytecodes
   const referenceContractList = Object.keys(referenceBytecodes);
@@ -100,7 +106,9 @@ async function detectChangedContract(referenceCommit, targetCommit) {
   console.log(`Total changed contracts: ${changedContracts.length}`);
 
   // Checkout back to original branch
+  shell.exec(`rm -rf contracts/*`);
   shell.exec(`git checkout HEAD contracts`);
+  shell.exec(`git reset HEAD contracts`);
 }
 
 async function getBytecodes() {
