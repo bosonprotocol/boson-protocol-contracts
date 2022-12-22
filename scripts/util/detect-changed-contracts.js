@@ -106,7 +106,7 @@ async function detectChangedContract(referenceCommit, targetCommit) {
   console.log(`Total changed contracts: ${changedContracts.length}`);
 
   // Checkout back to original branch
-  shell.exec(`rm -rf contracts/*`);
+  shell.exec(`rm -rf contracts`);
   shell.exec(`git checkout HEAD contracts`);
   shell.exec(`git reset HEAD contracts`);
 }
