@@ -38,7 +38,24 @@ const facets = {
       initArgs: {},
       skipInit: ["ERC165Facet"],
     },
+    HEAD: {
+      // HEAD is a special tag that is used to test upgrades to the latest version
+      addOrUpgrade: [
+        "ProtocolInitializationHandlerFacet",
+        "OfferHandlerFacet",
+        "ExchangeHandlerFacet",
+        "ConfigHandlerFacet",
+        "DisputeResolverHandlerFacet",
+      ],
+      remove: [],
+      skipSelectors: {},
+      facetsToInit: {},
+      initializationData: "0x0000000000000000000000000000000000000000000000000000000000005555", // input for initV2_2_0, representing maxPremintedVoucher (0x5555=21845)
+    },
   },
 };
+
+// Versions that have the same deploy config
+facets.deploy["v2.1.0"] = facets.deploy["v2.0.0"];
 
 exports.facets = facets;

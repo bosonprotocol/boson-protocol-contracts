@@ -32,7 +32,7 @@ function getGenericContext(
       snapshot = await ethers.provider.send("evm_snapshot", []);
     });
 
-    // Exchange methods
+    // Protocol state
     context("📋 Right After upgrade", async function () {
       it("State is not affected directly after the update", async function () {
         // Get protocol state after the upgrade
