@@ -2,8 +2,6 @@ const shell = require("shelljs");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { assert, expect } = require("chai");
-const Seller = require("../../scripts/domain/Seller");
-const AuthToken = require("../../scripts/domain/AuthToken");
 const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
 const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolverUpdateFields");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
@@ -18,11 +16,11 @@ const {
 } = require("../util/upgrade");
 const { getGenericContext } = require("./01_generic");
 
-const oldVersion = "v2.0.0";
-const newVersion = "v2.1.0";
+const oldVersion = "v2.1.0";
+const newVersion = "v2.2.0";
 
 /**
- *  Upgrade test case - After upgrade from 2.0.0 to 2.1.0 everything is still operational
+ *  Upgrade test case - After upgrade from 2.1.0 to 2.0.0 everything is still operational
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
@@ -72,7 +70,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         accountHandler: "IBosonAccountHandler",
         ERC165Facet: "ERC165Facet",
       }));
-
       protocolContracts.accountHandler = accountHandler;
 
       snapshot = await ethers.provider.send("evm_snapshot", []);
@@ -117,44 +114,46 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   // Test methods that were added to see that upgrade was succesful
   context("📋 Breaking changes and new methods", async function () {
     context("Breaking changes", async function () {
-      it("Seller addresses are not updated in one step, except for the treasury", async function () {
-        const oldSeller = preUpgradeEntities.sellers[3];
+      it.only("DR can be created without activation by protocol admin", async function () {
+        const oldDR = preUpgradeEntities.DRs[3];
+        console.log("oldDR", oldDR);
 
-        const seller = oldSeller.seller.clone();
+        const DR = oldDR.seller.clone();
+        console.log("DR", DR);
 
-        seller.admin = admin.address;
-        seller.operator = operator.address;
-        seller.clerk = clerk.address;
-        seller.treasury = treasury.address;
+        // seller.admin = admin.address;
+        // seller.operator = operator.address;
+        // seller.clerk = clerk.address;
+        // seller.treasury = treasury.address;
 
-        const authToken = mockAuthToken();
+        // const authToken = mockAuthToken();
 
-        // Update seller
-        await expect(accountHandler.connect(oldSeller.wallet).updateSeller(seller, authToken)).to.not.emit(
-          oldHandlers.accountHandler,
-          "SellerUpdated"
-        );
+        // // Update seller
+        // await expect(accountHandler.connect(oldSeller.wallet).updateSeller(seller, authToken)).to.not.emit(
+        //   oldHandlers.accountHandler,
+        //   "SellerUpdated"
+        // );
 
-        // Querying the seller id should return the old seller
-        const [, sellerStruct, emptyAuthTokenStruct] = await accountHandler
-          .connect(rando)
-          .getSeller(oldSeller.seller.id);
+        // // Querying the seller id should return the old seller
+        // const [, sellerStruct, emptyAuthTokenStruct] = await accountHandler
+        //   .connect(rando)
+        //   .getSeller(oldSeller.seller.id);
 
-        // Parse into entity
-        const returnedSeller = Seller.fromStruct(sellerStruct);
-        const returnedAuthToken = AuthToken.fromStruct(emptyAuthTokenStruct);
+        // // Parse into entity
+        // const returnedSeller = Seller.fromStruct(sellerStruct);
+        // const returnedAuthToken = AuthToken.fromStruct(emptyAuthTokenStruct);
 
-        // Returned values should match the input in createSeller, excpt the treasury, which is updated in one step
-        const expectedSeller = oldSeller.seller.clone();
-        expectedSeller.treasury = seller.treasury;
-        for (const [key, value] of Object.entries(expectedSeller)) {
-          assert.equal(JSON.stringify(returnedSeller[key]), JSON.stringify(value), `${key} mismatch`);
-        }
+        // // Returned values should match the input in createSeller, excpt the treasury, which is updated in one step
+        // const expectedSeller = oldSeller.seller.clone();
+        // expectedSeller.treasury = seller.treasury;
+        // for (const [key, value] of Object.entries(expectedSeller)) {
+        //   assert.equal(JSON.stringify(returnedSeller[key]), JSON.stringify(value), `${key} mismatch`);
+        // }
 
-        // Returned auth token values should match the input in createSeller
-        for (const [key, value] of Object.entries(oldSeller.authToken)) {
-          assert.equal(JSON.stringify(returnedAuthToken[key]), JSON.stringify(value), `${key} mismatch`);
-        }
+        // // Returned auth token values should match the input in createSeller
+        // for (const [key, value] of Object.entries(oldSeller.authToken)) {
+        //   assert.equal(JSON.stringify(returnedAuthToken[key]), JSON.stringify(value), `${key} mismatch`);
+        // }
       });
 
       it("Dispute resolver is not updated in one step", async function () {

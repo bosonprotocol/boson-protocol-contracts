@@ -18,11 +18,8 @@ function getGenericContext(
   snapshot
 ) {
   let postUpgradeEntities;
-  let exchangeHandler, offerHandler, fundsHandler, disputeHandler;
-  let mockToken;
-
-  ({ exchangeHandler, offerHandler, fundsHandler, disputeHandler } = protocolContracts);
-  ({ mockToken } = mockContracts);
+  let { exchangeHandler, offerHandler, fundsHandler, disputeHandler } = protocolContracts;
+  let { mockToken } = mockContracts;
 
   const genericContextFunction = async function () {
     afterEach(async function () {
