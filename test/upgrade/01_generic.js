@@ -1,3 +1,4 @@
+const shell = require("shelljs");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { assert, expect } = require("chai");
@@ -27,6 +28,13 @@ function getGenericContext(
       // This is used so the lengthly setup (deploy+upgrade) is done only once.
       await ethers.provider.send("evm_revert", [snapshot]);
       snapshot = await ethers.provider.send("evm_snapshot", []);
+    });
+
+    after(async function () {
+      // revert to latest state of contracts
+      shell.exec(`rm -rf contracts scripts`);
+      shell.exec(`git checkout HEAD contracts scripts`);
+      shell.exec(`git reset HEAD contracts scripts`);
     });
 
     // Protocol state

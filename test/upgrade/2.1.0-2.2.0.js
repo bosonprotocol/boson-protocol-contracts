@@ -114,7 +114,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   // Test methods that were added to see that upgrade was succesful
   context("📋 Breaking changes and new methods", async function () {
     context("Breaking changes", async function () {
-      it.only("DR can be created without activation by protocol admin", async function () {
+      it("DR can be created without activation by protocol admin", async function () {
         const oldDR = preUpgradeEntities.DRs[3];
         console.log("oldDR", oldDR);
 

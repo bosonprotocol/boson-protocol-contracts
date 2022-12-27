@@ -1,4 +1,3 @@
-const shell = require("shelljs");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { assert, expect } = require("chai");
@@ -20,6 +19,7 @@ const { getGenericContext } = require("./01_generic");
 
 const oldVersion = "v2.0.0";
 const newVersion = "v2.1.0";
+const v2_1_0_scripts = "b02a583ddb720bbe36fa6e29c344d35e957deb8b";
 
 /**
  *  Upgrade test case - After upgrade from 2.0.0 to 2.1.0 everything is still operational
@@ -44,7 +44,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(
         deployer,
         oldVersion,
-        oldVersion
+        v2_1_0_scripts
       ));
 
       ({ accountHandler, ERC165Facet } = protocolContracts);
@@ -68,11 +68,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       // Upgrade protocol
       oldHandlers = { accountHandler: accountHandler }; // store old handler to test old events
-      ({ accountHandler, ERC165Facet } = await upgradeSuite(newVersion, protocolDiamondAddress, {
-        accountHandler: "IBosonAccountHandler",
-        ERC165Facet: "ERC165Facet",
-      }));
-
+      ({ accountHandler, ERC165Facet } = await upgradeSuite(
+        newVersion,
+        protocolDiamondAddress,
+        {
+          accountHandler: "IBosonAccountHandler",
+          ERC165Facet: "ERC165Facet",
+        },
+        v2_1_0_scripts
+      ));
       protocolContracts.accountHandler = accountHandler;
 
       snapshot = await ethers.provider.send("evm_snapshot", []);
@@ -106,11 +110,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // This is used so the lengthly setup (deploy+upgrade) is done only once.
     await ethers.provider.send("evm_revert", [snapshot]);
     snapshot = await ethers.provider.send("evm_snapshot", []);
-  });
-
-  after(async function () {
-    // Revert to latest state of contracts
-    shell.exec(`git checkout HEAD contracts`);
   });
 
   // Test actions that worked in previous version, but should not work anymore, or work differently

@@ -102,7 +102,6 @@ module.exports = {
   networks: {
     hardhat: {
       accounts: { mnemonic: environments.hardhat.mnemonic },
-      blockGasLimit: 300000000,
     },
     localhost: {
       url: environments.localhost.txNode || "http://127.0.0.1:8545",

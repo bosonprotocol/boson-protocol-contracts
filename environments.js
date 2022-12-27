@@ -39,7 +39,6 @@ module.exports = {
   // Hardhat testnet
   //  - throwaway HDWallet mnemonic for running unit tests, which require more than one address
   hardhat: {
-    gasLimit: 300000000,
     mnemonic: process.env.DEPLOYER_HARDHAT_MNEMONIC,
   },
 

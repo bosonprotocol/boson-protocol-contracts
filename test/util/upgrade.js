@@ -36,43 +36,24 @@ const { facets } = require("../upgrade/00_config");
 // Common vars
 let rando;
 
-const oldScriptsVersions = ["v2.0.0", "v2.1.0"];
-
 // deploy suite and return deployed contracts
 async function deploySuite(deployer, tag, scriptsTag) {
-  tag = "v2.1.0-test";
-
   // checkout old version
   console.log(`Checking out version ${tag}`);
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`git checkout ${tag} contracts`);
   if (scriptsTag) {
+    console.log(`Checking out scripts on version ${scriptsTag}`);
     shell.exec(`rm -rf scripts/*`);
     shell.exec(`git checkout ${scriptsTag} scripts`);
   }
 
   // run deploy suite, which automatically compiles the contracts
-  // v2.0.0 and v2.1.0 doesn't use hardhat task
-  try {
-    if (oldScriptsVersions.includes(scriptsTag)) {
-      const balance = await ethers.provider.getBalance("0xb0B1D2659e8D5846432c66DE8615841CC7BCaf49");
-      console.log(ethers.utils.parseEther(balance.toString()).toString());
-      shell.exec(`npx hardhat run --network hardhat scripts/deploy-suite.js`);
-    } else {
-      await hre.run("deploy-suite", { env: "upgrade-test", facetConfig: JSON.stringify(facets.deploy[tag]) });
-    }
-  } catch (err) {
-    console.log(err);
-    throw new Error(err);
-  }
+  await hre.run("deploy-suite", { env: "upgrade-test", facetConfig: JSON.stringify(facets.deploy[tag]) });
 
   // Read contract info from file
   const chainId = (await hre.ethers.provider.getNetwork()).chainId;
-  const contractsFile = readContracts(
-    chainId,
-    "hardhat",
-    !oldScriptsVersions.some((script) => script == scriptsTag) && "upgrade-test"
-  );
+  const contractsFile = readContracts(chainId, "hardhat", "upgrade-test");
 
   // Get AccessController abstraction
   const accessControllerInfo = contractsFile.contracts.find((i) => i.name === "AccessController");
@@ -141,10 +122,14 @@ async function deploySuite(deployer, tag, scriptsTag) {
 
 // upgrade the suite to new version and returns handlers with upgraded interfaces
 // upgradedInterfaces is object { handlerName : "interfaceName"}
-async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces) {
+async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scriptsTag) {
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`rm -rf scripts/*`);
-  shell.exec(`git checkout HEAD scripts`);
+  if (scriptsTag) {
+    shell.exec(`git checkout ${scriptsTag} scripts`);
+  } else {
+    shell.exec(`git checkout HEAD scripts`);
+  }
   if (tag) {
     // checkout the new tag
     console.log(`Checking out version ${tag}`);
@@ -278,7 +263,6 @@ async function populateProtocolContract(
           sellerAllowList,
         });
 
-        console.log(`activating DR`);
         //ADMIN role activates Dispute Resolver
         await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
         break;
@@ -308,25 +292,14 @@ async function populateProtocolContract(
         break;
       }
       case entityType.AGENT: {
-        console.log(`creating agent`);
         const agent = mockAgent(wallet.address);
-        console.log(agent);
-        console.log(accountHandler.address);
-        // Common constants
-        const gasLimit = 1600000;
 
-        // try {
-        const result = await accountHandler.connect(connectedWallet).createAgent(agent, { gasLimit });
-        console.log(result);
-        // } catch (err) {
-        //   console.log(err);
-        //   throw new Error(err);
-        // }
+        await accountHandler.connect(connectedWallet).createAgent(agent);
+
         agents.push({ wallet: connectedWallet, id: agent.id, agent });
         break;
       }
       case entityType.BUYER: {
-        console.log(`creating buyer`);
         // no need to explicitly create buyer, since it's done automatically during commitToOffer
         const buyer = mockBuyer(wallet.address);
         buyers.push({ wallet: connectedWallet, id: buyer.id, buyer });
@@ -1620,13 +1593,9 @@ async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buye
 }
 
 function revertState() {
-  // Revert to latest state of contracts
-  shell.exec(`rm -rf contracts/*`);
-  shell.exec(`git checkout HEAD contracts`);
-
-  // Revert to latest state of scripts
-  shell.exec(`rm -rf scripts/*`);
-  shell.exec(`git checkout HEAD scripts`);
+  shell.exec(`rm -rf contracts/* scripts/*`);
+  shell.exec(`git checkout HEAD contracts scripts`);
+  shell.exec(`git reset HEAD contracts scripts`);
 }
 
 exports.deploySuite = deploySuite;
