@@ -197,8 +197,10 @@ async function populateProtocolContract(
     groupHandler,
     twinHandler,
   },
-  { mockToken, mockConditionalToken, mockAuthERC721Contract, mockTwinTokens, mockTwin20, mockTwin1155 }
+  { mockToken, mockConditionalToken, mockAuthERC721Contract, mockTwinTokens, mockTwin20, mockTwin1155 },
+  version
 ) {
+  const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
   let DRs = [];
   let sellers = [];
   let buyers = [];
@@ -254,7 +256,9 @@ async function populateProtocolContract(
           new DisputeResolverFee(mockToken.address, "MockToken", "0"),
         ];
         const sellerAllowList = [];
-        await accountHandler.connect(connectedWallet).createDisputeResolver(disputeResolver, [], sellerAllowList);
+        await accountHandler
+          .connect(connectedWallet)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
         DRs.push({
           wallet: connectedWallet,
           id: disputeResolver.id,
@@ -263,8 +267,10 @@ async function populateProtocolContract(
           sellerAllowList,
         });
 
-        //ADMIN role activates Dispute Resolver
-        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+        if (versionsWithActivateDRFunction.includes(version)) {
+          //ADMIN role activates Dispute Resolver
+          await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+        }
         break;
       }
       case entityType.SELLER: {

@@ -16,7 +16,8 @@ function getGenericContext(
   mockContracts,
   protocolContractState,
   preUpgradeEntities,
-  snapshot
+  snapshot,
+  newVersion
 ) {
   let postUpgradeEntities;
   let { exchangeHandler, offerHandler, fundsHandler, disputeHandler } = protocolContracts;
@@ -60,7 +61,8 @@ function getGenericContext(
           deployer,
           protocolDiamondAddress,
           protocolContracts,
-          mockContracts
+          mockContracts,
+          newVersion
         );
 
         // Get protocol state after the upgrade

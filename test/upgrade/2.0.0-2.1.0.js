@@ -54,7 +54,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         deployer,
         protocolDiamondAddress,
         protocolContracts,
-        mockContracts
+        mockContracts,
+        oldVersion
       );
 
       // Get current protocol state, which serves as the reference
@@ -94,7 +95,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           mockContracts,
           protocolContractState,
           preUpgradeEntities,
-          snapshot
+          snapshot,
+          newVersion
         )
       );
     } catch (err) {

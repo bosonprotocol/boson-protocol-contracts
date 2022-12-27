@@ -38,6 +38,19 @@ const facets = {
       initArgs: {},
       skipInit: ["ERC165Facet"],
     },
+    "v2.2.0": {
+      addOrUpgrade: [
+        "ProtocolInitializationHandlerFacet",
+        "OfferHandlerFacet",
+        "ExchangeHandlerFacet",
+        "ConfigHandlerFacet",
+        "DisputeResolverHandlerFacet",
+      ],
+      remove: [],
+      skipSelectors: {},
+      facetsToInit: {},
+      initializationData: "0x0000000000000000000000000000000000000000000000000000000000005555", // input for initV2_2_0, representing maxPremintedVoucher (0x5555=21845)
+    },
     HEAD: {
       // HEAD is a special tag that is used to test upgrades to the latest version
       addOrUpgrade: [
