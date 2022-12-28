@@ -1,9 +1,8 @@
-const shell = require("shelljs");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { assert, expect } = require("chai");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
-const { mockDisputeResolver } = require("../util/mock");
+const { mockDisputeResolver, mockTwin } = require("../util/mock");
 const {
   deploySuite,
   upgradeSuite,
@@ -12,20 +11,24 @@ const {
   revertState,
 } = require("../util/upgrade");
 const { getGenericContext } = require("./01_generic");
+const { keccak256, toUtf8Bytes } = require("ethers/lib/utils");
+const TokenType = require("../../scripts/domain/TokenType");
+const Twin = require("../../scripts/domain/Twin");
 
 const oldVersion = "v2.1.0";
 const newVersion = "v2.2.0";
-const v2_1_0_scripts = "b02a583ddb720bbe36fa6e29c344d35e957deb8b";
+const v2_1_0_scripts = "v2.1.0-scripts";
 
 /**
  *  Upgrade test case - After upgrade from 2.1.0 to 2.0.0 everything is still operational
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
-  let deployer, rando;
-  let accountHandler;
+  let deployer, rando, operator;
+  let accountHandler, metaTransactionsHandler, twinHandler;
   let snapshot;
   let protocolDiamondAddress, protocolContracts, mockContracts;
+  let mockToken;
 
   // reference protocol state
   let protocolContractState;
@@ -34,7 +37,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   before(async function () {
     try {
       // Make accounts available
-      [deployer, rando] = await ethers.getSigners();
+      [deployer, rando, , operator] = await ethers.getSigners();
 
       ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(
         deployer,
@@ -42,7 +45,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         v2_1_0_scripts
       ));
 
-      // ({ accountHandler } = protocolContracts);
+      ({ twinHandler } = protocolContracts);
+      ({ mockToken: mockToken } = mockContracts);
 
       // Populate protocol with data
       preUpgradeEntities = await populateProtocolContract(
@@ -64,10 +68,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       // Upgrade protocol
       // oldHandlers = { accountHandler: accountHandler }; // store old handler to test old events
-      ({ accountHandler } = await upgradeSuite(newVersion, protocolDiamondAddress, {
+      ({ accountHandler, metaTransactionsHandler } = await upgradeSuite(newVersion, protocolDiamondAddress, {
         accountHandler: "IBosonAccountHandler",
+        metaTransactionsHandler: "IBosonMetaTransactionsHandler",
       }));
-      protocolContracts.accountHandler = accountHandler;
+
+      protocolContracts = { ...protocolContracts, accountHandler, metaTransactionsHandler };
 
       snapshot = await ethers.provider.send("evm_snapshot", []);
 
@@ -105,14 +111,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   after(async function () {
     // Revert to latest state of contracts
-    shell.exec(`git checkout HEAD contracts`);
+    revertState();
   });
 
   // Test actions that worked in previous version, but should not work anymore, or work differently
   // Test methods that were added to see that upgrade was succesful
-  context("📋 Breaking changes and new methods", async function () {
+  context("📋 Breaking changes, new methods and bug fixes", async function () {
     context("Breaking changes", async function () {
       it("DR can be activated on creation", async function () {
+        // Get next account id
         const { nextAccountId } = protocolContractState.accountContractState;
 
         // DR shouldn't exist previously
@@ -132,220 +139,109 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       });
     });
 
-    // context("New methods", async function () {
-    //   it("Supported interface can be added", async function () {
-    //     const interfaceId = "0xaabbccdd";
+    context("New methods", async function () {
+      context(" 📋 MetaTransactionsHandler", async function () {
+        const functionList = [
+          "testFunction1(uint256)",
+          "testFunction2(uint256)",
+          "testFunction3((uint256,address,bool))",
+          "testFunction4(uint256[])",
+        ];
 
-    //     // Verify that interface does not exist yet
-    //     let support = await ERC165Facet.supportsInterface(interfaceId);
-    //     expect(support, "Interface should not be supported").is.false;
+        const functionHashList = functionList.map((func) => keccak256(toUtf8Bytes(func)));
 
-    //     // Add interface
-    //     await ERC165Facet.connect(deployer).addSupportedInterface(interfaceId);
+        it("👉 setAllowlistedFunctions()", async function () {
+          // Enable functions
+          await expect(metaTransactionsHandler.connect(deployer).setAllowlistedFunctions(functionHashList, true))
+            .to.emit(metaTransactionsHandler, "FunctionsAllowlisted")
+            .withArgs(functionHashList, true, deployer.address);
 
-    //     // Verify it was added
-    //     support = await ERC165Facet.supportsInterface(interfaceId);
-    //     expect(support, "Interface should be supported").is.true;
-    //   });
+          // Disable functions
+          await expect(metaTransactionsHandler.connect(deployer).setAllowlistedFunctions(functionHashList, false))
+            .to.emit(metaTransactionsHandler, "FunctionsAllowlisted")
+            .withArgs(functionHashList, false, deployer.address);
+        });
 
-    //   it("Supported interface can be removed", async function () {
-    //     const interfaceId = "0xddccbbaa";
-    //     // Add interface
-    //     await ERC165Facet.connect(deployer).addSupportedInterface(interfaceId);
+        it("👉 isFunctionAllowlisted(bytes32)", async function () {
+          // Functions should be disabled by default
+          for (const func of functionHashList) {
+            expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.false;
+          }
 
-    //     // Verify that interface exist
-    //     let support = await ERC165Facet.supportsInterface(interfaceId);
-    //     expect(support, "Interface should be supported").is.true;
+          // Enable functions
+          await metaTransactionsHandler.connect(deployer).setAllowlistedFunctions(functionHashList, true);
 
-    //     // Remove interface
-    //     await ERC165Facet.connect(deployer).removeSupportedInterface(interfaceId);
+          // Functions should be enabled
+          for (const func of functionHashList) {
+            expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.true;
+          }
 
-    //     // Verify it was removed
-    //     support = await ERC165Facet.supportsInterface(interfaceId);
-    //     expect(support, "Interface should not be supported").is.false;
-    //   });
+          // Disable functions
+          await metaTransactionsHandler.connect(deployer).setAllowlistedFunctions(functionHashList, false);
 
-    //   it("Seller can be updated in two steps", async function () {
-    //     const oldSeller = preUpgradeEntities.sellers[3];
+          // Functions should be disabled
+          for (const func of functionHashList) {
+            expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.false;
+          }
+        });
 
-    //     const seller = oldSeller.seller.clone();
-    //     seller.treasury = treasury.address;
-    //     seller.admin = admin.address;
-    //     seller.operator = operator.address;
-    //     seller.clerk = clerk.address;
+        it("👉 isFunctionAllowlisted(string)", async function () {
+          // Functions should be disabled by default
+          for (const func of functionList) {
+            expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.false;
+          }
 
-    //     const pendingSellerUpdate = seller.clone();
-    //     pendingSellerUpdate.id = "0";
-    //     pendingSellerUpdate.treasury = ethers.constants.AddressZero;
-    //     pendingSellerUpdate.active = false;
+          // Enable functions
+          await metaTransactionsHandler.connect(deployer).setAllowlistedFunctions(functionHashList, true);
 
-    //     const expectedSeller = oldSeller.seller.clone();
-    //     // Treasury is the only value that can be updated without address owner authorization
-    //     expectedSeller.treasury = seller.treasury;
+          // Functions should be enabled
+          for (const func of functionList) {
+            expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.true;
+          }
 
-    //     const authToken = mockAuthToken();
-    //     const pendingAuthToken = authToken.clone();
-    //     const oldSellerAuthToken = oldSeller.authToken.toStruct();
-    //     const pendingAuthTokenStruct = pendingAuthToken.toStruct();
+          // Disable functions
+          await metaTransactionsHandler.connect(deployer).setAllowlistedFunctions(functionHashList, false);
 
-    //     // Update seller
-    //     let tx = await accountHandler.connect(oldSeller.wallet).updateSeller(seller, authToken);
+          // Functions should be disabled
+          for (const func of functionList) {
+            expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.false;
+          }
+        });
+      });
+    });
 
-    //     // Testing for the SellerUpdateApplied event
-    //     await expect(tx)
-    //       .to.emit(accountHandler, "SellerUpdateApplied")
-    //       .withArgs(
-    //         seller.id,
-    //         expectedSeller.toStruct(),
-    //         pendingSellerUpdate.toStruct(),
-    //         oldSellerAuthToken,
-    //         pendingAuthTokenStruct,
-    //         oldSeller.wallet.address
-    //       );
+    context("Bug fixes", async function () {
+      it("Should ignore twin id set by seller and use nextAccountId on twin creation", async function () {});
+      // Get next twin id
+      const { nextTwinId } = protocolContractState.twinContractState;
 
-    //     // Testing for the SellerUpdatePending event
-    //     await expect(tx)
-    //       .to.emit(accountHandler, "SellerUpdatePending")
-    //       .withArgs(seller.id, pendingSellerUpdate.toStruct(), pendingAuthTokenStruct, oldSeller.wallet.address);
+      // Twin with id nextTwinId should not exist
+      let [exists, storedTwin] = await twinHandler.getTwin(nextTwinId.toString());
+      expect(exists).to.be.false;
+      expect(storedTwin).to.be.equal("0");
 
-    //     // Update seller operator
-    //     tx = await accountHandler.connect(operator).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]);
+      // Mock new twin
+      let twin = mockTwin(mockToken, TokenType.FungibleToken);
+      twin.id = "666";
 
-    //     pendingSellerUpdate.operator = ethers.constants.AddressZero;
-    //     expectedSeller.operator = seller.operator;
+      // Approve twinHandler to transfer operator tokens
+      await mockToken.connect(operator).approve(twinHandler.address, twin.amount);
 
-    //     // Check operator update
-    //     await expect(tx)
-    //       .to.emit(accountHandler, "SellerUpdateApplied")
-    //       .withArgs(
-    //         seller.id,
-    //         expectedSeller.toStruct(),
-    //         pendingSellerUpdate.toStruct(),
-    //         oldSellerAuthToken,
-    //         pendingAuthTokenStruct,
-    //         operator.address
-    //       );
+      // Create twin
+      await twinHandler.connect(operator).createTwin(twin);
 
-    //     // Update seller clerk
-    //     tx = await accountHandler.connect(clerk).optInToSellerUpdate(seller.id, [SellerUpdateFields.Clerk]);
+      // Twin with id 666 shouldn't exist
+      [exists, storedTwin] = await twinHandler.getTwin("666");
+      expect(exists).to.be.false;
+      expect(storedTwin).to.be.equal("0");
 
-    //     pendingSellerUpdate.clerk = ethers.constants.AddressZero;
-    //     expectedSeller.clerk = seller.clerk;
+      // Set twin id to nextTwinId
+      twin.id = nextTwinId.toString();
 
-    //     // Check operator update
-    //     await expect(tx)
-    //       .to.emit(accountHandler, "SellerUpdateApplied")
-    //       .withArgs(
-    //         seller.id,
-    //         expectedSeller.toStruct(),
-    //         pendingSellerUpdate.toStruct(),
-    //         oldSellerAuthToken,
-    //         pendingAuthTokenStruct,
-    //         clerk.address
-    //       );
-
-    //     // Update seller admin
-    //     tx = await accountHandler.connect(admin).optInToSellerUpdate(seller.id, [SellerUpdateFields.Admin]);
-
-    //     pendingSellerUpdate.admin = ethers.constants.AddressZero;
-    //     expectedSeller.admin = seller.admin;
-
-    //     // Check operator update
-    //     await expect(tx)
-    //       .to.emit(accountHandler, "SellerUpdateApplied")
-    //       .withArgs(
-    //         seller.id,
-    //         expectedSeller.toStruct(),
-    //         pendingSellerUpdate.toStruct(),
-    //         authToken.toStruct(),
-    //         pendingAuthTokenStruct,
-    //         admin.address
-    //       );
-    //   });
-
-    //   it("Dispute resolver can be updated in two steps", async function () {
-    //     const oldDisputeResolver = preUpgradeEntities.DRs[1];
-
-    //     const disputeResolver = oldDisputeResolver.disputeResolver.clone();
-
-    //     // new dispute resolver values
-    //     disputeResolver.escalationResponsePeriod = Number(
-    //       Number(disputeResolver.escalationResponsePeriod) - 100
-    //     ).toString();
-    //     disputeResolver.operator = operator.address;
-    //     disputeResolver.admin = admin.address;
-    //     disputeResolver.clerk = clerk.address;
-    //     disputeResolver.treasury = treasury.address;
-    //     disputeResolver.metadataUri = "https://ipfs.io/ipfs/updatedUri";
-    //     disputeResolver.active = false;
-
-    //     const disputeResolverPendingUpdate = disputeResolver.clone();
-    //     disputeResolverPendingUpdate.id = "0";
-    //     disputeResolverPendingUpdate.escalationResponsePeriod = "0";
-    //     disputeResolverPendingUpdate.metadataUri = "";
-    //     disputeResolverPendingUpdate.treasury = ethers.constants.AddressZero;
-
-    //     const expectedDisputeResolver = oldDisputeResolver.disputeResolver.clone();
-    //     expectedDisputeResolver.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
-    //     expectedDisputeResolver.treasury = disputeResolver.treasury;
-    //     expectedDisputeResolver.metadataUri = disputeResolver.metadataUri;
-
-    //     // Update dispute resolver
-    //     await expect(accountHandler.connect(oldDisputeResolver.wallet).updateDisputeResolver(disputeResolver))
-    //       .to.emit(accountHandler, "DisputeResolverUpdatePending")
-    //       .withArgs(disputeResolver.id, disputeResolverPendingUpdate.toStruct(), oldDisputeResolver.wallet.address);
-
-    //     // Approve operator update
-    //     expectedDisputeResolver.operator = disputeResolver.operator;
-    //     disputeResolverPendingUpdate.operator = ethers.constants.AddressZero;
-
-    //     await expect(
-    //       accountHandler
-    //         .connect(operator)
-    //         .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Operator])
-    //     )
-    //       .to.emit(accountHandler, "DisputeResolverUpdateApplied")
-    //       .withArgs(
-    //         disputeResolver.id,
-    //         expectedDisputeResolver.toStruct(),
-    //         disputeResolverPendingUpdate.toStruct(),
-    //         operator.address
-    //       );
-
-    //     // Approve admin update
-    //     expectedDisputeResolver.admin = disputeResolver.admin;
-    //     disputeResolverPendingUpdate.admin = ethers.constants.AddressZero;
-
-    //     await expect(
-    //       accountHandler
-    //         .connect(admin)
-    //         .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Admin])
-    //     )
-    //       .to.emit(accountHandler, "DisputeResolverUpdateApplied")
-    //       .withArgs(
-    //         disputeResolver.id,
-    //         expectedDisputeResolver.toStruct(),
-    //         disputeResolverPendingUpdate.toStruct(),
-    //         admin.address
-    //       );
-
-    //     // Approve clerk update
-    //     expectedDisputeResolver.clerk = disputeResolver.clerk;
-    //     disputeResolverPendingUpdate.clerk = ethers.constants.AddressZero;
-
-    //     await expect(
-    //       accountHandler
-    //         .connect(clerk)
-    //         .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Clerk])
-    //     )
-    //       .to.emit(accountHandler, "DisputeResolverUpdateApplied")
-    //       .withArgs(
-    //         disputeResolver.id,
-    //         expectedDisputeResolver.toStruct(),
-    //         disputeResolverPendingUpdate.toStruct(),
-    //         clerk.address
-    //       );
-    //   });
-    // });
+      // Twin with id nextTwinId should exist
+      [exists, storedTwin] = await twinHandler.getTwin(nextTwinId.toString());
+      expect(exists).to.be.true;
+      expect(Twin.fromStruct(storedTwin)).to.be.equal(twin.toStruct());
+    });
   });
 });

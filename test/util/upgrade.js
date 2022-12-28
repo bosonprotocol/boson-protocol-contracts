@@ -31,13 +31,14 @@ const { oneMonth, oneDay } = require("./constants");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { readContracts } = require("../../scripts/util/utils");
-const { facets } = require("../upgrade/00_config");
+const { getFacets } = require("../upgrade/00_config");
 
 // Common vars
 let rando;
 
 // deploy suite and return deployed contracts
 async function deploySuite(deployer, tag, scriptsTag) {
+  const facets = await getFacets();
   // checkout old version
   console.log(`Checking out version ${tag}`);
   shell.exec(`rm -rf contracts/*`);
@@ -140,6 +141,7 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scr
     shell.exec(`git checkout HEAD contracts`);
   }
 
+  const facets = await getFacets();
   // compile new contracts
   await hre.run("compile");
   await hre.run("upgrade-facets", { env: "upgrade-test", facetConfig: JSON.stringify(facets.upgrade[tag]) });
