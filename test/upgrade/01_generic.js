@@ -42,12 +42,21 @@ function getGenericContext(
     context("📋 Right After upgrade", async function () {
       it("State is not affected directly after the update", async function () {
         // Get protocol state after the upgrade
-        const protocolContractStateAfterUpgrade = await getProtocolContractState(
+        let protocolContractStateAfterUpgrade = await getProtocolContractState(
           protocolDiamondAddress,
           protocolContracts,
           mockContracts,
-          preUpgradeEntities
+          preUpgradeEntities,
+          newVersion
         );
+
+        for (const facetState in protocolContractStateAfterUpgrade) {
+          // If new state doesn't exist means the state was changed and should be test on specific version
+          if (!protocolContractStateAfterUpgrade[facetState]) {
+            delete protocolContractStateAfterUpgrade[facetState];
+            delete protocolContractState[facetState];
+          }
+        }
 
         // State before and after should be equal
         assert.deepEqual(protocolContractState, protocolContractStateAfterUpgrade, "state mismatch after upgrade");

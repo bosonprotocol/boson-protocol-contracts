@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { assert, expect } = require("chai");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
-const { mockDisputeResolver, mockTwin } = require("../util/mock");
+const { mockDisputeResolver, mockTwin, mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
 const {
   deploySuite,
   upgradeSuite,
@@ -14,6 +14,8 @@ const { getGenericContext } = require("./01_generic");
 const { keccak256, toUtf8Bytes } = require("ethers/lib/utils");
 const TokenType = require("../../scripts/domain/TokenType");
 const Twin = require("../../scripts/domain/Twin");
+const { prepareDataSignatureParameters } = require("../util/utils");
+const { RevertReasons } = require("../../scripts/config/revert-reasons");
 
 const oldVersion = "v2.1.0";
 const newVersion = "v2.2.0-rc.1";
@@ -142,6 +144,87 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         DRCreated = DisputeResolver.fromStruct(DRCreated);
         expect(DRCreated).to.deep.equal(DR);
       });
+
+      context("Meta transaction", async function () {
+        const seller = mockSeller(rando.address, rando.address, rando.address, rando.address, rando.address);
+        // Prepare the function signature for the facet function.
+        const functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+          seller,
+          mockAuthToken(),
+          mockVoucherInitValues(),
+        ]);
+
+        // Set the message Type
+        const metaTransactionType = [
+          { name: "nonce", type: "uint256" },
+          { name: "from", type: "address" },
+          { name: "contractAddress", type: "address" },
+          { name: "functionName", type: "string" },
+          { name: "functionSignature", type: "bytes" },
+        ];
+
+        let customTransactionType = {
+          MetaTransaction: metaTransactionType,
+        };
+
+        // TODO: check nonce
+        const nonce = parseInt(ethers.utils.randomBytes(8));
+
+        // Prepare the message
+        let message = {
+          nonce: 0,
+          from: operator.address,
+          contractAddress: accountHandler.address,
+          functionName: "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint256))",
+          functionSignature: functionSignature,
+        };
+
+        it("Meta transaction should work with allowlisted function", async function () {
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // send a meta transaction, check for event
+          await expect(
+            metaTransactionsHandler
+              .connect(deployer)
+              .executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
+          )
+            .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+            .withArgs(operator.address, deployer.address, message.functionName, nonce);
+        });
+
+        it("Meta transaction should fail when function name is not allowlisted", async function () {
+          message.functionName = "createSeller"; // function with this name does not exist (argument types are missing)
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Execute meta transaction, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTransaction(
+              operator.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
+          ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+        });
+      });
     });
 
     context("New methods", async function () {
@@ -225,7 +308,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         it("Should call initV2_2_0()", async function () {
           // maxPremintedVouchers is set in initV2_2_0 so we assume that if it is set, the function was called
-          expect(await configHandler.connect(rando).getMaxPremintedVouchers()).to.equal("1000");
+          expect(await configHandler.connect(rando).getMaxPremintedVouchers()).to.equal("21845");
         });
       });
 
@@ -233,7 +316,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         it("👉 setMaxPremintedVouchers()", async function () {
           // Set new value
           await expect(configHandler.connect(deployer).setMaxPremintedVouchers(100))
-            .to.emit(configHandler, "MaxPremintedVouchersSet")
+            .to.emit(configHandler, "MaxPremintedVouchersChanged")
             .withArgs(100, deployer.address);
 
           // Verify that new value is stored
@@ -242,7 +325,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         it("👉 getMaxPremintedVouchers()", async function () {
           // Verify that new value is stored
-          expect(await configHandler.connect(rando).getMaxPremintedVouchers()).to.equal("1000");
+          expect(await configHandler.connect(rando).getMaxPremintedVouchers()).to.equal("21845");
         });
       });
     });

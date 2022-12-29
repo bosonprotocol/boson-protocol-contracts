@@ -34,6 +34,7 @@ const { readContracts } = require("../../scripts/util/utils");
 const { getFacets } = require("../upgrade/00_config");
 
 // Common vars
+const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
 let rando;
 
 // deploy suite and return deployed contracts
@@ -127,10 +128,13 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scr
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`rm -rf scripts/*`);
   if (scriptsTag) {
+    console.log(`Checking out scripts on version ${scriptsTag}`);
     shell.exec(`git checkout ${scriptsTag} scripts`);
   } else {
+    console.log(`Checking out latest scripts`);
     shell.exec(`git checkout HEAD scripts`);
   }
+
   if (tag) {
     // checkout the new tag
     console.log(`Checking out version ${tag}`);
@@ -144,7 +148,9 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scr
   const facets = await getFacets();
   // compile new contracts
   await hre.run("compile");
+  console.log("before calling upgrade facets");
   await hre.run("upgrade-facets", { env: "upgrade-test", facetConfig: JSON.stringify(facets.upgrade[tag]) });
+  console.log("after upgrade facets");
 
   // Cast to updated interface
   let newHandlers = {};
@@ -202,7 +208,6 @@ async function populateProtocolContract(
   { mockToken, mockConditionalToken, mockAuthERC721Contract, mockTwinTokens, mockTwin20, mockTwin1155 },
   version
 ) {
-  const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
   let DRs = [];
   let sellers = [];
   let buyers = [];
@@ -525,7 +530,8 @@ async function getProtocolContractState(
     configHandler,
   },
   { mockToken, mockTwinTokens },
-  { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins }
+  { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins },
+  version
 ) {
   rando = (await ethers.getSigners())[10]; // random account making the calls
 
@@ -554,7 +560,7 @@ async function getProtocolContractState(
     getGroupContractState(groupHandler, groups),
     getTwinContractState(twinHandler, twins),
     getMetaTxContractState(),
-    getMetaTxPrivateContractState(protocolDiamondAddress),
+    version != "v2.2.0-rc.1" && getMetaTxPrivateContractState(protocolDiamondAddress),
     getProtocolStatusPrivateContractState(protocolDiamondAddress),
     getProtocolLookupsPrivateContractState(
       protocolDiamondAddress,
@@ -1342,7 +1348,8 @@ async function populateVoucherContract(
   protocolDiamondAddress,
   { accountHandler, exchangeHandler, offerHandler, fundsHandler },
   { mockToken },
-  existingEntities
+  existingEntities,
+  version
 ) {
   let DR;
   let sellers = [];
@@ -1409,8 +1416,10 @@ async function populateVoucherContract(
             sellerAllowList,
           };
 
-          //ADMIN role activates Dispute Resolver
-          await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+          if (versionsWithActivateDRFunction.includes(version)) {
+            //ADMIN role activates Dispute Resolver
+            await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+          }
           break;
         }
         case entityType.SELLER: {

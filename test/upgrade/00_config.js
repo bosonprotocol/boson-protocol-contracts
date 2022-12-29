@@ -63,7 +63,7 @@ async function getFacets() {
         initArgs: {},
         skipInit: ["ERC165Facet"],
       },
-      "v2.2.0": {
+      "v2.2.0-rc.1": {
         addOrUpgrade: [
           "MetaTransactionsHandlerFacet",
           "TwinHandlerFacet",
