@@ -16,7 +16,7 @@ const TokenType = require("../../scripts/domain/TokenType");
 const Twin = require("../../scripts/domain/Twin");
 
 const oldVersion = "v2.1.0";
-const newVersion = "v2.2.0";
+const newVersion = "v2.2.0-rc.1";
 const v2_1_0_scripts = "v2.1.0-scripts";
 
 /**
@@ -25,7 +25,7 @@ const v2_1_0_scripts = "v2.1.0-scripts";
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
   let deployer, rando, operator;
-  let accountHandler, metaTransactionsHandler, twinHandler;
+  let accountHandler, metaTransactionsHandler, twinHandler, protocolInitializationHandler, configHandler;
   let snapshot;
   let protocolDiamondAddress, protocolContracts, mockContracts;
   let mockToken;
@@ -44,7 +44,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         oldVersion,
         v2_1_0_scripts
       ));
-
       ({ twinHandler } = protocolContracts);
       ({ mockToken: mockToken } = mockContracts);
 
@@ -68,10 +67,16 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       // Upgrade protocol
       // oldHandlers = { accountHandler: accountHandler }; // store old handler to test old events
-      ({ accountHandler, metaTransactionsHandler } = await upgradeSuite(newVersion, protocolDiamondAddress, {
-        accountHandler: "IBosonAccountHandler",
-        metaTransactionsHandler: "IBosonMetaTransactionsHandler",
-      }));
+      ({ accountHandler, metaTransactionsHandler, protocolInitializationHandler, configHandler } = await upgradeSuite(
+        newVersion,
+        protocolDiamondAddress,
+        {
+          accountHandler: "IBosonAccountHandler",
+          metaTransactionsHandler: "IBosonMetaTransactionsHandler",
+          protocolInitializationHandler: "IBosonProtocolInitializationHandler",
+          configHandler: "IBosonConfigHandler",
+        }
+      ));
 
       protocolContracts = { ...protocolContracts, accountHandler, metaTransactionsHandler };
 
@@ -140,7 +145,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     });
 
     context("New methods", async function () {
-      context(" 📋 MetaTransactionsHandler", async function () {
+      context("📋 MetaTransactionsHandler", async function () {
         const functionList = [
           "testFunction1(uint256)",
           "testFunction2(uint256)",
@@ -206,6 +211,38 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           for (const func of functionList) {
             expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.false;
           }
+        });
+      });
+
+      context("📋 ProtocolInitializationHandlerFacet", async function () {
+        // To this test pass package.json version must be set to 2.2.0
+        it("👉 getVersion()", async function () {
+          const version = await protocolInitializationHandler.connect(rando).getVersion();
+
+          // Slice because of unicode escape notation
+          expect(version.slice(0, 5)).to.equal("2.2.0");
+        });
+
+        it("Should call initV2_2_0()", async function () {
+          // maxPremintedVouchers is set in initV2_2_0 so we assume that if it is set, the function was called
+          expect(await configHandler.connect(rando).getMaxPremintedVouchers()).to.equal("1000");
+        });
+      });
+
+      context("📋 ConfigHandlerFacet", async function () {
+        it("👉 setMaxPremintedVouchers()", async function () {
+          // Set new value
+          await expect(configHandler.connect(deployer).setMaxPremintedVouchers(100))
+            .to.emit(configHandler, "MaxPremintedVouchersSet")
+            .withArgs(100, deployer.address);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxPremintedVouchers()).to.equal("100");
+        });
+
+        it("👉 getMaxPremintedVouchers()", async function () {
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxPremintedVouchers()).to.equal("1000");
         });
       });
     });

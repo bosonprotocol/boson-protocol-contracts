@@ -359,6 +359,7 @@ describe("ProtocolInitializationHandler", async function () {
     let deployedProtocolInitializationHandlerFacet;
     let configHandler;
     let facetCut;
+    let calldataProtocolInitialization;
 
     beforeEach(async function () {
       version = "2.1.0";
@@ -405,17 +406,18 @@ describe("ProtocolInitializationHandler", async function () {
 
       version = ethers.utils.formatBytes32String("2.2.0");
 
-      // Prepare cut data, and attach correct address to configHandler
+      // Prepare cut data
       facetCut = getFacetAddCut(configHandler);
+      // Attach correct address to configHandler
       configHandler = configHandler.attach(protocolDiamond.address);
-    });
-
-    it("Should emit MaxPremintedVouchersChanged event", async function () {
-      const calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+      // Prepare calldata
+      calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
         "initialize",
         [version, [], [], true, initializationData, [], []]
       );
+    });
 
+    it("Should emit MaxPremintedVouchersChanged event", async function () {
       // Make the cut, check the event
       await expect(
         diamondCutFacet.diamondCut(
@@ -430,11 +432,6 @@ describe("ProtocolInitializationHandler", async function () {
     });
 
     it("Should update state", async function () {
-      const calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
-        "initialize",
-        [version, [], [], true, initializationData, [], []]
-      );
-
       // Make the cut, check the event
       await diamondCutFacet.diamondCut(
         [facetCut],
@@ -453,7 +450,7 @@ describe("ProtocolInitializationHandler", async function () {
         maxPremintedVouchers = "0";
         initializationData = ethers.utils.defaultAbiCoder.encode(["uint256"], [maxPremintedVouchers]);
 
-        const calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+        calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
           "initialize",
           [version, [], [], true, initializationData, [], []]
         );
@@ -486,10 +483,6 @@ describe("ProtocolInitializationHandler", async function () {
 
         // Prepare 2.2.0 deployment
         version = ethers.utils.formatBytes32String("2.2.0");
-        const calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
-          "initialize",
-          [version, [], [], true, initializationData, [], []]
-        );
 
         // make diamond cut, expect revert
         await expect(

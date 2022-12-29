@@ -26,7 +26,7 @@ const oldVersion = "v2.1.0";
 const newVersion = "HEAD";
 // Script that was used to deploy v2.1.0 was created after v2.1.0 tag was created.
 // This is the commit hash when deployment happened, so it represents the state of the code at that time.
-const v2_1_0_scripts = "b02a583ddb720bbe36fa6e29c344d35e957deb8b";
+const v2_1_0_scripts = "v2.1.0-scripts";
 
 let snapshot;
 
