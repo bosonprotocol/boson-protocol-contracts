@@ -7,6 +7,7 @@ This file contains deployment and upgrade configs for each tag. Format of config
 */
 
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils");
+
 const noArgFacetNames = [
   "AccountHandlerFacet",
   "SellerHandlerFacet",
@@ -30,8 +31,8 @@ async function getFacets() {
     [...noArgFacetNames, "MetaTransactionsHandlerFacet"],
     ["executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"]
   );
-  // Versions that have the same deploy config
 
+  // Versions that have the same deploy config
   const facets = {
     deploy: {
       "v2.0.0": {
@@ -72,8 +73,10 @@ async function getFacets() {
           "ExchangeHandlerFacet",
           "ConfigHandlerFacet",
           "DisputeResolverHandlerFacet",
+          "OrchestrationHandlerFacet1",
+          "OrchestrationHandlerFacet2",
         ],
-        remove: [],
+        remove: ["OrchestrationHandlerFacet"],
         skipSelectors: {},
         facetsToInit: {
           MetaTransactionsHandlerFacet: [MetaTransactionsHandlerFacetInitArgs],
