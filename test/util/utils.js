@@ -198,10 +198,7 @@ function getMappingStoragePosition(slot, key, padding = paddingType.NONE) {
       keyBuffer = Buffer.from(key.slice(2).padEnd(64, "0"), "hex"); // assume key is prefixed with 0x
       break;
   }
-  // console.log("keyBuffer", keyBuffer);
-  // console.log("slot", slot.toHexString());
   const pBuffer = Buffer.from(slot.toHexString().slice(2), "hex");
-  // console.log("pBuffer", pBuffer);
   return keccak256(Buffer.concat([keyBuffer, pBuffer]));
 }
 

@@ -81,7 +81,8 @@ function getGenericContext(
           protocolDiamondAddress,
           protocolContracts,
           mockContracts,
-          preUpgradeEntities
+          preUpgradeEntities,
+          newVersion == "v2.2.0-rc.1" ? ["metaTxPrivateContractState"] : []
         );
 
         // Counters are the only values that should be changed
@@ -138,6 +139,15 @@ function getGenericContext(
         delete protocolContractState.offerContractState.nextOfferId;
         delete protocolContractState.twinContractState.nextTwinId;
         delete protocolContractState.bundleContractState.nextBundleId;
+
+        for (const facetState in protocolContractStateAfterUpgradeAndActions) {
+          // If new state doesn't exist means the state was changed and should be test on file version
+          if (!protocolContractStateAfterUpgradeAndActions[facetState]) {
+            delete protocolContractStateAfterUpgradeAndActions[facetState];
+            delete protocolContractState[facetState];
+          }
+        }
+
         assert.deepEqual(
           protocolContractState,
           protocolContractStateAfterUpgradeAndActions,
@@ -232,7 +242,8 @@ function getGenericContext(
       });
 
       it("Escalate old dispute", async function () {
-        const exchange = preUpgradeEntities.exchanges[5]; // exchange for which dispute was raised
+        const exchange = preUpgradeEntities.exchanges[5 - 1]; // exchange for which dispute was raised
+
         const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
         const offer = preUpgradeEntities.offers.find((o) => o.offer.id == exchange.offerId);
         await expect(disputeHandler.connect(buyerWallet).escalateDispute(exchange.exchangeId))

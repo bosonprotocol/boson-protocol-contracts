@@ -33,8 +33,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     protocolInitializationHandler,
     configHandler,
     orchestrationHandler,
-    disputeHandler,
-    exchangeHandler;
+    disputeHandler;
   let snapshot;
   let protocolDiamondAddress, protocolContracts, mockContracts;
   let mockToken;
@@ -53,7 +52,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         oldVersion,
         v2_1_0_scripts
       ));
-      ({ twinHandler, disputeHandler, exchangeHandler } = protocolContracts);
+      ({ twinHandler, disputeHandler } = protocolContracts);
       ({ mockToken: mockToken } = mockContracts);
 
       // Populate protocol with data
@@ -358,33 +357,25 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       context("📋 OrchestrationHandlerFacet", async function () {
         it("👉 raiseAndEscalateDispute()", async function () {
           const { buyers, exchanges, offers } = preUpgradeEntities;
-          const exchangeId = "1";
-          // exchangeId 1 = exchanges index 0
+          const exchangeId = "2";
+          // exchangeId 2 = exchanges index 1
           const exchange = exchanges[exchangeId - 1];
           const buyer = buyers[exchange.buyerIndex];
-          console.log(exchange);
           const offer = offers.find((o) => o.offer.id === exchange.offerId);
-          console.log(offer);
-          const disputeResolver = await accountHandler.getDisputeResolver(offer.disputeResolverId);
-          console.log(disputeResolver);
 
-          const { configHandler } = protocolContractState;
-          console.log(configHandler);
-
-          const exchange2 = await exchangeHandler.getExchange(exchangeId);
-          console.log(exchange2);
+          const {
+            configContractState: { buyerEscalationDepositPercentage },
+          } = protocolContractState;
 
           // DRFee is 0 because protocol doesn't support DRFee yet
-          const buyerEscalationDepositPercentage = "1000"; // 10%
+          const buyerEscalationDepositNative = applyPercentage("0", buyerEscalationDepositPercentage.toString());
 
-          const buyerEscalationDepositNative = applyPercentage("0", buyerEscalationDepositPercentage);
+          const result = await orchestrationHandler
+            .connect(buyer.wallet)
+            .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
           // Raise and Escalate a dispute, testing for the event
-          await expect(
-            orchestrationHandler
-              .connect(buyer.wallet)
-              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
-          )
+          expect(result)
             .to.emit(disputeHandler, "DisputeRaised")
             .withArgs(exchangeId, buyer.id, offer.sellerId, buyer.wallet.address);
         });

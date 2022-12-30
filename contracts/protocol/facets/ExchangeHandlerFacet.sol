@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
-import  "hardhat/console.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
@@ -791,12 +790,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 // If token transfer failed
                 if (!success || (result.length > 0 && !abi.decode(result, (bool)))) {
                     transferFailed = true;
-                    console.log('twin transfer failed');
-                    console.logBytes(result);
-                    console.log(twin.id);
-                    console.log(twin.tokenAddress);
-                    console.log('exchangeIdd', exchangeId);
-                    console.log('tokenId', tokenId);
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 } else {
                     // Store twin receipt on twinReceiptsByExchange

@@ -148,17 +148,13 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scr
   const facets = await getFacets();
   // compile new contracts
   await hre.run("compile");
-  console.log("before calling upgrade facets");
   await hre.run("upgrade-facets", { env: "upgrade-test", facetConfig: JSON.stringify(facets.upgrade[tag]) });
-  console.log("after upgrade facets");
 
   // Cast to updated interface
   let newHandlers = {};
   for (const [handlerName, interfaceName] of Object.entries(upgradedInterfaces)) {
     newHandlers[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
   }
-
-  shell.exec(`cat test/upgrade/2.1.0-2.2.0.js`);
 
   return newHandlers;
 }
@@ -245,6 +241,8 @@ async function populateProtocolContract(
     entityType.BUYER,
   ];
 
+  let nextAccountId = Number(await accountHandler.getNextAccountId());
+
   for (const entity of entities) {
     const wallet = ethers.Wallet.createRandom();
     const connectedWallet = wallet.connect(ethers.provider);
@@ -265,6 +263,8 @@ async function populateProtocolContract(
           new DisputeResolverFee(mockToken.address, "MockToken", "0"),
         ];
         const sellerAllowList = [];
+        disputeResolver.id = nextAccountId.toString();
+
         await accountHandler
           .connect(connectedWallet)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -284,7 +284,8 @@ async function populateProtocolContract(
       }
       case entityType.SELLER: {
         const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address);
-        const id = seller.id;
+        const id = (seller.id = nextAccountId.toString());
+
         let authToken;
         // randomly decide if auth token is used or not
         if (Math.random() > 0.5) {
@@ -311,12 +312,14 @@ async function populateProtocolContract(
 
         await accountHandler.connect(connectedWallet).createAgent(agent);
 
+        agent.id = nextAccountId.toString();
         agents.push({ wallet: connectedWallet, id: agent.id, agent });
         break;
       }
       case entityType.BUYER: {
         // no need to explicitly create buyer, since it's done automatically during commitToOffer
         const buyer = mockBuyer(wallet.address);
+        buyer.id = nextAccountId.toString();
         buyers.push({ wallet: connectedWallet, id: buyer.id, buyer });
 
         // mint them conditional token in case they need it
@@ -324,6 +327,8 @@ async function populateProtocolContract(
         break;
       }
     }
+
+    nextAccountId++;
   }
 
   // Make explicit allowed sellers list for some DRs
@@ -347,7 +352,7 @@ async function populateProtocolContract(
       offer.price = `${offerId * 1000}`;
       offer.sellerDeposit = `${offerId * 100}`;
       offer.buyerCancelPenalty = `${offerId * 50}`;
-      offer.quantityAvailable = `${(offerId + 1) * 15}`;
+      offer.quantityAvailable = `${(offerId + 1) * 10}`;
 
       // Default offer is in native token. Change every other to mock token
       if (offerId % 2 == 0) {
@@ -418,14 +423,25 @@ async function populateProtocolContract(
     // non fungible token
     await mockTwinTokens[0].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
     await mockTwinTokens[1].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
+
     // create multiple ranges
     const twin721 = mockTwin(ethers.constants.AddressZero, TokenType.NonFungibleToken);
     twin721.amount = "0";
+
+    // min supply available for twin721 is the total amount to cover all offers bundled
+    const minSupplyAvailable = offers
+      .map((o) => o.offer)
+      .filter((o) => seller.offerIds.includes(Number(o.id)))
+      .reduce((acc, o) => acc + Number(o.quantityAvailable), 0);
+
     for (let j = 0; j < 7; j++) {
       twin721.tokenId = `${sellerId * 1000000 + j * 100000}`;
-      twin721.supplyAvailable = `${100 * (sellerId + 1)}`;
+      twin721.supplyAvailable = minSupplyAvailable;
       twin721.tokenAddress = mockTwinTokens[j % 2].address; // oscilate between twins
       twin721.id = twinId;
+
+      // mint tokens to be transferred on redeem
+      await mockTwinTokens[j % 2].connect(seller.wallet).mint(twin721.tokenId, twin721.supplyAvailable);
       await twinHandler.connect(seller.wallet).createTwin(twin721);
 
       twins.push(twin721);
@@ -436,11 +452,17 @@ async function populateProtocolContract(
 
     // fungible
     const twin20 = mockTwin(mockTwin20.address, TokenType.FungibleToken);
-    await mockTwin20.connect(seller.wallet).approve(protocolDiamondAddress, 1);
+
     twin20.id = twinId;
     twin20.amount = sellerId;
     twin20.supplyAvailable = twin20.amount * 100000000;
+
+    await mockTwin20.connect(seller.wallet).approve(protocolDiamondAddress, twin20.supplyAvailable);
+
+    // mint tokens to be transferred on redeem
+    await mockTwin20.connect(seller.wallet).mint(seller.wallet.address, twin20.supplyAvailable * twin20.amount);
     await twinHandler.connect(seller.wallet).createTwin(twin20);
+
     twins.push(twin20);
     twinIds.push(twinId);
     twinId++;
@@ -453,7 +475,11 @@ async function populateProtocolContract(
       twin1155.amount = sellerId + j;
       twin1155.supplyAvailable = `${300000 * (sellerId + 1)}`;
       twin1155.id = twinId;
+
+      // mint tokens to be transferred on redeem
+      await mockTwin1155.connect(seller.wallet).mint(twin1155.tokenId, twin1155.supplyAvailable);
       await twinHandler.connect(seller.wallet).createTwin(twin1155);
+
       twins.push(twin1155);
       twinIds.push(twinId);
       twinId++;
@@ -491,19 +517,19 @@ async function populateProtocolContract(
 
   // redeem some vouchers #4
   for (const id of [2, 5, 11, 8]) {
-    const exchange = exchanges[id];
+    const exchange = exchanges[id - 1];
     await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).redeemVoucher(exchange.exchangeId);
   }
 
   // cancel some vouchers #3
   for (const id of [10, 3, 13]) {
-    const exchange = exchanges[id];
+    const exchange = exchanges[id - 1];
     await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).cancelVoucher(exchange.exchangeId);
   }
 
   // revoke some vouchers #2
   for (const id of [4, 6]) {
-    const exchange = exchanges[id];
+    const exchange = exchanges[id - 1];
     const offer = offers.find((o) => o.offer.id == exchange.offerId);
     const seller = sellers.find((s) => s.seller.id == offer.offer.sellerId);
     await exchangeHandler.connect(seller.wallet).revokeVoucher(exchange.exchangeId);
@@ -511,7 +537,7 @@ async function populateProtocolContract(
 
   // raise dispute on some exchanges #1
   const id = 5; // must be one of redeemed ones
-  const exchange = exchanges[id];
+  const exchange = exchanges[id - 1];
   await disputeHandler.connect(buyers[exchange.buyerIndex].wallet).raiseDispute(exchange.exchangeId);
 
   return { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins };
@@ -1407,6 +1433,13 @@ async function populateVoucherContract(
             new DisputeResolverFee(mockToken.address, "MockToken", "0"),
           ];
           const sellerAllowList = [];
+
+          console.log(disputeResolver);
+          const nextAccountId = await accountHandler.getNextAccountId();
+          console.log("nextAccountId");
+          disputeResolver.id = nextAccountId.toString();
+          console.log(disputeResolver);
+
           await accountHandler
             .connect(connectedWallet)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);

@@ -88,11 +88,14 @@ async function getFacets() {
         // HEAD is a special tag that is used to test upgrades to the latest version
         addOrUpgrade: [
           "MetaTransactionsHandlerFacet",
+          "TwinHandlerFacet",
           "ProtocolInitializationHandlerFacet",
           "OfferHandlerFacet",
           "ExchangeHandlerFacet",
           "ConfigHandlerFacet",
           "DisputeResolverHandlerFacet",
+          "OrchestrationHandlerFacet1",
+          "OrchestrationHandlerFacet2",
         ],
         remove: [],
         skipSelectors: {},
