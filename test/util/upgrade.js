@@ -158,6 +158,8 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scr
     newHandlers[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
   }
 
+  shell.exec(`cat test/upgrade/2.1.0-2.2.0.js`);
+
   return newHandlers;
 }
 
@@ -531,7 +533,7 @@ async function getProtocolContractState(
   },
   { mockToken, mockTwinTokens },
   { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins },
-  version
+  omitStates = []
 ) {
   rando = (await ethers.getSigners())[10]; // random account making the calls
 
@@ -560,7 +562,7 @@ async function getProtocolContractState(
     getGroupContractState(groupHandler, groups),
     getTwinContractState(twinHandler, twins),
     getMetaTxContractState(),
-    version != "v2.2.0-rc.1" && getMetaTxPrivateContractState(protocolDiamondAddress),
+    !omitStates.includes("metaTxPrivateContractState") && getMetaTxPrivateContractState(protocolDiamondAddress),
     getProtocolStatusPrivateContractState(protocolDiamondAddress),
     getProtocolLookupsPrivateContractState(
       protocolDiamondAddress,

@@ -64,11 +64,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         protocolDiamondAddress,
         protocolContracts,
         mockContracts,
-        preUpgradeEntities
+        preUpgradeEntities,
+        oldVersion
       );
 
       // Upgrade protocol
-      // oldHandlers = { accountHandler: accountHandler }; // store old handler to test old events
       ({ accountHandler, metaTransactionsHandler, protocolInitializationHandler, configHandler } = await upgradeSuite(
         newVersion,
         protocolDiamondAddress,
@@ -80,7 +80,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         }
       ));
 
-      protocolContracts = { ...protocolContracts, accountHandler, metaTransactionsHandler };
+      protocolContracts = {
+        ...protocolContracts,
+        accountHandler,
+        metaTransactionsHandler,
+        protocolInitializationHandler,
+        configHandler,
+      };
 
       snapshot = await ethers.provider.send("evm_snapshot", []);
 
@@ -116,11 +122,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     snapshot = await ethers.provider.send("evm_snapshot", []);
   });
 
-  after(async function () {
-    // Revert to latest state of contracts
-    revertState();
-  });
-
   // Test actions that worked in previous version, but should not work anymore, or work differently
   // Test methods that were added to see that upgrade was succesful
   context("📋 Breaking changes, new methods and bug fixes", async function () {
@@ -145,40 +146,44 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         expect(DRCreated).to.deep.equal(DR);
       });
 
-      context("Meta transaction", async function () {
-        const seller = mockSeller(rando.address, rando.address, rando.address, rando.address, rando.address);
-        // Prepare the function signature for the facet function.
-        const functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
-          seller,
-          mockAuthToken(),
-          mockVoucherInitValues(),
-        ]);
+      context("MetaTransactionsHandler", async function () {
+        let seller, functionSignature, metaTransactionType, customTransactionType, nonce, message;
 
-        // Set the message Type
-        const metaTransactionType = [
-          { name: "nonce", type: "uint256" },
-          { name: "from", type: "address" },
-          { name: "contractAddress", type: "address" },
-          { name: "functionName", type: "string" },
-          { name: "functionSignature", type: "bytes" },
-        ];
+        beforeEach(async function () {
+          seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
 
-        let customTransactionType = {
-          MetaTransaction: metaTransactionType,
-        };
+          // Prepare the function signature for the facet function.
+          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+            seller,
+            mockAuthToken(),
+            mockVoucherInitValues(),
+          ]);
 
-        // TODO: check nonce
-        const nonce = parseInt(ethers.utils.randomBytes(8));
+          // Set the message Type
+          metaTransactionType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
+            { name: "functionSignature", type: "bytes" },
+          ];
 
-        // Prepare the message
-        let message = {
-          nonce: 0,
-          from: operator.address,
-          contractAddress: accountHandler.address,
-          functionName: "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint256))",
-          functionSignature: functionSignature,
-        };
+          customTransactionType = {
+            MetaTransaction: metaTransactionType,
+          };
 
+          nonce = parseInt(ethers.utils.randomBytes(8));
+
+          // Prepare the message
+          message = {
+            nonce,
+            from: operator.address,
+            contractAddress: accountHandler.address,
+            functionName:
+              "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint256))",
+            functionSignature: functionSignature,
+          };
+        });
         it("Meta transaction should work with allowlisted function", async function () {
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
@@ -213,30 +218,46 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
           // Execute meta transaction, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransaction(
-              operator.address,
-              message.functionName,
-              functionSignature,
-              nonce,
-              r,
-              s,
-              v
-            )
+            metaTransactionsHandler
+              .connect(operator)
+              .executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
           ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+        });
+
+        // Meta transactions hash functions positions were changed after we added new methods setAllowlistedFunctions and getAllowlistedFunctions
+        it("functionPointer positions should change", async function () {
+          const { metaTxPrivateContractState: oldState } = protocolContractState;
+
+          // Get protocol state after the upgrade
+          const { metaTxPrivateContractState: newState } = await getProtocolContractState(
+            protocolDiamondAddress,
+            protocolContracts,
+            mockContracts,
+            preUpgradeEntities
+          );
+
+          assert.notDeepEqual(
+            oldState.hashInfoState.map((x) => x.functionPointer),
+            newState.hashInfoState.map((x) => x.functionPointer)
+          );
         });
       });
     });
 
     context("New methods", async function () {
       context("📋 MetaTransactionsHandler", async function () {
-        const functionList = [
-          "testFunction1(uint256)",
-          "testFunction2(uint256)",
-          "testFunction3((uint256,address,bool))",
-          "testFunction4(uint256[])",
-        ];
+        let functionList, functionHashList;
 
-        const functionHashList = functionList.map((func) => keccak256(toUtf8Bytes(func)));
+        beforeEach(async function () {
+          functionList = [
+            "testFunction1(uint256)",
+            "testFunction2(uint256)",
+            "testFunction3((uint256,address,bool))",
+            "testFunction4(uint256[])",
+          ];
+
+          functionHashList = functionList.map((func) => keccak256(toUtf8Bytes(func)));
+        });
 
         it("👉 setAllowlistedFunctions()", async function () {
           // Enable functions

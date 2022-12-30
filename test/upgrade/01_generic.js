@@ -47,11 +47,12 @@ function getGenericContext(
           protocolContracts,
           mockContracts,
           preUpgradeEntities,
-          newVersion
+          // Meta transactions private state was changed on v2.2.0 and should be tested separately
+          newVersion == "v2.2.0-rc.1" ? ["metaTxPrivateContractState"] : []
         );
 
         for (const facetState in protocolContractStateAfterUpgrade) {
-          // If new state doesn't exist means the state was changed and should be test on specific version
+          // If new state doesn't exist means the state was changed and should be test on file version
           if (!protocolContractStateAfterUpgrade[facetState]) {
             delete protocolContractStateAfterUpgrade[facetState];
             delete protocolContractState[facetState];
