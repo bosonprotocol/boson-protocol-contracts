@@ -1413,6 +1413,7 @@ async function populateVoucherContract(
       entityType.BUYER,
     ];
 
+    let nextAccountId = await accountHandler.getNextAccountId();
     for (const entity of entities) {
       const wallet = ethers.Wallet.createRandom();
       const connectedWallet = wallet.connect(ethers.provider);
@@ -1434,11 +1435,7 @@ async function populateVoucherContract(
           ];
           const sellerAllowList = [];
 
-          console.log(disputeResolver);
-          const nextAccountId = await accountHandler.getNextAccountId();
-          console.log("nextAccountId");
           disputeResolver.id = nextAccountId.toString();
-          console.log(disputeResolver);
 
           await accountHandler
             .connect(connectedWallet)
@@ -1459,7 +1456,7 @@ async function populateVoucherContract(
         }
         case entityType.SELLER: {
           const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address);
-          const id = seller.id;
+          const id = (seller.id = nextAccountId.toString());
           let authToken = mockAuthToken();
 
           // set unique new voucherInitValues
@@ -1489,10 +1486,13 @@ async function populateVoucherContract(
         case entityType.BUYER: {
           // no need to explicitly create buyer, since it's done automatically during commitToOffer
           const buyer = mockBuyer(wallet.address);
+          buyer.id = nextAccountId.toString();
           buyers.push({ wallet: connectedWallet, id: buyer.id, buyer });
           break;
         }
       }
+
+      nextAccountId++;
     }
   }
 
