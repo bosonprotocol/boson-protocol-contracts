@@ -46,17 +46,14 @@ function getGenericContext(
           protocolDiamondAddress,
           protocolContracts,
           mockContracts,
-          preUpgradeEntities,
-          // Meta transactions private state was changed on v2.2.0 and should be tested separately
-          newVersion == "v2.2.0-rc.1" ? ["metaTxPrivateContractState"] : []
+          preUpgradeEntities
         );
 
-        for (const facetState in protocolContractStateAfterUpgrade) {
-          // If new state doesn't exist means the state was changed and should be test on file version
-          if (!protocolContractStateAfterUpgrade[facetState]) {
-            delete protocolContractStateAfterUpgrade[facetState];
-            delete protocolContractState[facetState];
-          }
+        if (newVersion == "v2.2.0-rc.1") {
+          // Meta transactions private state was changed on v2.2.0 and should be tested separately
+          // We need to remove the old state from the protocol state
+          delete protocolContractStateAfterUpgrade.metaTxPrivateContractState;
+          delete protocolContractState.metaTxPrivateContractState;
         }
 
         // State before and after should be equal
@@ -81,8 +78,7 @@ function getGenericContext(
           protocolDiamondAddress,
           protocolContracts,
           mockContracts,
-          preUpgradeEntities,
-          newVersion == "v2.2.0-rc.1" ? ["metaTxPrivateContractState"] : []
+          preUpgradeEntities
         );
 
         // Counters are the only values that should be changed
@@ -140,12 +136,11 @@ function getGenericContext(
         delete protocolContractState.twinContractState.nextTwinId;
         delete protocolContractState.bundleContractState.nextBundleId;
 
-        for (const facetState in protocolContractStateAfterUpgradeAndActions) {
-          // If new state doesn't exist means the state was changed and should be test on file version
-          if (!protocolContractStateAfterUpgradeAndActions[facetState]) {
-            delete protocolContractStateAfterUpgradeAndActions[facetState];
-            delete protocolContractState[facetState];
-          }
+        if (newVersion == "v2.2.0-rc.1") {
+          // Meta transactions private state was changed on v2.2.0 and should be tested separately
+          // We need to remove the old state from the protocol state
+          delete protocolContractStateAfterUpgradeAndActions.metaTxPrivateContractState;
+          delete protocolContractState.metaTxPrivateContractState;
         }
 
         assert.deepEqual(

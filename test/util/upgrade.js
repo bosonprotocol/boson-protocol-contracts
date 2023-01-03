@@ -558,8 +558,7 @@ async function getProtocolContractState(
     configHandler,
   },
   { mockToken, mockTwinTokens },
-  { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins },
-  omitStates = []
+  { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins }
 ) {
   rando = (await ethers.getSigners())[10]; // random account making the calls
 
@@ -588,7 +587,7 @@ async function getProtocolContractState(
     getGroupContractState(groupHandler, groups),
     getTwinContractState(twinHandler, twins),
     getMetaTxContractState(),
-    !omitStates.includes("metaTxPrivateContractState") && getMetaTxPrivateContractState(protocolDiamondAddress),
+    getMetaTxPrivateContractState(protocolDiamondAddress),
     getProtocolStatusPrivateContractState(protocolDiamondAddress),
     getProtocolLookupsPrivateContractState(
       protocolDiamondAddress,
