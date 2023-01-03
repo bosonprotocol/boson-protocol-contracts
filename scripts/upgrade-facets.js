@@ -126,6 +126,52 @@ async function main(env, facetConfig) {
   const facetCutRemove = [];
   const interfacesToRemove = [],
     interfacesToAdd = [];
+  const removedSelectors = []; // global list of selectors to be removed
+
+  // Remove facets
+  for (const facetToRemove of facets.remove) {
+    // Get currently registered selectors
+    const oldFacet = contracts.find((i) => i.name === facetToRemove);
+
+    let registeredSelectors;
+    if (oldFacet) {
+      // Facet exists, so all selectors should be removed
+      registeredSelectors = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
+    } else {
+      // Facet does not exist, skip next steps
+      continue;
+    }
+
+    // Remove old entry from contracts
+    contracts = contracts.filter((i) => i.name !== facetToRemove);
+
+    // All selectors must be removed
+    let selectorsToRemove = registeredSelectors; // all selectors must be removed
+    removedSelectors.push(selectorsToRemove); // add to global list
+
+    // Removing the selectors
+    facetCutRemove.push([ethers.constants.AddressZero, FacetCutAction.Remove, selectorsToRemove]);
+
+    if (oldFacet) {
+      // Remove support for old interface
+      if (!oldFacet.interfaceId) {
+        console.log(
+          `Could not find interface id for old facet ${oldFacet.name}.\nYou might need to remove its interfaceId from "supportsInterface" manually.`
+        );
+      } else {
+        // Remove from smart contract
+        interfacesToRemove.push(oldFacet.interfaceId);
+
+        // Check if interface was shared across other facets and update contracts info
+        contracts = contracts.map((entry) => {
+          if (entry.interfaceId == oldFacet.interfaceId) {
+            entry.interfaceId = "";
+          }
+          return entry;
+        });
+      }
+    }
+  }
 
   // Manage new or upgraded facets
   for (const [index, newFacet] of deployedFacets.entries()) {
@@ -183,6 +229,8 @@ async function main(env, facetConfig) {
     // Check if selectors that are being added are not registered yet on some other facet
     // If collision is found, user must choose to either (s)kip it or (r)eplace it.
     for (const selectorToAdd of selectorsToAdd) {
+      if (removedSelectors.flat().includes(selectorToAdd)) continue; // skip if selector is already marked for removal from another facet
+
       const existingFacetAddress = await diamondLoupe.facetAddress(selectorToAdd);
       if (existingFacetAddress != ethers.constants.AddressZero) {
         // Selector exist on some other facet
@@ -238,49 +286,6 @@ async function main(env, facetConfig) {
       const support = await erc165.supportsInterface(newFacetInterfaceId);
       if (!support) {
         interfacesToAdd.push(newFacetInterfaceId);
-      }
-    }
-  }
-
-  for (const facetToRemove of facets.remove) {
-    // Get currently registered selectors
-    const oldFacet = contracts.find((i) => i.name === facetToRemove);
-
-    let registeredSelectors;
-    if (oldFacet) {
-      // Facet already exists and is only upgraded
-      registeredSelectors = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
-    } else {
-      // Facet does not exist, skip next steps
-      continue;
-    }
-
-    // Remove old entry from contracts
-    contracts = contracts.filter((i) => i.name !== facetToRemove);
-
-    // All selectors must be removed
-    let selectorsToRemove = registeredSelectors; // all selectors must be removed
-
-    // Removing the selectors
-    facetCutRemove.push([ethers.constants.AddressZero, FacetCutAction.Remove, selectorsToRemove]);
-
-    if (oldFacet) {
-      // Remove support for old interface
-      if (!oldFacet.interfaceId) {
-        console.log(
-          `Could not find interface id for old facet ${oldFacet.name}.\nYou might need to remove its interfaceId from "supportsInterface" manually.`
-        );
-      } else {
-        // Remove from smart contract
-        interfacesToRemove.push(oldFacet.interfaceId);
-
-        // Check if interface was shared across other facets and update contracts info
-        contracts = contracts.map((entry) => {
-          if (entry.interfaceId == oldFacet.interfaceId) {
-            entry.interfaceId = "";
-          }
-          return entry;
-        });
       }
     }
   }

@@ -2,7 +2,16 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { assert, expect } = require("chai");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
-const { mockDisputeResolver, mockTwin, mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
+const {
+  mockDisputeResolver,
+  mockTwin,
+  mockSeller,
+  mockAuthToken,
+  mockVoucherInitValues,
+  mockOffer,
+  mockCondition,
+} = require("../util/mock");
+const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   deploySuite,
   upgradeSuite,
@@ -115,7 +124,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
       // and those values are undefined if this is placed outside "before".
       // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
-      context.skip(
+      context(
         "Generic tests",
         getGenericContext(
           deployer,
@@ -150,7 +159,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   // Test actions that worked in previous version, but should not work anymore, or work differently
   // Test methods that were added to see that upgrade was succesful
   context("📋 Breaking changes, new methods and bug fixes", async function () {
-    context.skip("Breaking changes", async function () {
+    context("Breaking changes", async function () {
       it("DR can be activated on creation", async function () {
         // Get next account id
         const { nextAccountId } = protocolContractState.accountContractState;
@@ -271,7 +280,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     });
 
     context("New methods", async function () {
-      context.skip("📋 MetaTransactionsHandler", async function () {
+      context("📋 MetaTransactionsHandler", async function () {
         let functionList, functionHashList;
 
         beforeEach(async function () {
@@ -344,7 +353,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
       });
 
-      context.skip("📋 ProtocolInitializationHandlerFacet", async function () {
+      context("📋 ProtocolInitializationHandlerFacet", async function () {
         // To this test pass package.json version must be set to 2.2.0
         it("👉 getVersion()", async function () {
           const version = await protocolInitializationHandler.connect(rando).getVersion();
@@ -359,7 +368,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
       });
 
-      context.skip("📋 ConfigHandlerFacet", async function () {
+      context("📋 ConfigHandlerFacet", async function () {
         it("👉 setMaxPremintedVouchers()", async function () {
           // Set new value
           await expect(configHandler.connect(deployer).setMaxPremintedVouchers(100))
@@ -376,14 +385,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
       });
 
-      context.skip("📋 OrchestrationHandlerFacet", async function () {
+      context("📋 OrchestrationHandlerFacet", async function () {
         it("👉 raiseAndEscalateDispute()", async function () {
-          const { buyers, exchanges, offers } = preUpgradeEntities;
+          const { buyers, exchanges } = preUpgradeEntities;
           const exchangeId = "2";
           // exchangeId 2 = exchanges index 1
           const exchange = exchanges[exchangeId - 1];
           const buyer = buyers[exchange.buyerIndex];
-          const offer = offers.find((o) => o.offer.id === exchange.offerId);
 
           const {
             configContractState: { buyerEscalationDepositPercentage },
@@ -392,14 +400,596 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // DRFee is 0 because protocol doesn't support DRFee yet
           const buyerEscalationDepositNative = applyPercentage("0", buyerEscalationDepositPercentage.toString());
 
-          const result = await orchestrationHandler
-            .connect(buyer.wallet)
-            .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative });
-
           // Raise and Escalate a dispute, testing for the event
-          await expect(result)
-            .to.emit(disputeHandler, "DisputeRaised")
-            .withArgs(exchangeId, buyer.id, offer.sellerId, buyer.wallet.address);
+          await expect(
+            orchestrationHandler
+              .connect(buyer.wallet)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.emit(disputeHandler, "DisputeRaised");
+        });
+
+        context("Standard offers", async function () {
+          context("Seller does not exist", async function () {
+            let seller, disputeResolverId, expectedCloneAddress;
+            let offer, offerDates, offerDurations, agentId;
+            let authToken, voucherInitValues;
+
+            beforeEach(async function () {
+              const {
+                sellers,
+                DRs: [, disputeResolver], // take DR that has empty allow list
+              } = preUpgradeEntities;
+
+              seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+              disputeResolverId = disputeResolver.id;
+              expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, sellers.length + 1);
+
+              ({ offer, offerDates, offerDurations } = await mockOffer());
+              agentId = 0;
+
+              authToken = mockAuthToken();
+              voucherInitValues = mockVoucherInitValues();
+            });
+
+            it("👉 createSellerAndOffer", async function () {
+              // Create a seller and an offer, testing for the event
+              const tx = await orchestrationHandler
+                .connect(rando)
+                .createSellerAndOffer(
+                  seller,
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  disputeResolverId,
+                  authToken,
+                  voucherInitValues,
+                  agentId
+                );
+
+              // Check that all events are emitted
+              await expect(tx).to.emit(orchestrationHandler, "SellerCreated");
+              await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+
+              // Voucher clone contract
+              let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+              await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
+              await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
+
+              bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress); // Different ABI
+              await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
+            });
+
+            it("👉 createSellerAndOfferWithCondition", async function () {
+              const condition = mockCondition({
+                tokenAddress: rando.address,
+                tokenType: TokenType.MultiToken,
+                tokenId: "5150",
+              });
+              // Create a seller and an offer with condition, testing for the events
+              const tx = await orchestrationHandler
+                .connect(rando)
+                .createSellerAndOfferWithCondition(
+                  seller,
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  disputeResolverId,
+                  condition,
+                  authToken,
+                  voucherInitValues,
+                  agentId
+                );
+
+              // Check that all events are emitted
+              await expect(tx).to.emit(orchestrationHandler, "SellerCreated");
+              await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+              await expect(tx).to.emit(orchestrationHandler, "GroupCreated");
+
+              // Voucher clone contract
+              let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+              await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
+              await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
+
+              bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+              await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
+            });
+
+            context("With twins", async function () {
+              let bosonToken, twin;
+
+              beforeEach(async function () {
+                [bosonToken] = await deployMockTokens();
+                // Approving the twinHandler contract to transfer seller's tokens
+                await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler
+
+                twin = mockTwin(bosonToken.address);
+              });
+
+              it("👉 createSellerAndOfferAndTwinWithBundle", async function () {
+                // Create a seller, an offer with condition and a twin with bundle, testing for the events
+                const tx = await orchestrationHandler
+                  .connect(rando)
+                  .createSellerAndOfferAndTwinWithBundle(
+                    seller,
+                    offer,
+                    offerDates,
+                    offerDurations,
+                    disputeResolverId,
+                    twin,
+                    authToken,
+                    voucherInitValues,
+                    agentId
+                  );
+
+                // Check that all events are emitted
+                await expect(tx).to.emit(orchestrationHandler, "SellerCreated");
+                await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+                await expect(tx).to.emit(orchestrationHandler, "TwinCreated");
+                await expect(tx).to.emit(orchestrationHandler, "BundleCreated");
+
+                // Voucher clone contract
+                let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+                await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
+                await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
+
+                bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+                await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
+              });
+
+              it("👉 createSellerAndOfferWithConditionAndTwinAndBundle", async function () {
+                const condition = mockCondition({
+                  tokenAddress: rando.address,
+                  tokenType: TokenType.MultiToken,
+                  tokenId: "5150",
+                });
+
+                // Create a seller, an offer with condition, twin and bundle
+                const tx = await orchestrationHandler
+                  .connect(rando)
+                  .createSellerAndOfferWithConditionAndTwinAndBundle(
+                    seller,
+                    offer,
+                    offerDates,
+                    offerDurations,
+                    disputeResolverId,
+                    condition,
+                    twin,
+                    authToken,
+                    voucherInitValues,
+                    agentId
+                  );
+
+                // Check that all events are emitted
+                await expect(tx).to.emit(orchestrationHandler, "SellerCreated");
+                await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+                await expect(tx).to.emit(orchestrationHandler, "GroupCreated");
+                await expect(tx).to.emit(orchestrationHandler, "TwinCreated");
+                await expect(tx).to.emit(orchestrationHandler, "BundleCreated");
+
+                // Voucher clone contract
+                let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+                await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
+                await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
+
+                bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+                await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
+              });
+            });
+          });
+
+          context("Seller exists", async function () {
+            let offer, offerDates, offerDurations, agentId, disputeResolverId;
+
+            beforeEach(async function () {
+              const {
+                sellers: [seller],
+                DRs: [, disputeResolver], // take DR that has empty allow list
+              } = preUpgradeEntities;
+
+              ({ offer, offerDates, offerDurations } = await mockOffer());
+              agentId = 0;
+              disputeResolverId = disputeResolver.id;
+
+              operator = seller.wallet;
+            });
+
+            it("👉 createOfferWithCondition", async function () {
+              const condition = mockCondition({
+                tokenAddress: rando.address,
+                tokenType: TokenType.MultiToken,
+                tokenId: "5150",
+              });
+              // Create a seller and an offer with condition, testing for the events
+              const tx = await orchestrationHandler
+                .connect(operator)
+                .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition, agentId);
+
+              // Check that all events are emitted
+              await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+              await expect(tx).to.emit(orchestrationHandler, "GroupCreated");
+            });
+
+            it("👉 createOfferAddToGroup", async function () {
+              // Create an offer, add it to the group, testing for the events
+              const tx = await orchestrationHandler.connect(operator).createOfferAddToGroup(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                "1", // seller already has a group with id 1 (from populateProtocolContract)
+                agentId
+              );
+
+              // Check that all events are emitted
+              await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+              await expect(tx).to.emit(orchestrationHandler, "GroupUpdated");
+            });
+
+            context("With twins", async function () {
+              let bosonToken, twin;
+
+              beforeEach(async function () {
+                [bosonToken] = await deployMockTokens();
+                // Approving the twinHandler contract to transfer seller's tokens
+                await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
+                twin = mockTwin(bosonToken.address);
+              });
+
+              it("👉 createOfferAndTwinWithBundle", async function () {
+                // Create a seller, an offer with condition and a twin with bundle, testing for the events
+                const tx = await orchestrationHandler
+                  .connect(operator)
+                  .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin, agentId);
+
+                // // Check that all events are emitted
+                await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+                await expect(tx).to.emit(orchestrationHandler, "TwinCreated");
+                await expect(tx).to.emit(orchestrationHandler, "BundleCreated");
+              });
+
+              it("👉 createOfferWithConditionAndTwinAndBundle", async function () {
+                const condition = mockCondition({
+                  tokenAddress: rando.address,
+                  tokenType: TokenType.MultiToken,
+                  tokenId: "5150",
+                });
+
+                // Create a seller, an offer with condition, twin and bundle
+                const tx = await orchestrationHandler
+                  .connect(operator)
+                  .createOfferWithConditionAndTwinAndBundle(
+                    offer,
+                    offerDates,
+                    offerDurations,
+                    disputeResolverId,
+                    condition,
+                    twin,
+                    agentId
+                  );
+
+                // Check that all events are emitted
+                await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+                await expect(tx).to.emit(orchestrationHandler, "GroupCreated");
+                await expect(tx).to.emit(orchestrationHandler, "TwinCreated");
+                await expect(tx).to.emit(orchestrationHandler, "BundleCreated");
+              });
+            });
+          });
+        });
+
+        context("Preminted offers", async function () {
+          context("Seller does not exist", async function () {
+            let seller, disputeResolverId, expectedCloneAddress;
+            let offer, offerDates, offerDurations, reservedRangeLength, agentId;
+            let authToken, voucherInitValues;
+            beforeEach(async function () {
+              const {
+                sellers,
+                DRs: [, disputeResolver], // take DR that has empty allow list
+              } = preUpgradeEntities;
+
+              seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+              disputeResolverId = disputeResolver.id;
+              expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, sellers.length + 1);
+
+              ({ offer, offerDates, offerDurations } = await mockOffer());
+              reservedRangeLength = offer.quantityAvailable;
+              agentId = 0;
+
+              authToken = mockAuthToken();
+              voucherInitValues = mockVoucherInitValues();
+            });
+
+            it("👉 createSellerAndPremintedOffer", async function () {
+              // Create a seller and a preminted offer, testing for the event
+              const tx = await orchestrationHandler
+                .connect(rando)
+                .createSellerAndPremintedOffer(
+                  seller,
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  disputeResolverId,
+                  reservedRangeLength,
+                  authToken,
+                  voucherInitValues,
+                  agentId
+                );
+
+              // Check that all events are emitted
+              await expect(tx).to.emit(orchestrationHandler, "SellerCreated");
+              await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+              await expect(tx).to.emit(orchestrationHandler, "RangeReserved");
+
+              // Voucher clone contract
+              let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+              await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
+              await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
+              await expect(tx).to.emit(bosonVoucher, "RangeReserved");
+
+              bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress); // Different ABI
+              await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
+            });
+
+            it("👉 createSellerAndPremintedOfferWithCondition", async function () {
+              const condition = mockCondition({
+                tokenAddress: rando.address,
+                tokenType: TokenType.MultiToken,
+                tokenId: "5150",
+              });
+              // Create a seller and a preminted offer with condition, testing for the events
+              const tx = await orchestrationHandler
+                .connect(rando)
+                .createSellerAndPremintedOfferWithCondition(
+                  seller,
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  disputeResolverId,
+                  reservedRangeLength,
+                  condition,
+                  authToken,
+                  voucherInitValues,
+                  agentId
+                );
+
+              // Check that all events are emitted
+              await expect(tx).to.emit(orchestrationHandler, "SellerCreated");
+              await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+              await expect(tx).to.emit(orchestrationHandler, "RangeReserved");
+              await expect(tx).to.emit(orchestrationHandler, "GroupCreated");
+
+              // Voucher clone contract
+              let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+              await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
+              await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
+              await expect(tx).to.emit(bosonVoucher, "RangeReserved");
+
+              bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+              await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
+            });
+
+            context("With twins", async function () {
+              let bosonToken, twin;
+
+              beforeEach(async function () {
+                [bosonToken] = await deployMockTokens();
+                // Approving the twinHandler contract to transfer seller's tokens
+                await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler
+
+                twin = mockTwin(bosonToken.address);
+              });
+
+              it("👉 createSellerAndPremintedOfferAndTwinWithBundle", async function () {
+                // Create a seller, a preminted offer with condition and a twin with bundle, testing for the events
+                const tx = await orchestrationHandler
+                  .connect(rando)
+                  .createSellerAndPremintedOfferAndTwinWithBundle(
+                    seller,
+                    offer,
+                    offerDates,
+                    offerDurations,
+                    disputeResolverId,
+                    reservedRangeLength,
+                    twin,
+                    authToken,
+                    voucherInitValues,
+                    agentId
+                  );
+
+                // Check that all events are emitted
+                await expect(tx).to.emit(orchestrationHandler, "SellerCreated");
+                await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+                await expect(tx).to.emit(orchestrationHandler, "RangeReserved");
+                await expect(tx).to.emit(orchestrationHandler, "TwinCreated");
+                await expect(tx).to.emit(orchestrationHandler, "BundleCreated");
+
+                // Voucher clone contract
+                let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+                await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
+                await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
+                await expect(tx).to.emit(bosonVoucher, "RangeReserved");
+
+                bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+                await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
+              });
+
+              it("👉 createSellerAndPremintedOfferWithConditionAndTwinAndBundle", async function () {
+                const condition = mockCondition({
+                  tokenAddress: rando.address,
+                  tokenType: TokenType.MultiToken,
+                  tokenId: "5150",
+                });
+
+                // Create a seller, a preminted offer with condition, twin and bundle
+                const tx = await orchestrationHandler
+                  .connect(rando)
+                  .createSellerAndPremintedOfferWithConditionAndTwinAndBundle(
+                    seller,
+                    offer,
+                    offerDates,
+                    offerDurations,
+                    disputeResolverId,
+                    reservedRangeLength,
+                    condition,
+                    twin,
+                    authToken,
+                    voucherInitValues,
+                    agentId
+                  );
+
+                // Check that all events are emitted
+                await expect(tx).to.emit(orchestrationHandler, "SellerCreated");
+                await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+                await expect(tx).to.emit(orchestrationHandler, "RangeReserved");
+                await expect(tx).to.emit(orchestrationHandler, "GroupCreated");
+                await expect(tx).to.emit(orchestrationHandler, "TwinCreated");
+                await expect(tx).to.emit(orchestrationHandler, "BundleCreated");
+
+                // Voucher clone contract
+                let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+                await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
+                await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
+                await expect(tx).to.emit(bosonVoucher, "RangeReserved");
+
+                bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+                await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
+              });
+            });
+          });
+
+          context("Seller exists", async function () {
+            let offer, offerDates, offerDurations, reservedRangeLength, agentId, disputeResolverId;
+            let bosonVoucher;
+
+            beforeEach(async function () {
+              const {
+                sellers: [seller],
+                DRs: [, disputeResolver], // take DR that has empty allow list
+              } = preUpgradeEntities;
+
+              ({ offer, offerDates, offerDurations } = await mockOffer());
+              reservedRangeLength = offer.quantityAvailable;
+              agentId = 0;
+              disputeResolverId = disputeResolver.id;
+
+              operator = seller.wallet;
+
+              // Voucher clone contract
+              const expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
+              bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+            });
+
+            it("👉 createPremintedOfferWithCondition", async function () {
+              const condition = mockCondition({
+                tokenAddress: rando.address,
+                tokenType: TokenType.MultiToken,
+                tokenId: "5150",
+              });
+              // Create a seller and a preminted offer with condition, testing for the events
+              const tx = await orchestrationHandler
+                .connect(operator)
+                .createPremintedOfferWithCondition(
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  disputeResolverId,
+                  reservedRangeLength,
+                  condition,
+                  agentId
+                );
+
+              // Check that all events are emitted
+              await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+              await expect(tx).to.emit(orchestrationHandler, "RangeReserved");
+              await expect(tx).to.emit(orchestrationHandler, "GroupCreated");
+              await expect(tx).to.emit(bosonVoucher, "RangeReserved");
+            });
+
+            it("👉 createPremintedOfferAddToGroup", async function () {
+              // Create a preminted offer, add it to the group, testing for the events
+              const tx = await orchestrationHandler.connect(operator).createPremintedOfferAddToGroup(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                reservedRangeLength,
+                "1", // seller already has a group with id 1 (from populateProtocolContract)
+                agentId
+              );
+
+              // Check that all events are emitted
+              await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+              await expect(tx).to.emit(orchestrationHandler, "RangeReserved");
+              await expect(tx).to.emit(orchestrationHandler, "GroupUpdated");
+              await expect(tx).to.emit(bosonVoucher, "RangeReserved");
+            });
+
+            context("With twins", async function () {
+              let bosonToken, twin;
+
+              beforeEach(async function () {
+                [bosonToken] = await deployMockTokens();
+                // Approving the twinHandler contract to transfer seller's tokens
+                await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
+                twin = mockTwin(bosonToken.address);
+              });
+
+              it("👉 createPremintedOfferAndTwinWithBundle", async function () {
+                // Create a seller, a preminted offer with condition and a twin with bundle, testing for the events
+                const tx = await orchestrationHandler
+                  .connect(operator)
+                  .createPremintedOfferAndTwinWithBundle(
+                    offer,
+                    offerDates,
+                    offerDurations,
+                    disputeResolverId,
+                    reservedRangeLength,
+                    twin,
+                    agentId
+                  );
+
+                // // Check that all events are emitted
+                await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+                await expect(tx).to.emit(orchestrationHandler, "RangeReserved");
+                await expect(tx).to.emit(orchestrationHandler, "TwinCreated");
+                await expect(tx).to.emit(orchestrationHandler, "BundleCreated");
+                await expect(tx).to.emit(bosonVoucher, "RangeReserved");
+              });
+
+              it("👉 createPremintedOfferWithConditionAndTwinAndBundle", async function () {
+                const condition = mockCondition({
+                  tokenAddress: rando.address,
+                  tokenType: TokenType.MultiToken,
+                  tokenId: "5150",
+                });
+
+                // Create a seller, a preminted offer with condition, twin and bundle
+                const tx = await orchestrationHandler
+                  .connect(operator)
+                  .createPremintedOfferWithConditionAndTwinAndBundle(
+                    offer,
+                    offerDates,
+                    offerDurations,
+                    disputeResolverId,
+                    reservedRangeLength,
+                    condition,
+                    twin,
+                    agentId
+                  );
+
+                // Check that all events are emitted
+                await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+                await expect(tx).to.emit(orchestrationHandler, "RangeReserved");
+                await expect(tx).to.emit(orchestrationHandler, "GroupCreated");
+                await expect(tx).to.emit(orchestrationHandler, "TwinCreated");
+                await expect(tx).to.emit(orchestrationHandler, "BundleCreated");
+                await expect(tx).to.emit(bosonVoucher, "RangeReserved");
+              });
+            });
+          });
         });
       });
 
@@ -455,7 +1045,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       });
     });
 
-    context.skip("Bug fixes", async function () {
+    context("Bug fixes", async function () {
       it("Should ignore twin id set by seller and use nextAccountId on twin creation", async function () {});
       // Get next twin id
       const { nextTwinId } = protocolContractState.twinContractState;
