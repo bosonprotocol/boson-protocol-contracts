@@ -158,7 +158,7 @@ async function main(env, facetConfig) {
   // LENS
   transactionResponse = await bosonConfigHandler.setAuthTokenContract(
     AuthTokenType.Lens,
-    authTokenContracts.lensAddress,
+    process.env.LENS_ADDRESS || authTokenContracts.lensAddress,
     await getFees(maxPriorityFeePerGas)
   );
   await transactionResponse.wait(confirmations);
@@ -168,7 +168,7 @@ async function main(env, facetConfig) {
   if (!(network === "polygon" || network === "mumbai")) {
     transactionResponse = await bosonConfigHandler.setAuthTokenContract(
       AuthTokenType.ENS,
-      authTokenContracts.ensAddress,
+      process.env.ENS_ADDRESS || authTokenContracts.ensAddress,
       await getFees(maxPriorityFeePerGas)
     );
     await transactionResponse.wait(confirmations);
