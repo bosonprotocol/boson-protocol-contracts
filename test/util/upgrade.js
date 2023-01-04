@@ -36,6 +36,7 @@ const { getFacets } = require("../upgrade/00_config");
 // Common vars
 const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
 let rando;
+let preUpgradeInterfaceIds;
 
 // deploy suite and return deployed contracts
 async function deploySuite(deployer, tag, scriptsTag) {
@@ -994,10 +995,13 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
   const reentrancyStatus = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber.add("1"));
 
   // initializedInterfaces
-  const interfaceIds = await getInterfaceIds();
+  if (!preUpgradeInterfaceIds) {
+    // Only interfaces registered before upgrade are relevant for tests, so we load them only once
+    preUpgradeInterfaceIds = await getInterfaceIds();
+  }
 
   const initializedInterfacesState = [];
-  for (const interfaceId of Object.values(interfaceIds)) {
+  for (const interfaceId of Object.values(preUpgradeInterfaceIds)) {
     const storageSlot = getMappingStoragePosition(
       protocolStatusStorageSlotNumber.add("2"),
       interfaceId,

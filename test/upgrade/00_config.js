@@ -53,6 +53,7 @@ async function getFacets() {
         remove: ["OrchestrationHandlerFacet"],
         skipSelectors: {},
         facetsToInit: {
+          OrchestrationHandlerFacet1: [], // init only OrchestrationHandlerFacet1, OrchestrationHandlerFacet2 is no-op
           MetaTransactionsHandlerFacet: [
             [
               "0xaaea2fdc2fe9e42a5c77e98666352fc2dbf7b32b9cbf91944089d3602b1a941d",
