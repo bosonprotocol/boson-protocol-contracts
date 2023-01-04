@@ -90,8 +90,8 @@ async function deployAndMintMockNFTAuthTokens() {
     ensTokenId++;
   }
   return {
-    addresses: [lensTokenContract.address, ensTokenContract.address]
-  }
+    addresses: [lensTokenContract.address, ensTokenContract.address],
+  };
 }
 
 exports.deployMockTokens = deployMockTokens;
