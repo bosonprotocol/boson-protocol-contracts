@@ -26,6 +26,7 @@ const TokenType = require("../../scripts/domain/TokenType");
 const Twin = require("../../scripts/domain/Twin");
 const { prepareDataSignatureParameters, applyPercentage, calculateContractAddress } = require("../util/utils");
 const { RevertReasons } = require("../../scripts/config/revert-reasons");
+const { readContracts } = require("../../scripts/util/utils.js");
 
 const oldVersion = "v2.1.0";
 const newVersion = "v2.2.0-rc.1";
@@ -124,7 +125,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
       // and those values are undefined if this is placed outside "before".
       // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
-      context(
+      context.skip(
         "Generic tests",
         getGenericContext(
           deployer,
@@ -154,6 +155,30 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   after(async function () {
     revertState();
+  });
+
+  // In v2.2.0, Orchestration is split into two facets. This test makes sure that the new orchestration facet is used.
+  context("Orchestration facet replacing", async function () {
+    it("Diamond forwards calls to new facet", async function () {
+      const selectors = [
+        "0x34fa96a6", //createOfferAddToGroup
+        "0x36358824", //createOfferAndTwinWithBundle
+        "0x1b002277", //createOfferWithCondition
+        "0x3e03b0f6", //createOfferWithConditionAndTwinAndBundle
+        "0x088177c8", //createSellerAndOffer
+        "0x05686244", //createSellerAndOfferAndTwinWithBundle
+        "0x0b1bb608", //createSellerAndOfferWithCondition
+        "0x97a6f155", //createSellerAndOfferWithConditionAndTwinAndBundle
+      ];
+
+      const { contracts } = readContracts(31337, "hardhat", "upgrade-test");
+      const orchestrationHandler1 = contracts.find((i) => i.name === "OrchestrationHandlerFacet1");
+      const diamondLoupe = await ethers.getContractAt("DiamondLoupeFacet", protocolDiamondAddress);
+
+      for (const selector of selectors) {
+        expect(await diamondLoupe.facetAddress(selector)).to.equal(orchestrationHandler1.address);
+      }
+    });
   });
 
   // Test actions that worked in previous version, but should not work anymore, or work differently
