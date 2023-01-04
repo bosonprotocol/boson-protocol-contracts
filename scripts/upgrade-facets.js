@@ -196,24 +196,11 @@ async function main(env, facetConfig) {
     const selectors = getSelectors(newFacet.contract, true);
     let newSelectors = selectors.selectors;
 
-    if (newFacet.name !== "ProtocolInitializationHandlerFacet") {
-      // Initialization data for facets with no-arg initializers
-      const noArgInitFunction = "initialize()";
-      const noArgInitInterface = new ethers.utils.Interface([`function ${noArgInitFunction}`]);
-      const noArgCallData = noArgInitInterface.encodeFunctionData("initialize");
-
-      try {
-        // Slice to get function selector (first 4 bytes)
-        newSelectors = selectors.selectors.remove([newFacet.initialize?.slice(0, 10) || noArgCallData]);
-      } catch {
-        // @TODO handle when facet has no initialize function or initialize has parameters (e.g ConfigHandlerFacet)
-      }
-    } else {
-      const signature = newFacet.contract.interface.getSighash(
-        "initialize(bytes32,address[],bytes[],bool,bytes,bytes4[],bytes4[])"
-      );
-      newSelectors = selectors.selectors.remove([signature]);
-    }
+    // Initialize selectors should not be added
+    const facetFactory = await ethers.getContractFactory(newFacet.name);
+    const functionFragment = facetFactory.interface.getFunction("initialize");
+    const signature = facetFactory.interface.getSighash(functionFragment);
+    newSelectors = selectors.selectors.remove([signature]);
 
     // Determine actions to be made
     let selectorsToReplace = registeredSelectors.filter((value) => newSelectors.includes(value)); // intersection of old and new selectors
