@@ -46,7 +46,7 @@ async function main(env, facetConfig) {
   const chainId = (await ethers.provider.getNetwork()).chainId;
   const contractsFile = readContracts(chainId, network, env);
   let contracts = contractsFile.contracts;
-  const interfaceIds = await getInterfaceIds();
+  const interfaceIds = await getInterfaceIds(false);
   const interfaceIdFromFacetName = (facetName) => interfaceIds[interfaceImplementers[facetName]];
 
   const divider = "-".repeat(80);
@@ -124,8 +124,8 @@ async function main(env, facetConfig) {
   const diamondLoupe = await ethers.getContractAt("DiamondLoupeFacet", protocolAddress);
 
   const facetCutRemove = [];
-  const interfacesToRemove = [],
-    interfacesToAdd = [];
+  const interfacesToRemove = {},
+    interfacesToAdd = {};
   const removedSelectors = []; // global list of selectors to be removed
 
   // Remove facets
@@ -160,7 +160,7 @@ async function main(env, facetConfig) {
         );
       } else {
         // Remove from smart contract
-        interfacesToRemove.push(oldFacet.interfaceId);
+        interfacesToRemove[facetToRemove] = oldFacet.interfaceId;
 
         // Check if interface was shared across other facets and update contracts info
         contracts = contracts.map((entry) => {
@@ -271,7 +271,7 @@ async function main(env, facetConfig) {
           continue;
         }
 
-        interfacesToRemove.push(oldFacet.interfaceId);
+        interfacesToRemove[oldFacet.name] = oldFacet.interfaceId;
 
         // Check if interface was shared across other facets and update contracts info
         contracts = contracts.map((entry) => {
@@ -285,7 +285,7 @@ async function main(env, facetConfig) {
       const erc165 = await ethers.getContractAt("IERC165", protocolAddress);
       const support = await erc165.supportsInterface(newFacetInterfaceId);
       if (!support) {
-        interfacesToAdd.push(newFacetInterfaceId);
+        interfacesToAdd[oldFacet.name] = newFacetInterfaceId;
       }
     }
   }
@@ -299,8 +299,8 @@ async function main(env, facetConfig) {
     true,
     facets.initializationData ?? "0x",
     protocolInitializationFacet,
-    interfacesToRemove,
-    interfacesToAdd
+    Object.values(interfacesToRemove),
+    Object.values(interfacesToAdd)
   );
 
   await cutDiamond(
@@ -328,8 +328,18 @@ async function main(env, facetConfig) {
 
   console.log(`\n💀 Removed facets:\n\t${facets.remove.join("\n\t")}`);
 
-  interfacesToAdd.length && console.log(`📋 Added interfaces:\n\t${interfacesToAdd.join("\n\t")}`);
-  interfacesToRemove.length && console.log(`💀 Removed interfaces:\n\t${interfacesToRemove.join("\n\t")}`);
+  Object.keys(interfacesToAdd).length &&
+    console.log(
+      `📋 Added interfaces:\n\t${Object.entries(interfacesToAdd)
+        .map((v) => `${v[1]} (${v[0]})`)
+        .join("\n\t")}`
+    );
+  Object.keys(interfacesToRemove).length &&
+    console.log(
+      `💀 Removed interfaces:\n\t${Object.entries(interfacesToRemove)
+        .map((v) => `${v[1]} (${v[0]})`)
+        .join("\n\t")}`
+    );
 
   console.log(divider);
 
