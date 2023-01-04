@@ -27,6 +27,7 @@ const Twin = require("../../scripts/domain/Twin");
 const { prepareDataSignatureParameters, applyPercentage, calculateContractAddress } = require("../util/utils");
 const { RevertReasons } = require("../../scripts/config/revert-reasons");
 const { readContracts } = require("../../scripts/util/utils.js");
+const { VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
 
 const oldVersion = "v2.1.0";
 const newVersion = "v2.2.0-rc.1";
@@ -125,7 +126,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
       // and those values are undefined if this is placed outside "before".
       // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
-      context.skip(
+      context(
         "Generic tests",
         getGenericContext(
           deployer,
@@ -203,6 +204,29 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         let [, DRCreated] = await accountHandler.getDisputeResolver(DR.id);
         DRCreated = DisputeResolver.fromStruct(DRCreated);
         expect(DRCreated).to.deep.equal(DR);
+      });
+
+      it("New voucher contract gets new name and symbol", async function () {
+        const { sellers } = preUpgradeEntities;
+        const { nextAccountId } = protocolContractState.accountContractState;
+
+        // Create seller
+        const seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
+        await accountHandler.connect(operator).createSeller(seller, mockAuthToken(), mockVoucherInitValues());
+
+        // Voucher contract
+        const expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, sellers.length + 1);
+        const bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+        // Validate voucher name and symbol
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " " + nextAccountId.toString(),
+          "Wrong voucher client name"
+        );
+        expect(await bosonVoucher.symbol()).to.equal(
+          VOUCHER_SYMBOL + "_" + nextAccountId.toString(),
+          "Wrong voucher client symbol"
+        );
       });
 
       context("MetaTransactionsHandler", async function () {
