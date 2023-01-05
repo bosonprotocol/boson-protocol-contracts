@@ -707,18 +707,18 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
                     if (start > _tokenId) {
                         // Split low and search again if target too high
                         high = mid;
-                    } else if (start + range.minted - 1 >= _tokenId) {
-                        // Is token in target's minted range?
-
-                        // It is committable if it has not been burned
-                        if (_tokenId > range.lastBurnedTokenId) {
-                            committable = true;
-                            offerId = currentOfferId;
-                        }
-                        break; // Found!
                     } else if (start + range.length - 1 >= _tokenId) {
-                        // No? Ok, is it in target's reserved range?
-                        committable = false;
+                        // Is token in target's reserved range?
+
+                        if (start + range.minted - 1 >= _tokenId) {
+                            // Has it been pre-minted?
+
+                            // It is committable if it has not been burned
+                            if (_tokenId > range.lastBurnedTokenId) {
+                                committable = true;
+                                offerId = currentOfferId;
+                            }
+                        }
                         break; // Found!
                     } else {
                         // No? It may be in a higher range
