@@ -34,7 +34,10 @@ const AuthTokenType = require("../scripts/domain/AuthTokenType");
  * @returns {lensAddress: string, ensAddress: string}
  */
 function getAuthTokenContracts() {
-  return { lensAddress: authTokenAddresses.LENS[network], ensAddress: authTokenAddresses.ENS[network] };
+  return {
+    lensAddress: process.env.LENS_ADDRESS || authTokenAddresses.LENS[network],
+    ensAddress: process.env.ENS_ADDRESS || authTokenAddresses.ENS[network],
+  };
 }
 
 async function main(env, facetConfig) {
@@ -158,7 +161,7 @@ async function main(env, facetConfig) {
   // LENS
   transactionResponse = await bosonConfigHandler.setAuthTokenContract(
     AuthTokenType.Lens,
-    process.env.LENS_ADDRESS || authTokenContracts.lensAddress,
+    authTokenContracts.lensAddress,
     await getFees(maxPriorityFeePerGas)
   );
   await transactionResponse.wait(confirmations);
@@ -168,7 +171,7 @@ async function main(env, facetConfig) {
   if (!(network === "polygon" || network === "mumbai")) {
     transactionResponse = await bosonConfigHandler.setAuthTokenContract(
       AuthTokenType.ENS,
-      process.env.ENS_ADDRESS || authTokenContracts.ensAddress,
+      authTokenContracts.ensAddress,
       await getFees(maxPriorityFeePerGas)
     );
     await transactionResponse.wait(confirmations);
