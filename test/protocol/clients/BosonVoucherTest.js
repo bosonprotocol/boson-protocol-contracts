@@ -251,7 +251,7 @@ describe("IBosonVoucher", function () {
       startId = "10";
       length = "123";
 
-      range = new Range(offerId, startId, length, "0", "0");
+      range = new Range(startId, length, "0", "0");
     });
 
     it("Should emit event RangeReserved", async function () {
@@ -561,7 +561,7 @@ describe("IBosonVoucher", function () {
       assert.equal(availablePremints.toNumber(), 0, "Available Premints mismatch");
 
       // Last burned id should be updated
-      const range = new Range(offerId, startId, length, amount, `${Number(startId) + Number(amount) - 1}`);
+      const range = new Range(startId, length, amount, `${Number(startId) + Number(amount) - 1}`);
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
     });
@@ -574,7 +574,7 @@ describe("IBosonVoucher", function () {
       assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
 
       // Last burned id should be updated
-      const range = new Range(offerId, startId, length, amount, `${Number(startId) + Number(amount) - 1}`);
+      const range = new Range(startId, length, amount, `${Number(startId) + Number(amount) - 1}`);
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
 
@@ -608,7 +608,7 @@ describe("IBosonVoucher", function () {
       assert.equal((await tx.wait()).events.length, Number(maxPremintedVouchers), "Wrong number of events emitted");
 
       // Last burned id should be updated
-      let range = new Range(offerId, startId, length, amount, `${Number(startId) + Number(maxPremintedVouchers) - 1}`);
+      let range = new Range(startId, length, amount, `${Number(startId) + Number(maxPremintedVouchers) - 1}`);
       let returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
 
@@ -623,7 +623,7 @@ describe("IBosonVoucher", function () {
       );
 
       // Last burned id should be updated
-      range = new Range(offerId, startId, length, amount, `${Number(startId) + Number(amount) - 1}`);
+      range = new Range(startId, length, amount, `${Number(startId) + Number(amount) - 1}`);
       returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
 
@@ -677,7 +677,7 @@ describe("IBosonVoucher", function () {
       }
 
       // Last burned id should be updated
-      const range = new Range(offerId, startId, length, amount, `${Number(startId) + Number(amount) - 1}`);
+      const range = new Range(startId, length, amount, `${Number(startId) + Number(amount) - 1}`);
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
     });
@@ -857,7 +857,7 @@ describe("IBosonVoucher", function () {
       startId = "10";
       length = "1000";
 
-      range = new Range(offerId, startId, length, "0", "0");
+      range = new Range(startId, length, "0", "0");
 
       await bosonVoucher.connect(protocol).reserveRange(offerId, startId, length);
 
@@ -889,7 +889,7 @@ describe("IBosonVoucher", function () {
     it("Get empty range if offer has no reserved ranges", async function () {
       // Set invalid offer and empty range
       offerId = "20";
-      range = new Range("0", "0", "0", "0", "0");
+      range = new Range("0", "0", "0", "0");
 
       // Get range object from contract
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
@@ -997,7 +997,7 @@ describe("IBosonVoucher", function () {
         await configHandler.connect(deployer).setMaxPremintedVouchers("10000");
         let previousOfferId = Number(offerId);
         let previousStartId = Number(startId);
-        let ranges = [new Range(offerId, Number(startId), length, amount, "0")];
+        let ranges = [new Range(Number(startId), length, amount, "0")];
         length = Number(length);
 
         for (let i = 0; i < 5; i++) {
@@ -1010,7 +1010,7 @@ describe("IBosonVoucher", function () {
           // amount to premint
           amount = length - i * 30;
           await bosonVoucher.connect(operator).preMint(offerId, amount);
-          ranges.push(new Range(offerId, startId, length, amount, "0"));
+          ranges.push(new Range(startId, length, amount, "0"));
 
           previousStartId = startId;
           previousOfferId = offerId;

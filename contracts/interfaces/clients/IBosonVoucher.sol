@@ -19,7 +19,6 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
 
     // Describe a reserved range of token ids
     struct Range {
-        uint256 offerId;
         uint256 start; // First token id of range
         uint256 length; // Length of range
         uint256 minted; // Amount pre-minted so far

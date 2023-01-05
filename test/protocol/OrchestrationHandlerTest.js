@@ -1232,7 +1232,7 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
         });
 
         it("should emit a SellerCreated, OfferCreated and RangeReserved events with auth token", async function () {
@@ -2630,7 +2630,7 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
@@ -3293,7 +3293,7 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
@@ -3949,7 +3949,7 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
@@ -4831,7 +4831,7 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
@@ -5523,7 +5523,7 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
         });
 
         it("should emit a SellerCreated, an OfferCreated, a GroupCreated and a RangeReserved event", async function () {
@@ -6273,7 +6273,7 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
         });
 
         it("should emit a SellerCreated, an OfferCreated, a TwinCreated, a BundleCreated and RangeReserved event", async function () {
@@ -7143,7 +7143,7 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
         });
 
         it("should emit a SellerCreated, an OfferCreated, a GroupCreated, a TwinCreated, a BundleCreated and a RangeReserved event", async function () {

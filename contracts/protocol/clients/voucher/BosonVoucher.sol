@@ -182,7 +182,6 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         require(range.length == 0, OFFER_RANGE_ALREADY_RESERVED);
 
         // Store the reserved range
-        range.offerId = _offerId;
         range.start = _start;
         range.length = _length;
         _rangeOfferIds.push(_offerId);
@@ -695,11 +694,12 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
                 uint256 high = length; // Upper bound of search
 
                 while (low < high) {
-                    // Calculate the current midpoint
+                    // Calculate the current midpoint and get the offer id
                     uint256 mid = (high + low) / 2;
+                    uint256 currentOfferId = _rangeOfferIds[mid];
 
                     // Get the range stored at the midpoint
-                    Range storage range = _rangeByOfferId[_rangeOfferIds[mid]];
+                    Range storage range = _rangeByOfferId[currentOfferId];
 
                     // Get the beginning of the range once for reference
                     uint256 start = range.start;
@@ -713,7 +713,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
                         // It is committable if it has not been burned
                         if (_tokenId > range.lastBurnedTokenId) {
                             committable = true;
-                            offerId = range.offerId;
+                            offerId = currentOfferId;
                         }
                         break; // Found!
                     } else if (start + range.length - 1 >= _tokenId) {

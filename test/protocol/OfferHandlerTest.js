@@ -1296,7 +1296,7 @@ describe("IBosonOfferHandler", function () {
         length = 100;
         firstTokenId = 1;
         lastTokenId = firstTokenId + length - 1;
-        range = new Range(id.toString(), firstTokenId.toString(), length.toString(), "0", "0");
+        range = new Range(firstTokenId.toString(), length.toString(), "0", "0");
       });
 
       it("should emit an RangeReserved event", async function () {
