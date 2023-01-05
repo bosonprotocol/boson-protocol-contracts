@@ -14,6 +14,8 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
  *
  */
 contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandler, ProtocolBase {
+    address private thisAddress; // used to prevent invocation of initialize directly on deployed contract. Variable is not used by the protocol.
+
     /**
      * @notice Modifier to protect initializer function from being invoked twice for a given version.
      */
@@ -22,6 +24,15 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         require(!ps.initializedVersions[_version], ALREADY_INITIALIZED);
         ps.initializedVersions[_version] = true;
         _;
+    }
+
+    /**
+     * @notice Constructor
+     *
+     * @dev This constructor is used to prevent invocation of initialize directly on deployed contract.
+     */
+    constructor() {
+        thisAddress = address(this);
     }
 
     /**
@@ -46,6 +57,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         bytes4[] calldata _interfacesToRemove,
         bytes4[] calldata _interfacesToAdd
     ) external onlyUninitializedVersion(_version) {
+        require(address(this) != thisAddress, DIRECT_INITIALIZATION_NOT_ALLOWED);
         require(_version != bytes32(0), VERSION_MUST_BE_SET);
         require(_addresses.length == _calldata.length, ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH);
 

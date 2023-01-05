@@ -27,6 +27,7 @@ exports.RevertReasons = {
   VERSION_MUST_BE_SET: "Version cannot be empty",
   ADDRESSES_AND_CALLDATA_MUST_BE_SAME_LENGTH: "Addresses and calldata must be same length",
   WRONG_CURRENT_VERSION: "Wrong current protocol version",
+  DIRECT_INITIALIZATION_NOT_ALLOWED: "Direct initializtion is not allowed",
 
   // Offer related
   NOT_OPERATOR: "Not seller's operator",
