@@ -637,17 +637,16 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         // Only when transferring, not minting or burning
         if (_from == owner()) {
             if (_premintStatus.committable) {
+                // Store offerId so _premintStatus can be deleted before making an external call
+                uint256 offerId = _premintStatus.offerId;
+                delete _premintStatus;
+
                 // Set the preminted token as committed
                 _committed[_tokenId] = true;
 
                 // If this is a transfer of preminted token, treat it differently
                 address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-                IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(
-                    payable(_to),
-                    _premintStatus.offerId,
-                    _tokenId
-                );
-                delete _premintStatus;
+                IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(payable(_to), offerId, _tokenId);
             } else {
                 // Already committed, treat as a normal transfer
                 onVoucherTransferred(_tokenId, payable(_to));
