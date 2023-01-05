@@ -66,7 +66,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     // Premint status, used only temporarly in transfers
     PremintStatus private _premintStatus;
 
-    // Tell is preminted voucher has already been _committed
+    // Tell if preminted voucher has already been _committed
     mapping(uint256 => bool) private _committed;
 
     /**
