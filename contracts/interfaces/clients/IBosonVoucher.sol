@@ -120,6 +120,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      *
      * Reverts if:
      * - Start id is not greater than zero
+     * - Length is too large, i.e., would cause an overflow
      * - Offer id is already associated with a range
      *
      * @param _offerId - the id of the offer

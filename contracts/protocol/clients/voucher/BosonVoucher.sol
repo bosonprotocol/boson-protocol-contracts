@@ -143,6 +143,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      *
      * Reverts if:
      * - Start id is not greater than zero
+     * - Length is too large, i.e., would cause an overflow
      * - Offer id is already associated with a range
      *
      * @param _offerId - the id of the offer
@@ -156,6 +157,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     ) external onlyRole(PROTOCOL) {
         // Make sure range start is valid
         require(_start > 0, INVALID_RANGE_START);
+        require(_start <= type(uint256).max - _length, INVALID_RANGE_LENGTH);
 
         // Get storage slot for the range
         Range storage range = _rangeByOfferId[_offerId];
