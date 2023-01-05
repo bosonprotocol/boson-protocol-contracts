@@ -386,7 +386,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
             // If _tokenId exists, it does not matter if vouchers were preminted or not
             return super.ownerOf(_tokenId);
         } else {
-            // If _tokenId does not exist, but offer is commitable, report contract owner as token owner
+            // If _tokenId does not exist, but offer is committable, report contract owner as token owner
             (bool committable, ) = getPreMintStatus(_tokenId);
             if (committable) return super.owner();
 
@@ -651,7 +651,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         uint256 _tokenId
     ) internal override {
         if (_premintStatus.committable) {
-            // If is commitable, invke commitToPreMintedOffer on the protocol
+            // If is committable, invoke commitToPreMintedOffer on the protocol
 
             // Store offerId so _premintStatus can be deleted before making an external call
             uint256 offerId = _premintStatus.offerId;
@@ -710,14 +710,10 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
                     } else if (start + range.length - 1 >= _tokenId) {
                         // Is token in target's reserved range?
 
-                        if (start + range.minted - 1 >= _tokenId) {
-                            // Has it been pre-minted?
-
-                            // It is committable if it has not been burned
-                            if (_tokenId > range.lastBurnedTokenId) {
-                                committable = true;
-                                offerId = currentOfferId;
-                            }
+                        if (start + range.minted - 1 >= _tokenId && _tokenId > range.lastBurnedTokenId) {
+                            // Has it been pre-minted and not burned yet?
+                            committable = true;
+                            offerId = currentOfferId;
                         }
                         break; // Found!
                     } else {
