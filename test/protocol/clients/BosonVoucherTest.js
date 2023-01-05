@@ -305,7 +305,7 @@ describe("IBosonVoucher", function () {
         );
       });
 
-      it("Start id is not greater than zero for the first range", async function () {
+      it("Start id is not greater than the end id of the previous range for subsequent ranges", async function () {
         // Reserver a range
         await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
 
@@ -342,6 +342,8 @@ describe("IBosonVoucher", function () {
       it("Offer id is already associated with a range", async function () {
         // Reserve range for an offer
         await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
+
+        start = Number(start) + Number(length) + 1;
 
         // Try to reserve range for the same offer, it should fail
         await expect(bosonVoucher.connect(protocol).reserveRange(offerId, start, length)).to.be.revertedWith(

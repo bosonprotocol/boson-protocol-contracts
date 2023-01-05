@@ -131,7 +131,7 @@ exports.RevertReasons = {
   EXCHANGE_ID_IN_RESERVED_RANGE: "Exchange id falls within a pre-minted offer's range",
   NO_RESERVED_RANGE_FOR_OFFER: "Offer id not associated with a reserved range",
   OFFER_RANGE_ALREADY_RESERVED: "Offer id already associated with a reserved range",
-  INVALID_RANGE_START: "Range start must be greater than zero",
+  INVALID_RANGE_START: "Range start too low",
   INVALID_AMOUNT_TO_MINT: "Amount to mint is greater than remaining un-minted in range",
   NO_SILENT_MINT_ALLOWED: "Only owner's mappings can be updated without event",
   TOO_MANY_TO_MINT: "Exceeded maximum amount to mint in a single transaction",
