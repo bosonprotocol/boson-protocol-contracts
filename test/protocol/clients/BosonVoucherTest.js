@@ -295,9 +295,22 @@ describe("IBosonVoucher", function () {
         );
       });
 
-      it("Start id is not greater than zero", async function () {
+      it("Start id is not greater than zero for the first range", async function () {
         // Set start id to 0
         startId = 0;
+
+        // Try to reserve range, it should fail
+        await expect(bosonVoucher.connect(protocol).reserveRange(offerId, startId, length)).to.be.revertedWith(
+          RevertReasons.INVALID_RANGE_START
+        );
+      });
+
+      it("Start id is not greater than zero for the first range", async function () {
+        // Reserver a range
+        await bosonVoucher.connect(protocol).reserveRange(offerId, startId, length);
+
+        // Set start id to 0
+        startId = Number(startId) + Number(length) - 1;
 
         // Try to reserve range, it should fail
         await expect(bosonVoucher.connect(protocol).reserveRange(offerId, startId, length)).to.be.revertedWith(

@@ -142,7 +142,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * Caller must have PROTOCOL role.
      *
      * Reverts if:
-     * - Start id is not greater than zero
+     * - Start id is not greater than zero for the first range
+     * - Start id is not greater than the end id of the previous range for subsequent ranges
      * - Range length is zero
      * - Range length is too large, i.e., would cause an overflow
      * - Offer id is already associated with a range
@@ -156,14 +157,23 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         uint256 _start,
         uint256 _length
     ) external onlyRole(PROTOCOL) {
-        // Make sure range start is valid
-        require(_start > 0, INVALID_RANGE_START);
-
         // Prevent reservation of an empty range
         require(_length > 0, INVALID_RANGE_LENGTH);
 
         // Prevent overflow in issueVoucher and preMint
         require(_start <= type(uint256).max - _length, INVALID_RANGE_LENGTH);
+
+        // Make sure that ranges are in ascending order
+        if (_rangeOfferIds.length > 0) {
+            // Get latest registered range
+            Range storage lastRange = _rangeByOfferId[_rangeOfferIds[_rangeOfferIds.length - 1]];
+
+            // New range should start after the end of last range
+            require(_start >= lastRange.start + lastRange.length, INVALID_RANGE_START);
+        } else {
+            // Make sure range start is valid
+            require(_start > 0, INVALID_RANGE_START);
+        }
 
         // Get storage slot for the range
         Range storage range = _rangeByOfferId[_offerId];

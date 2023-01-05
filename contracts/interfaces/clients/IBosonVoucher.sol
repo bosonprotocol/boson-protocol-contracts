@@ -119,7 +119,8 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * Caller must have PROTOCOL role.
      *
      * Reverts if:
-     * - Start id is not greater than zero
+     * - Start id is not greater than zero for the first range
+     * - Start id is not greater than the end id of the previous range for subsequent ranges
      * - Range length is zero
      * - Range length is too large, i.e., would cause an overflow
      * - Offer id is already associated with a range
