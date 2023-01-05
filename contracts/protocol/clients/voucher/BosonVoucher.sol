@@ -651,25 +651,22 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         address _to,
         uint256 _tokenId
     ) internal override {
-        // Update the buyer associated with the voucher in the protocol
-        // Only when transferring, not minting or burning
-        if (_from == owner()) {
-            if (_premintStatus.committable) {
-                // Store offerId so _premintStatus can be deleted before making an external call
-                uint256 offerId = _premintStatus.offerId;
-                delete _premintStatus;
+        if (_premintStatus.committable) {
+            // If is commitable, invke commitToPreMintedOffer on the protocol
 
-                // Set the preminted token as committed
-                _committed[_tokenId] = true;
+            // Store offerId so _premintStatus can be deleted before making an external call
+            uint256 offerId = _premintStatus.offerId;
+            delete _premintStatus;
 
-                // If this is a transfer of preminted token, treat it differently
-                address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-                IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(payable(_to), offerId, _tokenId);
-            } else {
-                // Already committed, treat as a normal transfer
-                onVoucherTransferred(_tokenId, payable(_to));
-            }
+            // Set the preminted token as committed
+            _committed[_tokenId] = true;
+
+            // If this is a transfer of preminted token, treat it differently
+            address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+            IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(payable(_to), offerId, _tokenId);
         } else if (_from != address(0) && _to != address(0) && _from != _to) {
+            // Update the buyer associated with the voucher in the protocol
+            // Only when transferring, not when minting or burning
             onVoucherTransferred(_tokenId, payable(_to));
         }
     }
@@ -748,7 +745,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 
     /*
-     * Updates balance and owner, but do not emit Transfer event. Event was already emited during pre-mint.
+     * Updates owners, but do not emit Transfer event. Event was already emited during pre-mint.
      */
     function silentMint(address _from, uint256 _tokenId) internal {
         require(_from == owner(), NO_SILENT_MINT_ALLOWED);

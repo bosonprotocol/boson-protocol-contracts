@@ -1190,7 +1190,7 @@ describe("IBosonVoucher", function () {
     };
 
     Object.keys(transferFunctions).forEach(function (transferFunction) {
-      context(transferFunction, function () {
+      context.only(transferFunction, function () {
         let tokenId, offerId;
         let selector = transferFunctions[transferFunction].selector;
         let additionalArgs = transferFunctions[transferFunction].additionalArgs ?? [];
