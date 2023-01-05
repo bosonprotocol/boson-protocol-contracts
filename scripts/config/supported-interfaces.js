@@ -69,7 +69,10 @@ async function getInterfaceNames() {
     const [source, name] = contractName.split(":");
 
     // If starts with prefix and is not in skip list, return name
-    return /.*contracts\/interfaces\/(.*)/.test(source) && !skip.some((s) => new RegExp(`.*contracts/interfaces/${s}`).test(source)) ? name : [];
+    return /.*contracts\/interfaces\/(.*)/.test(source) &&
+      !skip.some((s) => new RegExp(`.*contracts/interfaces/${s}`).test(source))
+      ? name
+      : [];
   });
 
   return interfaces;
