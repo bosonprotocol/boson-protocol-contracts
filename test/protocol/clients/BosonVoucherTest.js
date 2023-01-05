@@ -305,7 +305,17 @@ describe("IBosonVoucher", function () {
         );
       });
 
-      it("Length is too large, i.e., would cause an overflow", async function () {
+      it("Range length is zero", async function () {
+        // Set length to 0
+        length = "0";
+
+        // Try to reserve range, it should fail
+        await expect(bosonVoucher.connect(protocol).reserveRange(offerId, startId, length)).to.be.revertedWith(
+          RevertReasons.INVALID_RANGE_LENGTH
+        );
+      });
+
+      it("Range length is too large, i.e., would cause an overflow", async function () {
         // Set such numbers that would cause an overflow
         startId = ethers.constants.MaxUint256.div(2).add(2);
         length = ethers.constants.MaxUint256.div(2);
