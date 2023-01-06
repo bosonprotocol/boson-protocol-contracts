@@ -316,8 +316,10 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // increase exchangeIds
         pc.nextExchangeId = _startId + _length;
 
-        // decrease quantity available
-        offer.quantityAvailable -= _length;
+        // decrease quantity available, unless offer is unlimited
+        if (offer.quantityAvailable != type(uint256).max) {
+            offer.quantityAvailable -= _length;
+        }
 
         // Notify external observers
         emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, msgSender());
