@@ -110,6 +110,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * Reverts if:
      * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the supplied operator and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
@@ -247,6 +248,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * Reverts if:
      * - The offers region of protocol is paused
      * - The groups region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
@@ -362,6 +364,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * Reverts if:
      * - The offers region of protocol is paused
      * - The groups region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
@@ -484,6 +487,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The offers region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
@@ -618,6 +622,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The groups region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
@@ -779,6 +784,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
      * - The groups region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the supplied operator and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
@@ -955,6 +961,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The offers region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the supplied operator and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
@@ -1152,6 +1159,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The groups region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the supplied operator and clerk
      * - Caller is not the supplied admin or does not own supplied auth token

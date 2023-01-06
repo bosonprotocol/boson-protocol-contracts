@@ -292,7 +292,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * @param _offerId - the id of the offer
      * @param _length - the length of the range
      */
-    function reserveRangeInternal(uint256 _offerId, uint256 _length) internal {
+    function reserveRangeInternal(uint256 _offerId, uint256 _length) internal offersNotPaused exchangesNotPaused {
         // Get offer, make sure the caller is the operator
         Offer storage offer = getValidOffer(_offerId);
 
