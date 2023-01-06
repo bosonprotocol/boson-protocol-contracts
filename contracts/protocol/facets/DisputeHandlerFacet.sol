@@ -38,7 +38,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function raiseDispute(uint256 _exchangeId) external override nonReentrant {
+    function raiseDispute(uint256 _exchangeId) external override disputesNotPaused nonReentrant {
         // Get the exchange, should be in redeemed state
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Redeemed);
 
