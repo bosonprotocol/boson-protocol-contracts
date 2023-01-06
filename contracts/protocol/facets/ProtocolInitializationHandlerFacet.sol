@@ -14,7 +14,7 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
  *
  */
 contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandler, ProtocolBase {
-    address private thisAddress; // used to prevent invocation of initialize directly on deployed contract. Variable is not used by the protocol.
+    address private immutable thisAddress; // used to prevent invocation of initialize directly on deployed contract. Variable is not used by the protocol.
 
     /**
      * @notice Modifier to protect initializer function from being invoked twice for a given version.
