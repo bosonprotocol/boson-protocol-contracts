@@ -39,6 +39,16 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      * @notice Initializes the protocol after the deployment.
      * This function is callable only once for each version
      *
+     * Reverts if:
+     * - Is invoked directly on the deployed contract (not via proxy)
+     * - Version is not set
+     * - Length of _addresses and _calldata arrays do not match
+     * - Any of delegate calls to _addresses reverts
+     * - For upgrade to v2.2.0:
+     *   - If versions is set already
+     *   - If _initializationData cannot be decoded to uin256
+     *   - If _initializationData is represents value 0
+     *
      * @param _version - version of the protocol
      * @param _addresses - array of facet addresses to call initialize methods
      * @param _calldata -  array of facets initialize methods encoded as calldata
