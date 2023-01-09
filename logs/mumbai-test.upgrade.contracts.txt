@@ -77,3 +77,252 @@ You might need to remove its interfaceId from "supportsInterface" manually.
 📋 Diamond upgraded.
 
 
+--------------------------------------------------------------------------------
+Boson Protocol Client Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Fri Dec 30 2022 09:40:16 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+
+📋 Deploying new logic contract
+
+📋 Updating implementation address on beacon
+✅ BosonVoucher Logic deployed to: 0x85B3Ae514fF85E9931314C3fD26f498a28841b39
+--------------------------------------------------------------------------------
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/80001-mumbai-test.json
+--------------------------------------------------------------------------------
+
+📋 Client upgraded.
+
+
+--------------------------------------------------------------------------------
+Boson Protocol Contract Suite Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Fri Dec 30 2022 09:54:53 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+✅ ProtocolInitializationHandlerFacet deployed to: 0xAA7D28Bcc8127E706B0630208D53652F8BA306BD
+✅ OrchestrationHandlerFacet1 deployed to: 0x0A0C68dD3f844d32BC7497c5e33714852A4C313A
+✅ OrchestrationHandlerFacet2 deployed to: 0x6286d3d8E5ceCB5F17f4255957A5926450d37C21
+✅ BundleHandlerFacet deployed to: 0x173adA3Bb27aC711CD07669785c558ccaEab5BE3
+✅ ConfigHandlerFacet deployed to: 0x9A0ce59548e485B57bC88207659116883Bf50a29
+Could not find interface id for old facet ConfigHandlerFacet.
+You might need to remove its interfaceId from "supportsInterface" manually.
+✅ DisputeHandlerFacet deployed to: 0x137312CE9641C8627915BE4f080dDDBa63cD2E8A
+✅ DisputeResolverHandlerFacet deployed to: 0xd737766891D40ceE4E27b07B7A4D4cF678234DD3
+✅ ExchangeHandlerFacet deployed to: 0xbd95A57897AF8A18D7389768fAC3Ca672a5AC4ea
+Could not find interface id for old facet ExchangeHandlerFacet.
+You might need to remove its interfaceId from "supportsInterface" manually.
+✅ MetaTransactionsHandlerFacet deployed to: 0x7156930e1c08fFB1D6e7DB22C3cc48eB405fb268
+Could not find interface id for old facet MetaTransactionsHandlerFacet.
+You might need to remove its interfaceId from "supportsInterface" manually.
+✅ OfferHandlerFacet deployed to: 0x7707fCe9eFD69f25d35cA817A6936374c8DFD52f
+Could not find interface id for old facet OfferHandlerFacet.
+You might need to remove its interfaceId from "supportsInterface" manually.
+✅ SellerHandlerFacet deployed to: 0xB6778C2F131eFf794b7379337FD888475E4213bb
+✅ TwinHandlerFacet deployed to: 0x234485F4A7D8d9CB5f45c25d670b519CdbFbF9b9
+Could not find interface id for old facet OrchestrationHandlerFacet.
+You might need to remove its interfaceId from "supportsInterface" manually.
+
+📋 Facet: ProtocolInitializationHandlerFacet
+💎 Add selectors:
+	getVersion(): 0x0d8e6e2c
+
+📋 Facet: OrchestrationHandlerFacet1
+💎 Add selectors:
+	createPremintedOfferAddToGroup((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,uint256,uint256): 0xa9112e4f
+	createPremintedOfferAndTwinWithBundle((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,(uint256,uint256,uint256,uint256,uint256,address,uint8),uint256): 0xa29ec520
+	createPremintedOfferWithCondition((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,(uint8,uint8,address,uint256,uint256,uint256),uint256): 0xf11a3f76
+	createPremintedOfferWithConditionAndTwinAndBundle((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint256,uint256,uint256,uint256,address,uint8),uint256): 0xc559f8c0
+	createSellerAndPremintedOffer((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,(uint256,uint8),(string,uint256),uint256): 0x4d0b4b57
+	createSellerAndPremintedOfferAndTwinWithBundle((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,(uint256,uint256,uint256,uint256,uint256,address,uint8),(uint256,uint8),(string,uint256),uint256): 0xe82544ed
+	createSellerAndPremintedOfferWithCondition((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint8),(string,uint256),uint256): 0xc17de2b6
+	createSellerAndPremintedOfferWithConditionAndTwinAndBundle((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint256,uint256,uint256,uint256,address,uint8),(uint256,uint8),(string,uint256),uint256): 0x7abd4dab
+💎 Replace selectors:
+	createOfferAddToGroup((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,uint256): 0x34fa96a6
+	createOfferAndTwinWithBundle((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint256,uint256,uint256,uint256,uint256,address,uint8),uint256): 0x36358824
+	createOfferWithCondition((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint8,uint8,address,uint256,uint256,uint256),uint256): 0x1b002277
+	createOfferWithConditionAndTwinAndBundle((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint256,uint256,uint256,uint256,address,uint8),uint256): 0x3e03b0f6
+	createSellerAndOffer((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint256,uint8),(string,uint256),uint256): 0x088177c8
+	createSellerAndOfferAndTwinWithBundle((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint256,uint256,uint256,uint256,uint256,address,uint8),(uint256,uint8),(string,uint256),uint256): 0x05686244
+	createSellerAndOfferWithCondition((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint8),(string,uint256),uint256): 0x0b1bb608
+	createSellerAndOfferWithConditionAndTwinAndBundle((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint256,uint256,uint256,uint256,address,uint8),(uint256,uint8),(string,uint256),uint256): 0x97a6f155
+
+📋 Facet: OrchestrationHandlerFacet2
+💎 Add selectors:
+	raiseAndEscalateDispute(uint256): 0xf81f7640
+
+📋 Facet: BundleHandlerFacet
+💎 Replace selectors:
+	createBundle((uint256,uint256,uint256[],uint256[])): 0x7c016ad5
+	getBundle(uint256): 0x2d0821b7
+	getBundleIdByOffer(uint256): 0xa8e31107
+	getBundleIdByTwin(uint256): 0xc6cce096
+	getNextBundleId(): 0x4475643d
+
+📋 Facet: ConfigHandlerFacet
+💎 Add selectors:
+	getMaxPremintedVouchers(): 0x753901b0
+	initialize((address,address,address,address),(uint256,uint256,uint256,uint16,uint16,uint16,uint16,uint16,uint16,uint16,uint16,uint16,uint16,uint16,uint256),(uint256,uint256,uint256)): 0x01fa1497
+	setMaxPremintedVouchers(uint256): 0xbc799909
+💎 Replace selectors:
+	getAccessControllerAddress(): 0x694ca8ab
+	getAuthTokenContract(uint8): 0x6c2c13c2
+	getBeaconProxyAddress(): 0xc2f73795
+	getBuyerEscalationDepositPercentage(): 0x36ee008c
+	getMaxAllowedSellers(): 0x899b1233
+	getMaxDisputesPerBatch(): 0x323adcce
+	getMaxEscalationResponsePeriod(): 0xeb04d54b
+	getMaxExchangesPerBatch(): 0x3d609473
+	getMaxFeesPerDisputeResolver(): 0x862c6c8b
+	getMaxOffersPerBatch(): 0xd619f044
+	getMaxOffersPerBundle(): 0x942a61b4
+	getMaxOffersPerGroup(): 0x863b80fa
+	getMaxResolutionPeriod(): 0x32cf96ff
+	getMaxRoyaltyPecentage(): 0xa7f7801a
+	getMaxTokensPerWithdrawal(): 0x59c75653
+	getMaxTotalOfferFeePercentage(): 0xd3ab3d25
+	getMaxTwinsPerBundle(): 0x8cfc4975
+	getMinDisputePeriod(): 0xbe620a41
+	getProtocolFeeFlatBoson(): 0x23bbe5d5
+	getProtocolFeePercentage(): 0x706d9f78
+	getTokenAddress(): 0x10fe9ae8
+	getTreasuryAddress(): 0xe0024604
+	getVoucherBeaconAddress(): 0xf8aaad60
+	setAccessControllerAddress(address): 0x6cb84158
+	setAuthTokenContract(uint8,address): 0x250664d4
+	setBeaconProxyAddress(address): 0x31cd131e
+	setBuyerEscalationDepositPercentage(uint256): 0x6ba0f545
+	setMaxAllowedSellers(uint16): 0xd38416ff
+	setMaxDisputesPerBatch(uint16): 0x65a10c2c
+	setMaxEscalationResponsePeriod(uint256): 0x37987b52
+	setMaxExchangesPerBatch(uint16): 0xd6134aaf
+	setMaxFeesPerDisputeResolver(uint16): 0x70d24d63
+	setMaxOffersPerBatch(uint16): 0xd7ac2c47
+	setMaxOffersPerBundle(uint16): 0xb54767f6
+	setMaxOffersPerGroup(uint16): 0x94413c54
+	setMaxResolutionPeriod(uint256): 0xf920fc17
+	setMaxRoyaltyPecentage(uint16): 0x84bf1ac2
+	setMaxTokensPerWithdrawal(uint16): 0x0096aa98
+	setMaxTotalOfferFeePercentage(uint16): 0x589e4e58
+	setMaxTwinsPerBundle(uint16): 0xa70fdde1
+	setMinDisputePeriod(uint256): 0x84a91ce6
+	setProtocolFeeFlatBoson(uint256): 0x4dbcca7e
+	setProtocolFeePercentage(uint256): 0xd8a5e936
+	setTokenAddress(address): 0x26a4e8d2
+	setTreasuryAddress(address): 0x6605bfda
+	setVoucherBeaconAddress(address): 0x938d1b27
+
+📋 Facet: DisputeHandlerFacet
+💎 Replace selectors:
+	decideDispute(uint256,uint256): 0x04f63e12
+	escalateDispute(uint256): 0x20a68d25
+	expireDispute(uint256): 0x42443efd
+	expireDisputeBatch(uint256[]): 0xae707f1e
+	expireEscalatedDispute(uint256): 0xf7d95f3b
+	extendDisputeTimeout(uint256,uint256): 0xfb50e235
+	getDispute(uint256): 0xe3a96cbd
+	getDisputeState(uint256): 0xc6a470e2
+	getDisputeTimeout(uint256): 0x50f5e643
+	isDisputeFinalized(uint256): 0xc3c834b7
+	raiseDispute(uint256): 0xa5c1674e
+	refuseEscalatedDispute(uint256): 0xdfdcd613
+	resolveDispute(uint256,uint256,bytes32,bytes32,uint8): 0xb4dcefaf
+	retractDispute(uint256): 0x65f65c94
+
+📋 Facet: DisputeResolverHandlerFacet
+💎 Replace selectors:
+	addFeesToDisputeResolver(uint256,(address,string,uint256)[]): 0xa880fd89
+	addSellersToAllowList(uint256,uint256[]): 0x1227dbbb
+	areSellersAllowed(uint256,uint256[]): 0x8236d3c0
+	createDisputeResolver((uint256,uint256,address,address,address,address,string,bool),(address,string,uint256)[],uint256[]): 0x1843b3a9
+	getDisputeResolver(uint256): 0x9b646e88
+	getDisputeResolverByAddress(address): 0x6f4fbc16
+	removeFeesFromDisputeResolver(uint256,address[]): 0x4e534c96
+	removeSellersFromAllowList(uint256,uint256[]): 0xfa92792a
+	updateDisputeResolver((uint256,uint256,address,address,address,address,string,bool)): 0x125e35ec
+	optInToDisputeResolverUpdate(uint256,uint8[]): 0x2230dd12
+💎 Remove selectors:
+	undefined: 0xa7ef6a7c
+
+📋 Facet: ExchangeHandlerFacet
+💎 Add selectors:
+	commitToPreMintedOffer(address,uint256,uint256): 0x5f119c40
+💎 Replace selectors:
+	cancelVoucher(uint256): 0xbed3ac50
+	commitToOffer(address,uint256): 0x1f317d1c
+	completeExchange(uint256): 0x58477db8
+	completeExchangeBatch(uint256[]): 0x492edd28
+	expireVoucher(uint256): 0x18170b73
+	extendVoucher(uint256,uint256): 0x229f6943
+	getExchange(uint256): 0x0b9d5847
+	getExchangeState(uint256): 0xe0cdab47
+	getNextExchangeId(): 0x452ddd66
+	getReceipt(uint256): 0xb63e6ac3
+	isExchangeFinalized(uint256): 0x309bb762
+	onVoucherTransferred(uint256,address): 0x7b02365d
+	redeemVoucher(uint256): 0x1c6d6b5e
+	revokeVoucher(uint256): 0x79a5fea9
+
+📋 Facet: MetaTransactionsHandlerFacet
+💎 Add selectors:
+	isFunctionAllowlisted(string): 0x6759b8f1
+	isFunctionAllowlisted(bytes32): 0xbc4d3dd0
+	setAllowlistedFunctions(bytes32[],bool): 0xbaafa0e3
+💎 Replace selectors:
+	executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8): 0xdcb9c266
+	isUsedNonce(address,uint256): 0x0ee60fa7
+
+📋 Facet: OfferHandlerFacet
+💎 Add selectors:
+	reserveRange(uint256,uint256): 0x032d3400
+💎 Replace selectors:
+	createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256): 0x44c64d38
+	createOfferBatch((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool)[],(uint256,uint256,uint256,uint256)[],(uint256,uint256,uint256)[],uint256[],uint256[]): 0xdf3ce320
+	extendOffer(uint256,uint256): 0xcc00c061
+	extendOfferBatch(uint256[],uint256): 0xdb7af92f
+	getAgentIdByOffer(uint256): 0x1ac3e64a
+	getNextOfferId(): 0x1d73add8
+	getOffer(uint256): 0x4579268a
+	isOfferVoided(uint256): 0x4bec59f4
+	voidOffer(uint256): 0x4915907b
+	voidOfferBatch(uint256[]): 0x12b52cf5
+
+📋 Facet: SellerHandlerFacet
+💎 Replace selectors:
+	createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint256)): 0xaaea2fdc
+	getSeller(uint256): 0xd6a9de51
+	getSellerByAddress(address): 0x2e1528ae
+	getSellerByAuthToken((uint256,uint8)): 0x135bdebd
+	updateSeller((uint256,address,address,address,address,bool),(uint256,uint8)): 0x90b9d701
+	optInToSellerUpdate(uint256,uint8[]): 0xf7e469fd
+
+📋 Facet: TwinHandlerFacet
+💎 Replace selectors:
+	createTwin((uint256,uint256,uint256,uint256,uint256,address,uint8)): 0xb44d17eb
+	getNextTwinId(): 0xa7c078d6
+	getTwin(uint256): 0x164a82f7
+	removeTwin(uint256): 0x6574e3ba
+
+💀 Removed facets:
+	OrchestrationHandlerFacet
+📋 Added interfaces:
+	0xe393ad01
+	0x1f891681
+	0xe300dfc1
+	0xb3e4e803
+	0xdd282b34
+💀 Removed interfaces:
+	0xb8667cfd
+--------------------------------------------------------------------------------
+
+📋 New version: 2.2.0-rc.1                      
+--------------------------------------------------------------------------------
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/80001-mumbai-test.json
+--------------------------------------------------------------------------------
+
+📋 Diamond upgraded.
+
+

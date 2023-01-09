@@ -34,7 +34,10 @@ const AuthTokenType = require("../scripts/domain/AuthTokenType");
  * @returns {lensAddress: string, ensAddress: string}
  */
 function getAuthTokenContracts() {
-  return { lensAddress: authTokenAddresses.LENS[network], ensAddress: authTokenAddresses.ENS[network] };
+  return {
+    lensAddress: process.env.LENS_ADDRESS || authTokenAddresses.LENS[network],
+    ensAddress: process.env.ENS_ADDRESS || authTokenAddresses.ENS[network],
+  };
 }
 
 async function main(env, facetConfig) {

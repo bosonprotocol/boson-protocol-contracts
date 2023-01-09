@@ -61,7 +61,6 @@ async function getInterfaceIds(useCache = true) {
 // Function to get all interface names
 async function getInterfaceNames() {
   // Folder where interfaces are stored
-  const prefix = "contracts/interfaces/";
   const skip = ["events", "IERC20.sol", "IERC20Metadata"]; // ERC20 interfaces are skipped since no contract implements them directly.
 
   // Get build info
@@ -72,7 +71,10 @@ async function getInterfaceNames() {
     const [source, name] = contractName.split(":");
 
     // If starts with prefix and is not in skip list, return name
-    return source.startsWith(`${prefix}`) && !skip.some((s) => source.startsWith(`${prefix}${s}`)) ? name : [];
+    return /.*contracts\/interfaces\/(.*)/.test(source) &&
+      !skip.some((s) => new RegExp(`.*contracts/interfaces/${s}`).test(source))
+      ? name
+      : [];
   });
 
   return interfaces;

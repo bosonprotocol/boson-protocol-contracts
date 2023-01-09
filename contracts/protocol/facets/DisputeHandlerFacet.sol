@@ -64,7 +64,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function retractDispute(uint256 _exchangeId) external override disputesNotPaused nonReentrant {
+    function retractDispute(uint256 _exchangeId) external override nonReentrant {
         // Get the exchange, should be in disputed state
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
@@ -163,7 +163,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function expireDispute(uint256 _exchangeId) public override disputesNotPaused nonReentrant {
+    function expireDispute(uint256 _exchangeId) public override nonReentrant {
         // Get the exchange, should be in disputed state
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
@@ -199,7 +199,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeIds - the array of ids of the associated exchanges
      */
-    function expireDisputeBatch(uint256[] calldata _exchangeIds) external override disputesNotPaused {
+    function expireDisputeBatch(uint256[] calldata _exchangeIds) external override {
         // limit maximum number of disputes to avoid running into block gas limit in a loop
         require(_exchangeIds.length <= protocolLimits().maxDisputesPerBatch, TOO_MANY_DISPUTES);
 
@@ -238,7 +238,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV
-    ) external override disputesNotPaused nonReentrant {
+    ) external override nonReentrant {
         // buyer should get at most 100%
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
@@ -342,12 +342,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @param _exchangeId  - the id of the associated exchange
      * @param _buyerPercent - percentage of the pot that goes to the buyer
      */
-    function decideDispute(uint256 _exchangeId, uint256 _buyerPercent)
-        external
-        override
-        disputesNotPaused
-        nonReentrant
-    {
+    function decideDispute(uint256 _exchangeId, uint256 _buyerPercent) external override nonReentrant {
         // Buyer should get at most 100%
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
@@ -378,7 +373,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function refuseEscalatedDispute(uint256 _exchangeId) external override disputesNotPaused nonReentrant {
+    function refuseEscalatedDispute(uint256 _exchangeId) external override nonReentrant {
         // Make sure the dispute is valid and the caller is the dispute resolver
         (Exchange storage exchange, Dispute storage dispute, DisputeDates storage disputeDates) = disputeResolverChecks(
             _exchangeId
@@ -405,7 +400,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function expireEscalatedDispute(uint256 _exchangeId) external override disputesNotPaused nonReentrant {
+    function expireEscalatedDispute(uint256 _exchangeId) external override nonReentrant {
         // Get the exchange, should be in disputed state
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
@@ -447,7 +442,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         DisputeDates storage _disputeDates,
         DisputeState _targetState,
         uint256 _buyerPercent
-    ) internal {
+    ) internal disputesNotPaused {
         // update dispute and exchange
         _disputeDates.finalized = block.timestamp;
         _dispute.state = _targetState;

@@ -1440,6 +1440,29 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
+        it("The exchanges region of protocol is paused [preminted offers]", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
+
+          // Attempt to create a offer expecting revert
+          const reservedRangeLength = offer.quantityAvailable;
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndPremintedOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                reservedRangeLength,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("active is false", async function () {
           seller.active = false;
 
@@ -2793,6 +2816,27 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
+        it("The exchanges region of protocol is paused [preminted offers]", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
+
+          // Attempt to orchestrate, expecting revert
+          const reservedRangeLength = offer.quantityAvailable;
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createPremintedOfferWithCondition(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                reservedRangeLength,
+                condition,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("The groups region of protocol is paused", async function () {
           // Pause the groups region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
@@ -3442,6 +3486,27 @@ describe("IBosonOrchestrationHandler", function () {
             orchestrationHandler
               .connect(operator)
               .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("The exchanges region of protocol is paused [preminted offers]", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
+
+          // Attempt to create a offer expecting revert
+          const reservedRangeLength = offer.quantityAvailable;
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createPremintedOfferAddToGroup(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                reservedRangeLength,
+                nextGroupId,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -4135,6 +4200,27 @@ describe("IBosonOrchestrationHandler", function () {
             orchestrationHandler
               .connect(operator)
               .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("The exchanges region of protocol is paused [preminted offers]", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
+
+          // Attempt to create a twin, expecting revert
+          const reservedRangeLength = offer.quantityAvailable;
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createPremintedOfferAndTwinWithBundle(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                reservedRangeLength,
+                twin,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -5102,6 +5188,28 @@ describe("IBosonOrchestrationHandler", function () {
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
+
+        it("The exchanges region of protocol is paused [preminted offers]", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
+
+          // Attempt to create a twin, expecting revert
+          const reservedRangeLength = offer.quantityAvailable;
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createPremintedOfferWithConditionAndTwinAndBundle(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                reservedRangeLength,
+                condition,
+                twin,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
       });
     });
 
@@ -5777,6 +5885,30 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
+                condition,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("The exchanges region of protocol is paused", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
+
+          // Attempt to create an group, expecting revert
+          const reservedRangeLength = offer.quantityAvailable;
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndPremintedOfferWithCondition(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                reservedRangeLength,
                 condition,
                 emptyAuthToken,
                 voucherInitValues,
@@ -6570,6 +6702,33 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
+                twin,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("The exchanges region of protocol is paused [preminted offers]", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
+
+          // Approve twin transfer
+          await bosonToken.connect(operator).approve(twinHandler.address, 1);
+
+          // Attempt to create a twin expecting revert
+          const reservedRangeLength = offer.quantityAvailable;
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndPremintedOfferAndTwinWithBundle(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                reservedRangeLength,
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
@@ -7436,29 +7595,6 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
-        it("The offers region of protocol is paused", async function () {
-          // Pause the offers region of the protocol
-          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
-
-          // Attempt to create an offer, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createSellerAndOfferWithConditionAndTwinAndBundle(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                disputeResolver.id,
-                condition,
-                twin,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId
-              )
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
-        });
-
         it("The groups region of protocol is paused", async function () {
           // Pause the groups region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
@@ -7496,6 +7632,57 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
+                condition,
+                twin,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("The bundles region of protocol is paused", async function () {
+          // Pause the bundles region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Bundles]);
+
+          // Attempt to create a group, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOfferWithConditionAndTwinAndBundle(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                condition,
+                twin,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("The exchanges region of protocol is paused [preminted offers]", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
+
+          // Approve twin transfer
+          await bosonToken.connect(operator).approve(twinHandler.address, 1);
+
+          // Attempt to create a group, expecting revert
+          const reservedRangeLength = offer.quantityAvailable;
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndPremintedOfferWithConditionAndTwinAndBundle(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                reservedRangeLength,
                 condition,
                 twin,
                 emptyAuthToken,
