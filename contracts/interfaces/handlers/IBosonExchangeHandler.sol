@@ -36,8 +36,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - Contract at token address does not support ERC20 function transferFrom
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - Received ERC20 token amount differs from the expected value
-     * - Seller has less funds available than sellerDeposit for non preminted offers
-     * - Seller has less funds available than sellerDeposit and price for preminted offers
+     * - Seller has less funds available than sellerDeposit
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
@@ -59,8 +58,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - Offer is not yet available for commits
      * - Buyer account is inactive
      * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Seller has less funds available than sellerDeposit for non preminted offers
-     * - Seller has less funds available than sellerDeposit and price for preminted offers
+     * - Seller has less funds available than sellerDeposit and price
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
