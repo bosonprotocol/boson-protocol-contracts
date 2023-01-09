@@ -1027,7 +1027,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external sellersNotPaused {
+    ) external {
         createSellerAndOfferAndTwinWithBundle(
             _seller,
             _offer,
@@ -1228,7 +1228,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external sellersNotPaused {
+    ) external {
         createSellerAndOfferWithConditionAndTwinAndBundle(
             _seller,
             _offer,
