@@ -1136,7 +1136,7 @@ describe("IBosonVoucher", function () {
     });
   });
 
-  context.only("Token transfers", function () {
+  context("Token transfers", function () {
     afterEach(async function () {
       // Reset the accountId iterator
       accountId.next(true);
@@ -1415,7 +1415,7 @@ describe("IBosonVoucher", function () {
                 bosonVoucher.connect(operator)[selector](operator.address, rando.address, tokenId, ...additionalArgs)
               ).to.be.revertedWith(RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
 
-              // It should also fail if trasnfer done with transferPremintedFrom
+              // It should also fail if transfer done with transferPremintedFrom
               await expect(
                 bosonVoucher
                   .connect(operator)
