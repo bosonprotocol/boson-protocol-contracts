@@ -124,7 +124,7 @@ exports.RevertReasons = {
   VOUCHER_HAS_EXPIRED: "Voucher has expired",
   TOO_MANY_EXCHANGES: "Exceeded maximum exchanges in a single transaction",
   EXCHANGE_IS_NOT_IN_A_FINAL_STATE: "Exchange is not in a final state",
-  INVALID_RANGE_LENGTH: "Range length too large to large or zero",
+  INVALID_RANGE_LENGTH: "Range length is too large or zero",
   EXCHANGE_ALREADY_EXISTS: "Exchange already exists",
 
   // Voucher related
