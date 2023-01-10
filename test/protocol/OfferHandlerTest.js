@@ -1369,6 +1369,30 @@ describe("IBosonOfferHandler", function () {
         );
       });
 
+      it("Reserving range of unlimited offer does not decrease quantity available", async function () {
+        // Create an unlimited offer
+        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+        await offerHandler
+          .connect(operator)
+          .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
+        // Get the offer quantity available before reservation
+        [, offerStruct] = await offerHandler.connect(rando).getOffer(nextOfferId);
+        const quantityAvailableBefore = offerStruct.quantityAvailable;
+
+        // Reserve a range
+        await offerHandler.connect(operator).reserveRange(nextOfferId, length);
+
+        // Quantity available should not change
+        [, offerStruct] = await offerHandler.connect(rando).getOffer(nextOfferId);
+        const quantityAvailableAfter = offerStruct.quantityAvailable;
+        assert.equal(
+          quantityAvailableBefore.toString(),
+          quantityAvailableAfter.toString(),
+          "Quantity available mismatch"
+        );
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
