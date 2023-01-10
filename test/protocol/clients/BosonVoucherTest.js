@@ -1071,7 +1071,7 @@ describe("IBosonVoucher", function () {
           let startTokenId = Number(startId) + Number(amount);
           let endTokenId = Number(startId) + Number(length);
 
-          // None of reserverd but not preminted tokens should have an owner
+          // None of reserved but not preminted tokens should have an owner
           for (let i = startTokenId; i < endTokenId; i++) {
             await expect(bosonVoucher.connect(rando).ownerOf(i)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
           }
@@ -1445,7 +1445,7 @@ describe("IBosonVoucher", function () {
               // Burn preminted vouchers
               await bosonVoucher.connect(operator).burnPremintedVouchers(offerId);
 
-              // None of reserverd but not preminted tokens should have an owner
+              // None of reserved but not preminted tokens should have an owner
               await expect(
                 bosonVoucher.connect(operator)[selector](operator.address, rando.address, tokenId, ...additionalArgs)
               ).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
@@ -1630,7 +1630,7 @@ describe("IBosonVoucher", function () {
           // Burn preminted vouchers
           await bosonVoucher.connect(operator).burnPremintedVouchers(offerId);
 
-          // None of reserverd but not preminted tokens should have an owner
+          // None of reserved but not preminted tokens should have an owner
           await expect(
             bosonVoucher
               .connect(operator)
