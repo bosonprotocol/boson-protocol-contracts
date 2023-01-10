@@ -292,7 +292,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * @param _offerId - the id of the offer
      * @param _length - the length of the range
      */
-    function reserveRangeInternal(uint256 _offerId, uint256 _length) internal {
+    function reserveRangeInternal(uint256 _offerId, uint256 _length) internal offersNotPaused exchangesNotPaused {
         // Get offer, make sure the caller is the operator
         Offer storage offer = getValidOffer(_offerId);
 
@@ -316,8 +316,10 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // increase exchangeIds
         pc.nextExchangeId = _startId + _length;
 
-        // decrease quantity available
-        offer.quantityAvailable -= _length;
+        // decrease quantity available, unless offer is unlimited
+        if (offer.quantityAvailable != type(uint256).max) {
+            offer.quantityAvailable -= _length;
+        }
 
         // Notify external observers
         emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, msgSender());

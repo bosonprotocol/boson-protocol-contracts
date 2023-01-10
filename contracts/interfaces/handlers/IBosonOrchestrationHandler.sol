@@ -131,6 +131,7 @@ interface IBosonOrchestrationHandler is
      * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
      * - The orchestration region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - Caller is not the supplied operator and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
@@ -241,6 +242,7 @@ interface IBosonOrchestrationHandler is
      * Reverts if:
      * - The offers region of protocol is paused
      * - The groups region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
@@ -345,6 +347,7 @@ interface IBosonOrchestrationHandler is
      * Reverts if:
      * - The offers region of protocol is paused
      * - The groups region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
@@ -458,6 +461,7 @@ interface IBosonOrchestrationHandler is
      * - The offers region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
@@ -582,6 +586,7 @@ interface IBosonOrchestrationHandler is
      * - The groups region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
@@ -727,6 +732,7 @@ interface IBosonOrchestrationHandler is
      * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
      * - The groups region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the supplied operator and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
@@ -885,6 +891,7 @@ interface IBosonOrchestrationHandler is
      * - The offers region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the supplied operator and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
@@ -1056,6 +1063,7 @@ interface IBosonOrchestrationHandler is
      * - The groups region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
+     * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the supplied operator and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
