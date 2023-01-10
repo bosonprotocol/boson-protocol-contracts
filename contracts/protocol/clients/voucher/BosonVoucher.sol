@@ -164,9 +164,10 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         require(_start <= type(uint256).max - _length, INVALID_RANGE_LENGTH);
 
         // Make sure that ranges are in ascending order
-        if (_rangeOfferIds.length > 0) {
+        uint256 rangeOfferIdsLength = _rangeOfferIds.length;
+        if (rangeOfferIdsLength > 0) {
             // Get latest registered range
-            Range storage lastRange = _rangeByOfferId[_rangeOfferIds[_rangeOfferIds.length - 1]];
+            Range storage lastRange = _rangeByOfferId[_rangeOfferIds[rangeOfferIdsLength - 1]];
 
             // New range should start after the end of last range
             require(_start >= lastRange.start + lastRange.length, INVALID_RANGE_START);
