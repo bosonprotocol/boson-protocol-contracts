@@ -16,11 +16,12 @@ const { castProtocolClientProxies } = require("./cast-protocol-client-proxies.js
  *
  * @param protocolClientArgs
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
+ * @param implementationArgs - array of arguments to send to implementation constructor
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas) {
+async function deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas, implementationArgs) {
   // Deploy Protocol Client implementation contracts
-  const protocolClientImpls = await deployProtocolClientImpls(maxPriorityFeePerGas);
+  const protocolClientImpls = await deployProtocolClientImpls(implementationArgs, maxPriorityFeePerGas);
 
   // Deploy Protocol Client beacon contracts
   const protocolClientBeacons = await deployProtocolClientBeacons(

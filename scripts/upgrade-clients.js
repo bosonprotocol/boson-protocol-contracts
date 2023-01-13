@@ -14,6 +14,7 @@ const {
   checkRole,
   addressNotFound,
 } = require("./util/utils.js");
+const clientConfig = require("./config/client-upgrade");
 const Role = require("./domain/Role");
 
 /**
@@ -71,7 +72,10 @@ async function main(env) {
 
   // Deploy Protocol Client implementation contracts
   console.log(`\n📋 Deploying new logic contract`);
-  const [bosonVoucherImplementation] = await deployProtocolClientImpls(maxPriorityFeePerGas);
+  console.log(network);
+
+  const implementationArgs = Object.values(clientConfig).map(config => config[network]);
+  const [bosonVoucherImplementation] = await deployProtocolClientImpls(implementationArgs, maxPriorityFeePerGas);
 
   // Update implementation address on beacon contract
   console.log(`\n📋 Updating implementation address on beacon`);
