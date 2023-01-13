@@ -74,7 +74,7 @@ async function main(env) {
   console.log(`\n📋 Deploying new logic contract`);
   console.log(network);
 
-  const implementationArgs = Object.values(clientConfig).map(config => config[network]);
+  const implementationArgs = Object.values(clientConfig).map((config) => config[network]);
   const [bosonVoucherImplementation] = await deployProtocolClientImpls(implementationArgs, maxPriorityFeePerGas);
 
   // Update implementation address on beacon contract

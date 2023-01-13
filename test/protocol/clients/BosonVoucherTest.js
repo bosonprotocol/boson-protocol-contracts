@@ -29,12 +29,13 @@ const {
   calculateVoucherExpiry,
   setNextBlockTimestamp,
   getFacetsWithArgs,
+  prepareDataSignatureParameters,
 } = require("../../util/utils.js");
 const { waffle } = hre;
 const { deployMockContract } = waffle;
 const FormatTypes = ethers.utils.FormatTypes;
 
-describe.only("IBosonVoucher", function () {
+describe("IBosonVoucher", function () {
   let interfaceIds;
   let protocolDiamond, accessController;
   let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler, configHandler;
@@ -65,13 +66,13 @@ describe.only("IBosonVoucher", function () {
     // Get interface id
     const { IBosonVoucher, IERC721, IERC2981 } = await getInterfaceIds();
     interfaceIds = { IBosonVoucher, IERC721, IERC2981 };
-
-    // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
-    [deployer, protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR, protocolTreasury, bosonToken] =
-      await ethers.getSigners();
   });
 
   beforeEach(async function () {
+    // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
+    [deployer, protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR, protocolTreasury, bosonToken] =
+      await ethers.getSigners();
+
     // make all account the same
     operator = clerk = admin;
     operatorDR = clerkDR = adminDR;
@@ -94,8 +95,9 @@ describe.only("IBosonVoucher", function () {
     const protocolClientArgs = [protocolDiamond.address];
 
     // Mock forwarder to test metatx
-    const MinimalForwarder = await ethers.getContractFactory("MinimalForwarder");
-    forwarder = await MinimalForwarder.deploy();
+    const MockNativeMetaTransaction = await ethers.getContractFactory("MockNativeMetaTransaction");
+
+    forwarder = await MockNativeMetaTransaction.deploy("Forwarder", "0.0.1");
 
     const implementationArgs = [forwarder.address];
     const [, beacons, proxies, bv] = await deployProtocolClients(
@@ -396,7 +398,45 @@ describe.only("IBosonVoucher", function () {
       assert.equal(availablePremints.toNumber(), Number(length) - Number(amount), "Available Premints mismatch");
     });
 
-    it("Should work with meta transaction", async function () {});
+    it("MetaTx: forwarder can execute preMint on behalf of seller", async function () {
+      const nonce = Number(await forwarder.getNonce(operator.address));
+
+      const types = {
+        MetaTransaction: [
+          { name: "nonce", type: "uint256" },
+          { name: "from", type: "address" },
+          { name: "to", type: "address" },
+          { name: "functionSignature", type: "bytes" },
+        ],
+      };
+
+      const functionSignature = bosonVoucher.interface.encodeFunctionData("preMint", [offerId, amount]);
+
+      const message = {
+        nonce: nonce,
+        from: operator.address,
+        to: bosonVoucher.address,
+        functionSignature: functionSignature,
+      };
+
+      const { r, s, v } = await prepareDataSignatureParameters(
+        operator,
+        types,
+        "MetaTransaction",
+        message,
+        forwarder.address,
+        "Forwarder",
+        "0.0.1"
+      );
+      const tx = await forwarder.executeMetaTransaction(message, r, s, v);
+
+      // Expect an event for every mint
+      for (let i = 0; i < Number(amount); i++) {
+        await expect(tx)
+          .to.emit(bosonVoucher, "Transfer")
+          .withArgs(ethers.constants.AddressZero, operator.address, i + Number(startId));
+      }
+    });
 
     context("💔 Revert Reasons", async function () {
       it("Caller is not the owner", async function () {
@@ -1903,97 +1943,6 @@ describe.only("IBosonVoucher", function () {
 
       // Reset the accountId iterator
       accountId.next(true);
-    });
-  });
-
-  context("Meta transaction", function () {
-    let offerId, startId, length, amount;
-    let mockProtocol;
-    let offer, offerDates, offerDurations, offerFees, disputeResolutionTerms;
-    let operatorPK;
-
-    beforeEach(async function () {
-      operatorPK = new ethers.Wallet.createRandom();
-      operator = new ethers.Wallet(operatorPK, ethers.provider);
-
-      mockProtocol = await deployMockProtocol();
-      ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
-      offer.operator = operator.address;
-      disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
-      await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
-      await mockProtocol.mock.getOffer.returns(
-        true,
-        offer,
-        offerDates,
-        offerDurations,
-        disputeResolutionTerms,
-        offerFees
-      );
-
-      // reserve a range
-      offerId = "5";
-      startId = "10";
-      length = "1000";
-      await bosonVoucher.connect(protocol).reserveRange(offerId, startId, length);
-
-      // amount to mint
-      amount = 50;
-    });
-
-    it.only("forwarder can execute preMint on behalf of seller", async function () {
-      const nonce = await forwarder.getNonce(operator.address);
-
-      const { chainId } = await ethers.provider.getNetwork();
-      const domain = {
-        name: "MinimalForwarder",
-        version: "0.0.1",
-        chainId,
-        verifyingContract: forwarder.address,
-        salt: ethers.utils.hexZeroPad(ethers.BigNumber.from(31337).toHexString(), 32), //hardhat default chain id is 31337
-      };
-
-      const EIP712Domain = [
-        { name: "name", type: "string" },
-        { name: "version", type: "string" },
-        { name: "chainId", type: "uint256" },
-        { name: "verifyingContract", type: "address" },
-        { name: "salt", type: "bytes32" },
-      ];
-
-      const types = {
-        EIP712Domain,
-        ForwardRequest: [
-          { name: "from", type: "address" },
-          { name: "to", type: "address" },
-          { name: "value", type: "uint256" },
-          { name: "gas", type: "uint256" },
-          { name: "nonce", type: "uint256" },
-          { name: "data", type: "bytes" },
-        ],
-      };
-
-      const message = {
-        from: operator.address.toLowerCase(),
-        to: bosonVoucher.address,
-        value: "0",
-        gas: "10000",
-        nonce,
-        data: bosonVoucher.interface.encodeFunctionData("preMint", [offerId, amount]),
-      };
-
-      // Prepare the data to sign
-      let dataToSign = JSON.stringify({
-        types,
-        domain,
-        primaryType: "ForwardRequest",
-        message,
-      });
-
-      // Sign the data
-      const signature = await ethers.provider.send("eth_signTypedData_v4", [operator.address, dataToSign]);
-
-      const result = await forwarder.execute(message, signature);
-      console.log(result);
     });
   });
 

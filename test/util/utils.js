@@ -110,7 +110,9 @@ async function prepareDataSignatureParameters(
   customTransactionTypes,
   primaryType,
   message,
-  metaTransactionsHandlerAddress
+  forwarderAddress,
+  domainName = "Boson Protocol",
+  domainVersion = "V2"
 ) {
   // Initialize data
   const domainType = [
@@ -121,9 +123,9 @@ async function prepareDataSignatureParameters(
   ];
 
   const domainData = {
-    name: "Boson Protocol",
-    version: "V2",
-    verifyingContract: metaTransactionsHandlerAddress,
+    name: domainName ?? "Boson Protocol",
+    version: domainVersion ?? "V2",
+    verifyingContract: forwarderAddress,
     salt: ethers.utils.hexZeroPad(ethers.BigNumber.from(31337).toHexString(), 32), //hardhat default chain id is 31337
   };
 

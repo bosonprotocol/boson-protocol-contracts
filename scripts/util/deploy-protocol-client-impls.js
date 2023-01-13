@@ -20,7 +20,6 @@ const { getFees } = require("./utils");
  * @returns {Promise<(*|*|*)[]>}
  */
 async function deployProtocolClientImpls(implementationArgs, maxPriorityFeePerGas) {
-
   // Deploy the BosonVoucher contract
   const BosonVoucher = await ethers.getContractFactory("BosonVoucherWithMetaTransactions");
   const bosonVoucher = await BosonVoucher.deploy(...implementationArgs, await getFees(maxPriorityFeePerGas));

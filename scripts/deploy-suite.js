@@ -128,8 +128,12 @@ async function main(env, facetConfig) {
 
   // Deploy the Protocol Client implementation/proxy pairs
   const protocolClientArgs = [protocolDiamond.address];
-  const clientImplementationArgs = Object.values(clientConfig).map(config => config[network]);
-  const [impls, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas, clientImplementationArgs);
+  const clientImplementationArgs = Object.values(clientConfig).map((config) => config[network]);
+  const [impls, beacons, proxies] = await deployProtocolClients(
+    protocolClientArgs,
+    maxPriorityFeePerGas,
+    clientImplementationArgs
+  );
   const [bosonVoucherImpl] = impls;
   const [bosonClientBeacon] = beacons;
   const [bosonVoucherProxy] = proxies;
