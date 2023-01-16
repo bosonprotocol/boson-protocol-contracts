@@ -71,6 +71,13 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     mapping(uint256 => bool) private _committed;
 
     /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[43] private __gap;
+
+    /**
      * @notice Initializes the voucher.
      * This function is callable only once.
      */
@@ -745,10 +752,18 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 contract BosonVoucher is BosonVoucherBase, ERC2771ContextUpgradeable {
     constructor(address forwarder) ERC2771ContextUpgradeable(forwarder) {}
 
+    /**
+     * @notice This function returns the calldata of the current message.
+     * @dev It is an override of the ERC2771ContextUpgradeable._msgData() function which allows meta transactions.
+     */
     function _msgData() internal view override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (bytes calldata) {
         return ERC2771ContextUpgradeable._msgData();
     }
 
+    /**
+     * @notice This function returns the sender of the current message.
+     * @dev It is an override of the ERC2771ContextUpgradeable._msgSender() function which allows meta transactions.
+     */
     function _msgSender()
         internal
         view
@@ -763,5 +778,5 @@ contract BosonVoucher is BosonVoucherBase, ERC2771ContextUpgradeable {
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[43] private __gap;
+    uint256[50] private __gap;
 }
