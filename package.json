@@ -97,6 +97,6 @@
     "solhint": "^3.3.7",
     "solidity-coverage": "^0.7.18-eip165.0",
     "truffle": "^5.5.23",
-    "web3": "^1.7.0"
+    "web3": "^1.8.1"
   }
 }
