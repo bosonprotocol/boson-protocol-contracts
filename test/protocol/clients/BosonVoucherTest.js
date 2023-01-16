@@ -167,7 +167,7 @@ describe("IBosonVoucher", function () {
 
     // prepare the VoucherInitValues
     voucherInitValues = mockVoucherInitValues();
-    const bosonVoucherInit = await ethers.getContractAt("BosonVoucherWithMetaTransactions", bosonVoucher.address);
+    const bosonVoucherInit = await ethers.getContractAt("BosonVoucher", bosonVoucher.address);
 
     await bosonVoucherInit.initializeVoucher(sellerId, operator.address, voucherInitValues);
   });

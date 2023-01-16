@@ -38,7 +38,7 @@ import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchan
  * - Burned when the buyer redeems the voucher
  * - Support for pre-minted voucher id ranges
  */
-contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
+contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
     // Struct that is used to manipulate private variables from ERC721UpgradeableStorage
     struct ERC721UpgradeableStorage {
         // Mapping from token ID to owner address
@@ -742,7 +742,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 }
 
-contract BosonVoucherWithMetaTransactions is BosonVoucher, ERC2771ContextUpgradeable {
+contract BosonVoucher is BosonVoucherBase, ERC2771ContextUpgradeable {
     constructor(address forwarder) ERC2771ContextUpgradeable(forwarder) {}
 
     function _msgData() internal view override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (bytes calldata) {
@@ -763,5 +763,5 @@ contract BosonVoucherWithMetaTransactions is BosonVoucher, ERC2771ContextUpgrade
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[50] private __gap;
+    uint256[43] private __gap;
 }

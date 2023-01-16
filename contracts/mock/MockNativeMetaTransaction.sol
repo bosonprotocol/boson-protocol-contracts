@@ -3,7 +3,6 @@ pragma solidity 0.8.9;
 
 // This file is copied/pasted from the BOSON Child Token implementation deployed on Polygon
 
-import "hardhat/console.sol";
 import { MockEIP712Base } from "./MockEIP712Base.sol";
 
 contract MockNativeMetaTransaction is MockEIP712Base {
@@ -74,8 +73,6 @@ contract MockNativeMetaTransaction is MockEIP712Base {
         uint8 sigV
     ) internal view returns (bool) {
         require(metaTx.from != address(0), "NativeMetaTransaction: INVALID_SIGNER");
-        console.log(metaTx.from);
-        console.log(ecrecover(toTypedMessageHash(hashMetaTransaction(metaTx)), sigV, sigR, sigS));
         return metaTx.from == ecrecover(toTypedMessageHash(hashMetaTransaction(metaTx)), sigV, sigR, sigS);
     }
 }

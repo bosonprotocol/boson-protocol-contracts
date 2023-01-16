@@ -72,7 +72,6 @@ async function main(env) {
 
   // Deploy Protocol Client implementation contracts
   console.log(`\n📋 Deploying new logic contract`);
-  console.log(network);
 
   const implementationArgs = Object.values(clientConfig).map((config) => config[network]);
   const [bosonVoucherImplementation] = await deployProtocolClientImpls(implementationArgs, maxPriorityFeePerGas);
