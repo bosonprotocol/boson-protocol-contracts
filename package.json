@@ -88,7 +88,7 @@
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.5.4",
     "hardhat": "^2.8.3",
-    "hardhat-contract-sizer": "^2.4.0",
+    "hardhat-contract-sizer": "^2.7.0",
     "hardhat-gas-reporter": "^1.0.9",
     "husky": "^8.0.3",
     "prettier": "^2.6.1",
