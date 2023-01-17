@@ -70,7 +70,6 @@ async function main(env, clientConfig) {
   checkRole(contracts, Role.UPGRADER, adminAddress);
 
   clientConfig = JSON.parse(clientConfig) || require("./config/client-upgrade");
-  console.log(clientConfig);
 
   // Deploy Protocol Client implementation contracts
   console.log(`\n📋 Deploying new logic contract`);
