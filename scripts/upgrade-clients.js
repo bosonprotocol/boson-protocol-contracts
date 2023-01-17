@@ -12,7 +12,6 @@ const {
   writeContracts,
   checkRole,
   addressNotFound,
-  requireUncached,
 } = require("./util/utils.js");
 const { deployProtocolClientImpls } = requireUncached("./util/deploy-protocol-client-impls.js");
 const clientConfig = require("./config/client-upgrade");
@@ -96,6 +95,29 @@ async function main(env) {
 
   console.log(`\n📋 Client upgraded.`);
   console.log("\n");
+}
+
+/**
+ * Require uncached node module
+ *
+ * Normally, if the same module is required multiple times, the first time it is loaded and cached.
+ * If the module is changed during the execution, the cache is not updated, so the old version is returned.
+ * This function deletes the cache for the specified module and requires it again.
+ *
+ * Use case:
+ * Upgrade test `test/upgrade/clients/BosonVoucher-2.1.0-2.2.0.js` deploys version 2.1.0 of the contract and then upgrades it to 2.2.0.
+ * Since deployment script changed between versions, current deployment script cannot be used to deploy 2.1.0.
+ * For first deployment, we checkout old deployment script, which uses `deployProtocolHandlerFacets` from `./util/deploy-protocol-handler-facets.js`.
+ * To upgrade to 2.2.0, we switch back to current upgrade script, which uses `deployProtocolFacets` from `./util/deploy-protocol-handler-facets.js`.
+ * If the cache is not cleared, requiring module `./util/deploy-protocol-handler-facets.js` returns the old version, where `deployProtocolFacets` does not
+ * exist yet and the upgrade fails.
+ * If the cache is cleared, the new version is required and the upgrade succeeds.
+ *
+ * @param {string} module - Module to require
+ */
+function requireUncached(module) {
+  delete require.cache[require.resolve(module)];
+  return require(module);
 }
 
 exports.upgradeClients = main;
