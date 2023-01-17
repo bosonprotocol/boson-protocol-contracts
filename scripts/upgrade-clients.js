@@ -14,7 +14,6 @@ const {
   addressNotFound,
 } = require("./util/utils.js");
 const { deployProtocolClientImpls } = requireUncached("./util/deploy-protocol-client-impls.js");
-const clientConfig = require("./config/client-upgrade");
 const Role = require("./domain/Role");
 
 /**
@@ -26,7 +25,7 @@ const Role = require("./domain/Role");
  * Currently script upgrades the only existing client - BosonVoucher.
  * If new clients are introduced, this script should be modified to get the list of clients to upgrade from the config.
  */
-async function main(env) {
+async function main(env, clientConfig) {
   // Bail now if hardhat network, unless the upgrade is tested
   if (network === "hardhat" && env !== "upgrade-test") process.exit();
 
@@ -70,11 +69,13 @@ async function main(env) {
   // Validate that admin has UPGRADER role
   checkRole(contracts, Role.UPGRADER, adminAddress);
 
+  clientConfig = clientConfig || require("./config/client-upgrade");
+  console.log(clientConfig);
+
   // Deploy Protocol Client implementation contracts
   console.log(`\n📋 Deploying new logic contract`);
 
   const implementationArgs = Object.values(clientConfig).map((config) => config[network]);
-  console.log(implementationArgs);
   const [bosonVoucherImplementation] = await deployProtocolClientImpls(implementationArgs, maxPriorityFeePerGas);
 
   // Update implementation address on beacon contract

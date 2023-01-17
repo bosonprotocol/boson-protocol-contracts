@@ -194,6 +194,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         // get arbitrary voucher contract
         const voucher = bosonVouchers[2];
 
+        console.log(typeof voucher);
         // Premint tokens, test for event
         await expect(voucher.connect(operator).preMint(offerId, amount)).to.emit(bosonVoucher, "Transfer");
       })
