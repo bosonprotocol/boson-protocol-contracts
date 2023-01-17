@@ -25,7 +25,6 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
-
 /**
  * Upgrades or removes existing facets, or adds new facets.
  *

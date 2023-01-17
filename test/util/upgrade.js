@@ -172,13 +172,13 @@ async function upgradeClients(tag) {
   const clientConfig = {
     META_TRANSACTION_FORWARDER: {
       hardhat: forwarder.address,
-    }
-  }
+    },
+  };
 
   // Upgrade clients
   await hre.run("upgrade-clients", { env: "upgrade-test", clientConfig: JSON.stringify(clientConfig) });
 
-  return forwarder
+  return forwarder;
 }
 
 // populates protocol with some entities
