@@ -6,6 +6,7 @@ const environments = require("../environments");
 const tipMultiplier = ethers.BigNumber.from(environments.tipMultiplier);
 const tipSuggestion = "1500000000"; // ethers.js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = ethers.BigNumber.from(tipSuggestion).mul(tipMultiplier);
+const { deploymentComplete, readContracts, writeContracts, checkRole, addressNotFound, requireUncached } = require("./util/utils.js");
 const { deployProtocolFacets } = requireUncached("./util/deploy-protocol-handler-facets.js");
 const {
   FacetCutAction,
@@ -14,7 +15,6 @@ const {
   cutDiamond,
   getInitializeCalldata,
 } = require("./util/diamond-utils.js");
-const { deploymentComplete, readContracts, writeContracts, checkRole, addressNotFound } = require("./util/utils.js");
 const { getInterfaceIds, interfaceImplementers } = require("./config/supported-interfaces.js");
 const Role = require("./domain/Role");
 const packageFile = require("../package.json");
@@ -391,28 +391,5 @@ const logFacetCut = (cut, selectors) => {
       });
   }
 };
-
-/**
- * Require uncached node module
- *
- * Normally, if the same module is required multiple times, the first time it is loaded and cached.
- * If the module is changed during the execution, the cache is not updated, so the old version is returned.
- * This function deletes the cache for the specified module and requires it again.
- *
- * Use case:
- * Upgrade test `test/upgrade/clients/BosonVoucher-2.1.0-2.2.0.js` deploys version 2.1.0 of the contract and then upgrades it to 2.2.0.
- * Since deployment script changed between versions, current deployment script cannot be used to deploy 2.1.0.
- * For first deployment, we checkout old deployment script, which uses `deployProtocolHandlerFacets` from `./util/deploy-protocol-handler-facets.js`.
- * To upgrade to 2.2.0, we switch back to current upgrade script, which uses `deployProtocolFacets` from `./util/deploy-protocol-handler-facets.js`.
- * If the cache is not cleared, requiring module `./util/deploy-protocol-handler-facets.js` returns the old version, where `deployProtocolFacets` does not
- * exist yet and the upgrade fails.
- * If the cache is cleared, the new version is required and the upgrade succeeds.
- *
- * @param {string} module - Module to require
- */
-function requireUncached(module) {
-  delete require.cache[require.resolve(module)];
-  return require(module);
-}
 
 exports.upgradeFacets = main;

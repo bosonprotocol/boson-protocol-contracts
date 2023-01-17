@@ -5,7 +5,6 @@ const environments = require("../environments");
 const tipMultiplier = ethers.BigNumber.from(environments.tipMultiplier);
 const tipSuggestion = "1500000000"; // ethers.js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = ethers.BigNumber.from(tipSuggestion).mul(tipMultiplier);
-const { deployProtocolClientImpls } = require("./util/deploy-protocol-client-impls.js");
 const {
   deploymentComplete,
   getFees,
@@ -13,7 +12,9 @@ const {
   writeContracts,
   checkRole,
   addressNotFound,
+  requireUncached,
 } = require("./util/utils.js");
+const { deployProtocolClientImpls } = requireUncached("./util/deploy-protocol-client-impls.js");
 const clientConfig = require("./config/client-upgrade");
 const Role = require("./domain/Role");
 
@@ -74,6 +75,7 @@ async function main(env) {
   console.log(`\n📋 Deploying new logic contract`);
 
   const implementationArgs = Object.values(clientConfig).map((config) => config[network]);
+  console.log(implementationArgs);
   const [bosonVoucherImplementation] = await deployProtocolClientImpls(implementationArgs, maxPriorityFeePerGas);
 
   // Update implementation address on beacon contract
