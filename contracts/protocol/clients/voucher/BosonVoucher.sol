@@ -18,25 +18,11 @@ import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHa
 import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchangeHandler.sol";
 
 /**
- * @title BosonVoucher
+ * @title BosonVoucherBase
  * @notice This is the Boson Protocol ERC-721 Voucher contract.
  *
  * N.B. Although this contract extends OwnableUpgradeable and ERC721Upgradeable,
  *      that is only for convenience, to avoid conflicts with mixed imports.
- *
- *      This is only a logic contract, delegated to by BeaconClientProxy. Thus,
- *      this contract will never be "upgraded". Rather it will be redeployed
- *      with changes and the BosonClientBeacon will be advised of the new address.
- *      Individual seller collections are clones of BeaconClientProxy, which
- *      asks the BosonClientBeacon for the address of the BosonVoucher contract
- *      on each call. This allows us to upgrade all voucher collections cheaply,
- *      and at once.
- *
- * Key features:
- * - Only PROTOCOL-roled addresses can issue vouchers, i.e., the ProtocolDiamond or an EOA for testing
- * - Minted to the buyer when the buyer commits to an offer
- * - Burned when the buyer redeems the voucher
- * - Support for pre-minted voucher id ranges
  */
 contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
     // Struct that is used to manipulate private variables from ERC721UpgradeableStorage
@@ -749,6 +735,27 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     }
 }
 
+/**
+ * @title BosonVoucher
+ * @notice This is the Boson Protocol ERC-721 Voucher contract.
+ *
+ * N.B. This is only a logic contract, delegated to by BeaconClientProxy. Thus,
+ *      this contract will never be "upgraded". Rather it will be redeployed
+ *      with changes and the BosonClientBeacon will be advised of the new address.
+ *      Individual seller collections are clones of BeaconClientProxy, which
+ *      asks the BosonClientBeacon for the address of the BosonVoucher contract
+ *      on each call. This allows us to upgrade all voucher collections cheaply,
+ *      and at once.
+ *
+ * Key features:
+ * - Only PROTOCOL-roled addresses can issue vouchers, i.e., the ProtocolDiamond or an EOA for testing
+ * - Minted to the buyer when the buyer commits to an offer
+ * - Burned when the buyer redeems the voucher
+ * - Support for pre-minted voucher id ranges
+ *
+ * @dev This contract inherit BosonVoucherBase because we have added support to meta transaction
+ *      and split into two contracts doesn't mess up the storage layout when importing ERC2771ContextUpgradeable
+ */
 contract BosonVoucher is BosonVoucherBase, ERC2771ContextUpgradeable {
     constructor(address forwarder) ERC2771ContextUpgradeable(forwarder) {}
 
