@@ -17,10 +17,11 @@ const {
   mockOffer,
   accountId,
 } = require("../../util/mock");
-const { calculateContractAddress } = require("../../util/utils");
+const { calculateContractAddress, prepareDataSignatureParameters } = require("../../util/utils");
 const Range = require("../../../scripts/domain/Range");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const { getGenericContext } = require("./01_generic");
+const SellerUpdateFields = require("../../../scripts/domain/SellerUpdateFields");
 
 const oldVersion = "v2.1.0";
 const newVersion = "HEAD";
@@ -46,6 +47,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
   // facet handlers
   let offerHandler, accountHandler, fundsHandler, exchangeHandler, configHandler;
   let bosonVoucher;
+  let forwarder;
 
   before(async function() {
     // Make accounts available
@@ -78,7 +80,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
     voucherContractState = await getVoucherContractState(preUpgradeEntities);
 
     // upgrade clients
-    await upgradeClients(newVersion);
+    forwarder = await upgradeClients(newVersion);
 
     // upgrade suite
     ({ offerHandler, configHandler } = await upgradeSuite(newVersion, protocolDiamondAddress, {
@@ -92,19 +94,19 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
     // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
     // and those values are undefined if this is placed outside "before".
     // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
-    // context(
-    //   "Generic tests",
-    //   getGenericContext(
-    //     deployer,
-    //     protocolDiamondAddress,
-    //     protocolContracts,
-    //     mockContracts,
-    //     voucherContractState,
-    //     preUpgradeEntities,
-    //     preUpgradeStorageLayout,
-    //     snapshot
-    //   )
-    // );
+    context(
+      "Generic tests",
+      getGenericContext(
+        deployer,
+        protocolDiamondAddress,
+        protocolContracts,
+        mockContracts,
+        voucherContractState,
+        preUpgradeEntities,
+        preUpgradeStorageLayout,
+        snapshot
+      )
+    );
   });
 
   afterEach(async function() {
@@ -173,7 +175,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       await configHandler.connect(deployer).setMaxPremintedVouchers(1000);
     });
 
-    it.skip("reserveRange()", async function() {
+    it("reserveRange()", async function() {
       // Reserve range, test for event
       await expect(offerHandler.connect(operator).reserveRange(offerId, length)).to.emit(bosonVoucher, "RangeReserved");
     });
@@ -187,20 +189,63 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         await expect(bosonVoucher.connect(operator).preMint(offerId, amount)).to.emit(bosonVoucher, "Transfer");
       });
 
-      // WIP
       it("MetaTx: forwarder can pre mint on behalf of seller on old vouchers", async function() {
-        const { bosonVouchers } = preUpgradeEntities
+        const sellersLength = preUpgradeEntities.sellers.length;
 
-        // get arbitrary voucher contract
-        const voucher = bosonVouchers[2];
+        // Gets last seller created before upgrade
+        let { seller, authToken, offerIds: [offerId], wallet } = preUpgradeEntities.sellers[sellersLength - 1];
 
-        console.log(typeof voucher);
-        // Premint tokens, test for event
-        await expect(voucher.connect(operator).preMint(offerId, amount)).to.emit(bosonVoucher, "Transfer");
+        // reassign operator because signer must be on provider default accounts in order to call eth_signTypedData_v4
+        operator = (await ethers.getSigners())[2];
+        seller.operator = operator.address
+        await accountHandler.connect(wallet).updateSeller(seller, authToken);
+        await accountHandler.connect(operator).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator])
+
+        // Reserve range
+        await offerHandler.connect(operator).reserveRange(offerId, length);
+
+        // Get last seller voucher 
+        bosonVoucher = await ethers.getContractAt(
+          "BosonVoucher",
+          calculateContractAddress(exchangeHandler.address, sellersLength)
+        );
+
+        const nonce = Number(await forwarder.getNonce(operator.address));
+
+        const types = {
+          MetaTransaction: [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "to", type: "address" },
+            { name: "functionSignature", type: "bytes" },
+          ],
+        };
+
+        const functionSignature = bosonVoucher.interface.encodeFunctionData("preMint", [offerId, amount]);
+
+        const message = {
+          nonce: nonce,
+          from: operator.address,
+          to: bosonVoucher.address,
+          functionSignature: functionSignature,
+        };
+
+        const { r, s, v } = await prepareDataSignatureParameters(
+          operator,
+          types,
+          "MetaTransaction",
+          message,
+          forwarder.address,
+          "Forwarder",
+          "0.0.1"
+        );
+        const tx = await forwarder.executeMetaTransaction(message, r, s, v);
+
+        await expect(tx).to.emit(bosonVoucher, "Transfer");
       })
     });
 
-    it.skip("burnPremintedVouchers()", async function() {
+    it("burnPremintedVouchers()", async function() {
       // Reserve range and premint tokens
       await offerHandler.connect(operator).reserveRange(offerId, length);
       await bosonVoucher.connect(operator).preMint(offerId, amount);
@@ -212,7 +257,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       await expect(bosonVoucher.connect(operator).burnPremintedVouchers(offerId)).to.emit(bosonVoucher, "Transfer");
     });
 
-    it.skip("getRange()", async function() {
+    it("getRange()", async function() {
       // Reserve range
       await offerHandler.connect(operator).reserveRange(offerId, length);
 
@@ -223,7 +268,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
     });
 
-    it.skip("getAvailablePreMints()", async function() {
+    it("getAvailablePreMints()", async function() {
       // Reserve range
       await offerHandler.connect(operator).reserveRange(offerId, length);
 
