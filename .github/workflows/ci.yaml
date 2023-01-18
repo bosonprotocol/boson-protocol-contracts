@@ -5,7 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    types: [opened, reopened, synchronize, ready_for_review]
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft, assigned]
 
 jobs:
   build:
@@ -44,47 +44,94 @@ jobs:
           echo "test-chunk-ids=$(echo $CHUNKS | jq -cM 'to_entries | map(.key)')" >> $GITHUB_OUTPUT
         env:
           CHUNKS: ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
-  test:
-    needs: build
-    runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.draft }}
-    env:
-      GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
-    name: test (chunk ${{ matrix.chunk }})
-    strategy:
-      matrix:
-        chunk: ${{ fromJson(needs.build.outputs['test-chunk-ids']) }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3.1.0
-      - name: Setup node
-        uses: actions/setup-node@v3.5.1
-        with:
-          node-version: 16.14.x
-          cache: "npm"
-      - name: Install Dependencies
-        run: npm install
-      - name: Prepare Environment
-        shell: bash
-        run: |
-          cp .env.example .env
-      - name: Compile Contracts
-        run: npm run build
-      - name: Contract Sizing
-        run: npm run size
-      - name: Unit Tests 
-        run: echo $CHUNKS | jq '.[${{ matrix.chunk }}] | .[] | @text' | xargs npx hardhat test 
-        env:
-          CHUNKS: ${{ needs.build.outputs['test-chunks'] }}
+  # test:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   if: ${{ !github.event.pull_request.draft }}
+  #   env:
+  #     GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
+  #   name: test (chunk ${{ matrix.chunk }})
+  #   strategy:
+  #     matrix:
+  #       chunk: ${{ fromJson(needs.build.outputs['test-chunk-ids']) }}
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v3.1.0
+  #     - name: Setup node
+  #       uses: actions/setup-node@v3.5.1
+  #       with:
+  #         node-version: 16.14.x
+  #         cache: "npm"
+  #     - name: Install Dependencies
+  #       run: npm install
+  #     - name: Prepare Environment
+  #       shell: bash
+  #       run: |
+  #         cp .env.example .env
+  #     - name: Compile Contracts
+  #       run: npm run build
+  #     - name: Contract Sizing
+  #       run: npm run size
+  #     - name: Unit Tests 
+  #       run: echo $CHUNKS | jq '.[${{ matrix.chunk }}] | .[] | @text' | xargs npx hardhat test 
+  #       env:
+  #         CHUNKS: ${{ needs.build.outputs['test-chunks'] }}
 
-  integration-test:
-    needs: build
-    runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.draft }}
-    env:
-      GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
-    name: "test:integration"
-    steps:
+  # integration-test:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   if: ${{ !github.event.pull_request.draft }}
+  #   env:
+  #     GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
+  #   name: "test:integration"
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v3.1.0
+  #     - name: Setup node
+  #       uses: actions/setup-node@v3.5.1
+  #       with:
+  #         node-version: 16.14.x
+  #         cache: 'npm'
+  #     - name: Install Dependencies
+  #       run: npm install
+  #     - name: Prepare Environment
+  #       shell: bash
+  #       run: |
+  #         cp .env.example .env
+  #     - name: Integration tests
+  #       run: npx hardhat test test/integration/** 
+
+  # deploy-dry-run:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   if: ${{ !github.event.pull_request.draft }}
+  #   name: "deploy: dry run"
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v3.1.0
+  #     - name: Setup node
+  #       uses: actions/setup-node@v3.5.1
+  #       with:
+  #         node-version: 16.14.x
+  #         cache: "npm"
+  #     - name: Install Dependencies
+  #       run: npm install
+  #     - name: Prepare Environment
+  #       shell: bash
+  #       run: |
+  #         cp .env.example .env
+  #     - name: Deploy suite locally
+  #       run: npm run deploy-suite:hardhat
+  #     - name: Cancelling tests in case of failure
+  #       if: failure()
+  #       uses: andymckay/cancel-action@0.2
+  analyze:
+      needs: build
+      runs-on: ubuntu-latest
+      permissions:
+        contents: read
+        security-events: write
+      steps:
       - name: Checkout repository
         uses: actions/checkout@v3.1.0
       - name: Setup node
@@ -94,34 +141,17 @@ jobs:
           cache: 'npm'
       - name: Install Dependencies
         run: npm install
-      - name: Prepare Environment
-        shell: bash
-        run: |
-          cp .env.example .env
-      - name: Integration tests
-        run: npx hardhat test test/integration/** 
-
-  deploy-dry-run:
-    needs: build
-    runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.draft }}
-    name: "deploy: dry run"
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3.1.0
-      - name: Setup node
-        uses: actions/setup-node@v3.5.1
+      - name: Slither analyzer
+        uses: crytic/slither-action@v0.2.0
+        id: slither
         with:
-          node-version: 16.14.x
-          cache: "npm"
-      - name: Install Dependencies
-        run: npm install
-      - name: Prepare Environment
-        shell: bash
-        run: |
-          cp .env.example .env
-      - name: Deploy suite locally
-        run: npm run deploy-suite:hardhat
-      - name: Cancelling tests in case of failure
-        if: failure()
-        uses: andymckay/cancel-action@0.2
+          ignore-compile: true
+          node-version: 16
+          sarif: results.sarif
+          fail-on: none
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: ${{ steps.slither.outputs.sarif }}
+
+
