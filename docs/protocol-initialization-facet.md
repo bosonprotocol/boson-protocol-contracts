@@ -27,7 +27,7 @@ Facets allows to query the current version by calling `getVersion`.
 
 ### Facet initialization
 
-Each Protocol facet should have initialization function (even if no-op) to ensure consistency across codebase and different version. Initialization function should be written as if protocol is deployed for the first time (i.e. not taking into account potential effects on the upgrade).
+Each Protocol facet should have initialization function (even if no-op) to ensure consistency across codebase and different version. Initialization function should be written as if protocol is deployed for the first time (i.e. not taking into account potential effects on the upgrade). Although initialization functions must be external, they should not be part of facet interface and therefore should never be added to diamond function list. This is important to prevent facet reinitialization and clashes between initializers with same argument types.
 
 When protocol is deployed for the first time, `initialize` on Protocol initialization handler should get list of all facet implementation addresses together with corresponding initialization data. This data is passed directly on individual facets where whole initialization takes place.  
 
