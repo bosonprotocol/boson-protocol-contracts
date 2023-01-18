@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.draft }}
+    # if: ${{ !github.event.pull_request.draft }}
     name: build
     outputs: 
       test-chunks:  ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
@@ -128,9 +128,9 @@ jobs:
   analyze:
       needs: build
       runs-on: ubuntu-latest
-      permissions:
-        contents: read
-        security-events: write
+      # permissions:
+        # contents: read
+        # security-events: write
       steps:
       - name: Checkout repository
         uses: actions/checkout@v3.1.0
@@ -141,14 +141,26 @@ jobs:
           cache: 'npm'
       - name: Install Dependencies
         run: npm install
+      # - name: Compile Contracts
+        # run: npm run build
+      - name: Prepare Environment
+        shell: bash
+        run: |
+          cp .env.example .env
       - name: Slither analyzer
         uses: crytic/slither-action@v0.2.0
+        # run: |
+        #   pip3 install slither-analyzer
+        #   slither --no-fail-pedantic --disable-color --sarif results.sarif .
+        #   slither --no-fail-pedantic --disable-color --ignore-compile --print human-summary .
         id: slither
         with:
-          ignore-compile: true
+          # ignore-compile: true
           node-version: 16
           sarif: results.sarif
           fail-on: none
+          slither-version: dev-workaround-action-48
+        #   target: .
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v2
         with:
