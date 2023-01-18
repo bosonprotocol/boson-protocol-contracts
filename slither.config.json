@@ -1,3 +1,3 @@
 {
-  "filter_paths": "(contracts/mock/|contracts/ext_libs/)"
+  "filter_paths": "(contracts/mock/|contracts/ext_libs/|node_modules)"
 }
