@@ -141,8 +141,6 @@ jobs:
           cache: 'npm'
       - name: Install Dependencies
         run: npm install
-      # - name: Compile Contracts
-        # run: npm run build
       - name: Prepare Environment
         shell: bash
         run: |
