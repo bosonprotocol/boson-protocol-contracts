@@ -177,7 +177,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
                 tokenName = NATIVE_CURRENCY;
             } else {
                 // Try to get token name
-                try IERC20Metadata(tokenAddress).name() returns (string memory name) {
+                try IERC20Metadata(tokenAddress).name{ gas: 100000 }() returns (string memory name) {
                     tokenName = name;
                 } catch {
                     tokenName = TOKEN_NAME_UNSPECIFIED;

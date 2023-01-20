@@ -163,6 +163,27 @@ contract Foreign20Malicious2 is Foreign20 {
 }
 
 /**
+ * @title Foreign20 that consumes all gas when name called
+ *
+ *
+ * @notice Mock ERC-(20) for Unit Testing
+ */
+contract Foreign20MaliciousName is Foreign20 {
+    function name() public pure override returns (string memory) {
+        // simulate the contract without "name" implementation.
+        // while (true) {}
+        unchecked {
+            uint256 i = 0;
+            while (true) {
+                i++;
+            }
+            // uint256 j = 1/i;
+        }
+        return "nothing";
+    }
+}
+
+/**
  * @title Foreign20 that takes a fee during the transfer
  *
  *
