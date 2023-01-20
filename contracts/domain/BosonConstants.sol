@@ -32,6 +32,7 @@ string constant PROTOCOL_INITIALIZATION_FAILED = "Protocol initialization failed
 string constant VERSION_MUST_BE_SET = "Version cannot be empty";
 string constant ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH = "Addresses and calldata must be same length";
 string constant WRONG_CURRENT_VERSION = "Wrong current protocol version";
+string constant DIRECT_INITIALIZATION_NOT_ALLOWED = "Direct initializtion is not allowed";
 
 // Revert Reasons: Access related
 string constant ACCESS_DENIED = "Access denied, caller doesn't have role";
@@ -182,7 +183,7 @@ string constant VOUCHER_SYMBOL = "BOSON_VOUCHER_RNFT";
 string constant EXCHANGE_ID_IN_RESERVED_RANGE = "Exchange id falls within a pre-minted offer's range";
 string constant NO_RESERVED_RANGE_FOR_OFFER = "Offer id not associated with a reserved range";
 string constant OFFER_RANGE_ALREADY_RESERVED = "Offer id already associated with a reserved range";
-string constant INVALID_RANGE_START = "Range start must be greater than zero";
+string constant INVALID_RANGE_START = "Range start too low";
 string constant INVALID_AMOUNT_TO_MINT = "Amount to mint is greater than remaining un-minted in range";
 string constant NO_SILENT_MINT_ALLOWED = "Only owner's mappings can be updated without event";
 string constant TOO_MANY_TO_MINT = "Exceeded maximum amount to mint in a single transaction";
