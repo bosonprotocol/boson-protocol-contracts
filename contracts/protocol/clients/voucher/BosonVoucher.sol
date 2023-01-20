@@ -728,16 +728,16 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
     /*
      * Returns storage pointer to location of private variables
-     * 0x0000000000000000000000000000000000000000000000000000000000000099 is location of _owners
-     * 0x000000000000000000000000000000000000000000000000000000000000009a is location of _balances
+     * 0x99 is location of _owners
+     * 0x9a is location of _balances
      *
-     * Since ERC721UpgradeableStorage slot is 0x0000000000000000000000000000000000000000000000000000000000000099
+     * Since ERC721UpgradeableStorage slot is 0x99
      * _owners slot is ERC721UpgradeableStorage + 0
      * _balances slot is ERC721UpgradeableStorage + 1
      */
     function getERC721UpgradeableStorage() internal pure returns (ERC721UpgradeableStorage storage ps) {
         assembly {
-            ps.slot := 0x0000000000000000000000000000000000000000000000000000000000000099
+            ps.slot := 0x99
         }
     }
 
