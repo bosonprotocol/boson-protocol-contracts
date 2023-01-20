@@ -202,7 +202,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       // Reserve range
       await offerHandler.connect(operator).reserveRange(offerId, length);
 
-      const range = new Range(offerId.toString(), start.toString(), length, "0", "0");
+      const range = new Range(start.toString(), length, "0", "0");
 
       // Get range object from contract
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
