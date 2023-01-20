@@ -27,6 +27,7 @@ exports.RevertReasons = {
   VERSION_MUST_BE_SET: "Version cannot be empty",
   ADDRESSES_AND_CALLDATA_MUST_BE_SAME_LENGTH: "Addresses and calldata must be same length",
   WRONG_CURRENT_VERSION: "Wrong current protocol version",
+  DIRECT_INITIALIZATION_NOT_ALLOWED: "Direct initializtion is not allowed",
 
   // Offer related
   NOT_OPERATOR: "Not seller's operator",
@@ -124,20 +125,21 @@ exports.RevertReasons = {
   VOUCHER_HAS_EXPIRED: "Voucher has expired",
   TOO_MANY_EXCHANGES: "Exceeded maximum exchanges in a single transaction",
   EXCHANGE_IS_NOT_IN_A_FINAL_STATE: "Exchange is not in a final state",
-  INVALID_RANGE_LENGTH: "Range length too large to large or zero",
+  INVALID_RANGE_LENGTH: "Range length is too large or zero",
   EXCHANGE_ALREADY_EXISTS: "Exchange already exists",
 
   // Voucher related
   EXCHANGE_ID_IN_RESERVED_RANGE: "Exchange id falls within a pre-minted offer's range",
   NO_RESERVED_RANGE_FOR_OFFER: "Offer id not associated with a reserved range",
   OFFER_RANGE_ALREADY_RESERVED: "Offer id already associated with a reserved range",
-  INVALID_RANGE_START: "Range start must be greater than zero",
+  INVALID_RANGE_START: "Range start too low",
   INVALID_AMOUNT_TO_MINT: "Amount to mint is greater than remaining un-minted in range",
   NO_SILENT_MINT_ALLOWED: "Only owner's mappings can be updated without event",
   TOO_MANY_TO_MINT: "Exceeded maximum amount to mint in a single transaction",
   OFFER_EXPIRED_OR_VOIDED: "Offer expired or voided",
   OFFER_STILL_VALID: "Offer still valid",
   NOTHING_TO_BURN: "Nothing to burn",
+  NOT_COMMITTABLE: "Token not committable",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",

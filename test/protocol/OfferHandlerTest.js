@@ -1296,7 +1296,7 @@ describe("IBosonOfferHandler", function () {
         length = 100;
         firstTokenId = 1;
         lastTokenId = firstTokenId + length - 1;
-        range = new Range(id.toString(), firstTokenId.toString(), length.toString(), "0", "0");
+        range = new Range(firstTokenId.toString(), length.toString(), "0", "0");
       });
 
       it("should emit an RangeReserved event", async function () {
@@ -1366,6 +1366,30 @@ describe("IBosonOfferHandler", function () {
         await expect(offerHandler.connect(operator).reserveRange(nextOfferId, length)).to.emit(
           offerHandler,
           "RangeReserved"
+        );
+      });
+
+      it("Reserving range of unlimited offer does not decrease quantity available", async function () {
+        // Create an unlimited offer
+        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+        await offerHandler
+          .connect(operator)
+          .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
+        // Get the offer quantity available before reservation
+        [, offerStruct] = await offerHandler.connect(rando).getOffer(nextOfferId);
+        const quantityAvailableBefore = offerStruct.quantityAvailable;
+
+        // Reserve a range
+        await offerHandler.connect(operator).reserveRange(nextOfferId, length);
+
+        // Quantity available should not change
+        [, offerStruct] = await offerHandler.connect(rando).getOffer(nextOfferId);
+        const quantityAvailableAfter = offerStruct.quantityAvailable;
+        assert.equal(
+          quantityAvailableBefore.toString(),
+          quantityAvailableAfter.toString(),
+          "Quantity available mismatch"
         );
       });
 
