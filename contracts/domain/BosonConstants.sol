@@ -32,6 +32,7 @@ string constant PROTOCOL_INITIALIZATION_FAILED = "Protocol initialization failed
 string constant VERSION_MUST_BE_SET = "Version cannot be empty";
 string constant ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH = "Addresses and calldata must be same length";
 string constant WRONG_CURRENT_VERSION = "Wrong current protocol version";
+string constant DIRECT_INITIALIZATION_NOT_ALLOWED = "Direct initializtion is not allowed";
 
 // Revert Reasons: Access related
 string constant ACCESS_DENIED = "Access denied, caller doesn't have role";
@@ -191,6 +192,7 @@ string constant OFFER_STILL_VALID = "Offer still valid";
 string constant NOTHING_TO_BURN = "Nothing to burn";
 string constant OWNABLE_ZERO_ADDRESS = "Ownable: new owner is the zero address";
 string constant ROYALTY_FEE_INVALID = "ERC2981: royalty fee exceeds protocol limit";
+string constant NOT_COMMITTABLE = "Token not committable";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(

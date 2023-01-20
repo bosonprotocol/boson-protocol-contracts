@@ -9,7 +9,7 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
  *
  * @notice This is the interface for the Boson Protocol ERC-721 Voucher contract.
  *
- * The ERC-165 identifier for this interface is: 0xc2e9f9ff
+ * The ERC-165 identifier for this interface is: 0x60490c39
  */
 interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     event ContractURIChanged(string contractURI);
@@ -190,6 +190,30 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @param _offerId - the id of the offer
      */
     function burnPremintedVouchers(uint256 _offerId) external;
+
+    /**
+     * @notice Non-standard ERC721 function to transfer a pre-minted token from one address to another.
+     *
+     * Reverts if:
+     * - TokenId was already used to commit
+     * - TokenId already exists (i.e. has an owner)
+     * - TokenId has not been preminted yet
+     * - TokenId was already burned
+     * - From is not the owner of the voucher contract
+     *
+     * @param _from - the address to transfer from
+     * @param _to - the address to transfer to
+     * @param _offerId - the id of the offer
+     * @param _tokenId - the id of the token
+     * @param _data - data to pass if receiver is contract
+     */
+    function transferPremintedFrom(
+        address _from,
+        address _to,
+        uint256 _offerId,
+        uint256 _tokenId,
+        bytes memory _data
+    ) external;
 
     /**
      * @notice Gets the number of vouchers available to be pre-minted for an offer.

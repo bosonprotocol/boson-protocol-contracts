@@ -27,6 +27,7 @@ exports.RevertReasons = {
   VERSION_MUST_BE_SET: "Version cannot be empty",
   ADDRESSES_AND_CALLDATA_MUST_BE_SAME_LENGTH: "Addresses and calldata must be same length",
   WRONG_CURRENT_VERSION: "Wrong current protocol version",
+  DIRECT_INITIALIZATION_NOT_ALLOWED: "Direct initializtion is not allowed",
 
   // Offer related
   NOT_OPERATOR: "Not seller's operator",
@@ -138,6 +139,7 @@ exports.RevertReasons = {
   OFFER_EXPIRED_OR_VOIDED: "Offer expired or voided",
   OFFER_STILL_VALID: "Offer still valid",
   NOTHING_TO_BURN: "Nothing to burn",
+  NOT_COMMITTABLE: "Token not committable",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",
