@@ -139,6 +139,7 @@ exports.RevertReasons = {
   OFFER_EXPIRED_OR_VOIDED: "Offer expired or voided",
   OFFER_STILL_VALID: "Offer still valid",
   NOTHING_TO_BURN: "Nothing to burn",
+  NOT_COMMITTABLE: "Token not committable",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",

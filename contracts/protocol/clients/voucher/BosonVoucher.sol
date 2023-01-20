@@ -408,9 +408,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
         if (committable) {
             // If offer is committable, temporarily update _owners, so transfer succeeds
-            silentMint(_from, _tokenId);
-            _premintStatus.committable = true;
-            _premintStatus.offerId = offerId;
+            silentMintAndSetPremintStatus(_from, _tokenId, offerId);
         }
 
         super.transferFrom(_from, _to, _tokenId);
@@ -429,10 +427,46 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
         if (committable) {
             // If offer is committable, temporarily update _owners, so transfer succeeds
-            silentMint(_from, _tokenId);
-            _premintStatus.committable = true;
-            _premintStatus.offerId = offerId;
+            silentMintAndSetPremintStatus(_from, _tokenId, offerId);
         }
+
+        super.safeTransferFrom(_from, _to, _tokenId, _data);
+    }
+
+    /**
+     * @notice Non-standard ERC721 function to transfer a pre-minted token from one address to another.
+     *
+     * Reverts if:
+     * - TokenId was already used to commit
+     * - TokenId already exists (i.e. has an owner)
+     * - TokenId has not been preminted yet
+     * - TokenId was already burned
+     * - From is not the owner of the voucher contract
+     *
+     * @param _from - the address to transfer from
+     * @param _to - the address to transfer to
+     * @param _offerId - the id of the offer
+     * @param _tokenId - the id of the token
+     * @param _data - data to pass if receiver is contract
+     */
+    function transferPremintedFrom(
+        address _from,
+        address _to,
+        uint256 _offerId,
+        uint256 _tokenId,
+        bytes memory _data
+    ) external override {
+        // Check that token has not been used yet
+        require(!_committed[_tokenId] && !_exists(_tokenId), NOT_COMMITTABLE);
+
+        // Get range associated with offer
+        Range storage range = _rangeByOfferId[_offerId];
+
+        // Check if token is committable
+        require(range.start + range.minted - 1 >= _tokenId && _tokenId > range.lastBurnedTokenId, NOT_COMMITTABLE);
+
+        // Temporarily update _owners, so transfer succeeds
+        silentMintAndSetPremintStatus(_from, _tokenId, _offerId);
 
         super.safeTransferFrom(_from, _to, _tokenId, _data);
     }
@@ -684,7 +718,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @return committable - whether the token is committable
      * @return offerId - the associated offer id if committable
      */
-    function getPreMintStatus(uint256 _tokenId) internal view returns (bool committable, uint256 offerId) {
+    function getPreMintStatus(uint256 _tokenId) public view returns (bool committable, uint256 offerId) {
         // Not committable if _committed already or if token has an owner
         if (!_committed[_tokenId] && !_exists(_tokenId)) {
             // If are reserved ranges, search them
@@ -744,10 +778,18 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     /*
      * Updates owners, but do not emit Transfer event. Event was already emited during pre-mint.
      */
-    function silentMint(address _from, uint256 _tokenId) internal {
+    function silentMintAndSetPremintStatus(
+        address _from,
+        uint256 _tokenId,
+        uint256 _offerId
+    ) internal {
         require(_from == owner(), NO_SILENT_MINT_ALLOWED);
 
         // update data, so transfer will succeed
         getERC721UpgradeableStorage()._owners[_tokenId] = _from;
+
+        // Update premint status
+        _premintStatus.committable = true;
+        _premintStatus.offerId = _offerId;
     }
 }
