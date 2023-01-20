@@ -141,13 +141,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @param _offerId - the id of the offer
      * @param _length - the length of the range
      */
-    function reserveRange(uint256 _offerId, uint256 _length)
-        external
-        override
-        nonReentrant
-        offersNotPaused
-        exchangesNotPaused
-    {
+    function reserveRange(uint256 _offerId, uint256 _length) external override nonReentrant {
         reserveRangeInternal(_offerId, _length);
     }
 
