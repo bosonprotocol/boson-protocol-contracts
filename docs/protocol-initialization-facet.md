@@ -6,37 +6,37 @@
 
 ## Protocol initialization handler facet
 
-Protocol initialization handler facet has a special role in the whole [architecture](architecture.md). On one side we have Diamond-specific facets - Loupe and Cut - which enable lookups and facet management. On the other hand we have Protocol specific facets which implements all features needed for protocol to work. Most of these facets need to be initialized at the time when cuts are done, which among others includes registering its interface in the diamond. However, in some cases initialization of a facet is different depending on whether whole protocol is deployed for the first time or it is just upgraded. Moreover, some upgrades might introduce a logic that relies on data that was not produced in old versions of the protocol. For that purpose, we introduce Protocol initialization handler facet, which conceptually belongs between Diamond-specific and Protocol-specific facets. Its role is to enable smooth atomic upgrades and if necessary populate some of contract storage.
+The Protocol initialization handler facet plays a specialized role in the overall [architecture](architecture.md). On one side we have Diamond-specific facets - Loupe and Cut - which enable lookups and facet management. On the other hand we have Protocol specific facets which implement all the features needed for protocol to function as intended. Most of these facets need to be initialized at the time when cuts are performed, an example being the act of registering its own interface in the diamond. However, in some cases initialization of a facet is different depending on whether the whole protocol is deployed from scratch or whether it is being upgraded. Moreover, certain upgrades might introduce logic that requires data that was not produced in an older version of the protocol which also need to be handled in the initialization step. To this end, we introduce the Protocol initialization handler facet, which conceptually lives between the Diamond-specific and the Protocol-specific facets. Its role is to enable smooth atomic upgrades between versions. One of its functions is to backfill contract storage if needed for a given upgrade.
 
-Protocol initialization handler facets responsibilities are:
-- store version of the protocol,
-- forward initialization calls to individual facets,
-- if called during an upgrade, properly handle initialization data,
+Protocol initialization handler facets responsibilities are to:
+- store the version of the protocol,
+- forward initialization calls to the appropriate facets,
+- properly handle the initialization of data when called during an upgrade,
 - remove supported interfaces,
 - add supported interfaces.
 
 Two biggest benefits of the Protocol initialization handler are:
-- It allows atomic cuts of multiple facets, so there is generally no need to pause the protocol during the upgrade.
-- It allows custom storage manipulation, so if any back filling is needed, we have a way to do it.
+- It allows for atomic cuts of multiple facets, this can at times alleviate the need to pause the protocol to perform an upgrade.
+- It allows for custom storage manipulation, enabling the upgrades to backfill data as needed.
 
 ### Versioning
 
-Initialize accepts version encoded in bytes32. Every time an upgrade takes place, a unique version must be supplied, otherwise initialization reverts. Depending on version, some additional checks can be done, for example, upgrade to certain versions can only be done if current protocol version is exactly one version lower. This kind of restriction is planned to be used on every upgrade. This means that skipping versions during the upgrade will not be possible. If the latest version of protocol code is more than one version higher than currently deployed protocol, all intermediate upgrades need to be done to upgrade to the latest version.
+Initialize accepts version numbers that are encoded as bytes32. Every time an upgrade takes place, a unique version must be supplied, otherwise the initialization will revert. Checks can be performed against these version numbers, e.g. an upgrade to a given version can only be performed if the current protocol version is set to exactly one version below. This kind of restriction is planned to be used on every upgrade. This means that skipping versions during the upgrade will not be possible. If the latest version of protocol code is more than one version higher than currently deployed protocol, all intermediate upgrades need to be done to upgrade to the latest version.
 
 Facets allows to query the current version by calling `getVersion`.
 
 ### Facet initialization
 
-Each Protocol facet should have initialization function (even if no-op) to ensure consistency across codebase and different version. Initialization function should be written as if protocol is deployed for the first time (i.e. not taking into account potential effects on the upgrade). Although initialization functions must be external, they should not be part of facet interface and therefore should never be added to diamond function list. This is important to prevent facet reinitialization and clashes between initializers with same argument types.
+Each Protocol facet should have an initialization function (even if no-op) to ensure consistency across the codebase and the different versions. The initialization functions should be written as if the protocol is deployed for the first time (i.e. not taking into account potential effects on the upgrade). Although initialization functions must be external, they should not be part of facet interface and therefore should never be added to diamond function list. This is important to prevent facet reinitialization and clashes between initializers with same argument types.
 
-When protocol is deployed for the first time, `initialize` on Protocol initialization handler should get list of all facet implementation addresses together with corresponding initialization data. This data is passed directly on individual facets where whole initialization takes place.  
+When protocol is deployed for the first time, `initialize` on Protocol initialization handler should get a list of all facet implementation addresses together with corresponding initialization data. This data is passed directly on to individual facets where whole initialization takes place.  
 
-However, before upgrade is done, effects of facet initializers should be carefully considered before passing data to initialization handler. If facet's initialization function does not affect the protocol state in a harmful way, it should be passed to initialization handler in the same way as for the initial deployment. However, when initialize affects the storage (for example Config handler sets all counters to 1), facet should be omitted from initialization call and approach from next section should be followed.
+However, before an upgrade is performed, the effects of facet initializers should be carefully considered before passing data to initialization handler. If a facet's initialization function does not affect the protocol state in a harmful way, it should be passed to initialization handler in the same way as for the initial deployment. However, when initialize affects the storage (for example Config handler sets all counters to 1), the facet should be omitted from the initialization call and the approach detailed in the next section should be followed.
 
 ### Data initialization
 
-When facet initializers clash with existing data or simply a specific storage must be populated, initializer facet must be updated to cater for this kind of change. Suppose new version is X.Y.Z and there is a need to modify the storage during the update, a new internal function should be prepared, called `initVX_Y_Z`. This function can make additional version checks and can accept arbitrary data which can be handled in any desired way. This allows populating custom storage slots during the upgrade or mimicking actions of the facet initializers that would otherwise be harmful. For example if another limit is added to the Config handler, `initVX_Y_Z` could simply store new value to desired location, without the need to overwrite other config values and at the same time leaves counters intact.  
-Initialization data is passed in as bytes, so `initVX_Y_Z` must be decoded into correct types if needed.
+When facet initializers clash with existing data or if a specific bit of storage needs population, the initializer facet must be updated to cater for this kind of change. Suppose that in a new version X.Y.Z there is a need to modify the storage, a new function ought to be created, called `initVX_Y_Z`. This function can make additional version checks and can accept arbitrary data which can be handled in any desired way. This allows populating custom storage slots during the upgrade or mimicking actions of the facet initializers that would otherwise be harmful. For example if another limit is added to the Config handler, `initVX_Y_Z` could simply store new value to desired location, without the need to overwrite other config values and at the same time leaves counters intact.  
+Initialization data is passed in as bytes, so `initVX_Y_Z` must be decoded into correct types as needed.
 
 ### Managing supported interfaces
 
@@ -44,7 +44,7 @@ Although most facets initializers automatically register their EIP165 interfaces
 
 
 ### Initialization diagram
-Diagram below represents a simple upgrade with two upgraded facets:
+The diagram represents a simple protocol upgrade whereby two facets are upgraded:
 - Facet 1 has an initializer that writes to two slots, one of which is already populated.
 - Facet 2 has an initializer that writes to an empty slot.
 
