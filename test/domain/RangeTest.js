@@ -7,11 +7,10 @@ const Range = require("../../scripts/domain/Range");
 describe("Range", function () {
   // Suite-wide scope
   let range, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let offerId, start, length, minted, lastBurnedTokenId;
+  let start, length, minted, lastBurnedTokenId;
 
   beforeEach(async function () {
     // Required constructor params
-    offerId = "10";
     start = "15";
     length = "20000";
     minted = "1500";
@@ -20,8 +19,7 @@ describe("Range", function () {
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Range instance", async function () {
-      range = new Range(offerId, start, length, minted);
-      expect(range.offerIdIsValid()).is.true;
+      range = new Range(start, length, minted, lastBurnedTokenId);
       expect(range.startIsValid()).is.true;
       expect(range.lengthIsValid()).is.true;
       expect(range.mintedIsValid()).is.true;
@@ -33,34 +31,7 @@ describe("Range", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid range, then set fields in tests directly
-      range = new Range(offerId, start, length, minted, lastBurnedTokenId);
-      expect(range.isValid()).is.true;
-    });
-
-    it("Always present, offerId must be the string representation of a BigNumber", async function () {
-      // Invalid field value
-      range.offerId = "zedzdeadbaby";
-      expect(range.offerIdIsValid()).is.false;
-      expect(range.isValid()).is.false;
-
-      // Invalid field value
-      range.offerId = new Date();
-      expect(range.offerIdIsValid()).is.false;
-      expect(range.isValid()).is.false;
-
-      // Invalid field value
-      range.offerId = 12;
-      expect(range.offerIdIsValid()).is.false;
-      expect(range.isValid()).is.false;
-
-      // Valid field value
-      range.offerId = "0";
-      expect(range.offerIdIsValid()).is.true;
-      expect(range.isValid()).is.true;
-
-      // Valid field value
-      range.offerId = "126";
-      expect(range.offerIdIsValid()).is.true;
+      range = new Range(start, length, minted, lastBurnedTokenId);
       expect(range.isValid()).is.true;
     });
 
@@ -176,12 +147,11 @@ describe("Range", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid range, then set fields in tests directly
-      range = new Range(offerId, start, length, minted, lastBurnedTokenId);
+      range = new Range(start, length, minted, lastBurnedTokenId);
       expect(range.isValid()).is.true;
 
       // Get plain object
       object = {
-        offerId,
         start,
         length,
         minted,
@@ -189,7 +159,7 @@ describe("Range", function () {
       };
 
       // Struct representation
-      struct = [offerId, start, length, minted, lastBurnedTokenId];
+      struct = [start, length, minted, lastBurnedTokenId];
     });
 
     context("👉 Static", async function () {
