@@ -6,13 +6,9 @@ pragma solidity 0.8.9;
 import { MockEIP712Base } from "./MockEIP712Base.sol";
 
 contract MockNativeMetaTransaction is MockEIP712Base {
-    constructor(string memory name, string memory version) {
-        _initializeEIP712(name, version);
-    }
-
     bytes32 private constant META_TRANSACTION_TYPEHASH =
-        keccak256(bytes("MetaTransaction(uint256 nonce,address from,address to,bytes functionSignature)"));
-    event MetaTransactionExecuted(address from, address payable relayerAddress, bytes functionSignature);
+        keccak256(bytes("MetaTransaction(uint256 nonce,address from,bytes functionSignature)"));
+    event MetaTransactionExecuted(address userAddress, address payable relayerAddress, bytes functionSignature);
     mapping(address => uint256) private nonces;
 
     /*
@@ -23,27 +19,31 @@ contract MockNativeMetaTransaction is MockEIP712Base {
     struct MetaTransaction {
         uint256 nonce;
         address from;
-        address to;
         bytes functionSignature;
     }
 
     function executeMetaTransaction(
-        MetaTransaction memory metaTx,
+        address userAddress,
+        bytes memory functionSignature,
         bytes32 sigR,
         bytes32 sigS,
         uint8 sigV
     ) public payable returns (bytes memory) {
-        require(verify(metaTx, sigR, sigS, sigV), "Signer and signature do not match");
+        MetaTransaction memory metaTx = MetaTransaction({
+            nonce: nonces[userAddress],
+            from: userAddress,
+            functionSignature: functionSignature
+        });
+
+        require(verify(userAddress, metaTx, sigR, sigS, sigV), "Signer and signature do not match");
 
         // increase nonce for user (to avoid re-use)
-        nonces[metaTx.from]++;
+        nonces[userAddress]++;
 
-        emit MetaTransactionExecuted(metaTx.from, payable(msg.sender), metaTx.functionSignature);
+        emit MetaTransactionExecuted(userAddress, payable(msg.sender), functionSignature);
 
-        // Append from and relayer address at the end to extract it from calling context
-        (bool success, bytes memory returnData) = metaTx.to.call(
-            abi.encodePacked(metaTx.functionSignature, metaTx.from)
-        );
+        // Append userAddress and relayer address at the end to extract it from calling context
+        (bool success, bytes memory returnData) = address(this).call(abi.encodePacked(functionSignature, userAddress));
         require(success, "Function call not successful");
 
         return returnData;
@@ -52,13 +52,7 @@ contract MockNativeMetaTransaction is MockEIP712Base {
     function hashMetaTransaction(MetaTransaction memory metaTx) internal pure returns (bytes32) {
         return
             keccak256(
-                abi.encode(
-                    META_TRANSACTION_TYPEHASH,
-                    metaTx.nonce,
-                    metaTx.from,
-                    metaTx.to,
-                    keccak256(metaTx.functionSignature)
-                )
+                abi.encode(META_TRANSACTION_TYPEHASH, metaTx.nonce, metaTx.from, keccak256(metaTx.functionSignature))
             );
     }
 
@@ -67,12 +61,13 @@ contract MockNativeMetaTransaction is MockEIP712Base {
     }
 
     function verify(
+        address signer,
         MetaTransaction memory metaTx,
         bytes32 sigR,
         bytes32 sigS,
         uint8 sigV
     ) internal view returns (bool) {
-        require(metaTx.from != address(0), "NativeMetaTransaction: INVALID_SIGNER");
-        return metaTx.from == ecrecover(toTypedMessageHash(hashMetaTransaction(metaTx)), sigV, sigR, sigS);
+        require(signer != address(0), "NativeMetaTransaction: INVALID_SIGNER");
+        return signer == ecrecover(toTypedMessageHash(hashMetaTransaction(metaTx)), sigV, sigR, sigS);
     }
 }

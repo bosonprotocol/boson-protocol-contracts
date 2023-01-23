@@ -119,17 +119,17 @@ async function prepareDataSignatureParameters(
   const domainType =
     type == "Protocol"
       ? [
-        { name: "name", type: "string" },
-        { name: "version", type: "string" },
-        { name: "verifyingContract", type: "address" },
-        { name: "salt", type: "bytes32" },
-      ]
+          { name: "name", type: "string" },
+          { name: "version", type: "string" },
+          { name: "verifyingContract", type: "address" },
+          { name: "salt", type: "bytes32" },
+        ]
       : [
-        { name: "name", type: "string" },
-        { name: "version", type: "string" },
-        { name: "chainId", type: "uint256" },
-        { name: "verifyingContract", type: "address" },
-      ];
+          { name: "name", type: "string" },
+          { name: "version", type: "string" },
+          { name: "chainId", type: "uint256" },
+          { name: "verifyingContract", type: "address" },
+        ];
 
   const domainData = {
     name: domainName ?? "Boson Protocol",
@@ -139,7 +139,7 @@ async function prepareDataSignatureParameters(
 
   if (type == "Protocol") {
     //hardhat default chain id is 31337
-    domainData.salt = ethers.utils.hexZeroPad(ethers.BigNumber.from(31337).toHexString(), 32)
+    domainData.salt = ethers.utils.hexZeroPad(ethers.BigNumber.from(31337).toHexString(), 32);
   } else {
     const { chainId } = await ethers.provider.getNetwork();
     domainData.chainId = chainId;
