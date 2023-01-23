@@ -108,12 +108,10 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @param _exchangeId - the id of the associated exchange
      * @param _newDisputeTimeout - new date when resolution period ends
      */
-    function extendDisputeTimeout(uint256 _exchangeId, uint256 _newDisputeTimeout)
-        external
-        override
-        disputesNotPaused
-        nonReentrant
-    {
+    function extendDisputeTimeout(
+        uint256 _exchangeId,
+        uint256 _newDisputeTimeout
+    ) external override disputesNotPaused nonReentrant {
         // Verify that the caller is the seller. Get exchange -> get offer id -> get seller id -> get operator address and compare to msg.sender
         // Get the exchange, should be in disputed state
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
@@ -465,16 +463,9 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @return dispute - the dispute details. See {BosonTypes.Dispute}
      * @return disputeDates - the dispute dates details {BosonTypes.DisputeDates}
      */
-    function getDispute(uint256 _exchangeId)
-        external
-        view
-        override
-        returns (
-            bool exists,
-            Dispute memory dispute,
-            DisputeDates memory disputeDates
-        )
-    {
+    function getDispute(
+        uint256 _exchangeId
+    ) external view override returns (bool exists, Dispute memory dispute, DisputeDates memory disputeDates) {
         return fetchDispute(_exchangeId);
     }
 
@@ -542,15 +533,9 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function disputeResolverChecks(uint256 _exchangeId)
-        internal
-        view
-        returns (
-            Exchange storage exchange,
-            Dispute storage dispute,
-            DisputeDates storage disputeDates
-        )
-    {
+    function disputeResolverChecks(
+        uint256 _exchangeId
+    ) internal view returns (Exchange storage exchange, Dispute storage dispute, DisputeDates storage disputeDates) {
         // Get the exchange, should be in disputed state
         (exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 

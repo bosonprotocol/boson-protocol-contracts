@@ -1264,11 +1264,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerId - offerid, obtained in previous steps
      * @param _sellerId - sellerId, obtained in previous steps
      */
-    function createTwinAndBundleAfterOffer(
-        Twin memory _twin,
-        uint256 _offerId,
-        uint256 _sellerId
-    ) internal {
+    function createTwinAndBundleAfterOffer(Twin memory _twin, uint256 _offerId, uint256 _sellerId) internal {
         // Create twin and update structs values to represent true state
         createTwinInternal(_twin);
 

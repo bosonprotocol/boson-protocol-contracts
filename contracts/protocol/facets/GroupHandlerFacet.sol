@@ -36,12 +36,10 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct
      */
-    function createGroup(Group memory _group, Condition calldata _condition)
-        external
-        override
-        groupsNotPaused
-        nonReentrant
-    {
+    function createGroup(
+        Group memory _group,
+        Condition calldata _condition
+    ) external override groupsNotPaused nonReentrant {
         createGroupInternal(_group, _condition);
     }
 
@@ -63,12 +61,10 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _groupId - the id of the group to be updated
      * @param _offerIds - array of offer ids to be added to the group
      */
-    function addOffersToGroup(uint256 _groupId, uint256[] calldata _offerIds)
-        external
-        override
-        groupsNotPaused
-        nonReentrant
-    {
+    function addOffersToGroup(
+        uint256 _groupId,
+        uint256[] calldata _offerIds
+    ) external override groupsNotPaused nonReentrant {
         addOffersToGroupInternal(_groupId, _offerIds);
     }
 
@@ -88,12 +84,10 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _groupId - the id of the group to be updated
      * @param _offerIds - array of offer ids to be removed from the group
      */
-    function removeOffersFromGroup(uint256 _groupId, uint256[] calldata _offerIds)
-        external
-        override
-        groupsNotPaused
-        nonReentrant
-    {
+    function removeOffersFromGroup(
+        uint256 _groupId,
+        uint256[] calldata _offerIds
+    ) external override groupsNotPaused nonReentrant {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
@@ -155,12 +149,10 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _condition - fully populated condition struct
      *
      */
-    function setGroupCondition(uint256 _groupId, Condition calldata _condition)
-        external
-        override
-        groupsNotPaused
-        nonReentrant
-    {
+    function setGroupCondition(
+        uint256 _groupId,
+        Condition calldata _condition
+    ) external override groupsNotPaused nonReentrant {
         // Validate condition parameters
         require(validateCondition(_condition), INVALID_CONDITION_PARAMETERS);
 
@@ -192,16 +184,9 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @return group - the group details. See {BosonTypes.Group}
      * @return condition - the group's condition details. See {BosonTypes.Condition}
      */
-    function getGroup(uint256 _groupId)
-        external
-        view
-        override
-        returns (
-            bool exists,
-            Group memory group,
-            Condition memory condition
-        )
-    {
+    function getGroup(
+        uint256 _groupId
+    ) external view override returns (bool exists, Group memory group, Condition memory condition) {
         (exists, group) = fetchGroup(_groupId);
         if (exists) {
             condition = fetchCondition(_groupId);

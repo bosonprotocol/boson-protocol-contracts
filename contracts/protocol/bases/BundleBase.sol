@@ -166,11 +166,10 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
      * @param _offerId - offer id to add to total quantity
      * @return offersTotalQuantity - previous offers' total quantity plus the current offer quantityAvailable
      */
-    function calculateOffersTotalQuantity(uint256 previousTotal, uint256 _offerId)
-        internal
-        view
-        returns (uint256 offersTotalQuantity)
-    {
+    function calculateOffersTotalQuantity(
+        uint256 previousTotal,
+        uint256 _offerId
+    ) internal view returns (uint256 offersTotalQuantity) {
         // make sure all offers exist and belong to the seller
         Offer storage offer = getValidOffer(_offerId);
 

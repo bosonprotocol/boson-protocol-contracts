@@ -199,7 +199,9 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
      * @return offerFees - the offer fees details. See {BosonTypes.OfferFees}
      */
-    function getOffer(uint256 _offerId)
+    function getOffer(
+        uint256 _offerId
+    )
         external
         view
         returns (
