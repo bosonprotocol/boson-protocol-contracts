@@ -112,22 +112,38 @@ async function prepareDataSignatureParameters(
   message,
   forwarderAddress,
   domainName = "Boson Protocol",
-  domainVersion = "V2"
+  domainVersion = "V2",
+  type = "Protocol"
 ) {
   // Initialize data
-  const domainType = [
-    { name: "name", type: "string" },
-    { name: "version", type: "string" },
-    { name: "verifyingContract", type: "address" },
-    { name: "salt", type: "bytes32" },
-  ];
+  const domainType =
+    type == "Protocol"
+      ? [
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "verifyingContract", type: "address" },
+        { name: "salt", type: "bytes32" },
+      ]
+      : [
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "chainId", type: "uint256" },
+        { name: "verifyingContract", type: "address" },
+      ];
 
   const domainData = {
     name: domainName ?? "Boson Protocol",
     version: domainVersion ?? "V2",
     verifyingContract: forwarderAddress,
-    salt: ethers.utils.hexZeroPad(ethers.BigNumber.from(31337).toHexString(), 32), //hardhat default chain id is 31337
   };
+
+  if (type == "Protocol") {
+    //hardhat default chain id is 31337
+    domainData.salt = ethers.utils.hexZeroPad(ethers.BigNumber.from(31337).toHexString(), 32)
+  } else {
+    const { chainId } = await ethers.provider.getNetwork();
+    domainData.chainId = chainId;
+  }
 
   // Prepare the types
   let metaTxTypes = {
@@ -153,6 +169,7 @@ async function prepareDataSignatureParameters(
     r: r,
     s: s,
     v: v,
+    signature,
   };
 }
 

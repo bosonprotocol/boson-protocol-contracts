@@ -95,9 +95,9 @@ describe("IBosonVoucher", function () {
     const protocolClientArgs = [protocolDiamond.address];
 
     // Mock forwarder to test metatx
-    const MockNativeMetaTransaction = await ethers.getContractFactory("MockNativeMetaTransaction");
+    const MockForwarder = await ethers.getContractFactory("MockForwarder");
 
-    forwarder = await MockNativeMetaTransaction.deploy("Forwarder", "0.0.1");
+    forwarder = await MockForwarder.deploy();
 
     const implementationArgs = [forwarder.address];
     const [, beacons, proxies, bv] = await deployProtocolClients(
@@ -402,33 +402,35 @@ describe("IBosonVoucher", function () {
       const nonce = Number(await forwarder.getNonce(operator.address));
 
       const types = {
-        MetaTransaction: [
-          { name: "nonce", type: "uint256" },
+        ForwardRequest: [
           { name: "from", type: "address" },
           { name: "to", type: "address" },
-          { name: "functionSignature", type: "bytes" },
+          { name: "nonce", type: "uint256" },
+          { name: "data", type: "bytes" },
         ],
       };
 
       const functionSignature = bosonVoucher.interface.encodeFunctionData("preMint", [offerId, amount]);
 
       const message = {
-        nonce: nonce,
         from: operator.address,
         to: bosonVoucher.address,
-        functionSignature: functionSignature,
+        nonce: nonce,
+        data: functionSignature,
       };
 
-      const { r, s, v } = await prepareDataSignatureParameters(
+      const { signature } = await prepareDataSignatureParameters(
         operator,
         types,
-        "MetaTransaction",
+        "ForwardRequest",
         message,
         forwarder.address,
-        "Forwarder",
-        "0.0.1"
+        "MockForwarder",
+        "0.0.1",
+        "0Z"
       );
-      const tx = await forwarder.executeMetaTransaction(message, r, s, v);
+
+      const tx = await forwarder.execute(message, signature);
 
       // Expect an event for every mint
       for (let i = 0; i < Number(amount); i++) {

@@ -165,9 +165,9 @@ async function upgradeClients(tag) {
 
   await hre.run("compile");
   // Mock forwarder to test metatx
-  const MockNativeMetaTransaction = await ethers.getContractFactory("MockNativeMetaTransaction");
+  const MockForwarder = await ethers.getContractFactory("MockForwarder");
 
-  const forwarder = await MockNativeMetaTransaction.deploy("Forwarder", "0.0.1");
+  const forwarder = await MockForwarder.deploy();
 
   const clientConfig = {
     META_TRANSACTION_FORWARDER: {

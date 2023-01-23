@@ -218,33 +218,34 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         const nonce = Number(await forwarder.getNonce(operator.address));
 
         const types = {
-          MetaTransaction: [
-            { name: "nonce", type: "uint256" },
+          ForwardRequest: [
             { name: "from", type: "address" },
             { name: "to", type: "address" },
-            { name: "functionSignature", type: "bytes" },
+            { name: "nonce", type: "uint256" },
+            { name: "data", type: "bytes" },
           ],
         };
 
         const functionSignature = bosonVoucher.interface.encodeFunctionData("preMint", [offerId, amount]);
 
         const message = {
-          nonce: nonce,
           from: operator.address,
           to: bosonVoucher.address,
-          functionSignature: functionSignature,
+          nonce: nonce,
+          data: functionSignature,
         };
 
-        const { r, s, v } = await prepareDataSignatureParameters(
+        const { signature } = await prepareDataSignatureParameters(
           operator,
           types,
-          "MetaTransaction",
+          "ForwardRequest",
           message,
           forwarder.address,
-          "Forwarder",
-          "0.0.1"
+          "MockForwarder",
+          "0.0.1",
+          "0Z"
         );
-        const tx = await forwarder.executeMetaTransaction(message, r, s, v);
+        const tx = await forwarder.execute(message, signature);
 
         await expect(tx).to.emit(bosonVoucher, "Transfer");
       });
