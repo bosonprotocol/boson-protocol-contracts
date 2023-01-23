@@ -7,8 +7,9 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { IERC2981Upgradeable } from "@openzeppelin/contracts-upgradeable/interfaces/IERC2981Upgradeable.sol";
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import { ERC2771ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
-
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
 import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
@@ -17,27 +18,13 @@ import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHa
 import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchangeHandler.sol";
 
 /**
- * @title BosonVoucher
+ * @title BosonVoucherBase
  * @notice This is the Boson Protocol ERC-721 Voucher contract.
  *
  * N.B. Although this contract extends OwnableUpgradeable and ERC721Upgradeable,
  *      that is only for convenience, to avoid conflicts with mixed imports.
- *
- *      This is only a logic contract, delegated to by BeaconClientProxy. Thus,
- *      this contract will never be "upgraded". Rather it will be redeployed
- *      with changes and the BosonClientBeacon will be advised of the new address.
- *      Individual seller collections are clones of BeaconClientProxy, which
- *      asks the BosonClientBeacon for the address of the BosonVoucher contract
- *      on each call. This allows us to upgrade all voucher collections cheaply,
- *      and at once.
- *
- * Key features:
- * - Only PROTOCOL-roled addresses can issue vouchers, i.e., the ProtocolDiamond or an EOA for testing
- * - Minted to the buyer when the buyer commits to an offer
- * - Burned when the buyer redeems the voucher
- * - Support for pre-minted voucher id ranges
  */
-contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
+contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
     // Struct that is used to manipulate private variables from ERC721UpgradeableStorage
     struct ERC721UpgradeableStorage {
         // Mapping from token ID to owner address
@@ -68,6 +55,13 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
     // Tell if preminted voucher has already been _committed
     mapping(uint256 => bool) private _committed;
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[43] private __gap;
 
     /**
      * @notice Initializes the voucher.
@@ -792,4 +786,57 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         _premintStatus.committable = true;
         _premintStatus.offerId = _offerId;
     }
+}
+
+/**
+ * @title BosonVoucher
+ * @notice This is the Boson Protocol ERC-721 Voucher contract.
+ *
+ * N.B. This is only a logic contract, delegated to by BeaconClientProxy. Thus,
+ *      this contract will never be "upgraded". Rather it will be redeployed
+ *      with changes and the BosonClientBeacon will be advised of the new address.
+ *      Individual seller collections are clones of BeaconClientProxy, which
+ *      asks the BosonClientBeacon for the address of the BosonVoucher contract
+ *      on each call. This allows us to upgrade all voucher collections cheaply,
+ *      and at once.
+ *
+ * Key features:
+ * - Only PROTOCOL-roled addresses can issue vouchers, i.e., the ProtocolDiamond or an EOA for testing
+ * - Minted to the buyer when the buyer commits to an offer
+ * - Burned when the buyer redeems the voucher
+ * - Support for pre-minted voucher id ranges
+ *
+ * @dev This contract inherit BosonVoucherBase because we have added support to meta transaction
+ *      and split into two contracts doesn't mess up the storage layout when importing ERC2771ContextUpgradeable
+ */
+contract BosonVoucher is BosonVoucherBase, ERC2771ContextUpgradeable {
+    constructor(address forwarder) ERC2771ContextUpgradeable(forwarder) {}
+
+    /**
+     * @notice This function returns the calldata of the current message.
+     * @dev It is an override of the ERC2771ContextUpgradeable._msgData() function which allows meta transactions.
+     */
+    function _msgData() internal view override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (bytes calldata) {
+        return ERC2771ContextUpgradeable._msgData();
+    }
+
+    /**
+     * @notice This function returns the sender of the current message.
+     * @dev It is an override of the ERC2771ContextUpgradeable._msgSender() function which allows meta transactions.
+     */
+    function _msgSender()
+        internal
+        view
+        override(ContextUpgradeable, ERC2771ContextUpgradeable)
+        returns (address sender)
+    {
+        return ERC2771ContextUpgradeable._msgSender();
+    }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[50] private __gap;
 }

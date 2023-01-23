@@ -17,10 +17,11 @@ const {
   mockOffer,
   accountId,
 } = require("../../util/mock");
-const { calculateContractAddress } = require("../../util/utils");
+const { calculateContractAddress, prepareDataSignatureParameters } = require("../../util/utils");
 const Range = require("../../../scripts/domain/Range");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const { getGenericContext } = require("./01_generic");
+const SellerUpdateFields = require("../../../scripts/domain/SellerUpdateFields");
 
 const oldVersion = "v2.1.0";
 const newVersion = "HEAD";
@@ -46,6 +47,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
   // facet handlers
   let offerHandler, accountHandler, fundsHandler, exchangeHandler, configHandler;
   let bosonVoucher;
+  let forwarder;
 
   before(async function () {
     // Make accounts available
@@ -78,7 +80,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
     voucherContractState = await getVoucherContractState(preUpgradeEntities);
 
     // upgrade clients
-    await upgradeClients(newVersion);
+    forwarder = await upgradeClients(newVersion);
 
     // upgrade suite
     ({ offerHandler, configHandler } = await upgradeSuite(newVersion, protocolDiamondAddress, {
@@ -178,12 +180,75 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       await expect(offerHandler.connect(operator).reserveRange(offerId, length)).to.emit(bosonVoucher, "RangeReserved");
     });
 
-    it("preMint()", async function () {
-      // Reserve range
-      await offerHandler.connect(operator).reserveRange(offerId, length);
+    context("preMint()", async function () {
+      it("seller can pre mint vouchers", async function () {
+        // Reserve range
+        await offerHandler.connect(operator).reserveRange(offerId, length);
 
-      // Premint tokens, test for event
-      await expect(bosonVoucher.connect(operator).preMint(offerId, amount)).to.emit(bosonVoucher, "Transfer");
+        // Premint tokens, test for event
+        await expect(bosonVoucher.connect(operator).preMint(offerId, amount)).to.emit(bosonVoucher, "Transfer");
+      });
+
+      it("MetaTx: forwarder can pre mint on behalf of seller on old vouchers", async function () {
+        const sellersLength = preUpgradeEntities.sellers.length;
+
+        // Gets last seller created before upgrade
+        let {
+          seller,
+          authToken,
+          offerIds: [offerId],
+          wallet,
+        } = preUpgradeEntities.sellers[sellersLength - 1];
+
+        // reassign operator because signer must be on provider default accounts in order to call eth_signTypedData_v4
+        operator = (await ethers.getSigners())[2];
+        seller.operator = operator.address;
+        await accountHandler.connect(wallet).updateSeller(seller, authToken);
+        await accountHandler.connect(operator).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]);
+
+        // Reserve range
+        await offerHandler.connect(operator).reserveRange(offerId, length);
+
+        // Get last seller voucher
+        bosonVoucher = await ethers.getContractAt(
+          "BosonVoucher",
+          calculateContractAddress(exchangeHandler.address, sellersLength)
+        );
+
+        const nonce = Number(await forwarder.getNonce(operator.address));
+
+        const types = {
+          ForwardRequest: [
+            { name: "from", type: "address" },
+            { name: "to", type: "address" },
+            { name: "nonce", type: "uint256" },
+            { name: "data", type: "bytes" },
+          ],
+        };
+
+        const functionSignature = bosonVoucher.interface.encodeFunctionData("preMint", [offerId, amount]);
+
+        const message = {
+          from: operator.address,
+          to: bosonVoucher.address,
+          nonce: nonce,
+          data: functionSignature,
+        };
+
+        const { signature } = await prepareDataSignatureParameters(
+          operator,
+          types,
+          "ForwardRequest",
+          message,
+          forwarder.address,
+          "MockForwarder",
+          "0.0.1",
+          "0Z"
+        );
+        const tx = await forwarder.execute(message, signature);
+
+        await expect(tx).to.emit(bosonVoucher, "Transfer");
+      });
     });
 
     it("burnPremintedVouchers()", async function () {
