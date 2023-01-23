@@ -8,7 +8,6 @@ const { bigNumberIsValid } = require("../util/validations.js");
 class Range {
   /*
     struct Range {
-      uint256 offerId;
       uint256 start;
       uint256 length;
       uint256 minted;
@@ -16,8 +15,7 @@ class Range {
       }
   */
 
-  constructor(offerId, start, length, minted, lastBurnedTokenId) {
-    this.offerId = offerId;
+  constructor(start, length, minted, lastBurnedTokenId) {
     this.start = start;
     this.length = length;
     this.minted = minted;
@@ -30,8 +28,8 @@ class Range {
    * @returns {Range}
    */
   static fromObject(o) {
-    const { offerId, start, length, minted, lastBurnedTokenId } = o;
-    return new Range(offerId, start, length, minted, lastBurnedTokenId);
+    const { start, length, minted, lastBurnedTokenId } = o;
+    return new Range(start, length, minted, lastBurnedTokenId);
   }
 
   /**
@@ -40,13 +38,12 @@ class Range {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let offerId, start, length, minted, lastBurnedTokenId;
+    let start, length, minted, lastBurnedTokenId;
 
     // destructure struct
-    [offerId, start, length, minted, lastBurnedTokenId] = struct;
+    [start, length, minted, lastBurnedTokenId] = struct;
 
     return Range.fromObject({
-      offerId: offerId.toString(),
       start: start.toString(),
       length: length.toString(),
       minted: minted.toString(),
@@ -75,7 +72,7 @@ class Range {
    * @returns {string}
    */
   toStruct() {
-    return [this.offerId, this.start, this.length, this.minted, this.lastBurnedTokenId];
+    return [this.start, this.length, this.minted, this.lastBurnedTokenId];
   }
 
   /**
@@ -84,15 +81,6 @@ class Range {
    */
   clone() {
     return Range.fromObject(this.toObject());
-  }
-
-  /**
-   * Is this Range instance's offerId field valid?
-   * Must be a string representation of a big number
-   * @returns {boolean}
-   */
-  offerIdIsValid() {
-    return bigNumberIsValid(this.offerId);
   }
 
   /**
@@ -136,13 +124,7 @@ class Range {
    * @returns {boolean}
    */
   isValid() {
-    return (
-      this.offerIdIsValid() &&
-      this.startIsValid() &&
-      this.lengthIsValid() &&
-      this.mintedIsValid() &&
-      this.lastBurnedTokenIdIsValid()
-    );
+    return this.startIsValid() && this.lengthIsValid() && this.mintedIsValid() && this.lastBurnedTokenIdIsValid();
   }
 }
 

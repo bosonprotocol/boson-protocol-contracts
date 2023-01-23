@@ -27,7 +27,7 @@
     "test:gas-reporter": "npx hardhat test test/domain/** test/access/** test/protocol/**.js test/protocol/clients/**",
     "check:contracts": "solhint 'contracts/**/*.sol' && prettier --list-different contracts/**",
     "check:scripts": "eslint test/** scripts/** '*.js' && prettier --list-different test/** scripts/** '*.js'",
-    "docgen": "npx truffle compile --contracts_directory contracts/interfaces && npx truffle compile --contracts_directory contracts/domain && npx solidoc && rm -rf build",
+    "docgen": "npx truffle compile --contracts_directory contracts/interfaces && npx truffle compile --contracts_directory contracts/domain && rm -rf contract_docs && npx solidoc && rm -rf build",
     "tidy:contracts": "solhint --fix contracts/**/*.sol && prettier --write contracts/**",
     "tidy:scripts": "eslint --fix test/** scripts/** '*.js' && prettier --write test/** scripts/** '*.js'",
     "size": "npx hardhat size-contracts",
@@ -69,7 +69,7 @@
     "estimate-limits": "npx hardhat clean && npx hardhat compile && npx hardhat estimate-limits"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.7.1",
+    "@openzeppelin/contracts": "^4.8.1",
     "@openzeppelin/contracts-upgradeable": "^4.7.1"
   },
   "devDependencies": {
@@ -80,23 +80,24 @@
     "@nomiclabs/hardhat-waffle": "^2.0.2",
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/test-helpers": "^0.5.16",
-    "chai": "^4.3.6",
+    "chai": "^4.3.7",
     "dotenv": "^16.0.3",
     "eip55": "^2.1.0",
-    "eslint": "^8.12.0",
+    "eslint": "^8.32.0",
     "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-no-only-tests": "^3.1.0",
     "ethereum-waffle": "^3.4.0",
-    "ethers": "^5.5.4",
+    "ethers": "^5.7.2",
     "hardhat": "^2.8.3",
-    "hardhat-contract-sizer": "^2.4.0",
+    "hardhat-contract-sizer": "^2.7.0",
     "hardhat-gas-reporter": "^1.0.9",
     "husky": "^8.0.3",
     "prettier": "^2.6.1",
     "prettier-plugin-solidity": "^1.0.0-beta.19",
     "simple-statistics": "^7.7.6",
-    "solhint": "^3.3.7",
-    "solidity-coverage": "^0.7.18-eip165.0",
+    "solhint": "^3.3.8",
+    "solidity-coverage": "^0.8.2",
     "truffle": "^5.5.23",
-    "web3": "^1.7.0"
+    "web3": "^1.8.1"
   }
 }
