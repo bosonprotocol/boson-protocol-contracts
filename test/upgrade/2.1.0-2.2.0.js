@@ -30,7 +30,7 @@ const { readContracts } = require("../../scripts/util/utils.js");
 const { VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
 
 const oldVersion = "v2.1.0";
-const newVersion = "v2.2.0-rc.1";
+const newVersion = "HEAD";
 const v2_1_0_scripts = "v2.1.0-scripts";
 
 /**

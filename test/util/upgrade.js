@@ -149,7 +149,10 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scr
   const facets = await getFacets();
   // compile new contracts
   await hre.run("compile");
-  await hre.run("upgrade-facets", { env: "upgrade-test", facetConfig: JSON.stringify(facets.upgrade[tag]) });
+  await hre.run("upgrade-facets", {
+    env: "upgrade-test",
+    facetConfig: JSON.stringify(facets.upgrade[tag] || facets.upgrade["latest"]),
+  });
 
   // Cast to updated interface
   let newHandlers = {};
