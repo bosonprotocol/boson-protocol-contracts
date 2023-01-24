@@ -69,7 +69,7 @@ async function main(env, clientConfig) {
   // Validate that admin has UPGRADER role
   checkRole(contracts, Role.UPGRADER, adminAddress);
 
-  clientConfig = JSON.parse(clientConfig) || require("./config/client-upgrade");
+  clientConfig = clientConfig ? JSON.parse(clientConfig) : require("./config/client-upgrade");
 
   // Deploy Protocol Client implementation contracts
   console.log(`\n📋 Deploying new logic contract`);
