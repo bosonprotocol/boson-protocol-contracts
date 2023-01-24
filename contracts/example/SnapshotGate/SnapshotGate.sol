@@ -104,7 +104,14 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
     // Add safeTransferFrom to IERC20
     using SafeERC20 for IERC20;
 
-    // Constructor
+    /**
+     * @notice Constructor
+     *
+     * @param _name The name of the ERC721 contract.
+     * @param _symbol The symbol of the ERC721 contract.
+     * @param _protocol The address of the protocol contract.
+     * @param _sellerId The sellerId associated with the ERC721 contract.
+     */
     constructor(
         string memory _name,
         string memory _symbol,

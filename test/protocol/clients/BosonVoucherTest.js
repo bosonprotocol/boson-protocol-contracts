@@ -29,6 +29,7 @@ const {
   calculateVoucherExpiry,
   setNextBlockTimestamp,
   getFacetsWithArgs,
+  prepareDataSignatureParameters,
 } = require("../../util/utils.js");
 const { waffle } = hre;
 const { deployMockContract } = waffle;
@@ -59,18 +60,19 @@ describe("IBosonVoucher", function () {
   let emptyAuthToken;
   let agentId;
   let voucherInitValues, contractURI, royaltyPercentage, exchangeId, offerPrice;
+  let forwarder;
 
   before(async function () {
     // Get interface id
     const { IBosonVoucher, IERC721, IERC2981 } = await getInterfaceIds();
     interfaceIds = { IBosonVoucher, IERC721, IERC2981 };
-
-    // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
-    [deployer, protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR, protocolTreasury, bosonToken] =
-      await ethers.getSigners();
   });
 
   beforeEach(async function () {
+    // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
+    [deployer, protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR, protocolTreasury, bosonToken] =
+      await ethers.getSigners();
+
     // make all account the same
     operator = clerk = admin;
     operatorDR = clerkDR = adminDR;
@@ -91,7 +93,18 @@ describe("IBosonVoucher", function () {
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
     const protocolClientArgs = [protocolDiamond.address];
-    const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
+
+    // Mock forwarder to test metatx
+    const MockForwarder = await ethers.getContractFactory("MockForwarder");
+
+    forwarder = await MockForwarder.deploy();
+
+    const implementationArgs = [forwarder.address];
+    const [, beacons, proxies, bv] = await deployProtocolClients(
+      protocolClientArgs,
+      maxPriorityFeePerGas,
+      implementationArgs
+    );
     [bosonVoucher] = bv;
     [beacon] = beacons;
     const [proxy] = proxies;
@@ -419,6 +432,48 @@ describe("IBosonVoucher", function () {
       // Get available premints from contract
       const availablePremints = await bosonVoucher.getAvailablePreMints(offerId);
       assert.equal(availablePremints.toNumber(), Number(length) - Number(amount), "Available Premints mismatch");
+    });
+
+    it("MetaTx: forwarder can execute preMint on behalf of seller", async function () {
+      const nonce = Number(await forwarder.getNonce(operator.address));
+
+      const types = {
+        ForwardRequest: [
+          { name: "from", type: "address" },
+          { name: "to", type: "address" },
+          { name: "nonce", type: "uint256" },
+          { name: "data", type: "bytes" },
+        ],
+      };
+
+      const functionSignature = bosonVoucher.interface.encodeFunctionData("preMint", [offerId, amount]);
+
+      const message = {
+        from: operator.address,
+        to: bosonVoucher.address,
+        nonce: nonce,
+        data: functionSignature,
+      };
+
+      const { signature } = await prepareDataSignatureParameters(
+        operator,
+        types,
+        "ForwardRequest",
+        message,
+        forwarder.address,
+        "MockForwarder",
+        "0.0.1",
+        "0Z"
+      );
+
+      const tx = await forwarder.execute(message, signature);
+
+      // Expect an event for every mint
+      for (let i = 0; i < Number(amount); i++) {
+        await expect(tx)
+          .to.emit(bosonVoucher, "Transfer")
+          .withArgs(ethers.constants.AddressZero, operator.address, i + Number(start));
+      }
     });
 
     context("💔 Revert Reasons", async function () {
