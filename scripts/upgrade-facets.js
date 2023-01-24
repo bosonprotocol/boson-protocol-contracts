@@ -6,6 +6,7 @@ const environments = require("../environments");
 const tipMultiplier = ethers.BigNumber.from(environments.tipMultiplier);
 const tipSuggestion = "1500000000"; // ethers.js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = ethers.BigNumber.from(tipSuggestion).mul(tipMultiplier);
+const { deploymentComplete, readContracts, writeContracts, checkRole, addressNotFound } = require("./util/utils.js");
 const { deployProtocolFacets } = requireUncached("./util/deploy-protocol-handler-facets.js");
 const {
   FacetCutAction,
@@ -14,7 +15,6 @@ const {
   cutDiamond,
   getInitializeCalldata,
 } = require("./util/diamond-utils.js");
-const { deploymentComplete, readContracts, writeContracts, checkRole, addressNotFound } = require("./util/utils.js");
 const { getInterfaceIds, interfaceImplementers } = require("./config/supported-interfaces.js");
 const Role = require("./domain/Role");
 const packageFile = require("../package.json");

@@ -19,6 +19,8 @@ const { getInterfaceIds, interfaceImplementers } = require("./config/supported-i
 const { deploymentComplete, getFees, writeContracts } = require("./util/utils");
 const AuthTokenType = require("../scripts/domain/AuthTokenType");
 
+const clientConfig = require("./config/client-upgrade");
+
 /**
  * Deploy Boson Protocol V2 contract suite
  *
@@ -126,7 +128,12 @@ async function main(env, facetConfig) {
 
   // Deploy the Protocol Client implementation/proxy pairs
   const protocolClientArgs = [protocolDiamond.address];
-  const [impls, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
+  const clientImplementationArgs = Object.values(clientConfig).map((config) => config[network]);
+  const [impls, beacons, proxies] = await deployProtocolClients(
+    protocolClientArgs,
+    maxPriorityFeePerGas,
+    clientImplementationArgs
+  );
   const [bosonVoucherImpl] = impls;
   const [bosonClientBeacon] = beacons;
   const [bosonVoucherProxy] = proxies;

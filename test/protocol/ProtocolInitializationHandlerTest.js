@@ -182,6 +182,45 @@ describe("ProtocolInitializationHandler", async function () {
 
           await expect(cutTransaction).to.be.revertedWith(RevertReasons.ALREADY_INITIALIZED);
         });
+
+        it("Initialize is not called via proxy", async function () {
+          // The simple version of this test would be to try just any call directly on protocolInitializationFacet
+          // This test is more complex to show how actual exploit would work if we didn't check who calls initialize
+
+          // Add protocolInitializationFacet to diamond
+          await deployAndCutFacets(
+            protocolDiamond.address,
+            { ProtocolInitializationHandlerFacet: [] },
+            maxPriorityFeePerGas
+          );
+
+          // Get actual deployed protocolInitializationFacet
+          const diamondLoupe = await ethers.getContractAt("DiamondLoupeFacet", protocolDiamond.address);
+          const signature = protocolInitializationFacet.interface.getSighash("getVersion()");
+          const existingFacetAddress = await diamondLoupe.facetAddress(signature);
+          const protocolInitializationFacet2 = await ethers.getContractAt(
+            "ProtocolInitializationHandlerFacet",
+            existingFacetAddress
+          );
+
+          // Deploy selfDestruct contract that will be called during initialize
+          const SelfDestructorFactory = await ethers.getContractFactory("SelfDestructor");
+          const selfDestructor = await SelfDestructorFactory.deploy();
+          const selfDestructorInitData = selfDestructor.interface.encodeFunctionData("destruct");
+
+          // call initialize
+          await expect(
+            protocolInitializationFacet2.initialize(
+              ethers.utils.formatBytes32String("haha"),
+              [selfDestructor.address],
+              [selfDestructorInitData],
+              false,
+              "0x",
+              [],
+              []
+            )
+          ).to.be.revertedWith(RevertReasons.DIRECT_INITIALIZATION_NOT_ALLOWED);
+        });
       });
     });
   });

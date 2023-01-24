@@ -165,7 +165,10 @@ describe("IClientExternalAddresses", function () {
       context("💔 Revert Reasons", async function () {
         it("_protocolAddress address is the zero address", async function () {
           // Deploy Protocol Client implementation contracts
-          const protocolClientImpls = await deployProtocolClientImpls(maxPriorityFeePerGas);
+          const protocolClientImpls = await deployProtocolClientImpls(
+            [ethers.constants.AddressZero],
+            maxPriorityFeePerGas
+          );
 
           // Deploy Protocol Client beacon contracts
           const protocolClientArgs = [ethers.constants.AddressZero];

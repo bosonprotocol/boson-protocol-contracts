@@ -7,8 +7,9 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { IERC2981Upgradeable } from "@openzeppelin/contracts-upgradeable/interfaces/IERC2981Upgradeable.sol";
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import { ERC2771ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
-
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
 import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
@@ -17,27 +18,13 @@ import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHa
 import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchangeHandler.sol";
 
 /**
- * @title BosonVoucher
+ * @title BosonVoucherBase
  * @notice This is the Boson Protocol ERC-721 Voucher contract.
  *
  * N.B. Although this contract extends OwnableUpgradeable and ERC721Upgradeable,
  *      that is only for convenience, to avoid conflicts with mixed imports.
- *
- *      This is only a logic contract, delegated to by BeaconClientProxy. Thus,
- *      this contract will never be "upgraded". Rather it will be redeployed
- *      with changes and the BosonClientBeacon will be advised of the new address.
- *      Individual seller collections are clones of BeaconClientProxy, which
- *      asks the BosonClientBeacon for the address of the BosonVoucher contract
- *      on each call. This allows us to upgrade all voucher collections cheaply,
- *      and at once.
- *
- * Key features:
- * - Only PROTOCOL-roled addresses can issue vouchers, i.e., the ProtocolDiamond or an EOA for testing
- * - Minted to the buyer when the buyer commits to an offer
- * - Burned when the buyer redeems the voucher
- * - Support for pre-minted voucher id ranges
  */
-contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
+contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
     // Struct that is used to manipulate private variables from ERC721UpgradeableStorage
     struct ERC721UpgradeableStorage {
         // Mapping from token ID to owner address
@@ -66,8 +53,15 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     // Premint status, used only temporarly in transfers
     PremintStatus private _premintStatus;
 
-    // Tell is preminted voucher has already been _committed
+    // Tell if preminted voucher has already been _committed
     mapping(uint256 => bool) private _committed;
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[43] private __gap;
 
     /**
      * @notice Initializes the voucher.
@@ -142,7 +136,10 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * Caller must have PROTOCOL role.
      *
      * Reverts if:
-     * - Start id is not greater than zero
+     * - Start id is not greater than zero for the first range
+     * - Start id is not greater than the end id of the previous range for subsequent ranges
+     * - Range length is zero
+     * - Range length is too large, i.e., would cause an overflow
      * - Offer id is already associated with a range
      *
      * @param _offerId - the id of the offer
@@ -154,8 +151,24 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         uint256 _start,
         uint256 _length
     ) external onlyRole(PROTOCOL) {
-        // Make sure range start is valid
-        require(_start > 0, INVALID_RANGE_START);
+        // Prevent reservation of an empty range
+        require(_length > 0, INVALID_RANGE_LENGTH);
+
+        // Prevent overflow in issueVoucher and preMint
+        require(_start <= type(uint256).max - _length, INVALID_RANGE_LENGTH);
+
+        // Make sure that ranges are in ascending order
+        uint256 rangeOfferIdsLength = _rangeOfferIds.length;
+        if (rangeOfferIdsLength > 0) {
+            // Get latest registered range
+            Range storage lastRange = _rangeByOfferId[_rangeOfferIds[rangeOfferIdsLength - 1]];
+
+            // New range should start after the end of last range
+            require(_start >= lastRange.start + lastRange.length, INVALID_RANGE_START);
+        } else {
+            // Make sure range start is valid
+            require(_start > 0, INVALID_RANGE_START);
+        }
 
         // Get storage slot for the range
         Range storage range = _rangeByOfferId[_offerId];
@@ -164,7 +177,6 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         require(range.length == 0, OFFER_RANGE_ALREADY_RESERVED);
 
         // Store the reserved range
-        range.offerId = _offerId;
         range.start = _start;
         range.length = _length;
         _rangeOfferIds.push(_offerId);
@@ -369,7 +381,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
             // If _tokenId exists, it does not matter if vouchers were preminted or not
             return super.ownerOf(_tokenId);
         } else {
-            // If _tokenId does not exist, but offer is commitable, report contract owner as token owner
+            // If _tokenId does not exist, but offer is committable, report contract owner as token owner
             (bool committable, ) = getPreMintStatus(_tokenId);
             if (committable) return super.owner();
 
@@ -390,9 +402,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
         if (committable) {
             // If offer is committable, temporarily update _owners, so transfer succeeds
-            silentMint(_from, _tokenId);
-            _premintStatus.committable = true;
-            _premintStatus.offerId = offerId;
+            silentMintAndSetPremintStatus(_from, _tokenId, offerId);
         }
 
         super.transferFrom(_from, _to, _tokenId);
@@ -411,10 +421,46 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
         if (committable) {
             // If offer is committable, temporarily update _owners, so transfer succeeds
-            silentMint(_from, _tokenId);
-            _premintStatus.committable = true;
-            _premintStatus.offerId = offerId;
+            silentMintAndSetPremintStatus(_from, _tokenId, offerId);
         }
+
+        super.safeTransferFrom(_from, _to, _tokenId, _data);
+    }
+
+    /**
+     * @notice Non-standard ERC721 function to transfer a pre-minted token from one address to another.
+     *
+     * Reverts if:
+     * - TokenId was already used to commit
+     * - TokenId already exists (i.e. has an owner)
+     * - TokenId has not been preminted yet
+     * - TokenId was already burned
+     * - From is not the owner of the voucher contract
+     *
+     * @param _from - the address to transfer from
+     * @param _to - the address to transfer to
+     * @param _offerId - the id of the offer
+     * @param _tokenId - the id of the token
+     * @param _data - data to pass if receiver is contract
+     */
+    function transferPremintedFrom(
+        address _from,
+        address _to,
+        uint256 _offerId,
+        uint256 _tokenId,
+        bytes memory _data
+    ) external override {
+        // Check that token has not been used yet
+        require(!_committed[_tokenId] && !_exists(_tokenId), NOT_COMMITTABLE);
+
+        // Get range associated with offer
+        Range storage range = _rangeByOfferId[_offerId];
+
+        // Check if token is committable
+        require(range.start + range.minted - 1 >= _tokenId && _tokenId > range.lastBurnedTokenId, NOT_COMMITTABLE);
+
+        // Temporarily update _owners, so transfer succeeds
+        silentMintAndSetPremintStatus(_from, _tokenId, _offerId);
 
         super.safeTransferFrom(_from, _to, _tokenId, _data);
     }
@@ -633,26 +679,22 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         address _to,
         uint256 _tokenId
     ) internal override {
-        // Update the buyer associated with the voucher in the protocol
-        // Only when transferring, not minting or burning
-        if (_from == owner()) {
-            if (_premintStatus.committable) {
-                // Set the preminted token as committed
-                _committed[_tokenId] = true;
+        if (_premintStatus.committable) {
+            // If is committable, invoke commitToPreMintedOffer on the protocol
 
-                // If this is a transfer of preminted token, treat it differently
-                address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-                IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(
-                    payable(_to),
-                    _premintStatus.offerId,
-                    _tokenId
-                );
-                delete _premintStatus;
-            } else {
-                // Already committed, treat as a normal transfer
-                onVoucherTransferred(_tokenId, payable(_to));
-            }
+            // Store offerId so _premintStatus can be deleted before making an external call
+            uint256 offerId = _premintStatus.offerId;
+            delete _premintStatus;
+
+            // Set the preminted token as committed
+            _committed[_tokenId] = true;
+
+            // If this is a transfer of preminted token, treat it differently
+            address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+            IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(payable(_to), offerId, _tokenId);
         } else if (_from != address(0) && _to != address(0) && _from != _to) {
+            // Update the buyer associated with the voucher in the protocol
+            // Only when transferring, not when minting or burning
             onVoucherTransferred(_tokenId, payable(_to));
         }
     }
@@ -670,7 +712,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @return committable - whether the token is committable
      * @return offerId - the associated offer id if committable
      */
-    function getPreMintStatus(uint256 _tokenId) internal view returns (bool committable, uint256 offerId) {
+    function getPreMintStatus(uint256 _tokenId) public view returns (bool committable, uint256 offerId) {
         // Not committable if _committed already or if token has an owner
         if (!_committed[_tokenId] && !_exists(_tokenId)) {
             // If are reserved ranges, search them
@@ -681,11 +723,12 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
                 uint256 high = length; // Upper bound of search
 
                 while (low < high) {
-                    // Calculate the current midpoint
+                    // Calculate the current midpoint and get the offer id
                     uint256 mid = (high + low) / 2;
+                    uint256 currentOfferId = _rangeOfferIds[mid];
 
                     // Get the range stored at the midpoint
-                    Range storage range = _rangeByOfferId[_rangeOfferIds[mid]];
+                    Range storage range = _rangeByOfferId[currentOfferId];
 
                     // Get the beginning of the range once for reference
                     uint256 start = range.start;
@@ -693,18 +736,14 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
                     if (start > _tokenId) {
                         // Split low and search again if target too high
                         high = mid;
-                    } else if (start + range.minted - 1 >= _tokenId) {
-                        // Is token in target's minted range?
-
-                        // It is committable if it has not been burned
-                        if (_tokenId > range.lastBurnedTokenId) {
-                            committable = true;
-                            offerId = range.offerId;
-                        }
-                        break; // Found!
                     } else if (start + range.length - 1 >= _tokenId) {
-                        // No? Ok, is it in target's reserved range?
-                        committable = false;
+                        // Is token in target's reserved range?
+
+                        if (start + range.minted - 1 >= _tokenId && _tokenId > range.lastBurnedTokenId) {
+                            // Has it been pre-minted and not burned yet?
+                            committable = true;
+                            offerId = currentOfferId;
+                        }
                         break; // Found!
                     } else {
                         // No? It may be in a higher range
@@ -717,26 +756,87 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
     /*
      * Returns storage pointer to location of private variables
-     * 0x0000000000000000000000000000000000000000000000000000000000000099 is location of _owners
-     * 0x000000000000000000000000000000000000000000000000000000000000009a is location of _balances
+     * 0x99 is location of _owners
+     * 0x9a is location of _balances
      *
-     * Since ERC721UpgradeableStorage slot is 0x0000000000000000000000000000000000000000000000000000000000000099
+     * Since ERC721UpgradeableStorage slot is 0x99
      * _owners slot is ERC721UpgradeableStorage + 0
      * _balances slot is ERC721UpgradeableStorage + 1
      */
     function getERC721UpgradeableStorage() internal pure returns (ERC721UpgradeableStorage storage ps) {
         assembly {
-            ps.slot := 0x0000000000000000000000000000000000000000000000000000000000000099
+            ps.slot := 0x99
         }
     }
 
     /*
-     * Updates balance and owner, but do not emit Transfer event. Event was already emited during pre-mint.
+     * Updates owners, but do not emit Transfer event. Event was already emited during pre-mint.
      */
-    function silentMint(address _from, uint256 _tokenId) internal {
+    function silentMintAndSetPremintStatus(
+        address _from,
+        uint256 _tokenId,
+        uint256 _offerId
+    ) internal {
         require(_from == owner(), NO_SILENT_MINT_ALLOWED);
 
         // update data, so transfer will succeed
         getERC721UpgradeableStorage()._owners[_tokenId] = _from;
+
+        // Update premint status
+        _premintStatus.committable = true;
+        _premintStatus.offerId = _offerId;
     }
+}
+
+/**
+ * @title BosonVoucher
+ * @notice This is the Boson Protocol ERC-721 Voucher contract.
+ *
+ * N.B. This is only a logic contract, delegated to by BeaconClientProxy. Thus,
+ *      this contract will never be "upgraded". Rather it will be redeployed
+ *      with changes and the BosonClientBeacon will be advised of the new address.
+ *      Individual seller collections are clones of BeaconClientProxy, which
+ *      asks the BosonClientBeacon for the address of the BosonVoucher contract
+ *      on each call. This allows us to upgrade all voucher collections cheaply,
+ *      and at once.
+ *
+ * Key features:
+ * - Only PROTOCOL-roled addresses can issue vouchers, i.e., the ProtocolDiamond or an EOA for testing
+ * - Minted to the buyer when the buyer commits to an offer
+ * - Burned when the buyer redeems the voucher
+ * - Support for pre-minted voucher id ranges
+ *
+ * @dev This contract inherit BosonVoucherBase because we have added support to meta transaction
+ *      and split into two contracts doesn't mess up the storage layout when importing ERC2771ContextUpgradeable
+ */
+contract BosonVoucher is BosonVoucherBase, ERC2771ContextUpgradeable {
+    constructor(address forwarder) ERC2771ContextUpgradeable(forwarder) {}
+
+    /**
+     * @notice This function returns the calldata of the current message.
+     * @dev It is an override of the ERC2771ContextUpgradeable._msgData() function which allows meta transactions.
+     */
+    function _msgData() internal view override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (bytes calldata) {
+        return ERC2771ContextUpgradeable._msgData();
+    }
+
+    /**
+     * @notice This function returns the sender of the current message.
+     * @dev It is an override of the ERC2771ContextUpgradeable._msgSender() function which allows meta transactions.
+     */
+    function _msgSender()
+        internal
+        view
+        override(ContextUpgradeable, ERC2771ContextUpgradeable)
+        returns (address sender)
+    {
+        return ERC2771ContextUpgradeable._msgSender();
+    }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[50] private __gap;
 }
