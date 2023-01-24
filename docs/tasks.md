@@ -70,6 +70,9 @@ For upgrade to succeed you need an account with UPGRADER role. Refer to [Manage 
 - **Ethereum Mainnet**. This upgrades the existing diamond on Ethereum Mainnet.  
 ```npm run upgrade-facets:ethereum:mainnet```
 
+Each upgrade requires correct config parameters. We provide [correct configurations for all release versions]().  
+If you want to upgrade to any intermediate version (for example to a release candidate), you can use the same config as for the actual release, however it might result in interface clashes, which prevent subsequent upgrades. Workaround for this problem is to temporary disable `onlyUninitialized` modifier on all contracts that clash. Since this is generally an unsafe operation, you should never do that in production environment. Production should always be upgraded only to actual releases.
+
 ### Upgrade clients
 Upgrade existing clients (currently only BosonVoucher). Script deploys new implementation and updates address on beacon.  
 We provide different npm scripts for different use cases. A script for Hardhat network does not exist. Since contracts are discarded after the deployment, they cannot be upgraded.  
