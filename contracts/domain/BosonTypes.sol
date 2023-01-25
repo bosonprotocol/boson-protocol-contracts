@@ -183,6 +183,11 @@ contract BosonTypes {
         ExchangeState state;
     }
 
+    struct SequentialCommit {
+        uint256 buyerId;
+        uint256 price;
+    }
+
     struct Voucher {
         uint256 committedDate;
         uint256 validUntilDate;

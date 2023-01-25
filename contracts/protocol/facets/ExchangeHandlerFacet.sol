@@ -15,6 +15,7 @@ import { Address } from "../../ext_libs/Address.sol";
 import { IERC1155 } from "../../interfaces/IERC1155.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
+import { Math } from "../../ext_libs/Math.sol";
 
 /**
  * @title ExchangeHandlerFacet
@@ -79,6 +80,107 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         require(exists, NO_SUCH_OFFER);
 
         commitToOfferInternal(_buyer, offer, 0, false);
+    }
+
+    // temporary struct for development purposes
+    struct Order {
+        uint256 exchangeId;
+        uint256 quantity;
+        uint256 price;
+        uint256 nonce;
+        uint256 deadline;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
+    function sequentialCommitToOffer(address payable _buyer, Order calldata _order)
+        external
+        payable
+        exchangesNotPaused
+        buyersNotPaused
+        nonReentrant
+    {
+        /* need to know 
+            seller (== current owner of voucher)
+            buyer (== new owner)
+            price
+        */
+
+        // verify that order can be fulfilled [// pass forward to 0x or seaport]
+        // offer must be done in a way that boson protocol receives minimal necesarry funds to go in escrow
+
+        // Exchange must exist
+        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(
+            _order.exchangeId,
+            ExchangeState.Committed
+        );
+
+        // Make sure the voucher is still valid
+        require(block.timestamp <= voucher.validUntilDate, "VOUCHER_INVALID");
+
+        // Fetch offer
+        (, Offer storage offer) = fetchOffer(exchange.offerId);
+
+        // Authorize the buyer to commit if original offer is in a conditional group
+        require(authorizeCommit(_buyer, offer, _order.exchangeId), CANNOT_COMMIT);
+
+        // Get sequential commits for this exchange
+        SequentialCommit[] storage sequentialCommits = protocolEntities().sequentialCommits[_order.exchangeId];
+
+        // Get token address
+        address tokenAddress = offer.exchangeToken;
+
+        // Calculate the amount to be immediately released to current voucher owner
+        uint256 currentBuyerAmount;
+        {
+            // Calculate fees
+            uint256 protocolFeeAmount = tokenAddress == protocolAddresses().token
+                ? protocolFees().flatBoson
+                : (protocolFees().percentage * _order.price) / 10000;
+
+            // Calculate royalties
+            (, uint256 royaltyAmount) = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]).royaltyInfo(
+                _order.exchangeId,
+                _order.price
+            );
+
+            // Verify that fees and royalties are not higher than the price.
+            require((protocolFeeAmount + royaltyAmount) <= _order.price, "FEE_AMOUNT_TOO_HIGH");
+
+            // Get price paid by current buyer
+            uint256 len = sequentialCommits.length;
+            uint256 currentPrice = len == 0 ? offer.price : sequentialCommits[len - 1].price;
+
+            // Calculate the amount to be immediately released to current voucher owner
+            currentBuyerAmount = Math.min(currentPrice, _order.price - protocolFeeAmount - royaltyAmount);
+        }
+
+        // Update sequential commit
+        sequentialCommits.push(SequentialCommit({ buyerId: getValidBuyer(_buyer), price: _order.price }));
+
+        // Release funds to current buyer
+        FundsLib.increaseAvailableFunds(exchange.buyerId, tokenAddress, currentBuyerAmount); // must be called before transfer is done
+
+        // Amount of funds to go in escrow
+        uint256 escrowAmount = _order.price - currentBuyerAmount;
+
+        // Verify that order actually sends the correct amount of funds to escrow
+        uint256 protocolBalanceBefore = tokenAddress == address(0)
+            ? address(this).balance
+            : IERC20(tokenAddress).balanceOf(address(this));
+
+        // TODO: make call to settlement contract
+
+        uint256 protocolBalanceAfter = tokenAddress == address(0)
+            ? address(this).balance
+            : IERC20(tokenAddress).balanceOf(address(this));
+
+        // Make sure that expected amount of tokens was transferred
+        require(protocolBalanceAfter - protocolBalanceBefore == escrowAmount, INSUFFICIENT_VALUE_RECEIVED);
+
+
+        // No need to update exchange detail. Most fields stay as they are, and buyerId was updated at the same time voucher is transferred
     }
 
     /**
@@ -493,12 +595,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeId - the id of the exchange
      * @param _newBuyer - the address of the new buyer
      */
-    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer)
-        external
-        override
-        buyersNotPaused
-        nonReentrant
-    {
+    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) external override buyersNotPaused {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 

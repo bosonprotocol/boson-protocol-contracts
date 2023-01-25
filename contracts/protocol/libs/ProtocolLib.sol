@@ -114,6 +114,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Twin) twins;
         //entity id => auth token
         mapping(uint256 => BosonTypes.AuthToken) authTokens;
+        // exchange id => sequential commit info
+        mapping(uint256 => BosonTypes.SequentialCommit[]) sequentialCommits;
     }
 
     // Protocol lookups storage
