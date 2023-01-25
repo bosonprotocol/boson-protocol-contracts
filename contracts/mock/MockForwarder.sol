@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import "hardhat/console.sol";
 
 /**
  * @dev Simple minimal forwarder to be used together with an ERC2771 compatible contract. See {ERC2771Context}.
@@ -47,7 +48,8 @@ contract MockForwarder is EIP712 {
     {
         require(verify(req, signature), "MockForwarder: signature does not match request");
         _nonces[req.from] = req.nonce + 1;
-
+        console.log("calling voucher contract", req.from, req.to);
+        console.logBytes(req.data);
         (bool success, bytes memory returndata) = req.to.call(abi.encodePacked(req.data, req.from));
         require(success, "MockForwarder: call reverted");
 

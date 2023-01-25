@@ -16,6 +16,7 @@ import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
 import { IClientExternalAddresses } from "../../../interfaces/clients/IClientExternalAddresses.sol";
 import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
 import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchangeHandler.sol";
+import "hardhat/console.sol";
 
 /**
  * @title BosonVoucherBase
@@ -151,6 +152,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         uint256 _start,
         uint256 _length
     ) external onlyRole(PROTOCOL) {
+        console.log("reserveRange");
         // Prevent reservation of an empty range
         require(_length > 0, INVALID_RANGE_LENGTH);
 
@@ -217,9 +219,10 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @param _amount - the amount to mint
      */
     function preMint(uint256 _offerId, uint256 _amount) external onlyOwner {
+        console.log("preMint first line offerId", _offerId, "_amount", _amount);
         // Get the offer's range
         Range storage range = _rangeByOfferId[_offerId];
-
+        console.log("preMint offerId", _offerId, "range.length", range.length);
         // Revert if id not associated with a range
         require(range.length != 0, NO_RESERVED_RANGE_FOR_OFFER);
 
@@ -229,12 +232,13 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         // Get max amount that can be minted in a single transaction
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
         uint256 maxPremintedVouchers = IBosonConfigHandler(protocolDiamond).getMaxPremintedVouchers();
-
+        console.log("preMint protocolDiamond", protocolDiamond, "maxPremintedVouchers", maxPremintedVouchers);
         // Revert if too many to mint in a single transaction
         require(_amount <= maxPremintedVouchers, TOO_MANY_TO_MINT);
 
         // Make sure that offer is not expired or voided
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
+        console.log("preMint offer.voided", offer.voided, "offerDates.validUntil", offerDates.validUntil);
         require(!offer.voided && (offerDates.validUntil > block.timestamp), OFFER_EXPIRED_OR_VOIDED);
 
         // Get the first token to mint
