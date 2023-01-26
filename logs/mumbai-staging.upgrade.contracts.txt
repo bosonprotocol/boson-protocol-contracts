@@ -74,3 +74,172 @@ Removed supported interface 0x6db2c812 from supported interfaces.
 📋 Diamond upgraded.
 
 
+[
+  {
+    name: 'AccessController',
+    address: '0x955AbDE524CEd6A8AcA3A4a097bd3484c09f58bE',
+    args: [],
+    interfaceId: ''
+  },
+  {
+    name: 'DiamondLoupeFacet',
+    address: '0x120643A4c4EDcd2e86C67193006B1e0c44EEF1A9',
+    args: [],
+    interfaceId: '0x48e2b093'
+  },
+  {
+    name: 'DiamondCutFacet',
+    address: '0x77Ca7EBAAfC81433e46601e1acA7c245B33e2421',
+    args: [],
+    interfaceId: '0x1f931c1c'
+  },
+  {
+    name: 'ProtocolDiamond',
+    address: '0xf9719c7e641964D83cC50ea2d4d0D4e6C300d50E',
+    args: [ '0x955AbDE524CEd6A8AcA3A4a097bd3484c09f58bE', [Array], [Array] ],
+    interfaceId: ''
+  },
+  {
+    name: 'ConfigHandlerFacet',
+    address: '0xC656c68b48926a429Aa7165fFace65246126d682',
+    args: [],
+    interfaceId: '0x2ad335b8'
+  },
+  {
+    name: 'BuyerHandlerFacet',
+    address: '0x5Bb476E32d1e88B31bBC82d999D760eCb0c14d7D',
+    args: [],
+    interfaceId: '0xb8667cfd'
+  },
+  {
+    name: 'AgentHandlerFacet',
+    address: '0x954E0018cD1acc808774048231417c5b39687E22',
+    args: [],
+    interfaceId: '0xb8667cfd'
+  },
+  {
+    name: 'BundleHandlerFacet',
+    address: '0x75a762D427f584b49Df816C7B8EF35f366C5021e',
+    args: [],
+    interfaceId: '0x7b53dece'
+  },
+  {
+    name: 'DisputeHandlerFacet',
+    address: '0x506040028eB82d9bcD04f0834E7413D580C12777',
+    args: [],
+    interfaceId: '0xd9ea8317'
+  },
+  {
+    name: 'ExchangeHandlerFacet',
+    address: '0xE9745a15ff08f4a1Ef9f35FafF6afc5C3c81d92A',
+    args: [],
+    interfaceId: '0xbc114381'
+  },
+  {
+    name: 'FundsHandlerFacet',
+    address: '0x2330876E961a1A247f38813B78CdD4c00c7f2852',
+    args: [],
+    interfaceId: '0x18834247'
+  },
+  {
+    name: 'GroupHandlerFacet',
+    address: '0x44132DC5471F013530a5Fa69b89B651073Ca093e',
+    args: [],
+    interfaceId: '0xe2bf2256'
+  },
+  {
+    name: 'MetaTransactionsHandlerFacet',
+    address: '0x76C3bf69519ACc8Ad5fF2B720Ef1F623754e1842',
+    args: [],
+    interfaceId: '0xd25fcdc1'
+  },
+  {
+    name: 'OfferHandlerFacet',
+    address: '0x89682edb5A902A49d73Bf3139Eaa9c52F1551b63',
+    args: [],
+    interfaceId: '0xde051f34'
+  },
+  {
+    name: 'OrchestrationHandlerFacet',
+    address: '0x6e599ec84e16B9444bE392eD489493aebB139692',
+    args: [],
+    interfaceId: '0xb698ded2'
+  },
+  {
+    name: 'TwinHandlerFacet',
+    address: '0xa6Ff006d7a3A66AE432381c0030Ea6A7561A0A36',
+    args: [],
+    interfaceId: '0x60b30e70'
+  },
+  {
+    name: 'PauseHandlerFacet',
+    address: '0xd65517cc0c987AfCd1Ae62e281410f8F1fA636dD',
+    args: [],
+    interfaceId: '0x9ddb8ca6'
+  },
+  {
+    name: 'BosonVoucher Logic',
+    address: '0x7Ec228D90F62116c607a556eb0610C056E097581',
+    args: [],
+    interfaceId: ''
+  },
+  {
+    name: 'BosonVoucher Beacon',
+    address: '0xaFca5eAA6a6826a405c60110942150979Ff78281',
+    args: [
+      '0xf9719c7e641964D83cC50ea2d4d0D4e6C300d50E',
+      '0x7Ec228D90F62116c607a556eb0610C056E097581'
+    ],
+    interfaceId: ''
+  },
+  {
+    name: 'BosonVoucher Proxy',
+    address: '0xC54A578dbcBD57d844976eABDA61B853d0a0a724',
+    args: [],
+    interfaceId: ''
+  },
+  {
+    name: 'ERC165Facet',
+    address: '0x877BFA1fA72bFe974FD255f0b6D62aAb6d1482f0',
+    args: [],
+    interfaceId: '0x2ae6ea10'
+  },
+  {
+    name: 'AccountHandlerFacet',
+    address: '0x59cFcF5003Ea794c2676D5198142a815Cae9D77E',
+    args: [],
+    interfaceId: '0xb8667cfd'
+  },
+  {
+    name: 'SellerHandlerFacet',
+    address: '0x91D0c8e4DcBD558C8F6eDC1713112BA92e34F3Ef',
+    args: [],
+    interfaceId: '0xb8667cfd'
+  },
+  {
+    name: 'DisputeResolverHandlerFacet',
+    address: '0x8aaB601E4cFCfAebBBeB99F03b7992AA8c336430',
+    args: [],
+    interfaceId: '0xb8667cfd'
+  }
+]
+--------------------------------------------------------------------------------
+Boson Protocol Client Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Thu Jan 26 2023 16:25:43 GMT-0300 (Brasilia Standard Time)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+
+📋 Deploying new logic contract
+BosonVoucher deployed to: 0x56Cbc86c5eC3e2D64B66F53C25A90Cff0E324b1B
+
+📋 Updating implementation address on beacon
+✅ BosonVoucher Logic deployed to: 0x56Cbc86c5eC3e2D64B66F53C25A90Cff0E324b1B
+--------------------------------------------------------------------------------
+✅ Contracts written to /Users/anajulia/Dev/work/boson-protocol-contracts/scripts/util/../../addresses/80001-mumbai-staging.json
+--------------------------------------------------------------------------------
+
+📋 Client upgraded.
+
+

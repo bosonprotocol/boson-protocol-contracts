@@ -2,7 +2,7 @@
   "chainId": 80001,
   "network": "mumbai",
   "env": "staging",
-  "protocolVersion": "2.1.0",
+  "protocolVersion": "2.2.0-rc.2",
   "contracts": [
     {
       "name": "AccessController",
@@ -140,12 +140,6 @@
       "interfaceId": "0x9ddb8ca6"
     },
     {
-      "name": "BosonVoucher Logic",
-      "address": "0x7Ec228D90F62116c607a556eb0610C056E097581",
-      "args": [],
-      "interfaceId": ""
-    },
-    {
       "name": "BosonVoucher Beacon",
       "address": "0xaFca5eAA6a6826a405c60110942150979Ff78281",
       "args": [
@@ -183,6 +177,12 @@
       "address": "0x8aaB601E4cFCfAebBBeB99F03b7992AA8c336430",
       "args": [],
       "interfaceId": "0xb8667cfd"
+    },
+    {
+      "name": "BosonVoucher Logic",
+      "address": "0x56Cbc86c5eC3e2D64B66F53C25A90Cff0E324b1B",
+      "args": [],
+      "interfaceId": ""
     }
   ]
 }
