@@ -26,7 +26,7 @@ const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handl
 describe("IBosonAccountHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, protocolTreasury, bosonToken;
+  let deployer, rando, assistant, admin, clerk, treasury, other1, other2, other3, protocolTreasury, bosonToken;
   let erc165, protocolDiamond, accessController, accountHandler;
   let seller;
   let emptyAuthToken;
@@ -52,7 +52,7 @@ describe("IBosonAccountHandler", function () {
       await ethers.getSigners();
 
     // make all account the same
-    operator = clerk = admin;
+    assistant = clerk = admin;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -151,7 +151,7 @@ describe("IBosonAccountHandler", function () {
       nextAccountId = "1";
 
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
@@ -168,7 +168,7 @@ describe("IBosonAccountHandler", function () {
       expect(buyer.isValid()).is.true;
 
       // Create a valid dispute resolver
-      disputeResolver = mockDisputeResolver(operator.address, admin.address, clerk.address, treasury.address);
+      disputeResolver = mockDisputeResolver(assistant.address, admin.address, clerk.address, treasury.address);
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array
@@ -217,7 +217,7 @@ describe("IBosonAccountHandler", function () {
 
       it("should be incremented after a seller is created", async function () {
         //addresses need to be unique to seller Id, so setting them to random addresses here
-        seller.operator = rando.address;
+        seller.assistant = rando.address;
         seller.admin = rando.address;
         seller.clerk = rando.address;
 

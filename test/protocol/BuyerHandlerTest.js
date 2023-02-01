@@ -30,7 +30,7 @@ describe("BuyerHandler", function () {
   let deployer,
     pauser,
     rando,
-    operator,
+    assistant,
     admin,
     clerk,
     treasury,
@@ -59,7 +59,7 @@ describe("BuyerHandler", function () {
       await ethers.getSigners();
 
     // make all account the same
-    operator = clerk = admin;
+    assistant = clerk = admin;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -411,7 +411,7 @@ describe("BuyerHandler", function () {
           let agentId = "0"; // agent id is optional while creating an offer
 
           // Create a valid seller
-          seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+          seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
           seller.id = id.toString();
           expect(seller.isValid()).is.true;
 
@@ -426,11 +426,17 @@ describe("BuyerHandler", function () {
           // Create a seller
           await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-          [exists] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
+          [exists] = await accountHandler.connect(rando).getSellerByAddress(assistant.address);
           expect(exists).is.true;
 
           // Create a valid dispute resolver
-          disputeResolver = mockDisputeResolver(operator.address, admin.address, clerk.address, treasury.address, true);
+          disputeResolver = mockDisputeResolver(
+            assistant.address,
+            admin.address,
+            clerk.address,
+            treasury.address,
+            true
+          );
           disputeResolver.id = id.add(1).toString();
           expect(disputeResolver.isValid()).is.true;
 
@@ -460,7 +466,7 @@ describe("BuyerHandler", function () {
 
           // Create the offer
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
           offerId = offer.id;
@@ -468,7 +474,7 @@ describe("BuyerHandler", function () {
 
           // Deposit seller funds so the commit will succeed
           await fundsHandler
-            .connect(operator)
+            .connect(assistant)
             .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
 
           //Commit to offer

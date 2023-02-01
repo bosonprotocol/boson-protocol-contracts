@@ -19,7 +19,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      *
      * Reverts if:
      * - Caller is not the supplied admin or does not own supplied auth token
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
@@ -59,7 +59,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a DisputeResolverCreated event if successful.
      *
      * Reverts if:
-     * - Caller is not the supplied admin, operator and clerk
+     * - Caller is not the supplied admin, assistant and clerk
      * - The dispute resolvers region of protocol is paused
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
@@ -98,13 +98,13 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function createAgent(BosonTypes.Agent memory _agent) external;
 
     /**
-     * @notice Updates treasury address, if changed. Puts admin, operator, clerk and AuthToken in pending queue, if changed.
+     * @notice Updates treasury address, if changed. Puts admin, assistant, clerk and AuthToken in pending queue, if changed.
      *         Pending updates can be completed by calling the optInToSellerUpdate function.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a SellerUpdateApplied event if the seller has changed the treasury.
-     * Emits a SellerUpdatePending event if the seller has requested an update for admin, clerk, operator, or auth token.
-     * Holder of new auth token and/or owner(s) of new addresses for admin, clerk, operator must opt-in to the update.
+     * Emits a SellerUpdatePending event if the seller has requested an update for admin, clerk, assistant, or auth token.
+     * Holder of new auth token and/or owner(s) of new addresses for admin, clerk, assistant must opt-in to the update.
      *
      * Reverts if:
      * - The sellers region of protocol is paused
@@ -160,7 +160,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function updateBuyer(BosonTypes.Buyer memory _buyer) external;
 
     /**
-     * @notice Updates treasury address, escalationResponsePeriod or metadataUri if changed. Puts admin, operator and clerk in pending queue, if changed.
+     * @notice Updates treasury address, escalationResponsePeriod or metadataUri if changed. Puts admin, assistant and clerk in pending queue, if changed.
      *         Pending updates can be completed by calling the optInToDisputeResolverUpdate function.
      *
      *         Update doesn't include DisputeResolverFees, allowed seller list or active flag.
@@ -171,8 +171,8 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a DisputeResolverUpdated event if successful.
-     * Emits a DisputeResolverUpdatePending event if the dispute resolver has requested an update for admin, clerk or operator.
-     * Owner(s) of new addresses for admin, clerk, operator must opt-in to the update.
+     * Emits a DisputeResolverUpdatePending event if the dispute resolver has requested an update for admin, clerk or assistant.
+     * Owner(s) of new addresses for admin, clerk, assistant must opt-in to the update.
      *
      * Reverts if:
      * - The dispute resolvers region of protocol is paused
@@ -320,11 +320,11 @@ interface IBosonAccountHandler is IBosonAccountEvents {
         );
 
     /**
-     * @notice Gets the details about a seller by an address associated with that seller: operator, admin, or clerk address.
+     * @notice Gets the details about a seller by an address associated with that seller: assistant, admin, or clerk address.
      * A seller will have either an admin address or an auth token.
      * If seller's admin uses NFT Auth the seller should call `getSellerByAuthToken` instead.
      *
-     * @param _associatedAddress - the address associated with the seller. Must be an operator, admin, or clerk address.
+     * @param _associatedAddress - the address associated with the seller. Must be an assistant, admin, or clerk address.
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -389,9 +389,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
         );
 
     /**
-     * @notice Gets the details about a dispute resolver by an address associated with that dispute resolver: operator, admin, or clerk address.
+     * @notice Gets the details about a dispute resolver by an address associated with that dispute resolver: assistant, admin, or clerk address.
      *
-     * @param _associatedAddress - the address associated with the dispute resolver. Must be an operator, admin, or clerk address.
+     * @param _associatedAddress - the address associated with the dispute resolver. Must be an assistant, admin, or clerk address.
      * @return exists - the dispute resolver was found
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}

@@ -9,12 +9,12 @@ const Seller = require("../../scripts/domain/Seller");
 describe("Seller", function () {
   // Suite-wide scope
   let seller, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let accounts, id, operator, admin, clerk, treasury, active;
+  let accounts, id, assistant, admin, clerk, treasury, active;
 
   beforeEach(async function () {
     // Get a list of accounts
     accounts = await ethers.getSigners();
-    operator = accounts[0].address;
+    assistant = accounts[0].address;
     admin = accounts[1].address;
     clerk = accounts[2].address;
     treasury = accounts[3].address;
@@ -27,9 +27,9 @@ describe("Seller", function () {
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Seller instance", async function () {
       // Create a valid seller
-      seller = new Seller(id, operator, admin, clerk, treasury, active);
+      seller = new Seller(id, assistant, admin, clerk, treasury, active);
       expect(seller.idIsValid()).is.true;
-      expect(seller.operatorIsValid()).is.true;
+      expect(seller.assistantIsValid()).is.true;
       expect(seller.adminIsValid()).is.true;
       expect(seller.clerkIsValid()).is.true;
       expect(seller.treasuryIsValid()).is.true;
@@ -41,7 +41,7 @@ describe("Seller", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid seller, then set fields in tests directly
-      seller = new Seller(id, operator, admin, clerk, treasury, active);
+      seller = new Seller(id, assistant, admin, clerk, treasury, active);
       expect(seller.isValid()).is.true;
     });
 
@@ -72,25 +72,25 @@ describe("Seller", function () {
       expect(seller.isValid()).is.true;
     });
 
-    it("Always present, operator must be a string representation of an EIP-55 compliant address", async function () {
+    it("Always present, assistant must be a string representation of an EIP-55 compliant address", async function () {
       // Invalid field value
-      seller.operator = "0xASFADF";
-      expect(seller.operatorIsValid()).is.false;
+      seller.assistant = "0xASFADF";
+      expect(seller.assistantIsValid()).is.false;
       expect(seller.isValid()).is.false;
 
       // Invalid field value
-      seller.operator = "zedzdeadbaby";
-      expect(seller.operatorIsValid()).is.false;
+      seller.assistant = "zedzdeadbaby";
+      expect(seller.assistantIsValid()).is.false;
       expect(seller.isValid()).is.false;
 
       // Valid field value
-      seller.operator = accounts[0].address;
-      expect(seller.operatorIsValid()).is.true;
+      seller.assistant = accounts[0].address;
+      expect(seller.assistantIsValid()).is.true;
       expect(seller.isValid()).is.true;
 
       // Valid field value
-      seller.operator = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
-      expect(seller.operatorIsValid()).is.true;
+      seller.assistant = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
+      expect(seller.assistantIsValid()).is.true;
       expect(seller.isValid()).is.true;
     });
 
@@ -186,13 +186,13 @@ describe("Seller", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid seller, then set fields in tests directly
-      seller = new Seller(id, operator, admin, clerk, treasury, active);
+      seller = new Seller(id, assistant, admin, clerk, treasury, active);
       expect(seller.isValid()).is.true;
 
       // Get plain object
       object = {
         id,
-        operator,
+        assistant,
         admin,
         clerk,
         treasury,
@@ -200,7 +200,7 @@ describe("Seller", function () {
       };
 
       // Struct representation
-      struct = [id, operator, admin, clerk, treasury, active];
+      struct = [id, assistant, admin, clerk, treasury, active];
     });
 
     context("👉 Static", async function () {

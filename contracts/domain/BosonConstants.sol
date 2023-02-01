@@ -36,15 +36,15 @@ string constant DIRECT_INITIALIZATION_NOT_ALLOWED = "Direct initializtion is not
 
 // Revert Reasons: Access related
 string constant ACCESS_DENIED = "Access denied, caller doesn't have role";
-string constant NOT_OPERATOR = "Not seller's operator";
+string constant NOT_ASSISTANT = "Not seller's assistant";
 string constant NOT_ADMIN = "Not admin";
-string constant NOT_OPERATOR_AND_CLERK = "Not operator and clerk";
-string constant NOT_ADMIN_OPERATOR_AND_CLERK = "Not admin, operator and clerk";
+string constant NOT_ASSISTANT_AND_CLERK = "Not assistant and clerk";
+string constant NOT_ADMIN_ASSISTANT_AND_CLERK = "Not admin, assistant and clerk";
 string constant NOT_BUYER_OR_SELLER = "Not buyer or seller";
 string constant NOT_VOUCHER_HOLDER = "Not current voucher holder";
 string constant NOT_BUYER_WALLET = "Not buyer's wallet address";
 string constant NOT_AGENT_WALLET = "Not agent's wallet address";
-string constant NOT_DISPUTE_RESOLVER_OPERATOR = "Not dispute resolver's operator address";
+string constant NOT_DISPUTE_RESOLVER_ASSISTANT = "Not dispute resolver's assistant address";
 
 // Revert Reasons: Account-related
 string constant NO_SUCH_SELLER = "No such seller";

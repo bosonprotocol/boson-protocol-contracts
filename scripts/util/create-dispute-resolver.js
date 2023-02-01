@@ -16,7 +16,7 @@ Path should contain a JSON file with the following:
  "disputeResolver": {
   "id": string, // ignored
   "escalationResponsePeriod": string,
-  "operator": string,
+  "assistant": string,
   "admin": string,
   "clerk": string,
   "treasury": string,
@@ -85,7 +85,7 @@ const createDisputeResolver = async (path) => {
   // create dispute resolver with callers account
   let initialDisputeResolver = { ...disputeResolver };
   initialDisputeResolver.admin = disputeResolverSigner.address;
-  initialDisputeResolver.operator = disputeResolverSigner.address;
+  initialDisputeResolver.assistant = disputeResolverSigner.address;
   initialDisputeResolver.clerk = disputeResolverSigner.address;
 
   tx = await accountHandler
@@ -98,7 +98,7 @@ const createDisputeResolver = async (path) => {
   // this is primarily used when one does not have access to private key of dispute resolver or it does not exist (i.e. DR is a smart contract)
   if (
     initialDisputeResolver.admin.toLowerCase() != disputeResolver.admin.toLowerCase() ||
-    initialDisputeResolver.operator.toLowerCase() != disputeResolver.operator.toLowerCase() ||
+    initialDisputeResolver.assistant.toLowerCase() != disputeResolver.assistant.toLowerCase() ||
     initialDisputeResolver.clerk.toLowerCase() != disputeResolver.clerk.toLowerCase()
   ) {
     disputeResolver.id = initialDisputeResolver.id;

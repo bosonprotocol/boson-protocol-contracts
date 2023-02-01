@@ -21,7 +21,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
@@ -46,7 +46,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Check for zero address
         require(
-            _seller.operator != address(0) && _seller.clerk != address(0) && _seller.treasury != address(0),
+            _seller.assistant != address(0) && _seller.clerk != address(0) && _seller.treasury != address(0),
             INVALID_ADDRESS
         );
 
@@ -63,8 +63,8 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         // Get message sender
         address sender = msgSender();
 
-        // Check that caller is the supplied operator and clerk
-        require(_seller.operator == sender && _seller.clerk == sender, NOT_OPERATOR_AND_CLERK);
+        // Check that caller is the supplied assistant and clerk
+        require(_seller.assistant == sender && _seller.clerk == sender, NOT_ASSISTANT_AND_CLERK);
 
         // Do caller and uniqueness checks based on auth type
         if (_authToken.tokenType != AuthTokenType.None) {
@@ -88,7 +88,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         // Check that the sender address is unique to one seller id, across all roles
         require(
             lookups.sellerIdByAdmin[sender] == 0 &&
-                lookups.sellerIdByOperator[sender] == 0 &&
+                lookups.sellerIdByAssistant[sender] == 0 &&
                 lookups.sellerIdByClerk[sender] == 0,
             SELLER_ADDRESS_MUST_BE_UNIQUE
         );
@@ -99,7 +99,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         storeSeller(_seller, _authToken, lookups);
 
         // Create clone and store its address cloneAddress
-        address voucherCloneAddress = cloneBosonVoucher(sellerId, _seller.operator, _voucherInitValues);
+        address voucherCloneAddress = cloneBosonVoucher(sellerId, _seller.assistant, _voucherInitValues);
         lookups.cloneAddress[sellerId] = voucherCloneAddress;
 
         // Notify watchers of state change
@@ -123,7 +123,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Set seller props individually since memory structs can't be copied to storage
         seller.id = _seller.id;
-        seller.operator = _seller.operator;
+        seller.assistant = _seller.assistant;
         seller.admin = _seller.admin;
         seller.clerk = _seller.clerk;
         seller.treasury = _seller.treasury;
@@ -144,7 +144,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         }
 
         // Map the seller's other addresses to the seller id. It's not necessary to map the treasury address, as it only receives funds
-        _lookups.sellerIdByOperator[_seller.operator] = _seller.id;
+        _lookups.sellerIdByAssistant[_seller.assistant] = _seller.id;
         _lookups.sellerIdByClerk[_seller.clerk] = _seller.id;
     }
 
@@ -152,13 +152,13 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      * @notice Creates a minimal clone of the Boson Voucher Contract.
      *
      * @param _sellerId - id of the seller
-     * @param _operator - address of the operator
+     * @param _assistant - address of the assistant
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @return cloneAddress - the address of newly created clone
      */
     function cloneBosonVoucher(
         uint256 _sellerId,
-        address _operator,
+        address _assistant,
         VoucherInitValues calldata _voucherInitValues
     ) internal returns (address cloneAddress) {
         // Pointer to stored addresses
@@ -178,7 +178,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Initialize the clone
         IInitializableVoucherClone(cloneAddress).initialize(pa.voucherBeacon);
-        IInitializableVoucherClone(cloneAddress).initializeVoucher(_sellerId, _operator, _voucherInitValues);
+        IInitializableVoucherClone(cloneAddress).initializeVoucher(_sellerId, _assistant, _voucherInitValues);
     }
 
     /**
@@ -210,7 +210,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         // Determine existence
         exists =
             sellerPendingUpdate.admin != address(0) ||
-            sellerPendingUpdate.operator != address(0) ||
+            sellerPendingUpdate.assistant != address(0) ||
             sellerPendingUpdate.clerk != address(0) ||
             authTokenPendingUpdate.tokenType != AuthTokenType.None;
     }

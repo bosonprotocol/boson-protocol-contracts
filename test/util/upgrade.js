@@ -990,11 +990,11 @@ async function getProtocolLookupsPrivateContractState(
     #2  [X] // placeholder for bundleIdByTwin
     #3  [ ] // placeholder for groupIdByOffer
     #4  [X] // placeholder for agentIdByOffer
-    #5  [X] // placeholder for sellerIdByOperator
+    #5  [X] // placeholder for sellerIdByAssistant
     #6  [X] // placeholder for sellerIdByAdmin
     #7  [X] // placeholder for sellerIdByClerk
     #8  [ ] // placeholder for buyerIdByWallet
-    #9  [X] // placeholder for disputeResolverIdByOperator
+    #9  [X] // placeholder for disputeResolverIdByAssistant
     #10 [X] // placeholder for disputeResolverIdByAdmin
     #11 [X] // placeholder for disputeResolverIdByClerk
     #12 [ ] // placeholder for disputeResolverFeeTokenIndex
@@ -1572,7 +1572,7 @@ async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buye
     );
 
     // balanceOf(address owner)
-    // isApprovedForAll(address owner, address operator)
+    // isApprovedForAll(address owner, address assistant)
     const addresses = [...sellers, ...buyers].map((acc) => acc.wallet.address);
     const balanceOf = await Promise.all(addresses.map((address) => bosonVoucher.balanceOf(address)));
     const isApprovedForAll = await Promise.all(

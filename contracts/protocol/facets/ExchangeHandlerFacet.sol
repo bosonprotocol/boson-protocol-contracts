@@ -302,7 +302,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in Committed state
-     * - Caller is not seller's operator
+     * - Caller is not seller's assistant
      *
      * @param _exchangeId - the id of the exchange
      */
@@ -313,14 +313,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Get seller id associated with caller
         bool sellerExists;
         uint256 sellerId;
-        (sellerExists, sellerId) = getSellerIdByOperator(msgSender());
+        (sellerExists, sellerId) = getSellerIdByAssistant(msgSender());
 
         // Get the offer, which will definitely exist
         Offer storage offer;
         (, offer) = fetchOffer(exchange.offerId);
 
-        // Only seller's operator may call
-        require(sellerExists && offer.sellerId == sellerId, NOT_OPERATOR);
+        // Only seller's assistant may call
+        require(sellerExists && offer.sellerId == sellerId, NOT_ASSISTANT);
 
         // Revoke the voucher
         revokeVoucherInternal(exchange);
@@ -392,7 +392,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in Committed state
-     * - Caller is not seller's operator
+     * - Caller is not seller's assistant
      * - New date is not later than the current one
      *
      * @param _exchangeId - the id of the exchange
@@ -413,10 +413,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Get seller id associated with caller
         bool sellerExists;
         uint256 sellerId;
-        (sellerExists, sellerId) = getSellerIdByOperator(sender);
+        (sellerExists, sellerId) = getSellerIdByAssistant(sender);
 
-        // Only seller's operator may call
-        require(sellerExists && offer.sellerId == sellerId, NOT_OPERATOR);
+        // Only seller's assistant may call
+        require(sellerExists && offer.sellerId == sellerId, NOT_ASSISTANT);
 
         // Make sure the proposed date is later than the current one
         require(_validUntilDate > voucher.validUntilDate, VOUCHER_EXTENSION_NOT_VALID);
@@ -728,7 +728,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 // Get the twin
                 (, Twin storage twin) = fetchTwin(twinIds[i]);
 
-                // Transfer the token from the seller's operator to the buyer
+                // Transfer the token from the seller's assistant to the buyer
                 // N.B. Using call here so as to normalize the revert reason
                 bytes memory result;
                 bool success;
@@ -748,7 +748,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
                             "transferFrom(address,address,uint256)",
-                            seller.operator,
+                            seller.assistant,
                             sender,
                             twin.amount
                         )
@@ -765,7 +765,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,bytes)",
-                            seller.operator,
+                            seller.assistant,
                             sender,
                             tokenId,
                             ""
@@ -776,7 +776,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
-                            seller.operator,
+                            seller.assistant,
                             sender,
                             tokenId,
                             twin.amount,

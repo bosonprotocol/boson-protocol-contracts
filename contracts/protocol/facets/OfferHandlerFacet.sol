@@ -27,7 +27,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Caller is not an operator
+     * - Caller is not an assistant
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
      * - Both voucher expiration date and voucher expiration period are defined
@@ -73,7 +73,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Number of offers exceeds maximum allowed number per batch
      * - Number of elements in offers, offerDates and offerDurations do not match
      * - For any offer:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -155,13 +155,13 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * Reverts if:
      * - The offers region of protocol is paused
      * - Offer id is invalid
-     * - Caller is not the operator of the offer
+     * - Caller is not the assistant of the offer
      * - Offer has already been voided
      *
      * @param _offerId - the id of the offer to void
      */
     function voidOffer(uint256 _offerId) public override offersNotPaused nonReentrant {
-        // Get offer, make sure the caller is the operator
+        // Get offer, make sure the caller is the assistant
         Offer storage offer = getValidOffer(_offerId);
 
         // Void the offer
@@ -182,7 +182,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - The offers region of protocol is paused
      * - Number of offers exceeds maximum allowed number per batch
      * - Offer id is invalid
-     * - Caller is not the operator of the offer
+     * - Caller is not the assistant of the offer
      * - Offer has already been voided
      *
      * @param _offerIds - list of ids of offers to void
@@ -203,7 +203,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * Reverts if:
      * - The offers region of protocol is paused
      * - Offer does not exist
-     * - Caller is not the operator of the offer
+     * - Caller is not the assistant of the offer
      * - New valid until date is before existing valid until dates
      * - Offer has voucherRedeemableUntil set and new valid until date is greater than that
      *
@@ -211,7 +211,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *  @param _validUntilDate - new valid until date
      */
     function extendOffer(uint256 _offerId, uint256 _validUntilDate) public override offersNotPaused nonReentrant {
-        // Make sure the caller is the operator, offer exists and is not voided
+        // Make sure the caller is the assistant, offer exists and is not voided
         Offer storage offer = getValidOffer(_offerId);
 
         // Fetch the offer dates
@@ -242,7 +242,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Number of offers exceeds maximum allowed number per batch
      * - For any of the offers:
      *   - Offer does not exist
-     *   - Caller is not the operator of the offer
+     *   - Caller is not the assistant of the offer
      *   - New valid until date is before existing valid until dates
      *   - Offer has voucherRedeemableUntil set and new valid until date is greater than that
      *
