@@ -31,8 +31,8 @@ contract ERC721 is IERC721, IERC721Metadata {
     // Mapping from token ID to approved address
     mapping(uint256 => address) private _tokenApprovals;
 
-    // Mapping from owner to assistant approvals
-    mapping(address => mapping(address => bool)) private _assistantApprovals;
+    // Mapping from owner to operator approvals
+    mapping(address => mapping(address => bool)) private _operatorApprovals;
 
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
@@ -126,15 +126,15 @@ contract ERC721 is IERC721, IERC721Metadata {
     /**
      * @dev See {IERC721-setApprovalForAll}.
      */
-    function setApprovalForAll(address assistant, bool approved) public virtual override {
-        _setApprovalForAll(msg.sender, assistant, approved);
+    function setApprovalForAll(address operator, bool approved) public virtual override {
+        _setApprovalForAll(msg.sender, operator, approved);
     }
 
     /**
      * @dev See {IERC721-isApprovedForAll}.
      */
-    function isApprovedForAll(address owner, address assistant) public view virtual override returns (bool) {
-        return _assistantApprovals[owner][assistant];
+    function isApprovedForAll(address owner, address operator) public view virtual override returns (bool) {
+        return _operatorApprovals[owner][operator];
     }
 
     /**
@@ -353,18 +353,18 @@ contract ERC721 is IERC721, IERC721Metadata {
     }
 
     /**
-     * @dev Approve `assistant` to operate on all of `owner` tokens
+     * @dev Approve `operator` to operate on all of `owner` tokens
      *
      * Emits an {ApprovalForAll} event.
      */
     function _setApprovalForAll(
         address owner,
-        address assistant,
+        address operator,
         bool approved
     ) internal virtual {
-        require(owner != assistant, "ERC721: approve to caller");
-        _assistantApprovals[owner][assistant] = approved;
-        emit ApprovalForAll(owner, assistant, approved);
+        require(owner != operator, "ERC721: approve to caller");
+        _operatorApprovals[owner][operator] = approved;
+        emit ApprovalForAll(owner, operator, approved);
     }
 
     /**

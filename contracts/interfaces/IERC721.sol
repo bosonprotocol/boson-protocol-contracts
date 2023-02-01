@@ -20,9 +20,9 @@ interface IERC721 is IERC165 {
     event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
 
     /**
-     * @dev Emitted when `owner` enables or disables (`approved`) `assistant` to manage all of its assets.
+     * @dev Emitted when `owner` enables or disables (`approved`) `operator` to manage all of its assets.
      */
-    event ApprovalForAll(address indexed owner, address indexed assistant, bool approved);
+    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
 
     /**
      * @dev Returns the number of tokens in ``owner``'s account.
@@ -86,7 +86,7 @@ interface IERC721 is IERC165 {
      *
      * Requirements:
      *
-     * - The caller must own the token or be an approved assistant.
+     * - The caller must own the token or be an approved operator.
      * - `tokenId` must exist.
      *
      * Emits an {Approval} event.
@@ -100,26 +100,26 @@ interface IERC721 is IERC165 {
      *
      * - `tokenId` must exist.
      */
-    function getApproved(uint256 tokenId) external view returns (address assistant);
+    function getApproved(uint256 tokenId) external view returns (address operator);
 
     /**
-     * @dev Approve or remove `assistant` as an assistant for the caller.
-     * Assistants can call {transferFrom} or {safeTransferFrom} for any token owned by the caller.
+     * @dev Approve or remove `operator` as an operator for the caller.
+     * Operators can call {transferFrom} or {safeTransferFrom} for any token owned by the caller.
      *
      * Requirements:
      *
-     * - The `assistant` cannot be the caller.
+     * - The `operator` cannot be the caller.
      *
      * Emits an {ApprovalForAll} event.
      */
-    function setApprovalForAll(address assistant, bool _approved) external;
+    function setApprovalForAll(address operator, bool _approved) external;
 
     /**
-     * @dev Returns if the `assistant` is allowed to manage all of the assets of `owner`.
+     * @dev Returns if the `operator` is allowed to manage all of the assets of `owner`.
      *
      * See {setApprovalForAll}
      */
-    function isApprovedForAll(address owner, address assistant) external view returns (bool);
+    function isApprovedForAll(address owner, address operator) external view returns (bool);
 
     /**
      * @dev Safely transfers `tokenId` token from `from` to `to`.

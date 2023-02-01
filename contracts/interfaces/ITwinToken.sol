@@ -12,24 +12,24 @@ import "./IERC165.sol";
  */
 interface ITwinToken is IERC165 {
     /**
-     * @notice Returns true if the `assistant` is allowed to manage the assets of `owner`.
+     * @notice Returns true if the `operator` is allowed to manage the assets of `owner`.
      *
      * @param _owner - the token owner address.
-     * @param _assistant - the assistant address.
+     * @param _operator - the operator address.
      * @return _isApproved - the approval was found.
      */
-    function isApprovedForAll(address _owner, address _assistant) external view returns (bool _isApproved);
+    function isApprovedForAll(address _owner, address _operator) external view returns (bool _isApproved);
 
     /**
-     * @notice Returns the remaining number of tokens that `_assistant` will be
+     * @notice Returns the remaining number of tokens that `_operator` will be
      * allowed to spend on behalf of `_owner` through {transferFrom}. This is
      * zero by default.
      *
      * This value changes when {approve} or {transferFrom} are called.
      *
      * @param _owner - the owner address
-     * @param _assistant - the assistant address
+     * @param _operator - the operator address
      * @return The remaining amount allowed
      */
-    function allowance(address _owner, address _assistant) external view returns (uint256);
+    function allowance(address _owner, address _operator) external view returns (uint256);
 }

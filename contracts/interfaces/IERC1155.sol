@@ -13,22 +13,16 @@ import "./IERC165.sol";
  */
 interface IERC1155 is IERC165 {
     /**
-     * @dev Emitted when `value` tokens of token type `id` are transferred from `from` to `to` by `assistant`.
+     * @dev Emitted when `value` tokens of token type `id` are transferred from `from` to `to` by `operator`.
      */
-    event TransferSingle(
-        address indexed assistant,
-        address indexed from,
-        address indexed to,
-        uint256 id,
-        uint256 value
-    );
+    event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value);
 
     /**
-     * @dev Equivalent to multiple {TransferSingle} events, where `assistant`, `from` and `to` are the same for all
+     * @dev Equivalent to multiple {TransferSingle} events, where `operator`, `from` and `to` are the same for all
      * transfers.
      */
     event TransferBatch(
-        address indexed assistant,
+        address indexed operator,
         address indexed from,
         address indexed to,
         uint256[] ids,
@@ -36,10 +30,10 @@ interface IERC1155 is IERC165 {
     );
 
     /**
-     * @dev Emitted when `account` grants or revokes permission to `assistant` to transfer their tokens, according to
+     * @dev Emitted when `account` grants or revokes permission to `operator` to transfer their tokens, according to
      * `approved`.
      */
-    event ApprovalForAll(address indexed account, address indexed assistant, bool approved);
+    event ApprovalForAll(address indexed account, address indexed operator, bool approved);
 
     /**
      * @dev Emitted when the URI for token type `id` changes to `value`, if it is a non-programmatic URI.
@@ -72,22 +66,22 @@ interface IERC1155 is IERC165 {
         returns (uint256[] memory);
 
     /**
-     * @dev Grants or revokes permission to `assistant` to transfer the caller's tokens, according to `approved`,
+     * @dev Grants or revokes permission to `operator` to transfer the caller's tokens, according to `approved`,
      *
      * Emits an {ApprovalForAll} event.
      *
      * Requirements:
      *
-     * - `assistant` cannot be the caller.
+     * - `operator` cannot be the caller.
      */
-    function setApprovalForAll(address assistant, bool approved) external;
+    function setApprovalForAll(address operator, bool approved) external;
 
     /**
-     * @dev Returns true if `assistant` is approved to transfer ``account``'s tokens.
+     * @dev Returns true if `operator` is approved to transfer ``account``'s tokens.
      *
      * See {setApprovalForAll}.
      */
-    function isApprovedForAll(address account, address assistant) external view returns (bool);
+    function isApprovedForAll(address account, address operator) external view returns (bool);
 
     /**
      * @dev Transfers `amount` tokens of token type `id` from `from` to `to`.
