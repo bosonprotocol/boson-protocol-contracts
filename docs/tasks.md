@@ -70,6 +70,9 @@ For upgrade to succeed you need an account with UPGRADER role. Refer to [Manage 
 - **Ethereum Mainnet**. This upgrades the existing diamond on Ethereum Mainnet.  
 ```npm run upgrade-facets:ethereum:mainnet```
 
+Each upgrade requires correct config parameters. We provide [correct configurations for all release versions]().  
+If you want to upgrade to any intermediate version (for example to a release candidate), you can use the same config as for the actual release, however it might result in interface clashes, which prevent subsequent upgrades. Workaround for this problem is to temporarily disable `onlyUninitialized` modifier on all contracts that clash. Since this is generally an unsafe operation, you should never do that in the production environment. Production should always be upgraded only to actual releases.
+
 ### Upgrade clients
 Upgrade existing clients (currently only BosonVoucher). Script deploys new implementation and updates address on beacon.  
 We provide different npm scripts for different use cases. A script for Hardhat network does not exist. Since contracts are discarded after the deployment, they cannot be upgraded.  
@@ -163,7 +166,7 @@ Script will create a dispute resolver
      "disputeResolver": {
       "id": string, // ignored
       "escalationResponsePeriod": string,
-      "operator": string,
+      "assistant": string,
       "admin": string,
       "clerk": string,
       "treasury": string,
@@ -186,8 +189,8 @@ Script will create a dispute resolver
 
 Note about the field `privateKey` in JSON file:
 - `privateKey` represents the hex encoded private key that will create a dispute resolver. If it is not specified, the protocol admin account will be used (specified in `.env`).
-- If all `operator`, `admin` and `clerk` match the address, corresponding to `privateKey`, dispute resolver is simply created.
-- If any of `operator`, `admin` or `clerk` differs from the address, corresponding to `privateKey`, dispute resolver is created in two steps. Firstly, a dispute resolver with `operator`, `admin` and `clerk` set to address, corresponding to `privateKey` is created and then in the second step dispute resolver is updated with addresses from JSON file.
+- If all `assistant`, `admin` and `clerk` match the address, corresponding to `privateKey`, dispute resolver is simply created.
+- If any of `assistant`, `admin` or `clerk` differs from the address, corresponding to `privateKey`, dispute resolver is created in two steps. Firstly, a dispute resolver with `assistant`, `admin` and `clerk` set to address, corresponding to `privateKey` is created and then in the second step dispute resolver is updated with addresses from JSON file.
 
 Example: 
 

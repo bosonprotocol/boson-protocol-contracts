@@ -150,7 +150,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * causing the token range to be reserved, but only pre-minting
      * a certain amount monthly.
      *
-     * Caller must be contract owner (seller operator address).
+     * Caller must be contract owner (seller assistant address).
      *
      * Reverts if:
      * - Offer id is not associated with a range
@@ -176,7 +176,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * this method can be called multiple times, until the whole
      * range is burned.
      *
-     * Caller must be contract owner (seller operator address).
+     * Caller must be contract owner (seller assistant address).
      *
      * Reverts if:
      * - Offer id is not associated with a range

@@ -68,9 +68,9 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         address sender = msgSender();
 
         // Get seller id
-        (, uint256 sellerId) = getSellerIdByOperator(sender);
+        (, uint256 sellerId) = getSellerIdByAssistant(sender);
         // Caller's seller id must match twin seller id
-        require(sellerId == twin.sellerId, NOT_OPERATOR);
+        require(sellerId == twin.sellerId, NOT_ASSISTANT);
 
         // Check if there are bundles for this twin
         (bool bundleForTwinExist, ) = fetchBundleIdByTwin(_twinId);

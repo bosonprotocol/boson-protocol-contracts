@@ -113,15 +113,15 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @notice Gets a seller id from storage by operator address
+     * @notice Gets a seller id from storage by assistant address
      *
-     * @param _operator - the operator address of the seller
+     * @param _assistant - the assistant address of the seller
      * @return exists - whether the seller id exists
      * @return sellerId  - the seller id
      */
-    function getSellerIdByOperator(address _operator) internal view returns (bool exists, uint256 sellerId) {
+    function getSellerIdByAssistant(address _assistant) internal view returns (bool exists, uint256 sellerId) {
         // Get the seller id
-        sellerId = protocolLookups().sellerIdByOperator[_operator];
+        sellerId = protocolLookups().sellerIdByAssistant[_assistant];
 
         // Determine existence
         exists = (sellerId > 0);
@@ -205,17 +205,17 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @notice Gets a dispute resolver id from storage by operator address
+     * @notice Gets a dispute resolver id from storage by assistant address
      *
-     * @param _operator - the operator address of the dispute resolver
+     * @param _assistant - the assistant address of the dispute resolver
      * @return exists - whether the dispute resolver id exists
      * @return disputeResolverId  - the dispute resolver  id
      */
-    function getDisputeResolverIdByOperator(
-        address _operator
+    function getDisputeResolverIdByAssistant(
+        address _assistant
     ) internal view returns (bool exists, uint256 disputeResolverId) {
         // Get the dispute resolver id
-        disputeResolverId = protocolLookups().disputeResolverIdByOperator[_operator];
+        disputeResolverId = protocolLookups().disputeResolverIdByAssistant[_assistant];
 
         // Determine existence
         exists = (disputeResolverId > 0);
@@ -539,8 +539,8 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         // Get seller, we assume seller exists if offer exists
         (, seller, ) = fetchSeller(offer.sellerId);
 
-        // Caller must be seller's operator address
-        require(seller.operator == msgSender(), NOT_OPERATOR);
+        // Caller must be seller's assistant address
+        require(seller.assistant == msgSender(), NOT_ASSISTANT);
     }
 
     /**

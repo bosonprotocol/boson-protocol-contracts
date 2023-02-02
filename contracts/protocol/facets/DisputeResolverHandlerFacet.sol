@@ -28,7 +28,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * Emits a DisputeResolverCreated event if successful.
      *
      * Reverts if:
-     * - Caller is not the supplied admin, operator and clerk
+     * - Caller is not the supplied admin, assistant and clerk
      * - The dispute resolvers region of protocol is paused
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
@@ -55,7 +55,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Check for zero address
         require(
             _disputeResolver.admin != address(0) &&
-                _disputeResolver.operator != address(0) &&
+                _disputeResolver.assistant != address(0) &&
                 _disputeResolver.clerk != address(0) &&
                 _disputeResolver.treasury != address(0),
             INVALID_ADDRESS
@@ -69,12 +69,12 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             // Get message sender
             address sender = msgSender();
 
-            // Check that caller is the supplied operator and clerk
+            // Check that caller is the supplied assistant and clerk
             require(
                 _disputeResolver.admin == sender &&
-                    _disputeResolver.operator == sender &&
+                    _disputeResolver.assistant == sender &&
                     _disputeResolver.clerk == sender,
-                NOT_ADMIN_OPERATOR_AND_CLERK
+                NOT_ADMIN_ASSISTANT_AND_CLERK
             );
         }
 
@@ -82,18 +82,18 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         uint256 disputeResolverId = protocolCounters().nextAccountId++;
 
         // Check that the addresses are unique to one dispute resolver id, across all rolls
-        mapping(address => uint256) storage disputeResolverIdByOperator = lookups.disputeResolverIdByOperator;
+        mapping(address => uint256) storage disputeResolverIdByAssistant = lookups.disputeResolverIdByAssistant;
         mapping(address => uint256) storage disputeResolverIdByAdmin = lookups.disputeResolverIdByAdmin;
         mapping(address => uint256) storage disputeResolverIdByClerk = lookups.disputeResolverIdByClerk;
         require(
-            disputeResolverIdByOperator[_disputeResolver.operator] == 0 &&
-                disputeResolverIdByOperator[_disputeResolver.admin] == 0 &&
-                disputeResolverIdByOperator[_disputeResolver.clerk] == 0 &&
+            disputeResolverIdByAssistant[_disputeResolver.assistant] == 0 &&
+                disputeResolverIdByAssistant[_disputeResolver.admin] == 0 &&
+                disputeResolverIdByAssistant[_disputeResolver.clerk] == 0 &&
                 disputeResolverIdByAdmin[_disputeResolver.admin] == 0 &&
-                disputeResolverIdByAdmin[_disputeResolver.operator] == 0 &&
+                disputeResolverIdByAdmin[_disputeResolver.assistant] == 0 &&
                 disputeResolverIdByAdmin[_disputeResolver.clerk] == 0 &&
                 disputeResolverIdByClerk[_disputeResolver.clerk] == 0 &&
-                disputeResolverIdByClerk[_disputeResolver.operator] == 0 &&
+                disputeResolverIdByClerk[_disputeResolver.assistant] == 0 &&
                 disputeResolverIdByClerk[_disputeResolver.admin] == 0,
             DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
         );
@@ -159,7 +159,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Updates treasury address, escalationResponsePeriod or metadataUri if changed. Puts admin, operator and clerk in pending queue, if changed.
+     * @notice Updates treasury address, escalationResponsePeriod or metadataUri if changed. Puts admin, assistant and clerk in pending queue, if changed.
      *         Pending updates can be completed by calling the optInToDisputeResolverUpdate function.
      *
      *         Update doesn't include DisputeResolverFees, allowed seller list or active flag.
@@ -170,8 +170,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a DisputeResolverUpdated event if successful.
-     * Emits a DisputeResolverUpdatePending event if the dispute resolver has requested an update for admin, clerk or operator.
-     * Owner(s) of new addresses for admin, clerk, operator must opt-in to the update.
+     * Emits a DisputeResolverUpdatePending event if the dispute resolver has requested an update for admin, clerk or assistant.
+     * Owner(s) of new addresses for admin, clerk, assistant must opt-in to the update.
      *
      * Reverts if:
      * - The dispute resolvers region of protocol is paused
@@ -192,7 +192,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Check for zero address
         require(
             _disputeResolver.admin != address(0) &&
-                _disputeResolver.operator != address(0) &&
+                _disputeResolver.assistant != address(0) &&
                 _disputeResolver.clerk != address(0) &&
                 _disputeResolver.treasury != address(0),
             INVALID_ADDRESS
@@ -229,11 +229,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             needsApproval = true;
         }
 
-        if (_disputeResolver.operator != disputeResolver.operator) {
-            preUpdateDisputeResolverCheck(_disputeResolver.id, _disputeResolver.operator, lookups);
+        if (_disputeResolver.assistant != disputeResolver.assistant) {
+            preUpdateDisputeResolverCheck(_disputeResolver.id, _disputeResolver.assistant, lookups);
 
-            // If operator address exists, operator address owner must approve the update to prevent front-running
-            disputeResolverPendingUpdate.operator = _disputeResolver.operator;
+            // If assistant address exists, assistant address owner must approve the update to prevent front-running
+            disputeResolverPendingUpdate.assistant = _disputeResolver.assistant;
             needsApproval = true;
         }
 
@@ -348,24 +348,24 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
                 updateApplied = true;
             } else if (
-                role == DisputeResolverUpdateFields.Operator && disputeResolverPendingUpdate.operator != address(0)
+                role == DisputeResolverUpdateFields.Assistant && disputeResolverPendingUpdate.assistant != address(0)
             ) {
-                // Approve operator update
-                require(disputeResolverPendingUpdate.operator == sender, UNAUTHORIZED_CALLER_UPDATE);
+                // Approve assistant update
+                require(disputeResolverPendingUpdate.assistant == sender, UNAUTHORIZED_CALLER_UPDATE);
 
                 preUpdateDisputeResolverCheck(_disputeResolverId, sender, lookups);
 
-                // Delete old disputeResolver id by operator mapping
-                delete lookups.disputeResolverIdByOperator[disputeResolver.operator];
+                // Delete old disputeResolver id by assistant mapping
+                delete lookups.disputeResolverIdByAssistant[disputeResolver.assistant];
 
-                // Update operator
-                disputeResolver.operator = sender;
+                // Update assistant
+                disputeResolver.assistant = sender;
 
-                // Store new disputeResolver id by operator mapping
-                lookups.disputeResolverIdByOperator[sender] = _disputeResolverId;
+                // Store new disputeResolver id by assistant mapping
+                lookups.disputeResolverIdByAssistant[sender] = _disputeResolverId;
 
-                // Delete pending update operator
-                delete disputeResolverPendingUpdate.operator;
+                // Delete pending update assistant
+                delete disputeResolverPendingUpdate.assistant;
 
                 updateApplied = true;
             } else if (role == DisputeResolverUpdateFields.Clerk && disputeResolverPendingUpdate.clerk != address(0)) {
@@ -683,9 +683,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Gets the details about a dispute resolver by an address associated with that dispute resolver: operator, admin, or clerk address.
+     * @notice Gets the details about a dispute resolver by an address associated with that dispute resolver: assistant, admin, or clerk address.
      *
-     * @param _associatedAddress - the address associated with the dispute resolver. Must be an operator, admin, or clerk address.
+     * @param _associatedAddress - the address associated with the dispute resolver. Must be an assistant, admin, or clerk address.
      * @return exists - the dispute resolver was found
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
@@ -705,7 +705,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     {
         uint256 disputeResolverId;
 
-        (exists, disputeResolverId) = getDisputeResolverIdByOperator(_associatedAddress);
+        (exists, disputeResolverId) = getDisputeResolverIdByAssistant(_associatedAddress);
 
         if (exists) {
             return getDisputeResolver(disputeResolverId);
@@ -773,7 +773,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Set dispute resolver props individually since memory structs can't be copied to storage
         disputeResolver.id = _disputeResolver.id;
         disputeResolver.escalationResponsePeriod = _disputeResolver.escalationResponsePeriod;
-        disputeResolver.operator = _disputeResolver.operator;
+        disputeResolver.assistant = _disputeResolver.assistant;
         disputeResolver.admin = _disputeResolver.admin;
         disputeResolver.clerk = _disputeResolver.clerk;
         disputeResolver.treasury = _disputeResolver.treasury;
@@ -781,7 +781,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         disputeResolver.active = _disputeResolver.active;
 
         // Map the dispute resolver's addresses to the dispute resolver id.
-        lookups.disputeResolverIdByOperator[_disputeResolver.operator] = _disputeResolver.id;
+        lookups.disputeResolverIdByAssistant[_disputeResolver.assistant] = _disputeResolver.id;
         lookups.disputeResolverIdByAdmin[_disputeResolver.admin] = _disputeResolver.id;
         lookups.disputeResolverIdByClerk[_disputeResolver.clerk] = _disputeResolver.id;
     }
@@ -824,7 +824,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @notice Pre update dispute resolver checks
      *
      * Reverts if:
-     *   - Address has already been used by another dispute resolver as operator, admin, or clerk
+     *   - Address has already been used by another dispute resolver as assistant, admin, or clerk
      *
      * @param _disputeResolverId - the id of the disputeResolver to check
      * @param _role - the address to check
@@ -836,7 +836,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         ProtocolLib.ProtocolLookups storage _lookups
     ) internal view {
         // Check that the role is unique to one dispute resolver id across all roles -- not used or is used by this dispute resolver id.
-        uint256 check1 = _lookups.disputeResolverIdByOperator[_role];
+        uint256 check1 = _lookups.disputeResolverIdByAssistant[_role];
         uint256 check2 = _lookups.disputeResolverIdByClerk[_role];
         uint256 check3 = _lookups.disputeResolverIdByAdmin[_role];
 
@@ -867,7 +867,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Determine existence
         exists =
             disputeResolverPendingUpdate.admin != address(0) ||
-            disputeResolverPendingUpdate.operator != address(0) ||
+            disputeResolverPendingUpdate.assistant != address(0) ||
             disputeResolverPendingUpdate.clerk != address(0);
     }
 }

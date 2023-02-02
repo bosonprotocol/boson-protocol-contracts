@@ -31,13 +31,13 @@ describe("SnapshotGate", function () {
   // Common vars
   let deployer,
     pauser,
-    operator,
-    operator2,
+    assistant,
+    assistant2,
     admin,
     clerk,
     treasury,
     rando,
-    operatorDR,
+    assistantDR,
     adminDR,
     clerkDR,
     treasuryDR,
@@ -73,7 +73,7 @@ describe("SnapshotGate", function () {
       adminDR,
       treasuryDR,
       protocolTreasury,
-      operator2,
+      assistant2,
       bosonToken,
       holder1,
       holder2,
@@ -83,8 +83,8 @@ describe("SnapshotGate", function () {
     ] = await ethers.getSigners();
 
     // make all account the same
-    operator = clerk = admin;
-    operatorDR = clerkDR = adminDR;
+    assistant = clerk = admin;
+    assistantDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -185,11 +185,11 @@ describe("SnapshotGate", function () {
     agentId = "0"; // agent id is optional while creating an offer
 
     // Create a valid seller
-    seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+    seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
     expect(seller.isValid()).is.true;
 
     // Create a second seller
-    seller2 = mockSeller(operator2.address, operator2.address, operator2.address, operator2.address);
+    seller2 = mockSeller(assistant2.address, assistant2.address, assistant2.address, assistant2.address);
     expect(seller2.isValid()).is.true;
 
     // AuthToken
@@ -204,11 +204,11 @@ describe("SnapshotGate", function () {
     await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
     // Create the second seller
-    await accountHandler.connect(operator2).createSeller(seller2, emptyAuthToken, voucherInitValues);
+    await accountHandler.connect(assistant2).createSeller(seller2, emptyAuthToken, voucherInitValues);
 
     // Create a valid dispute resolver
     disputeResolver = mockDisputeResolver(
-      operatorDR.address,
+      assistantDR.address,
       adminDR.address,
       clerkDR.address,
       treasuryDR.address,
@@ -314,7 +314,9 @@ describe("SnapshotGate", function () {
         expect(offerDurations.isValid()).is.true;
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
         offers.push(offer);
 
         // Required constructor params for Group
@@ -334,7 +336,7 @@ describe("SnapshotGate", function () {
         // Create Group
         group = new Group(groupId, seller.id, offerIds);
         expect(group.isValid()).is.true;
-        await groupHandler.connect(operator).createGroup(group, condition);
+        await groupHandler.connect(assistant).createGroup(group, condition);
         groups.push(group);
       }
     }
@@ -357,7 +359,7 @@ describe("SnapshotGate", function () {
 
     // Create the offer
     let tx = await offerHandler
-      .connect(operator2)
+      .connect(assistant2)
       .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
     offers.push(offer);
 

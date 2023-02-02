@@ -112,7 +112,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         uint256 _exchangeId,
         uint256 _newDisputeTimeout
     ) external override disputesNotPaused nonReentrant {
-        // Verify that the caller is the seller. Get exchange -> get offer id -> get seller id -> get operator address and compare to msg.sender
+        // Verify that the caller is the seller. Get exchange -> get offer id -> get seller id -> get assistant address and compare to msg.sender
         // Get the exchange, should be in disputed state
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
@@ -125,8 +125,8 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         // get message sender
         address sender = msgSender();
 
-        // Caller must be seller's operator address
-        require(seller.operator == sender, NOT_OPERATOR);
+        // Caller must be seller's assistant address
+        require(seller.assistant == sender, NOT_ASSISTANT);
 
         // Fetch the dispute, it exists if exchange is in Disputed state
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
@@ -258,7 +258,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
             (, Offer storage offer) = fetchOffer(exchange.offerId);
 
             // get seller id to check if caller is the seller
-            (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
+            (bool exists, uint256 sellerId) = getSellerIdByAssistant(msgSender());
 
             // variable to store who the expected signer is
             address expectedSigner;
@@ -277,7 +277,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
                 // caller is the buyer
                 // get the seller's address, which should be the signer of the resolution
                 (, Seller storage seller, ) = fetchSeller(offer.sellerId);
-                expectedSigner = seller.operator;
+                expectedSigner = seller.assistant;
             }
 
             // verify that the signature belongs to the expectedSigner
@@ -552,10 +552,10 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // get dispute resolver id to check if caller is the dispute resolver
-        uint256 disputeResolverId = protocolLookups().disputeResolverIdByOperator[msgSender()];
+        uint256 disputeResolverId = protocolLookups().disputeResolverIdByAssistant[msgSender()];
         require(
             disputeResolverId == fetchDisputeResolutionTerms(offer.id).disputeResolverId,
-            NOT_DISPUTE_RESOLVER_OPERATOR
+            NOT_DISPUTE_RESOLVER_ASSISTANT
         );
     }
 

@@ -35,13 +35,13 @@ const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolve
 describe("[@skip-on-coverage] Update account roles addresses", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
   let deployer,
-    operator,
+    assistant,
     admin,
     clerk,
     treasury,
     buyer,
     rando,
-    operatorDR,
+    assistantDR,
     adminDR,
     clerkDR,
     treasuryDR,
@@ -56,8 +56,8 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       await ethers.getSigners();
 
     // make all account the same
-    operator = clerk = admin;
-    operatorDR = clerkDR = adminDR;
+    assistant = clerk = admin;
+    assistantDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     const [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -164,14 +164,14 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       expect(voucherInitValues.isValid()).is.true;
 
       // Create a seller account
-      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
       await expect(accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues))
         .to.emit(accountHandler, "SellerCreated")
         .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, emptyAuthToken.toStruct(), admin.address);
 
       // Create a dispute resolver
       disputeResolver = mockDisputeResolver(
-        operatorDR.address,
+        assistantDR.address,
         adminDR.address,
         clerkDR.address,
         treasuryDR.address,
@@ -211,12 +211,12 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
       // Register the offer
       await offerHandler
-        .connect(operator)
+        .connect(assistant)
         .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentAccount.id);
 
       // Deposit seller funds so the commit will succeed
       await fundsHandler
-        .connect(operator)
+        .connect(assistant)
         .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
 
       // Create a buyer account
@@ -245,20 +245,20 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       accountId.next(true);
     });
 
-    it("Seller should be able to revoke the voucher after updating operator address", async function () {
-      seller.operator = rando.address;
+    it("Seller should be able to revoke the voucher after updating assistant address", async function () {
+      seller.assistant = rando.address;
       expect(seller.isValid()).is.true;
-      sellerPendingUpdate.operator = rando.address;
+      sellerPendingUpdate.assistant = rando.address;
 
       // Update the seller wallet, testing for the event
       await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
         .to.emit(accountHandler, "SellerUpdatePending")
         .withArgs(seller.id, sellerPendingUpdate.toStruct(), emptyAuthToken.toStruct(), admin.address);
 
-      sellerPendingUpdate.operator = ethers.constants.AddressZero;
+      sellerPendingUpdate.assistant = ethers.constants.AddressZero;
 
       // Approve the update
-      await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]))
+      await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]))
         .to.emit(accountHandler, "SellerUpdateApplied")
         .withArgs(
           seller.id,
@@ -275,20 +275,20 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         .withArgs(offer.id, exchangeId, rando.address);
     });
 
-    it("Seller should be able to extend the voucher after updating operator address", async function () {
-      seller.operator = rando.address;
+    it("Seller should be able to extend the voucher after updating assistant address", async function () {
+      seller.assistant = rando.address;
       expect(seller.isValid()).is.true;
-      sellerPendingUpdate.operator = rando.address;
+      sellerPendingUpdate.assistant = rando.address;
 
       // Update the seller wallet, testing for the event
       await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
         .to.emit(accountHandler, "SellerUpdatePending")
         .withArgs(seller.id, sellerPendingUpdate.toStruct(), emptyAuthToken.toStruct(), admin.address);
 
-      sellerPendingUpdate.operator = ethers.constants.AddressZero;
+      sellerPendingUpdate.assistant = ethers.constants.AddressZero;
 
       // Approve the update
-      await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]))
+      await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]))
         .to.emit(accountHandler, "SellerUpdateApplied")
         .withArgs(
           seller.id,
@@ -479,20 +479,20 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
           };
         });
 
-        it("Seller should be able to resolve dispute after updating operator address", async function () {
-          seller.operator = rando.address;
+        it("Seller should be able to resolve dispute after updating assistant address", async function () {
+          seller.assistant = rando.address;
           expect(seller.isValid()).is.true;
-          sellerPendingUpdate.operator = rando.address;
+          sellerPendingUpdate.assistant = rando.address;
 
           // Update the seller wallet, testing for the event
           await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
             .to.emit(accountHandler, "SellerUpdatePending")
             .withArgs(seller.id, sellerPendingUpdate.toStruct(), emptyAuthToken.toStruct(), admin.address);
 
-          sellerPendingUpdate.operator = ethers.constants.AddressZero;
+          sellerPendingUpdate.assistant = ethers.constants.AddressZero;
 
           // Approve the update
-          await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]))
+          await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]))
             .to.emit(accountHandler, "SellerUpdateApplied")
             .withArgs(
               seller.id,
@@ -512,12 +512,12 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
             disputeHandler.address
           );
 
-          // Attempt to resolve a dispute with old seller operator, should fail
+          // Attempt to resolve a dispute with old seller assistant, should fail
           await expect(
-            disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v)
+            disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercent, r, s, v)
           ).to.revertedWith(RevertReasons.NOT_BUYER_OR_SELLER);
 
-          // Attempt to resolve a dispute with new seller operator, should succeed
+          // Attempt to resolve a dispute with new seller assistant, should succeed
           await expect(disputeHandler.connect(rando).resolveDispute(exchangeId, buyerPercent, r, s, v))
             .to.emit(disputeHandler, "DisputeResolved")
             .withArgs(exchangeId, buyerPercent, rando.address);
@@ -534,7 +534,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
           // Collect the signature components
           const { r, s, v } = await prepareDataSignatureParameters(
-            operator, // When buyer is the caller, seller should be the signer
+            assistant, // When buyer is the caller, seller should be the signer
             customSignatureType,
             "Resolution",
             message,
@@ -572,24 +572,24 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
           // Attempt to resolve a dispute with old buyer wallet, should fail
           await expect(
-            disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v)
+            disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercent, r, s, v)
           ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         });
 
-        it("If the seller operator address was changed, the buyer should not be able to resolve a dispute with the old signature", async function () {
-          seller.operator = rando.address;
+        it("If the seller assistant address was changed, the buyer should not be able to resolve a dispute with the old signature", async function () {
+          seller.assistant = rando.address;
           expect(seller.isValid()).is.true;
-          sellerPendingUpdate.operator = rando.address;
+          sellerPendingUpdate.assistant = rando.address;
 
           // Update the seller wallet, testing for the event
           await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
             .to.emit(accountHandler, "SellerUpdatePending")
             .withArgs(seller.id, sellerPendingUpdate.toStruct(), emptyAuthToken.toStruct(), admin.address);
 
-          sellerPendingUpdate.operator = ethers.constants.AddressZero;
+          sellerPendingUpdate.assistant = ethers.constants.AddressZero;
 
           // Approve the update
-          await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]))
+          await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]))
             .to.emit(accountHandler, "SellerUpdateApplied")
             .withArgs(
               seller.id,
@@ -602,7 +602,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
           // Collect the signature components
           const { r, s, v } = await prepareDataSignatureParameters(
-            operator, // When buyer is the caller, seller should be the signer
+            assistant, // When buyer is the caller, seller should be the signer
             customSignatureType,
             "Resolution",
             message,
@@ -645,37 +645,37 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
             // Escalate the dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
-            disputeResolver.operator = rando.address;
+            disputeResolver.assistant = rando.address;
             expect(disputeResolver.isValid()).is.true;
 
-            // Update the dispute resolver operator
+            // Update the dispute resolver assistant
             await accountHandler.connect(adminDR).updateDisputeResolver(disputeResolver);
             await accountHandler
               .connect(rando)
-              .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Operator]);
+              .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Assistant]);
           });
 
-          it("Dispute resolver should be able to decide dispute after change the operator address", async function () {
+          it("Dispute resolver should be able to decide dispute after change the assistant address", async function () {
             const buyerPercent = "1234";
 
-            // Attempt to decide a dispute with old dispute resolver operator, should fail
-            await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
-              RevertReasons.NOT_DISPUTE_RESOLVER_OPERATOR
+            // Attempt to decide a dispute with old dispute resolver assistant, should fail
+            await expect(disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
+              RevertReasons.NOT_DISPUTE_RESOLVER_ASSISTANT
             );
 
-            // Attempt to decide a dispute with new dispute resolver operator, should fail
+            // Attempt to decide a dispute with new dispute resolver assistant, should fail
             await expect(disputeHandler.connect(rando).decideDispute(exchangeId, buyerPercent))
               .to.emit(disputeHandler, "DisputeDecided")
               .withArgs(exchangeId, buyerPercent, rando.address);
           });
 
-          it("Dispute resolver should be able to refuse to decide a dispute after change the operator address", async function () {
-            // Attempt to refuse to decide a dispute with old dispute resolver operator, should fail
-            await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
-              RevertReasons.NOT_DISPUTE_RESOLVER_OPERATOR
+          it("Dispute resolver should be able to refuse to decide a dispute after change the assistant address", async function () {
+            // Attempt to refuse to decide a dispute with old dispute resolver assistant, should fail
+            await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
+              RevertReasons.NOT_DISPUTE_RESOLVER_ASSISTANT
             );
 
-            // Attempt to refuse a dispute with new dispute resolver operator, should fail
+            // Attempt to refuse a dispute with new dispute resolver assistant, should fail
             await expect(disputeHandler.connect(rando).refuseEscalatedDispute(exchangeId))
               .to.emit(disputeHandler, "EscalatedDisputeRefused")
               .withArgs(exchangeId, rando.address);
