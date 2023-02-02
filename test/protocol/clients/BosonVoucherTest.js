@@ -1802,7 +1802,7 @@ describe("IBosonVoucher", function () {
   });
 
   context("tokenURI", function () {
-    let metadataUri;
+    let metadataUri, offerId;
 
     beforeEach(async function () {
       seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
@@ -1841,12 +1841,16 @@ describe("IBosonVoucher", function () {
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+      offerId = offer.id;
+
       await offerHandler
         .connect(assistant)
         .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
+
       await fundsHandler
         .connect(admin)
         .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+
       await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
 
       metadataUri = offer.metadataUri;
@@ -1859,6 +1863,19 @@ describe("IBosonVoucher", function () {
 
     it("should return the correct tokenURI", async function () {
       const tokenURI = await bosonVoucher.tokenURI(1);
+      expect(tokenURI).eq(metadataUri);
+    });
+
+    it("should return the correct tokenURI when token is preminted", async function () {
+      // reserve a range
+      const start = "10";
+      const length = "1";
+      await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
+
+      // premint
+      await bosonVoucher.connect(assistant).preMint(offerId, 1);
+
+      const tokenURI = await bosonVoucher.tokenURI(start);
       expect(tokenURI).eq(metadataUri);
     });
   });

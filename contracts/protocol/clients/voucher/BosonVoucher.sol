@@ -499,16 +499,24 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * replaceable baseURI template, since the latter is not compatible
      * with IPFS hashes.
      *
-     * @param _exchangeId - id of the voucher's associated exchange
+     * @param _tokenId - id of the voucher's associated exchange or pre-minted
      * @return the uri for the associated offer's off-chain metadata (blank if not found)
      */
-    function tokenURI(uint256 _exchangeId)
+    function tokenURI(uint256 _tokenId)
         public
         view
         override(ERC721Upgradeable, IERC721MetadataUpgradeable)
         returns (string memory)
     {
-        (bool exists, Offer memory offer) = getBosonOfferByExchangeId(_exchangeId);
+        (bool exists, Offer memory offer) = getBosonOfferByExchangeId(_tokenId);
+
+        if (!exists) {
+            (bool committable, uint256 offerId) = getPreMintStatus(_tokenId);
+            if (committable) {
+                exists = true;
+                (offer, ) = getBosonOffer(offerId);
+            }
+        }
         return exists ? offer.metadataUri : "";
     }
 
