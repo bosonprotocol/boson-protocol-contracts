@@ -202,6 +202,11 @@ library FundsLib {
             }
         }
 
+        // Original seller and last buyer are done
+        // Release funds to intermediate sellers (if they exist)
+        // and add the protocol fee to the total
+        // protocolFee += releaseFundsToIntermediateSellers(_exchangeId, sellerPayoff);
+
         // Store payoffs to availablefunds and notify the external observers
         address exchangeToken = offer.exchangeToken;
         uint256 sellerId = offer.sellerId;
@@ -238,15 +243,20 @@ library FundsLib {
      * - Received ERC20 token amount differs from the expected value
      *
      * @param _tokenAddress - address of the token to be transferred
+     * @param _from - address to transfer funds from
      * @param _amount - amount to be transferred
      */
-    function transferFundsToProtocol(address _tokenAddress, uint256 _amount) internal {
+    function transferFundsToProtocol(
+        address _tokenAddress,
+        address _from,
+        uint256 _amount
+    ) internal {
         if (_amount > 0) {
             // protocol balance before the transfer
             uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
 
             // transfer ERC20 tokens from the caller
-            IERC20(_tokenAddress).safeTransferFrom(EIP712Lib.msgSender(), address(this), _amount);
+            IERC20(_tokenAddress).safeTransferFrom(_from, address(this), _amount);
 
             // protocol balance after the transfer
             uint256 protocolTokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
@@ -254,6 +264,10 @@ library FundsLib {
             // make sure that expected amount of tokens was transferred
             require(protocolTokenBalanceAfter - protocolTokenBalanceBefore == _amount, INSUFFICIENT_VALUE_RECEIVED);
         }
+    }
+
+    function transferFundsToProtocol(address _tokenAddress, uint256 _amount) internal {
+        transferFundsToProtocol(_tokenAddress, EIP712Lib.msgSender(), _amount);
     }
 
     /**
