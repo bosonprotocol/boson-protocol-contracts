@@ -166,7 +166,7 @@ Script will create a dispute resolver
      "disputeResolver": {
       "id": string, // ignored
       "escalationResponsePeriod": string,
-      "operator": string,
+      "assistant": string,
       "admin": string,
       "clerk": string,
       "treasury": string,
@@ -189,8 +189,8 @@ Script will create a dispute resolver
 
 Note about the field `privateKey` in JSON file:
 - `privateKey` represents the hex encoded private key that will create a dispute resolver. If it is not specified, the protocol admin account will be used (specified in `.env`).
-- If all `operator`, `admin` and `clerk` match the address, corresponding to `privateKey`, dispute resolver is simply created.
-- If any of `operator`, `admin` or `clerk` differs from the address, corresponding to `privateKey`, dispute resolver is created in two steps. Firstly, a dispute resolver with `operator`, `admin` and `clerk` set to address, corresponding to `privateKey` is created and then in the second step dispute resolver is updated with addresses from JSON file.
+- If all `assistant`, `admin` and `clerk` match the address, corresponding to `privateKey`, dispute resolver is simply created.
+- If any of `assistant`, `admin` or `clerk` differs from the address, corresponding to `privateKey`, dispute resolver is created in two steps. Firstly, a dispute resolver with `assistant`, `admin` and `clerk` set to address, corresponding to `privateKey` is created and then in the second step dispute resolver is updated with addresses from JSON file.
 
 Example: 
 

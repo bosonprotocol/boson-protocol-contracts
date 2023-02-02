@@ -43,7 +43,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -112,7 +112,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The offers region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -189,7 +189,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The groups region of protocol is paused
      * - The orchestration region of protocol is paused
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -254,7 +254,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -308,7 +308,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The groups region of protocol is paused
      * - The orchestration region of protocol is paused
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -326,7 +326,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Buyer cancel penalty is greater than price
      * - When adding to the group if:
      *   - Group does not exists
-     *   - Caller is not the operator of the group
+     *   - Caller is not the assistant of the group
      *   - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -370,7 +370,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -388,7 +388,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Buyer cancel penalty is greater than price
      * - When adding to the group if:
      *   - Group does not exists
-     *   - Caller is not the operator of the group
+     *   - Caller is not the assistant of the group
      *   - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -428,7 +428,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -493,7 +493,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -557,7 +557,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -628,7 +628,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -709,7 +709,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The offers region of protocol is paused
      * - The groups region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -718,7 +718,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -786,7 +786,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The groups region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -798,7 +798,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -878,7 +878,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -887,7 +887,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -963,7 +963,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The bundles region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -975,7 +975,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -1063,7 +1063,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -1072,7 +1072,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -1161,7 +1161,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The bundles region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -1173,7 +1173,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined

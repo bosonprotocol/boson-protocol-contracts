@@ -30,7 +30,7 @@ exports.RevertReasons = {
   DIRECT_INITIALIZATION_NOT_ALLOWED: "Direct initializtion is not allowed",
 
   // Offer related
-  NOT_OPERATOR: "Not seller's operator",
+  NOT_ASSISTANT: "Not seller's assistant",
   NO_SUCH_OFFER: "No such offer",
   OFFER_HAS_BEEN_VOIDED: "Offer has been voided",
   OFFER_PERIOD_INVALID: "Offer period invalid",
@@ -66,14 +66,14 @@ exports.RevertReasons = {
   DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE: "Dispute resolver address cannot be assigned to another dispute resolver Id",
   AGENT_ADDRESS_MUST_BE_UNIQUE: "Agent address cannot be assigned to another agent Id",
   NOT_ADMIN: "Not admin",
-  NOT_OPERATOR_AND_CLERK: "Not operator and clerk",
-  NOT_ADMIN_OPERATOR_AND_CLERK: "Not admin, operator and clerk",
+  NOT_ASSISTANT_AND_CLERK: "Not assistant and clerk",
+  NOT_ADMIN_ASSISTANT_AND_CLERK: "Not admin, assistant and clerk",
   NOT_BUYER_WALLET: "Not buyer's wallet address",
   NOT_AGENT_WALLET: "Not agent's wallet address",
   NO_SUCH_BUYER: "No such buyer",
   NO_SUCH_AGENT: "No such agent",
   WALLET_OWNS_VOUCHERS: "Wallet address owns vouchers",
-  NOT_DISPUTE_RESOLVER_OPERATOR: "Not dispute resolver's operator address",
+  NOT_DISPUTE_RESOLVER_ASSISTANT: "Not dispute resolver's assistant address",
   NO_SUCH_DISPUTE_RESOLVER: "No such dispute resolver",
   INVALID_ESCALATION_PERIOD: "Invalid escalation period",
   INVALID_AMOUNT_DISPUTE_RESOLVER_FEES:

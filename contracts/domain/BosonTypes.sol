@@ -72,14 +72,14 @@ contract BosonTypes {
 
     enum SellerUpdateFields {
         Admin,
-        Operator,
+        Assistant,
         Clerk,
         AuthToken
     }
 
     enum DisputeResolverUpdateFields {
         Admin,
-        Operator,
+        Assistant,
         Clerk
     }
 
@@ -90,7 +90,7 @@ contract BosonTypes {
 
     struct Seller {
         uint256 id;
-        address operator;
+        address assistant;
         address admin;
         address clerk;
         address payable treasury;
@@ -106,7 +106,7 @@ contract BosonTypes {
     struct DisputeResolver {
         uint256 id;
         uint256 escalationResponsePeriod;
-        address operator;
+        address assistant;
         address admin;
         address clerk;
         address payable treasury;

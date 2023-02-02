@@ -41,8 +41,8 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         address sender = msgSender();
 
         // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(sender);
-        require(exists, NOT_OPERATOR);
+        (bool exists, uint256 sellerId) = getSellerIdByAssistant(sender);
+        require(exists, NOT_ASSISTANT);
 
         // Protocol must be approved to transfer seller’s tokens
         require(isProtocolApproved(_twin.tokenAddress, sender, address(this)), NO_TRANSFER_APPROVED);
@@ -161,23 +161,23 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      * @notice Checks if protocol is approved to transfer the tokens.
      *
      * @param _tokenAddress - the address of the seller's twin token contract
-     * @param _operator - the seller's operator address
+     * @param _assistant - the seller's assistant address
      * @param _protocol - the protocol address
      * @return _approved - the approve status
      */
     function isProtocolApproved(
         address _tokenAddress,
-        address _operator,
+        address _assistant,
         address _protocol
     ) internal view returns (bool _approved) {
         require(_tokenAddress != address(0), UNSUPPORTED_TOKEN);
 
-        try ITwinToken(_tokenAddress).allowance(_operator, _protocol) returns (uint256 _allowance) {
+        try ITwinToken(_tokenAddress).allowance(_assistant, _protocol) returns (uint256 _allowance) {
             if (_allowance > 0) {
                 _approved = true;
             }
         } catch {
-            try ITwinToken(_tokenAddress).isApprovedForAll(_operator, _protocol) returns (bool _isApproved) {
+            try ITwinToken(_tokenAddress).isApprovedForAll(_assistant, _protocol) returns (bool _isApproved) {
                 _approved = _isApproved;
             } catch {
                 revert(UNSUPPORTED_TOKEN);

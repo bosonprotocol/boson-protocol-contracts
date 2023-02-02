@@ -67,7 +67,7 @@ interface IBosonOrchestrationHandler is
      * - The offers region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the supplied admin or does not own supplied auth token
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -132,7 +132,7 @@ interface IBosonOrchestrationHandler is
      * - The offers region of protocol is paused
      * - The orchestration region of protocol is paused
      * - The exchanges region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -197,7 +197,7 @@ interface IBosonOrchestrationHandler is
      * - The groups region of protocol is paused
      * - The orchestration region of protocol is paused
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -248,7 +248,7 @@ interface IBosonOrchestrationHandler is
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -299,7 +299,7 @@ interface IBosonOrchestrationHandler is
      * - The groups region of protocol is paused
      * - The orchestration region of protocol is paused
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -317,7 +317,7 @@ interface IBosonOrchestrationHandler is
      *   - Buyer cancel penalty is greater than price
      * - When adding to the group if:
      *   - Group does not exists
-     *   - Caller is not the operator of the group
+     *   - Caller is not the assistant of the group
      *   - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -353,7 +353,7 @@ interface IBosonOrchestrationHandler is
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -371,7 +371,7 @@ interface IBosonOrchestrationHandler is
      *   - Buyer cancel penalty is greater than price
      * - When adding to the group if:
      *   - Group does not exists
-     *   - Caller is not the operator of the group
+     *   - Caller is not the assistant of the group
      *   - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -408,7 +408,7 @@ interface IBosonOrchestrationHandler is
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -467,7 +467,7 @@ interface IBosonOrchestrationHandler is
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -528,7 +528,7 @@ interface IBosonOrchestrationHandler is
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -592,7 +592,7 @@ interface IBosonOrchestrationHandler is
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -663,7 +663,7 @@ interface IBosonOrchestrationHandler is
      * - The groups region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the supplied admin or does not own supplied auth token
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -671,7 +671,7 @@ interface IBosonOrchestrationHandler is
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -734,7 +734,7 @@ interface IBosonOrchestrationHandler is
      * - The groups region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -746,7 +746,7 @@ interface IBosonOrchestrationHandler is
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -814,7 +814,7 @@ interface IBosonOrchestrationHandler is
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the supplied admin or does not own supplied auth token
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -822,7 +822,7 @@ interface IBosonOrchestrationHandler is
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -893,7 +893,7 @@ interface IBosonOrchestrationHandler is
      * - The bundles region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -905,7 +905,7 @@ interface IBosonOrchestrationHandler is
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -981,7 +981,7 @@ interface IBosonOrchestrationHandler is
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the supplied admin or does not own supplied auth token
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -989,7 +989,7 @@ interface IBosonOrchestrationHandler is
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -1065,7 +1065,7 @@ interface IBosonOrchestrationHandler is
      * - The bundles region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -1077,7 +1077,7 @@ interface IBosonOrchestrationHandler is
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined

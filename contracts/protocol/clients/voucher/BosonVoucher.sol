@@ -204,7 +204,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * causing the token range to be reserved, but only pre-minting
      * a certain amount monthly.
      *
-     * Caller must be contract owner (seller operator address).
+     * Caller must be contract owner (seller assistant address).
      *
      * Reverts if:
      * - Offer id is not associated with a range
@@ -269,7 +269,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * this method can be called multiple times, until the whole
      * range is burned.
      *
-     * Caller must be contract owner (seller operator address).
+     * Caller must be contract owner (seller assistant address).
      *
      * Reverts if:
      * - Offer id is not associated with a range
@@ -360,7 +360,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @dev Returns the owner of the specified token.
      *
      * If the token IS a pre-mint, then the actual owner address hasn't been set,
-     * but will be reported as the owner of this contract (the seller operator).
+     * but will be reported as the owner of this contract (the seller assistant).
      *
      * If the token IS NOT a pre-mint, then the actual owner will be reported.
      *
