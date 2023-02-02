@@ -295,6 +295,18 @@ library FundsLib {
         decreaseAvailableFunds(_entityId, _tokenAddress, _amount);
 
         // try to transfer the funds
+        transferFundsFromProtocol(_tokenAddress, _to, _amount);
+
+        // notify the external observers
+        emit FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, EIP712Lib.msgSender());
+    }
+
+    function transferFundsFromProtocol(
+        address _tokenAddress,
+        address payable _to,
+        uint256 _amount
+    ) internal {
+        // try to transfer the funds
         if (_tokenAddress == address(0)) {
             // transfer native currency
             (bool success, ) = _to.call{ value: _amount }("");
@@ -303,9 +315,6 @@ library FundsLib {
             // transfer ERC20 tokens
             IERC20(_tokenAddress).safeTransfer(_to, _amount);
         }
-
-        // notify the external observers
-        emit FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, EIP712Lib.msgSender());
     }
 
     /**

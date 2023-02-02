@@ -228,7 +228,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 _initialSellerId
             );
         } else {
-            // fulfilSellOrder(_priceDiscovery, _escrowAmount);
+            fulfilSellOrder(_exchangeId, _exchangeToken, _priceDiscovery, _escrowAmount, _seller, _initialSellerId);
         }
     }
 
@@ -272,7 +272,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         uint256 expectedBalanceAfter = protocolBalanceBefore - _priceDiscovery.price + _escrowAmount;
         if (protocolBalanceAfter > expectedBalanceAfter) {
-            // Escrowed too much, return the difference. TO WHO?
+            // Escrowed too much, return the difference to buyer
+            FundsLib.transferFundsFromProtocol(
+                _exchangeToken,
+                payable(_buyer),
+                protocolBalanceAfter - expectedBalanceAfter
+            );
         } else if (protocolBalanceAfter < expectedBalanceAfter) {
             uint256 diff = expectedBalanceAfter - protocolBalanceAfter;
             // Not enough in the escrow, pull it form seller
@@ -290,6 +295,64 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             _buyer,
             _exchangeId
         );
+    }
+
+    function fulfilSellOrder(
+        uint256 _exchangeId,
+        address _exchangeToken,
+        PriceDiscovery calldata _priceDiscovery,
+        uint256 _escrowAmount,
+        address _seller,
+        uint256 _initialSellerId
+    ) internal {
+        // what about non-zero msg.value?
+
+        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[_initialSellerId]);
+        // Transfer seller's voucher to protocol
+        bosonVoucher.transferFrom(_seller, address(this), _exchangeId);
+
+        // Get protocol balance before the exchange
+        uint256 protocolBalanceBefore = getBalance(_exchangeToken);
+
+        // Approve validator to transfer voucher
+        bosonVoucher.approve(_priceDiscovery.validator, _exchangeId);
+
+        {
+            // Call the validator
+            (bool success, bytes memory returnData) = address(_priceDiscovery.validator).call{ value: msg.value }(
+                _priceDiscovery.proof
+            );
+
+            // If error, return error message
+            string memory errorMessage = (returnData.length == 0) ? FUNCTION_CALL_NOT_SUCCESSFUL : (string(returnData));
+            require(success, errorMessage);
+        }
+
+        // Reset approval
+        bosonVoucher.approve(address(0), _exchangeId);
+
+        // Check the escrow amount
+        uint256 protocolBalanceAfter = getBalance(_exchangeToken);
+
+        uint256 expectedBalanceAfter = protocolBalanceBefore + _escrowAmount; // what about potential non zero msg.value?
+
+        if (protocolBalanceAfter > expectedBalanceAfter) {
+            // Return the difference to the seller
+            FundsLib.transferFundsFromProtocol(
+                _exchangeToken,
+                payable(_seller),
+                protocolBalanceAfter - expectedBalanceAfter
+            );
+        } else if (protocolBalanceAfter < expectedBalanceAfter) {
+            uint256 diff = expectedBalanceAfter - protocolBalanceAfter;
+            // Not enough in the escrow, pull it form seller
+            if (_exchangeToken == address(0)) {
+                FundsLib.transferFundsToProtocol(address(weth), _seller, diff);
+                weth.withdraw(diff);
+            } else {
+                FundsLib.transferFundsToProtocol(_exchangeToken, _seller, diff);
+            }
+        }
     }
 
     function getBalance(address _tokenAddress) internal view returns (uint256) {
