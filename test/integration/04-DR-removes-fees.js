@@ -33,12 +33,12 @@ describe("[@skip-on-coverage] DR removes fee", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
   let expectedCloneAddress, emptyAuthToken, voucherInitValues;
   let deployer,
-    operator,
+    assistant,
     admin,
     clerk,
     treasury,
     buyer,
-    operatorDR,
+    assistantDR,
     adminDR,
     clerkDR,
     treasuryDR,
@@ -55,8 +55,8 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     [deployer, admin, treasury, buyer, adminDR, treasuryDR, protocolTreasury, bosonToken] = await ethers.getSigners();
 
     // make all account the same
-    operator = clerk = admin;
-    operatorDR = clerkDR = adminDR;
+    assistant = clerk = admin;
+    assistantDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     const [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -154,14 +154,14 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     expect(voucherInitValues.isValid()).is.true;
 
     // Create a seller account
-    seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+    seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
     expect(await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues))
       .to.emit(accountHandler, "SellerCreated")
       .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, emptyAuthToken.toStruct(), admin.address);
 
     // Create a dispute resolver
     disputeResolver = mockDisputeResolver(
-      operatorDR.address,
+      assistantDR.address,
       adminDR.address,
       clerkDR.address,
       treasuryDR.address,
@@ -191,11 +191,11 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     expect(offerDurations.isValid()).is.true;
 
     // Create the offer
-    await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+    await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
 
     // Deposit seller funds so the commit will succeed
     const fundsToDeposit = ethers.BigNumber.from(offer.sellerDeposit).mul(offer.quantityAvailable);
-    await fundsHandler.connect(operator).depositFunds(seller.id, ethers.constants.AddressZero, fundsToDeposit, {
+    await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, fundsToDeposit, {
       value: fundsToDeposit,
     });
 
@@ -305,9 +305,9 @@ describe("[@skip-on-coverage] DR removes fee", function () {
       it("DR should be able to decide dispute even when DR removes fee", async function () {
         exchangeId = "1";
         // Decide the dispute befor removing fee
-        await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints))
+        await expect(disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints))
           .to.emit(disputeHandler, "DisputeDecided")
-          .withArgs(exchangeId, buyerPercentBasisPoints, operatorDR.address);
+          .withArgs(exchangeId, buyerPercentBasisPoints, assistantDR.address);
 
         // Removes fee
         await expect(
@@ -320,17 +320,17 @@ describe("[@skip-on-coverage] DR removes fee", function () {
 
         // Decide the dispute after removing fee
         exchangeId = "2";
-        await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints))
+        await expect(disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints))
           .to.emit(disputeHandler, "DisputeDecided")
-          .withArgs(exchangeId, buyerPercentBasisPoints, operatorDR.address);
+          .withArgs(exchangeId, buyerPercentBasisPoints, assistantDR.address);
       });
 
       it("DR should be able to refuse to decide dispute even when DR removes fee", async function () {
         // Refuse to decide the dispute before removing fee
         exchangeId = "1";
-        await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId))
+        await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId))
           .to.emit(disputeHandler, "EscalatedDisputeRefused")
-          .withArgs(exchangeId, operatorDR.address);
+          .withArgs(exchangeId, assistantDR.address);
 
         // Removes fee
         await expect(
@@ -343,9 +343,9 @@ describe("[@skip-on-coverage] DR removes fee", function () {
 
         // Refuse to decide the dispute after removing fee
         exchangeId = "2";
-        await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId))
+        await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId))
           .to.emit(disputeHandler, "EscalatedDisputeRefused")
-          .withArgs(exchangeId, operatorDR.address);
+          .withArgs(exchangeId, assistantDR.address);
       });
     });
   });

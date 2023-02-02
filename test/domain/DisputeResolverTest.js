@@ -10,12 +10,12 @@ const { oneMonth } = require("../util/constants");
 describe("DisputeResolver", function () {
   // Suite-wide scope
   let disputeResolver, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let accounts, id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active;
+  let accounts, id, escalationResponsePeriod, assistant, admin, clerk, treasury, metadataUri, active;
 
   beforeEach(async function () {
     // Get a list of accounts
     accounts = await ethers.getSigners();
-    operator = accounts[0].address;
+    assistant = accounts[0].address;
     admin = accounts[1].address;
     clerk = accounts[2].address;
     treasury = accounts[3].address;
@@ -33,7 +33,7 @@ describe("DisputeResolver", function () {
       disputeResolver = new DisputeResolver(
         id,
         escalationResponsePeriod,
-        operator,
+        assistant,
         admin,
         clerk,
         treasury,
@@ -42,7 +42,7 @@ describe("DisputeResolver", function () {
       );
       expect(disputeResolver.idIsValid()).is.true;
       expect(disputeResolver.escalationResponsePeriodIsValid()).is.true;
-      expect(disputeResolver.operatorIsValid()).is.true;
+      expect(disputeResolver.assistantIsValid()).is.true;
       expect(disputeResolver.adminIsValid()).is.true;
       expect(disputeResolver.clerkIsValid()).is.true;
       expect(disputeResolver.treasuryIsValid()).is.true;
@@ -58,7 +58,7 @@ describe("DisputeResolver", function () {
       disputeResolver = new DisputeResolver(
         id,
         escalationResponsePeriod,
-        operator,
+        assistant,
         admin,
         clerk,
         treasury,
@@ -122,25 +122,25 @@ describe("DisputeResolver", function () {
       expect(disputeResolver.isValid()).is.true;
     });
 
-    it("Always present, operator must be a string representation of an EIP-55 compliant address", async function () {
+    it("Always present, assistant must be a string representation of an EIP-55 compliant address", async function () {
       // Invalid field value
-      disputeResolver.operator = "0xASFADF";
-      expect(disputeResolver.operatorIsValid()).is.false;
+      disputeResolver.assistant = "0xASFADF";
+      expect(disputeResolver.assistantIsValid()).is.false;
       expect(disputeResolver.isValid()).is.false;
 
       // Invalid field value
-      disputeResolver.operator = "zedzdeadbaby";
-      expect(disputeResolver.operatorIsValid()).is.false;
+      disputeResolver.assistant = "zedzdeadbaby";
+      expect(disputeResolver.assistantIsValid()).is.false;
       expect(disputeResolver.isValid()).is.false;
 
       // Valid field value
-      disputeResolver.operator = accounts[0].address;
-      expect(disputeResolver.operatorIsValid()).is.true;
+      disputeResolver.assistant = accounts[0].address;
+      expect(disputeResolver.assistantIsValid()).is.true;
       expect(disputeResolver.isValid()).is.true;
 
       // Valid field value
-      disputeResolver.operator = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
-      expect(disputeResolver.operatorIsValid()).is.true;
+      disputeResolver.assistant = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
+      expect(disputeResolver.assistantIsValid()).is.true;
       expect(disputeResolver.isValid()).is.true;
     });
 
@@ -256,7 +256,7 @@ describe("DisputeResolver", function () {
       disputeResolver = new DisputeResolver(
         id,
         escalationResponsePeriod,
-        operator,
+        assistant,
         admin,
         clerk,
         treasury,
@@ -269,7 +269,7 @@ describe("DisputeResolver", function () {
       object = {
         id,
         escalationResponsePeriod,
-        operator,
+        assistant,
         admin,
         clerk,
         treasury,
@@ -278,7 +278,7 @@ describe("DisputeResolver", function () {
       };
 
       // Struct representation
-      struct = [id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active];
+      struct = [id, escalationResponsePeriod, assistant, admin, clerk, treasury, metadataUri, active];
     });
 
     context("👉 Static", async function () {

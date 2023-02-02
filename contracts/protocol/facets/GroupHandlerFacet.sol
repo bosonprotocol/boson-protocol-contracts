@@ -27,7 +27,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * Emits a GroupCreated event if successful.
      *
      * Reverts if:
-     * - Caller is not an operator
+     * - Caller is not an assistant
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
      * - Offer exists in a different group
@@ -172,10 +172,10 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         address sender = msgSender();
 
         // Get seller id, we assume seller id exists if offer exists
-        (, uint256 sellerId) = getSellerIdByOperator(sender);
+        (, uint256 sellerId) = getSellerIdByAssistant(sender);
 
         // Caller's seller id must match group seller id
-        require(sellerId == group.sellerId, NOT_OPERATOR);
+        require(sellerId == group.sellerId, NOT_ASSISTANT);
 
         // Store new condition
         storeCondition(_groupId, _condition);

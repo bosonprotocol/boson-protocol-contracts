@@ -44,8 +44,8 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         address sender = msgSender();
 
         // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(sender);
-        require(exists, NOT_OPERATOR);
+        (bool exists, uint256 sellerId) = getSellerIdByAssistant(sender);
+        require(exists, NOT_ASSISTANT);
 
         // validate that offer ids and twin ids are not empty
         require(
@@ -125,10 +125,10 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         require(exists, NO_SUCH_TWIN);
 
         // Get seller id, we assume seller id exists if twin exists
-        (, uint256 sellerId) = getSellerIdByOperator(msgSender());
+        (, uint256 sellerId) = getSellerIdByAssistant(msgSender());
 
         // Caller's seller id must match twin seller id
-        require(sellerId == twin.sellerId, NOT_OPERATOR);
+        require(sellerId == twin.sellerId, NOT_ASSISTANT);
     }
 
     /**

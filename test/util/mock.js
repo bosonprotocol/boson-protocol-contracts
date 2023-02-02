@@ -110,12 +110,12 @@ function mockTwin(tokenAddress, tokenType) {
   return new Twin(id, sellerId, amount, supplyAvailable, tokenId, tokenAddress, tokenType);
 }
 
-function mockDisputeResolver(operatorAddress, adminAddress, clerkAddress, treasuryAddress, active) {
+function mockDisputeResolver(assistantAddress, adminAddress, clerkAddress, treasuryAddress, active) {
   const metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
   return new DisputeResolver(
     accountId.next().value,
     oneMonth.toString(),
-    operatorAddress,
+    assistantAddress,
     adminAddress,
     clerkAddress,
     treasuryAddress,
@@ -124,8 +124,8 @@ function mockDisputeResolver(operatorAddress, adminAddress, clerkAddress, treasu
   );
 }
 
-function mockSeller(operatorAddress, adminAddress, clerkAddress, treasuryAddress) {
-  return new Seller(accountId.next().value, operatorAddress, adminAddress, clerkAddress, treasuryAddress, true);
+function mockSeller(assistantAddress, adminAddress, clerkAddress, treasuryAddress) {
+  return new Seller(accountId.next().value, assistantAddress, adminAddress, clerkAddress, treasuryAddress, true);
 }
 
 function mockBuyer(wallet) {

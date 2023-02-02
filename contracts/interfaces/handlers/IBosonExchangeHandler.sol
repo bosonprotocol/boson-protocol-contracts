@@ -111,7 +111,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in Committed state
-     * - Caller is not seller's operator
+     * - Caller is not seller's assistant
      *
      * @param _exchangeId - the id of the exchange
      */
@@ -156,7 +156,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in Committed state
-     * - Caller is not seller's operator
+     * - Caller is not seller's assistant
      * - New date is not later than the current one
      *
      * @param _exchangeId - the id of the exchange

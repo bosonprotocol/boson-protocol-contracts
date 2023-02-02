@@ -29,7 +29,7 @@ contract SellerHandlerFacet is SellerBase {
      *
      * Reverts if:
      * - Caller is not the supplied admin or does not own supplied auth token
-     * - Caller is not the supplied operator and clerk revert reason
+     * - Caller is not the supplied assistant and clerk revert reason
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
@@ -52,13 +52,13 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
-     * @notice Updates treasury address, if changed. Puts admin, operator, clerk and AuthToken in pending queue, if changed.
+     * @notice Updates treasury address, if changed. Puts admin, assistant, clerk and AuthToken in pending queue, if changed.
      *         Pending updates can be completed by calling the optInToSellerUpdate function.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a SellerUpdateApplied event if the seller has changed the treasury.
-     * Emits a SellerUpdatePending event if the seller has requested an update for admin, clerk, operator, or auth token.
-     * Holder of new auth token and/or owner(s) of new addresses for admin, clerk, operator must opt-in to the update.
+     * Emits a SellerUpdatePending event if the seller has requested an update for admin, clerk, assistant, or auth token.
+     * Holder of new auth token and/or owner(s) of new addresses for admin, clerk, assistant must opt-in to the update.
      *
      * Reverts if:
      * - The sellers region of protocol is paused
@@ -137,11 +137,11 @@ contract SellerHandlerFacet is SellerBase {
             needsApproval = true;
         }
 
-        if (_seller.operator != seller.operator) {
-            preUpdateSellerCheck(_seller.id, _seller.operator, lookups);
-            require(_seller.operator != address(0), INVALID_ADDRESS);
-            // Operator address owner must approve the update to prevent front-running
-            sellerPendingUpdate.operator = _seller.operator;
+        if (_seller.assistant != seller.assistant) {
+            preUpdateSellerCheck(_seller.id, _seller.assistant, lookups);
+            require(_seller.assistant != address(0), INVALID_ADDRESS);
+            // Assistant address owner must approve the update to prevent front-running
+            sellerPendingUpdate.assistant = _seller.assistant;
             needsApproval = true;
         }
 
@@ -241,26 +241,26 @@ contract SellerHandlerFacet is SellerBase {
                 delete protocolEntities().authTokens[_sellerId];
 
                 updateApplied = true;
-            } else if (role == SellerUpdateFields.Operator && sellerPendingUpdate.operator != address(0)) {
-                // Approve operator update
-                require(sellerPendingUpdate.operator == sender, UNAUTHORIZED_CALLER_UPDATE);
+            } else if (role == SellerUpdateFields.Assistant && sellerPendingUpdate.assistant != address(0)) {
+                // Approve assistant update
+                require(sellerPendingUpdate.assistant == sender, UNAUTHORIZED_CALLER_UPDATE);
 
                 preUpdateSellerCheck(_sellerId, sender, lookups);
 
-                // Delete old seller id by operator mapping
-                delete lookups.sellerIdByOperator[seller.operator];
+                // Delete old seller id by assistant mapping
+                delete lookups.sellerIdByAssistant[seller.assistant];
 
-                // Update operator
-                seller.operator = sender;
+                // Update assistant
+                seller.assistant = sender;
 
-                // Transfer ownership of voucher contract to new operator
+                // Transfer ownership of voucher contract to new assistant
                 IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender);
 
-                // Store new seller id by operator mapping
-                lookups.sellerIdByOperator[sender] = _sellerId;
+                // Store new seller id by assistant mapping
+                lookups.sellerIdByAssistant[sender] = _sellerId;
 
-                // Delete pending update operator
-                delete sellerPendingUpdate.operator;
+                // Delete pending update assistant
+                delete sellerPendingUpdate.assistant;
 
                 updateApplied = true;
             } else if (role == SellerUpdateFields.Clerk && sellerPendingUpdate.clerk != address(0)) {
@@ -353,11 +353,11 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
-     * @notice Gets the details about a seller by an address associated with that seller: operator, admin, or clerk address.
+     * @notice Gets the details about a seller by an address associated with that seller: assistant, admin, or clerk address.
      * A seller will have either an admin address or an auth token.
      * If seller's admin uses NFT Auth the seller should call `getSellerByAuthToken` instead.
      *
-     * @param _associatedAddress - the address associated with the seller. Must be an operator, admin, or clerk address.
+     * @param _associatedAddress - the address associated with the seller. Must be an assistant, admin, or clerk address.
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -374,7 +374,7 @@ contract SellerHandlerFacet is SellerBase {
     {
         uint256 sellerId;
 
-        (exists, sellerId) = getSellerIdByOperator(_associatedAddress);
+        (exists, sellerId) = getSellerIdByAssistant(_associatedAddress);
         if (exists) {
             return fetchSeller(sellerId);
         }
@@ -423,7 +423,7 @@ contract SellerHandlerFacet is SellerBase {
      * @notice Pre update Seller checks
      *
      * Reverts if:
-     *   - Address has already been used by another seller as operator, admin, or clerk
+     *   - Address has already been used by another seller as assistant, admin, or clerk
      *
      * @param _sellerId - the id of the seller to check
      * @param _role - the address to check
@@ -436,7 +436,7 @@ contract SellerHandlerFacet is SellerBase {
     ) internal view {
         // Check that the role is unique to one seller id across all roles -- not used or is used by this seller id.
         if (_role != address(0)) {
-            uint256 check1 = _lookups.sellerIdByOperator[_role];
+            uint256 check1 = _lookups.sellerIdByAssistant[_role];
             uint256 check2 = _lookups.sellerIdByClerk[_role];
             uint256 check3 = _lookups.sellerIdByAdmin[_role];
 
