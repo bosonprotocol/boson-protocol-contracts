@@ -184,8 +184,10 @@ contract BosonTypes {
     }
 
     struct SequentialCommit {
-        uint256 buyerId;
+        uint256 resellerId;
         uint256 price;
+        uint256 protocolFeeAmount;
+        uint256 royaltyAmount;
     }
 
     struct Voucher {

@@ -176,12 +176,25 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 uint256 currentPrice = len == 0 ? offer.price : sequentialCommits[len - 1].price;
 
                 // Calculate the amount to be immediately released to current voucher owner
+                // escrowAmount =
+                //     _priceDiscovery.price -
+                //     Math.min(currentPrice, _priceDiscovery.price - protocolFeeAmount - royaltyAmount);
+                // escrowAmount =
+                //     Math.max(_priceDiscovery.price-currentPrice,  protocolFeeAmount + royaltyAmount); // can underflow
                 escrowAmount =
-                    _priceDiscovery.price -
-                    Math.min(currentPrice, _priceDiscovery.price - protocolFeeAmount - royaltyAmount);
+                    Math.max(_priceDiscovery.price, protocolFeeAmount + royaltyAmount + currentPrice) -
+                    currentPrice;
+
+                // Update sequential commit
+                sequentialCommits.push(
+                    SequentialCommit({
+                        resellerId: exchange.buyerId,
+                        price: _priceDiscovery.price,
+                        protocolFeeAmount: protocolFeeAmount,
+                        royaltyAmount: royaltyAmount
+                    })
+                );
             }
-            // Update sequential commit
-            sequentialCommits.push(SequentialCommit({ buyerId: getValidBuyer(_buyer), price: _priceDiscovery.price }));
         }
 
         // Release funds to current buyer

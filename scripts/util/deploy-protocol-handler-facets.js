@@ -79,10 +79,18 @@ async function deployAndCutFacets(
 async function deployProtocolFacets(facetNames, facetsToInit, maxPriorityFeePerGas) {
   let deployedFacets = [];
 
+  // TODO: get constructorArguments from a config file
+  let constructorArguments = {
+    ExchangeHandlerFacet: ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"],
+  };
+
   // Deploy all handler facets
   for (const facetName of facetNames) {
     let FacetContractFactory = await ethers.getContractFactory(facetName);
-    const facetContract = await FacetContractFactory.deploy(await getFees(maxPriorityFeePerGas));
+    const facetContract = await FacetContractFactory.deploy(
+      ...(constructorArguments[facetName] || []),
+      await getFees(maxPriorityFeePerGas)
+    );
     await facetContract.deployTransaction.wait(confirmations);
 
     const deployedFacet = {

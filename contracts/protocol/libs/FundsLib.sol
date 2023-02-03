@@ -7,6 +7,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
 import { SafeERC20 } from "../../ext_libs/SafeERC20.sol";
+import { Math } from "../../ext_libs/Math.sol";
 
 /**
  * @title FundsLib
@@ -149,12 +150,11 @@ library FundsLib {
         uint256 agentFee;
 
         BosonTypes.OfferFees storage offerFee = pe.offerFees[exchange.offerId];
-
+        uint256 price = offer.price;
         {
             // scope to avoid stack too deep errors
             BosonTypes.ExchangeState exchangeState = exchange.state;
             uint256 sellerDeposit = offer.sellerDeposit;
-            uint256 price = offer.price;
 
             if (exchangeState == BosonTypes.ExchangeState.Completed) {
                 // COMPLETED
@@ -202,24 +202,31 @@ library FundsLib {
             }
         }
 
+        address exchangeToken = offer.exchangeToken;
+
         // Original seller and last buyer are done
         // Release funds to intermediate sellers (if they exist)
         // and add the protocol fee to the total
-        // protocolFee += releaseFundsToIntermediateSellers(_exchangeId, sellerPayoff);
+        {
+            (uint256 sequentialProtocolFee, uint256 sequentialRoyalties) = releaseFundsToIntermediateSellers(
+                _exchangeId,
+                exchange.state,
+                price,
+                exchangeToken
+            );
+            sellerPayoff += sequentialRoyalties; // revisit this
+            protocolFee += sequentialProtocolFee;
+        }
 
         // Store payoffs to availablefunds and notify the external observers
-        address exchangeToken = offer.exchangeToken;
-        uint256 sellerId = offer.sellerId;
-        uint256 buyerId = exchange.buyerId;
         address sender = EIP712Lib.msgSender();
         if (sellerPayoff > 0) {
-            increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
-            emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, sender);
+            increaseAvailableFundsAndEmitEvent(_exchangeId, offer.sellerId, exchangeToken, sellerPayoff, sender);
         }
         if (buyerPayoff > 0) {
-            increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
-            emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, sender);
+            increaseAvailableFundsAndEmitEvent(_exchangeId, exchange.buyerId, exchangeToken, buyerPayoff, sender);
         }
+
         if (protocolFee > 0) {
             increaseAvailableFunds(0, exchangeToken, protocolFee);
             emit ProtocolFeeCollected(_exchangeId, exchangeToken, protocolFee, sender);
@@ -227,9 +234,105 @@ library FundsLib {
         if (agentFee > 0) {
             // Get the agent for offer
             uint256 agentId = ProtocolLib.protocolLookups().agentIdByOffer[exchange.offerId];
-            increaseAvailableFunds(agentId, exchangeToken, agentFee);
-            emit FundsReleased(_exchangeId, agentId, exchangeToken, agentFee, sender);
+            increaseAvailableFundsAndEmitEvent(_exchangeId, agentId, exchangeToken, agentFee, sender);
         }
+    }
+
+    function releaseFundsToIntermediateSellers(
+        uint256 _exchangeId,
+        BosonTypes.ExchangeState _exchangeState,
+        uint256 _initialPrice,
+        address _exchangeToken
+    ) internal returns (uint256 protocolFee, uint256 royalties) {
+        // ProtocolLib.protocolEntities() and sequentialCommits.length are not stored to memory due to stack too deep errors
+        // Revisit when update to newest compiler version
+
+        BosonTypes.SequentialCommit[] storage sequentialCommits = ProtocolLib.protocolEntities().sequentialCommits[
+            _exchangeId
+        ];
+
+        if (sequentialCommits.length == 0) {
+            return (0, 0);
+        }
+
+        // calculate effective price multiplier
+        uint256 effectivePriceMultiplier;
+        {
+            if (_exchangeState == BosonTypes.ExchangeState.Completed) {
+                // COMPLETED, buyer pays full price
+                effectivePriceMultiplier = 10000;
+            } else if (
+                _exchangeState == BosonTypes.ExchangeState.Revoked ||
+                _exchangeState == BosonTypes.ExchangeState.Canceled
+            ) {
+                // REVOKED or CANCELED, buyer pays nothing (buyerCancelationPenalty is not considered payment)
+                effectivePriceMultiplier = 0;
+            } else if (_exchangeState == BosonTypes.ExchangeState.Disputed) {
+                // DISPUTED
+                // get the information about the dispute, which must exist
+                BosonTypes.Dispute storage dispute = ProtocolLib.protocolEntities().disputes[_exchangeId];
+                BosonTypes.DisputeState disputeState = dispute.state;
+
+                if (disputeState == BosonTypes.DisputeState.Retracted) {
+                    // RETRACTED - same as "COMPLETED"
+                    effectivePriceMultiplier = 10000;
+                } else if (disputeState == BosonTypes.DisputeState.Refused) {
+                    // REFUSED, buyer pays nothing
+                    effectivePriceMultiplier = 0;
+                } else {
+                    // RESOLVED or DECIDED
+                    effectivePriceMultiplier = 10000 - dispute.buyerPercent;
+                }
+            }
+        }
+
+        uint256 resellerBuyPrice = _initialPrice;
+        address msgSender = EIP712Lib.msgSender();
+        uint256 nextResellerAmount;
+        for (uint256 i = 0; i < sequentialCommits.length; i++) {
+            BosonTypes.SequentialCommit memory sc = sequentialCommits[i]; // we need all members of the struct
+
+            protocolFee += sc.protocolFeeAmount;
+            royalties += sc.royaltyAmount;
+
+            uint256 currentResellerAmount;
+
+            // escrowed for exchange between buyer i and i+1
+            {
+                uint256 escrowAmount = Math.max(sc.price, sc.protocolFeeAmount + sc.royaltyAmount + resellerBuyPrice) -
+                    resellerBuyPrice;
+
+                currentResellerAmount = (escrowAmount * effectivePriceMultiplier) / 10000 + nextResellerAmount;
+                nextResellerAmount = escrowAmount + nextResellerAmount - currentResellerAmount;
+                // uint256 nextResellerAmountTemp = escrowAmount - currentResellerAmount; // TODO: is it cheaper to make another memory variable and save one subtraction?
+                // currentResellerAmount += nextResellerAmount;
+                // nextResellerAmount = nextResellerAmountTemp;
+            }
+            if (currentResellerAmount > 0) {
+                increaseAvailableFundsAndEmitEvent(
+                    _exchangeId,
+                    sc.resellerId,
+                    _exchangeToken,
+                    currentResellerAmount,
+                    msgSender
+                );
+            }
+        }
+
+        protocolFee = (protocolFee * effectivePriceMultiplier) / 10000;
+        royalties = (royalties * effectivePriceMultiplier) / 10000;
+        // ? do we need to return nextResellerAmount and add it to buyerPayoff?
+    }
+
+    function increaseAvailableFundsAndEmitEvent(
+        uint256 _exchangeId,
+        uint256 _entityId,
+        address _tokenAddress,
+        uint256 _amount,
+        address _sender
+    ) internal {
+        increaseAvailableFunds(_entityId, _tokenAddress, _amount);
+        emit FundsReleased(_exchangeId, _entityId, _tokenAddress, _amount, _sender);
     }
 
     /**
