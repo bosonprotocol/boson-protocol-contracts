@@ -1802,7 +1802,7 @@ describe("IBosonVoucher", function () {
   });
 
   context("tokenURI", function () {
-    let metadataUri, offerId;
+    let metadataUri, offerId, offerPrice;
 
     beforeEach(async function () {
       seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
@@ -1842,18 +1842,21 @@ describe("IBosonVoucher", function () {
 
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
       offerId = offer.id;
+      offerPrice = offer.price;
 
       await offerHandler
         .connect(assistant)
         .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
 
-      await fundsHandler
-        .connect(admin)
-        .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+      const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
 
-      await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
+      await fundsHandler.connect(admin).depositFunds(seller.id, ethers.constants.AddressZero, pool, { value: pool });
 
       metadataUri = offer.metadataUri;
+
+      // Update boson voucher address to actual seller's voucher
+      const voucherAddress = calculateContractAddress(accountHandler.address, "1");
+      bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
     });
 
     afterEach(async function () {
@@ -1862,21 +1865,34 @@ describe("IBosonVoucher", function () {
     });
 
     it("should return the correct tokenURI", async function () {
+      await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: offerPrice });
+
       const tokenURI = await bosonVoucher.tokenURI(1);
       expect(tokenURI).eq(metadataUri);
     });
 
-    it("should return the correct tokenURI when token is preminted", async function () {
-      // reserve a range
-      const start = "10";
-      const length = "1";
-      await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
+    context("pre-minted", async function () {
+      let start;
+      beforeEach(async function () {
+        // reserve a range
+        start = "10";
+        const length = "1";
+        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
 
-      // premint
-      await bosonVoucher.connect(assistant).preMint(offerId, 1);
+        // premint
+        await bosonVoucher.connect(assistant).preMint(offerId, 1);
+      });
+      it("should return the correct tokenURI", async function () {
+        const tokenURI = await bosonVoucher.tokenURI(start);
+        expect(tokenURI).eq(metadataUri);
+      });
 
-      const tokenURI = await bosonVoucher.tokenURI(start);
-      expect(tokenURI).eq(metadataUri);
+      it("should return correct tokenURI when token is preminted and transferred", async function () {
+        await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, start);
+
+        const tokenURI = await bosonVoucher.tokenURI(start);
+        expect(tokenURI).eq(metadataUri);
+      });
     });
   });
 

@@ -499,7 +499,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * replaceable baseURI template, since the latter is not compatible
      * with IPFS hashes.
      *
-     * @param _tokenId - id of the voucher's associated exchange or pre-minted
+     * @param _tokenId - id of the voucher's associated exchange or pre-minted token id
      * @return the uri for the associated offer's off-chain metadata (blank if not found)
      */
     function tokenURI(uint256 _tokenId)
