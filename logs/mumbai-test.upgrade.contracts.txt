@@ -326,3 +326,42 @@ You might need to remove its interfaceId from "supportsInterface" manually.
 📋 Diamond upgraded.
 
 
+--------------------------------------------------------------------------------
+Boson Protocol Client Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Tue Feb 07 2023 13:46:52 GMT-0300 (Brasilia Standard Time)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+
+📋 Deploying new logic contract
+
+📋 Updating implementation address on beacon
+✅ BosonVoucher Logic deployed to: 0x3e88931206A9617BBA6b6027Cf3097FC509f1475
+--------------------------------------------------------------------------------
+✅ Contracts written to /Users/anajulia/Dev/work/boson-protocol-contracts/scripts/util/../../addresses/80001-mumbai-test.json
+--------------------------------------------------------------------------------
+
+📋 Client upgraded.
+
+
+--------------------------------------------------------------------------------
+Boson Protocol Contract Suite Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Tue Feb 07 2023 13:47:48 GMT-0300 (Brasilia Standard Time)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+
+💀 Removed facets:
+	
+--------------------------------------------------------------------------------
+
+📋 New version: 2.2.0-rc.2                      
+--------------------------------------------------------------------------------
+✅ Contracts written to /Users/anajulia/Dev/work/boson-protocol-contracts/scripts/util/../../addresses/80001-mumbai-test.json
+--------------------------------------------------------------------------------
+
+📋 Diamond upgraded.
+
+

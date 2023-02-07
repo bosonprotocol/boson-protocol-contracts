@@ -2,7 +2,7 @@
   "chainId": 80001,
   "network": "mumbai",
   "env": "test",
-  "protocolVersion": "2.2.0-rc.1",
+  "protocolVersion": "2.2.0-rc.2",
   "contracts": [
     {
       "name": "AccessController",
@@ -108,12 +108,6 @@
       "interfaceId": "0x1f891681"
     },
     {
-      "name": "BosonVoucher Logic",
-      "address": "0x85B3Ae514fF85E9931314C3fD26f498a28841b39",
-      "args": [],
-      "interfaceId": ""
-    },
-    {
       "name": "ProtocolInitializationHandlerFacet",
       "address": "0xAA7D28Bcc8127E706B0630208D53652F8BA306BD",
       "args": [],
@@ -182,6 +176,12 @@
       "address": "0x234485F4A7D8d9CB5f45c25d670b519CdbFbF9b9",
       "args": [],
       "interfaceId": "0x60b30e70"
+    },
+    {
+      "name": "BosonVoucher Logic",
+      "address": "0x3e88931206A9617BBA6b6027Cf3097FC509f1475",
+      "args": [],
+      "interfaceId": ""
     }
   ]
 }
