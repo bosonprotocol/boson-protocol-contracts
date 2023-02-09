@@ -548,6 +548,199 @@ describe("IBosonVoucher", function () {
     });
   });
 
+  context("preMintTo()", function () {
+    let offerId, start, length, amount;
+    let mockProtocol;
+    let offer, offerDates, offerDurations, offerFees, disputeResolutionTerms;
+
+    beforeEach(async function () {
+      mockProtocol = await deployMockProtocol();
+      ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
+      disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
+      await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
+      await mockProtocol.mock.getOffer.returns(
+        true,
+        offer,
+        offerDates,
+        offerDurations,
+        disputeResolutionTerms,
+        offerFees
+      );
+
+      // reserve a range
+      offerId = "5";
+      start = "10";
+      length = "1000";
+      await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
+
+      // amount to mint
+      amount = 50;
+    });
+
+    it("Should emit Transfer events", async function () {
+      // Premint tokens, test for event
+      const tx = await bosonVoucher.connect(assistant).preMintTo(rando.address, offerId, amount);
+
+      // Expect an event for every mint
+      for (let i = 0; i < Number(amount); i++) {
+        await expect(tx)
+          .to.emit(bosonVoucher, "Transfer")
+          .withArgs(ethers.constants.AddressZero, rando.address, i + Number(start));
+      }
+    });
+
+    it("Should update state", async function () {
+      let randoBalanceBefore = await bosonVoucher.balanceOf(rando.address);
+
+      // Premint tokens
+      await bosonVoucher.connect(assistant).preMintTo(rando.address, offerId, amount);
+
+      // Expect a correct owner for all preminted tokens
+      for (let i = 0; i < Number(amount); i++) {
+        let tokenId = i + Number(start);
+        let tokenOwner = await bosonVoucher.ownerOf(tokenId);
+        assert.equal(tokenOwner, rando.address, `Wrong token owner for token ${tokenId}`);
+      }
+
+      // Token that is inside a range, but wasn't preminted yet should not have an owner
+      await expect(bosonVoucher.ownerOf(Number(amount) + Number(start) + 1)).to.be.revertedWith(
+        RevertReasons.ERC721_NON_EXISTENT
+      );
+
+      // Random balance should be updated for the total mint amount
+      let randoBalanceAfter = await bosonVoucher.balanceOf(rando.address);
+      assert.equal(randoBalanceAfter.toNumber(), randoBalanceBefore.add(amount).toNumber(), "Balance mismatch");
+
+      // Get available premints from contract
+      const availablePremints = await bosonVoucher.getAvailablePreMints(offerId);
+      assert.equal(availablePremints.toNumber(), Number(length) - Number(amount), "Available Premints mismatch");
+    });
+
+    it("MetaTx: forwarder can execute preMint on behalf of seller", async function () {
+      const nonce = Number(await forwarder.getNonce(assistant.address));
+
+      const types = {
+        ForwardRequest: [
+          { name: "from", type: "address" },
+          { name: "to", type: "address" },
+          { name: "nonce", type: "uint256" },
+          { name: "data", type: "bytes" },
+        ],
+      };
+
+      const functionSignature = bosonVoucher.interface.encodeFunctionData("preMintTo", [
+        rando.address,
+        offerId,
+        amount,
+      ]);
+
+      const message = {
+        from: assistant.address,
+        to: bosonVoucher.address,
+        nonce: nonce,
+        data: functionSignature,
+      };
+
+      const { signature } = await prepareDataSignatureParameters(
+        assistant,
+        types,
+        "ForwardRequest",
+        message,
+        forwarder.address,
+        "MockForwarder",
+        "0.0.1",
+        "0Z"
+      );
+
+      const tx = await forwarder.execute(message, signature);
+
+      // Expect an event for every mint
+      for (let i = 0; i < Number(amount); i++) {
+        await expect(tx)
+          .to.emit(bosonVoucher, "Transfer")
+          .withArgs(ethers.constants.AddressZero, rando.address, i + Number(start));
+      }
+    });
+
+    context("💔 Revert Reasons", async function () {
+      it("Caller is not the owner", async function () {
+        await expect(bosonVoucher.connect(rando).preMintTo(rando.address, offerId, amount)).to.be.revertedWith(
+          RevertReasons.OWNABLE_NOT_OWNER
+        );
+      });
+
+      it("Offer id is not associated with a range", async function () {
+        // Set invalid offer id
+        offerId = 15;
+
+        // Try to premint, it should fail
+        await expect(bosonVoucher.connect(assistant).preMintTo(rando.address, offerId, amount)).to.be.revertedWith(
+          RevertReasons.NO_RESERVED_RANGE_FOR_OFFER
+        );
+      });
+
+      it("Amount to mint is more than remaining un-minted in range", async function () {
+        // Mint 50 tokens
+        await bosonVoucher.connect(assistant).preMintTo(rando.address, offerId, amount);
+
+        // Set invalid amount
+        amount = "990"; // length is 1000, already minted 50
+
+        // Try to premint, it should fail
+        await expect(bosonVoucher.connect(assistant).preMintTo(rando.address, offerId, amount)).to.be.revertedWith(
+          RevertReasons.INVALID_AMOUNT_TO_MINT
+        );
+      });
+
+      it("Too many to mint in a single transaction", async function () {
+        await mockProtocol.mock.getMaxPremintedVouchers.returns("100");
+
+        // Set invalid amount
+        amount = "101";
+
+        // Try to premint, it should fail
+        await expect(bosonVoucher.connect(assistant).preMintTo(rando.address, offerId, amount)).to.be.revertedWith(
+          RevertReasons.TOO_MANY_TO_MINT
+        );
+      });
+
+      it("Offer already expired", async function () {
+        // Skip to after offer expiration
+        await setNextBlockTimestamp(ethers.BigNumber.from(offerDates.validUntil).add(1).toHexString());
+
+        // Try to premint, it should fail
+        await expect(bosonVoucher.connect(assistant).preMintTo(rando.address, offerId, amount)).to.be.revertedWith(
+          RevertReasons.OFFER_EXPIRED_OR_VOIDED
+        );
+      });
+
+      it("Offer is voided", async function () {
+        // Make offer voided
+        offer.voided = true;
+        await mockProtocol.mock.getOffer.returns(
+          true,
+          offer,
+          offerDates,
+          offerDurations,
+          disputeResolutionTerms,
+          offerFees
+        );
+
+        // Try to premint, it should fail
+        await expect(bosonVoucher.connect(assistant).preMintTo(rando.address, offerId, amount)).to.be.revertedWith(
+          RevertReasons.OFFER_EXPIRED_OR_VOIDED
+        );
+      });
+
+      it("_to is the zero address", async function () {
+        // Try to premint, it should fail
+        await expect(
+          bosonVoucher.connect(assistant).preMintTo(ethers.constants.AddressZero, offerId, amount)
+        ).to.be.revertedWith(RevertReasons.INVALID_ADDRESS);
+      });
+    });
+  });
+
   context("burnPremintedVouchers()", function () {
     let offerId, start, length, amount;
     let mockProtocol;
@@ -1491,12 +1684,6 @@ describe("IBosonVoucher", function () {
           });
 
           context("💔 Revert Reasons", async function () {
-            it("Transfer preminted voucher, but from is not the contract owner", async function () {
-              await expect(
-                bosonVoucher.connect(rando)[selector](rando.address, buyer.address, tokenId, ...additionalArgs)
-              ).to.be.revertedWith(RevertReasons.NO_SILENT_MINT_ALLOWED);
-            });
-
             it("Cannot transfer preminted voucher twice", async function () {
               // Make first transfer
               await bosonVoucher
@@ -1674,12 +1861,6 @@ describe("IBosonVoucher", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        it("Transfer preminted voucher, but from is not the contract owner", async function () {
-          await expect(
-            bosonVoucher.connect(rando).transferPremintedFrom(rando.address, buyer.address, offerId, tokenId, "0x")
-          ).to.be.revertedWith(RevertReasons.NO_SILENT_MINT_ALLOWED);
-        });
-
         it("Cannot transfer preminted voucher twice", async function () {
           // Make first transfer
           await bosonVoucher
