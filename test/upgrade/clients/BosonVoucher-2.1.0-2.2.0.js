@@ -8,6 +8,7 @@ const {
   getStorageLayout,
   populateVoucherContract,
   getVoucherContractState,
+  revertState,
 } = require("../../util/upgrade");
 const {
   mockDisputeResolver,
@@ -20,7 +21,7 @@ const {
 const { calculateContractAddress, prepareDataSignatureParameters } = require("../../util/utils");
 const Range = require("../../../scripts/domain/Range");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
-const { getGenericcontext } = require("./01_generic");
+const { getGenericContext } = require("./01_generic");
 const SellerUpdateFields = require("../../../scripts/domain/SellerUpdateFields");
 
 const oldVersion = "v2.1.0";
@@ -50,63 +51,71 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
   let forwarder;
 
   before(async function () {
-    // Make accounts available
-    [deployer, assistant, rando] = await ethers.getSigners();
+    try {
+      // Make accounts available
+      [deployer, assistant, rando] = await ethers.getSigners();
 
-    // temporary update config, so compiler outputs storage layout
-    for (const compiler of hre.config.solidity.compilers) {
-      if (compiler.settings.outputSelection["*"]["BosonVoucher"]) {
-        compiler.settings.outputSelection["*"]["BosonVoucher"].push("storageLayout");
-      } else {
-        compiler.settings.outputSelection["*"]["BosonVoucher"] = ["storageLayout"];
+      // temporary update config, so compiler outputs storage layout
+      for (const compiler of hre.config.solidity.compilers) {
+        if (compiler.settings.outputSelection["*"]["BosonVoucher"]) {
+          compiler.settings.outputSelection["*"]["BosonVoucher"].push("storageLayout");
+        } else {
+          compiler.settings.outputSelection["*"]["BosonVoucher"] = ["storageLayout"];
+        }
       }
-    }
 
-    ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(
-      deployer,
-      oldVersion,
-      v2_1_0_scripts
-    ));
+      ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(
+        deployer,
+        oldVersion,
+        v2_1_0_scripts
+      ));
 
-    ({ accountHandler, fundsHandler, exchangeHandler } = protocolContracts);
+      ({ fundsHandler, exchangeHandler } = protocolContracts);
 
-    preUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
-    preUpgradeEntities = await populateVoucherContract(
-      deployer,
-      protocolDiamondAddress,
-      protocolContracts,
-      mockContracts
-    );
-    voucherContractState = await getVoucherContractState(preUpgradeEntities);
-
-    // upgrade clients
-    forwarder = await upgradeClients(newVersion);
-
-    // upgrade suite
-    ({ offerHandler, configHandler } = await upgradeSuite(newVersion, protocolDiamondAddress, {
-      offerHandler: "IBosonOfferHandler",
-      configHandler: "IBosonConfigHandler",
-    }));
-
-    snapshot = await ethers.provider.send("evm_snapshot", []);
-
-    // This context is placed in an uncommon place due to order of test execution.
-    // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
-    // and those values are undefined if this is placed outside "before".
-    // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
-    context(
-      "Generic tests",
-      getGenericcontext(
+      preUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
+      preUpgradeEntities = await populateVoucherContract(
         deployer,
         protocolDiamondAddress,
         protocolContracts,
-        mockContracts,
-        voucherContractState,
-        preUpgradeEntities,
-        preUpgradeStorageLayout,
-        snapshot
-      )
-    );
+        mockContracts
+      );
+      voucherContractState = await getVoucherContractState(preUpgradeEntities);
+
+      // upgrade clients
+      forwarder = await upgradeClients(newVersion);
+
+      // upgrade suite
+      ({ offerHandler, configHandler, accountHandler } = await upgradeSuite(newVersion, protocolDiamondAddress, {
+        offerHandler: "IBosonOfferHandler",
+        configHandler: "IBosonConfigHandler",
+        accountHandler: "IBosonAccountHandler",
+      }));
+
+      snapshot = await ethers.provider.send("evm_snapshot", []);
+
+      // This context is placed in an uncommon place due to order of test execution.
+      // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
+      // and those values are undefined if this is placed outside "before".
+      // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
+      context(
+        "Generic tests",
+        getGenericContext(
+          deployer,
+          protocolDiamondAddress,
+          protocolContracts,
+          mockContracts,
+          voucherContractState,
+          preUpgradeEntities,
+          preUpgradeStorageLayout,
+          snapshot
+        )
+      );
+    } catch (err) {
+      // revert to latest version of scripts and contracts
+      revertState();
+      // stop execution
+      assert(false, `Before all reverts with: ${err}`);
+    }
   });
 
   afterEach(async function () {
@@ -128,7 +137,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
     beforeEach(async function () {
       // Create a seller
       sellerId = await accountHandler.getNextAccountId();
-      const seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+      const seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address, true);
       const voucherInitValues = mockVoucherInitValues();
       const emptyAuthToken = mockAuthToken();
       await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -142,6 +151,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         assistant.address,
         assistant.address,
         assistant.address,
+        true,
         true
       );
       const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
@@ -278,7 +288,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         } = preUpgradeEntities.sellers[sellersLength - 1];
 
         // reassign assistant because signer must be on provider default accounts in order to call eth_signTypedData_v4
-        assistant = (await ethers.getSigners())[2];
+        assistant = (await ethers.getSigners())[4];
         seller.assistant = assistant.address;
         await accountHandler.connect(wallet).updateSeller(seller, authToken);
         await accountHandler.connect(assistant).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]);
