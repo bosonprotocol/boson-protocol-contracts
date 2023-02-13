@@ -56,8 +56,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     // Tell if preminted voucher has already been _committed
     mapping(uint256 => bool) private _committed;
 
-    mapping(uint256 => address) private _preMintOwners;
-
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
@@ -214,58 +212,54 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * - Too many to mint in a single transaction, given current block gas limit
      * - Offer already expired
      * - Offer is voided
-     *
+     * - _to is not the contract address or the owner
+     
      * @param _offerId - the id of the offer
      * @param _amount - the amount to mint
+     * @param _to - the address to send the minted vouchers to (contract address or contract owner)
      */
-    function preMint(uint256 _offerId, uint256 _amount) external onlyOwner {
-        address seller = owner();
-
-        preMintInternal(seller, _offerId, _amount);
-    }
-
-    /**
-     * @notice Pre-mints all or part of an offer's reserved vouchers.
-     *
-     * For small offer quantities, this method may only need to be
-     * called once.
-     *
-     * But, if the range is large, e.g., 10k vouchers, block gas limit
-     * could cause the transaction to fail. Thus, in order to support
-     * a batched approach to pre-minting an offer's vouchers,
-     * this method can be called multiple times, until the whole
-     * range is minted.
-     *
-     * A benefit to the batched approach is that the entire reserved
-     * range for an offer need not be pre-minted at one time. A seller
-     * could just mint batches periodically, controlling the amount
-     * that are available on the market at any given time, e.g.,
-     * creating a pre-minted offer with a validity period of one year,
-     * causing the token range to be reserved, but only pre-minting
-     * a certain amount monthly.
-     *
-     * Caller must be contract owner (seller assistant address).
-     *
-     * Reverts if:
-     * - Offer id is not associated with a range
-     * - Amount to mint is more than remaining un-minted in range
-     * - Too many to mint in a single transaction, given current block gas limit
-     * - Offer already expired
-     * - Offer is voided
-     * - _to address is zero address
-     *
-     * @param _to - the address to mint the vouchers to
-     * @param _offerId - the id of the offer
-     * @param _amount - the amount to mint
-     */
-    function preMintTo(
-        address _to,
+    function preMint(
         uint256 _offerId,
-        uint256 _amount
+        uint256 _amount,
+        address _to
     ) external onlyOwner {
-        require(_to != address(0), INVALID_ADDRESS);
+        require(_to == address(this) || _to == owner(), "INVALID_ADDRESS");
+        // Get the offer's range
+        Range storage range = _rangeByOfferId[_offerId];
 
-        preMintInternal(_to, _offerId, _amount);
+        // Revert if id not associated with a range
+        require(range.length != 0, NO_RESERVED_RANGE_FOR_OFFER);
+
+        // Revert if no more to mint in range
+        require(range.length >= range.minted + _amount, INVALID_AMOUNT_TO_MINT);
+
+        // Get max amount that can be minted in a single transaction
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+        uint256 maxPremintedVouchers = IBosonConfigHandler(protocolDiamond).getMaxPremintedVouchers();
+
+        // Revert if too many to mint in a single transaction
+        require(_amount <= maxPremintedVouchers, TOO_MANY_TO_MINT);
+
+        // Make sure that offer is not expired or voided
+        (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
+        require(!offer.voided && (offerDates.validUntil > block.timestamp), OFFER_EXPIRED_OR_VOIDED);
+
+        // Get the first token to mint
+        uint256 start = range.start + range.minted;
+
+        // Pre-mint the range
+        uint256 tokenId;
+        for (uint256 i = 0; i < _amount; i++) {
+            tokenId = start + i;
+
+            emit Transfer(address(0), _to, tokenId);
+        }
+
+        // Bump the minted count
+        range.minted += _amount;
+
+        // Update to total balance
+        getERC721UpgradeableStorage()._balances[_to] += _amount;
     }
 
     /**
@@ -396,7 +390,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         } else {
             // If _tokenId does not exist, but offer is committable, report contract owner as token owner
             (bool committable, ) = getPreMintStatus(_tokenId);
-            if (committable) return _preMintOwners[_tokenId];
+            if (committable) return super.owner();
 
             // Otherwise revert
             revert("ERC721: invalid token ID");
@@ -804,52 +798,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         // Update premint status
         _premintStatus.committable = true;
         _premintStatus.offerId = _offerId;
-    }
-
-    function preMintInternal(
-        address _to,
-        uint256 _offerId,
-        uint256 _amount
-    ) internal {
-        // Get the offer's range
-        Range storage range = _rangeByOfferId[_offerId];
-
-        // Revert if id not associated with a range
-        require(range.length != 0, NO_RESERVED_RANGE_FOR_OFFER);
-
-        // Revert if no more to mint in range
-        require(range.length >= range.minted + _amount, INVALID_AMOUNT_TO_MINT);
-
-        // Get max amount that can be minted in a single transaction
-        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        uint256 maxPremintedVouchers = IBosonConfigHandler(protocolDiamond).getMaxPremintedVouchers();
-
-        // Revert if too many to mint in a single transaction
-        require(_amount <= maxPremintedVouchers, TOO_MANY_TO_MINT);
-
-        // Make sure that offer is not expired or voided
-        (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
-        require(!offer.voided && (offerDates.validUntil > block.timestamp), OFFER_EXPIRED_OR_VOIDED);
-
-        // Get the first token to mint
-        uint256 start = range.start + range.minted;
-
-        // Pre-mint the range
-        uint256 tokenId;
-        for (uint256 i = 0; i < _amount; i++) {
-            tokenId = start + i;
-
-            // Set preMint token owner
-            _preMintOwners[tokenId] = _to;
-
-            emit Transfer(address(0), _to, tokenId);
-        }
-
-        // Bump the minted count
-        range.minted += _amount;
-
-        // Update to total balance
-        getERC721UpgradeableStorage()._balances[_to] += _amount;
     }
 }
 

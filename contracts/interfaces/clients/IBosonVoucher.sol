@@ -9,7 +9,7 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
  *
  * @notice This is the interface for the Boson Protocol ERC-721 Voucher contract.
  *
- * The ERC-165 identifier for this interface is: 0x210d2e65
+ * The ERC-165 identifier for this interface is: 0x49cfea61
  */
 interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     event ContractURIChanged(string contractURI);
@@ -163,44 +163,12 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      *
      * @param _offerId - the id of the offer
      * @param _amount - the amount to mint
+     * @param _to - the address to send the minted vouchers to (contract address or contract owner)
      */
-    function preMint(uint256 _offerId, uint256 _amount) external;
-
-    /**
-     * @notice Pre-mints all or part of an offer's reserved vouchers.
-     *
-     * For small offer quantities, this method may only need to be
-     * called once.
-     *
-     * But, if the range is large, e.g., 10k vouchers, block gas limit
-     * could cause the transaction to fail. Thus, in order to support
-     * a batched approach to pre-minting an offer's vouchers,
-     * this method can be called multiple times, until the whole
-     * range is minted.
-     *
-     * A benefit to the batched approach is that the entire reserved
-     * range for an offer need not be pre-minted at one time. A seller
-     * could just mint batches periodically, controlling the amount
-     * that are available on the market at any given time, e.g.,
-     * creating a pre-minted offer with a validity period of one year,
-     * causing the token range to be reserved, but only pre-minting
-     * a certain amount monthly.
-     *
-     * Caller must be contract owner (seller assistant address).
-     *
-     * Reverts if:
-     * - Offer id is not associated with a range
-     * - Amount to mint is more than remaining un-minted in range
-     * - Too many to mint in a single transaction, given current block gas limit
-     *
-     * @param _to - the address to mint the vouchers to
-     * @param _offerId - the id of the offer
-     * @param _amount - the amount to mint
-     */
-    function preMintTo(
-        address _to,
+    function preMint(
         uint256 _offerId,
-        uint256 _amount
+        uint256 _amount,
+        address _to
     ) external;
 
     /**
