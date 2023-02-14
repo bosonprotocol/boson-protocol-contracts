@@ -105,8 +105,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     // temporary struct for development purposes
     struct PriceDiscovery {
         uint256 price;
-        address validator;
-        bytes proof;
+        address priceDiscoveryContract;
+        bytes priceDiscoveryData;
         Direction direction;
     }
 
@@ -143,9 +143,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         // Fetch offer
         (, Offer storage offer) = fetchOffer(exchange.offerId);
-
-        // Authorize the buyer to commit if original offer is in a conditional group
-        require(authorizeCommit(_buyer, offer, _exchangeId), CANNOT_COMMIT);
 
         // Get token address
         address tokenAddress = offer.exchangeToken;
@@ -218,6 +215,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             );
         }
 
+        // since exchange and voucher are passed by reference, they are updated
+        emit BuyerCommitted(exchange.offerId, exchange.buyerId, _exchangeId, exchange, voucher, msgSender());
         // No need to update exchange detail. Most fields stay as they are, and buyerId was updated at the same time voucher is transferred
     }
 
@@ -260,16 +259,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // At this point, protocol temporary holds buyer's payment
         uint256 protocolBalanceBefore = getBalance(_exchangeToken);
 
-        // If token is ERC20, approve validator to transfer funds
+        // If token is ERC20, approve price discovery contract to transfer funds
         if (_exchangeToken != address(0)) {
-            IERC20(_exchangeToken).approve(address(_priceDiscovery.validator), _priceDiscovery.price);
+            IERC20(_exchangeToken).approve(address(_priceDiscovery.priceDiscoveryContract), _priceDiscovery.price);
         }
 
         {
-            // Call the validator
-            (bool success, bytes memory returnData) = address(_priceDiscovery.validator).call{ value: msg.value }(
-                _priceDiscovery.proof
-            );
+            // Call the price discovery contract
+            (bool success, bytes memory returnData) = address(_priceDiscovery.priceDiscoveryContract).call{
+                value: msg.value
+            }(_priceDiscovery.priceDiscoveryData);
 
             // If error, return error message
             string memory errorMessage = (returnData.length == 0) ? FUNCTION_CALL_NOT_SUCCESSFUL : (string(returnData));
@@ -277,7 +276,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         }
         // If token is ERC20, reset approval
         if (_exchangeToken != address(0)) {
-            IERC20(_exchangeToken).approve(address(_priceDiscovery.validator), 0);
+            IERC20(_exchangeToken).approve(address(_priceDiscovery.priceDiscoveryContract), 0);
         }
 
         // Check the escrow amount
@@ -327,14 +326,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Get protocol balance before the exchange
         uint256 protocolBalanceBefore = getBalance(_exchangeToken);
 
-        // Approve validator to transfer voucher
-        bosonVoucher.approve(_priceDiscovery.validator, _exchangeId);
+        // Approve price discovery contract to transfer voucher
+        bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, _exchangeId);
 
         {
-            // Call the validator
-            (bool success, bytes memory returnData) = address(_priceDiscovery.validator).call{ value: msg.value }(
-                _priceDiscovery.proof
-            );
+            // Call the price discovery contract
+            (bool success, bytes memory returnData) = address(_priceDiscovery.priceDiscoveryContract).call{
+                value: msg.value
+            }(_priceDiscovery.priceDiscoveryData);
 
             // If error, return error message
             string memory errorMessage = (returnData.length == 0) ? FUNCTION_CALL_NOT_SUCCESSFUL : (string(returnData));
