@@ -288,11 +288,17 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Range length is greater than quantity available
      * - Range length is greater than maximum allowed range length
      * - Call to BosonVoucher.reserveRange() reverts
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @param _offerId - the id of the offer
      * @param _length - the length of the range
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      */
-    function reserveRangeInternal(uint256 _offerId, uint256 _length) internal offersNotPaused exchangesNotPaused {
+    function reserveRangeInternal(
+        uint256 _offerId,
+        uint256 _length,
+        address _to
+    ) internal offersNotPaused exchangesNotPaused {
         // Get offer, make sure the caller is the assistant
         Offer storage offer = getValidOffer(_offerId);
 
@@ -309,9 +315,13 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
         uint256 _startId = pc.nextExchangeId;
 
-        // Call reserveRange on voucher
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
-        bosonVoucher.reserveRange(_offerId, _startId, _length);
+
+        // _to must be the contract address or the contract owner
+        require(_to == address(bosonVoucher) || _to == bosonVoucher.owner(), INVALID_TO_ADDRESS);
+
+        // Call reserveRange on voucher
+        bosonVoucher.reserveRange(_offerId, _startId, _length, _to);
 
         // increase exchangeIds
         pc.nextExchangeId = _startId + _length;

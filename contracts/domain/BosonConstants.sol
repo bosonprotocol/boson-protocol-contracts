@@ -193,6 +193,7 @@ string constant NOTHING_TO_BURN = "Nothing to burn";
 string constant OWNABLE_ZERO_ADDRESS = "Ownable: new owner is the zero address";
 string constant ROYALTY_FEE_INVALID = "ERC2981: royalty fee exceeds protocol limit";
 string constant NOT_COMMITTABLE = "Token not committable";
+string constant INVALID_TO_ADDRESS = "Tokens can only be pre-mined to the contract address or contract owner address";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(

@@ -9,7 +9,7 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
  *
  * @notice This is the interface for the Boson Protocol ERC-721 Voucher contract.
  *
- * The ERC-165 identifier for this interface is: 0x49cfea61
+ * The ERC-165 identifier for this interface is: 0x98eb5f84
  */
 interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     event ContractURIChanged(string contractURI);
@@ -23,6 +23,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
         uint256 length; // Length of range
         uint256 minted; // Amount pre-minted so far
         uint256 lastBurnedTokenId; // Last burned token id
+        address owner; // The range owner
     }
 
     /**
@@ -123,15 +124,18 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * - Range length is zero
      * - Range length is too large, i.e., would cause an overflow
      * - Offer id is already associated with a range
+     * - _to is not the contract address or the contract owner
      *
      * @param _offerId - the id of the offer
      * @param _start - the first id of the token range
      * @param _length - the length of the range
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      */
     function reserveRange(
         uint256 _offerId,
         uint256 _start,
-        uint256 _length
+        uint256 _length,
+        address _to
     ) external;
 
     /**
@@ -163,13 +167,8 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      *
      * @param _offerId - the id of the offer
      * @param _amount - the amount to mint
-     * @param _to - the address to send the minted vouchers to (contract address or contract owner)
      */
-    function preMint(
-        uint256 _offerId,
-        uint256 _amount,
-        address _to
-    ) external;
+    function preMint(uint256 _offerId, uint256 _amount) external;
 
     /**
      * @notice Burn all or part of an offer's preminted vouchers.
@@ -235,4 +234,9 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @return range - range struct with information about range start, length and already minted tokens
      */
     function getRangeByOfferId(uint256 _offerId) external view returns (Range memory range);
+
+    /**
+     * @dev Returns the address of the current contract owner.
+     */
+    function owner() external view returns (address);
 }
