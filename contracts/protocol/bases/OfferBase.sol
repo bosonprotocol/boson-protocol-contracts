@@ -332,6 +332,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         }
 
         // Notify external observers
-        emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, msgSender());
+        emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, _to, msgSender());
     }
 }

@@ -37,7 +37,7 @@ let snapshot;
  */
 describe("[@skip-on-coverage] After client upgrade, everything is still operational", function () {
   // Common vars
-  let deployer, assistant, rando;
+  let deployer, assistant;
 
   // reference protocol state
   let voucherContractState;
@@ -53,7 +53,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
   before(async function () {
     try {
       // Make accounts available
-      [deployer, assistant, rando] = await ethers.getSigners();
+      [deployer, assistant] = await ethers.getSigners();
 
       // temporary update config, so compiler outputs storage layout
       for (const compiler of hre.config.solidity.compilers) {
@@ -132,7 +132,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
   // Extensive unit tests for this methods are in /test/protocol/clients/BosonVoucherTest.js
   context("📋 New methods", async function () {
     let offerId, start, length, amount;
-    let sellerId, disputeResolverId;
+    let sellerId, disputeResolverId, offer, offerDates, offerDurations, agentId;
 
     beforeEach(async function () {
       // Create a seller
@@ -142,7 +142,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       const emptyAuthToken = mockAuthToken();
       await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-      const agentId = "0"; // agent id is optional while creating an offer
+      agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid dispute resolver
       disputeResolverId = await accountHandler.getNextAccountId();
@@ -162,8 +162,9 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
       // Create an offer
       offerId = await offerHandler.getNextOfferId();
-      const { offer, offerDates, offerDurations } = await mockOffer();
+      ({ offer, offerDates, offerDurations } = await mockOffer());
       offer.quantityAvailable = "100";
+
       await offerHandler
         .connect(assistant)
         .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
@@ -186,8 +187,20 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
     });
 
     it("reserveRange()", async function () {
-      // Reserve range, test for event
-      await expect(offerHandler.connect(assistant).reserveRange(offerId, length)).to.emit(
+      // Reserve range for the assistant, test for event
+      await expect(offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address)).to.emit(
+        bosonVoucher,
+        "RangeReserved"
+      );
+
+      await offerHandler
+        .connect(assistant)
+        .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
+
+      ++offerId;
+
+      // Reserve range for the contract, test for event
+      await expect(offerHandler.connect(assistant).reserveRange(offerId, length, bosonVoucher.address)).to.emit(
         bosonVoucher,
         "RangeReserved"
       );
@@ -196,7 +209,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
     context("preMint()", async function () {
       it("seller can pre mint vouchers", async function () {
         // Reserve range
-        await offerHandler.connect(assistant).reserveRange(offerId, length);
+        await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
 
         // Premint tokens, test for event
         await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.emit(bosonVoucher, "Transfer");
@@ -220,81 +233,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         await accountHandler.connect(assistant).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]);
 
         // Reserve range
-        await offerHandler.connect(assistant).reserveRange(offerId, length);
-
-        // Get last seller voucher
-        bosonVoucher = await ethers.getContractAt(
-          "BosonVoucher",
-          calculateContractAddress(exchangeHandler.address, sellersLength)
-        );
-
-        const nonce = Number(await forwarder.getNonce(assistant.address));
-
-        const types = {
-          ForwardRequest: [
-            { name: "from", type: "address" },
-            { name: "to", type: "address" },
-            { name: "nonce", type: "uint256" },
-            { name: "data", type: "bytes" },
-          ],
-        };
-
-        const functionSignature = bosonVoucher.interface.encodeFunctionData("preMint", [offerId, amount]);
-
-        const message = {
-          from: assistant.address,
-          to: bosonVoucher.address,
-          nonce: nonce,
-          data: functionSignature,
-        };
-
-        const { signature } = await prepareDataSignatureParameters(
-          assistant,
-          types,
-          "ForwardRequest",
-          message,
-          forwarder.address,
-          "MockForwarder",
-          "0.0.1",
-          "0Z"
-        );
-        const tx = await forwarder.execute(message, signature);
-
-        await expect(tx).to.emit(bosonVoucher, "Transfer");
-      });
-    });
-
-    context("preMintTo()", async function () {
-      it("Assistant can pre mint vouchers for rando address", async function () {
-        // Reserve range
-        await offerHandler.connect(assistant).reserveRange(offerId, length);
-
-        // Premint tokens, test for event
-        await expect(bosonVoucher.connect(assistant).preMintTo(rando.address, offerId, amount)).to.emit(
-          bosonVoucher,
-          "Transfer"
-        );
-      });
-
-      it("MetaTx: forwarder can pre mint on behalf of seller on old vouchers", async function () {
-        const sellersLength = preUpgradeEntities.sellers.length;
-
-        // Gets last seller created before upgrade
-        let {
-          seller,
-          authToken,
-          offerIds: [offerId],
-          wallet,
-        } = preUpgradeEntities.sellers[sellersLength - 1];
-
-        // reassign assistant because signer must be on provider default accounts in order to call eth_signTypedData_v4
-        assistant = (await ethers.getSigners())[4];
-        seller.assistant = assistant.address;
-        await accountHandler.connect(wallet).updateSeller(seller, authToken);
-        await accountHandler.connect(assistant).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]);
-
-        // Reserve range
-        await offerHandler.connect(assistant).reserveRange(offerId, length);
+        await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
 
         // Get last seller voucher
         bosonVoucher = await ethers.getContractAt(
@@ -340,7 +279,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
     it("burnPremintedVouchers()", async function () {
       // Reserve range and premint tokens
-      await offerHandler.connect(assistant).reserveRange(offerId, length);
+      await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
       await bosonVoucher.connect(assistant).preMint(offerId, amount);
 
       // void the offer
@@ -352,9 +291,9 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
     it("getRange()", async function () {
       // Reserve range
-      await offerHandler.connect(assistant).reserveRange(offerId, length);
+      await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
 
-      const range = new Range(start.toString(), length, "0", "0");
+      const range = new Range(start.toString(), length, "0", "0", assistant.address);
 
       // Get range object from contract
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
@@ -363,7 +302,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
     it("getAvailablePreMints()", async function () {
       // Reserve range
-      await offerHandler.connect(assistant).reserveRange(offerId, length);
+      await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
 
       // Get available premints from contract
       const availablePremints = await bosonVoucher.getAvailablePreMints(offerId);
