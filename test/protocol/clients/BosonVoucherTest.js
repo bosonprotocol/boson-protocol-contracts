@@ -1491,6 +1491,7 @@ describe("IBosonVoucher", function () {
           beforeEach(async function () {
             // Create preminted offer
             const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+            offer.quantityAvailable = "2";
             await offerHandler
               .connect(assistant)
               .createOffer(
@@ -1668,6 +1669,22 @@ describe("IBosonVoucher", function () {
                 bosonVoucher.connect(assistant)[selector](assistant.address, rando.address, tokenId, ...additionalArgs)
               ).to.be.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
             });
+
+            it("Transfer preminted voucher, but from is not the voucher owner", async function () {
+              await bosonVoucher
+                .connect(assistant)
+                [selector](assistant.address, rando.address, tokenId, ...additionalArgs);
+
+              // next token id. Make sure that assistant is the owner
+              tokenId = Number(tokenId) + 1;
+              let tokenOwner = await bosonVoucher.ownerOf(tokenId.toString());
+              assert.equal(tokenOwner, assistant.address, "Seller is not the owner");
+
+              // Following call should fail, since rando is not the owner of preminted voucher
+              await expect(
+                bosonVoucher.connect(rando)[selector](rando.address, rando.address, tokenId, ...additionalArgs)
+              ).to.be.revertedWith(RevertReasons.NO_SILENT_MINT_ALLOWED);
+            });
           });
         });
       });
@@ -1679,6 +1696,8 @@ describe("IBosonVoucher", function () {
       beforeEach(async function () {
         // Create preminted offer
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+        offer.quantityAvailable = "2";
+
         await offerHandler
           .connect(assistant)
           .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
@@ -1854,6 +1873,20 @@ describe("IBosonVoucher", function () {
               .connect(assistant)
               .transferPremintedFrom(assistant.address, rando.address, offerId, tokenId, "0x")
           ).to.be.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+        });
+
+        it("Transfer preminted voucher, but from is not the voucher owner", async function () {
+          await bosonVoucher.connect(assistant).transferFrom(assistant.address, rando.address, tokenId);
+
+          // next token id. Make sure that assistant is the owner
+          tokenId = Number(tokenId) + 1;
+          let tokenOwner = await bosonVoucher.ownerOf(tokenId.toString());
+          assert.equal(tokenOwner, assistant.address, "Seller is not the owner");
+
+          // Following call should fail, since rando is not the owner of preminted voucher
+          await expect(
+            bosonVoucher.connect(rando).transferPremintedFrom(rando.address, rando.address, offerId, tokenId, "0x")
+          ).to.be.revertedWith(RevertReasons.NO_SILENT_MINT_ALLOWED);
         });
       });
     });

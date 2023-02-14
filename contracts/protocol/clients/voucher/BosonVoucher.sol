@@ -810,6 +810,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         uint256 _tokenId,
         uint256 _offerId
     ) internal {
+        require(_from == owner() || _from == address(this), NO_SILENT_MINT_ALLOWED);
+
         // update data, so transfer will succeed
         getERC721UpgradeableStorage()._owners[_tokenId] = _from;
 

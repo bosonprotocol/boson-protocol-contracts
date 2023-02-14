@@ -1307,7 +1307,7 @@ describe("IBosonOfferHandler", function () {
 
         await expect(tx)
           .to.emit(offerHandler, "RangeReserved")
-          .withArgs(id, offer.sellerId, firstTokenId, lastTokenId, assistant.address);
+          .withArgs(id, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
         await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(id, range.toStruct());
       });
@@ -1353,7 +1353,7 @@ describe("IBosonOfferHandler", function () {
         // Reserve a range, testing for the event
         await expect(offerHandler.connect(assistant).reserveRange(id, length, assistant.address))
           .to.emit(offerHandler, "RangeReserved")
-          .withArgs(id, offer.sellerId, firstTokenId + 2, lastTokenId + 2, assistant.address);
+          .withArgs(id, offer.sellerId, firstTokenId + 2, lastTokenId + 2, assistant.address, assistant.address);
       });
 
       it("It's possible to reserve a range with maximum allowed length", async function () {
@@ -1406,7 +1406,7 @@ describe("IBosonOfferHandler", function () {
 
           await expect(tx)
             .to.emit(offerHandler, "RangeReserved")
-            .withArgs(id, offer.sellerId, firstTokenId, lastTokenId, assistant.address);
+            .withArgs(id, offer.sellerId, firstTokenId, lastTokenId, bosonVoucher.address, assistant.address);
 
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(id, range.toStruct());
         });
