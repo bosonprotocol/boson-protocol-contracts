@@ -1298,12 +1298,12 @@ describe("IBosonOfferHandler", function () {
         length = 100;
         firstTokenId = 1;
         lastTokenId = firstTokenId + length - 1;
-        range = new Range(firstTokenId.toString(), length.toString(), "0", "0");
+        range = new Range(firstTokenId.toString(), length.toString(), "0", "0", assistant.address);
       });
 
       it("should emit an RangeReserved event", async function () {
         // Reserve a range, testing for the event
-        const tx = await offerHandler.connect(assistant).reserveRange(id, length);
+        const tx = await offerHandler.connect(assistant).reserveRange(id, length, assistant.address);
 
         await expect(tx)
           .to.emit(offerHandler, "RangeReserved")
@@ -1319,7 +1319,7 @@ describe("IBosonOfferHandler", function () {
         const nextExchangeIdBefore = await exchangeHandler.getNextExchangeId();
 
         // Reserve a range
-        await offerHandler.connect(assistant).reserveRange(id, length);
+        await offerHandler.connect(assistant).reserveRange(id, length, assistant.address);
 
         // Quantity available should be updated
         [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
@@ -1351,7 +1351,7 @@ describe("IBosonOfferHandler", function () {
         await exchangeHandler.connect(rando).commitToOffer(rando.address, id, { value: price });
 
         // Reserve a range, testing for the event
-        await expect(offerHandler.connect(assistant).reserveRange(id, length))
+        await expect(offerHandler.connect(assistant).reserveRange(id, length, assistant.address))
           .to.emit(offerHandler, "RangeReserved")
           .withArgs(id, offer.sellerId, firstTokenId + 2, lastTokenId + 2, assistant.address);
       });
@@ -1365,7 +1365,7 @@ describe("IBosonOfferHandler", function () {
 
         // Set maximum allowed length
         length = ethers.BigNumber.from(2).pow(128).sub(1);
-        await expect(offerHandler.connect(assistant).reserveRange(nextOfferId, length)).to.emit(
+        await expect(offerHandler.connect(assistant).reserveRange(nextOfferId, length, assistant.address)).to.emit(
           offerHandler,
           "RangeReserved"
         );
@@ -1383,7 +1383,7 @@ describe("IBosonOfferHandler", function () {
         const quantityAvailableBefore = offerStruct.quantityAvailable;
 
         // Reserve a range
-        await offerHandler.connect(assistant).reserveRange(nextOfferId, length);
+        await offerHandler.connect(assistant).reserveRange(nextOfferId, length, assistant.address);
 
         // Quantity available should not change
         [, offerStruct] = await offerHandler.connect(rando).getOffer(nextOfferId);
@@ -1395,13 +1395,57 @@ describe("IBosonOfferHandler", function () {
         );
       });
 
+      context("Owner range is contract", async function () {
+        beforeEach(async function () {
+          range.owner = bosonVoucher.address;
+        });
+
+        it("should emit an RangeReserved event", async function () {
+          // Reserve a range, testing for the event
+          const tx = await offerHandler.connect(assistant).reserveRange(id, length, bosonVoucher.address);
+
+          await expect(tx)
+            .to.emit(offerHandler, "RangeReserved")
+            .withArgs(id, offer.sellerId, firstTokenId, lastTokenId, assistant.address);
+
+          await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(id, range.toStruct());
+        });
+
+        it("should update state", async function () {
+          // Get the offer and nextExchangeId before reservation
+          [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+          const quantityAvailableBefore = offerStruct.quantityAvailable;
+          const nextExchangeIdBefore = await exchangeHandler.getNextExchangeId();
+
+          // Reserve a range
+          await offerHandler.connect(assistant).reserveRange(id, length, bosonVoucher.address);
+
+          // Quantity available should be updated
+          [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+          const quantityAvailableAfter = offerStruct.quantityAvailable;
+          assert.equal(
+            quantityAvailableBefore.sub(quantityAvailableAfter).toNumber(),
+            length,
+            "Quantity available mismatch"
+          );
+
+          // nextExchangeId should be updated
+          const nextExchangeIdAfter = await exchangeHandler.getNextExchangeId();
+          assert.equal(nextExchangeIdAfter.sub(nextExchangeIdBefore).toNumber(), length, "nextExchangeId mismatch");
+
+          // Get range object from the voucher contract
+          const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(id));
+          assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+        });
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to reserve a range, expecting revert
-          await expect(offerHandler.connect(assistant).reserveRange(id, length)).to.revertedWith(
+          await expect(offerHandler.connect(assistant).reserveRange(id, length, assistant.address)).to.revertedWith(
             RevertReasons.REGION_PAUSED
           );
         });
@@ -1411,7 +1455,7 @@ describe("IBosonOfferHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to reserve a range, expecting revert
-          await expect(offerHandler.connect(assistant).reserveRange(id, length)).to.revertedWith(
+          await expect(offerHandler.connect(assistant).reserveRange(id, length, assistant.address)).to.revertedWith(
             RevertReasons.REGION_PAUSED
           );
         });
@@ -1421,7 +1465,7 @@ describe("IBosonOfferHandler", function () {
           id = "444";
 
           // Attempt to reserve a range, expecting revert
-          await expect(offerHandler.connect(assistant).reserveRange(id, length)).to.revertedWith(
+          await expect(offerHandler.connect(assistant).reserveRange(id, length, assistant.address)).to.revertedWith(
             RevertReasons.NO_SUCH_OFFER
           );
 
@@ -1429,7 +1473,7 @@ describe("IBosonOfferHandler", function () {
           id = "0";
 
           // Attempt to reserve a range, expecting revert
-          await expect(offerHandler.connect(assistant).reserveRange(id, length)).to.revertedWith(
+          await expect(offerHandler.connect(assistant).reserveRange(id, length, assistant.address)).to.revertedWith(
             RevertReasons.NO_SUCH_OFFER
           );
         });
@@ -1439,7 +1483,7 @@ describe("IBosonOfferHandler", function () {
           await offerHandler.connect(assistant).voidOffer(id);
 
           // Attempt to reserve a range, expecting revert
-          await expect(offerHandler.connect(assistant).reserveRange(id, length)).to.revertedWith(
+          await expect(offerHandler.connect(assistant).reserveRange(id, length, assistant.address)).to.revertedWith(
             RevertReasons.OFFER_HAS_BEEN_VOIDED
           );
         });
@@ -1447,7 +1491,7 @@ describe("IBosonOfferHandler", function () {
         it("Caller is not seller", async function () {
           // caller is not the assistant of any seller
           // Attempt to reserve a range, expecting revert
-          await expect(offerHandler.connect(rando).reserveRange(id, length)).to.revertedWith(
+          await expect(offerHandler.connect(rando).reserveRange(id, length, assistant.address)).to.revertedWith(
             RevertReasons.NOT_ASSISTANT
           );
 
@@ -1461,7 +1505,7 @@ describe("IBosonOfferHandler", function () {
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Attempt to reserve a range, expecting revert
-          await expect(offerHandler.connect(rando).reserveRange(id, length)).to.revertedWith(
+          await expect(offerHandler.connect(rando).reserveRange(id, length, assistant.address)).to.revertedWith(
             RevertReasons.NOT_ASSISTANT
           );
         });
@@ -1471,7 +1515,7 @@ describe("IBosonOfferHandler", function () {
           length = 0;
 
           // Attempt to reserve a range, expecting revert
-          await expect(offerHandler.connect(assistant).reserveRange(id, length)).to.revertedWith(
+          await expect(offerHandler.connect(assistant).reserveRange(id, length, assistant.address)).to.revertedWith(
             RevertReasons.INVALID_RANGE_LENGTH
           );
         });
@@ -1481,7 +1525,7 @@ describe("IBosonOfferHandler", function () {
           length = Number(offer.quantityAvailable) + 1;
 
           // Attempt to reserve a range, expecting revert
-          await expect(offerHandler.connect(assistant).reserveRange(id, length)).to.revertedWith(
+          await expect(offerHandler.connect(assistant).reserveRange(id, length, assistant.address)).to.revertedWith(
             RevertReasons.INVALID_RANGE_LENGTH
           );
         });
@@ -1497,18 +1541,25 @@ describe("IBosonOfferHandler", function () {
           length = ethers.BigNumber.from(2).pow(128);
 
           // Attempt to reserve a range, expecting revert
-          await expect(offerHandler.connect(assistant).reserveRange(nextOfferId, length)).to.revertedWith(
-            RevertReasons.INVALID_RANGE_LENGTH
-          );
+          await expect(
+            offerHandler.connect(assistant).reserveRange(nextOfferId, length, assistant.address)
+          ).to.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
         });
 
         it("Call to BosonVoucher.reserveRange() reverts", async function () {
           // Reserve a range
-          await offerHandler.connect(assistant).reserveRange(id, length);
+          await offerHandler.connect(assistant).reserveRange(id, length, assistant.address);
 
           // Attempt to reserve the same range again, expecting revert
-          await expect(offerHandler.connect(assistant).reserveRange(id, length)).to.revertedWith(
+          await expect(offerHandler.connect(assistant).reserveRange(id, length, assistant.address)).to.revertedWith(
             RevertReasons.OFFER_RANGE_ALREADY_RESERVED
+          );
+        });
+
+        it("_to address isn't contract address or contract owner address", async function () {
+          // Try to reserve range for rando address, it should fail
+          await expect(offerHandler.connect(assistant).reserveRange(id, length, rando.address)).to.be.revertedWith(
+            RevertReasons.INVALID_TO_ADDRESS
           );
         });
       });

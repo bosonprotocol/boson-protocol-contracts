@@ -391,7 +391,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             bool committable;
             // If _tokenId does not exist, but offer is committable, report contract owner as token owner
             (committable, , tokenOwner) = getPreMintStatus(_tokenId);
-            if (committable) return super.owner();
+            if (committable) return tokenOwner;
 
             // Otherwise revert
             revert("ERC721: invalid token ID");
