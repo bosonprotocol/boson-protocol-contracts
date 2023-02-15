@@ -13,7 +13,7 @@ import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  *
- * The ERC-165 identifier for this interface is: 0x6fa524ec
+ * The ERC-165 identifier for this interface is: 0xa38bc2e7
  */
 interface IBosonOrchestrationHandler is
     IBosonAccountEvents,
@@ -162,6 +162,7 @@ interface IBosonOrchestrationHandler is
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -171,6 +172,7 @@ interface IBosonOrchestrationHandler is
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
@@ -182,6 +184,7 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         BosonTypes.AuthToken calldata _authToken,
         BosonTypes.VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
@@ -268,6 +271,7 @@ interface IBosonOrchestrationHandler is
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -276,6 +280,7 @@ interface IBosonOrchestrationHandler is
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _agentId - the id of agent
      */
@@ -285,6 +290,7 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         BosonTypes.Condition calldata _condition,
         uint256 _agentId
     ) external;
@@ -376,6 +382,7 @@ interface IBosonOrchestrationHandler is
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -384,6 +391,7 @@ interface IBosonOrchestrationHandler is
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _groupId - id of the group, to which offer will be added
      * @param _agentId - the id of agent
      */
@@ -393,6 +401,7 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         uint256 _groupId,
         uint256 _agentId
     ) external;
@@ -494,6 +503,7 @@ interface IBosonOrchestrationHandler is
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -502,6 +512,7 @@ interface IBosonOrchestrationHandler is
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
      */
@@ -511,6 +522,7 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         BosonTypes.Twin memory _twin,
         uint256 _agentId
     ) external;
@@ -620,6 +632,7 @@ interface IBosonOrchestrationHandler is
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -628,6 +641,7 @@ interface IBosonOrchestrationHandler is
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
@@ -638,6 +652,7 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         BosonTypes.Condition calldata _condition,
         BosonTypes.Twin memory _twin,
         uint256 _agentId
@@ -766,6 +781,7 @@ interface IBosonOrchestrationHandler is
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -775,6 +791,7 @@ interface IBosonOrchestrationHandler is
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
@@ -787,6 +804,7 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         BosonTypes.Condition calldata _condition,
         BosonTypes.AuthToken calldata _authToken,
         BosonTypes.VoucherInitValues calldata _voucherInitValues,
@@ -932,6 +950,7 @@ interface IBosonOrchestrationHandler is
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -941,6 +960,7 @@ interface IBosonOrchestrationHandler is
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _twin - the fully populated twin struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
@@ -953,6 +973,7 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         BosonTypes.Twin memory _twin,
         BosonTypes.AuthToken calldata _authToken,
         BosonTypes.VoucherInitValues calldata _voucherInitValues,
@@ -1105,6 +1126,7 @@ interface IBosonOrchestrationHandler is
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -1114,6 +1136,7 @@ interface IBosonOrchestrationHandler is
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -1127,6 +1150,7 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         BosonTypes.Condition calldata _condition,
         BosonTypes.Twin memory _twin,
         BosonTypes.AuthToken calldata _authToken,

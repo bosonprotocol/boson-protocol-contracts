@@ -61,7 +61,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[42] private __gap;
+    uint256[43] private __gap;
 
     /**
      * @notice Initializes the voucher.
@@ -246,20 +246,21 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Get the first token to mint
         uint256 start = range.start + range.minted;
+        address to = range.owner;
 
         // Pre-mint the range
         uint256 tokenId;
         for (uint256 i = 0; i < _amount; i++) {
             tokenId = start + i;
 
-            emit Transfer(address(0), range.owner, tokenId);
+            emit Transfer(address(0), to, tokenId);
         }
 
         // Bump the minted count
         range.minted += _amount;
 
         // Update to total balance
-        getERC721UpgradeableStorage()._balances[range.owner] += _amount;
+        getERC721UpgradeableStorage()._balances[to] += _amount;
     }
 
     /**

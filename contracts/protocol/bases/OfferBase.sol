@@ -317,8 +317,10 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
 
+        address sender = msgSender();
+
         // _to must be the contract address or the contract owner
-        require(_to == address(bosonVoucher) || _to == bosonVoucher.owner(), INVALID_TO_ADDRESS);
+        require(_to == address(bosonVoucher) || _to == sender, INVALID_TO_ADDRESS);
 
         // Call reserveRange on voucher
         bosonVoucher.reserveRange(_offerId, _startId, _length, _to);
@@ -332,6 +334,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         }
 
         // Notify external observers
-        emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, _to, msgSender());
+        emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, _to, sender);
     }
 }
