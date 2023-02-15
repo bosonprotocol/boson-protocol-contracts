@@ -38,7 +38,7 @@ async function getFacets() {
         initArgs: {},
         skipInit: ["ERC165Facet"],
       },
-      "v2.2.0-rc.1": {
+      "v2.2.0-rc.3": {
         addOrUpgrade: [
           "AccountHandlerFacet",
           "BundleHandlerFacet",
@@ -143,7 +143,7 @@ async function getFacets() {
 
   // Versions that have the same deploy config
   facets.deploy["v2.1.0"] = facets.deploy["v2.0.0"];
-  facets.upgrade["latest"] = facets.upgrade["v2.2.0-rc.1"];
+  facets.upgrade["latest"] = facets.upgrade["v2.2.0-rc.3"];
 
   return facets;
 }
