@@ -121,7 +121,7 @@ class Range {
   }
 
   /**
-   * Is this Range instance's assistant field valid?
+   * Is this Range instance's owner field valid?
    * Must be a eip55 compliant Ethereum address
    * @returns {boolean}
    */

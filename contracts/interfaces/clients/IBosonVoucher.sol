@@ -234,9 +234,4 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @return range - range struct with information about range start, length and already minted tokens
      */
     function getRangeByOfferId(uint256 _offerId) external view returns (Range memory range);
-
-    /**
-     * @dev Returns the address of the current contract owner.
-     */
-    function owner() external view returns (address);
 }

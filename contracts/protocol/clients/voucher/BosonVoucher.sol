@@ -376,14 +376,14 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * - Token is not a pre-mint and does not have a stored owner, i.e., invalid token id
      *
      * @param _tokenId - the id of the token to check
-     * @return tokenOwner - the address of the owner
+     * @return owner - the address of the owner
      */
     function ownerOf(uint256 _tokenId)
         public
         view
         virtual
         override(ERC721Upgradeable, IERC721Upgradeable)
-        returns (address tokenOwner)
+        returns (address owner)
     {
         if (_exists(_tokenId)) {
             // If _tokenId exists, it does not matter if vouchers were preminted or not
@@ -391,8 +391,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         } else {
             bool committable;
             // If _tokenId does not exist, but offer is committable, report contract owner as token owner
-            (committable, , tokenOwner) = getPreMintStatus(_tokenId);
-            if (committable) return tokenOwner;
+            (committable, , owner) = getPreMintStatus(_tokenId);
+            if (committable) return owner;
 
             // Otherwise revert
             revert("ERC721: invalid token ID");
@@ -728,7 +728,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @param _tokenId - the token id to check
      * @return committable - whether the token is committable
      * @return offerId - the associated offer id if committable
-     * @return tokenOwner - the token owner
+     * @return owner - the token owner
      */
     function getPreMintStatus(uint256 _tokenId)
         public
@@ -736,7 +736,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         returns (
             bool committable,
             uint256 offerId,
-            address tokenOwner
+            address owner
         )
     {
         // Not committable if _committed already or if token has an owner
@@ -769,7 +769,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
                             // Has it been pre-minted and not burned yet?
                             committable = true;
                             offerId = currentOfferId;
-                            tokenOwner = range.owner;
+                            owner = range.owner;
                         }
                         break; // Found!
                     } else {
@@ -779,13 +779,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
                 }
             }
         }
-    }
-
-    /**
-     * @dev Returns the address of the current contract owner.
-     */
-    function owner() public view override(IBosonVoucher, OwnableUpgradeable) returns (address contractOwner) {
-        return super.owner();
     }
 
     /*
