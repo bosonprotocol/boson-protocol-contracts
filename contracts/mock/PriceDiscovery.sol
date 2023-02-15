@@ -26,9 +26,10 @@ contract PriceDiscovery {
      * It just transfers the voucher and exchange token to the buyer
      * If any of the transfers fail, the whole transaction will revert
      */
-    function fulfilOrder(Order calldata _order) external {
+    function fulfilOrder(Order calldata _order) external payable {
         // transfer voucher
-        try IERC721(_order.voucherContract).transferFrom(_order.seller, _order.buyer, _order.tokenId) {} catch (
+        // TODO: try safe transfer from!
+        try IERC721(_order.voucherContract).transferFrom(_order.seller, msg.sender, _order.tokenId) {} catch (
             bytes memory reason
         ) {
             if (reason.length == 0) {
@@ -42,17 +43,21 @@ contract PriceDiscovery {
         }
 
         // transfer exchange token
-        try IERC20(_order.exchangeToken).transferFrom(_order.buyer, _order.seller, _order.price) {} catch (
-            bytes memory reason
-        ) {
-            if (reason.length == 0) {
-                revert("Voucher transfer failed");
-            } else {
-                /// @solidity memory-safe-assembly
-                assembly {
-                    revert(add(32, reason), mload(reason))
+        if (_order.exchangeToken == address(0)) {
+            (bool success, ) = payable(_order.buyer).call{ value: _order.price }("");
+            require(success, "Token transfer failed");
+        } else
+            try IERC20(_order.exchangeToken).transferFrom(msg.sender, _order.seller, _order.price) {} catch (
+                bytes memory reason
+            ) {
+                if (reason.length == 0) {
+                    revert("Token transfer failed");
+                } else {
+                    /// @solidity memory-safe-assembly
+                    assembly {
+                        revert(add(32, reason), mload(reason))
+                    }
                 }
             }
-        }
     }
 }

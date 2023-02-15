@@ -102,25 +102,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         commitToOfferInternal(_buyer, offer, 0, false);
     }
 
-    // temporary struct for development purposes
-    struct PriceDiscovery {
-        uint256 price;
-        address priceDiscoveryContract;
-        bytes priceDiscoveryData;
-        Direction direction;
-    }
-
-    // enum ValidatorType {
-    //     None,
-    //     Simple,
-    //     Advanced
-    // }
-
-    enum Direction {
-        Buy,
-        Sell
-    }
-
     function sequentialCommitToOffer(
         address payable _buyer,
         uint256 _exchangeId,

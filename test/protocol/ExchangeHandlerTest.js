@@ -14,6 +14,8 @@ const ExchangeState = require("../../scripts/domain/ExchangeState");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const Group = require("../../scripts/domain/Group");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
+const PriceDiscovery = require("../../scripts/domain/PriceDiscovery");
+const Direction = require("../../scripts/domain/Direction");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -63,6 +65,7 @@ describe("IBosonExchangeHandler", function () {
     treasury,
     rando,
     buyer,
+    buyer2,
     newOwner,
     fauxClient,
     assistantDR,
@@ -107,6 +110,7 @@ describe("IBosonExchangeHandler", function () {
   let exchangesToComplete, exchangeId;
   let offer, offerFees;
   let offerDates, offerDurations;
+  let weth;
 
   before(async function () {
     // get interface Ids
@@ -121,6 +125,7 @@ describe("IBosonExchangeHandler", function () {
       admin,
       treasury,
       buyer,
+      buyer2,
       rando,
       newOwner,
       fauxClient,
@@ -219,6 +224,13 @@ describe("IBosonExchangeHandler", function () {
     ];
 
     const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+    const wethFactory = await ethers.getContractFactory("WETH9");
+    weth = await wethFactory.deploy();
+    await weth.deployed();
+
+    // Add WETH
+    facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [weth.address];
 
     // Cut the protocol handler facets into the Diamond
     await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
@@ -362,6 +374,8 @@ describe("IBosonExchangeHandler", function () {
 
       offer.quantityAvailable = "10";
       disputeResolverId = mo.disputeResolverId;
+
+      offerDurations.voucherValid = (oneMonth * 12).toString();
 
       // Check if domains are valid
       expect(offer.isValid()).is.true;
@@ -1380,6 +1394,387 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler,
             "BuyerCommitted"
           );
+        });
+      });
+    });
+
+    context("👉 sequentialCommitToOffer()", async function () {
+      let priceDiscoveryContract, priceDiscovery, price2;
+      let newBuyer;
+
+      // TODO:
+      // * ERC20 as exchange token
+      // * sell order
+
+      before(async function () {
+        // Deploy PriceDiscovery contract
+        const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscovery");
+        priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
+        await priceDiscoveryContract.deployed();
+      });
+
+      beforeEach(async function () {
+        // Commit to offer with first buyer
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        txReceipt = await tx.wait();
+        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        voucher.committedDate = block.timestamp.toString();
+
+        // Update the validUntilDate date in the expected exchange struct
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        // Price on secondary market
+        price2 = ethers.BigNumber.from(price).mul(11).div(10).toString(); // 10% above the original price
+
+        // Prepare calldata for PriceDiscovery contract
+        let order = {
+          seller: buyer.address,
+          buyer: buyer2.address,
+          voucherContract: expectedCloneAddress,
+          tokenId: exchangeId,
+          exchangeToken: offer.exchangeToken,
+          price: price2,
+        };
+
+        const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilOrder", [order]);
+
+        priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Direction.Buy);
+
+        // deposit weth - needed only for Buy direction
+        await weth.connect(buyer).deposit({ value: price2 }); // you don't need to approve whole amount, just what goes in escrow
+        await weth.connect(buyer).approve(protocolDiamond.address, price2);
+
+        // Approve transfers
+        // Buyer does not approve, since its in ETH.
+        // Seller approves price discovery to transfer the voucher
+        bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        await bosonVoucherClone.connect(buyer).setApprovalForAll(priceDiscoveryContract.address, true);
+
+        mockBuyer(buyer.address); // call only to increment account id counter
+        newBuyer = mockBuyer(buyer2.address);
+        exchange.buyerId = newBuyer.id;
+      });
+
+      it("should emit a BuyerCommitted event", async function () {
+        // Sequential commit to offer, retrieving the event
+        await expect(
+          exchangeHandler
+            .connect(buyer2)
+            .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 })
+        )
+          .to.emit(exchangeHandler, "BuyerCommitted")
+          .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer2.address);
+      });
+
+      it("should update state", async function () {
+        // Escrow amount before
+        const escrowBefore = await ethers.provider.getBalance(exchangeHandler.address);
+
+        // Sequential commit to offer
+        await exchangeHandler
+          .connect(buyer2)
+          .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 });
+
+        // buyer2 is owner of voucher
+        expect(await bosonVoucherClone.connect(buyer2).ownerOf(exchangeId)).to.equal(buyer2.address);
+
+        // buyer2 is exchange.buyerId
+        // Get the exchange as a struct
+        const [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
+
+        // Parse into entity
+        let returnedExchange = Exchange.fromStruct(exchangeStruct);
+        expect(returnedExchange.buyerId).to.equal(newBuyer.id);
+
+        // Contract's balance should increase for minimal escrow amount
+        const escrowAfter = await ethers.provider.getBalance(exchangeHandler.address);
+        expect(escrowAfter).to.equal(escrowBefore.add(price2).sub(price));
+      });
+
+      it("should transfer the voucher", async function () {
+        // buyer is owner of voucher
+        expect(await bosonVoucherClone.connect(buyer).ownerOf(exchangeId)).to.equal(buyer.address);
+
+        // Sequential commit to offer
+        await exchangeHandler
+          .connect(buyer2)
+          .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 });
+
+        // buyer2 is owner of voucher
+        expect(await bosonVoucherClone.connect(buyer2).ownerOf(exchangeId)).to.equal(buyer2.address);
+      });
+
+      it("voucher should remain unchanged", async function () {
+        // Voucher before
+        let [, , voucherStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
+        let returnedVoucher = Voucher.fromStruct(voucherStruct);
+        expect(returnedVoucher).to.deep.equal(voucher);
+
+        // Sequential commit to offer, creating a new exchange
+        await exchangeHandler
+          .connect(buyer2)
+          .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 });
+
+        // Voucher after
+        [, , voucherStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
+        returnedVoucher = Voucher.fromStruct(voucherStruct);
+        expect(returnedVoucher).to.deep.equal(voucher);
+      });
+
+      it("only new buyer can redeem voucher", async function () {
+        // Sequential commit to offer, creating a new exchange
+        await exchangeHandler
+          .connect(buyer2)
+          .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 });
+
+        // Old buyer cannot redeem
+        await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.be.revertedWith(
+          RevertReasons.NOT_VOUCHER_HOLDER
+        );
+
+        // Redeem voucher, test for event
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+        expect(await exchangeHandler.connect(buyer2).redeemVoucher(exchangeId))
+          .to.emit(exchangeHandler, "VoucherRedeemed")
+          .withArgs(offerId, exchangeId, buyer2.address);
+      });
+
+      it("only new buyer can cancel voucher", async function () {
+        // Sequential commit to offer, creating a new exchange
+        await exchangeHandler
+          .connect(buyer2)
+          .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 });
+
+        // Old buyer cannot redeem
+        await expect(exchangeHandler.connect(buyer).cancelVoucher(exchangeId)).to.be.revertedWith(
+          RevertReasons.NOT_VOUCHER_HOLDER
+        );
+
+        // Redeem voucher, test for event
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+        expect(await exchangeHandler.connect(buyer2).cancelVoucher(exchangeId))
+          .to.emit(exchangeHandler, "VoucherCanceled")
+          .withArgs(offerId, exchangeId, buyer2.address);
+      });
+
+      it("should not increment the next exchange id counter", async function () {
+        const nextExchangeIdBefore = await exchangeHandler.connect(rando).getNextExchangeId();
+
+        // Sequential commit to offer, creating a new exchange
+        await exchangeHandler
+          .connect(buyer2)
+          .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 });
+
+        // Get the next exchange id and ensure it was incremented by the creation of the offer
+        const nextExchangeIdAfter = await exchangeHandler.connect(rando).getNextExchangeId();
+        expect(nextExchangeIdAfter).to.equal(nextExchangeIdBefore);
+      });
+
+      it("Should not decrement quantityAvailable", async function () {
+        // Get quantityAvailable before
+        const [, { quantityAvailable: quantityAvailableBefore }] = await offerHandler.connect(rando).getOffer(offerId);
+
+        // Sequential commit to offer, creating a new exchange
+        await exchangeHandler
+          .connect(buyer2)
+          .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 });
+
+        // Get quantityAvailable after
+        const [, { quantityAvailable: quantityAvailableAfter }] = await offerHandler.connect(rando).getOffer(offerId);
+
+        expect(quantityAvailableAfter).to.equal(quantityAvailableBefore, "Quantity available should be the same");
+      });
+
+      it("It is possible to commit on someone else's behalf", async function () {
+        // Sequential commit to offer, retrieving the event
+        await expect(
+          exchangeHandler
+            .connect(rando)
+            .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 })
+        )
+          .to.emit(exchangeHandler, "BuyerCommitted")
+          .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), rando.address);
+
+        // buyer2 is owner of voucher, not rando
+        expect(await bosonVoucherClone.connect(buyer2).ownerOf(exchangeId)).to.equal(buyer2.address);
+      });
+
+      it("It is possible to commit even if offer is voided", async function () {
+        // Void the offer
+        await offerHandler.connect(assistant).voidOffer(offerId);
+
+        // Committing directly is not possible
+        await expect(
+          exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId, { value: price })
+        ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+
+        // Sequential commit to offer, retrieving the event
+        await expect(
+          exchangeHandler
+            .connect(buyer2)
+            .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 })
+        )
+          .to.emit(exchangeHandler, "BuyerCommitted")
+          .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer2.address);
+      });
+
+      it("It is possible to commit even if redemption period has not started yet", async function () {
+        // Redemption not yet possible
+        await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.revertedWith(
+          RevertReasons.VOUCHER_NOT_REDEEMABLE
+        );
+
+        // Sequential commit to offer, retrieving the event
+        await expect(
+          exchangeHandler
+            .connect(buyer2)
+            .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 })
+        )
+          .to.emit(exchangeHandler, "BuyerCommitted")
+          .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer2.address);
+      });
+
+      it("It is possible to commit even if offer has expired", async function () {
+        // Advance time to after offer expiry
+        await setNextBlockTimestamp(Number(offerDates.validUntil));
+
+        // Committing directly is not possible
+        await expect(
+          exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId, { value: price })
+        ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+
+        // Sequential commit to offer, retrieving the event
+        await expect(
+          exchangeHandler
+            .connect(buyer2)
+            .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 })
+        )
+          .to.emit(exchangeHandler, "BuyerCommitted")
+          .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer2.address);
+      });
+
+      it("It is possible to commit even if is sold out", async function () {
+        // Commit to all remaining quantity
+        for (let i = 1; i < offer.quantityAvailable; i++) {
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        }
+
+        // Committing directly is not possible
+        await expect(
+          exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId, { value: price })
+        ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
+
+        // Sequential commit to offer, retrieving the event
+        await expect(
+          exchangeHandler
+            .connect(buyer2)
+            .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 })
+        )
+          .to.emit(exchangeHandler, "BuyerCommitted")
+          .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer2.address);
+      });
+
+      // TESTS BELOW NOT UPDATED YET
+
+      context("💔 Revert Reasons", async function () {
+        it("The exchanges region of protocol is paused", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
+
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("The buyers region of protocol is paused", async function () {
+          // Pause the buyers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
+
+          // Attempt to create a buyer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("buyer address is the zero address", async function () {
+          // Attempt to commit, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(ethers.constants.AddressZero, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+        });
+
+        it("offer id is invalid", async function () {
+          // An invalid offer id
+          offerId = "666";
+
+          // Attempt to commit, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+        });
+
+        it("offer is voided", async function () {
+          // Void the offer first
+          await offerHandler.connect(assistant).voidOffer(offerId);
+
+          // Attempt to commit to the voided offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+        });
+
+        it("offer is not yet available for commits", async function () {
+          // Create an offer with staring date in the future
+          // get current block timestamp
+          const block = await ethers.provider.getBlock("latest");
+          const now = block.timestamp.toString();
+
+          // set validFrom date in the past
+          offerDates.validFrom = ethers.BigNumber.from(now)
+            .add(oneMonth * 6)
+            .toString(); // 6 months in the future
+          offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom).add(10).toString(); // just after the valid from so it succeeds.
+
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+          // Attempt to commit to the not availabe offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, ++offerId, { value: price })
+          ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
+        });
+
+        it("offer has expired", async function () {
+          // Go past offer expiration date
+          await setNextBlockTimestamp(Number(offerDates.validUntil));
+
+          // Attempt to commit to the expired offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+        });
+
+        it("offer sold", async function () {
+          // Create an offer with only 1 item
+          offer.quantityAvailable = "1";
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          // Commit to offer, so it's not availble anymore
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, ++offerId, { value: price });
+
+          // Attempt to commit to the sold out offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
         });
       });
     });

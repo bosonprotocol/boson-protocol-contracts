@@ -225,7 +225,7 @@ async function getFacetsWithArgs(facetNames, config) {
   const facets = await getFacets(config);
   const keys = Object.keys(facets).filter((key) => facetNames.includes(key));
   return keys.reduce((obj, key) => {
-    obj[key] = facets[key];
+    obj[key] = { init: facets[key] };
     return obj;
   }, {});
 }

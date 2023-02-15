@@ -258,4 +258,10 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @return receipt - the receipt for the exchange. See {BosonTypes.Receipt}
      */
     function getReceipt(uint256 _exchangeId) external view returns (BosonTypes.Receipt memory receipt);
+
+    function sequentialCommitToOffer(
+        address payable _buyer,
+        uint256 _exchangeId,
+        BosonTypes.PriceDiscovery calldata _priceDiscovery
+    ) external payable;
 }

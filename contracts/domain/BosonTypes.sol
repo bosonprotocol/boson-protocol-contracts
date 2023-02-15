@@ -291,4 +291,17 @@ contract BosonTypes {
         string contractURI;
         uint256 royaltyPercentage;
     }
+
+    // temporary struct for development purposes
+    struct PriceDiscovery {
+        uint256 price;
+        address priceDiscoveryContract;
+        bytes priceDiscoveryData;
+        Direction direction;
+    }
+
+    enum Direction {
+        Buy,
+        Sell
+    }
 }
