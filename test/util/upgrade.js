@@ -274,7 +274,14 @@ async function populateProtocolContract(
     // create entities
     switch (entity) {
       case entityType.DR: {
-        const disputeResolver = mockDisputeResolver(wallet.address, wallet.address, wallet.address, wallet.address);
+        const disputeResolver = mockDisputeResolver(
+          wallet.address,
+          wallet.address,
+          wallet.address,
+          wallet.address,
+          true,
+          true
+        );
         const disputeResolverFees = [
           new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
           new DisputeResolverFee(mockToken.address, "MockToken", "0"),
@@ -299,11 +306,12 @@ async function populateProtocolContract(
         }
         break;
       }
-      case entityType.SELLER: {
-        const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address);
-        const id = (seller.id = nextAccountId.toString());
 
+      case entityType.SELLER: {
+        const id = (seller.id = nextAccountId.toString());
+        const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address, true);
         let authToken;
+
         // randomly decide if auth token is used or not
         if (Math.random() > 0.5) {
           // no auth token
@@ -1043,11 +1051,11 @@ async function getProtocolLookupsPrivateContractState(
     #2  [X] // placeholder for bundleIdByTwin
     #3  [ ] // placeholder for groupIdByOffer
     #4  [X] // placeholder for agentIdByOffer
-    #5  [X] // placeholder for sellerIdByOperator
+    #5  [X] // placeholder for sellerIdByAssistant
     #6  [X] // placeholder for sellerIdByAdmin
     #7  [X] // placeholder for sellerIdByClerk
     #8  [ ] // placeholder for buyerIdByWallet
-    #9  [X] // placeholder for disputeResolverIdByOperator
+    #9  [X] // placeholder for disputeResolverIdByAssistant
     #10 [X] // placeholder for disputeResolverIdByAdmin
     #11 [X] // placeholder for disputeResolverIdByClerk
     #12 [ ] // placeholder for disputeResolverFeeTokenIndex
@@ -1447,7 +1455,14 @@ async function populateVoucherContract(
       // create entities
       switch (entity) {
         case entityType.DR: {
-          const disputeResolver = mockDisputeResolver(wallet.address, wallet.address, wallet.address, wallet.address);
+          const disputeResolver = mockDisputeResolver(
+            wallet.address,
+            wallet.address,
+            wallet.address,
+            wallet.address,
+            true,
+            true
+          );
           const disputeResolverFees = [
             new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
             new DisputeResolverFee(mockToken.address, "MockToken", "0"),
@@ -1474,7 +1489,7 @@ async function populateVoucherContract(
           break;
         }
         case entityType.SELLER: {
-          const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address);
+          const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address, true);
           const id = (seller.id = nextAccountId.toString());
           let authToken = mockAuthToken();
 
@@ -1635,7 +1650,7 @@ async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buye
     );
 
     // balanceOf(address owner)
-    // isApprovedForAll(address owner, address operator)
+    // isApprovedForAll(address owner, address assistant)
     const addresses = [...sellers, ...buyers].map((acc) => acc.wallet.address);
     const balanceOf = await Promise.all(addresses.map((address) => bosonVoucher.balanceOf(address)));
     const isApprovedForAll = await Promise.all(

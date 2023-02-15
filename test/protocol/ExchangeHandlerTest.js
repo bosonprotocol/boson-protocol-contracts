@@ -57,7 +57,7 @@ describe("IBosonExchangeHandler", function () {
   let InterfaceIds;
   let deployer,
     pauser,
-    operator,
+    assistant,
     admin,
     clerk,
     treasury,
@@ -65,7 +65,7 @@ describe("IBosonExchangeHandler", function () {
     buyer,
     newOwner,
     fauxClient,
-    operatorDR,
+    assistantDR,
     adminDR,
     clerkDR,
     treasuryDR,
@@ -131,8 +131,8 @@ describe("IBosonExchangeHandler", function () {
     ] = await ethers.getSigners();
 
     // make all account the same
-    operator = clerk = admin;
-    operatorDR = clerkDR = adminDR;
+    assistant = clerk = admin;
+    assistantDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -316,7 +316,7 @@ describe("IBosonExchangeHandler", function () {
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller
-      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       // AuthToken
@@ -334,7 +334,7 @@ describe("IBosonExchangeHandler", function () {
 
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
-        operatorDR.address,
+        assistantDR.address,
         adminDR.address,
         clerkDR.address,
         treasuryDR.address,
@@ -369,7 +369,7 @@ describe("IBosonExchangeHandler", function () {
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
-      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+      await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
       // Set used variables
       price = offer.price;
@@ -391,7 +391,7 @@ describe("IBosonExchangeHandler", function () {
 
       // Deposit seller funds so the commit will succeed
       await fundsHandler
-        .connect(operator)
+        .connect(assistant)
         .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
     });
 
@@ -575,7 +575,7 @@ describe("IBosonExchangeHandler", function () {
         // Make sure that vouchers have correct royalty fee for exchangeId 1
         exchangeId = "1";
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucherClone.connect(operator).royaltyInfo(exchangeId, offer.price);
+        [receiver, royaltyAmount] = await bosonVoucherClone.connect(assistant).royaltyInfo(exchangeId, offer.price);
 
         // Expectations
         let expectedRecipient = seller1Treasury; //Expect 1st seller's treasury address as exchange id exists
@@ -590,7 +590,7 @@ describe("IBosonExchangeHandler", function () {
         seller2Treasury = seller.treasury;
 
         receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucherClone2.connect(operator).royaltyInfo(exchangeId, offer.price);
+        [receiver, royaltyAmount] = await bosonVoucherClone2.connect(assistant).royaltyInfo(exchangeId, offer.price);
 
         // Expectations
         expectedRecipient = seller2Treasury; //Expect 2nd seller's treasury address as exchange id exists
@@ -612,7 +612,9 @@ describe("IBosonExchangeHandler", function () {
         expect(offerDurations.isValid()).is.true;
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
         exchange.offerId = offerId = "2"; // tested against second offer
 
         // Commit to offer, retrieving the event
@@ -667,7 +669,7 @@ describe("IBosonExchangeHandler", function () {
         expect(offer.isValid()).is.true;
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, ...Object.values(details), agentId);
+        await offerHandler.connect(assistant).createOffer(offer, ...Object.values(details), agentId);
         exchange.offerId = offerId = "2"; // first offer is created on beforeEach
 
         // Commit to offer
@@ -701,7 +703,9 @@ describe("IBosonExchangeHandler", function () {
         expect(offer.isValid()).is.true;
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
         // Commit to offer
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
@@ -754,7 +758,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("offer is voided", async function () {
           // Void the offer first
-          await offerHandler.connect(operator).voidOffer(offerId);
+          await offerHandler.connect(assistant).voidOffer(offerId);
 
           // Attempt to commit to the voided offer, expecting revert
           await expect(
@@ -775,7 +779,7 @@ describe("IBosonExchangeHandler", function () {
           offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom).add(10).toString(); // just after the valid from so it succeeds.
 
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
           // Attempt to commit to the not availabe offer, expecting revert
@@ -798,7 +802,7 @@ describe("IBosonExchangeHandler", function () {
           // Create an offer with only 1 item
           offer.quantityAvailable = "1";
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
           // Commit to offer, so it's not availble anymore
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, ++offerId, { value: price });
@@ -815,19 +819,19 @@ describe("IBosonExchangeHandler", function () {
       let tokenId;
       beforeEach(async function () {
         // Reserve range
-        await offerHandler.connect(operator).reserveRange(offer.id, offer.quantityAvailable);
+        await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
 
         // expected address of the first clone
         const voucherCloneAddress = calculateContractAddress(accountHandler.address, "1");
         bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
-        await bosonVoucher.connect(operator).preMint(offer.id, offer.quantityAvailable);
+        await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
         tokenId = "1";
       });
 
       it("should emit a BuyerCommitted event", async function () {
         // Commit to preminted offer, retrieving the event
-        tx = await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+        tx = await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
         txReceipt = await tx.wait();
         event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
@@ -862,7 +866,7 @@ describe("IBosonExchangeHandler", function () {
         let nextExchangeIdBefore = await exchangeHandler.connect(rando).getNextExchangeId();
 
         // Commit to preminted offer, creating a new exchange
-        await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+        await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
 
         // Get the next exchange id and ensure it was incremented by the creation of the offer
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
@@ -877,7 +881,7 @@ describe("IBosonExchangeHandler", function () {
         await expect(bosonVoucher.ownerOf(nextExchangeId)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
 
         // Commit to preminted offer, creating a new exchange
-        await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+        await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
 
         // Voucher with nextExchangeId still should not exist
         await expect(bosonVoucher.ownerOf(nextExchangeId)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
@@ -886,18 +890,18 @@ describe("IBosonExchangeHandler", function () {
       it("ERC2981: issued voucher should have royalty fees", async function () {
         // set non zero royalty percentage
         const royaltyPercentage = "10";
-        await bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage);
+        await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
 
         // Before voucher is transferred, it should have zero royalty fee
-        let [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(tokenId, offer.price);
+        let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offer.price);
         assert.equal(receiver, ethers.constants.AddressZero, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), "0", "Royalty amount is incorrect");
 
         // Commit to preminted offer, creating a new exchange
-        await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+        await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
 
         // After voucher is transferred, it should have royalty fee
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(tokenId, offer.price);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offer.price);
         assert.equal(receiver, treasury.address, "Recipient address is incorrect");
         assert.equal(
           royaltyAmount.toString(),
@@ -912,7 +916,7 @@ describe("IBosonExchangeHandler", function () {
         const quantityAvailableBefore = offer.quantityAvailable;
 
         // Commit to preminted offer
-        await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+        await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
 
         // Offer qunantityAvailable should be decremented
         [, offer] = await offerHandler.connect(rando).getOffer(offerId);
@@ -931,7 +935,9 @@ describe("IBosonExchangeHandler", function () {
         // Create the offer
         offer.quantityAvailable = "10";
         const rangeLength = "5";
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
         // Deposit seller funds so the commit will succeed
         await fundsHandler
@@ -939,7 +945,7 @@ describe("IBosonExchangeHandler", function () {
           .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
 
         // reserve half of the offer, so it's still possible to commit directly
-        await offerHandler.connect(operator).reserveRange(offerId, rangeLength);
+        await offerHandler.connect(assistant).reserveRange(offerId, rangeLength, assistant.address);
 
         // Commit to offer directly
         expect(
@@ -954,7 +960,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to create an exchange, expecting revert
           await expect(
-            bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -964,7 +970,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to create a buyer, expecting revert
           await expect(
-            bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -977,7 +983,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("Exchange exists already", async function () {
           // Commit to preminted offer, creating a new exchange
-          await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+          await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
 
           // impersonate voucher contract and give it some funds
           const impersonatedBosonVoucher = await ethers.getImpersonatedSigner(bosonVoucher.address);
@@ -994,11 +1000,11 @@ describe("IBosonExchangeHandler", function () {
 
         it("offer is voided", async function () {
           // Void the offer first
-          await offerHandler.connect(operator).voidOffer(offerId);
+          await offerHandler.connect(assistant).voidOffer(offerId);
 
           // Attempt to commit to the voided offer, expecting revert
           await expect(
-            bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
           ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
         });
 
@@ -1017,17 +1023,17 @@ describe("IBosonExchangeHandler", function () {
           offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom).add(10).toString(); // just after the valid from so it succeeds.
 
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
           // Reserve a range and premint vouchers
           tokenId = await exchangeHandler.getNextExchangeId();
-          await offerHandler.connect(operator).reserveRange(offerId, "1");
-          await bosonVoucher.connect(operator).preMint(offerId, "1");
+          await offerHandler.connect(assistant).reserveRange(offerId, "1", assistant.address);
+          await bosonVoucher.connect(assistant).preMint(offerId, "1");
 
           // Attempt to commit to the not availabe offer, expecting revert
           await expect(
-            bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
           ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
         });
 
@@ -1037,7 +1043,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to commit to the expired offer, expecting revert
           await expect(
-            bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
           ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
         });
 
@@ -1045,7 +1051,7 @@ describe("IBosonExchangeHandler", function () {
           // Create an offer with only 1 item
           offer.quantityAvailable = "1";
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
           // Commit to offer, so it's not availble anymore
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, ++offerId, { value: price });
@@ -1072,7 +1078,7 @@ describe("IBosonExchangeHandler", function () {
           // Create Group
           group = new Group(groupId, seller.id, offerIds);
           expect(group.isValid()).is.true;
-          await groupHandler.connect(operator).createGroup(group, condition);
+          await groupHandler.connect(assistant).createGroup(group, condition);
         });
 
         it("should emit a BuyerCommitted event if user meets condition", async function () {
@@ -1143,7 +1149,7 @@ describe("IBosonExchangeHandler", function () {
           // Create Group
           group = new Group(groupId, seller.id, offerIds);
           expect(group.isValid()).is.true;
-          await groupHandler.connect(operator).createGroup(group, condition);
+          await groupHandler.connect(assistant).createGroup(group, condition);
         });
 
         it("should emit a BuyerCommitted event if user meets condition", async function () {
@@ -1215,7 +1221,7 @@ describe("IBosonExchangeHandler", function () {
           // Create Group
           group = new Group(groupId, seller.id, offerIds);
           expect(group.isValid()).is.true;
-          await groupHandler.connect(operator).createGroup(group, condition);
+          await groupHandler.connect(assistant).createGroup(group, condition);
         });
 
         it("should emit a BuyerCommitted event if user meets condition", async function () {
@@ -1288,7 +1294,7 @@ describe("IBosonExchangeHandler", function () {
           // Create Group
           group = new Group(groupId, seller.id, offerIds);
           expect(group.isValid()).is.true;
-          await groupHandler.connect(operator).createGroup(group, condition);
+          await groupHandler.connect(assistant).createGroup(group, condition);
         });
 
         it("should emit a BuyerCommitted event if user meets condition", async function () {
@@ -1364,7 +1370,7 @@ describe("IBosonExchangeHandler", function () {
           // Create Group
           group = new Group(groupId, seller.id, offerIds);
           expect(group.isValid()).is.true;
-          await groupHandler.connect(operator).createGroup(group, condition);
+          await groupHandler.connect(assistant).createGroup(group, condition);
         });
 
         it("should emit a BuyerCommitted event", async function () {
@@ -1414,7 +1420,7 @@ describe("IBosonExchangeHandler", function () {
         assert.equal(response, ExchangeState.Completed, "Exchange state is incorrect");
       });
 
-      it("should emit an ExchangeCompleted event if operator calls after dispute period", async function () {
+      it("should emit an ExchangeCompleted event if assistant calls after dispute period", async function () {
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
@@ -1430,9 +1436,9 @@ describe("IBosonExchangeHandler", function () {
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
-        await expect(exchangeHandler.connect(operator).completeExchange(exchange.id))
+        await expect(exchangeHandler.connect(assistant).completeExchange(exchange.id))
           .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchange.id, operator.address);
+          .withArgs(offerId, buyerId, exchange.id, assistant.address);
       });
 
       it("should emit an ExchangeCompleted event if anyone calls after dispute period", async function () {
@@ -1462,7 +1468,7 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchange(exchangeId)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).completeExchange(exchangeId)).to.revertedWith(
             RevertReasons.REGION_PAUSED
           );
         });
@@ -1472,7 +1478,7 @@ describe("IBosonExchangeHandler", function () {
           exchangeId = "666";
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchange(exchangeId)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).completeExchange(exchangeId)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -1485,7 +1491,7 @@ describe("IBosonExchangeHandler", function () {
           assert.equal(response, ExchangeState.Committed, "Exchange state is incorrect");
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchange(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).completeExchange(exchange.id)).to.revertedWith(
             RevertReasons.INVALID_STATE
           );
         });
@@ -1495,7 +1501,7 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).cancelVoucher(exchange.id);
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchange(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).completeExchange(exchange.id)).to.revertedWith(
             RevertReasons.INVALID_STATE
           );
         });
@@ -1513,7 +1519,7 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
-        it("caller is seller's operator and offer dispute period has not elapsed", async function () {
+        it("caller is seller's assistant and offer dispute period has not elapsed", async function () {
           // Set time forward to the offer's voucherRedeemableFrom
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
@@ -1521,7 +1527,7 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchange(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).completeExchange(exchange.id)).to.revertedWith(
             RevertReasons.DISPUTE_PERIOD_NOT_ELAPSED
           );
         });
@@ -1581,7 +1587,7 @@ describe("IBosonExchangeHandler", function () {
         }
       });
 
-      it("should emit an ExchangeCompleted event if operator calls after dispute period", async function () {
+      it("should emit an ExchangeCompleted event if assistant calls after dispute period", async function () {
         // Get the current block info
         blockNumber = await ethers.provider.getBlockNumber();
         block = await ethers.provider.getBlock(blockNumber);
@@ -1591,26 +1597,26 @@ describe("IBosonExchangeHandler", function () {
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
-        const tx = await exchangeHandler.connect(operator).completeExchangeBatch(exchangesToComplete);
+        const tx = await exchangeHandler.connect(assistant).completeExchangeBatch(exchangesToComplete);
         await expect(tx)
           .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchangesToComplete[0], operator.address);
+          .withArgs(offerId, buyerId, exchangesToComplete[0], assistant.address);
 
         await expect(tx)
           .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchangesToComplete[1], operator.address);
+          .withArgs(offerId, buyerId, exchangesToComplete[1], assistant.address);
 
         await expect(tx)
           .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchangesToComplete[2], operator.address);
+          .withArgs(offerId, buyerId, exchangesToComplete[2], assistant.address);
 
         await expect(tx)
           .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchangesToComplete[3], operator.address);
+          .withArgs(offerId, buyerId, exchangesToComplete[3], assistant.address);
 
         await expect(tx)
           .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchangesToComplete[4], operator.address);
+          .withArgs(offerId, buyerId, exchangesToComplete[4], assistant.address);
       });
 
       it("should emit an ExchangeCompleted event if anyone calls after dispute period", async function () {
@@ -1674,7 +1680,7 @@ describe("IBosonExchangeHandler", function () {
           exchangesToComplete = [exchangeId, ...exchangesToComplete];
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -1691,7 +1697,7 @@ describe("IBosonExchangeHandler", function () {
           exchangesToComplete = [exchangeId, ...exchangesToComplete];
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
             RevertReasons.INVALID_STATE
           );
         });
@@ -1714,7 +1720,7 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
-        it("caller is seller's operator and offer dispute period has not elapsed", async function () {
+        it("caller is seller's assistant and offer dispute period has not elapsed", async function () {
           // Create exchange with id 6
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
@@ -1724,7 +1730,7 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
             RevertReasons.DISPUTE_PERIOD_NOT_ELAPSED
           );
         });
@@ -1737,16 +1743,16 @@ describe("IBosonExchangeHandler", function () {
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
       });
 
-      it("should emit an VoucherRevoked event when seller's operator calls", async function () {
+      it("should emit an VoucherRevoked event when seller's assistant calls", async function () {
         // Revoke the voucher, expecting event
-        await expect(exchangeHandler.connect(operator).revokeVoucher(exchange.id))
+        await expect(exchangeHandler.connect(assistant).revokeVoucher(exchange.id))
           .to.emit(exchangeHandler, "VoucherRevoked")
-          .withArgs(offerId, exchange.id, operator.address);
+          .withArgs(offerId, exchange.id, assistant.address);
       });
 
       it("should update state", async function () {
         // Revoke the voucher
-        await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
+        await exchangeHandler.connect(assistant).revokeVoucher(exchange.id);
 
         // Get the exchange state
         [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -1761,7 +1767,7 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).revokeVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).revokeVoucher(exchange.id)).to.revertedWith(
             RevertReasons.REGION_PAUSED
           );
         });
@@ -1771,7 +1777,7 @@ describe("IBosonExchangeHandler", function () {
           exchangeId = "666";
 
           // Attempt to revoke the voucher, expecting revert
-          await expect(exchangeHandler.connect(operator).revokeVoucher(exchangeId)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).revokeVoucher(exchangeId)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -1781,15 +1787,15 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).cancelVoucher(exchange.id);
 
           // Attempt to revoke the voucher, expecting revert
-          await expect(exchangeHandler.connect(operator).revokeVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).revokeVoucher(exchange.id)).to.revertedWith(
             RevertReasons.INVALID_STATE
           );
         });
 
-        it("caller is not seller's operator", async function () {
+        it("caller is not seller's assistant", async function () {
           // Attempt to complete the exchange, expecting revert
           await expect(exchangeHandler.connect(rando).revokeVoucher(exchange.id)).to.revertedWith(
-            RevertReasons.NOT_OPERATOR
+            RevertReasons.NOT_ASSISTANT
           );
         });
       });
@@ -1873,7 +1879,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("exchange is not in committed state", async function () {
           // Revoke the voucher
-          await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
+          await exchangeHandler.connect(assistant).revokeVoucher(exchange.id);
 
           // Attempt to cancel the voucher, expecting revert
           await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWith(
@@ -1997,7 +2003,7 @@ describe("IBosonExchangeHandler", function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
           // Revoke the voucher
-          await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
+          await exchangeHandler.connect(assistant).revokeVoucher(exchange.id);
 
           // Attempt to expire the voucher, expecting revert
           await expect(exchangeHandler.connect(buyer).expireVoucher(exchange.id)).to.revertedWith(
@@ -2067,7 +2073,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("exchange is not in committed state", async function () {
           // Revoke the voucher
-          await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
+          await exchangeHandler.connect(assistant).revokeVoucher(exchange.id);
 
           // Attempt to redeem the voucher, expecting revert
           await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
@@ -2104,16 +2110,16 @@ describe("IBosonExchangeHandler", function () {
     context("👉 redeemVoucher() with bundle", async function () {
       beforeEach(async function () {
         // Mint some tokens to be bundled
-        await foreign20.connect(operator).mint(operator.address, "500");
+        await foreign20.connect(assistant).mint(assistant.address, "500");
         // Mint first two and last two tokens of range
-        await foreign721.connect(operator).mint("0", "2");
-        await foreign721.connect(operator).mint("8", "2");
-        await foreign1155.connect(operator).mint("1", "500");
+        await foreign721.connect(assistant).mint("0", "2");
+        await foreign721.connect(assistant).mint("8", "2");
+        await foreign1155.connect(assistant).mint("1", "500");
 
         // Approve the protocol diamond to transfer seller's tokens
-        await foreign20.connect(operator).approve(protocolDiamond.address, "30");
-        await foreign721.connect(operator).setApprovalForAll(protocolDiamond.address, true);
-        await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, true);
+        await foreign20.connect(assistant).approve(protocolDiamond.address, "30");
+        await foreign721.connect(assistant).setApprovalForAll(protocolDiamond.address, true);
+        await foreign1155.connect(assistant).setApprovalForAll(protocolDiamond.address, true);
 
         // Create an ERC20 twin
         twin20 = mockTwin(foreign20.address);
@@ -2141,9 +2147,9 @@ describe("IBosonExchangeHandler", function () {
         twinIds = [twin20.id, twin721.id, twin1155.id];
 
         // Create twins
-        await twinHandler.connect(operator).createTwin(twin20.toStruct());
-        await twinHandler.connect(operator).createTwin(twin721.toStruct());
-        await twinHandler.connect(operator).createTwin(twin1155.toStruct());
+        await twinHandler.connect(assistant).createTwin(twin20.toStruct());
+        await twinHandler.connect(assistant).createTwin(twin721.toStruct());
+        await twinHandler.connect(assistant).createTwin(twin1155.toStruct());
       });
 
       context("📦 Offer bundled with ERC20 twin", async function () {
@@ -2151,7 +2157,7 @@ describe("IBosonExchangeHandler", function () {
           // Create a new bundle
           bundle = new Bundle("1", seller.id, [offerId], [twin20.id]);
           expect(bundle.isValid()).is.true;
-          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+          await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
           // Commit to offer
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -2180,7 +2186,7 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
           // Check twin supplyAvailable
-          const [, twin] = await twinHandler.connect(operator).getTwin(twin20.id);
+          const [, twin] = await twinHandler.connect(assistant).getTwin(twin20.id);
 
           expect(twin.supplyAvailable).to.equal(twin20.supplyAvailable - twin20.amount);
         });
@@ -2191,19 +2197,19 @@ describe("IBosonExchangeHandler", function () {
           twin20.id = "4";
 
           // Create a new twin
-          await twinHandler.connect(operator).createTwin(twin20.toStruct());
+          await twinHandler.connect(assistant).createTwin(twin20.toStruct());
 
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "2";
 
           // Create a new offer
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
           // Create a new bundle
           bundle = new Bundle("1", seller.id, [++offerId], [twin20.id]);
-          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+          await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
           // Commit to offer
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -2216,7 +2222,7 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
           // Check the supplyAvailable of the twin
-          const [exists, twin] = await twinHandler.connect(operator).getTwin(twin20.id);
+          const [exists, twin] = await twinHandler.connect(assistant).getTwin(twin20.id);
           expect(exists).to.be.true;
           expect(twin.supplyAvailable).to.equal(twin20.supplyAvailable);
         });
@@ -2227,17 +2233,17 @@ describe("IBosonExchangeHandler", function () {
 
           // Create a new offer
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
           twin20.supplyAvailable = "3";
           twin20.id = "4";
 
-          await twinHandler.connect(operator).createTwin(twin20.toStruct());
+          await twinHandler.connect(assistant).createTwin(twin20.toStruct());
 
           // Create a new bundle
           bundle = new Bundle("1", seller.id, [++offerId], [twin20.id]);
-          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+          await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
           // Commit to offer
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -2262,7 +2268,7 @@ describe("IBosonExchangeHandler", function () {
         context("Twin transfer fail", async function () {
           it("should revoke exchange when buyer is an EOA", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
-            await foreign20.connect(operator).approve(protocolDiamond.address, "0");
+            await foreign20.connect(assistant).approve(protocolDiamond.address, "0");
 
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
@@ -2284,21 +2290,21 @@ describe("IBosonExchangeHandler", function () {
           it("should revoke exchange when ERC20 contract transferFrom returns false", async function () {
             const [foreign20ReturnFalse] = await deployMockTokens(["Foreign20TransferFromReturnFalse"]);
 
-            await foreign20ReturnFalse.connect(operator).mint(operator.address, "500");
-            await foreign20ReturnFalse.connect(operator).approve(protocolDiamond.address, "100");
+            await foreign20ReturnFalse.connect(assistant).mint(assistant.address, "500");
+            await foreign20ReturnFalse.connect(assistant).approve(protocolDiamond.address, "100");
 
             // Create a new ERC20 twin
             twin20 = mockTwin(foreign20ReturnFalse.address, TokenType.FungibleToken);
             twin20.id = "4";
 
             // Create a new twin
-            await twinHandler.connect(operator).createTwin(twin20.toStruct());
+            await twinHandler.connect(assistant).createTwin(twin20.toStruct());
 
             // Create a new offer
             const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
 
             await offerHandler
-              .connect(operator)
+              .connect(assistant)
               .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
             // Set time forward to the offer's voucherRedeemableFrom
@@ -2306,7 +2312,7 @@ describe("IBosonExchangeHandler", function () {
             await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
             // Create a new bundle
-            await bundleHandler.connect(operator).createBundle(new Bundle("1", seller.id, [++offerId], [twin20.id]));
+            await bundleHandler.connect(assistant).createBundle(new Bundle("1", seller.id, [++offerId], [twin20.id]));
 
             // Commit to offer
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -2324,7 +2330,7 @@ describe("IBosonExchangeHandler", function () {
 
           it("should raise a dispute when buyer account is a contract", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
-            await foreign20.connect(operator).approve(protocolDiamond.address, "0");
+            await foreign20.connect(assistant).approve(protocolDiamond.address, "0");
 
             // Deploy contract to test redeem called by another contract
             let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
@@ -2366,7 +2372,7 @@ describe("IBosonExchangeHandler", function () {
           // Create a new bundle
           bundle = new Bundle("1", seller.id, [offerId], [twin721.id]);
           expect(bundle.isValid()).is.true;
-          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+          await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
           // Commit to offer
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -2378,9 +2384,9 @@ describe("IBosonExchangeHandler", function () {
         it("Should transfer the twin", async function () {
           let tokenId = "9";
 
-          // Check the operator owns the last ERC721 of twin range
+          // Check the assistant owns the last ERC721 of twin range
           owner = await foreign721.ownerOf(tokenId);
-          expect(owner).to.equal(operator.address);
+          expect(owner).to.equal(assistant.address);
           [exists, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
           // Redeem the voucher
@@ -2393,9 +2399,9 @@ describe("IBosonExchangeHandler", function () {
           expect(owner).to.equal(buyer.address);
 
           tokenId = "8";
-          // Check the operator owns the last ERC721 of twin range
+          // Check the assistant owns the last ERC721 of twin range
           owner = await foreign721.ownerOf(tokenId);
-          expect(owner).to.equal(operator.address);
+          expect(owner).to.equal(assistant.address);
 
           // Commit to offer for the second time
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -2415,20 +2421,20 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
           // Check twin supplyAvailable
-          const [, twin] = await twinHandler.connect(operator).getTwin(twin721.id);
+          const [, twin] = await twinHandler.connect(assistant).getTwin(twin721.id);
 
           expect(twin.supplyAvailable).to.equal(twin721.supplyAvailable - 1);
         });
 
         it("Should transfer the twin even if supplyAvailable is equal to 1", async function () {
-          await foreign721.connect(operator).mint("10", "2");
+          await foreign721.connect(assistant).mint("10", "2");
 
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "1";
 
           // Create a new offer
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
           twin721.supplyAvailable = "1";
@@ -2436,11 +2442,11 @@ describe("IBosonExchangeHandler", function () {
           twin721.id = "4";
 
           // Create a new twin
-          await twinHandler.connect(operator).createTwin(twin721.toStruct());
+          await twinHandler.connect(assistant).createTwin(twin721.toStruct());
 
           // Create a new bundle
           bundle = new Bundle("1", seller.id, [++offerId], [twin721.id]);
-          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+          await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
           // Commit to offer
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -2471,17 +2477,17 @@ describe("IBosonExchangeHandler", function () {
             other721 = await TokenContractFactory.connect(rando).deploy();
 
             // Mint enough tokens to cover the offer
-            await other721.connect(operator).mint("0", "2");
+            await other721.connect(assistant).mint("0", "2");
 
             // Approve the protocol diamond to transfer seller's tokens
-            await other721.connect(operator).setApprovalForAll(protocolDiamond.address, true);
+            await other721.connect(assistant).setApprovalForAll(protocolDiamond.address, true);
 
             const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
             offer.quantityAvailable = "2";
 
             // Create a new offer
             await offerHandler
-              .connect(operator)
+              .connect(assistant)
               .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
             // Change twin supply to unlimited and token address to the new token
@@ -2490,11 +2496,11 @@ describe("IBosonExchangeHandler", function () {
             twin721.id = "4";
 
             // Create a new twin with the new token address
-            await twinHandler.connect(operator).createTwin(twin721.toStruct());
+            await twinHandler.connect(assistant).createTwin(twin721.toStruct());
 
             // Create a new bundle
             bundle = new Bundle("1", seller.id, [++offerId], [twin721.id]);
-            await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+            await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
             // Commit to offer
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -2509,7 +2515,7 @@ describe("IBosonExchangeHandler", function () {
             await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
             // Check the supplyAvailable of the twin
-            const [exists, twin] = await twinHandler.connect(operator).getTwin(twin721.id);
+            const [exists, twin] = await twinHandler.connect(assistant).getTwin(twin721.id);
             expect(exists).to.be.true;
             expect(twin.supplyAvailable).to.equal(twin721.supplyAvailable);
           });
@@ -2520,9 +2526,9 @@ describe("IBosonExchangeHandler", function () {
             // tokenId transferred to the buyer is 0
             let expectedTokenId = "0";
 
-            // Check the operator owns the first ERC721 of twin range
+            // Check the assistant owns the first ERC721 of twin range
             owner = await other721.ownerOf(expectedTokenId);
-            expect(owner).to.equal(operator.address);
+            expect(owner).to.equal(assistant.address);
 
             // Redeem the voucher
             await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
@@ -2535,9 +2541,9 @@ describe("IBosonExchangeHandler", function () {
 
             ++expectedTokenId;
 
-            // Check the operator owns the second ERC721 of twin range
+            // Check the assistant owns the second ERC721 of twin range
             owner = await other721.ownerOf(expectedTokenId);
-            expect(owner).to.equal(operator.address);
+            expect(owner).to.equal(assistant.address);
 
             // Commit to offer for the second time
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -2557,7 +2563,7 @@ describe("IBosonExchangeHandler", function () {
         context("Twin transfer fail", async function () {
           it("should revoke exchange when buyer is an EOA", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
-            await foreign721.connect(operator).setApprovalForAll(protocolDiamond.address, false);
+            await foreign721.connect(assistant).setApprovalForAll(protocolDiamond.address, false);
 
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
@@ -2609,7 +2615,7 @@ describe("IBosonExchangeHandler", function () {
           // Create a new bundle
           bundle = new Bundle("1", seller.id, [offerId], [twin1155.id]);
           expect(bundle.isValid()).is.true;
-          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+          await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
           // Commit to offer
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -2640,7 +2646,7 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
           // Check twin supplyAvailable
-          const [, twin] = await twinHandler.connect(operator).getTwin(twin1155.id);
+          const [, twin] = await twinHandler.connect(assistant).getTwin(twin1155.id);
 
           expect(twin.supplyAvailable).to.equal(twin1155.supplyAvailable - twin1155.amount);
         });
@@ -2651,19 +2657,19 @@ describe("IBosonExchangeHandler", function () {
           twin1155.id = "4";
 
           // Create a new twin
-          await twinHandler.connect(operator).createTwin(twin1155.toStruct());
+          await twinHandler.connect(assistant).createTwin(twin1155.toStruct());
 
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "2";
 
           // Create a new offer
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
           // Create a new bundle
           bundle = new Bundle("1", seller.id, [++offerId], [twin1155.id]);
-          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+          await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
           // Commit to offer
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -2676,7 +2682,7 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
           // Check the supplyAvailable of the twin
-          const [exists, twin] = await twinHandler.connect(operator).getTwin(twin1155.id);
+          const [exists, twin] = await twinHandler.connect(assistant).getTwin(twin1155.id);
           expect(exists).to.be.true;
           expect(twin.supplyAvailable).to.equal(twin1155.supplyAvailable);
         });
@@ -2687,18 +2693,18 @@ describe("IBosonExchangeHandler", function () {
 
           // Create a new offer
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
           twin1155.supplyAvailable = "1";
           twin1155.id = "4";
 
           // Create a new twin
-          await twinHandler.connect(operator).createTwin(twin1155.toStruct());
+          await twinHandler.connect(assistant).createTwin(twin1155.toStruct());
 
           // Create a new bundle
           bundle = new Bundle("1", seller.id, [++offerId], [twin1155.id]);
-          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+          await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
           // Commit to offer
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -2730,7 +2736,7 @@ describe("IBosonExchangeHandler", function () {
         context("Twin transfer fail", async function () {
           it("should revoke exchange when buyer is an EOA", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
-            await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, false);
+            await foreign1155.connect(assistant).setApprovalForAll(protocolDiamond.address, false);
 
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
             await expect(tx)
@@ -2794,7 +2800,7 @@ describe("IBosonExchangeHandler", function () {
           // Create a new bundle
           bundle = new Bundle("1", seller.id, [offerId], twinIds);
           expect(bundle.isValid()).is.true;
-          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+          await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
           // Commit to offer
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -2811,9 +2817,9 @@ describe("IBosonExchangeHandler", function () {
           balance = await foreign20.balanceOf(buyer.address);
           expect(balance).to.equal(0);
 
-          // Check the operator owns the ERC721
+          // Check the assistant owns the ERC721
           owner = await foreign721.ownerOf(tokenIdNonFungible);
-          expect(owner).to.equal(operator.address);
+          expect(owner).to.equal(assistant.address);
 
           // Check the buyer's balance of the ERC1155
           balance = await foreign1155.balanceOf(buyer.address, tokenIdMultiToken);
@@ -2857,36 +2863,36 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("Should transfer the twin even if supplyAvailable is equal to amount", async function () {
-          await foreign721.connect(operator).mint("10", "1");
+          await foreign721.connect(assistant).mint("10", "1");
 
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "1";
 
           // Create a new offer
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
           twin1155.supplyAvailable = "1";
           twin1155.id = "4";
 
           // Create a new twin
-          await twinHandler.connect(operator).createTwin(twin1155.toStruct());
+          await twinHandler.connect(assistant).createTwin(twin1155.toStruct());
 
           twin20.supplyAvailable = "3";
           twin20.id = "5";
 
-          await twinHandler.connect(operator).createTwin(twin20.toStruct());
+          await twinHandler.connect(assistant).createTwin(twin20.toStruct());
 
           twin721.supplyAvailable = "1";
           twin721.tokenId = "10";
           twin721.id = "6";
 
-          await twinHandler.connect(operator).createTwin(twin721.toStruct());
+          await twinHandler.connect(assistant).createTwin(twin721.toStruct());
 
           // Create a new bundle
           bundle = new Bundle("1", seller.id, [++offerId], [twin1155.id, twin20.id, twin721.id]);
-          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+          await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
           // Commit to offer
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -2946,17 +2952,17 @@ describe("IBosonExchangeHandler", function () {
             other721 = await TokenContractFactory.connect(rando).deploy();
 
             // Mint enough tokens to cover the offer
-            await other721.connect(operator).mint("0", "2");
+            await other721.connect(assistant).mint("0", "2");
 
             // Approve the protocol diamond to transfer seller's tokens
-            await other721.connect(operator).setApprovalForAll(protocolDiamond.address, true);
+            await other721.connect(assistant).setApprovalForAll(protocolDiamond.address, true);
 
             const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
             offer.quantityAvailable = "2";
 
             // Create a new offer
             await offerHandler
-              .connect(operator)
+              .connect(assistant)
               .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
             // Change twin supply to unlimited and token address to the new token
@@ -2964,21 +2970,21 @@ describe("IBosonExchangeHandler", function () {
             twin721.tokenAddress = other721.address;
             twin721.id = "4";
             // Create a new ERC721 twin with the new token address
-            await twinHandler.connect(operator).createTwin(twin721.toStruct());
+            await twinHandler.connect(assistant).createTwin(twin721.toStruct());
 
             twin20.supplyAvailable = ethers.constants.MaxUint256.toString();
             twin20.id = "5";
             // Create a new ERC20 twin with the new token address
-            await twinHandler.connect(operator).createTwin(twin20.toStruct());
+            await twinHandler.connect(assistant).createTwin(twin20.toStruct());
 
             twin1155.supplyAvailable = ethers.constants.MaxUint256.toString();
             twin1155.id = "6";
             // Create a new ERC1155 twin with the new token address
-            await twinHandler.connect(operator).createTwin(twin1155.toStruct());
+            await twinHandler.connect(assistant).createTwin(twin1155.toStruct());
 
             // Create a new bundle
             bundle = new Bundle("1", seller.id, [++offerId], [twin721.id, twin20.id, twin1155.id]);
-            await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+            await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
             // Commit to offer
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -3014,13 +3020,13 @@ describe("IBosonExchangeHandler", function () {
               );
 
             // Check the supplyAvailable of each twin
-            let [, twin] = await twinHandler.connect(operator).getTwin(twin721.id);
+            let [, twin] = await twinHandler.connect(assistant).getTwin(twin721.id);
             expect(twin.supplyAvailable).to.equal(twin721.supplyAvailable);
 
-            [, twin] = await twinHandler.connect(operator).getTwin(twin20.id);
+            [, twin] = await twinHandler.connect(assistant).getTwin(twin20.id);
             expect(twin.supplyAvailable).to.equal(twin20.supplyAvailable);
 
-            [, twin] = await twinHandler.connect(operator).getTwin(twin1155.id);
+            [, twin] = await twinHandler.connect(assistant).getTwin(twin1155.id);
             expect(twin.supplyAvailable).to.equal(twin1155.supplyAvailable);
           });
 
@@ -3029,9 +3035,9 @@ describe("IBosonExchangeHandler", function () {
             let expectedTokenId = "0";
             let exchangeId = exchange.id;
 
-            // Check the operator owns the first ERC721 of twin range
+            // Check the assistant owns the first ERC721 of twin range
             owner = await other721.ownerOf(expectedTokenId);
-            expect(owner).to.equal(operator.address);
+            expect(owner).to.equal(assistant.address);
 
             // Redeem the voucher
             await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
@@ -3044,9 +3050,9 @@ describe("IBosonExchangeHandler", function () {
 
             ++expectedTokenId;
 
-            // Check the operator owns the second ERC721 of twin range
+            // Check the assistant owns the second ERC721 of twin range
             owner = await other721.ownerOf(expectedTokenId);
-            expect(owner).to.equal(operator.address);
+            expect(owner).to.equal(assistant.address);
 
             // Commit to offer for the second time
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -3066,7 +3072,7 @@ describe("IBosonExchangeHandler", function () {
         context("Twin transfer fail", async function () {
           it("should revoke exchange when buyer is an EOA", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
-            await foreign20.connect(operator).approve(protocolDiamond.address, "0");
+            await foreign20.connect(assistant).approve(protocolDiamond.address, "0");
 
             let exchangeId = exchange.id;
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -3103,7 +3109,7 @@ describe("IBosonExchangeHandler", function () {
 
           it("should raise a dispute when buyer account is a contract", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
-            await foreign20.connect(operator).approve(protocolDiamond.address, "0");
+            await foreign20.connect(assistant).approve(protocolDiamond.address, "0");
 
             // Deploy contract to test redeem called by another contract
             let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
@@ -3168,16 +3174,16 @@ describe("IBosonExchangeHandler", function () {
         validUntilDate = ethers.BigNumber.from(voucher.validUntilDate).add(oneMonth).toString();
       });
 
-      it("should emit an VoucherExtended event when seller's operator calls", async function () {
+      it("should emit an VoucherExtended event when seller's assistant calls", async function () {
         // Extend the voucher, expecting event
-        await expect(exchangeHandler.connect(operator).extendVoucher(exchange.id, validUntilDate))
+        await expect(exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate))
           .to.emit(exchangeHandler, "VoucherExtended")
-          .withArgs(offerId, exchange.id, validUntilDate, operator.address);
+          .withArgs(offerId, exchange.id, validUntilDate, assistant.address);
       });
 
       it("should update state", async function () {
         // Extend the voucher
-        await exchangeHandler.connect(operator).extendVoucher(exchange.id, validUntilDate);
+        await exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate);
 
         // Get the voucher
         [, , response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
@@ -3193,7 +3199,7 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
             RevertReasons.REGION_PAUSED
           );
         });
@@ -3203,7 +3209,7 @@ describe("IBosonExchangeHandler", function () {
           exchangeId = "666";
 
           // Attempt to extend voucher, expecting revert
-          await expect(exchangeHandler.connect(operator).extendVoucher(exchangeId, validUntilDate)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).extendVoucher(exchangeId, validUntilDate)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -3213,15 +3219,15 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).cancelVoucher(exchange.id);
 
           // Attempt to extend voucher, expecting revert
-          await expect(exchangeHandler.connect(operator).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
             RevertReasons.INVALID_STATE
           );
         });
 
-        it("caller is not seller's operator", async function () {
+        it("caller is not seller's assistant", async function () {
           // Attempt to extend voucher, expecting revert
           await expect(exchangeHandler.connect(rando).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
-            RevertReasons.NOT_OPERATOR
+            RevertReasons.NOT_ASSISTANT
           );
         });
 
@@ -3230,7 +3236,7 @@ describe("IBosonExchangeHandler", function () {
           validUntilDate = ethers.BigNumber.from(voucher.validUntilDate).sub(oneMonth).toString();
 
           // Attempt to extend voucher, expecting revert
-          await expect(exchangeHandler.connect(operator).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
             RevertReasons.VOUCHER_EXTENSION_NOT_VALID
           );
         });
@@ -3398,7 +3404,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("exchange is not in committed state", async function () {
           // Revoke the voucher
-          await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
+          await exchangeHandler.connect(assistant).revokeVoucher(exchange.id);
 
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(
@@ -3473,7 +3479,7 @@ describe("IBosonExchangeHandler", function () {
           await setNextBlockTimestamp(newTime);
 
           // Complete exchange
-          await exchangeHandler.connect(operator).completeExchange(exchange.id);
+          await exchangeHandler.connect(assistant).completeExchange(exchange.id);
 
           // Now in Completed state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
@@ -3484,7 +3490,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("should return true if exchange is in Revoked state", async function () {
           // Revoke voucher
-          await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
+          await exchangeHandler.connect(assistant).revokeVoucher(exchange.id);
 
           // Now in Revoked state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
@@ -3556,7 +3562,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Collect the signature components
           const { r, s, v } = await prepareDataSignatureParameters(
-            buyer, // Operator is the caller, seller should be the signer.
+            buyer, // Assistant is the caller, seller should be the signer.
             customSignatureType,
             "Resolution",
             message,
@@ -3564,7 +3570,7 @@ describe("IBosonExchangeHandler", function () {
           );
 
           // Resolve Dispute
-          await disputeHandler.connect(operator).resolveDispute(exchange.id, buyerPercentBasisPoints, r, s, v);
+          await disputeHandler.connect(assistant).resolveDispute(exchange.id, buyerPercentBasisPoints, r, s, v);
 
           // Now in Resolved state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
@@ -3589,7 +3595,7 @@ describe("IBosonExchangeHandler", function () {
           await disputeHandler.connect(buyer).escalateDispute(exchange.id);
 
           // Decide Dispute
-          await disputeHandler.connect(operatorDR).decideDispute(exchange.id, "1111");
+          await disputeHandler.connect(assistantDR).decideDispute(exchange.id, "1111");
 
           // Now in Decided state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
@@ -3811,7 +3817,9 @@ describe("IBosonExchangeHandler", function () {
         expect(offerDurations.isValid()).is.true;
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
         // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
@@ -4026,19 +4034,19 @@ describe("IBosonExchangeHandler", function () {
       context("TwinReceipt tests", async function () {
         beforeEach(async function () {
           // Mint some tokens to be bundled
-          await foreign20.connect(operator).mint(operator.address, "500");
-          await foreign721.connect(operator).mint("0", "10");
+          await foreign20.connect(assistant).mint(assistant.address, "500");
+          await foreign721.connect(assistant).mint("0", "10");
 
           // Approve the protocol diamond to transfer seller's tokens
-          await foreign20.connect(operator).approve(protocolDiamond.address, "3");
-          await foreign721.connect(operator).setApprovalForAll(protocolDiamond.address, true);
+          await foreign20.connect(assistant).approve(protocolDiamond.address, "3");
+          await foreign721.connect(assistant).setApprovalForAll(protocolDiamond.address, true);
 
           // Create an ERC20 twin
           twin20 = mockTwin(foreign20.address);
           twin20.amount = "3";
           expect(twin20.isValid()).is.true;
 
-          await twinHandler.connect(operator).createTwin(twin20.toStruct());
+          await twinHandler.connect(assistant).createTwin(twin20.toStruct());
 
           // Create an ERC721 twin
           twin721 = mockTwin(foreign721.address, TokenType.NonFungibleToken);
@@ -4047,7 +4055,7 @@ describe("IBosonExchangeHandler", function () {
           twin721.id = "2";
           expect(twin721.isValid()).is.true;
 
-          await twinHandler.connect(operator).createTwin(twin721.toStruct());
+          await twinHandler.connect(assistant).createTwin(twin721.toStruct());
 
           // Create a new offer
           const mo = await mockOffer();
@@ -4067,7 +4075,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Create the offer
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
         });
 
@@ -4075,7 +4083,7 @@ describe("IBosonExchangeHandler", function () {
           // Create a new bundle
           bundle = new Bundle("1", seller.id, [offerId], [twin20.id]);
           expect(bundle.isValid()).is.true;
-          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+          await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
           // Set time forward to the offer's voucherRedeemableFrom
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -4173,7 +4181,7 @@ describe("IBosonExchangeHandler", function () {
           // Create a new bundle
           bundle = new Bundle("1", seller.id, [offerId], [twin20.id, twin721.id]);
           expect(bundle.isValid()).is.true;
-          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+          await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
           // Set time forward to the offer's voucherRedeemableFrom
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -4288,7 +4296,7 @@ describe("IBosonExchangeHandler", function () {
         // Create a new group
         group = new Group(groupId, seller.id, offerIds);
         expect(group.isValid()).is.true;
-        await groupHandler.connect(operator).createGroup(group, condition);
+        await groupHandler.connect(assistant).createGroup(group, condition);
 
         // Mint enough tokens for the buyer
         await foreign20.connect(buyer).mint(buyer.address, condition.threshold);
@@ -4401,7 +4409,9 @@ describe("IBosonExchangeHandler", function () {
         expect(offerDurations.isValid()).is.true;
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
         // Commit to offer
         let tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });

@@ -41,12 +41,12 @@ describe("IBosonFundsHandler", function () {
   let deployer,
     pauser,
     rando,
-    operator,
+    assistant,
     admin,
     clerk,
     treasury,
     feeCollector,
-    operatorDR,
+    assistantDR,
     adminDR,
     clerkDR,
     treasuryDR,
@@ -113,8 +113,8 @@ describe("IBosonFundsHandler", function () {
       await ethers.getSigners();
 
     // make all account the same
-    operator = clerk = admin;
-    operatorDR = clerkDR = adminDR;
+    assistant = clerk = admin;
+    assistantDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -239,7 +239,7 @@ describe("IBosonFundsHandler", function () {
   context("📋 Funds Handler Methods", async function () {
     beforeEach(async function () {
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
@@ -252,11 +252,11 @@ describe("IBosonFundsHandler", function () {
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-      // top up operators account
-      await mockToken.mint(operator.address, "1000000");
+      // top up assistants account
+      await mockToken.mint(assistant.address, "1000000");
 
       // approve protocol to transfer the tokens
-      await mockToken.connect(operator).approve(protocolDiamond.address, "1000000");
+      await mockToken.connect(assistant).approve(protocolDiamond.address, "1000000");
 
       // set the deposit amount
       depositAmount = "100";
@@ -274,9 +274,9 @@ describe("IBosonFundsHandler", function () {
       it("should emit a FundsDeposited event", async function () {
         // Deposit funds, testing for the event
         // Deposit token
-        await expect(fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount))
+        await expect(fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, depositAmount))
           .to.emit(fundsHandler, "FundsDeposited")
-          .withArgs(seller.id, operator.address, mockToken.address, depositAmount);
+          .withArgs(seller.id, assistant.address, mockToken.address, depositAmount);
 
         // Deposit native currency
         await expect(
@@ -290,7 +290,7 @@ describe("IBosonFundsHandler", function () {
 
       it("should update state", async function () {
         // Deposit token
-        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
+        await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, depositAmount);
 
         // Read on chain state
         let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -314,7 +314,7 @@ describe("IBosonFundsHandler", function () {
 
       it("should be possible to top up the account", async function () {
         // Deposit token
-        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
+        await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, depositAmount);
 
         // Read on chain state
         let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -324,7 +324,7 @@ describe("IBosonFundsHandler", function () {
         expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
 
         // Deposit the same token again
-        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, 2 * depositAmount);
+        await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, 2 * depositAmount);
 
         // Get new on chain state
         returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -341,7 +341,7 @@ describe("IBosonFundsHandler", function () {
 
           // Attempt to deposit funds, expecting revert
           await expect(
-            fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount)
+            fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, depositAmount)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -400,7 +400,7 @@ describe("IBosonFundsHandler", function () {
           // not approved
           depositAmount = "10000000";
           await expect(
-            fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount)
+            fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, depositAmount)
           ).to.revertedWith(RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE);
         });
 
@@ -409,23 +409,23 @@ describe("IBosonFundsHandler", function () {
           const [Foreign20WithFee] = await deployMockTokens(["Foreign20WithFee"]);
 
           // mint tokens and approve
-          await Foreign20WithFee.mint(operator.address, depositAmount);
-          await Foreign20WithFee.connect(operator).approve(protocolDiamond.address, depositAmount);
+          await Foreign20WithFee.mint(assistant.address, depositAmount);
+          await Foreign20WithFee.connect(assistant).approve(protocolDiamond.address, depositAmount);
 
           // Attempt to deposit funds, expecting revert
           await expect(
-            fundsHandler.connect(operator).depositFunds(seller.id, Foreign20WithFee.address, depositAmount)
+            fundsHandler.connect(assistant).depositFunds(seller.id, Foreign20WithFee.address, depositAmount)
           ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
         });
 
         it("ERC20 transferFrom returns false", async function () {
           const [foreign20ReturnFalse] = await deployMockTokens(["Foreign20TransferFromReturnFalse"]);
 
-          await foreign20ReturnFalse.connect(operator).mint(operator.address, depositAmount);
-          await foreign20ReturnFalse.connect(operator).approve(protocolDiamond.address, depositAmount);
+          await foreign20ReturnFalse.connect(assistant).mint(assistant.address, depositAmount);
+          await foreign20ReturnFalse.connect(assistant).approve(protocolDiamond.address, depositAmount);
 
           await expect(
-            fundsHandler.connect(operator).depositFunds(seller.id, foreign20ReturnFalse.address, depositAmount)
+            fundsHandler.connect(assistant).depositFunds(seller.id, foreign20ReturnFalse.address, depositAmount)
           ).to.revertedWith(RevertReasons.SAFE_ERC20_NOT_SUCCEEDED);
         });
       });
@@ -438,7 +438,7 @@ describe("IBosonFundsHandler", function () {
 
         // Create a valid dispute resolver
         disputeResolver = mockDisputeResolver(
-          operatorDR.address,
+          assistantDR.address,
           adminDR.address,
           clerkDR.address,
           treasuryDR.address,
@@ -482,10 +482,10 @@ describe("IBosonFundsHandler", function () {
         // Create both offers
         await Promise.all([
           offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId),
           offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId),
         ]);
 
@@ -495,19 +495,19 @@ describe("IBosonFundsHandler", function () {
         offerTokenProtocolFee = offerNativeProtocolFee = offerFees.protocolFee;
 
         // top up seller's and buyer's account
-        await Promise.all([mockToken.mint(operator.address, sellerDeposit), mockToken.mint(buyer.address, price)]);
+        await Promise.all([mockToken.mint(assistant.address, sellerDeposit), mockToken.mint(buyer.address, price)]);
 
         // approve protocol to transfer the tokens
         await Promise.all([
-          mockToken.connect(operator).approve(protocolDiamond.address, sellerDeposit),
+          mockToken.connect(assistant).approve(protocolDiamond.address, sellerDeposit),
           mockToken.connect(buyer).approve(protocolDiamond.address, price),
         ]);
 
         // deposit to seller's pool
         await Promise.all([
-          fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit),
+          fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerDeposit),
           fundsHandler
-            .connect(operator)
+            .connect(assistant)
             .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit }),
         ]);
 
@@ -812,7 +812,7 @@ describe("IBosonFundsHandler", function () {
 
             // Create offer with agent
             await offerHandler
-              .connect(operator)
+              .connect(assistant)
               .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
             // Set used variables
@@ -821,15 +821,15 @@ describe("IBosonFundsHandler", function () {
             voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
 
             // top up seller's and buyer's account
-            await mockToken.mint(operator.address, sellerDeposit);
+            await mockToken.mint(assistant.address, sellerDeposit);
             await mockToken.mint(buyer.address, price);
 
             // approve protocol to transfer the tokens
-            await mockToken.connect(operator).approve(protocolDiamond.address, sellerDeposit);
+            await mockToken.connect(assistant).approve(protocolDiamond.address, sellerDeposit);
             await mockToken.connect(buyer).approve(protocolDiamond.address, price);
 
             // deposit to seller's pool
-            await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit);
+            await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerDeposit);
 
             // commit to agent offer
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, agentOffer.id);
@@ -1024,7 +1024,7 @@ describe("IBosonFundsHandler", function () {
             const fallbackContractBuyerId = event.buyerId;
 
             // revoke the voucher so the contract gets credited some funds
-            await exchangeHandler.connect(operator).revokeVoucher(exchangeId);
+            await exchangeHandler.connect(assistant).revokeVoucher(exchangeId);
 
             // we call a fallbackContract which calls fundsHandler.withdraw, which should revert
             await expect(
@@ -1051,7 +1051,7 @@ describe("IBosonFundsHandler", function () {
             const fallbackContractBuyerId = event.buyerId;
 
             // revoke the voucher so the contract gets credited some funds
-            await exchangeHandler.connect(operator).revokeVoucher(exchangeId);
+            await exchangeHandler.connect(assistant).revokeVoucher(exchangeId);
 
             // we call a fallbackContract which calls fundsHandler.withdraw, which should revert
             await expect(
@@ -1085,10 +1085,10 @@ describe("IBosonFundsHandler", function () {
           it("Transfer of funds failed - ERC20 transfer returns false", async function () {
             const [foreign20ReturnFalse] = await deployMockTokens(["Foreign20TransferReturnFalse"]);
 
-            await foreign20ReturnFalse.connect(operator).mint(operator.address, sellerDeposit);
-            await foreign20ReturnFalse.connect(operator).approve(protocolDiamond.address, sellerDeposit);
+            await foreign20ReturnFalse.connect(assistant).mint(assistant.address, sellerDeposit);
+            await foreign20ReturnFalse.connect(assistant).approve(protocolDiamond.address, sellerDeposit);
 
-            await fundsHandler.connect(operator).depositFunds(seller.id, foreign20ReturnFalse.address, sellerDeposit);
+            await fundsHandler.connect(assistant).depositFunds(seller.id, foreign20ReturnFalse.address, sellerDeposit);
 
             await expect(
               fundsHandler.connect(clerk).withdrawFunds(seller.id, [foreign20ReturnFalse.address], [sellerDeposit])
@@ -1501,13 +1501,13 @@ describe("IBosonFundsHandler", function () {
       it("Returns info also for ERC20 tokens without the name", async function () {
         // Deploy the mock token with no name
         [mockToken] = await deployMockTokens(["Foreign20NoName"]);
-        // top up operators account
-        await mockToken.mint(operator.address, "1000000");
+        // top up assistants account
+        await mockToken.mint(assistant.address, "1000000");
         // approve protocol to transfer the tokens
-        await mockToken.connect(operator).approve(protocolDiamond.address, "1000000");
+        await mockToken.connect(assistant).approve(protocolDiamond.address, "1000000");
 
         // Deposit token
-        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
+        await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, depositAmount);
 
         // Read on chain state
         let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -1526,7 +1526,7 @@ describe("IBosonFundsHandler", function () {
   context("📋 FundsLib  Methods", async function () {
     beforeEach(async function () {
       // Create a valid seller
-      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
@@ -1541,7 +1541,7 @@ describe("IBosonFundsHandler", function () {
 
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
-        operatorDR.address,
+        assistantDR.address,
         adminDR.address,
         clerkDR.address,
         treasuryDR.address,
@@ -1585,8 +1585,10 @@ describe("IBosonFundsHandler", function () {
       agentId = "0"; // agent id is optional while creating an offer
       // Create both offers
       await Promise.all([
-        offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId),
-        offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId),
+        offerHandler
+          .connect(assistant)
+          .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId),
+        offerHandler.connect(assistant).createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId),
       ]);
 
       // Set used variables
@@ -1597,17 +1599,17 @@ describe("IBosonFundsHandler", function () {
       resolutionPeriod = offerDurations.resolutionPeriod;
 
       // top up seller's and buyer's account
-      await mockToken.mint(operator.address, `${2 * sellerDeposit}`);
+      await mockToken.mint(assistant.address, `${2 * sellerDeposit}`);
       await mockToken.mint(buyer.address, `${2 * price}`);
 
       // approve protocol to transfer the tokens
-      await mockToken.connect(operator).approve(protocolDiamond.address, `${2 * sellerDeposit}`);
+      await mockToken.connect(assistant).approve(protocolDiamond.address, `${2 * sellerDeposit}`);
       await mockToken.connect(buyer).approve(protocolDiamond.address, `${2 * price}`);
 
       // deposit to seller's pool
-      await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, `${2 * sellerDeposit}`);
+      await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, `${2 * sellerDeposit}`);
       await fundsHandler
-        .connect(operator)
+        .connect(assistant)
         .depositFunds(seller.id, ethers.constants.AddressZero, `${2 * sellerDeposit}`, {
           value: `${2 * sellerDeposit}`,
         });
@@ -1761,13 +1763,13 @@ describe("IBosonFundsHandler", function () {
             ]);
 
           // top up seller's and buyer's account
-          await otherToken.mint(operator.address, sellerDeposit);
+          await otherToken.mint(assistant.address, sellerDeposit);
 
           // approve protocol to transfer the tokens
-          await otherToken.connect(operator).approve(protocolDiamond.address, sellerDeposit);
+          await otherToken.connect(assistant).approve(protocolDiamond.address, sellerDeposit);
 
           // deposit to seller's pool
-          await fundsHandler.connect(operator).depositFunds(seller.id, otherToken.address, sellerDeposit);
+          await fundsHandler.connect(assistant).depositFunds(seller.id, otherToken.address, sellerDeposit);
 
           // seller's available funds
           let sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -1864,10 +1866,10 @@ describe("IBosonFundsHandler", function () {
       it("if offer is preminted, only sellers funds are encumbered", async function () {
         // deposit to seller's pool to cover for the price
         const buyerId = mockBuyer().id;
-        await mockToken.mint(operator.address, `${2 * price}`);
-        await mockToken.connect(operator).approve(protocolDiamond.address, `${2 * price}`);
-        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, `${2 * price}`);
-        await fundsHandler.connect(operator).depositFunds(seller.id, ethers.constants.AddressZero, `${2 * price}`, {
+        await mockToken.mint(assistant.address, `${2 * price}`);
+        await mockToken.connect(assistant).approve(protocolDiamond.address, `${2 * price}`);
+        await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, `${2 * price}`);
+        await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, `${2 * price}`, {
           value: `${2 * price}`,
         });
 
@@ -1877,14 +1879,16 @@ describe("IBosonFundsHandler", function () {
         const sellersAvailableFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
         // reserve a range and premint vouchers
-        await offerHandler.connect(operator).reserveRange(offerToken.id, offerToken.quantityAvailable);
+        await offerHandler
+          .connect(assistant)
+          .reserveRange(offerToken.id, offerToken.quantityAvailable, assistant.address);
         const voucherCloneAddress = calculateContractAddress(accountHandler.address, "1");
         const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
-        await bosonVoucher.connect(operator).preMint(offerToken.id, offerToken.quantityAvailable);
+        await bosonVoucher.connect(assistant).preMint(offerToken.id, offerToken.quantityAvailable);
 
         // commit to an offer via preminted voucher
         let tokenId = "1";
-        tx = await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+        tx = await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
 
         // it should emit FundsEncumbered event with amount equal to sellerDeposit + price
         let encumberedFunds = ethers.BigNumber.from(sellerDeposit).add(price);
@@ -1918,11 +1922,13 @@ describe("IBosonFundsHandler", function () {
 
         // reserve a range and premint vouchers
         tokenId = await exchangeHandler.getNextExchangeId();
-        await offerHandler.connect(operator).reserveRange(offerNative.id, offerNative.quantityAvailable);
-        await bosonVoucher.connect(operator).preMint(offerNative.id, offerNative.quantityAvailable);
+        await offerHandler
+          .connect(assistant)
+          .reserveRange(offerNative.id, offerNative.quantityAvailable, assistant.address);
+        await bosonVoucher.connect(assistant).preMint(offerNative.id, offerNative.quantityAvailable);
 
         // commit to an offer via preminted voucher
-        tx = await bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId);
+        tx = await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
 
         // it should emit FundsEncumbered event with amount equal to sellerDeposit + price
         encumberedFunds = ethers.BigNumber.from(sellerDeposit).add(price);
@@ -1983,7 +1989,7 @@ describe("IBosonFundsHandler", function () {
               new DisputeResolverFee(offerToken.exchangeToken, "BadContract", "0"),
             ]);
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
 
           // Attempt to commit to an offer, expecting revert
@@ -2005,7 +2011,7 @@ describe("IBosonFundsHandler", function () {
             ]);
 
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
 
           // Attempt to commit to an offer, expecting revert
@@ -2038,7 +2044,7 @@ describe("IBosonFundsHandler", function () {
           offerToken.sellerDeposit = ethers.BigNumber.from(offerToken.sellerDeposit).mul("4");
           offerToken.id = "3";
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
 
           // Attempt to commit to an offer, expecting revert
@@ -2050,7 +2056,7 @@ describe("IBosonFundsHandler", function () {
           offerNative.sellerDeposit = ethers.BigNumber.from(offerNative.sellerDeposit).mul("4");
           offerNative.id = "4";
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId);
 
           // Attempt to commit to an offer, expecting revert
@@ -2061,10 +2067,12 @@ describe("IBosonFundsHandler", function () {
 
         it("Seller'a availableFunds is less than the required sellerDeposit + price for preminted offer", async function () {
           // reserve a range and premint vouchers for offer in tokens
-          await offerHandler.connect(operator).reserveRange(offerToken.id, offerToken.quantityAvailable);
+          await offerHandler
+            .connect(assistant)
+            .reserveRange(offerToken.id, offerToken.quantityAvailable, assistant.address);
           const voucherCloneAddress = calculateContractAddress(accountHandler.address, "1");
           const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
-          await bosonVoucher.connect(operator).preMint(offerToken.id, offerToken.quantityAvailable);
+          await bosonVoucher.connect(assistant).preMint(offerToken.id, offerToken.quantityAvailable);
 
           // Seller's availableFunds is 2*sellerDeposit which is less than sellerDeposit + price.
           // Add the check in case if the sellerDeposit is changed in the future
@@ -2072,17 +2080,19 @@ describe("IBosonFundsHandler", function () {
           // Attempt to commit to an offer via preminted voucher, expecting revert
           let tokenId = "1";
           await expect(
-            bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
           ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
 
           // reserve a range and premint vouchers for offer in native currency
           tokenId = await exchangeHandler.getNextExchangeId();
-          await offerHandler.connect(operator).reserveRange(offerNative.id, offerNative.quantityAvailable);
-          await bosonVoucher.connect(operator).preMint(offerNative.id, offerNative.quantityAvailable);
+          await offerHandler
+            .connect(assistant)
+            .reserveRange(offerNative.id, offerNative.quantityAvailable, assistant.address);
+          await bosonVoucher.connect(assistant).preMint(offerNative.id, offerNative.quantityAvailable);
 
           // Attempt to commit to an offer, expecting revert
           await expect(
-            bosonVoucher.connect(operator).transferFrom(operator.address, buyer.address, tokenId)
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
           ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
         });
 
@@ -2106,7 +2116,7 @@ describe("IBosonFundsHandler", function () {
 
           // Create a new offer
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
 
           // mint tokens and approve
@@ -2236,7 +2246,7 @@ describe("IBosonFundsHandler", function () {
           beforeEach(async function () {
             // Create Agent offer
             await offerHandler
-              .connect(operator)
+              .connect(assistant)
               .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
             // Commit to Offer
@@ -2340,9 +2350,9 @@ describe("IBosonFundsHandler", function () {
 
         it("should emit a FundsReleased event", async function () {
           // Revoke the voucher, expecting event
-          await expect(exchangeHandler.connect(operator).revokeVoucher(exchangeId))
+          await expect(exchangeHandler.connect(assistant).revokeVoucher(exchangeId))
             .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operator.address);
+            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, assistant.address);
         });
 
         it("should update state", async function () {
@@ -2366,7 +2376,7 @@ describe("IBosonFundsHandler", function () {
           expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
           // Revoke the voucher so the funds are released
-          await exchangeHandler.connect(operator).revokeVoucher(exchangeId);
+          await exchangeHandler.connect(assistant).revokeVoucher(exchangeId);
 
           // Available funds should be increased for
           // buyer: sellerDeposit + price
@@ -2388,7 +2398,7 @@ describe("IBosonFundsHandler", function () {
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
 
           // Revoke another voucher
-          await exchangeHandler.connect(operator).revokeVoucher(++exchangeId);
+          await exchangeHandler.connect(assistant).revokeVoucher(++exchangeId);
 
           // Available funds should be increased for
           // buyer: sellerDeposit + price
@@ -2417,19 +2427,19 @@ describe("IBosonFundsHandler", function () {
           beforeEach(async function () {
             // Create Agent offer
             await offerHandler
-              .connect(operator)
+              .connect(assistant)
               .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
             // top up seller's and buyer's account
-            await mockToken.mint(operator.address, `${2 * sellerDeposit}`);
+            await mockToken.mint(assistant.address, `${2 * sellerDeposit}`);
             await mockToken.mint(buyer.address, `${2 * price}`);
 
             // approve protocol to transfer the tokens
-            await mockToken.connect(operator).approve(protocolDiamond.address, `${2 * sellerDeposit}`);
+            await mockToken.connect(assistant).approve(protocolDiamond.address, `${2 * sellerDeposit}`);
             await mockToken.connect(buyer).approve(protocolDiamond.address, `${2 * price}`);
 
             // deposit to seller's pool
-            await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, `${2 * sellerDeposit}`);
+            await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, `${2 * sellerDeposit}`);
 
             // Commit to Offer
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, agentOffer.id);
@@ -2471,7 +2481,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
             // Revoke the voucher so the funds are released
-            await exchangeHandler.connect(operator).revokeVoucher(exchangeId);
+            await exchangeHandler.connect(assistant).revokeVoucher(exchangeId);
 
             // Available funds should be increased for
             // buyer: sellerDeposit + price
@@ -2493,7 +2503,7 @@ describe("IBosonFundsHandler", function () {
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, agentOffer.id);
 
             // Revoke another voucher
-            await exchangeHandler.connect(operator).revokeVoucher(++exchangeId);
+            await exchangeHandler.connect(assistant).revokeVoucher(++exchangeId);
 
             // Available funds should be increased for
             // buyer: sellerDeposit + price
@@ -2596,19 +2606,19 @@ describe("IBosonFundsHandler", function () {
           beforeEach(async function () {
             // Create Agent offer
             await offerHandler
-              .connect(operator)
+              .connect(assistant)
               .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
             // top up seller's and buyer's account
-            await mockToken.mint(operator.address, `${2 * sellerDeposit}`);
+            await mockToken.mint(assistant.address, `${2 * sellerDeposit}`);
             await mockToken.mint(buyer.address, `${2 * price}`);
 
             // approve protocol to transfer the tokens
-            await mockToken.connect(operator).approve(protocolDiamond.address, `${2 * sellerDeposit}`);
+            await mockToken.connect(assistant).approve(protocolDiamond.address, `${2 * sellerDeposit}`);
             await mockToken.connect(buyer).approve(protocolDiamond.address, `${2 * price}`);
 
             // deposit to seller's pool
-            await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, `${sellerDeposit}`);
+            await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, `${sellerDeposit}`);
 
             // Commit to Offer
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, agentOffer.id);
@@ -2816,7 +2826,7 @@ describe("IBosonFundsHandler", function () {
               // Exchange id
               exchangeId = "2";
               await offerHandler
-                .connect(operator)
+                .connect(assistant)
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
               await exchangeHandler.connect(buyer).commitToOffer(buyer.address, agentOffer.id);
 
@@ -2977,7 +2987,7 @@ describe("IBosonFundsHandler", function () {
             beforeEach(async function () {
               // Create Agent offer
               await offerHandler
-                .connect(operator)
+                .connect(assistant)
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
               // Commit to Offer
@@ -3121,7 +3131,7 @@ describe("IBosonFundsHandler", function () {
 
             // Collect the signature components
             ({ r, s, v } = await prepareDataSignatureParameters(
-              buyer, // Operator is the caller, seller should be the signer.
+              buyer, // Assistant is the caller, seller should be the signer.
               customSignatureType,
               "Resolution",
               message,
@@ -3132,15 +3142,15 @@ describe("IBosonFundsHandler", function () {
           it("should emit a FundsReleased event", async function () {
             // Resolve the dispute, expecting event
             const tx = await disputeHandler
-              .connect(operator)
+              .connect(assistant)
               .resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, operator.address);
+              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, assistant.address);
 
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operator.address);
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, assistant.address);
 
             await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
           });
@@ -3166,7 +3176,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
             // Resolve the dispute, so the funds are released
-            await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit)*buyerPercentage
@@ -3194,7 +3204,7 @@ describe("IBosonFundsHandler", function () {
             beforeEach(async function () {
               // Create Agent offer
               await offerHandler
-                .connect(operator)
+                .connect(assistant)
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
               // Commit to Offer
@@ -3244,7 +3254,7 @@ describe("IBosonFundsHandler", function () {
 
               // Collect the signature components
               ({ r, s, v } = await prepareDataSignatureParameters(
-                buyer, // Operator is the caller, seller should be the signer.
+                buyer, // Assistant is the caller, seller should be the signer.
                 customSignatureType,
                 "Resolution",
                 message,
@@ -3272,7 +3282,7 @@ describe("IBosonFundsHandler", function () {
               expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
               // Resolve the dispute, so the funds are released
-              await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+              await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
 
               // Available funds should be increased for
               // buyer: (price + sellerDeposit)*buyerPercentage
@@ -3408,7 +3418,7 @@ describe("IBosonFundsHandler", function () {
               // Exchange id
               exchangeId = "2";
               await offerHandler
-                .connect(operator)
+                .connect(assistant)
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
               // approve protocol to transfer the tokens
@@ -3512,7 +3522,7 @@ describe("IBosonFundsHandler", function () {
 
             // Collect the signature components
             ({ r, s, v } = await prepareDataSignatureParameters(
-              buyer, // Operator is the caller, seller should be the signer.
+              buyer, // Assistant is the caller, seller should be the signer.
               customSignatureType,
               "Resolution",
               message,
@@ -3526,15 +3536,15 @@ describe("IBosonFundsHandler", function () {
           it("should emit a FundsReleased event", async function () {
             // Resolve the dispute, expecting event
             const tx = await disputeHandler
-              .connect(operator)
+              .connect(assistant)
               .resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, operator.address);
+              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, assistant.address);
 
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operator.address);
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, assistant.address);
 
             await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
           });
@@ -3560,7 +3570,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
             // Resolve the dispute, so the funds are released
-            await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
@@ -3587,7 +3597,7 @@ describe("IBosonFundsHandler", function () {
             beforeEach(async function () {
               // Create Agent offer
               await offerHandler
-                .connect(operator)
+                .connect(assistant)
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
               // approve protocol to transfer the tokens
@@ -3643,7 +3653,7 @@ describe("IBosonFundsHandler", function () {
 
               // Collect the signature components
               ({ r, s, v } = await prepareDataSignatureParameters(
-                buyer, // Operator is the caller, seller should be the signer.
+                buyer, // Assistant is the caller, seller should be the signer.
                 customSignatureType,
                 "Resolution",
                 message,
@@ -3676,7 +3686,7 @@ describe("IBosonFundsHandler", function () {
               expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
               // Resolve the dispute, so the funds are released
-              await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+              await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
 
               // Available funds should be increased for
               // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
@@ -3729,14 +3739,14 @@ describe("IBosonFundsHandler", function () {
 
           it("should emit a FundsReleased event", async function () {
             // Decide the dispute, expecting event
-            const tx = await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints);
+            const tx = await disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints);
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, operatorDR.address);
+              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, assistantDR.address);
 
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operatorDR.address);
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, assistantDR.address);
 
             await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
           });
@@ -3762,7 +3772,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
             // Decide the dispute, so the funds are released
-            await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints);
+            await disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints);
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
@@ -3789,7 +3799,7 @@ describe("IBosonFundsHandler", function () {
             beforeEach(async function () {
               // Create Agent offer
               await offerHandler
-                .connect(operator)
+                .connect(assistant)
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
               // approve protocol to transfer the tokens
@@ -3860,7 +3870,7 @@ describe("IBosonFundsHandler", function () {
               expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
               // Decide the dispute, so the funds are released
-              await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints);
+              await disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints);
 
               // Available funds should be increased for
               // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
@@ -3969,7 +3979,7 @@ describe("IBosonFundsHandler", function () {
               beforeEach(async function () {
                 // Create Agent offer
                 await offerHandler
-                  .connect(operator)
+                  .connect(assistant)
                   .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
                 // approve protocol to transfer the tokens
@@ -4074,15 +4084,15 @@ describe("IBosonFundsHandler", function () {
 
             it("should emit a FundsReleased event", async function () {
               // Expire the dispute, expecting event
-              const tx = await disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId);
+              const tx = await disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId);
 
               await expect(tx)
                 .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, operatorDR.address);
+                .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, assistantDR.address);
 
               await expect(tx)
                 .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operatorDR.address);
+                .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, assistantDR.address);
 
               await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
 
@@ -4119,7 +4129,7 @@ describe("IBosonFundsHandler", function () {
               expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
               // Expire the escalated dispute, so the funds are released
-              await disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId);
+              await disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId);
 
               // Available funds should be increased for
               // buyer: price + buyerEscalationDeposit
@@ -4146,7 +4156,7 @@ describe("IBosonFundsHandler", function () {
               beforeEach(async function () {
                 // Create Agent offer
                 await offerHandler
-                  .connect(operator)
+                  .connect(assistant)
                   .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
                 // approve protocol to transfer the tokens
@@ -4200,7 +4210,7 @@ describe("IBosonFundsHandler", function () {
                 expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
                 // Expire the escalated dispute, so the funds are released
-                await disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId);
+                await disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId);
 
                 // Available funds should be increased for
                 // buyer: price + buyerEscalationDeposit
@@ -4320,7 +4330,7 @@ describe("IBosonFundsHandler", function () {
 
             // Create Agent Offer before setting new protocol fee as 3%
             await offerHandler
-              .connect(operator)
+              .connect(assistant)
               .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
             // Commit to Agent Offer
@@ -4358,15 +4368,15 @@ describe("IBosonFundsHandler", function () {
             // similar as tests before, excpet the commit to offer is done after the protocol fee change
 
             // top up seller's and buyer's account
-            await mockToken.mint(operator.address, sellerDeposit);
+            await mockToken.mint(assistant.address, sellerDeposit);
             await mockToken.mint(buyer.address, price);
 
             // approve protocol to transfer the tokens
-            await mockToken.connect(operator).approve(protocolDiamond.address, sellerDeposit);
+            await mockToken.connect(assistant).approve(protocolDiamond.address, sellerDeposit);
             await mockToken.connect(buyer).approve(protocolDiamond.address, price);
 
             // deposit to seller's pool
-            await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit);
+            await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerDeposit);
 
             // commit to offer and get the correct exchangeId
             tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, agentOffer.id);

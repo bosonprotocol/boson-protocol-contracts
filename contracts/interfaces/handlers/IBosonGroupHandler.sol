@@ -18,7 +18,7 @@ interface IBosonGroupHandler is IBosonGroupEvents {
      * Emits a GroupCreated event if successful.
      *
      * Reverts if:
-     * - Caller is not an operator
+     * - Caller is not an assistant
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
      * - Offer exists in a different group

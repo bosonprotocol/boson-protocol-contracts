@@ -26,13 +26,13 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
   // Common vars
   let deployer,
     pauser,
-    operator,
+    assistant,
     admin,
     clerk,
     treasury,
     buyer,
     other1,
-    operatorDR,
+    assistantDR,
     adminDR,
     clerkDR,
     treasuryDR,
@@ -53,8 +53,8 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       await ethers.getSigners();
 
     // make all account the same
-    operator = clerk = admin;
-    operatorDR = clerkDR = adminDR;
+    assistant = clerk = admin;
+    assistantDR = clerkDR = adminDR;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -157,7 +157,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       const agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller
-      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       const seller2 = mockSeller(other1.address, other1.address, other1.address, other1.address);
@@ -179,7 +179,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
 
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
-        operatorDR.address,
+        assistantDR.address,
         adminDR.address,
         clerkDR.address,
         treasuryDR.address,
@@ -213,7 +213,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
 
       // Create the offer
       disputeResolverId = disputeResolver.id;
-      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+      await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
       // Set used variables
       const price = offer.price;
@@ -224,7 +224,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       // Deposit seller funds so the commit will succeed
       const fundsToDeposit = ethers.BigNumber.from(sellerDeposit).mul(quantityAvailable);
       await fundsHandler
-        .connect(operator)
+        .connect(assistant)
         .depositFunds(seller.id, ethers.constants.AddressZero, fundsToDeposit, { value: fundsToDeposit });
 
       // Set time forward to the offer's voucherRedeemableFrom
@@ -261,9 +261,9 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       it("should decide dispute even when DR removes approved sellers", async function () {
         exchangeId = 1;
         // Decide the dispute
-        await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints))
+        await expect(disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints))
           .to.emit(disputeHandler, "DisputeDecided")
-          .withArgs(exchangeId, buyerPercentBasisPoints, operatorDR.address);
+          .withArgs(exchangeId, buyerPercentBasisPoints, assistantDR.address);
 
         // Remove an approved seller
         let allowedSellersToRemove = ["1"];
@@ -276,9 +276,9 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
           .withArgs(disputeResolverId, allowedSellersToRemove, adminDR.address);
 
         // Decide the dispute
-        await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints))
+        await expect(disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints))
           .to.emit(disputeHandler, "DisputeDecided")
-          .withArgs(exchangeId, buyerPercentBasisPoints, operatorDR.address);
+          .withArgs(exchangeId, buyerPercentBasisPoints, assistantDR.address);
 
         // Remove another approved seller
         allowedSellersToRemove = ["2"];
@@ -291,9 +291,9 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
           .withArgs(disputeResolverId, allowedSellersToRemove, adminDR.address);
 
         // Decide the dispute
-        await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints))
+        await expect(disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints))
           .to.emit(disputeHandler, "DisputeDecided")
-          .withArgs(exchangeId, buyerPercentBasisPoints, operatorDR.address);
+          .withArgs(exchangeId, buyerPercentBasisPoints, assistantDR.address);
       });
     });
 
@@ -311,9 +311,9 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       it("should refuse escalated dispute even when DR removes approved sellers", async function () {
         exchangeId = 1;
         // Refuse the escalated dispute, testing for the event
-        await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId))
+        await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId))
           .to.emit(disputeHandler, "EscalatedDisputeRefused")
-          .withArgs(exchangeId, operatorDR.address);
+          .withArgs(exchangeId, assistantDR.address);
 
         // Remove an approved seller
         let allowedSellersToRemove = ["1"];
@@ -326,9 +326,9 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
           .withArgs(disputeResolverId, allowedSellersToRemove, adminDR.address);
 
         // Refuse the escalated dispute, testing for the event
-        await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId))
+        await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId))
           .to.emit(disputeHandler, "EscalatedDisputeRefused")
-          .withArgs(exchangeId, operatorDR.address);
+          .withArgs(exchangeId, assistantDR.address);
 
         // Remove another approved seller
         allowedSellersToRemove = ["2"];
@@ -341,9 +341,9 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
           .withArgs(disputeResolverId, allowedSellersToRemove, adminDR.address);
 
         // Refuse the escalated dispute, testing for the event
-        await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId))
+        await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId))
           .to.emit(disputeHandler, "EscalatedDisputeRefused")
-          .withArgs(exchangeId, operatorDR.address);
+          .withArgs(exchangeId, assistantDR.address);
       });
     });
   });
