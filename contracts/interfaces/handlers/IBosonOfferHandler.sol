@@ -9,7 +9,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xdd282b34
+ * The ERC-165 identifier for this interface is: 0xa1598d02
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
     /**
@@ -111,11 +111,17 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Range length is greater than quantity available
      * - Range length is greater than maximum allowed range length
      * - Call to BosonVoucher.reserveRange() reverts
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @param _offerId - the id of the offer
      * @param _length - the length of the range
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      */
-    function reserveRange(uint256 _offerId, uint256 _length) external;
+    function reserveRange(
+        uint256 _offerId,
+        uint256 _length,
+        address _to
+    ) external;
 
     /**
      * @notice Voids a given offer.

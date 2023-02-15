@@ -245,7 +245,7 @@ describe("IBosonVoucher", function () {
         await mockProtocol.mock.getExchange.withArgs(tokenId).returns(true, mockExchange({ offerId }), mockVoucher());
 
         // Reserve a range
-        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
+        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
 
         // Expect revert if random user attempts to issue voucher
         await expect(bosonVoucher.connect(protocol).issueVoucher(tokenId, buyerWallet)).to.be.revertedWith(
@@ -264,19 +264,19 @@ describe("IBosonVoucher", function () {
       start = "10";
       length = "123";
 
-      range = new Range(start, length, "0", "0");
+      range = new Range(start, length, "0", "0", assistant.address);
     });
 
     it("Should emit event RangeReserved", async function () {
       // Reserve range, test for event
-      await expect(bosonVoucher.connect(protocol).reserveRange(offerId, start, length))
+      await expect(bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address))
         .to.emit(bosonVoucher, "RangeReserved")
         .withArgs(offerId, range.toStruct());
     });
 
     it("Should update state", async function () {
       // Reserve range
-      await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
+      await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
 
       // Get range object from contract
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
@@ -301,11 +301,51 @@ describe("IBosonVoucher", function () {
       assert.equal(availablePremints.toString(), length, "Available Premints mismatch");
     });
 
+    context("Owner range is contract", async function () {
+      beforeEach(async function () {
+        range.owner = bosonVoucher.address;
+      });
+
+      it("Should emit event RangeReserved", async function () {
+        // Reserve range, test for event
+        await expect(bosonVoucher.connect(protocol).reserveRange(offerId, start, length, bosonVoucher.address))
+          .to.emit(bosonVoucher, "RangeReserved")
+          .withArgs(offerId, range.toStruct());
+      });
+
+      it("Should update state", async function () {
+        // Reserve range
+        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, bosonVoucher.address);
+
+        // Get range object from contract
+        const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
+        assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+
+        // Mock getOffer call, otherwise getAvailablePreMints will return 0
+        const mockProtocol = await deployMockProtocol();
+        const { offer, offerDates, offerDurations, offerFees } = await mockOffer();
+        const disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
+        await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
+        await mockProtocol.mock.getOffer.returns(
+          true,
+          offer,
+          offerDates,
+          offerDurations,
+          disputeResolutionTerms,
+          offerFees
+        );
+
+        // Get available premints from contract
+        const availablePremints = await bosonVoucher.getAvailablePreMints(offerId);
+        assert.equal(availablePremints.toString(), length, "Available Premints mismatch");
+      });
+    });
+
     context("💔 Revert Reasons", async function () {
       it("caller does not have PROTOCOL role", async function () {
-        await expect(bosonVoucher.connect(rando).reserveRange(offerId, start, length)).to.be.revertedWith(
-          RevertReasons.ACCESS_DENIED
-        );
+        await expect(
+          bosonVoucher.connect(rando).reserveRange(offerId, start, length, assistant.address)
+        ).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
       });
 
       it("Start id is not greater than zero for the first range", async function () {
@@ -313,22 +353,22 @@ describe("IBosonVoucher", function () {
         start = 0;
 
         // Try to reserve range, it should fail
-        await expect(bosonVoucher.connect(protocol).reserveRange(offerId, start, length)).to.be.revertedWith(
-          RevertReasons.INVALID_RANGE_START
-        );
+        await expect(
+          bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address)
+        ).to.be.revertedWith(RevertReasons.INVALID_RANGE_START);
       });
 
       it("Start id is not greater than the end id of the previous range for subsequent ranges", async function () {
         // Reserver a range
-        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
+        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
 
         // Set start id to 0
         start = Number(start) + Number(length) - 1;
 
         // Try to reserve range, it should fail
-        await expect(bosonVoucher.connect(protocol).reserveRange(offerId, start, length)).to.be.revertedWith(
-          RevertReasons.INVALID_RANGE_START
-        );
+        await expect(
+          bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address)
+        ).to.be.revertedWith(RevertReasons.INVALID_RANGE_START);
       });
 
       it("Range length is zero", async function () {
@@ -336,9 +376,9 @@ describe("IBosonVoucher", function () {
         length = "0";
 
         // Try to reserve range, it should fail
-        await expect(bosonVoucher.connect(protocol).reserveRange(offerId, start, length)).to.be.revertedWith(
-          RevertReasons.INVALID_RANGE_LENGTH
-        );
+        await expect(
+          bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address)
+        ).to.be.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
       });
 
       it("Range length is too large, i.e., would cause an overflow", async function () {
@@ -347,21 +387,28 @@ describe("IBosonVoucher", function () {
         length = ethers.constants.MaxUint256.div(2);
 
         // Try to reserve range, it should fail
-        await expect(bosonVoucher.connect(protocol).reserveRange(offerId, start, length)).to.be.revertedWith(
-          RevertReasons.INVALID_RANGE_LENGTH
-        );
+        await expect(
+          bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address)
+        ).to.be.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
       });
 
       it("Offer id is already associated with a range", async function () {
         // Reserve range for an offer
-        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
+        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
 
         start = Number(start) + Number(length) + 1;
 
         // Try to reserve range for the same offer, it should fail
-        await expect(bosonVoucher.connect(protocol).reserveRange(offerId, start, length)).to.be.revertedWith(
-          RevertReasons.OFFER_RANGE_ALREADY_RESERVED
-        );
+        await expect(
+          bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address)
+        ).to.be.revertedWith(RevertReasons.OFFER_RANGE_ALREADY_RESERVED);
+      });
+
+      it("_to address isn't contract address or contract owner address", async function () {
+        // Try to reserve range for rando address, it should fail
+        await expect(
+          bosonVoucher.connect(protocol).reserveRange(offerId, start, length, rando.address)
+        ).to.be.revertedWith(RevertReasons.INVALID_TO_ADDRESS);
       });
     });
   });
@@ -389,7 +436,7 @@ describe("IBosonVoucher", function () {
       offerId = "5";
       start = "10";
       length = "1000";
-      await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
+      await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
 
       // amount to mint
       amount = 50;
@@ -405,6 +452,64 @@ describe("IBosonVoucher", function () {
           .to.emit(bosonVoucher, "Transfer")
           .withArgs(ethers.constants.AddressZero, assistant.address, i + Number(start));
       }
+    });
+
+    context("Owner range is contract", async function () {
+      beforeEach(async function () {
+        offer.id = offerId = ++offerId;
+        await mockProtocol.mock.getOffer.returns(
+          true,
+          offer,
+          offerDates,
+          offerDurations,
+          disputeResolutionTerms,
+          offerFees
+        );
+
+        // reserve a range
+        start = "1010";
+        length = "1000";
+        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, bosonVoucher.address);
+      });
+
+      it("Transfer event should emit contract address", async function () {
+        // Premint tokens, test for event
+        const tx = await bosonVoucher.connect(assistant).preMint(offerId, amount);
+
+        // Expect an event for every mint
+        for (let i = 0; i < Number(amount); i++) {
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(ethers.constants.AddressZero, bosonVoucher.address, i + Number(start));
+        }
+      });
+
+      it("Should update state", async function () {
+        let contractBalanceBefore = await bosonVoucher.balanceOf(bosonVoucher.address);
+
+        // Premint tokens
+        await bosonVoucher.connect(assistant).preMint(offerId, amount);
+
+        // Expect a correct owner for all preminted tokens
+        for (let i = 0; i < Number(amount); i++) {
+          let tokenId = i + Number(start);
+          let tokenOwner = await bosonVoucher.ownerOf(tokenId);
+          assert.equal(tokenOwner, bosonVoucher.address, `Wrong token owner for token ${tokenId}`);
+        }
+
+        // Token that is inside a range, but wasn't preminted yet should not have an owner
+        await expect(bosonVoucher.ownerOf(Number(amount) + Number(start) + 1)).to.be.revertedWith(
+          RevertReasons.ERC721_NON_EXISTENT
+        );
+
+        // Contract's balance should be updated for the total mint amount
+        let contractBalanceAfter = await bosonVoucher.balanceOf(bosonVoucher.address);
+        assert.equal(contractBalanceAfter.toNumber(), contractBalanceBefore.add(amount).toNumber(), "Balance mismatch");
+
+        // Get available premints from contract
+        const availablePremints = await bosonVoucher.getAvailablePreMints(offerId);
+        assert.equal(availablePremints.toNumber(), Number(length) - Number(amount), "Available Premints mismatch");
+      });
     });
 
     it("Should update state", async function () {
@@ -569,7 +674,7 @@ describe("IBosonVoucher", function () {
       // reserve a range
       start = "10";
       length = "1000";
-      await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
+      await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
 
       // amount to mint
       amount = "5";
@@ -618,7 +723,7 @@ describe("IBosonVoucher", function () {
       assert.equal(availablePremints.toNumber(), 0, "Available Premints mismatch");
 
       // Last burned id should be updated
-      const range = new Range(start, length, amount, `${Number(start) + Number(amount) - 1}`);
+      const range = new Range(start, length, amount, `${Number(start) + Number(amount) - 1}`, assistant.address);
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
     });
@@ -631,7 +736,7 @@ describe("IBosonVoucher", function () {
       assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
 
       // Last burned id should be updated
-      const range = new Range(start, length, amount, `${Number(start) + Number(amount) - 1}`);
+      const range = new Range(start, length, amount, `${Number(start) + Number(amount) - 1}`, assistant.address);
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
 
@@ -665,7 +770,13 @@ describe("IBosonVoucher", function () {
       assert.equal((await tx.wait()).events.length, Number(maxPremintedVouchers), "Wrong number of events emitted");
 
       // Last burned id should be updated
-      let range = new Range(start, length, amount, `${Number(start) + Number(maxPremintedVouchers) - 1}`);
+      let range = new Range(
+        start,
+        length,
+        amount,
+        `${Number(start) + Number(maxPremintedVouchers) - 1}`,
+        assistant.address
+      );
       let returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
 
@@ -680,7 +791,7 @@ describe("IBosonVoucher", function () {
       );
 
       // Last burned id should be updated
-      range = new Range(start, length, amount, `${Number(start) + Number(amount) - 1}`);
+      range = new Range(start, length, amount, `${Number(start) + Number(amount) - 1}`, assistant.address);
       returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
 
@@ -734,7 +845,7 @@ describe("IBosonVoucher", function () {
       }
 
       // Last burned id should be updated
-      const range = new Range(start, length, amount, `${Number(start) + Number(amount) - 1}`);
+      const range = new Range(start, length, amount, `${Number(start) + Number(amount) - 1}`, assistant.address);
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
     });
@@ -815,7 +926,7 @@ describe("IBosonVoucher", function () {
       offerId = "5";
       start = "10";
       length = "1000";
-      await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
+      await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
 
       // amount to mint
       amount = 50;
@@ -914,9 +1025,9 @@ describe("IBosonVoucher", function () {
       start = "10";
       length = "1000";
 
-      range = new Range(start, length, "0", "0");
+      range = new Range(start, length, "0", "0", assistant.address);
 
-      await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
+      await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
 
       const mockProtocol = await deployMockProtocol();
       const { offer, offerDates, offerDurations, offerFees } = await mockOffer();
@@ -946,7 +1057,7 @@ describe("IBosonVoucher", function () {
     it("Get empty range if offer has no reserved ranges", async function () {
       // Set invalid offer and empty range
       offerId = "20";
-      range = new Range("0", "0", "0", "0");
+      range = new Range("0", "0", "0", "0", ethers.constants.AddressZero);
 
       // Get range object from contract
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
@@ -986,7 +1097,7 @@ describe("IBosonVoucher", function () {
         offerId = "5";
         start = "10";
         length = "150";
-        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
+        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
 
         mockProtocol = await deployMockProtocol();
         ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
@@ -1062,7 +1173,7 @@ describe("IBosonVoucher", function () {
           start = previousStartId + length + 100;
 
           // reserve length
-          await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
+          await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
 
           // amount to premint
           amount = length - i * 30;
@@ -1114,7 +1225,7 @@ describe("IBosonVoucher", function () {
         let nextAmount = "5";
 
         // reserve length
-        await bosonVoucher.connect(protocol).reserveRange(nextOfferId, nextStartId, nextLength);
+        await bosonVoucher.connect(protocol).reserveRange(nextOfferId, nextStartId, nextLength, assistant.address);
 
         // amount to premint
         await bosonVoucher.connect(assistant).preMint(nextOfferId, nextAmount);
@@ -1380,6 +1491,7 @@ describe("IBosonVoucher", function () {
           beforeEach(async function () {
             // Create preminted offer
             const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+            offer.quantityAvailable = "2";
             await offerHandler
               .connect(assistant)
               .createOffer(
@@ -1389,7 +1501,7 @@ describe("IBosonVoucher", function () {
                 disputeResolverId,
                 agentId
               );
-            await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable);
+            await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
             // Pool needs to cover both seller deposit and price
             const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
             await fundsHandler.connect(admin).depositFunds(seller.id, ethers.constants.AddressZero, pool, {
@@ -1491,12 +1603,6 @@ describe("IBosonVoucher", function () {
           });
 
           context("💔 Revert Reasons", async function () {
-            it("Transfer preminted voucher, but from is not the contract owner", async function () {
-              await expect(
-                bosonVoucher.connect(rando)[selector](rando.address, buyer.address, tokenId, ...additionalArgs)
-              ).to.be.revertedWith(RevertReasons.NO_SILENT_MINT_ALLOWED);
-            });
-
             it("Cannot transfer preminted voucher twice", async function () {
               // Make first transfer
               await bosonVoucher
@@ -1563,6 +1669,22 @@ describe("IBosonVoucher", function () {
                 bosonVoucher.connect(assistant)[selector](assistant.address, rando.address, tokenId, ...additionalArgs)
               ).to.be.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
             });
+
+            it("Transfer preminted voucher, but from is not the voucher owner", async function () {
+              await bosonVoucher
+                .connect(assistant)
+                [selector](assistant.address, rando.address, tokenId, ...additionalArgs);
+
+              // next token id. Make sure that assistant is the owner
+              tokenId = Number(tokenId) + 1;
+              let tokenOwner = await bosonVoucher.ownerOf(tokenId.toString());
+              assert.equal(tokenOwner, assistant.address, "Seller is not the owner");
+
+              // Following call should fail, since rando is not the owner of preminted voucher
+              await expect(
+                bosonVoucher.connect(rando)[selector](rando.address, rando.address, tokenId, ...additionalArgs)
+              ).to.be.revertedWith(RevertReasons.NO_SILENT_MINT_ALLOWED);
+            });
           });
         });
       });
@@ -1574,10 +1696,12 @@ describe("IBosonVoucher", function () {
       beforeEach(async function () {
         // Create preminted offer
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+        offer.quantityAvailable = "2";
+
         await offerHandler
           .connect(assistant)
           .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
-        await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable);
+        await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
         // Pool needs to cover both seller deposit and price
         const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
         await fundsHandler.connect(admin).depositFunds(seller.id, ethers.constants.AddressZero, pool, {
@@ -1674,12 +1798,6 @@ describe("IBosonVoucher", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        it("Transfer preminted voucher, but from is not the contract owner", async function () {
-          await expect(
-            bosonVoucher.connect(rando).transferPremintedFrom(rando.address, buyer.address, offerId, tokenId, "0x")
-          ).to.be.revertedWith(RevertReasons.NO_SILENT_MINT_ALLOWED);
-        });
-
         it("Cannot transfer preminted voucher twice", async function () {
           // Make first transfer
           await bosonVoucher
@@ -1755,6 +1873,20 @@ describe("IBosonVoucher", function () {
               .connect(assistant)
               .transferPremintedFrom(assistant.address, rando.address, offerId, tokenId, "0x")
           ).to.be.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+        });
+
+        it("Transfer preminted voucher, but from is not the voucher owner", async function () {
+          await bosonVoucher.connect(assistant).transferFrom(assistant.address, rando.address, tokenId);
+
+          // next token id. Make sure that assistant is the owner
+          tokenId = Number(tokenId) + 1;
+          let tokenOwner = await bosonVoucher.ownerOf(tokenId.toString());
+          assert.equal(tokenOwner, assistant.address, "Seller is not the owner");
+
+          // Following call should fail, since rando is not the owner of preminted voucher
+          await expect(
+            bosonVoucher.connect(rando).transferPremintedFrom(rando.address, rando.address, offerId, tokenId, "0x")
+          ).to.be.revertedWith(RevertReasons.NO_SILENT_MINT_ALLOWED);
         });
       });
     });
@@ -1877,7 +2009,7 @@ describe("IBosonVoucher", function () {
         // reserve a range
         start = "10";
         const length = "1";
-        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length);
+        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
 
         // premint
         await bosonVoucher.connect(assistant).preMint(offerId, 1);
