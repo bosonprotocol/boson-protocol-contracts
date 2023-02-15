@@ -234,6 +234,10 @@ library ProtocolLib {
         mapping(bytes32 => bool) initializedVersions;
         // Current protocol version
         bytes32 version;
+        // Incoming voucher id
+        uint256 incomingVoucherId;
+        // Incoming voucher clone address
+        address incomingVoucherCloneAddress;
     }
 
     /**

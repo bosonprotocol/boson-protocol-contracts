@@ -127,6 +127,8 @@ exports.RevertReasons = {
   EXCHANGE_IS_NOT_IN_A_FINAL_STATE: "Exchange is not in a final state",
   INVALID_RANGE_LENGTH: "Range length is too large or zero",
   EXCHANGE_ALREADY_EXISTS: "Exchange already exists",
+  UNEXPECTED_ERC721_RECEIVED: "Unexpected ERC721 received",
+  FEE_AMOUNT_TOO_HIGH: "Fee amount is too high",
 
   // Voucher related
   EXCHANGE_ID_IN_RESERVED_RANGE: "Exchange id falls within a pre-minted offer's range",

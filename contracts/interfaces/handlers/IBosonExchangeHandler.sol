@@ -5,15 +5,16 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonExchangeEvents } from "../events/IBosonExchangeEvents.sol";
 import { IBosonTwinEvents } from "../events/IBosonTwinEvents.sol";
 import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 /**
  * @title IBosonExchangeHandler
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xe300dfc1
+ * The ERC-165 identifier for this interface is: 0xf666ec8b
  */
-interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
+interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents, IERC721Receiver {
     /**
      * @notice Commits to an offer (first step of an exchange).
      *

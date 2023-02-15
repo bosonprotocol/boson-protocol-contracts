@@ -28,8 +28,7 @@ contract PriceDiscovery {
      */
     function fulfilOrder(Order calldata _order) external payable {
         // transfer voucher
-        // TODO: try safe transfer from!
-        try IERC721(_order.voucherContract).transferFrom(_order.seller, msg.sender, _order.tokenId) {} catch (
+        try IERC721(_order.voucherContract).safeTransferFrom(_order.seller, msg.sender, _order.tokenId) {} catch (
             bytes memory reason
         ) {
             if (reason.length == 0) {

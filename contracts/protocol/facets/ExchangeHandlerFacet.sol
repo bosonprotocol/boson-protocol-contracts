@@ -113,6 +113,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             price
         */
 
+        // Make sure buyer address is not zero address
+        require(_buyer != address(0), INVALID_ADDRESS);
+
         // verify that order can be fulfilled [// pass forward to 0x or seaport]
         // offer must be done in a way that boson protocol receives minimal necesarry funds to go in escrow
 
@@ -120,7 +123,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Make sure the voucher is still valid
-        require(block.timestamp <= voucher.validUntilDate, "VOUCHER_INVALID");
+        require(block.timestamp <= voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
 
         // Fetch offer
         (, Offer storage offer) = fetchOffer(exchange.offerId);
@@ -147,7 +150,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 );
 
                 // Verify that fees and royalties are not higher than the price.
-                require((protocolFeeAmount + royaltyAmount) <= _priceDiscovery.price, "FEE_AMOUNT_TOO_HIGH");
+                require((protocolFeeAmount + royaltyAmount) <= _priceDiscovery.price, FEE_AMOUNT_TOO_HIGH);
 
                 // Get price paid by current buyer
                 uint256 len = sequentialCommits.length;
@@ -245,6 +248,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             IERC20(_exchangeToken).approve(address(_priceDiscovery.priceDiscoveryContract), _priceDiscovery.price);
         }
 
+        // Store the information about incoming voucher
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+        address cloneAddress = protocolLookups().cloneAddress[_initialSellerId];
+        ps.incomingVoucherId = _exchangeId;
+        ps.incomingVoucherCloneAddress = cloneAddress;
+
         {
             // Call the price discovery contract
             (bool success, bytes memory returnData) = address(_priceDiscovery.priceDiscoveryContract).call{
@@ -259,6 +268,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         if (_exchangeToken != address(0)) {
             IERC20(_exchangeToken).approve(address(_priceDiscovery.priceDiscoveryContract), 0);
         }
+
+        // Clear the storage
+        delete ps.incomingVoucherId;
+        delete ps.incomingVoucherCloneAddress;
 
         // Check the escrow amount
         uint256 protocolBalanceAfter = getBalance(_exchangeToken);
@@ -283,11 +296,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         }
 
         // Transfer voucher to buyer
-        IBosonVoucher(protocolLookups().cloneAddress[_initialSellerId]).transferFrom(
-            address(this),
-            _buyer,
-            _exchangeId
-        );
+        IBosonVoucher(cloneAddress).transferFrom(address(this), _buyer, _exchangeId);
     }
 
     function fulfilSellOrder(
@@ -350,6 +359,24 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
     function getBalance(address _tokenAddress) internal view returns (uint256) {
         return _tokenAddress == address(0) ? address(this).balance : IERC20(_tokenAddress).balanceOf(address(this));
+    }
+
+    // during sequential commit to offer, we expect to receive the boson voucher, therefore we need to implement onERC721Received
+    // alternative option, where vouchers are modified to not invoke onERC721Received when to is protocol is unsafe, since one can abuse it to send vouchers to protocol
+    // this should return true value only when protocol expects to receive the voucher
+    // should revert if called from any other address
+    function onERC721Received(
+        address,
+        address,
+        uint256 _tokenId,
+        bytes calldata
+    ) external view override returns (bytes4) {
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+        require(
+            ps.incomingVoucherId == _tokenId && ps.incomingVoucherCloneAddress == msg.sender,
+            UNEXPECTED_ERC721_RECEIVED
+        );
+        return this.onERC721Received.selector;
     }
 
     /**

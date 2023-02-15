@@ -1680,16 +1680,16 @@ describe("IBosonExchangeHandler", function () {
           .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer2.address);
       });
 
-      // TESTS BELOW NOT UPDATED YET
-
       context("💔 Revert Reasons", async function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
-          // Attempt to create an exchange, expecting revert
+          // Attempt to sequentially commit, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            exchangeHandler
+              .connect(buyer2)
+              .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 })
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -1697,84 +1697,59 @@ describe("IBosonExchangeHandler", function () {
           // Pause the buyers region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
 
-          // Attempt to create a buyer, expecting revert
+          // Attempt to sequentially commit, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            exchangeHandler
+              .connect(buyer2)
+              .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 })
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
         it("buyer address is the zero address", async function () {
-          // Attempt to commit, expecting revert
+          // Attempt to sequentially commit, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToOffer(ethers.constants.AddressZero, offerId, { value: price })
+            exchangeHandler
+              .connect(buyer2)
+              .sequentialCommitToOffer(ethers.constants.AddressZero, exchangeId, priceDiscovery, { value: price2 })
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
-        it("offer id is invalid", async function () {
+        it("exchange id is invalid", async function () {
           // An invalid offer id
-          offerId = "666";
+          exchangeId = "666";
 
-          // Attempt to commit, expecting revert
+          // Attempt to sequentially commit, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
-          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+            exchangeHandler
+              .connect(buyer2)
+              .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 })
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
         });
 
-        it("offer is voided", async function () {
-          // Void the offer first
-          await offerHandler.connect(assistant).voidOffer(offerId);
-
-          // Attempt to commit to the voided offer, expecting revert
-          await expect(
-            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
-          ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
-        });
-
-        it("offer is not yet available for commits", async function () {
-          // Create an offer with staring date in the future
-          // get current block timestamp
-          const block = await ethers.provider.getBlock("latest");
-          const now = block.timestamp.toString();
-
-          // set validFrom date in the past
-          offerDates.validFrom = ethers.BigNumber.from(now)
-            .add(oneMonth * 6)
-            .toString(); // 6 months in the future
-          offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom).add(10).toString(); // just after the valid from so it succeeds.
-
-          await offerHandler
-            .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-
-          // Attempt to commit to the not availabe offer, expecting revert
-          await expect(
-            exchangeHandler.connect(buyer).commitToOffer(buyer.address, ++offerId, { value: price })
-          ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
-        });
-
-        it("offer has expired", async function () {
+        it("voucher not valid anymore", async function () {
           // Go past offer expiration date
-          await setNextBlockTimestamp(Number(offerDates.validUntil));
+          await setNextBlockTimestamp(Number(voucher.validUntilDate));
 
-          // Attempt to commit to the expired offer, expecting revert
+          // Attempt to sequentially commit to the expired voucher, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
-          ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+            exchangeHandler
+              .connect(buyer2)
+              .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 })
+          ).to.revertedWith(RevertReasons.VOUCHER_HAS_EXPIRED);
         });
 
-        it("offer sold", async function () {
-          // Create an offer with only 1 item
-          offer.quantityAvailable = "1";
-          await offerHandler
-            .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-          // Commit to offer, so it's not availble anymore
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, ++offerId, { value: price });
+        it("protocol fees to high", async function () {
+          // Set protocol fees to 95%
+          await configHandler.setProtocolFeePercentage(9500);
+          // Set royalty fees to 6%
+          await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(600);
 
           // Attempt to commit to the sold out offer, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
-          ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
+            exchangeHandler
+              .connect(buyer2)
+              .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 })
+          ).to.revertedWith(RevertReasons.FEE_AMOUNT_TOO_HIGH);
         });
       });
     });
