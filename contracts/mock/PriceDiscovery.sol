@@ -43,8 +43,14 @@ contract PriceDiscovery {
 
         // transfer exchange token
         if (_order.exchangeToken == address(0)) {
-            (bool success, ) = payable(_order.buyer).call{ value: _order.price }("");
+            (bool success, ) = payable(_order.seller).call{ value: _order.price }("");
             require(success, "Token transfer failed");
+
+            // return any extra ETH to the buyer
+            if (msg.value > _order.price) {
+                (success, ) = payable(msg.sender).call{ value: msg.value - _order.price }("");
+                require(success, "ETH return failed");
+            }
         } else
             try IERC20(_order.exchangeToken).transferFrom(msg.sender, _order.seller, _order.price) {} catch (
                 bytes memory reason

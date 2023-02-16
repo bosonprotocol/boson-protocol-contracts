@@ -277,11 +277,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 protocolBalanceAfter = getBalance(_exchangeToken);
 
         uint256 expectedBalanceAfter = protocolBalanceBefore - _priceDiscovery.price + _escrowAmount;
+        // console.log("expectedBalanceAfter",expectedBalanceAfter);
         if (protocolBalanceAfter > expectedBalanceAfter) {
             // Escrowed too much, return the difference to buyer
             FundsLib.transferFundsFromProtocol(
                 _exchangeToken,
-                payable(_buyer),
+                payable(_seller),
                 protocolBalanceAfter - expectedBalanceAfter
             );
         } else if (protocolBalanceAfter < expectedBalanceAfter) {
