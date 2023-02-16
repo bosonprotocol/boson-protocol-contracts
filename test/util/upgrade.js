@@ -10,6 +10,7 @@ const Bundle = require("../../scripts/domain/Bundle");
 const Group = require("../../scripts/domain/Group");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const TokenType = require("../../scripts/domain/TokenType.js");
+const Exchange = require("../../scripts/domain/Exchange.js");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const {
   mockOffer,
@@ -32,6 +33,12 @@ const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.j
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { readContracts } = require("../../scripts/util/utils");
 const { getFacets } = require("../upgrade/00_config");
+const Receipt = require("../../scripts/domain/Receipt");
+const Offer = require("../../scripts/domain/Offer");
+const OfferFees = require("../../scripts/domain/OfferFees");
+const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
+const OfferDurations = require("../../scripts/domain/OfferDurations");
+const OfferDates = require("../../scripts/domain/OfferDates");
 
 // Common vars
 const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
@@ -309,6 +316,7 @@ async function populateProtocolContract(
 
       case entityType.SELLER: {
         const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address, true);
+
         const id = (seller.id = nextAccountId.toString());
         let authToken;
 
@@ -724,12 +732,20 @@ async function getOfferContractState(offerHandler, offers) {
       offerHandlerRando.isOfferVoided(id),
       offerHandlerRando.getAgentIdByOffer(id),
     ]);
-    offersState.push(singleOffersState);
+
+    let [exist, offerStruct, offerDates, offerDurations, disputeResolutionTerms, offerFees] = singleOffersState;
+    offerStruct = Offer.fromStruct(offerStruct);
+    offerDates = OfferDates.fromStruct(offerDates);
+    offerDurations = OfferDurations.fromStruct(offerDurations);
+    disputeResolutionTerms = DisputeResolutionTerms.fromStruct(disputeResolutionTerms);
+    offerFees = OfferFees.fromStruct(offerFees);
+
+    offersState.push([exist, offerStruct, offerDates, offerDurations, disputeResolutionTerms, offerFees]);
     isOfferVoidedState.push(singleIsOfferVoidedState);
-    agentIdByOfferState.push(singleAgentIdByOfferState);
+    agentIdByOfferState.push(singleAgentIdByOfferState.toString());
   }
 
-  let nextOfferId = await offerHandlerRando.getNextOfferId();
+  let nextOfferId = (await offerHandlerRando.getNextOfferId()).toString();
 
   return { offersState, isOfferVoidedState, agentIdByOfferState, nextOfferId };
 }
@@ -749,17 +765,23 @@ async function getExchangeContractState(exchangeHandler, exchanges) {
       exchangeHandlerRando.getExchangeState(id),
       exchangeHandlerRando.isExchangeFinalized(id),
     ]);
-    exchangesState.push(singleExchangesState);
+
+    let [exists, exchangeState] = singleExchangesState;
+    exchangeState = Exchange.fromStruct(exchangeState);
+
+    exchangesState.push([exists, exchangeState]);
     exchangeStateState.push(singleExchangeStateState);
     isExchangeFinalizedState.push(singleIsExchangeFinalizedState);
+
     try {
-      receiptsState.push(await exchangeHandlerRando.getReceipt(id));
+      const receipt = await exchangeHandlerRando.getReceipt(id);
+      receiptsState.push(Receipt.fromStruct(receipt));
     } catch {
       receiptsState.push(["NOT_FINALIZED"]);
     }
   }
 
-  let nextExchangeId = await exchangeHandlerRando.getNextExchangeId();
+  let nextExchangeId = (await exchangeHandlerRando.getNextExchangeId()).toString();
   return { exchangesState, exchangeStateState, isExchangeFinalizedState, receiptsState, nextExchangeId };
 }
 
@@ -848,27 +870,27 @@ async function getConfigContractState(configHandler) {
     treasuryAddress,
     voucherBeaconAddress,
     beaconProxyAddress,
-    protocolFeePercentage,
-    protocolFeeFlatBoson,
-    maxOffersPerBatch,
-    maxOffersPerGroup,
-    maxTwinsPerBundle,
-    maxOffersPerBundle,
-    maxTokensPerWithdrawal,
-    maxFeesPerDisputeResolver,
-    maxEscalationResponsePeriod,
-    maxDisputesPerBatch,
-    maxTotalOfferFeePercentage,
-    maxAllowedSellers,
-    buyerEscalationDepositPercentage,
+    protocolFeePercentage: protocolFeePercentage.toString(),
+    protocolFeeFlatBoson: protocolFeeFlatBoson.toString(),
+    maxOffersPerBatch: maxOffersPerBatch.toString(),
+    maxOffersPerGroup: maxOffersPerGroup.toString(),
+    maxTwinsPerBundle: maxTwinsPerBundle.toString(),
+    maxOffersPerBundle: maxOffersPerBundle.toString(),
+    maxTokensPerWithdrawal: maxTokensPerWithdrawal.toString(),
+    maxFeesPerDisputeResolver: maxFeesPerDisputeResolver.toString(),
+    maxEscalationResponsePeriod: maxEscalationResponsePeriod.toString(),
+    maxDisputesPerBatch: maxDisputesPerBatch.toString(),
+    maxTotalOfferFeePercentage: maxTotalOfferFeePercentage.toString(),
+    maxAllowedSellers: maxAllowedSellers.toString(),
+    buyerEscalationDepositPercentage: buyerEscalationDepositPercentage.toString(),
     authTokenContractNone,
     authTokenContractCustom,
     authTokenContractLens,
     authTokenContractENS,
-    maxExchangesPerBatch,
-    maxRoyaltyPecentage,
-    maxResolutionPeriod,
-    minDisputePeriod,
+    maxExchangesPerBatch: maxExchangesPerBatch.toString(),
+    maxRoyaltyPecentage: maxRoyaltyPecentage.toString(),
+    maxResolutionPeriod: maxResolutionPeriod.toString(),
+    minDisputePeriod: minDisputePeriod.toString(),
     accessControllerAddress,
   };
 }
