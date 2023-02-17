@@ -16,6 +16,7 @@ import { IERC1155 } from "../../interfaces/IERC1155.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
 import { Math } from "../../ext_libs/Math.sol";
+import "hardhat/console.sol";
 
 interface WETH9Like {
     function withdraw(uint256) external;
@@ -122,16 +123,20 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Get token address
         address tokenAddress = offer.exchangeToken;
 
-        // Get current buyer address. This is actually the seller in sequential commit
+        // Get current buyer address. This is actually the seller in sequential commit. Need to do it before voucher is transferred
         address _seller;
         {
             (, Buyer storage currentBuyer) = fetchBuyer(exchange.buyerId);
             _seller = currentBuyer.wallet;
         }
 
+        if (_priceDiscovery.direction == Direction.Sell) {
+            require(_seller == msgSender(), NOT_VOUCHER_HOLDER);
+        }
+
         // First call price discovery and get actual price
         // It might be lower tha submitted for buy orders and higher for sell orders
-        uint256 actualPrice = fulFilOrder(_exchangeId, tokenAddress, _priceDiscovery, _seller, _buyer, offer.sellerId);
+        uint256 actualPrice = fulFilOrder(_exchangeId, tokenAddress, _priceDiscovery, _buyer, offer.sellerId);
 
         // Calculate the amount to be kept in escrow
         uint256 escrowAmount;
@@ -178,18 +183,26 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             }
 
             // Make sure enough get escrowed
-            if (_priceDiscovery.direction == Direction.Buy && escrowAmount > 0) {
-                // Price discovery should send funds to the seller
-                // Nothing in escrow, need to pull everything from seller
-                if (tokenAddress == address(0)) {
-                    FundsLib.transferFundsToProtocol(address(weth), _seller, escrowAmount);
-                    weth.withdraw(escrowAmount);
-                } else {
-                    FundsLib.transferFundsToProtocol(tokenAddress, _seller, escrowAmount);
+            if (_priceDiscovery.direction == Direction.Buy) {
+                if (escrowAmount > 0) {
+                    // Price discovery should send funds to the seller
+                    // Nothing in escrow, need to pull everything from seller
+                    if (tokenAddress == address(0)) {
+                        FundsLib.transferFundsToProtocol(address(weth), _seller, escrowAmount);
+                        weth.withdraw(escrowAmount);
+                    } else {
+                        FundsLib.transferFundsToProtocol(tokenAddress, _seller, escrowAmount);
+                    }
                 }
             } else {
                 // when sell direction, we have full proceeds in escrow. Keep minimal in, return the difference
-                FundsLib.transferFundsFromProtocol(tokenAddress, payable(_seller), actualPrice - escrowAmount);
+                if (tokenAddress == address(0)) {
+                    tokenAddress = address(weth);
+                    if (escrowAmount > 0) weth.withdraw(escrowAmount);
+                }
+
+                uint256 payout = actualPrice - escrowAmount;
+                if (payout > 0) FundsLib.transferFundsFromProtocol(tokenAddress, payable(_seller), payout);
             }
         }
 
@@ -202,14 +215,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 _exchangeId,
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
-        address _seller,
         address _buyer,
         uint256 _initialSellerId
     ) internal returns (uint256 actualPrice) {
         if (_priceDiscovery.direction == Direction.Buy) {
             return fulfilBuyOrder(_exchangeId, _exchangeToken, _priceDiscovery, _buyer, _initialSellerId);
         } else {
-            return fulfilSellOrder(_exchangeId, _exchangeToken, _priceDiscovery, _seller, _initialSellerId);
+            return fulfilSellOrder(_exchangeId, _exchangeToken, _priceDiscovery, _initialSellerId);
         }
     }
 
@@ -275,14 +287,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 _exchangeId,
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
-        address _seller,
         uint256 _initialSellerId
     ) internal returns (uint256 actualPrice) {
         // what about non-zero msg.value?
+        // No need to reset approval
 
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[_initialSellerId]);
         // Transfer seller's voucher to protocol
-        bosonVoucher.transferFrom(_seller, address(this), _exchangeId);
+        bosonVoucher.transferFrom(msgSender(), address(this), _exchangeId);
+
+        if (_exchangeToken == address(0)) _exchangeToken = address(weth);
 
         // Get protocol balance before the exchange
         uint256 protocolBalanceBefore = getBalance(_exchangeToken);
@@ -301,37 +315,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             require(success, errorMessage);
         }
 
-        // Reset approval
-        bosonVoucher.approve(address(0), _exchangeId);
-
         // Check the escrow amount
         uint256 protocolBalanceAfter = getBalance(_exchangeToken);
 
         actualPrice = protocolBalanceAfter - protocolBalanceBefore;
-
         require(actualPrice >= _priceDiscovery.price, "Price discovery contract returned less than expected");
-
-        /**
-        uint256 expectedBalanceAfter = protocolBalanceBefore + _escrowAmount; // what about potential non zero msg.value?
-
-        if (protocolBalanceAfter > expectedBalanceAfter) {
-            // Return the difference to the seller
-            FundsLib.transferFundsFromProtocol(
-                _exchangeToken,
-                payable(_seller),
-                protocolBalanceAfter - expectedBalanceAfter
-            );
-        } else if (protocolBalanceAfter < expectedBalanceAfter) {
-            uint256 diff = expectedBalanceAfter - protocolBalanceAfter;
-            // Not enough in the escrow, pull it form seller
-            if (_exchangeToken == address(0)) {
-                FundsLib.transferFundsToProtocol(address(weth), _seller, diff);
-                weth.withdraw(diff);
-            } else {
-                FundsLib.transferFundsToProtocol(_exchangeToken, _seller, diff);
-            }
-        }
-         */
     }
 
     function getBalance(address _tokenAddress) internal view returns (uint256) {
