@@ -126,19 +126,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // This context is placed in an uncommon place due to order of test execution.
       // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
       // and those values are undefined if this is placed outside "before".
-      // Normally, this would be solved with mocha's --delay option, but it.skip does not behave as expected when running with hardhat.
-      context(
-        "Generic tests",
-        getGenericContext(
-          deployer,
-          protocolDiamondAddress,
-          protocolContracts,
-          mockContracts,
-          protocolContractState,
-          preUpgradeEntities,
-          snapshot,
-          newVersion
-        )
+      // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
+      // context(
+      //   "Generic tests",
+      getGenericContext(
+        deployer,
+        protocolDiamondAddress,
+        protocolContracts,
+        mockContracts,
+        protocolContractState,
+        preUpgradeEntities,
+        snapshot,
+        newVersion
       );
     } catch (err) {
       // revert to latest version of scripts and contracts
@@ -161,7 +160,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   // In v2.2.0, Orchestration is split into two facets. This test makes sure that the new orchestration facet is used.
   context("Orchestration facet replacing", async function () {
-    it.skip("Diamond forwards calls to new facet", async function () {
+    it("Diamond forwards calls to new facet", async function () {
       const selectors = [
         "0x34fa96a6", //createOfferAddToGroup
         "0x36358824", //createOfferAndTwinWithBundle
@@ -187,7 +186,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   // Test methods that were added to see that upgrade was succesful
   context("📋 Breaking changes, new methods and bug fixes", async function () {
     context("Breaking changes", async function () {
-      it.skip("DR can be activated on creation", async function () {
+      it("DR can be activated on creation", async function () {
         // Get next account id
         const { nextAccountId } = protocolContractState.accountContractState;
 
@@ -207,7 +206,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         expect(DRCreated).to.deep.equal(DR);
       });
 
-      it.skip("New voucher contract gets new name and symbol", async function () {
+      it("New voucher contract gets new name and symbol", async function () {
         const { sellers } = preUpgradeEntities;
         const { nextAccountId } = protocolContractState.accountContractState;
 
@@ -230,8 +229,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         );
       });
 
-      it.skip("Operator has renamed to assistant", async function () {
-        let protocolContractStateAfterUpgrade = await getProtocolContractState(
+      it("Operator has been renamed to assistant", async function () {
+        let { accountContractState: accountContractStateAfter } = await getProtocolContractState(
           protocolDiamondAddress,
           protocolContracts,
           mockContracts,
@@ -239,6 +238,48 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         );
 
         let { accountContractState } = protocolContractState;
+
+        accountContractState.DRsState.map((state) => {
+          if (state.DR.operator) {
+            state.DR.assistant = state.DR.operator;
+          }
+          return state;
+        });
+
+        accountContractState.sellerState.map((state) => {
+          if (state.seller.operator) {
+            state.seller.assistant = state.seller.operator;
+            delete state.seller.operator;
+          }
+          return state;
+        });
+
+        accountContractState.sellerByAddressState.map((state) => {
+          if (state.seller.operator) {
+            state.seller.assistant = state.seller.operator;
+            delete state.seller.operator;
+          }
+
+          return state;
+        });
+
+        accountContractState.sellerByAuthTokenState.map((state) => {
+          if (state.seller.operator) {
+            state.seller.assistant = state.seller.operator;
+            delete state.seller.operator;
+          }
+          return state;
+        });
+
+        accountContractState.DRbyAddressState.map((state) => {
+          if (state.DR.operator) {
+            state.DR.assistant = state.DR.operator;
+            delete state.DR.operator;
+          }
+          return state;
+        });
+
+        assert.deepEqual(accountContractStateAfter, accountContractState);
       });
 
       context("MetaTransactionsHandler", async function () {
@@ -280,7 +321,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           };
         });
 
-        it.skip("Meta transaction should work with allowlisted function", async function () {
+        it("Meta transaction should work with allowlisted function", async function () {
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             assistant,
@@ -300,7 +341,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             .withArgs(assistant.address, deployer.address, message.functionName, nonce);
         });
 
-        it.skip("Meta transaction should fail when function name is not allowlisted", async function () {
+        it("Meta transaction should fail when function name is not allowlisted", async function () {
           message.functionName = "createSeller"; // function with this name does not exist (argument types are missing)
 
           // Collect the signature components
@@ -321,7 +362,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
 
         // Meta transactions hash functions positions were changed after we added new methods setAllowlistedFunctions and getAllowlistedFunctions
-        it.skip("functionPointer positions should change", async function () {
+        it("functionPointer positions should change", async function () {
           const { metaTxPrivateContractState: oldState } = protocolContractState;
 
           // Get protocol state after the upgrade
@@ -355,7 +396,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           functionHashList = functionList.map((func) => keccak256(toUtf8Bytes(func)));
         });
 
-        it.skip("👉 setAllowlistedFunctions()", async function () {
+        it("👉 setAllowlistedFunctions()", async function () {
           // Enable functions
           await expect(metaTransactionsHandler.connect(deployer).setAllowlistedFunctions(functionHashList, true))
             .to.emit(metaTransactionsHandler, "FunctionsAllowlisted")
@@ -367,7 +408,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             .withArgs(functionHashList, false, deployer.address);
         });
 
-        it.skip("👉 isFunctionAllowlisted(bytes32)", async function () {
+        it("👉 isFunctionAllowlisted(bytes32)", async function () {
           // Functions should be disabled by default
           for (const func of functionHashList) {
             expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.false;
@@ -390,7 +431,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           }
         });
 
-        it.skip("👉 isFunctionAllowlisted(string)", async function () {
+        it("👉 isFunctionAllowlisted(string)", async function () {
           // Functions should be disabled by default
           for (const func of functionList) {
             expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.false;
@@ -416,21 +457,21 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       context("📋 ProtocolInitializationHandlerFacet", async function () {
         // To this test pass package.json version must be set to 2.2.0
-        it.skip("👉 getVersion()", async function () {
+        it("👉 getVersion()", async function () {
           const version = await protocolInitializationHandler.connect(rando).getVersion();
 
           // Slice because of unicode escape notation
           expect(version.slice(0, 5)).to.equal("2.2.0");
         });
 
-        it.skip("Should call initV2_2_0()", async function () {
-          // maxPremintedVouchers is set in initV2_2_0 so we assume that if it.skip is set, the function was called
+        it("Should call initV2_2_0()", async function () {
+          // maxPremintedVouchers is set in initV2_2_0 so we assume that if it is set, the function was called
           expect(await configHandler.connect(rando).getMaxPremintedVouchers()).to.equal("10000");
         });
       });
 
       context("📋 ConfigHandlerFacet", async function () {
-        it.skip("👉 setMaxPremintedVouchers()", async function () {
+        it("👉 setMaxPremintedVouchers()", async function () {
           // Set new value
           await expect(configHandler.connect(deployer).setMaxPremintedVouchers(100))
             .to.emit(configHandler, "MaxPremintedVouchersChanged")
@@ -440,14 +481,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           expect(await configHandler.connect(rando).getMaxPremintedVouchers()).to.equal("100");
         });
 
-        it.skip("👉 getMaxPremintedVouchers()", async function () {
+        it("👉 getMaxPremintedVouchers()", async function () {
           // Verify that new value is stored
           expect(await configHandler.connect(rando).getMaxPremintedVouchers()).to.equal("10000");
         });
       });
 
       context("📋 OrchestrationHandlerFacet", async function () {
-        it.skip("👉 raiseAndEscalateDispute()", async function () {
+        it("👉 raiseAndEscalateDispute()", async function () {
           const { buyers, exchanges } = preUpgradeEntities;
           const exchangeId = "2";
           // exchangeId 2 = exchanges index 1
@@ -492,7 +533,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               voucherInitValues = mockVoucherInitValues();
             });
 
-            it.skip("👉 createSellerAndOffer", async function () {
+            it("👉 createSellerAndOffer", async function () {
               // Create a seller and an offer, testing for the event
               const tx = await orchestrationHandler
                 .connect(rando)
@@ -520,7 +561,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
             });
 
-            it.skip("👉 createSellerAndOfferWithCondition", async function () {
+            it("👉 createSellerAndOfferWithCondition", async function () {
               const condition = mockCondition({
                 tokenAddress: rando.address,
                 tokenType: TokenType.MultiToken,
@@ -566,7 +607,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 twin = mockTwin(bosonToken.address);
               });
 
-              it.skip("👉 createSellerAndOfferAndTwinWithBundle", async function () {
+              it("👉 createSellerAndOfferAndTwinWithBundle", async function () {
                 // Create a seller, an offer with condition and a twin with bundle, testing for the events
                 const tx = await orchestrationHandler
                   .connect(rando)
@@ -597,7 +638,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
               });
 
-              it.skip("👉 createSellerAndOfferWithConditionAndTwinAndBundle", async function () {
+              it("👉 createSellerAndOfferWithConditionAndTwinAndBundle", async function () {
                 const condition = mockCondition({
                   tokenAddress: rando.address,
                   tokenType: TokenType.MultiToken,
@@ -654,7 +695,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               assistant = seller.wallet;
             });
 
-            it.skip("👉 createOfferWithCondition", async function () {
+            it("👉 createOfferWithCondition", async function () {
               const condition = mockCondition({
                 tokenAddress: rando.address,
                 tokenType: TokenType.MultiToken,
@@ -670,8 +711,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               await expect(tx).to.emit(orchestrationHandler, "GroupCreated");
             });
 
-            it.skip("👉 createOfferAddToGroup", async function () {
-              // Create an offer, add it.skip to the group, testing for the events
+            it("👉 createOfferAddToGroup", async function () {
+              // Create an offer, add it to the group, testing for the events
               const tx = await orchestrationHandler.connect(assistant).createOfferAddToGroup(
                 offer,
                 offerDates,
@@ -697,7 +738,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 twin = mockTwin(bosonToken.address);
               });
 
-              it.skip("👉 createOfferAndTwinWithBundle", async function () {
+              it("👉 createOfferAndTwinWithBundle", async function () {
                 // Create a seller, an offer with condition and a twin with bundle, testing for the events
                 const tx = await orchestrationHandler
                   .connect(assistant)
@@ -709,7 +750,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 await expect(tx).to.emit(orchestrationHandler, "BundleCreated");
               });
 
-              it.skip("👉 createOfferWithConditionAndTwinAndBundle", async function () {
+              it("👉 createOfferWithConditionAndTwinAndBundle", async function () {
                 const condition = mockCondition({
                   tokenAddress: rando.address,
                   tokenType: TokenType.MultiToken,
@@ -762,7 +803,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               voucherInitValues = mockVoucherInitValues();
             });
 
-            it.skip("👉 createSellerAndPremintedOffer", async function () {
+            it("👉 createSellerAndPremintedOffer", async function () {
               // Create a seller and a preminted offer, testing for the event
               const tx = await orchestrationHandler
                 .connect(rando)
@@ -794,7 +835,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
             });
 
-            it.skip("👉 createSellerAndPremintedOfferWithCondition", async function () {
+            it("👉 createSellerAndPremintedOfferWithCondition", async function () {
               const condition = mockCondition({
                 tokenAddress: rando.address,
                 tokenType: TokenType.MultiToken,
@@ -844,7 +885,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 twin = mockTwin(bosonToken.address);
               });
 
-              it.skip("👉 createSellerAndPremintedOfferAndTwinWithBundle", async function () {
+              it("👉 createSellerAndPremintedOfferAndTwinWithBundle", async function () {
                 // Create a seller, a preminted offer with condition and a twin with bundle, testing for the events
                 const tx = await orchestrationHandler
                   .connect(rando)
@@ -879,7 +920,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
               });
 
-              it.skip("👉 createSellerAndPremintedOfferWithConditionAndTwinAndBundle", async function () {
+              it("👉 createSellerAndPremintedOfferWithConditionAndTwinAndBundle", async function () {
                 const condition = mockCondition({
                   tokenAddress: rando.address,
                   tokenType: TokenType.MultiToken,
@@ -903,8 +944,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                     voucherInitValues,
                     agentId
                   );
-
-                console.log("tx", tx);
 
                 // Check that all events are emitted
                 await expect(tx).to.emit(orchestrationHandler, "SellerCreated");
@@ -948,7 +987,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
             });
 
-            it.skip("👉 createPremintedOfferWithCondition", async function () {
+            it("👉 createPremintedOfferWithCondition", async function () {
               const condition = mockCondition({
                 tokenAddress: rando.address,
                 tokenType: TokenType.MultiToken,
@@ -975,8 +1014,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               await expect(tx).to.emit(bosonVoucher, "RangeReserved");
             });
 
-            it.skip("👉 createPremintedOfferAddToGroup", async function () {
-              // Create a preminted offer, add it.skip to the group, testing for the events
+            it("👉 createPremintedOfferAddToGroup", async function () {
+              // Create a preminted offer, add it to the group, testing for the events
               const tx = await orchestrationHandler.connect(assistant).createPremintedOfferAddToGroup(
                 offer,
                 offerDates,
@@ -1006,7 +1045,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 twin = mockTwin(bosonToken.address);
               });
 
-              it.skip("👉 createPremintedOfferAndTwinWithBundle", async function () {
+              it("👉 createPremintedOfferAndTwinWithBundle", async function () {
                 // Create a preminted offer with condition and a twin with bundle, testing for the events
                 const tx = await orchestrationHandler
                   .connect(assistant)
@@ -1029,7 +1068,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 await expect(tx).to.emit(bosonVoucher, "RangeReserved");
               });
 
-              it.skip("👉 createPremintedOfferWithConditionAndTwinAndBundle", async function () {
+              it("👉 createPremintedOfferWithConditionAndTwinAndBundle", async function () {
                 const condition = mockCondition({
                   tokenAddress: rando.address,
                   tokenType: TokenType.MultiToken,
@@ -1081,7 +1120,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
 
         context("📋 ExchangeHandlerFacet", async function () {
-          it.skip("👉 commitToPremintedOffer", async function () {
+          it("👉 commitToPremintedOffer", async function () {
             // Get next token id
             const tokenId = await exchangeHandler.getNextExchangeId();
 
@@ -1105,10 +1144,21 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
 
         context("📋 OfferHandlerFacet", async function () {
-          it.skip("👉 reserveRange", async function () {
+          it("👉 reserveRange for assistant", async function () {
             // Reserve range
             await expect(
               offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address)
+            ).to.emit(offerHandler, "RangeReserved");
+          });
+
+          it("👉 reserveRange to contract", async function () {
+            // Voucher contract
+            const sellerIndex = sellers.findIndex((s) => s.id === seller.id);
+            const expectedCloneAddress = calculateContractAddress(accountHandler.address, sellerIndex + 1);
+            const bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+            await expect(
+              offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, bosonVoucher.address)
             ).to.emit(offerHandler, "RangeReserved");
           });
         });
@@ -1116,7 +1166,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     });
 
     context("Bug fixes", async function () {
-      it.skip("Should ignore twin id set by seller and use nextAccountId on twin creation", async function () {});
+      it("Should ignore twin id set by seller and use nextAccountId on twin creation", async function () {});
       // Get next twin id
       const { nextTwinId } = protocolContractState.twinContractState;
 
@@ -1147,6 +1197,35 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       [exists, storedTwin] = await twinHandler.getTwin(nextTwinId.toString());
       expect(exists).to.be.true;
       expect(Twin.fromStruct(storedTwin)).to.be.equal(twin.toStruct());
+    });
+
+    it("should return the correct tokenURI when token is pre-minted", async function () {
+      // Get offer
+      const offerId = "2";
+      const { offer } = await offerHandler.getOffer(offerId);
+
+      // Get seller assistant
+      const { sellers } = preUpgradeEntities;
+      const seller = sellers.find((s) => s.id === offer.sellerId.toString());
+      const assistant = seller.wallet;
+
+      // Reserve range
+      const length = "1";
+      const tx = await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
+      const { events } = await tx.wait();
+      const { startExchangeId: voucherId } = events.find((e) => e.event === "RangeReserved").args;
+
+      // Find voucher contract
+      const sellerIndex = sellers.findIndex((s) => s.id === seller.id);
+      const expectedCloneAddress = calculateContractAddress(accountHandler.address, sellerIndex + 1);
+      const bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+      // Premint
+      await bosonVoucher.connect(assistant).preMint(offerId, 1);
+
+      // Get metadata URI
+      const tokenURI = await bosonVoucher.tokenURI(voucherId);
+      expect(tokenURI).eq(offer.metadataUri);
     });
   });
 });

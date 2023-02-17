@@ -55,6 +55,7 @@ function getGenericContext(
           delete protocolContractStateAfterUpgrade.metaTxPrivateContractState;
           delete protocolContractState.metaTxPrivateContractState;
 
+          // Operator has changed to assistant so we need to test separately
           delete protocolContractState.accountContractState.DRsState;
           delete protocolContractStateAfterUpgrade.accountContractState.DRsState;
           delete protocolContractState.accountContractState.sellerState;
@@ -97,36 +98,35 @@ function getGenericContext(
           postUpgradeEntities.DRs.length +
           postUpgradeEntities.agents.length +
           postUpgradeEntities.buyers.length;
+
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.accountContractState.nextAccountId.toNumber(),
-          protocolContractState.accountContractState.nextAccountId.add(accountCount).toNumber(),
+          protocolContractStateAfterUpgradeAndActions.accountContractState.nextAccountId,
+          Number(protocolContractState.accountContractState.nextAccountId) + accountCount,
           "nextAccountId mismatch"
         );
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.exchangeContractState.nextExchangeId.toNumber(),
-          protocolContractState.exchangeContractState.nextExchangeId
-            .add(postUpgradeEntities.exchanges.length)
-            .toNumber(),
+          protocolContractStateAfterUpgradeAndActions.exchangeContractState.nextExchangeId,
+          Number(protocolContractState.exchangeContractState.nextExchangeId) + postUpgradeEntities.exchanges.length,
           "nextExchangeId mismatch"
         );
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.groupContractState.nextGroupId.toNumber(),
-          protocolContractState.groupContractState.nextGroupId.add(postUpgradeEntities.groups.length).toNumber(),
+          protocolContractStateAfterUpgradeAndActions.groupContractState.nextGroupId,
+          Number(protocolContractState.groupContractState.nextGroupId) + postUpgradeEntities.groups.length,
           "nextGroupId mismatch"
         );
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.offerContractState.nextOfferId.toNumber(),
-          protocolContractState.offerContractState.nextOfferId.add(postUpgradeEntities.offers.length).toNumber(),
+          protocolContractStateAfterUpgradeAndActions.offerContractState.nextOfferId,
+          Number(protocolContractState.offerContractState.nextOfferId) + postUpgradeEntities.offers.length,
           "nextOfferId mismatch"
         );
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.twinContractState.nextTwinId.toNumber(),
-          protocolContractState.twinContractState.nextTwinId.add(postUpgradeEntities.twins.length).toNumber(),
+          protocolContractStateAfterUpgradeAndActions.twinContractState.nextTwinId,
+          Number(protocolContractState.twinContractState.nextTwinId) + postUpgradeEntities.twins.length,
           "nextTwinId mismatch"
         );
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.bundleContractState.nextBundleId.toNumber(),
-          protocolContractState.bundleContractState.nextBundleId.add(postUpgradeEntities.bundles.length).toNumber()
+          protocolContractStateAfterUpgradeAndActions.bundleContractState.nextBundleId,
+          Number(protocolContractState.bundleContractState.nextBundleId) + postUpgradeEntities.bundles.length
         );
 
         // State before and after should be equal
@@ -149,6 +149,16 @@ function getGenericContext(
           // We need to remove the old state from the protocol state
           delete protocolContractStateAfterUpgradeAndActions.metaTxPrivateContractState;
           delete protocolContractState.metaTxPrivateContractState;
+
+          // Operator has changed to assistant so we need to test separately
+          delete protocolContractState.accountContractState.DRsState;
+          delete protocolContractStateAfterUpgradeAndActions.accountContractState.DRsState;
+          delete protocolContractState.accountContractState.sellerState;
+          delete protocolContractStateAfterUpgradeAndActions.accountContractState.sellerState;
+          delete protocolContractState.accountContractState.sellerByAddressState;
+          delete protocolContractStateAfterUpgradeAndActions.accountContractState.sellerByAddressState;
+          delete protocolContractState.accountContractState.sellerByAuthTokenState;
+          delete protocolContractStateAfterUpgradeAndActions.accountContractState.sellerByAuthTokenState;
         }
 
         assert.deepEqual(

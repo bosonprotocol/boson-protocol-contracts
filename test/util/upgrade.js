@@ -165,6 +165,8 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scr
     facetConfig: JSON.stringify(facets.upgrade[tag] || facets.upgrade["latest"]),
   });
 
+  shell.exec(`npx hardhat compile`);
+
   // Cast to updated interface
   let newHandlers = {};
   for (const [handlerName, interfaceName] of Object.entries(upgradedInterfaces)) {
@@ -668,8 +670,8 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
   for (const account of accounts) {
     const id = account.id;
 
-    sellerState.push(await getSeller(accountHandlerRando, id));
-    DRsState.push(await getDisputeResolver(accountHandlerRando, id));
+    sellerState.push(await getSeller(accountHandlerRando, id, { getBy: "id" }));
+    DRsState.push(await getDisputeResolver(accountHandlerRando, id, { getBy: "id" }));
     agentsState.push(await getAgent(accountHandlerRando, id));
     buyersState.push(await getBuyer(accountHandlerRando, id));
 
@@ -683,8 +685,8 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
     const sellerAddress = seller.wallet.address;
     const sellerAuthToken = seller.authToken;
 
-    sellerByAddressState(await getSeller(accountHandlerRando, sellerAddress, { getBy: "address" }));
-    sellerByAddressState(await getSeller(accountHandlerRando, sellerAuthToken, { getBy: "authToken" }));
+    sellerByAddressState.push(await getSeller(accountHandlerRando, sellerAddress, { getBy: "address" }));
+    sellerByAddressState.push(await getSeller(accountHandlerRando, sellerAuthToken, { getBy: "authToken" }));
     DRbyAddressState.push(await getDisputeResolver(accountHandlerRando, sellerAddress, { getBy: "address" }));
   }
 
@@ -697,7 +699,7 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
     DRbyAddressState.push(await getDisputeResolver(accountHandlerRando, accountAddress, { getBy: "address" }));
   }
 
-  nextAccountId = await accountHandlerRando.getNextAccountId();
+  nextAccountId = (await accountHandlerRando.getNextAccountId()).toString();
 
   return {
     DRsState,
