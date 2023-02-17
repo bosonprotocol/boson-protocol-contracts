@@ -107,17 +107,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 _exchangeId,
         PriceDiscovery calldata _priceDiscovery
     ) external payable exchangesNotPaused buyersNotPaused nonReentrant {
-        /* need to know 
-            seller (== current owner of voucher)
-            buyer (== new owner)
-            price
-        */
-
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
-
-        // verify that order can be fulfilled [// pass forward to 0x or seaport]
-        // offer must be done in a way that boson protocol receives minimal necesarry funds to go in escrow
 
         // Exchange must exist
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
@@ -131,7 +122,18 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Get token address
         address tokenAddress = offer.exchangeToken;
 
-        // Calculate the amount to be immediately released to current voucher owner
+        // Get current buyer address. This is actually the seller in sequential commit
+        address _seller;
+        {
+            (, Buyer storage currentBuyer) = fetchBuyer(exchange.buyerId);
+            _seller = currentBuyer.wallet;
+        }
+
+        // First call price discovery and get actual price
+        // It might be lower tha submitted for buy orders and higher for sell orders
+        uint256 actualPrice = fulFilOrder(_exchangeId, tokenAddress, _priceDiscovery, _seller, _buyer, offer.sellerId);
+
+        // Calculate the amount to be kept in escrow
         uint256 escrowAmount;
         {
             // Get sequential commits for this exchange
@@ -141,16 +143,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 // Calculate fees
                 uint256 protocolFeeAmount = tokenAddress == protocolAddresses().token
                     ? protocolFees().flatBoson
-                    : (protocolFees().percentage * _priceDiscovery.price) / 10000;
+                    : (protocolFees().percentage * actualPrice) / 10000;
 
                 // Calculate royalties
                 (, uint256 royaltyAmount) = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]).royaltyInfo(
                     _exchangeId,
-                    _priceDiscovery.price
+                    actualPrice
                 );
 
                 // Verify that fees and royalties are not higher than the price.
-                require((protocolFeeAmount + royaltyAmount) <= _priceDiscovery.price, FEE_AMOUNT_TOO_HIGH);
+                require((protocolFeeAmount + royaltyAmount) <= actualPrice, FEE_AMOUNT_TOO_HIGH);
 
                 // Get price paid by current buyer
                 uint256 len = sequentialCommits.length;
@@ -158,45 +160,37 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
                 // Calculate the amount to be immediately released to current voucher owner
                 // escrowAmount =
-                //     _priceDiscovery.price -
-                //     Math.min(currentPrice, _priceDiscovery.price - protocolFeeAmount - royaltyAmount);
+                //     actualPrice -
+                //     Math.min(currentPrice, actualPrice - protocolFeeAmount - royaltyAmount);
                 // escrowAmount =
-                //     Math.max(_priceDiscovery.price-currentPrice,  protocolFeeAmount + royaltyAmount); // can underflow
-                escrowAmount =
-                    Math.max(_priceDiscovery.price, protocolFeeAmount + royaltyAmount + currentPrice) -
-                    currentPrice;
+                //     Math.max(actualPrice-currentPrice,  protocolFeeAmount + royaltyAmount); // can underflow
+                escrowAmount = Math.max(actualPrice, protocolFeeAmount + royaltyAmount + currentPrice) - currentPrice;
 
                 // Update sequential commit
                 sequentialCommits.push(
                     SequentialCommit({
                         resellerId: exchange.buyerId,
-                        price: _priceDiscovery.price,
+                        price: actualPrice,
                         protocolFeeAmount: protocolFeeAmount,
                         royaltyAmount: royaltyAmount
                     })
                 );
             }
-        }
 
-        // Release funds to current buyer
-        // FundsLib.increaseAvailableFunds(exchange.buyerId, tokenAddress, currentBuyerAmount); // must be called before transfer is done
-
-        {
-            // Amount of funds to go in escrow
-            // uint256 escrowAmount = ;
-
-            // Get current buyer address. This is actually the seller in sequential commit
-            (, Buyer storage currentBuyer) = fetchBuyer(exchange.buyerId);
-
-            fulFilOrder(
-                _exchangeId,
-                tokenAddress,
-                _priceDiscovery,
-                escrowAmount,
-                currentBuyer.wallet,
-                _buyer,
-                offer.sellerId
-            );
+            // Make sure enough get escrowed
+            if (_priceDiscovery.direction == Direction.Buy && escrowAmount > 0) {
+                // Price discovery should send funds to the seller
+                // Nothing in escrow, need to pull everything from seller
+                if (tokenAddress == address(0)) {
+                    FundsLib.transferFundsToProtocol(address(weth), _seller, escrowAmount);
+                    weth.withdraw(escrowAmount);
+                } else {
+                    FundsLib.transferFundsToProtocol(tokenAddress, _seller, escrowAmount);
+                }
+            } else {
+                // when sell direction, we have full proceeds in escrow. Keep minimal in, return the difference
+                FundsLib.transferFundsFromProtocol(tokenAddress, payable(_seller), actualPrice - escrowAmount);
+            }
         }
 
         // since exchange and voucher are passed by reference, they are updated
@@ -208,23 +202,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 _exchangeId,
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
-        uint256 _escrowAmount,
         address _seller,
         address _buyer,
         uint256 _initialSellerId
-    ) internal {
+    ) internal returns (uint256 actualPrice) {
         if (_priceDiscovery.direction == Direction.Buy) {
-            fulfilBuyOrder(
-                _exchangeId,
-                _exchangeToken,
-                _priceDiscovery,
-                _escrowAmount,
-                _seller,
-                _buyer,
-                _initialSellerId
-            );
+            return fulfilBuyOrder(_exchangeId, _exchangeToken, _priceDiscovery, _buyer, _initialSellerId);
         } else {
-            fulfilSellOrder(_exchangeId, _exchangeToken, _priceDiscovery, _escrowAmount, _seller, _initialSellerId);
+            return fulfilSellOrder(_exchangeId, _exchangeToken, _priceDiscovery, _seller, _initialSellerId);
         }
     }
 
@@ -232,11 +217,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 _exchangeId,
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
-        uint256 _escrowAmount,
-        address _seller,
         address _buyer,
         uint256 _initialSellerId
-    ) internal {
+    ) internal returns (uint256 actualPrice) {
         // Transfer buyers funds to protocol
         FundsLib.validateIncomingPayment(_exchangeToken, _priceDiscovery.price);
 
@@ -275,25 +258,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         // Check the escrow amount
         uint256 protocolBalanceAfter = getBalance(_exchangeToken);
+        actualPrice = protocolBalanceBefore - protocolBalanceAfter;
 
-        uint256 expectedBalanceAfter = protocolBalanceBefore - _priceDiscovery.price + _escrowAmount;
-        // console.log("expectedBalanceAfter",expectedBalanceAfter);
-        if (protocolBalanceAfter > expectedBalanceAfter) {
-            // Escrowed too much, return the difference to buyer
-            FundsLib.transferFundsFromProtocol(
-                _exchangeToken,
-                payable(_seller),
-                protocolBalanceAfter - expectedBalanceAfter
-            );
-        } else if (protocolBalanceAfter < expectedBalanceAfter) {
-            uint256 diff = expectedBalanceAfter - protocolBalanceAfter;
-            // Not enough in the escrow, pull it form seller
-            if (_exchangeToken == address(0)) {
-                FundsLib.transferFundsToProtocol(address(weth), _seller, diff);
-                weth.withdraw(diff);
-            } else {
-                FundsLib.transferFundsToProtocol(_exchangeToken, _seller, diff);
-            }
+        uint256 overchargedAmount = _priceDiscovery.price - actualPrice;
+
+        if (overchargedAmount > 0) {
+            // Return the surplus to buyer
+            FundsLib.transferFundsFromProtocol(_exchangeToken, payable(_buyer), overchargedAmount);
         }
 
         // Transfer voucher to buyer
@@ -304,10 +275,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 _exchangeId,
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
-        uint256 _escrowAmount,
         address _seller,
         uint256 _initialSellerId
-    ) internal {
+    ) internal returns (uint256 actualPrice) {
         // what about non-zero msg.value?
 
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[_initialSellerId]);
@@ -337,6 +307,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Check the escrow amount
         uint256 protocolBalanceAfter = getBalance(_exchangeToken);
 
+        actualPrice = protocolBalanceAfter - protocolBalanceBefore;
+
+        require(actualPrice >= _priceDiscovery.price, "Price discovery contract returned less than expected");
+
+        /**
         uint256 expectedBalanceAfter = protocolBalanceBefore + _escrowAmount; // what about potential non zero msg.value?
 
         if (protocolBalanceAfter > expectedBalanceAfter) {
@@ -356,6 +331,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 FundsLib.transferFundsToProtocol(_exchangeToken, _seller, diff);
             }
         }
+         */
     }
 
     function getBalance(address _tokenAddress) internal view returns (uint256) {
