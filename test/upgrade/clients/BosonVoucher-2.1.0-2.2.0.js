@@ -25,6 +25,7 @@ const { getGenericContext } = require("./01_generic");
 const SellerUpdateFields = require("../../../scripts/domain/SellerUpdateFields");
 
 const oldVersion = "v2.1.0";
+// TODO: change to v2.2.0
 const newVersion = "HEAD";
 // Script that was used to deploy v2.1.0 was created after v2.1.0 tag was created.
 // This is the commit hash when deployment happened, so it represents the state of the code at that time.
@@ -35,7 +36,7 @@ let snapshot;
 /**
  *  Upgrade test case - After upgrade from 2.1.0 to 2.2.0 everything is still operational
  */
-describe("[@skip-on-coverage] After client upgrade, everything is still operational", function() {
+describe("[@skip-on-coverage] After client upgrade, everything is still operational", function () {
   // Common vars
   let deployer, assistant;
 
@@ -50,7 +51,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
   let bosonVoucher;
   let forwarder;
 
-  before(async function() {
+  before(async function () {
     try {
       // Make accounts available
       [deployer, assistant] = await ethers.getSigners();
@@ -85,6 +86,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       forwarder = await upgradeClients(newVersion);
 
       // upgrade suite
+      // TODO: change undefined to v2.2.0
       ({ offerHandler, configHandler, accountHandler } = await upgradeSuite(undefined, protocolDiamondAddress, {
         offerHandler: "IBosonOfferHandler",
         configHandler: "IBosonConfigHandler",
@@ -118,7 +120,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
     }
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     // Revert to state right after the upgrade.
     // This is used so the lengthly setup (deploy+upgrade) is done only once.
     await ethers.provider.send("evm_revert", [snapshot]);
@@ -130,11 +132,11 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
   // Test methods that were added to see that upgrade was succesful
   // Extensive unit tests for this methods are in /test/protocol/clients/BosonVoucherTest.js
-  context("📋 New methods", async function() {
+  context("📋 New methods", async function () {
     let offerId, start, length, amount;
     let sellerId, disputeResolverId, offer, offerDates, offerDurations, agentId;
 
-    beforeEach(async function() {
+    beforeEach(async function () {
       // Create a seller
       sellerId = await accountHandler.getNextAccountId();
       const seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address, true);
@@ -186,7 +188,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       await configHandler.connect(deployer).setMaxPremintedVouchers(1000);
     });
 
-    it("reserveRange()", async function() {
+    it("reserveRange()", async function () {
       // Reserve range for the assistant, test for event
       await expect(offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address)).to.emit(
         bosonVoucher,
@@ -206,8 +208,8 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       );
     });
 
-    context("preMint()", async function() {
-      it("seller can pre mint vouchers", async function() {
+    context("preMint()", async function () {
+      it("seller can pre mint vouchers", async function () {
         // Reserve range
         await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
 
@@ -215,7 +217,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.emit(bosonVoucher, "Transfer");
       });
 
-      it("MetaTx: forwarder can pre mint on behalf of seller on old vouchers", async function() {
+      it("MetaTx: forwarder can pre mint on behalf of seller on old vouchers", async function () {
         const sellersLength = preUpgradeEntities.sellers.length;
 
         // Gets last seller created before upgrade
@@ -277,7 +279,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       });
     });
 
-    it("burnPremintedVouchers()", async function() {
+    it("burnPremintedVouchers()", async function () {
       // Reserve range and premint tokens
       await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
       await bosonVoucher.connect(assistant).preMint(offerId, amount);
@@ -289,7 +291,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId)).to.emit(bosonVoucher, "Transfer");
     });
 
-    it("getRange()", async function() {
+    it("getRange()", async function () {
       // Reserve range
       await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
 
@@ -300,7 +302,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
     });
 
-    it("getAvailablePreMints()", async function() {
+    it("getAvailablePreMints()", async function () {
       // Reserve range
       await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
 

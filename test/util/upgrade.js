@@ -322,8 +322,8 @@ async function populateProtocolContract(
 
       case entityType.SELLER: {
         const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address, true);
-
         const id = (seller.id = nextAccountId.toString());
+
         let authToken;
 
         // randomly decide if auth token is used or not
