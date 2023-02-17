@@ -58,94 +58,94 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let preUpgradeEntities;
 
   before(async function () {
-    // try {
-    // Make accounts available
-    [deployer, rando, , assistant] = await ethers.getSigners();
+    try {
+      // Make accounts available
+      [deployer, rando, , assistant] = await ethers.getSigners();
 
-    ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(
-      deployer,
-      oldVersion,
-      v2_1_0_scripts
-    ));
-    ({ twinHandler, disputeHandler } = protocolContracts);
-    ({ mockToken: mockToken } = mockContracts);
+      ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(
+        deployer,
+        oldVersion,
+        v2_1_0_scripts
+      ));
+      ({ twinHandler, disputeHandler } = protocolContracts);
+      ({ mockToken: mockToken } = mockContracts);
 
-    // Populate protocol with data
-    preUpgradeEntities = await populateProtocolContract(
-      deployer,
-      protocolDiamondAddress,
-      protocolContracts,
-      mockContracts,
-      oldVersion
-    );
-
-    // Get current protocol state, which serves as the reference
-    // We assume that this state is a true one, relying on our unit and integration tests
-    protocolContractState = await getProtocolContractState(
-      protocolDiamondAddress,
-      protocolContracts,
-      mockContracts,
-      preUpgradeEntities,
-      oldVersion
-    );
-
-    // upgrade clients
-    await upgradeClients(newVersion);
-
-    // Upgrade protocol
-    ({
-      accountHandler,
-      metaTransactionsHandler,
-      protocolInitializationHandler,
-      configHandler,
-      orchestrationHandler,
-      offerHandler,
-      exchangeHandler,
-    } = await upgradeSuite(undefined, protocolDiamondAddress, {
-      accountHandler: "IBosonAccountHandler",
-      metaTransactionsHandler: "IBosonMetaTransactionsHandler",
-      protocolInitializationHandler: "IBosonProtocolInitializationHandler",
-      configHandler: "IBosonConfigHandler",
-      orchestrationHandler: "IBosonOrchestrationHandler",
-      offerHandler: "IBosonOfferHandler",
-      exchangeHandler: "IBosonExchangeHandler",
-    }));
-
-    protocolContracts = {
-      ...protocolContracts,
-      accountHandler,
-      metaTransactionsHandler,
-      protocolInitializationHandler,
-      configHandler,
-      offerHandler,
-      exchangeHandler,
-    };
-
-    snapshot = await ethers.provider.send("evm_snapshot", []);
-
-    // This context is placed in an uncommon place due to order of test execution.
-    // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
-    // and those values are undefined if this is placed outside "before".
-    // Normally, this would be solved with mocha's --delay option, but it.skip does not behave as expected when running with hardhat.
-    context(
-      "Generic tests",
-      getGenericContext(
+      // Populate protocol with data
+      preUpgradeEntities = await populateProtocolContract(
         deployer,
         protocolDiamondAddress,
         protocolContracts,
         mockContracts,
-        protocolContractState,
+        oldVersion
+      );
+
+      // Get current protocol state, which serves as the reference
+      // We assume that this state is a true one, relying on our unit and integration tests
+      protocolContractState = await getProtocolContractState(
+        protocolDiamondAddress,
+        protocolContracts,
+        mockContracts,
         preUpgradeEntities,
-        snapshot,
-        newVersion
-      )
-    );
-    // } catch (err) {
-    //   // revert to latest version of scripts and contracts
-    //   revertState();
-    //   // stop execution
-    //   assert(false, `Before all reverts with: ${err}`);
-    // }
+        oldVersion
+      );
+
+      // upgrade clients
+      await upgradeClients(newVersion);
+
+      // Upgrade protocol
+      ({
+        accountHandler,
+        metaTransactionsHandler,
+        protocolInitializationHandler,
+        configHandler,
+        orchestrationHandler,
+        offerHandler,
+        exchangeHandler,
+      } = await upgradeSuite(undefined, protocolDiamondAddress, {
+        accountHandler: "IBosonAccountHandler",
+        metaTransactionsHandler: "IBosonMetaTransactionsHandler",
+        protocolInitializationHandler: "IBosonProtocolInitializationHandler",
+        configHandler: "IBosonConfigHandler",
+        orchestrationHandler: "IBosonOrchestrationHandler",
+        offerHandler: "IBosonOfferHandler",
+        exchangeHandler: "IBosonExchangeHandler",
+      }));
+
+      protocolContracts = {
+        ...protocolContracts,
+        accountHandler,
+        metaTransactionsHandler,
+        protocolInitializationHandler,
+        configHandler,
+        offerHandler,
+        exchangeHandler,
+      };
+
+      snapshot = await ethers.provider.send("evm_snapshot", []);
+
+      // This context is placed in an uncommon place due to order of test execution.
+      // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
+      // and those values are undefined if this is placed outside "before".
+      // Normally, this would be solved with mocha's --delay option, but it.skip does not behave as expected when running with hardhat.
+      context(
+        "Generic tests",
+        getGenericContext(
+          deployer,
+          protocolDiamondAddress,
+          protocolContracts,
+          mockContracts,
+          protocolContractState,
+          preUpgradeEntities,
+          snapshot,
+          newVersion
+        )
+      );
+    } catch (err) {
+      // revert to latest version of scripts and contracts
+      revertState();
+      // stop execution
+      assert(false, `Before all reverts with: ${err}`);
+    }
   });
 
   afterEach(async function () {
@@ -228,6 +228,17 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           VOUCHER_SYMBOL + "_" + nextAccountId.toString(),
           "Wrong voucher client symbol"
         );
+      });
+
+      it.skip("Operator has renamed to assistant", async function () {
+        let protocolContractStateAfterUpgrade = await getProtocolContractState(
+          protocolDiamondAddress,
+          protocolContracts,
+          mockContracts,
+          preUpgradeEntities
+        );
+
+        let { accountContractState } = protocolContractState;
       });
 
       context("MetaTransactionsHandler", async function () {

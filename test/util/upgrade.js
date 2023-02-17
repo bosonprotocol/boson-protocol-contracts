@@ -39,6 +39,10 @@ const OfferFees = require("../../scripts/domain/OfferFees");
 const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
 const OfferDates = require("../../scripts/domain/OfferDates");
+const Seller = require("../../scripts/domain/Seller");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const Agent = require("../../scripts/domain/Agent");
+const Buyer = require("../../scripts/domain/Buyer");
 
 // Common vars
 const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
@@ -663,16 +667,12 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
   // Query even the ids where it's not expected to get the entity
   for (const account of accounts) {
     const id = account.id;
-    const [singleSellerState, singleDRsState, singleBuyersState, singleAgentsState] = await Promise.all([
-      accountHandlerRando.getSeller(id),
-      accountHandlerRando.getDisputeResolver(id),
-      accountHandlerRando.getBuyer(id),
-      accountHandlerRando.getAgent(id),
-    ]);
-    sellerState.push(singleSellerState);
-    DRsState.push(singleDRsState);
-    buyersState.push(singleBuyersState);
-    agentsState.push(singleAgentsState);
+
+    sellerState.push(await getSeller(accountHandlerRando, id));
+    DRsState.push(await getDisputeResolver(accountHandlerRando, id));
+    agentsState.push(await getAgent(accountHandlerRando, id));
+    buyersState.push(await getBuyer(accountHandlerRando, id));
+
     for (const account2 of accounts) {
       const id2 = account2.id;
       allowedSellersState.push(await accountHandlerRando.areSellersAllowed(id2, [id]));
@@ -683,14 +683,9 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
     const sellerAddress = seller.wallet.address;
     const sellerAuthToken = seller.authToken;
 
-    const [singleSellerByAddressState, singleSellerByAuthTokenState, singleDRbyAddressState] = await Promise.all([
-      accountHandlerRando.getSellerByAddress(sellerAddress),
-      accountHandlerRando.getSellerByAuthToken(sellerAuthToken),
-      accountHandlerRando.getDisputeResolverByAddress(sellerAddress),
-    ]);
-    sellerByAddressState.push(singleSellerByAddressState);
-    sellerByAuthTokenState.push(singleSellerByAuthTokenState);
-    DRbyAddressState.push(singleDRbyAddressState);
+    sellerByAddressState(await getSeller(accountHandlerRando, sellerAddress, { getBy: "address" }));
+    sellerByAddressState(await getSeller(accountHandlerRando, sellerAuthToken, { getBy: "authToken" }));
+    DRbyAddressState.push(await getDisputeResolver(accountHandlerRando, sellerAddress, { getBy: "address" }));
   }
 
   const otherAccounts = [...DRs, ...agents, ...buyers];
@@ -698,12 +693,8 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
   for (const account of otherAccounts) {
     const accountAddress = account.wallet.address;
 
-    const [singleSellerByAddressState, singleDRbyAddressState] = await Promise.all([
-      accountHandlerRando.getSellerByAddress(accountAddress),
-      accountHandlerRando.getDisputeResolverByAddress(accountAddress),
-    ]);
-    sellerByAddressState.push(singleSellerByAddressState);
-    DRbyAddressState.push(singleDRbyAddressState);
+    sellerByAddressState.push(await getSeller(accountHandlerRando, accountAddress, { getBy: "address" }));
+    DRbyAddressState.push(await getDisputeResolver(accountHandlerRando, accountAddress, { getBy: "address" }));
   }
 
   nextAccountId = await accountHandlerRando.getNextAccountId();
@@ -1704,6 +1695,51 @@ function revertState() {
   shell.exec(`rm -rf contracts/* scripts/*`);
   shell.exec(`git checkout HEAD contracts scripts`);
   shell.exec(`git reset HEAD contracts scripts`);
+}
+
+async function getDisputeResolver(accountHandler, value, { getBy }) {
+  let exist, DR, DRFees, sellerAllowList;
+  if (getBy == "address") {
+    [exist, DR, DRFees, sellerAllowList] = await accountHandler.getDisputeResolverByAddress(value);
+  } else {
+    [exist, DR, DRFees, sellerAllowList] = await accountHandler.getDisputeResolver(value);
+  }
+  DR = DisputeResolver.fromStruct(DR);
+  DRFees = DRFees.map((fee) => DisputeResolverFee.fromStruct(fee));
+  sellerAllowList = sellerAllowList.map((sellerId) => sellerId.toString());
+
+  return { exist, DR, DRFees, sellerAllowList };
+}
+
+async function getSeller(accountHandler, value, { getBy }) {
+  let exist, seller, authToken;
+
+  if (getBy == "address") {
+    [exist, seller, authToken] = await accountHandler.getSellerByAddress(value);
+  } else if (getBy == "authToken") {
+    [exist, seller, authToken] = await accountHandler.getSellerByAuthToken(value);
+  } else {
+    [exist, seller, authToken] = await accountHandler.getSeller(value);
+  }
+
+  seller = Seller.fromStruct(seller);
+  authToken = AuthToken.fromStruct(authToken);
+
+  return { exist, seller, authToken };
+}
+
+async function getAgent(accountHandler, id) {
+  let exist, agent;
+  [exist, agent] = await accountHandler.getAgent(id);
+  agent = Agent.fromStruct(agent);
+  return { exist, agent };
+}
+
+async function getBuyer(accountHandler, id) {
+  let exist, buyer;
+  [exist, buyer] = await accountHandler.getBuyer(id);
+  buyer = Buyer.fromStruct(buyer);
+  return { exist, buyer };
 }
 
 exports.deploySuite = deploySuite;
