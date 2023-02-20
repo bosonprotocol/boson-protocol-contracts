@@ -574,6 +574,25 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         _setContractURI(_newContractURI);
     }
 
+    function callExternalContract(address _to, bytes memory _data) external onlyOwner {
+        require(_to != address(0), INVALID_ADDRESS);
+
+        (bool success, bytes memory result) = _to.delegatecall(_data);
+
+        // Handle result
+        if (!success) {
+            if (result.length > 0) {
+                // bubble up the error
+                revert(string(result));
+            } else {
+                // Reverts with default message
+                revert(DELEGATECALL_FAILED);
+            }
+        }
+    }
+
+    receive() external payable {}
+
     /**
      * @notice Sets new contract URI.
      * Can only be called by the owner or during the initialization.

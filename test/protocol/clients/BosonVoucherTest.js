@@ -30,7 +30,9 @@ const {
   setNextBlockTimestamp,
   getFacetsWithArgs,
   prepareDataSignatureParameters,
+  getEvent,
 } = require("../../util/utils.js");
+const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
 const { waffle } = hre;
 const { deployMockContract } = waffle;
 const FormatTypes = ethers.utils.FormatTypes;
@@ -70,7 +72,7 @@ describe("IBosonVoucher", function () {
 
   beforeEach(async function () {
     // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
-    [deployer, protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR, protocolTreasury, bosonToken] =
+    [deployer, protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR, protocolTreasury] =
       await ethers.getSigners();
 
     // make all account the same
@@ -111,6 +113,8 @@ describe("IBosonVoucher", function () {
 
     const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
     const buyerEscalationDepositPercentage = "1000"; // 10%
+
+    [bosonToken] = await deployMockTokens();
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
@@ -188,6 +192,18 @@ describe("IBosonVoucher", function () {
         support = await bosonVoucher.supportsInterface(interfaceIds["IERC2981"]);
         expect(support, "IERC2981 interface not supported").is.true;
       });
+    });
+  });
+
+  context("General", async function () {
+    it("Contract can receive native token", async function () {
+      const balanceBefore = await ethers.provider.getBalance(bosonVoucher.address);
+      const amount = ethers.utils.parseUnits("1", "ether");
+
+      await admin.sendTransaction({ to: bosonVoucher.address, value: amount });
+
+      const balanceAfter = await ethers.provider.getBalance(bosonVoucher.address);
+      expect(balanceAfter.sub(balanceBefore)).to.eq(amount);
     });
   });
 
@@ -2346,6 +2362,43 @@ describe("IBosonVoucher", function () {
 
       // Reset the accountId iterator
       accountId.next(true);
+    });
+  });
+
+  context("callExternalContract()", function () {
+    let mockSimpleContract, calldata;
+
+    beforeEach(async function () {
+      // Deploy a random contract
+      const MockSimpleContract = await ethers.getContractFactory("MockSimpleContract");
+      mockSimpleContract = await MockSimpleContract.deploy();
+      await mockSimpleContract.deployed();
+
+      // Generate calldata
+      calldata = mockSimpleContract.interface.encodeFunctionData("testEvent");
+    });
+
+    it("Should call external contract and emit its events", async function () {
+      const tx = await bosonVoucher.connect(assistant).callExternalContract(mockSimpleContract.address, calldata);
+
+      const receipt = await tx.wait();
+      const event = getEvent(receipt, mockSimpleContract, "TestEvent");
+
+      assert.equal(event._value.toString(), "1");
+    });
+
+    context("💔 Revert Reasons", async function () {
+      it("_to is the zero address", async function () {
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(ethers.constants.AddressZero, calldata)
+        ).to.be.revertedWith(RevertReasons.INVALID_ADDRESS);
+      });
+
+      it("Caller is not the contract owner", async function () {
+        await expect(
+          bosonVoucher.connect(rando).callExternalContract(mockSimpleContract.address, calldata)
+        ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
+      });
     });
   });
 
