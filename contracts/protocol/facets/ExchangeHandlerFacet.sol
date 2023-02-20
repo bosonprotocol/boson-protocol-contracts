@@ -124,14 +124,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         address tokenAddress = offer.exchangeToken;
 
         // Get current buyer address. This is actually the seller in sequential commit. Need to do it before voucher is transferred
-        address _seller;
+        address seller;
+        uint256 buyerId = exchange.buyerId;
         {
-            (, Buyer storage currentBuyer) = fetchBuyer(exchange.buyerId);
-            _seller = currentBuyer.wallet;
+            (, Buyer storage currentBuyer) = fetchBuyer(buyerId);
+            seller = currentBuyer.wallet;
         }
 
         if (_priceDiscovery.direction == Direction.Sell) {
-            require(_seller == msgSender(), NOT_VOUCHER_HOLDER);
+            require(seller == msgSender(), NOT_VOUCHER_HOLDER);
         }
 
         // First call price discovery and get actual price
@@ -174,7 +175,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 // Update sequential commit
                 sequentialCommits.push(
                     SequentialCommit({
-                        resellerId: exchange.buyerId,
+                        resellerId: buyerId,
                         price: actualPrice,
                         protocolFeeAmount: protocolFeeAmount,
                         royaltyAmount: royaltyAmount
@@ -188,10 +189,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     // Price discovery should send funds to the seller
                     // Nothing in escrow, need to pull everything from seller
                     if (tokenAddress == address(0)) {
-                        FundsLib.transferFundsToProtocol(address(weth), _seller, escrowAmount);
+                        FundsLib.transferFundsToProtocol(address(weth), seller, escrowAmount);
                         weth.withdraw(escrowAmount);
                     } else {
-                        FundsLib.transferFundsToProtocol(tokenAddress, _seller, escrowAmount);
+                        FundsLib.transferFundsToProtocol(tokenAddress, seller, escrowAmount);
                     }
                 }
             } else {
@@ -202,7 +203,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 }
 
                 uint256 payout = actualPrice - escrowAmount;
-                if (payout > 0) FundsLib.transferFundsFromProtocol(tokenAddress, payable(_seller), payout);
+                if (payout > 0) FundsLib.transferFundsFromProtocol(tokenAddress, payable(seller), payout);
             }
         }
 
@@ -221,7 +222,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         if (_priceDiscovery.direction == Direction.Buy) {
             return fulfilBuyOrder(_exchangeId, _exchangeToken, _priceDiscovery, _buyer, _initialSellerId);
         } else {
-            return fulfilSellOrder(_exchangeId, _exchangeToken, _priceDiscovery, _initialSellerId);
+            // return fulfilSellOrder(_exchangeId, _exchangeToken, _priceDiscovery, _initialSellerId);
         }
     }
 

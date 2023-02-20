@@ -8,6 +8,7 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
 import { SafeERC20 } from "../../ext_libs/SafeERC20.sol";
 import { Math } from "../../ext_libs/Math.sol";
+import "hardhat/console.sol";
 
 /**
  * @title FundsLib
@@ -299,11 +300,12 @@ library FundsLib {
 
             // escrowed for exchange between buyer i and i+1
             {
-                uint256 escrowAmount = Math.max(sc.price, sc.protocolFeeAmount + sc.royaltyAmount + resellerBuyPrice) -
+                uint256 escrowAmount = Math.max(sc.price - sc.protocolFeeAmount - sc.royaltyAmount, resellerBuyPrice) -
                     resellerBuyPrice;
 
                 currentResellerAmount = (escrowAmount * effectivePriceMultiplier) / 10000 + nextResellerAmount;
-                nextResellerAmount = escrowAmount + nextResellerAmount - currentResellerAmount;
+                nextResellerAmount = escrowAmount - currentResellerAmount;
+                resellerBuyPrice = sc.price; // for next iteration
                 // uint256 nextResellerAmountTemp = escrowAmount - currentResellerAmount; // TODO: is it cheaper to make another memory variable and save one subtraction?
                 // currentResellerAmount += nextResellerAmount;
                 // nextResellerAmount = nextResellerAmountTemp;
