@@ -4437,8 +4437,8 @@ describe("IBosonFundsHandler", function () {
         await priceDiscoveryContract.deployed();
       });
 
-      // const directions = ["increasing", "constant", "decreasing", "mixed"];
-      const directions = ["increasing"];
+      const directions = ["increasing", "constant", "decreasing", "mixed"];
+      // const directions = ["increasing"];
 
       let buyerChains;
       beforeEach(async function () {
@@ -4512,8 +4512,8 @@ describe("IBosonFundsHandler", function () {
                 offer = offerToken.clone();
                 offer.id = "3";
                 offer.price = "100";
-                offer.sellerDeposit = "10";
-                offer.buyerCancelPenalty = "30";
+                offer.sellerDeposit = "0";
+                offer.buyerCancelPenalty = "00";
 
                 // approve protocol to transfer the tokens
 
@@ -4543,7 +4543,7 @@ describe("IBosonFundsHandler", function () {
                 buyerId = 5;
 
                 voucherOwner = buyer; // voucherOwner is the first buyer
-                previousPrice = offer.price;
+                previousPrice = ethers.BigNumber.from(offer.price);
                 totalRoyalties = new ethers.BigNumber.from(0);
                 totalProtocolFee = new ethers.BigNumber.from(0);
                 for (const trade of buyerChains[direction]) {
@@ -4593,7 +4593,7 @@ describe("IBosonFundsHandler", function () {
                   const immediatePayout = reducedSecondaryPrice.lte(previousPrice)
                     ? reducedSecondaryPrice
                     : previousPrice;
-                  payoutInformation.push({ buyerId: buyerId++, immediatePayout, reducedSecondaryPrice });
+                  payoutInformation.push({ buyerId: buyerId++, immediatePayout, previousPrice, reducedSecondaryPrice });
 
                   // Total royalties and fees
                   totalRoyalties = totalRoyalties.add(royalties);
@@ -4616,7 +4616,7 @@ describe("IBosonFundsHandler", function () {
                   // expected payoffs
                   // last buyer: 0
 
-                  // resellers
+                  // resellers: difference between the secondary price and immediate payout
                   resellerPayoffs = payoutInformation.map((pi) => {
                     return { id: pi.buyerId, payoff: pi.reducedSecondaryPrice.sub(pi.immediatePayout).toString() };
                   });
@@ -4637,12 +4637,16 @@ describe("IBosonFundsHandler", function () {
                   // Complete the exchange, expecting event
                   const tx = await exchangeHandler.connect(voucherOwner).completeExchange(exchangeId);
 
+                  // seller
                   await expect(tx)
                     .to.emit(exchangeHandler, "FundsReleased")
                     .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, voucherOwner.address);
 
+                  // resellers
+                  let expectedEventCount = 1; // 1 for seller
                   for (const resellerPayoff of resellerPayoffs) {
                     if (resellerPayoff.payoff != "0") {
+                      expectedEventCount++;
                       await expect(tx)
                         .to.emit(exchangeHandler, "FundsReleased")
                         .withArgs(
@@ -4655,6 +4659,11 @@ describe("IBosonFundsHandler", function () {
                     }
                   }
 
+                  // Make sure exact number of FundsReleased events was emitted
+                  const eventCount = (await tx.wait()).events.filter((e) => e.event == "FundsReleased").length;
+                  expect(eventCount).to.equal(expectedEventCount);
+
+                  // protocol
                   if (protocolPayoff != "0") {
                     await expect(tx)
                       .to.emit(exchangeHandler, "ProtocolFeeCollected")
@@ -4665,9 +4674,6 @@ describe("IBosonFundsHandler", function () {
                 });
 
                 it("should update state", async function () {
-                  // // commit again, so seller has nothing in available funds
-                  // await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
-
                   // Read on chain state
                   sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
                   buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
@@ -4695,6 +4701,7 @@ describe("IBosonFundsHandler", function () {
                   // Available funds should be increased for
                   // buyer: 0
                   // seller: sellerDeposit + price - protocolFee - agentFee + royalties
+                  // resellers: difference between the secondary price and immediate payout
                   // protocol: protocolFee
                   // agent: 0
                   expectedSellerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", sellerPayoff));
@@ -4722,203 +4729,112 @@ describe("IBosonFundsHandler", function () {
                   expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
                 });
               });
+
+              context("Final state REVOKED", async function () {
+                let resellerPayoffs;
+                beforeEach(async function () {
+                  // expected payoffs
+                  // last buyer: sellerDeposit + price
+                  buyerPayoff = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price).toString();
+
+                  // resellers: difference between original price and immediate payoff
+                  resellerPayoffs = payoutInformation.map((pi) => {
+                    return { id: pi.buyerId, payoff: pi.previousPrice.sub(pi.immediatePayout).toString() };
+                  });
+
+                  // seller: 0
+                  sellerPayoff = 0;
+
+                  // protocol: 0
+                  protocolPayoff = 0;
+                });
+
+                it("should emit a FundsReleased event", async function () {
+                  // Revoke the voucher, expecting event
+                  const tx = await exchangeHandler.connect(assistant).revokeVoucher(exchangeId);
+
+                  // Buyer
+                  await expect(tx)
+                    .to.emit(exchangeHandler, "FundsReleased")
+                    .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, assistant.address);
+
+                  // Resellers
+                  let expectedEventCount = 1; // 1 for buyer
+                  for (const resellerPayoff of resellerPayoffs) {
+                    if (resellerPayoff.payoff != "0") {
+                      expectedEventCount++;
+                      await expect(tx)
+                        .to.emit(exchangeHandler, "FundsReleased")
+                        .withArgs(
+                          exchangeId,
+                          resellerPayoff.id,
+                          offer.exchangeToken,
+                          resellerPayoff.payoff,
+                          assistant.address
+                        );
+                    }
+                  }
+
+                  // Make sure exact number of FundsReleased events was emitted
+                  const eventCount = (await tx.wait()).events.filter((e) => e.event == "FundsReleased").length;
+                  expect(eventCount).to.equal(expectedEventCount);
+
+                  // Expect no protocol fee
+                  await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
+                });
+
+                it("should update state", async function () {
+                  // Read on chain state
+                  sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+                  buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
+                  protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
+                  agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
+                  resellersAvailableFunds = (
+                    await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAvailableFunds(r.id)))
+                  ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+
+                  // Chain state should match the expected available funds
+                  expectedSellerAvailableFunds = new FundsList([]);
+                  expectedBuyerAvailableFunds = new FundsList([]);
+                  expectedProtocolAvailableFunds = new FundsList([]);
+                  expectedAgentAvailableFunds = new FundsList([]);
+                  expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
+                  expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+                  expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+                  expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+                  expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+                  expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+
+                  // Revoke the voucher so the funds are released
+                  await exchangeHandler.connect(assistant).revokeVoucher(exchangeId);
+
+                  // Available funds should be increased for
+                  // buyer: sellerDeposit + price
+                  // seller: 0
+                  // resellers: difference between original price and immediate payoff
+                  // protocol: 0
+                  // agent: 0
+                  expectedBuyerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", buyerPayoff));
+                  expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
+                    return new FundsList(r.payoff != "0" ? [new Funds(mockToken.address, "Foreign20", r.payoff)] : []);
+                  });
+
+                  sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+                  buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
+                  protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
+                  agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
+                  resellersAvailableFunds = (
+                    await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAvailableFunds(r.id)))
+                  ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+
+                  expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+                  expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+                  expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+                  expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+                  expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                });
+              });
             });
-          });
-        });
-      });
-
-      context("Final state REVOKED", async function () {
-        beforeEach(async function () {
-          // expected payoffs
-          // buyer: sellerDeposit + price
-          buyerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit).add(offerToken.price).toString();
-
-          // seller: 0
-          sellerPayoff = 0;
-
-          // protocol: 0
-          protocolPayoff = 0;
-        });
-
-        it("should emit a FundsReleased event", async function () {
-          // Revoke the voucher, expecting event
-          await expect(exchangeHandler.connect(assistant).revokeVoucher(exchangeId))
-            .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, assistant.address);
-        });
-
-        it("should update state", async function () {
-          // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-          buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-          protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-          agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
-
-          // Chain state should match the expected available funds
-          expectedSellerAvailableFunds = new FundsList([
-            new Funds(mockToken.address, "Foreign20", sellerDeposit),
-            new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
-          ]);
-          expectedBuyerAvailableFunds = new FundsList([]);
-          expectedProtocolAvailableFunds = new FundsList([]);
-          expectedAgentAvailableFunds = new FundsList([]);
-          expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-          expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-          expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-          expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-          // Revoke the voucher so the funds are released
-          await exchangeHandler.connect(assistant).revokeVoucher(exchangeId);
-
-          // Available funds should be increased for
-          // buyer: sellerDeposit + price
-          // seller: 0
-          // protocol: 0
-          // agent: 0
-          expectedBuyerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", buyerPayoff));
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-          buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-          protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-          agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
-          expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-          expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-          expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-          expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-          // Test that if buyer has some funds available, and gets more, the funds are only updated
-          // Commit again
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
-
-          // Revoke another voucher
-          await exchangeHandler.connect(assistant).revokeVoucher(++exchangeId);
-
-          // Available funds should be increased for
-          // buyer: sellerDeposit + price
-          // seller: 0; but during the commitToOffer, sellerDeposit is encumbered
-          // protocol: 0
-          // agent: 0
-          expectedBuyerAvailableFunds.funds[0] = new Funds(
-            mockToken.address,
-            "Foreign20",
-            ethers.BigNumber.from(buyerPayoff).mul(2).toString()
-          );
-          expectedSellerAvailableFunds = new FundsList([
-            new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
-          ]);
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-          buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-          protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-          agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
-          expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-          expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-          expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-          expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-        });
-
-        context("Offer has an agent", async function () {
-          beforeEach(async function () {
-            // Create Agent offer
-            await offerHandler
-              .connect(assistant)
-              .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
-
-            // top up seller's and buyer's account
-            await mockToken.mint(assistant.address, `${2 * sellerDeposit}`);
-            await mockToken.mint(buyer.address, `${2 * price}`);
-
-            // approve protocol to transfer the tokens
-            await mockToken.connect(assistant).approve(protocolDiamond.address, `${2 * sellerDeposit}`);
-            await mockToken.connect(buyer).approve(protocolDiamond.address, `${2 * price}`);
-
-            // deposit to seller's pool
-            await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, `${2 * sellerDeposit}`);
-
-            // Commit to Offer
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, agentOffer.id);
-
-            // expected payoffs
-            // buyer: sellerDeposit + price
-            buyerPayoff = ethers.BigNumber.from(agentOffer.sellerDeposit).add(agentOffer.price).toString();
-
-            // seller: 0
-            sellerPayoff = 0;
-
-            // protocol: 0
-            protocolPayoff = 0;
-
-            // agent: 0
-            agentPayoff = 0;
-
-            exchangeId = "2";
-          });
-
-          it("should update state", async function () {
-            // Read on chain state
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-            protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-            agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
-
-            // Chain state should match the expected available funds
-            expectedSellerAvailableFunds = new FundsList([
-              new Funds(mockToken.address, "Foreign20", `${2 * sellerDeposit}`),
-              new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
-            ]);
-            expectedBuyerAvailableFunds = new FundsList([]);
-            expectedProtocolAvailableFunds = new FundsList([]);
-            expectedAgentAvailableFunds = new FundsList([]);
-            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-            expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-            // Revoke the voucher so the funds are released
-            await exchangeHandler.connect(assistant).revokeVoucher(exchangeId);
-
-            // Available funds should be increased for
-            // buyer: sellerDeposit + price
-            // seller: 0
-            // protocol: 0
-            // agent: 0
-            expectedBuyerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", buyerPayoff));
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-            protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-            agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
-            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-            expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-            // Test that if buyer has some funds available, and gets more, the funds are only updated
-            // Commit again
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, agentOffer.id);
-
-            // Revoke another voucher
-            await exchangeHandler.connect(assistant).revokeVoucher(++exchangeId);
-
-            // Available funds should be increased for
-            // buyer: sellerDeposit + price
-            // seller: 0; but during the commitToOffer, sellerDeposit is encumbered
-            // protocol: 0
-            // agent: 0
-            expectedBuyerAvailableFunds.funds[0] = new Funds(
-              mockToken.address,
-              "Foreign20",
-              ethers.BigNumber.from(buyerPayoff).mul(2).toString()
-            );
-            expectedSellerAvailableFunds = new FundsList([
-              new Funds(mockToken.address, "Foreign20", `${sellerDeposit}`),
-              new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
-            ]);
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-            protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-            agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
-            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-            expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
           });
         });
       });

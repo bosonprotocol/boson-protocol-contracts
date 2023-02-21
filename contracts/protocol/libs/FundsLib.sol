@@ -258,16 +258,45 @@ library FundsLib {
 
         // calculate effective price multiplier
         uint256 effectivePriceMultiplier;
+        // {
+        //     if (_exchangeState == BosonTypes.ExchangeState.Completed) {
+        //         // COMPLETED, buyer pays full price
+        //         effectivePriceMultiplier = 10000;
+        //     } else if (
+        //         _exchangeState == BosonTypes.ExchangeState.Revoked ||
+        //         _exchangeState == BosonTypes.ExchangeState.Canceled
+        //     ) {
+        //         // REVOKED or CANCELED, buyer pays nothing (buyerCancelationPenalty is not considered payment)
+        //         effectivePriceMultiplier = 0;
+        //     } else if (_exchangeState == BosonTypes.ExchangeState.Disputed) {
+        //         // DISPUTED
+        //         // get the information about the dispute, which must exist
+        //         BosonTypes.Dispute storage dispute = ProtocolLib.protocolEntities().disputes[_exchangeId];
+        //         BosonTypes.DisputeState disputeState = dispute.state;
+
+        //         if (disputeState == BosonTypes.DisputeState.Retracted) {
+        //             // RETRACTED - same as "COMPLETED"
+        //             effectivePriceMultiplier = 10000;
+        //         } else if (disputeState == BosonTypes.DisputeState.Refused) {
+        //             // REFUSED, buyer pays nothing
+        //             effectivePriceMultiplier = 0;
+        //         } else {
+        //             // RESOLVED or DECIDED
+        //             effectivePriceMultiplier = 10000 - dispute.buyerPercent;
+        //         }
+        //     }
+        // }
+
         {
             if (_exchangeState == BosonTypes.ExchangeState.Completed) {
                 // COMPLETED, buyer pays full price
-                effectivePriceMultiplier = 10000;
+                effectivePriceMultiplier = 0;
             } else if (
                 _exchangeState == BosonTypes.ExchangeState.Revoked ||
                 _exchangeState == BosonTypes.ExchangeState.Canceled
             ) {
                 // REVOKED or CANCELED, buyer pays nothing (buyerCancelationPenalty is not considered payment)
-                effectivePriceMultiplier = 0;
+                effectivePriceMultiplier = 10000;
             } else if (_exchangeState == BosonTypes.ExchangeState.Disputed) {
                 // DISPUTED
                 // get the information about the dispute, which must exist
@@ -276,20 +305,20 @@ library FundsLib {
 
                 if (disputeState == BosonTypes.DisputeState.Retracted) {
                     // RETRACTED - same as "COMPLETED"
-                    effectivePriceMultiplier = 10000;
+                    effectivePriceMultiplier = 0;
                 } else if (disputeState == BosonTypes.DisputeState.Refused) {
                     // REFUSED, buyer pays nothing
-                    effectivePriceMultiplier = 0;
+                    effectivePriceMultiplier = 10000;
                 } else {
                     // RESOLVED or DECIDED
-                    effectivePriceMultiplier = 10000 - dispute.buyerPercent;
+                    effectivePriceMultiplier = dispute.buyerPercent;
                 }
             }
         }
 
         uint256 resellerBuyPrice = _initialPrice;
         address msgSender = EIP712Lib.msgSender();
-        uint256 nextResellerAmount;
+        // uint256 nextResellerAmount;
         for (uint256 i = 0; i < sequentialCommits.length; i++) {
             BosonTypes.SequentialCommit memory sc = sequentialCommits[i]; // we need all members of the struct
 
@@ -297,18 +326,27 @@ library FundsLib {
             royalties += sc.royaltyAmount;
 
             uint256 currentResellerAmount;
+            uint256 reducedSecondaryPrice = sc.price - sc.protocolFeeAmount - sc.royaltyAmount;
 
             // escrowed for exchange between buyer i and i+1
             {
-                uint256 escrowAmount = Math.max(sc.price - sc.protocolFeeAmount - sc.royaltyAmount, resellerBuyPrice) -
-                    resellerBuyPrice;
+                // uint256 escrowAmount = Math.max(sc.price - sc.protocolFeeAmount - sc.royaltyAmount, resellerBuyPrice) -
+                //     resellerBuyPrice;
 
-                currentResellerAmount = (escrowAmount * effectivePriceMultiplier) / 10000 + nextResellerAmount;
-                nextResellerAmount = escrowAmount - currentResellerAmount;
-                resellerBuyPrice = sc.price; // for next iteration
+                // currentResellerAmount = ((escrowAmount) * effectivePriceMultiplier) / 10000 + nextResellerAmount;
+                // nextResellerAmount = escrowAmount + nextResellerAmount - currentResellerAmount;
+                // resellerBuyPrice = sc.price; // for next iteration
                 // uint256 nextResellerAmountTemp = escrowAmount - currentResellerAmount; // TODO: is it cheaper to make another memory variable and save one subtraction?
                 // currentResellerAmount += nextResellerAmount;
                 // nextResellerAmount = nextResellerAmountTemp;
+                currentResellerAmount =
+                    (effectivePriceMultiplier *
+                        resellerBuyPrice +
+                        (10000 - effectivePriceMultiplier) *
+                        reducedSecondaryPrice) /
+                    10000 -
+                    Math.min(resellerBuyPrice, reducedSecondaryPrice);
+                resellerBuyPrice = sc.price;
             }
             if (currentResellerAmount > 0) {
                 increaseAvailableFundsAndEmitEvent(
@@ -321,8 +359,8 @@ library FundsLib {
             }
         }
 
-        protocolFee = (protocolFee * effectivePriceMultiplier) / 10000;
-        royalties = (royalties * effectivePriceMultiplier) / 10000;
+        protocolFee = (protocolFee * (10000 - effectivePriceMultiplier)) / 10000;
+        royalties = (royalties * (10000 - effectivePriceMultiplier)) / 10000;
         // ? do we need to return nextResellerAmount and add it to buyerPayoff?
     }
 

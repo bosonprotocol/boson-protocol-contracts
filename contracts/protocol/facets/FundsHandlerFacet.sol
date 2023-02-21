@@ -48,25 +48,27 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         address _tokenAddress,
         uint256 _amount
     ) external payable override fundsNotPaused nonReentrant {
-        // Check seller exists in sellers mapping
-        (bool exists, , ) = fetchSeller(_sellerId);
+        if (_amount > 0) {
+            // Check seller exists in sellers mapping
+            (bool exists, , ) = fetchSeller(_sellerId);
 
-        // Seller must exist
-        require(exists, NO_SUCH_SELLER);
+            // Seller must exist
+            require(exists, NO_SUCH_SELLER);
 
-        if (msg.value != 0) {
-            // Receiving native currency
-            require(_tokenAddress == address(0), NATIVE_WRONG_ADDRESS);
-            require(_amount == msg.value, NATIVE_WRONG_AMOUNT);
-        } else {
-            // Transfer tokens from the caller
-            FundsLib.transferFundsToProtocol(_tokenAddress, _amount);
+            if (msg.value != 0) {
+                // Receiving native currency
+                require(_tokenAddress == address(0), NATIVE_WRONG_ADDRESS);
+                require(_amount == msg.value, NATIVE_WRONG_AMOUNT);
+            } else {
+                // Transfer tokens from the caller
+                FundsLib.transferFundsToProtocol(_tokenAddress, _amount);
+            }
+
+            // Increase available funds
+            FundsLib.increaseAvailableFunds(_sellerId, _tokenAddress, _amount);
+
+            emit FundsDeposited(_sellerId, msgSender(), _tokenAddress, _amount);
         }
-
-        // Increase available funds
-        FundsLib.increaseAvailableFunds(_sellerId, _tokenAddress, _amount);
-
-        emit FundsDeposited(_sellerId, msgSender(), _tokenAddress, _amount);
     }
 
     /**
