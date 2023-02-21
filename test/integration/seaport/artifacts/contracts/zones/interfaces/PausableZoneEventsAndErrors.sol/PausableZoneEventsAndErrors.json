@@ -1,0 +1,151 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "PausableZoneEventsAndErrors",
+  "sourceName": "contracts/zones/interfaces/PausableZoneEventsAndErrors.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "CallerIsNotOperator",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "CallerIsNotOwner",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "CallerIsNotPotentialOwner",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidController",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidOperator",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidPauser",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "OwnerCanNotBeSetAsZero",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "PauserCanNotBeSetAsZero",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "zone",
+          "type": "address"
+        }
+      ],
+      "name": "ZoneAlreadyExists",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "newOperator",
+          "type": "address"
+        }
+      ],
+      "name": "OperatorUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "Paused",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "newPauser",
+          "type": "address"
+        }
+      ],
+      "name": "PauserUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "newPotentialOwner",
+          "type": "address"
+        }
+      ],
+      "name": "PotentialOwnerUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "Unpaused",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "zone",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "salt",
+          "type": "bytes32"
+        }
+      ],
+      "name": "ZoneCreated",
+      "type": "event"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

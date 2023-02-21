@@ -1,0 +1,74 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "CriteriaResolution",
+  "sourceName": "contracts/lib/CriteriaResolution.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "ConsiderationCriteriaResolverOutOfRange",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "CriteriaNotEnabledForItem",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidProof",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "OfferCriteriaResolverOutOfRange",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "enum Side",
+          "name": "side",
+          "type": "uint8"
+        }
+      ],
+      "name": "OrderCriteriaResolverOutOfRange",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "orderIndex",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "considerationIndex",
+          "type": "uint256"
+        }
+      ],
+      "name": "UnresolvedConsiderationCriteria",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "orderIndex",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "offerIndex",
+          "type": "uint256"
+        }
+      ],
+      "name": "UnresolvedOfferCriteria",
+      "type": "error"
+    }
+  ],
+  "bytecode": "0x608080604052346013576011908160198239f35b600080fdfe600080fdfea164736f6c6343000811000a",
+  "deployedBytecode": "0x600080fdfea164736f6c6343000811000a",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

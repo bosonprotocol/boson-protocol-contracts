@@ -1,0 +1,16 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "ReentrancyErrors",
+  "sourceName": "contracts/interfaces/ReentrancyErrors.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "NoReentrantCalls",
+      "type": "error"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

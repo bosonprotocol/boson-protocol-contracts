@@ -1,0 +1,102 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "ImmutableCreate2FactoryInterface",
+  "sourceName": "contracts/interfaces/ImmutableCreate2FactoryInterface.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "salt",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes",
+          "name": "initCode",
+          "type": "bytes"
+        }
+      ],
+      "name": "findCreate2Address",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "deploymentAddress",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "salt",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "initCodeHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "findCreate2AddressViaHash",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "deploymentAddress",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "deploymentAddress",
+          "type": "address"
+        }
+      ],
+      "name": "hasBeenDeployed",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "salt",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes",
+          "name": "initializationCode",
+          "type": "bytes"
+        }
+      ],
+      "name": "safeCreate2",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "deploymentAddress",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

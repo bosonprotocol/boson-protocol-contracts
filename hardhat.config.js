@@ -102,6 +102,9 @@ module.exports = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
+      forking: {
+        url: environments.polygon.txNode,
+      },
       accounts: { mnemonic: environments.hardhat.mnemonic },
     },
     localhost: {
