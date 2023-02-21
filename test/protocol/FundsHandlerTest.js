@@ -4438,7 +4438,6 @@ describe("IBosonFundsHandler", function () {
       });
 
       const directions = ["increasing", "constant", "decreasing", "mixed"];
-      // const directions = ["increasing"];
 
       let buyerChains;
       beforeEach(async function () {
@@ -4496,13 +4495,12 @@ describe("IBosonFundsHandler", function () {
         context(`Direction: ${direction}`, async function () {
           fees.forEach((fee) => {
             context(`protocol fee: ${fee.protocol / 100}%; royalties: ${fee.royalties / 100}%`, async function () {
-              let expectedCloneAddress;
               let voucherOwner, previousPrice;
               let payoutInformation = [];
               let totalRoyalties, totalProtocolFee;
 
               beforeEach(async function () {
-                expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
+                const expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
                 bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
                 // set fees
@@ -4514,8 +4512,6 @@ describe("IBosonFundsHandler", function () {
                 offer.price = "100";
                 offer.sellerDeposit = "10";
                 offer.buyerCancelPenalty = "30";
-
-                // approve protocol to transfer the tokens
 
                 // deposit to seller's pool
                 await fundsHandler.connect(clerk).withdrawFunds(seller.id, [], []); // withdraw all, so it's easier to test
@@ -4529,18 +4525,14 @@ describe("IBosonFundsHandler", function () {
 
                 // ids
                 exchangeId = "1";
-                protocolId = "0";
+                agentId = "3";
+                buyerId = 5;
 
                 // Create buyer with protocol address to not mess up ids in tests
                 await accountHandler.createBuyer(mockBuyer(exchangeHandler.address));
 
                 // commit to offer
                 await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
-
-                // ids
-                exchangeId = "1";
-                agentId = "3";
-                buyerId = 5;
 
                 voucherOwner = buyer; // voucherOwner is the first buyer
                 previousPrice = ethers.BigNumber.from(offer.price);
@@ -4586,7 +4578,7 @@ describe("IBosonFundsHandler", function () {
                       gasPrice: 0,
                     });
 
-                  // Fees, royalites and immediate payout
+                  // Fees, royalties and immediate payout
                   const royalties = order.price.mul(fee.royalties).div(10000);
                   const protocolFee = order.price.mul(fee.protocol).div(10000);
                   const reducedSecondaryPrice = order.price.sub(royalties).sub(protocolFee);
@@ -6088,179 +6080,193 @@ describe("IBosonFundsHandler", function () {
               });
             });
           });
-        });
-      });
 
-      context("Changing the protocol fee", async function () {
-        beforeEach(async function () {
-          // Cast Diamond to IBosonConfigHandler
-          configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+          context("Changing the protocol fee and royalties", async function () {
+            let voucherOwner, previousPrice;
+            let payoutInformation = [];
+            let totalRoyalties, totalProtocolFee;
+            let resellerPayoffs;
 
-          // expected payoffs
-          // buyer: 0
-          buyerPayoff = 0;
+            beforeEach(async function () {
+              const fees = [
+                { protocol: 100, royalties: 50 },
+                { protocol: 400, royalties: 200 },
+                { protocol: 300, royalties: 300 },
+                { protocol: 700, royalties: 100 },
+              ];
 
-          // seller: sellerDeposit + price - protocolFee
-          sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit)
-            .add(offerToken.price)
-            .sub(offerTokenProtocolFee)
-            .toString();
-        });
+              let feeIndex = 0;
+              let fee = fees[feeIndex];
 
-        it("Protocol fee for existing exchanges should be the same as at the offer creation", async function () {
-          // set the new procol fee
-          protocolFeePercentage = "300"; // 3%
-          await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
+              // set fees
+              const expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
+              const bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+              await configHandler.setProtocolFeePercentage(fee.protocol);
+              await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(fee.royalties);
 
-          // Set time forward to the offer's voucherRedeemableFrom
-          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+              // create a new offer
+              offer = offerToken.clone();
+              offer.id = "3";
+              offer.price = "100";
+              offer.sellerDeposit = "10";
+              offer.buyerCancelPenalty = "30";
 
-          // succesfully redeem exchange
-          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+              // deposit to seller's pool
+              await fundsHandler.connect(clerk).withdrawFunds(seller.id, [], []); // withdraw all, so it's easier to test
+              await mockToken.connect(assistant).mint(assistant.address, offer.sellerDeposit);
+              await mockToken.connect(assistant).approve(fundsHandler.address, offer.sellerDeposit);
+              await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, offer.sellerDeposit);
 
-          // Complete the exchange, expecting event
-          const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
-          await expect(tx)
-            .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
+              await offerHandler
+                .connect(assistant)
+                .createOffer(offer, offerDates, offerDurations, disputeResolverId, 0);
 
-          await expect(tx)
-            .to.emit(exchangeHandler, "ProtocolFeeCollected")
-            .withArgs(exchangeId, offerToken.exchangeToken, offerTokenProtocolFee, buyer.address);
-        });
+              // ids
+              exchangeId = "1";
+              agentId = "3";
+              buyerId = 5;
 
-        it("Protocol fee for new exchanges should be the same as at the offer creation", async function () {
-          // set the new procol fee
-          protocolFeePercentage = "300"; // 3%
-          await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
+              // Create buyer with protocol address to not mess up ids in tests
+              await accountHandler.createBuyer(mockBuyer(exchangeHandler.address));
 
-          // similar as teste before, excpet the commit to offer is done after the procol fee change
+              // commit to offer
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
 
-          // commit to offer and get the correct exchangeId
-          tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
-          txReceipt = await tx.wait();
-          event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
-          exchangeId = event.exchangeId.toString();
+              voucherOwner = buyer; // voucherOwner is the first buyer
+              previousPrice = ethers.BigNumber.from(offer.price);
+              totalRoyalties = new ethers.BigNumber.from(0);
+              totalProtocolFee = new ethers.BigNumber.from(0);
+              for (const trade of buyerChains[direction]) {
+                feeIndex++;
+                fee = fees[feeIndex];
 
-          // Set time forward to the offer's voucherRedeemableFrom
-          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+                // set new fee
+                await configHandler.setProtocolFeePercentage(fee.protocol);
+                await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(fee.royalties);
 
-          // succesfully redeem exchange
-          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+                // Prepare calldata for PriceDiscovery contract
+                let order = {
+                  seller: voucherOwner.address,
+                  buyer: trade.buyer.address,
+                  voucherContract: expectedCloneAddress,
+                  tokenId: exchangeId,
+                  exchangeToken: offer.exchangeToken,
+                  price: ethers.BigNumber.from(offer.price).mul(trade.price).div(100),
+                };
 
-          // Complete the exchange, expecting event
-          tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
-          await expect(tx)
-            .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
+                const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [
+                  order,
+                ]);
 
-          await expect(tx)
-            .to.emit(exchangeHandler, "ProtocolFeeCollected")
-            .withArgs(exchangeId, offerToken.exchangeToken, offerTokenProtocolFee, buyer.address);
-        });
+                const priceDiscovery = new PriceDiscovery(
+                  order.price,
+                  priceDiscoveryContract.address,
+                  priceDiscoveryData,
+                  Direction.Buy
+                );
 
-        context("Offer has an agent", async function () {
-          beforeEach(async function () {
-            exchangeId = "2";
+                // voucher owner approves protocol to transfer the tokens
+                await mockToken.mint(voucherOwner.address, order.price);
+                await mockToken.connect(voucherOwner).approve(protocolDiamond.address, order.price);
 
-            // Cast Diamond to IBosonConfigHandler
-            configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+                // Voucher owner approves PriceDiscovery contract to transfer the tokens
+                await bosonVoucherClone.connect(voucherOwner).setApprovalForAll(priceDiscoveryContract.address, true);
 
-            // expected payoffs
-            // buyer: 0
-            buyerPayoff = 0;
+                // Buyer approves protocol to transfer the tokens
+                await mockToken.mint(trade.buyer.address, order.price);
+                await mockToken.connect(trade.buyer).approve(protocolDiamond.address, order.price);
 
-            // agentPayoff: agentFee
-            agentFee = ethers.BigNumber.from(agentOffer.price).mul(agentFeePercentage).div("10000").toString();
-            agentPayoff = agentFee;
+                // commit to offer
+                await exchangeHandler
+                  .connect(trade.buyer)
+                  .sequentialCommitToOffer(trade.buyer.address, exchangeId, priceDiscovery, {
+                    gasPrice: 0,
+                  });
 
-            // seller: sellerDeposit + price - protocolFee - agentFee
-            sellerPayoff = ethers.BigNumber.from(agentOffer.sellerDeposit)
-              .add(agentOffer.price)
-              .sub(agentOfferProtocolFee)
-              .sub(agentFee)
-              .toString();
+                // Fees, royalties and immediate payout
+                const royalties = order.price.mul(fee.royalties).div(10000);
+                const protocolFee = order.price.mul(fee.protocol).div(10000);
+                const reducedSecondaryPrice = order.price.sub(royalties).sub(protocolFee);
+                const immediatePayout = reducedSecondaryPrice.lte(previousPrice)
+                  ? reducedSecondaryPrice
+                  : previousPrice;
+                payoutInformation.push({ buyerId: buyerId++, immediatePayout, previousPrice, reducedSecondaryPrice });
 
-            // protocol: protocolFee
-            protocolPayoff = agentOfferProtocolFee;
+                // Total royalties and fees
+                totalRoyalties = totalRoyalties.add(royalties);
+                totalProtocolFee = totalProtocolFee.add(protocolFee);
 
-            // Create Agent Offer before setting new protocol fee as 3%
-            await offerHandler
-              .connect(assistant)
-              .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
+                voucherOwner = trade.buyer; // last buyer is voucherOwner in next iteration
+                previousPrice = order.price;
+              }
 
-            // Commit to Agent Offer
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, agentOffer.id);
+              // expected payoffs
+              // buyer: 0
+              buyerPayoff = 0;
 
-            // set the new procol fee
-            protocolFeePercentage = "300"; // 3%
-            await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
-          });
+              // resellers: difference between the secondary price and immediate payout
+              resellerPayoffs = payoutInformation.map((pi) => {
+                return { id: pi.buyerId, payoff: pi.reducedSecondaryPrice.sub(pi.immediatePayout).toString() };
+              });
 
-          it("Protocol fee for existing exchanges should be the same as at the agent offer creation", async function () {
-            // Set time forward to the offer's voucherRedeemableFrom
-            await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+              // seller: sellerDeposit + price - protocolFee + royalties
+              const initialFee = applyPercentage(offer.price, fees[0].protocol);
+              sellerPayoff = ethers.BigNumber.from(offer.sellerDeposit)
+                .add(offer.price)
+                .add(totalRoyalties)
+                .sub(initialFee)
+                .toString();
 
-            // succesfully redeem exchange
-            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+              // protocol: protocolFee
+              protocolPayoff = totalProtocolFee.add(initialFee).toString();
+            });
 
-            // Complete the exchange, expecting event
-            const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+            it("Fees and royalties should be the same as at the commit time", async function () {
+              // set the new protocol fee
+              protocolFeePercentage = "300"; // 3%
+              await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
 
-            await expect(tx)
-              .to.emit(exchangeHandler, "FundsReleased")
-              .withArgs(exchangeId, seller.id, agentOffer.exchangeToken, sellerPayoff, buyer.address);
+              // Set time forward to the offer's voucherRedeemableFrom
+              await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
-            await expect(tx)
-              .to.emit(exchangeHandler, "ProtocolFeeCollected")
-              .withArgs(exchangeId, agentOffer.exchangeToken, protocolPayoff, buyer.address);
+              // succesfully redeem exchange
+              await exchangeHandler.connect(voucherOwner).redeemVoucher(exchangeId);
 
-            await expect(tx)
-              .to.emit(exchangeHandler, "FundsReleased")
-              .withArgs(exchangeId, agentId, agentOffer.exchangeToken, agentPayoff, buyer.address);
-          });
+              // seller
+              await expect(tx)
+                .to.emit(exchangeHandler, "FundsReleased")
+                .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, voucherOwner.address);
 
-          it("Protocol fee for new exchanges should be the same as at the agent offer creation", async function () {
-            // similar as tests before, excpet the commit to offer is done after the protocol fee change
+              // resellers
+              let expectedEventCount = 1; // 1 for seller
+              for (const resellerPayoff of resellerPayoffs) {
+                if (resellerPayoff.payoff != "0") {
+                  expectedEventCount++;
+                  await expect(tx)
+                    .to.emit(exchangeHandler, "FundsReleased")
+                    .withArgs(
+                      exchangeId,
+                      resellerPayoff.id,
+                      offer.exchangeToken,
+                      resellerPayoff.payoff,
+                      voucherOwner.address
+                    );
+                }
+              }
 
-            // top up seller's and buyer's account
-            await mockToken.mint(assistant.address, sellerDeposit);
-            await mockToken.mint(buyer.address, price);
+              // Make sure exact number of FundsReleased events was emitted
+              const eventCount = (await tx.wait()).events.filter((e) => e.event == "FundsReleased").length;
+              expect(eventCount).to.equal(expectedEventCount);
 
-            // approve protocol to transfer the tokens
-            await mockToken.connect(assistant).approve(protocolDiamond.address, sellerDeposit);
-            await mockToken.connect(buyer).approve(protocolDiamond.address, price);
-
-            // deposit to seller's pool
-            await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerDeposit);
-
-            // commit to offer and get the correct exchangeId
-            tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, agentOffer.id);
-            txReceipt = await tx.wait();
-            event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
-            exchangeId = event.exchangeId.toString();
-
-            // Set time forward to the offer's voucherRedeemableFrom
-            await setNextBlockTimestamp(Number(voucherRedeemableFrom));
-
-            // succesfully redeem exchange
-            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
-            // Complete the exchange, expecting event
-            tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
-
-            // Complete the exchange, expecting event
-            await expect(tx)
-              .to.emit(exchangeHandler, "FundsReleased")
-              .withArgs(exchangeId, seller.id, agentOffer.exchangeToken, sellerPayoff, buyer.address);
-
-            await expect(tx)
-              .to.emit(exchangeHandler, "ProtocolFeeCollected")
-              .withArgs(exchangeId, agentOffer.exchangeToken, protocolPayoff, buyer.address);
-
-            await expect(tx)
-              .to.emit(exchangeHandler, "FundsReleased")
-              .withArgs(exchangeId, agentId, agentOffer.exchangeToken, agentPayoff, buyer.address);
+              // protocol
+              if (protocolPayoff != "0") {
+                await expect(tx)
+                  .to.emit(exchangeHandler, "ProtocolFeeCollected")
+                  .withArgs(exchangeId, offer.exchangeToken, protocolPayoff, voucherOwner.address);
+              } else {
+                await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
+              }
+            });
           });
         });
       });
