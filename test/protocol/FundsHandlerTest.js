@@ -4496,10 +4496,12 @@ describe("IBosonFundsHandler", function () {
           fees.forEach((fee) => {
             context(`protocol fee: ${fee.protocol / 100}%; royalties: ${fee.royalties / 100}%`, async function () {
               let voucherOwner, previousPrice;
-              let payoutInformation = [];
+              let payoutInformation;
               let totalRoyalties, totalProtocolFee;
 
               beforeEach(async function () {
+                payoutInformation = [];
+
                 const expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
                 bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
@@ -4527,6 +4529,7 @@ describe("IBosonFundsHandler", function () {
                 exchangeId = "1";
                 agentId = "3";
                 buyerId = 5;
+                protocolId = 0;
 
                 // Create buyer with protocol address to not mess up ids in tests
                 await accountHandler.createBuyer(mockBuyer(exchangeHandler.address));
@@ -6083,11 +6086,13 @@ describe("IBosonFundsHandler", function () {
 
           context("Changing the protocol fee and royalties", async function () {
             let voucherOwner, previousPrice;
-            let payoutInformation = [];
+            let payoutInformation;
             let totalRoyalties, totalProtocolFee;
             let resellerPayoffs;
 
             beforeEach(async function () {
+              payoutInformation = [];
+
               const fees = [
                 { protocol: 100, royalties: 50 },
                 { protocol: 400, royalties: 200 },
@@ -6231,6 +6236,9 @@ describe("IBosonFundsHandler", function () {
 
               // succesfully redeem exchange
               await exchangeHandler.connect(voucherOwner).redeemVoucher(exchangeId);
+
+              // complete exchange
+              tx = await exchangeHandler.connect(voucherOwner).completeExchange(exchangeId);
 
               // seller
               await expect(tx)
