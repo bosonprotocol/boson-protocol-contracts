@@ -1,19 +1,35 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const { constants, BigNumber } = require("ethers");
+
 const shell = require("shelljs");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const { mockVoucherInitValues } = require("../util/mock");
-const { getFacetsWithArgs } = require("../util/utils");
+const { getFacetsWithArgs, getEvent } = require("../util/utils");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 
+const { assert, expect } = require("chai");
 const seaportArtifact = require("./seaport/artifacts/contracts/Seaport.sol/Seaport.json");
 const Role = require("../../scripts/domain/Role");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const abi = seaportArtifact.abi;
 
-function objectToArray(obj) {
+const formatStruct = (param) => {
+  if (typeof param !== "object" || param === null) {
+    return param;
+  }
+
+  if (Array.isArray(param)) {
+    return param.map((p) => formatParams(p));
+  }
+
+  if (BigNumber.isBigNumber(param)) {
+    return param.toNumber();
+  }
+};
+const objectToArray = (obj) => {
   // If the input is not an object, return it as-is
   if (typeof obj !== "object" || obj === null) {
     return obj;
@@ -25,22 +41,24 @@ function objectToArray(obj) {
   }
 
   // If the input is an object, convert its properties recursively
-  const result = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      result[key] = objectToArray(obj[key]);
-    }
+  const keys = Object.keys(obj);
+  const result = new Array(keys.length);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const value = objectToArray(obj[key]);
+    result[i] = value;
   }
   return result;
-}
+};
 
 describe("[@skip-on-coverage] Seaport integration", function () {
+  this.timeout(10000000);
   let seaport;
-  let bosonVoucher;
+  let bosonVoucher, bosonToken;
   let deployer, protocol, assistant;
 
   const startDate = new Date();
-  const endDate = new Date(startDate.getDate() + 30);
+  const endDate = new Date().setDate(startDate.getDate() + 30);
 
   before(async function () {
     let protocolTreasury;
@@ -137,15 +155,15 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     await bosonVoucherInit.initializeVoucher(sellerId, assistant.address, voucherInitValues);
   });
 
-  it("Voucher contract can be used as a bridge between seaport and seller operations", function () {
+  it("Voucher contract can be used as a bridge between seaport and seller operations", async function () {
     const parameters = {
       offerer: assistant.address,
-      zone: ethers.constants.AddressZero,
+      zone: constants.AddressZero,
       offer: [
         {
           itemType: 4, // maybe 2
-          identifierOrCriteria: "0", // must be a merkle root with a seet of vouchers ids
           token: bosonToken.address,
+          identifierOrCriteria: 0, // must be a merkle root with a seet of vouchers ids
           startAmount: 1,
           endAmount: 1,
         },
@@ -153,23 +171,23 @@ describe("[@skip-on-coverage] Seaport integration", function () {
       consideration: [
         {
           itemType: 0, // native,
-          token: ethers.constants.AddressZero, // native
-          identifierOrCriteria: "0",
-          startAmount: ethers.utils.parseEther("1"),
-          endAmount: ethers.utils.parseEther("2"),
+          token: constants.AddressZero, // native
+          identifierOrCriteria: 0,
+          startAmount: 1,
+          endAmount: 2,
           recipient: bosonVoucher.address,
         },
       ],
       orderType: 0, // full
       startTime: startDate.getTime(),
-      endTime: endDate.getTime(),
+      endTime: endDate, // value is already in timestamp
+      zoneHash: constants.HashZero,
       salt: 0,
-      zoneHash: "0",
-      conduitKey: "0",
-      counter: 1,
+      conduitKey: constants.HashZero,
+      totalOriginalConsiderationItems: 1,
     };
 
-    const signature = "";
+    const signature = "0x";
     const order = {
       parameters,
       signature,
@@ -177,7 +195,16 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     const orders = [objectToArray(order)];
 
     const calldata = seaport.interface.encodeFunctionData("validate", [orders]);
+    const tx = await bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata);
+    const receipt = await tx.wait();
+
+    const [, orderParameters] = getEvent(receipt, seaport, "OrderValidated");
+    const formatedOrderParameters = orderParameters.map(formatParams);
+
+    assert.deepEqual(formatedOrderParameters, objectToArray(parameters));
   });
+
+  it("Seaport is allowed to transfer vouchers", async function () {});
 
   context("Revert reasons", function () {
     it("Transaction reverts if the seaport call reverts", function () {});
