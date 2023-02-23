@@ -1502,7 +1502,7 @@ describe("IBosonVoucher", function () {
           });
         });
 
-        context("Transfer of a preminted voucher", async function () {
+        context("Transfer of a preminted voucher when owner is assistant", async function () {
           let voucherRedeemableFrom, voucherValid, offerValid;
           beforeEach(async function () {
             // Create preminted offer
@@ -1517,6 +1517,8 @@ describe("IBosonVoucher", function () {
                 disputeResolverId,
                 agentId
               );
+
+            // Reverse range to assistant
             await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
             // Pool needs to cover both seller deposit and price
             const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
@@ -1703,6 +1705,67 @@ describe("IBosonVoucher", function () {
             });
           });
         });
+
+        context("Transfer of a preminted voucher when owner is contract", async function () {
+          beforeEach(async function () {
+            // Create preminted offer
+            const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+            offer.quantityAvailable = "2";
+
+            await offerHandler
+              .connect(assistant)
+              .createOffer(
+                offer.toStruct(),
+                offerDates.toStruct(),
+                offerDurations.toStruct(),
+                disputeResolverId,
+                agentId
+              );
+
+            // Update boson voucher address to actual seller's voucher
+            const voucherAddress = calculateContractAddress(accountHandler.address, "1");
+            bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
+
+            // Reverse range to contract
+            await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, bosonVoucher.address);
+
+            // Pool needs to cover both seller deposit and price
+            const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
+            await fundsHandler.connect(admin).depositFunds(seller.id, ethers.constants.AddressZero, pool, {
+              value: pool,
+            });
+
+            // Store correct values
+            tokenId = offerId = "1";
+
+            // amount to premint
+            await bosonVoucher.connect(assistant).preMint(offerId, offer.quantityAvailable);
+          });
+
+          it("If voucher contract is the owner of voucher, transfer on behalf of should work normally", async function () {
+            // Approve another address to transfer the voucher
+            await bosonVoucher.connect(assistant).setApprovalForAllToContract(rando2.address, true);
+
+            const tx = await bosonVoucher
+              .connect(rando2)
+              [selector](bosonVoucher.address, rando.address, tokenId, ...additionalArgs);
+
+            await expect(tx).to.emit(bosonVoucher, "Transfer").withArgs(bosonVoucher.address, rando.address, tokenId);
+          });
+
+          it("If voucher contract is the owner of voucher, transferPremintedFrom should work normally", async function () {
+            // Approve another address to transfer the voucher
+            await bosonVoucher.connect(assistant).setApprovalForAllToContract(rando2.address, true);
+
+            await expect(
+              bosonVoucher
+                .connect(rando2)
+                .transferPremintedFrom(bosonVoucher.address, rando.address, offerId, tokenId, "0x")
+            )
+              .to.emit(bosonVoucher, "Transfer")
+              .withArgs(bosonVoucher.address, rando.address, tokenId);
+          });
+        });
       });
     });
 
@@ -1717,7 +1780,10 @@ describe("IBosonVoucher", function () {
         await offerHandler
           .connect(assistant)
           .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
+
+        // Reverse range to assistant
         await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
+
         // Pool needs to cover both seller deposit and price
         const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
         await fundsHandler.connect(admin).depositFunds(seller.id, ethers.constants.AddressZero, pool, {
@@ -2399,6 +2465,14 @@ describe("IBosonVoucher", function () {
           bosonVoucher.connect(rando).callExternalContract(mockSimpleContract.address, calldata)
         ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
       });
+    });
+  });
+
+  context("setApprovalForAllToContract", function () {
+    it("Should emit ApprovalForAll event", async function () {
+      await expect(bosonVoucher.connect(assistant).setApprovalForAllToContract(rando.address, true))
+        .to.emit(bosonVoucher, "ApprovalForAll")
+        .withArgs(bosonVoucher.address, rando.address, true);
     });
   });
 

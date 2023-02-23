@@ -236,4 +236,6 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     function getRangeByOfferId(uint256 _offerId) external view returns (Range memory range);
 
     function callExternalContract(address _to, bytes memory _data) external;
+
+    function setApprovalForAllToContract(address _operator, bool _approved) external;
 }

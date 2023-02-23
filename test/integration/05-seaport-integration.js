@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { constants, BigNumber } = require("ethers");
 
-const shell = require("shelljs");
+// const shell = require("shelljs");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
@@ -10,42 +10,54 @@ const { mockVoucherInitValues } = require("../util/mock");
 const { getFacetsWithArgs, getEvent } = require("../util/utils");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 
-const { assert, expect } = require("chai");
+const { assert } = require("chai");
 const seaportArtifact = require("./seaport/artifacts/contracts/Seaport.sol/Seaport.json");
 const Role = require("../../scripts/domain/Role");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const abi = seaportArtifact.abi;
 
-const formatStruct = (param) => {
-  if (typeof param !== "object" || param === null) {
-    return param;
+const formatStruct = (input) => {
+  // convert BigNumber to number
+  if (BigNumber.isBigNumber(input)) {
+    return input.toNumber();
   }
 
-  if (Array.isArray(param)) {
-    return param.map((p) => formatParams(p));
-  }
-
-  if (BigNumber.isBigNumber(param)) {
-    return param.toNumber();
-  }
-};
-const objectToArray = (obj) => {
   // If the input is not an object, return it as-is
-  if (typeof obj !== "object" || obj === null) {
-    return obj;
+  if (typeof input !== "object" || input === null) {
+    return input;
   }
 
   // If the input is an array, convert its elements recursively
-  if (Array.isArray(obj)) {
-    return obj.map((element) => objectToArray(element));
+  if (Array.isArray(input)) {
+    return input.map((p) => formatStruct(p));
   }
 
   // If the input is an object, convert its properties recursively
-  const keys = Object.keys(obj);
+  const keys = Object.keys(input);
+  const result = {};
+  for (const key of keys) {
+    const value = formatStruct(input[key]);
+    result[key] = value;
+  }
+};
+
+const objectToArray = (input) => {
+  // If the input is not an object, return it as-is
+  if (typeof input !== "object" || input === null) {
+    return input;
+  }
+
+  // If the input is an array, convert its elements recursively
+  if (Array.isArray(input)) {
+    return input.map((element) => objectToArray(element));
+  }
+
+  // If the input is an object, convert its properties recursively
+  const keys = Object.keys(input);
   const result = new Array(keys.length);
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
-    const value = objectToArray(obj[key]);
+    const value = objectToArray(input[key]);
     result[i] = value;
   }
   return result;
@@ -199,9 +211,8 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     const receipt = await tx.wait();
 
     const [, orderParameters] = getEvent(receipt, seaport, "OrderValidated");
-    const formatedOrderParameters = orderParameters.map(formatParams);
 
-    assert.deepEqual(formatedOrderParameters, objectToArray(parameters));
+    assert.deepEqual(orderParameters.map(formatStruct), objectToArray(parameters));
   });
 
   it("Seaport is allowed to transfer vouchers", async function () {});

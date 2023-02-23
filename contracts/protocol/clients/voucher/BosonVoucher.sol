@@ -439,6 +439,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     /**
      * @notice Non-standard ERC721 function to transfer a pre-minted token from one address to another.
      *
+     * @dev  This function is more efficient than generic transferFrom methods, since it does not have to perform binary search.
+     *
      * Reverts if:
      * - TokenId was already used to commit
      * - TokenId already exists (i.e. has an owner)
@@ -591,6 +593,13 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         }
     }
 
+    function setApprovalForAllToContract(address _operator, bool _approved) external onlyOwner {
+        require(_operator != address(0), INVALID_ADDRESS);
+
+        _setApprovalForAll(address(this), _operator, _approved);
+    }
+
+    // @dev Contract must be allowed to receive native token as assistant can pre-mint tokens to the contract
     receive() external payable {}
 
     /**
