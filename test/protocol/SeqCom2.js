@@ -132,6 +132,9 @@ async function testSeqCom() {
     bosonToken,
   ] = await ethers.getSigners();
 
+  const { chainId } = await ethers.provider.getNetwork();
+console.log("chainId", chainId)
+
   console.log("signers", (await ethers.getSigners()).length)
 
   pauser = admin = treasury = buyer = buyer2 = rando = newOwner = fauxClient = adminDR = treasuryDR = protocolTreasury = bosonToken = deployer;
@@ -148,7 +151,7 @@ async function testSeqCom() {
     console.log("UPGRADE SUITE")
   
     protocolAddress = "0x785a225EBAC1b600cA3170C6c7fA3488A203Fc21"
-    await upgradeSuite("HEAD",protocolAddress, {})
+    // await upgradeSuite("HEAD",protocolAddress, {})
 
   // const wethFactory = await ethers.getContractFactory("WETH9");
   // weth = await wethFactory.deploy();
