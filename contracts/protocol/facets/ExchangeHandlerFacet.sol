@@ -252,7 +252,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 _initialSellerId
     ) internal returns (uint256 actualPrice) {
         // Transfer buyers funds to protocol
+        console.log("bc validate incoming payment");
         FundsLib.validateIncomingPayment(_exchangeToken, _priceDiscovery.price);
+
+        
 
         // At this point, protocol temporary holds buyer's payment
         uint256 protocolBalanceBefore = getBalance(_exchangeToken);
@@ -268,6 +271,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         ps.incomingVoucherId = _exchangeId;
         ps.incomingVoucherCloneAddress = cloneAddress;
 
+        console.log("making external call");
         {
             // Call the price discovery contract
             (bool success, bytes memory returnData) = address(_priceDiscovery.priceDiscoveryContract).call{
@@ -293,10 +297,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         uint256 overchargedAmount = _priceDiscovery.price - actualPrice;
 
+        console.log("overchargedAmount: %s", overchargedAmount);
         if (overchargedAmount > 0) {
             // Return the surplus to buyer
             FundsLib.transferFundsFromProtocol(_exchangeToken, payable(_buyer), overchargedAmount);
         }
+        console.log("bc transfer voucher");
 
         // Transfer voucher to buyer
         IBosonVoucher(cloneAddress).transferFrom(address(this), _buyer, _exchangeId);

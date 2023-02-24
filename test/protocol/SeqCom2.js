@@ -193,8 +193,8 @@ async function testSeqCom() {
   // Price on secondary market
   // price2 = "9950000000000000";
   // "50000000000000"
-  price2 = ethers.utils.parseEther("0.01");
-
+  price2 = ethers.utils.parseEther("0.01",);
+console.log("price2", price2.toString())
 
   // Prepare calldata for PriceDiscovery contract
 
