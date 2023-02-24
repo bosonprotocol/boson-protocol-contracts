@@ -120,6 +120,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Exchange must exist
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
+        console.log("bc got valid exchange");
+
         // Make sure the voucher is still valid
         require(block.timestamp <= voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
 
@@ -128,6 +130,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         // Get token address
         address tokenAddress = offer.exchangeToken;
+
+        console.log("token address", tokenAddress);
 
         // Get current buyer address. This is actually the seller in sequential commit. Need to do it before voucher is transferred
         address seller;
@@ -141,9 +145,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             require(seller == msgSender(), NOT_VOUCHER_HOLDER);
         }
 
+        console.log("start fulfiling");
+
         // First call price discovery and get actual price
         // It might be lower tha submitted for buy orders and higher for sell orders
         uint256 actualPrice = fulFilOrder(_exchangeId, tokenAddress, _priceDiscovery, _buyer, offer.sellerId);
+
+        console.log("got actual price", actualPrice);
 
         // Calculate the amount to be kept in escrow
         uint256 escrowAmount;
@@ -189,6 +197,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 );
             }
 
+            console.log("start collecting escrow");
+
             // Make sure enough get escrowed
             if (_priceDiscovery.direction == Direction.Buy) {
                 if (escrowAmount > 0) {
@@ -212,6 +222,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 if (payout > 0) FundsLib.transferFundsFromProtocol(tokenAddress, payable(seller), payout);
             }
         }
+
+        console.log("yuhu");
 
         // since exchange and voucher are passed by reference, they are updated
         emit BuyerCommitted(exchange.offerId, exchange.buyerId, _exchangeId, exchange, voucher, msgSender());
@@ -1224,73 +1236,73 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @return receipt - the receipt for the exchange. See {BosonTypes.Receipt}
      */
     function getReceipt(uint256 _exchangeId) external view returns (Receipt memory receipt) {
-        // Get the exchange
-        (bool exists, Exchange storage exchange) = fetchExchange(_exchangeId);
-        require(exists, NO_SUCH_EXCHANGE);
+        // // Get the exchange
+        // (bool exists, Exchange storage exchange) = fetchExchange(_exchangeId);
+        // require(exists, NO_SUCH_EXCHANGE);
 
-        // Verify if exchange is finalized, returns true if exchange is in one of the final states
-        (, bool isFinalized) = isExchangeFinalized(_exchangeId);
-        require(isFinalized, EXCHANGE_IS_NOT_IN_A_FINAL_STATE);
+        // // Verify if exchange is finalized, returns true if exchange is in one of the final states
+        // (, bool isFinalized) = isExchangeFinalized(_exchangeId);
+        // require(isFinalized, EXCHANGE_IS_NOT_IN_A_FINAL_STATE);
 
-        // Add exchange to receipt
-        receipt.exchangeId = exchange.id;
-        receipt.buyerId = exchange.buyerId;
-        receipt.finalizedDate = exchange.finalizedDate;
+        // // Add exchange to receipt
+        // receipt.exchangeId = exchange.id;
+        // receipt.buyerId = exchange.buyerId;
+        // receipt.finalizedDate = exchange.finalizedDate;
 
-        // Get the voucher
-        Voucher storage voucher = fetchVoucher(_exchangeId);
-        receipt.committedDate = voucher.committedDate;
-        receipt.redeemedDate = voucher.redeemedDate;
-        receipt.voucherExpired = voucher.expired;
+        // // Get the voucher
+        // Voucher storage voucher = fetchVoucher(_exchangeId);
+        // receipt.committedDate = voucher.committedDate;
+        // receipt.redeemedDate = voucher.redeemedDate;
+        // receipt.voucherExpired = voucher.expired;
 
-        // Fetch offer, we assume offer exist if exchange exist
-        (, Offer storage offer) = fetchOffer(exchange.offerId);
-        receipt.offerId = offer.id;
-        receipt.sellerId = offer.sellerId;
-        receipt.price = offer.price;
-        receipt.sellerDeposit = offer.sellerDeposit;
-        receipt.buyerCancelPenalty = offer.buyerCancelPenalty;
-        receipt.exchangeToken = offer.exchangeToken;
+        // // Fetch offer, we assume offer exist if exchange exist
+        // (, Offer storage offer) = fetchOffer(exchange.offerId);
+        // receipt.offerId = offer.id;
+        // receipt.sellerId = offer.sellerId;
+        // receipt.price = offer.price;
+        // receipt.sellerDeposit = offer.sellerDeposit;
+        // receipt.buyerCancelPenalty = offer.buyerCancelPenalty;
+        // receipt.exchangeToken = offer.exchangeToken;
 
-        // Fetch offer fees
-        OfferFees storage offerFees = fetchOfferFees(offer.id);
-        receipt.offerFees = offerFees;
+        // // Fetch offer fees
+        // OfferFees storage offerFees = fetchOfferFees(offer.id);
+        // receipt.offerFees = offerFees;
 
-        // Fetch agent id
-        (, uint256 agentId) = fetchAgentIdByOffer(offer.id);
-        receipt.agentId = agentId;
+        // // Fetch agent id
+        // (, uint256 agentId) = fetchAgentIdByOffer(offer.id);
+        // receipt.agentId = agentId;
 
-        // We assume dispute exist if exchange is in disputed state
-        if (exchange.state == ExchangeState.Disputed) {
-            // Fetch dispute resolution terms
-            DisputeResolutionTerms storage disputeResolutionTerms = fetchDisputeResolutionTerms(offer.id);
+        // // We assume dispute exist if exchange is in disputed state
+        // if (exchange.state == ExchangeState.Disputed) {
+        //     // Fetch dispute resolution terms
+        //     DisputeResolutionTerms storage disputeResolutionTerms = fetchDisputeResolutionTerms(offer.id);
 
-            // Add disputeResolverId to receipt
-            receipt.disputeResolverId = disputeResolutionTerms.disputeResolverId;
+        //     // Add disputeResolverId to receipt
+        //     receipt.disputeResolverId = disputeResolutionTerms.disputeResolverId;
 
-            // Fetch dispute and dispute dates
-            (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
+        //     // Fetch dispute and dispute dates
+        //     (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
-            // Add dispute data to receipt
-            receipt.disputeState = dispute.state;
-            receipt.disputedDate = disputeDates.disputed;
-            receipt.escalatedDate = disputeDates.escalated;
-        }
+        //     // Add dispute data to receipt
+        //     receipt.disputeState = dispute.state;
+        //     receipt.disputedDate = disputeDates.disputed;
+        //     receipt.escalatedDate = disputeDates.escalated;
+        // }
 
-        // Fetch the twin receipt, it exists if offer was bundled with twins
-        (bool twinsExists, TwinReceipt[] storage twinReceipts) = fetchTwinReceipts(exchange.id);
+        // // Fetch the twin receipt, it exists if offer was bundled with twins
+        // (bool twinsExists, TwinReceipt[] storage twinReceipts) = fetchTwinReceipts(exchange.id);
 
-        // Add twin to receipt if exists
-        if (twinsExists) {
-            receipt.twinReceipts = twinReceipts;
-        }
+        // // Add twin to receipt if exists
+        // if (twinsExists) {
+        //     receipt.twinReceipts = twinReceipts;
+        // }
 
-        // Fetch condition
-        (bool conditionExists, Condition storage condition) = fetchConditionByExchange(exchange.id);
+        // // Fetch condition
+        // (bool conditionExists, Condition storage condition) = fetchConditionByExchange(exchange.id);
 
-        // Add condition to receipt if exists
-        if (conditionExists) {
-            receipt.condition = condition;
-        }
+        // // Add condition to receipt if exists
+        // if (conditionExists) {
+        //     receipt.condition = condition;
+        // }
     }
 }
