@@ -123,6 +123,7 @@ module.exports = {
     mumbai: {
       url: environments.mumbai.txNode,
       accounts: environments.mumbai.keys,
+      timeout: 100_000
     },
     polygon: {
       url: environments.polygon.txNode,

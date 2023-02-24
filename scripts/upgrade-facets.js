@@ -187,8 +187,9 @@ async function main(env, facetConfig) {
       if (existingFacetAddress != ethers.constants.AddressZero) {
         // Selector exist on some other facet
         const selectorName = selectors.signatureToNameMapping[selectorToAdd];
-        const prompt = `Selector ${selectorName} is already registered on facet ${existingFacetAddress}. Do you want to (r)eplace or (s)kip it? `;
-        const answer = await getUserResponse(prompt, ["r", "s"]);
+        // const prompt = `Selector ${selectorName} is already registered on facet ${existingFacetAddress}. Do you want to (r)eplace or (s)kip it? `;
+        // const answer = await getUserResponse(prompt, ["r", "s"]);
+        const answer = "r";
         if (answer == "r") {
           // User chose to replace
           selectorsToReplace.push(selectorToAdd);

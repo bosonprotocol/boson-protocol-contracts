@@ -148,7 +148,7 @@ async function testSeqCom() {
     console.log("UPGRADE SUITE")
   
     protocolAddress = "0x785a225EBAC1b600cA3170C6c7fA3488A203Fc21"
-    await upgradeSuite("HEAD",protocolAddress)
+    await upgradeSuite("HEAD",protocolAddress, {})
 
   // const wethFactory = await ethers.getContractFactory("WETH9");
   // weth = await wethFactory.deploy();
