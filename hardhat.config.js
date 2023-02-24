@@ -153,6 +153,19 @@ module.exports = {
       {
         version: "0.5.17", // Mock weth contract
       },
+      {
+        version: "0.8.17", // Filterer
+        settings: {
+          // viair: true,
+          optimizer: {
+            enabled: true,
+            runs: 200,
+            details: {
+              yul: true,
+            },
+          },
+        },
+      },
     ],
   },
   gasReporter: {

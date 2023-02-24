@@ -41,9 +41,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     using Address for address;
 
     WETH9Like private immutable weth; // 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2)
+    // wmatic 0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889
 
-    constructor(address _weth) {
-        weth = WETH9Like(_weth);
+    // constructor(address _weth) {
+    //     weth = WETH9Like(_weth);
+    // }
+
+        constructor() {
+        weth = WETH9Like(0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889);
     }
 
     /**
