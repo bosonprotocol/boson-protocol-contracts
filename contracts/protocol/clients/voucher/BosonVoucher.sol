@@ -579,7 +579,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     function callExternalContract(address _to, bytes memory _data) external onlyOwner {
         require(_to != address(0), INVALID_ADDRESS);
 
-        (bool success, bytes memory result) = _to.delegatecall(_data);
+        (bool success, bytes memory result) = _to.call(_data);
 
         // Handle result
         if (!success) {

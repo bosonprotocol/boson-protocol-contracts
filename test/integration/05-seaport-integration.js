@@ -1,20 +1,21 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { constants, BigNumber } = require("ethers");
+const { constants, BigNumber } = ethers;
 
 // const shell = require("shelljs");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const { mockVoucherInitValues } = require("../util/mock");
-const { getFacetsWithArgs, getEvent } = require("../util/utils");
+const { getFacetsWithArgs, getEvent, toHex } = require("../util/utils");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 
 const { assert } = require("chai");
-const seaportArtifact = require("./seaport/artifacts/contracts/Seaport.sol/Seaport.json");
 const Role = require("../../scripts/domain/Role");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const abi = seaportArtifact.abi;
+const { abi } = require("./seaport/artifacts/contracts/Seaport.sol/Seaport.json");
+let { seaportFixtures } = require("./seaport/fixtures.js");
+const { getBasicOrderParameters } = require("./seaport/utils");
 
 const formatStruct = (input) => {
   // convert BigNumber to number
@@ -43,7 +44,7 @@ const formatStruct = (input) => {
 
 const objectToArray = (input) => {
   // If the input is not an object, return it as-is
-  if (typeof input !== "object" || input === null) {
+  if (BigNumber.isBigNumber(input) || typeof input !== "object" || input === null) {
     return input;
   }
 
@@ -67,20 +68,23 @@ describe("[@skip-on-coverage] Seaport integration", function () {
   this.timeout(10000000);
   let seaport;
   let bosonVoucher, bosonToken;
-  let deployer, protocol, assistant;
+  let deployer, protocol, assistant, buyer;
 
   const startDate = new Date();
   const endDate = new Date().setDate(startDate.getDate() + 30);
 
   before(async function () {
     let protocolTreasury;
-    [deployer, protocol, assistant, protocolTreasury] = await ethers.getSigners();
+    [deployer, protocol, assistant, protocolTreasury, buyer] = await ethers.getSigners();
+
     seaport = await ethers.getContractAt(abi, "0x00000000000001ad428e4906aE43D8F9852d0dD6");
 
-    let protocolDiamond, accessController;
+    const { chainId } = await ethers.provider.getNetwork();
+
+    seaportFixtures = await seaportFixtures(chainId);
 
     // Deploy diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
+    let [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Cast Diamond to contract interfaces
     // offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
@@ -168,54 +172,52 @@ describe("[@skip-on-coverage] Seaport integration", function () {
   });
 
   it("Voucher contract can be used as a bridge between seaport and seller operations", async function () {
-    const parameters = {
-      offerer: assistant.address,
-      zone: constants.AddressZero,
-      offer: [
-        {
-          itemType: 4, // maybe 2
-          token: bosonToken.address,
-          identifierOrCriteria: 0, // must be a merkle root with a seet of vouchers ids
-          startAmount: 1,
-          endAmount: 1,
-        },
-      ],
-      consideration: [
-        {
-          itemType: 0, // native,
-          token: constants.AddressZero, // native
-          identifierOrCriteria: 0,
-          startAmount: 1,
-          endAmount: 2,
-          recipient: bosonVoucher.address,
-        },
-      ],
-      orderType: 0, // full
-      startTime: startDate.getTime(),
-      endTime: endDate, // value is already in timestamp
-      zoneHash: constants.HashZero,
-      salt: 0,
-      conduitKey: constants.HashZero,
-      totalOriginalConsiderationItems: 1,
-    };
+    const offer = seaportFixtures.getTestVoucher(0, bosonVoucher.address, 1, 1);
+    const consideration = seaportFixtures.getTestToken(0, undefined, 1, 2, bosonVoucher.address);
+    const { order } = seaportFixtures.getOrder(
+      bosonVoucher,
+      undefined,
+      [offer],
+      [consideration],
+      0, // full
+      startDate.getTime(),
+      endDate
+    );
 
-    const signature = "0x";
-    const order = {
-      parameters,
-      signature,
-    };
     const orders = [objectToArray(order)];
-
     const calldata = seaport.interface.encodeFunctionData("validate", [orders]);
     const tx = await bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata);
     const receipt = await tx.wait();
 
     const [, orderParameters] = getEvent(receipt, seaport, "OrderValidated");
 
-    assert.deepEqual(orderParameters.map(formatStruct), objectToArray(parameters));
+    assert.deepEqual(orderParameters, objectToArray(order.parameters));
   });
 
-  it("Seaport is allowed to transfer vouchers", async function () {});
+  it.only("Seaport is allowed to transfer vouchers", async function () {
+    const offer = seaportFixtures.getTestVoucher(0, bosonVoucher.address, 1, 1);
+    const consideration = seaportFixtures.getTestToken(0, undefined, 1, 2, bosonVoucher.address);
+    const { order, value } = seaportFixtures.getOrder(
+      bosonVoucher,
+      undefined,
+      [offer],
+      [consideration],
+      0, // full
+      startDate.getTime(),
+      endDate
+    );
+
+    const orders = [objectToArray(order)];
+    const calldata = seaport.interface.encodeFunctionData("validate", [orders]);
+    await bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata);
+
+    const basicOrderParameters = getBasicOrderParameters(order);
+
+    console.log(order.parameters.startTime);
+    console.log(order.parameters.endTime);
+    const tx = await seaport.connect(buyer).fulfillBasicOrder(basicOrderParameters, { value });
+    const receipt = await tx.wait();
+  });
 
   context("Revert reasons", function () {
     it("Transaction reverts if the seaport call reverts", function () {});

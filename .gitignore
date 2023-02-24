@@ -5,7 +5,7 @@ node_modules
 /artifacts
 /cache
 /abi
-
+/test/integration/seaport/artifacts
 
 # Secrets
 .env
