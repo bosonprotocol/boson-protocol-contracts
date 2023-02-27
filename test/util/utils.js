@@ -230,6 +230,28 @@ async function getFacetsWithArgs(facetNames, config) {
   }, {});
 }
 
+function objectToArray(input) {
+  // If the input is not an object, return it as-is
+  if (BigNumber.isBigNumber(input) || typeof input !== "object" || input === null) {
+    return input;
+  }
+
+  // If the input is an array, convert its elements recursively
+  if (Array.isArray(input)) {
+    return input.map((element) => objectToArray(element));
+  }
+
+  // If the input is an object, convert its properties recursively
+  const keys = Object.keys(input);
+  const result = new Array(keys.length);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const value = objectToArray(input[key]);
+    result[i] = value;
+  }
+  return result;
+}
+
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.eventEmittedWithArgs = eventEmittedWithArgs;
@@ -240,3 +262,4 @@ exports.applyPercentage = applyPercentage;
 exports.getMappingStoragePosition = getMappingStoragePosition;
 exports.paddingType = paddingType;
 exports.getFacetsWithArgs = getFacetsWithArgs;
+exports.objectToArray = objectToArray;

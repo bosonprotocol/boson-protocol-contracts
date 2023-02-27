@@ -6,7 +6,7 @@ const { constants, BigNumber } = ethers;
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
-const { getFacetsWithArgs, getEvent, calculateContractAddress } = require("../util/utils");
+const { getFacetsWithArgs, getEvent, calculateContractAddress, objectToArray } = require("../util/utils");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 
 const { mockSeller, mockAuthToken, mockVoucherInitValues, mockOffer, mockDisputeResolver } = require("../util/mock");
@@ -18,61 +18,19 @@ let { seaportFixtures } = require("./seaport/fixtures.js");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { RevertReasons } = require("../../scripts/config/revert-reasons");
 
-const formatStruct = (input) => {
-  // convert BigNumber to number
-  if (BigNumber.isBigNumber(input)) {
-    return input.toNumber();
-  }
-
-  // If the input is not an object, return it as-is
-  if (typeof input !== "object" || input === null) {
-    return input;
-  }
-
-  // If the input is an array, convert its elements recursively
-  if (Array.isArray(input)) {
-    return input.map((p) => formatStruct(p));
-  }
-
-  // If the input is an object, convert its properties recursively
-  const keys = Object.keys(input);
-  const result = {};
-  for (const key of keys) {
-    const value = formatStruct(input[key]);
-    result[key] = value;
-  }
-};
-
-const objectToArray = (input) => {
-  // If the input is not an object, return it as-is
-  if (BigNumber.isBigNumber(input) || typeof input !== "object" || input === null) {
-    return input;
-  }
-
-  // If the input is an array, convert its elements recursively
-  if (Array.isArray(input)) {
-    return input.map((element) => objectToArray(element));
-  }
-
-  // If the input is an object, convert its properties recursively
-  const keys = Object.keys(input);
-  const result = new Array(keys.length);
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    const value = objectToArray(input[key]);
-    result[i] = value;
-  }
-  return result;
-};
+function cloneSeaportAndGenerateArtifacts() {
+  console.log("Clonning Seaport repo...");
+  shell.exec("git clone git@github.com:ProjectOpenSea/seaport.git");
+  shell.exec("npx yarn install");
+  console.log("Generating artifacts...");
+  shell.exec("npx hardhat compile");
+}
 
 describe("[@skip-on-coverage] Seaport integration", function () {
-  this.timeout(10000000);
   let seaport;
   let bosonVoucher, bosonToken;
   let deployer, protocol, assistant, buyer, DR;
   let calldata, order, orderHash, value;
-
-  const endDate = "0xff00000000000000000000000000";
 
   before(async function () {
     let protocolTreasury;
@@ -88,11 +46,9 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     let [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Cast Diamond to contract interfaces
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-    // exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-    // configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+    const offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
+    const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+    const fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
 
     // Grant roles
     await accessController.grantRole(Role.PROTOCOL, protocol.address);
@@ -191,10 +147,12 @@ describe("[@skip-on-coverage] Seaport integration", function () {
       value: pool,
     });
 
+    // Pre mint range
     await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, bosonVoucher.address);
-
     await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
+    // Create seaport offer which tokenId 1
+    const endDate = "0xff00000000000000000000000000";
     const seaportOffer = seaportFixtures.getTestVoucher(1, bosonVoucher.address, 1, 1);
     const consideration = seaportFixtures.getTestToken(0, undefined, 1, 2, bosonVoucher.address);
     ({ order, orderHash, value } = await seaportFixtures.getOrder(
@@ -242,7 +200,7 @@ describe("[@skip-on-coverage] Seaport integration", function () {
   });
 
   context("💔 Revert Reasons", function () {
-    it("Boson voucher callExternalContrqact reverts if the seaport call reverts", async function () {
+    it("Boson voucher callExternalContract reverts if the seaport call reverts", async function () {
       order.parameters.totalOriginalConsiderationItems = BigNumber.from(2);
       const orders = [objectToArray(order)];
       calldata = seaport.interface.encodeFunctionData("validate", [orders]);
