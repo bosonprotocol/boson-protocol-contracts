@@ -6,16 +6,17 @@ const { constants, BigNumber } = ethers;
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
-const { mockVoucherInitValues } = require("../util/mock");
-const { getFacetsWithArgs, getEvent, toHex } = require("../util/utils");
+const { getFacetsWithArgs, getEvent, calculateContractAddress } = require("../util/utils");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 
-const { assert } = require("chai");
+const { mockSeller, mockAuthToken, mockVoucherInitValues, mockOffer, mockDisputeResolver } = require("../util/mock");
+const { assert, expect } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { abi } = require("./seaport/artifacts/contracts/Seaport.sol/Seaport.json");
 let { seaportFixtures } = require("./seaport/fixtures.js");
-const { getBasicOrderParameters } = require("./seaport/utils");
+const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
+const { RevertReasons } = require("../../scripts/config/revert-reasons");
 
 const formatStruct = (input) => {
   // convert BigNumber to number
@@ -68,14 +69,14 @@ describe("[@skip-on-coverage] Seaport integration", function () {
   this.timeout(10000000);
   let seaport;
   let bosonVoucher, bosonToken;
-  let deployer, protocol, assistant, buyer;
+  let deployer, protocol, assistant, buyer, DR;
+  let calldata, order, orderHash, value;
 
-  const startDate = new Date();
-  const endDate = new Date().setDate(startDate.getDate() + 30);
+  const endDate = "0xff00000000000000000000000000";
 
   before(async function () {
     let protocolTreasury;
-    [deployer, protocol, assistant, protocolTreasury, buyer] = await ethers.getSigners();
+    [deployer, protocol, assistant, protocolTreasury, buyer, DR] = await ethers.getSigners();
 
     seaport = await ethers.getContractAt(abi, "0x00000000000001ad428e4906aE43D8F9852d0dD6");
 
@@ -87,10 +88,10 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     let [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Cast Diamond to contract interfaces
-    // offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-    // accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
+    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
     // exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-    // fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
+    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
     // configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
     // Grant roles
@@ -161,31 +162,56 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     // Cut the protocol handler facets into the Diamond
     await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
 
-    // Initialize voucher contract
-    const sellerId = 1;
+    const seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
 
-    // prepare the VoucherInitValues
+    const emptyAuthToken = mockAuthToken();
     const voucherInitValues = mockVoucherInitValues();
-    const bosonVoucherInit = await ethers.getContractAt("BosonVoucher", bosonVoucher.address);
+    await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-    await bosonVoucherInit.initializeVoucher(sellerId, assistant.address, voucherInitValues);
-  });
+    const disputeResolver = mockDisputeResolver(DR.address, DR.address, DR.address, DR.address, true);
 
-  it("Voucher contract can be used as a bridge between seaport and seller operations", async function () {
-    const offer = seaportFixtures.getTestVoucher(0, bosonVoucher.address, 1, 1);
+    const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+    const sellerAllowList = [];
+
+    await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+    const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+    offer.quantityAvailable = 10;
+
+    await offerHandler
+      .connect(assistant)
+      .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
+
+    const voucherAddress = calculateContractAddress(accountHandler.address, seller.id);
+    bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
+
+    // Pool needs to cover both seller deposit and price
+    const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
+    await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, pool, {
+      value: pool,
+    });
+
+    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, bosonVoucher.address);
+
+    await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
+
+    const seaportOffer = seaportFixtures.getTestVoucher(1, bosonVoucher.address, 1, 1);
     const consideration = seaportFixtures.getTestToken(0, undefined, 1, 2, bosonVoucher.address);
-    const { order } = seaportFixtures.getOrder(
+    ({ order, orderHash, value } = await seaportFixtures.getOrder(
       bosonVoucher,
       undefined,
-      [offer],
+      [seaportOffer],
       [consideration],
       0, // full
-      startDate.getTime(),
+      0,
       endDate
-    );
+    ));
 
     const orders = [objectToArray(order)];
-    const calldata = seaport.interface.encodeFunctionData("validate", [orders]);
+    calldata = seaport.interface.encodeFunctionData("validate", [orders]);
+  });
+
+  it("Voucher contract can be used to call seaport validate", async function () {
     const tx = await bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata);
     const receipt = await tx.wait();
 
@@ -194,32 +220,36 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     assert.deepEqual(orderParameters, objectToArray(order.parameters));
   });
 
-  it.only("Seaport is allowed to transfer vouchers", async function () {
-    const offer = seaportFixtures.getTestVoucher(0, bosonVoucher.address, 1, 1);
-    const consideration = seaportFixtures.getTestToken(0, undefined, 1, 2, bosonVoucher.address);
-    const { order, value } = seaportFixtures.getOrder(
-      bosonVoucher,
-      undefined,
-      [offer],
-      [consideration],
-      0, // full
-      startDate.getTime(),
-      endDate
-    );
-
-    const orders = [objectToArray(order)];
-    const calldata = seaport.interface.encodeFunctionData("validate", [orders]);
+  it("Seaport is allowed to transfer vouchers", async function () {
     await bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata);
+    await bosonVoucher.connect(assistant).setApprovalForAllToContract(seaport.address, true);
 
-    const basicOrderParameters = getBasicOrderParameters(order);
+    let totalFilled, isValidated;
 
-    console.log(order.parameters.startTime);
-    console.log(order.parameters.endTime);
-    const tx = await seaport.connect(buyer).fulfillBasicOrder(basicOrderParameters, { value });
+    ({ isValidated, totalFilled } = await seaport.getOrderStatus(orderHash));
+    assert(isValidated, "Order is not validated");
+    assert.equal(totalFilled.toNumber(), 0);
+
+    const tx = await seaport.connect(buyer).fulfillOrder(order, constants.HashZero, { value });
     const receipt = await tx.wait();
+
+    const event = getEvent(receipt, seaport, "OrderFulfilled");
+
+    ({ totalFilled } = await seaport.getOrderStatus(orderHash));
+    assert.equal(totalFilled.toNumber(), 1);
+
+    assert.equal(orderHash, event[0]);
   });
 
-  context("Revert reasons", function () {
-    it("Transaction reverts if the seaport call reverts", function () {});
+  context("💔 Revert Reasons", function () {
+    it("Boson voucher callExternalContrqact reverts if the seaport call reverts", async function () {
+      order.parameters.totalOriginalConsiderationItems = BigNumber.from(2);
+      const orders = [objectToArray(order)];
+      calldata = seaport.interface.encodeFunctionData("validate", [orders]);
+
+      await expect(bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata)).to.be.revertedWith(
+        RevertReasons.EXTERNAL_CALL_FAILED
+      );
+    });
   });
 });

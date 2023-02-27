@@ -117,7 +117,8 @@ const calculateOrderHash = (orderComponents) => {
         BigNumber.from(orderComponents.startTime).toHexString().slice(2).padStart(64, "0"),
         BigNumber.from(orderComponents.endTime).toHexString().slice(2).padStart(64, "0"),
         orderComponents.zoneHash.slice(2),
-        orderComponents.salt.slice(2).padStart(64, "0"),
+        // orderComponents.salt.slice(2).padStart(64, "0"),
+        BigNumber.from(orderComponents.salt).toHexString().slice(2).padStart(64, "0"),
         orderComponents.conduitKey.slice(2).padStart(64, "0"),
         BigNumber.from(orderComponents.counter).toHexString().slice(2).padStart(64, "0"),
       ].join("")

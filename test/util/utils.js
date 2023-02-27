@@ -230,17 +230,6 @@ async function getFacetsWithArgs(facetNames, config) {
   }, {});
 }
 
-function toHex(n, numBytes = 0) {
-  const asHexString = BigNumber.isBigNumber(n)
-    ? n.toHexString().slice(2)
-    : typeof n === "string"
-    ? hexRegex.test(n)
-      ? n.replace(/0x/, "")
-      : Number(n).toString(16)
-    : Number(n).toString(16);
-  return `0x${asHexString.padStart(numBytes * 2, "0")}`;
-}
-
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.eventEmittedWithArgs = eventEmittedWithArgs;
@@ -251,4 +240,3 @@ exports.applyPercentage = applyPercentage;
 exports.getMappingStoragePosition = getMappingStoragePosition;
 exports.paddingType = paddingType;
 exports.getFacetsWithArgs = getFacetsWithArgs;
-exports.toHex = toHex;

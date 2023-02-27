@@ -583,13 +583,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Handle result
         if (!success) {
-            if (result.length > 0) {
-                // bubble up the error
-                revert(string(result));
-            } else {
-                // Reverts with default message
-                revert(DELEGATECALL_FAILED);
-            }
+            // Reverts with default message
+            revert(EXTERNAL_CALL_FAILED);
         }
     }
 
