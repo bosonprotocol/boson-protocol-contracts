@@ -5,16 +5,15 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonExchangeEvents } from "../events/IBosonExchangeEvents.sol";
 import { IBosonTwinEvents } from "../events/IBosonTwinEvents.sol";
 import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 /**
  * @title IBosonExchangeHandler
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xe36d9689
+ * The ERC-165 identifier for this interface is: 0xe300dfc1
  */
-interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents, IERC721Receiver {
+interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
      * @notice Commits to an offer (first step of an exchange).
      *
@@ -259,10 +258,4 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @return receipt - the receipt for the exchange. See {BosonTypes.Receipt}
      */
     function getReceipt(uint256 _exchangeId) external view returns (BosonTypes.Receipt memory receipt);
-
-    function sequentialCommitToOffer(
-        address payable _buyer,
-        uint256 _exchangeId,
-        BosonTypes.PriceDiscovery calldata _priceDiscovery
-    ) external payable;
 }

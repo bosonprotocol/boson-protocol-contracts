@@ -7,8 +7,6 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
 import { SafeERC20 } from "../../ext_libs/SafeERC20.sol";
-import { Math } from "../../ext_libs/Math.sol";
-import "hardhat/console.sol";
 
 /**
  * @title FundsLib

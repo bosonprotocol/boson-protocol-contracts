@@ -25,6 +25,7 @@ const interfaceImplementers = {
   ERC165Facet: "IERC165Extended",
   ConfigHandlerFacet: "IBosonConfigHandler",
   ProtocolInitializationHandlerFacet: "IBosonProtocolInitializationHandler",
+  SequentialCommitHandlerFacet: "IBosonSequentialCommitHandler",
 };
 
 let interfacesCache; // if getInterfaceIds is called multiple times (e.g. during tests), calculate ids only once and store them to cache
@@ -44,9 +45,11 @@ async function getInterfaceIds(useCache = true) {
     skip[iFace] = true;
     return skip;
   }, {});
-  ["IBosonVoucher", "IERC1155", "IERC721", "IERC2981", "IAccessControl"].forEach((iFace) => {
-    skipBaseCheck[iFace] = false;
-  });
+  ["IBosonVoucher", "IERC1155", "IERC721", "IERC2981", "IAccessControl", "IBosonSequentialCommitHandler"].forEach(
+    (iFace) => {
+      skipBaseCheck[iFace] = false;
+    }
+  );
 
   for (const iFace of interfaces) {
     interfaceIds[iFace] = await getInterfaceId(iFace, skipBaseCheck[iFace]);

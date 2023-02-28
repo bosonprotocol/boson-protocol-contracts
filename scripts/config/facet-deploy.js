@@ -54,6 +54,7 @@ const noArgFacetNames = [
   "TwinHandlerFacet",
   "PauseHandlerFacet",
   "ProtocolInitializationHandlerFacet", // args are generated on cutDiamond function
+  "SequentialCommitHandlerFacet",
 ];
 
 async function getFacets(config) {
