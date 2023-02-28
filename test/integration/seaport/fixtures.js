@@ -1,15 +1,10 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { constants, BigNumber } = ethers;
-const { abi } = require("./artifacts/contracts/Seaport.sol/Seaport.json");
 const { getOfferOrConsiderationItem, calculateOrderHash } = require("./utils");
 const { expect } = require("chai");
 
-const SEAPORT_ADDRESS = "0x00000000000001ad428e4906aE43D8F9852d0dD6"; // 1.4
-
-const seaportFixtures = async () => {
-  const seaport = await ethers.getContractAt(abi, SEAPORT_ADDRESS);
-
+const seaportFixtures = async (seaport) => {
   const getTestVoucher = function (identifierOrCriteria, token, startAmount = 1, endAmount = 1) {
     return getOfferOrConsiderationItem(2, token, identifierOrCriteria, startAmount, endAmount);
   };
@@ -91,7 +86,6 @@ const seaportFixtures = async () => {
   };
 
   return {
-    seaport,
     getOrder,
     getTestVoucher,
     getTestToken,

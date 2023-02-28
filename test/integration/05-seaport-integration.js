@@ -1,8 +1,11 @@
+// const environments = require("../../environments");
 const hre = require("hardhat");
+// hre.network.config.forking = {
+//   url: environments.polygon.txNode,
+// };
+
 const ethers = hre.ethers;
 const { constants, BigNumber } = ethers;
-
-// const shell = require("shelljs");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
@@ -13,20 +16,14 @@ const { mockSeller, mockAuthToken, mockVoucherInitValues, mockOffer, mockDispute
 const { assert, expect } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { abi } = require("./seaport/artifacts/contracts/Seaport.sol/Seaport.json");
 let { seaportFixtures } = require("./seaport/fixtures.js");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { RevertReasons } = require("../../scripts/config/revert-reasons");
 
-function cloneSeaportAndGenerateArtifacts() {
-  console.log("Clonning Seaport repo...");
-  shell.exec("git clone git@github.com:ProjectOpenSea/seaport.git");
-  shell.exec("npx yarn install");
-  console.log("Generating artifacts...");
-  shell.exec("npx hardhat compile");
-}
+const SEAPORT_ADDRESS = "0x00000000000001ad428e4906aE43D8F9852d0dD6"; // 1.4
 
 describe("[@skip-on-coverage] Seaport integration", function () {
+  this.timeout(1000000);
   let seaport;
   let bosonVoucher, bosonToken;
   let deployer, protocol, assistant, buyer, DR;
@@ -36,11 +33,10 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     let protocolTreasury;
     [deployer, protocol, assistant, protocolTreasury, buyer, DR] = await ethers.getSigners();
 
-    seaport = await ethers.getContractAt(abi, "0x00000000000001ad428e4906aE43D8F9852d0dD6");
+    const { abi } = require("../../seaport/artifacts/contracts/Seaport.sol/Seaport.json");
+    seaport = await ethers.getContractAt(abi, SEAPORT_ADDRESS);
 
-    const { chainId } = await ethers.provider.getNetwork();
-
-    seaportFixtures = await seaportFixtures(chainId);
+    seaportFixtures = await seaportFixtures(seaport);
 
     // Deploy diamond
     let [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
