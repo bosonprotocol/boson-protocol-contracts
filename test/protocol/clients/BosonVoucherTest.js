@@ -2465,6 +2465,14 @@ describe("IBosonVoucher", function () {
           bosonVoucher.connect(rando).callExternalContract(mockSimpleContract.address, calldata)
         ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
       });
+
+      it("External call reverts", async function () {
+        calldata = mockSimpleContract.interface.encodeFunctionData("testRevert");
+
+        calldata = await expect(
+          bosonVoucher.connect(assistant).callExternalContract(mockSimpleContract.address, calldata)
+        ).to.be.revertedWith(RevertReasons.EXTERNAL_CALL_FAILED);
+      });
     });
   });
 

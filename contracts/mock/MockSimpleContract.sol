@@ -7,4 +7,8 @@ contract MockSimpleContract {
     function testEvent() external {
         emit TestEvent(1);
     }
+
+    function testRevert() external {
+        revert("Reverted");
+    }
 }

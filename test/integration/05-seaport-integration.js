@@ -1,9 +1,4 @@
-// const environments = require("../../environments");
 const hre = require("hardhat");
-// hre.network.config.forking = {
-//   url: environments.polygon.txNode,
-// };
-
 const ethers = hre.ethers;
 const { constants, BigNumber } = ethers;
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
