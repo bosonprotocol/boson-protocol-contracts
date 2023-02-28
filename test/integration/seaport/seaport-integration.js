@@ -1,24 +1,25 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { constants, BigNumber } = ethers;
-const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond");
-const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
-const { getFacetsWithArgs, getEvent, calculateContractAddress, objectToArray } = require("../util/utils");
-const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
+const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
+const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond");
+const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets");
+const { getFacetsWithArgs, getEvent, calculateContractAddress, objectToArray } = require("../../util/utils");
+const { oneWeek, oneMonth, maxPriorityFeePerGas, SEAPORT_ADDRESS } = require("../../util/constants");
 
-const { mockSeller, mockAuthToken, mockVoucherInitValues, mockOffer, mockDisputeResolver } = require("../util/mock");
+const { mockSeller, mockAuthToken, mockVoucherInitValues, mockOffer, mockDisputeResolver } = require("../../util/mock");
 const { assert, expect } = require("chai");
-const Role = require("../../scripts/domain/Role");
-const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-let { seaportFixtures } = require("./seaport/fixtures.js");
-const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
-const { RevertReasons } = require("../../scripts/config/revert-reasons");
+const Role = require("../../../scripts/domain/Role");
+const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
+let { seaportFixtures } = require("./fixtures.js");
+const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
+const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 
-const SEAPORT_ADDRESS = "0x00000000000001ad428e4906aE43D8F9852d0dD6"; // 1.4
-
+// Requirements to run this test:
+// - Seaport submodule contains a `artifacts` folder inside it. Run `git submodule update --init --recursive` to get it.
+// - Set hardhat config to hardhat-fork.config.js. e.g.:
+//   npx hardhat test test/integration/seaport/seaport-integration.js --config ./hardhat-fork.config.js
 describe("[@skip-on-coverage] Seaport integration", function () {
-  this.timeout(1000000);
   let seaport;
   let bosonVoucher, bosonToken;
   let deployer, protocol, assistant, buyer, DR;
@@ -28,7 +29,7 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     let protocolTreasury;
     [deployer, protocol, assistant, protocolTreasury, buyer, DR] = await ethers.getSigners();
 
-    const { abi } = require("../../seaport/artifacts/contracts/Seaport.sol/Seaport.json");
+    const { abi } = require("../../../seaport/artifacts/contracts/Seaport.sol/Seaport.json");
     seaport = await ethers.getContractAt(abi, SEAPORT_ADDRESS);
 
     seaportFixtures = await seaportFixtures(seaport);

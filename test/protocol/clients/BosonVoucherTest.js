@@ -1781,7 +1781,7 @@ describe("IBosonVoucher", function () {
           .connect(assistant)
           .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
 
-        // Reverse range to assistant
+        // Reserve range to assistant
         await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
 
         // Pool needs to cover both seller deposit and price

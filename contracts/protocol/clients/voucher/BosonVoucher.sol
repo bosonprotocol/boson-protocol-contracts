@@ -576,6 +576,16 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         _setContractURI(_newContractURI);
     }
 
+    /** @notice Make a call to an external contract.
+     *
+     * Reverts if:
+     * - _to is zero address
+     * - call to external contract fails
+     * - caller is not the owner
+     *
+     * @param _to - address of the contract to call
+     * @param _data - data to pass to the external contract
+     */
     function callExternalContract(address _to, bytes memory _data) external onlyOwner {
         require(_to != address(0), INVALID_ADDRESS);
 
@@ -587,13 +597,23 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         }
     }
 
+    /** @notice Set approval for all to the vouchers owned by this contract
+     *
+     * Reverts if:
+     * - _operator is zero address
+     * - caller is not the owner
+     * - _operator is this contract
+     *
+     * @param _operator - address of the operator to set approval for
+     * @param _approved - true if the operator is approved, false to revoke approval
+     */
     function setApprovalForAllToContract(address _operator, bool _approved) external onlyOwner {
         require(_operator != address(0), INVALID_ADDRESS);
 
         _setApprovalForAll(address(this), _operator, _approved);
     }
 
-    // @dev Contract must be allowed to receive native token as assistant can pre-mint tokens to the contract
+    // @dev Contract must be allowed to receive native token as it can be used as voucher's owner
     receive() external payable {}
 
     /**

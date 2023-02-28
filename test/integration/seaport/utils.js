@@ -1,32 +1,5 @@
 const { BigNumber, constants, utils } = require("ethers");
 
-const getBasicOrderParameters = (
-  order,
-  basicOrderType = 0, // ETH_TO_ERC721_FULL_OPEN
-  fulfillerConduitKey = false
-) => ({
-  offerer: order.parameters.offerer,
-  zone: order.parameters.zone,
-  basicOrderType: basicOrderType,
-  offerToken: order.parameters.offer[0].token,
-  offerIdentifier: order.parameters.offer[0].identifierOrCriteria,
-  offerAmount: order.parameters.offer[0].endAmount,
-  considerationToken: order.parameters.consideration[0].token,
-  considerationIdentifier: order.parameters.consideration[0].identifierOrCriteria,
-  considerationAmount: order.parameters.consideration[0].endAmount,
-  startTime: order.parameters.startTime,
-  endTime: order.parameters.endTime,
-  zoneHash: order.parameters.zoneHash,
-  salt: order.parameters.salt,
-  totalOriginalAdditionalRecipients: BigNumber.from(order.parameters.consideration.length - 1),
-  signature: order.signature,
-  offererConduitKey: order.parameters.conduitKey,
-  fulfillerConduitKey: typeof fulfillerConduitKey === "string" ? fulfillerConduitKey : constants.HashZero,
-  additionalRecipients: [
-    ...order.parameters.consideration.slice(1).map(({ endAmount, recipient }) => ({ amount: endAmount, recipient })),
-  ],
-});
-
 const getOfferOrConsiderationItem = function (
   itemType = 0,
   token = constants.AddressZero,
@@ -125,6 +98,5 @@ const calculateOrderHash = (orderComponents) => {
 
   return derivedOrderHash;
 };
-exports.getBasicOrderParameters = getBasicOrderParameters;
 exports.getOfferOrConsiderationItem = getOfferOrConsiderationItem;
 exports.calculateOrderHash = calculateOrderHash;
