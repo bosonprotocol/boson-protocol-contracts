@@ -14,6 +14,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   mockOffer,
   mockDisputeResolver,
@@ -322,9 +323,6 @@ describe("IBosonSequentialCommitHandler", function () {
       let newBuyer;
       let reseller; // for clarity in tests
 
-      // TODO:
-      // * ERC20 as exchange token
-
       before(async function () {
         // Deploy PriceDiscovery contract
         const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscovery");
@@ -335,7 +333,6 @@ describe("IBosonSequentialCommitHandler", function () {
       beforeEach(async function () {
         // Commit to offer with first buyer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-        // txReceipt = await tx.wait();
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
@@ -1354,6 +1351,159 @@ describe("IBosonSequentialCommitHandler", function () {
               });
             });
           });
+        });
+      });
+    });
+
+    context("👉 onERC721Received()", async function () {
+      let priceDiscoveryContract, priceDiscovery, price2;
+      let reseller; // for clarity in tests
+
+      beforeEach(async function () {
+        // Commit to offer with first buyer
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+        reseller = buyer;
+
+        // Price on secondary market
+        price2 = ethers.BigNumber.from(price).mul(11).div(10).toString(); // 10% above the original price
+
+        // Seller needs to deposit weth in order to fill the escrow at the last step
+        // Price2 is theoretically the highest amount needed, in practice it will be less (around price2-price)
+        await weth.connect(buyer).deposit({ value: price2 });
+        await weth.connect(buyer).approve(protocolDiamond.address, price2);
+
+        // Approve transfers
+        // Buyer does not approve, since its in ETH.
+        // Seller approves price discovery to transfer the voucher
+        bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+      });
+
+      it("should transfer the voucher during sequential commit", async function () {
+        // Deploy PriceDiscovery contract
+        const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscovery");
+        priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
+        await priceDiscoveryContract.deployed();
+
+        // Prepare calldata for PriceDiscovery contract
+        let order = {
+          seller: reseller.address,
+          buyer: buyer2.address,
+          voucherContract: expectedCloneAddress,
+          tokenId: exchangeId,
+          exchangeToken: offer.exchangeToken,
+          price: price2,
+        };
+
+        const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
+
+        // Seller approves price discovery to transfer the voucher
+        await bosonVoucherClone.connect(reseller).setApprovalForAll(priceDiscoveryContract.address, true);
+
+        priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Direction.Buy);
+
+        // buyer is owner of voucher
+        expect(await bosonVoucherClone.connect(buyer).ownerOf(exchangeId)).to.equal(buyer.address);
+
+        // Sequential commit to offer
+        await sequentialCommitHandler
+          .connect(buyer2)
+          .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 });
+
+        // buyer2 is owner of voucher
+        expect(await bosonVoucherClone.connect(buyer2).ownerOf(exchangeId)).to.equal(buyer2.address);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Correct caller, wrong id", async function () {
+          // Commit to offer with first buyer once more (so they have two vouchers)
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Deploy Bad PriceDiscovery contract
+          const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscoveryModifyTokenId");
+          priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
+          await priceDiscoveryContract.deployed();
+
+          // Prepare calldata for PriceDiscovery contract
+          let order = {
+            seller: reseller.address,
+            buyer: buyer2.address,
+            voucherContract: expectedCloneAddress,
+            tokenId: exchangeId,
+            exchangeToken: offer.exchangeToken,
+            price: price2,
+          };
+
+          const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
+
+          // Seller approves price discovery to transfer the voucher
+          await bosonVoucherClone.connect(reseller).setApprovalForAll(priceDiscoveryContract.address, true);
+
+          priceDiscovery = new PriceDiscovery(
+            price2,
+            priceDiscoveryContract.address,
+            priceDiscoveryData,
+            Direction.Buy
+          );
+
+          // Attempt to sequentially commit, expecting revert
+          await expect(
+            sequentialCommitHandler
+              .connect(buyer2)
+              .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 })
+          ).to.revertedWith(RevertReasons.UNEXPECTED_ERC721_RECEIVED);
+        });
+
+        it("Correct token id, wrong caller", async function () {
+          // Deploy mock erc721 contract
+          const [foreign721] = await deployMockTokens(["Foreign721"]);
+
+          // Deploy Bad PriceDiscovery contract
+          const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscoveryModifyVoucherContract");
+          priceDiscoveryContract = await PriceDiscoveryFactory.deploy(foreign721.address);
+          await priceDiscoveryContract.deployed();
+
+          // Prepare calldata for PriceDiscovery contract
+          let order = {
+            seller: reseller.address,
+            buyer: buyer2.address,
+            voucherContract: expectedCloneAddress,
+            tokenId: exchangeId,
+            exchangeToken: offer.exchangeToken,
+            price: price2,
+          };
+
+          const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
+
+          // Seller approves price discovery to transfer the voucher
+          await bosonVoucherClone.connect(reseller).setApprovalForAll(priceDiscoveryContract.address, true);
+
+          priceDiscovery = new PriceDiscovery(
+            price2,
+            priceDiscoveryContract.address,
+            priceDiscoveryData,
+            Direction.Buy
+          );
+
+          // Attempt to sequentially commit, expecting revert
+          await expect(
+            sequentialCommitHandler
+              .connect(buyer2)
+              .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 })
+          ).to.revertedWith(RevertReasons.UNEXPECTED_ERC721_RECEIVED);
+        });
+
+        it("Random erc721 transfer", async function () {
+          // Deploy mock erc721 contract
+          const [foreign721] = await deployMockTokens(["Foreign721"]);
+
+          const tokenId = 123;
+          await foreign721.mint(tokenId, 1);
+
+          // Attempt to sequentially commit, expecting revert
+          await expect(
+            foreign721["safeTransferFrom(address,address,uint256)"](deployer.address, protocolDiamond.address, tokenId)
+          ).to.revertedWith(RevertReasons.UNEXPECTED_ERC721_RECEIVED);
         });
       });
     });
