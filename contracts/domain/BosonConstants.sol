@@ -111,8 +111,11 @@ string constant TOO_MANY_EXCHANGES = "Exceeded maximum exchanges in a single tra
 string constant EXCHANGE_IS_NOT_IN_A_FINAL_STATE = "Exchange is not in a final state";
 string constant EXCHANGE_ALREADY_EXISTS = "Exchange already exists";
 string constant INVALID_RANGE_LENGTH = "Range length is too large or zero";
+
+// Revert Reasons: Sequential commit related
 string constant UNEXPECTED_ERC721_RECEIVED = "Unexpected ERC721 received";
 string constant FEE_AMOUNT_TOO_HIGH = "Fee amount is too high";
+string constant VOUCHER_NOT_RECEIVED = "Voucher not received";
 
 // Revert Reasons: Twin related
 string constant NO_SUCH_TWIN = "No such twin";

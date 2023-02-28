@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 
 import "../interfaces/IERC20.sol";
 import "../interfaces/IERC721.sol";
+import "./Foreign721.sol";
 
 /**
  * @dev Simple price discovery contract used in tests
@@ -26,7 +27,7 @@ contract PriceDiscovery {
      * It just transfers the voucher and exchange token to the buyer
      * If any of the transfers fail, the whole transaction will revert
      */
-    function fulfilBuyOrder(Order calldata _order) external payable {
+    function fulfilBuyOrder(Order memory _order) public payable virtual {
         // transfer voucher
         try IERC721(_order.voucherContract).safeTransferFrom(_order.seller, msg.sender, _order.tokenId) {} catch (
             bytes memory reason
@@ -66,7 +67,7 @@ contract PriceDiscovery {
             }
     }
 
-    function fulfilSellOrder(Order calldata _order) external payable {
+    function fulfilSellOrder(Order memory _order) public payable virtual {
         // transfer voucher
         try IERC721(_order.voucherContract).safeTransferFrom(msg.sender, _order.buyer, _order.tokenId) {} catch (
             bytes memory reason
@@ -95,4 +96,58 @@ contract PriceDiscovery {
             }
         }
     }
+}
+
+/**
+ * @dev Simple bad price discovery contract used in tests
+ *
+ * This contract modifies the token id, simulates bad/malicious contract
+ */
+contract PriceDiscoveryModifyTokenId is PriceDiscovery {
+    /**
+     * @dev simple fulfillOrder that does not perform any checks
+     * Bump token id by 1
+     */
+    function fulfilBuyOrder(Order memory _order) public payable override {
+        _order.tokenId++;
+        super.fulfilBuyOrder(_order);
+    }
+}
+
+/**
+ * @dev Simple bad price discovery contract used in tests
+ *
+ * This contract modifies the erc721 token, simulates bad/malicious contract
+ */
+contract PriceDiscoveryModifyVoucherContract is PriceDiscovery {
+    Foreign721 private erc721;
+
+    constructor(address _erc721) {
+        erc721 = Foreign721(_erc721);
+    }
+
+    /**
+     * @dev simple fulfillOrder that does not perform any checks
+     * Change order voucher address with custom erc721
+     * Mint tokenId on custom erc721
+     */
+    function fulfilBuyOrder(Order memory _order) public payable override {
+        erc721.mint(_order.tokenId, 1);
+
+        _order.seller = address(this);
+        _order.voucherContract = address(erc721);
+        super.fulfilBuyOrder(_order);
+    }
+}
+
+/**
+ * @dev Simple bad price discovery contract used in tests
+ *
+ * This contract modifies simply does not transfer the voucher to the caller
+ */
+contract PriceDiscoveryNoTransfer is PriceDiscovery {
+    /**
+     * @dev do nothing
+     */
+    function fulfilBuyOrder(Order memory _order) public payable override {}
 }

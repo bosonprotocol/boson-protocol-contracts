@@ -66,6 +66,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
      *   - Offer price is in some ERC20 token and caller also sends native currency
      *   - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      *   - Received ERC20 token amount differs from the expected value
+     *   - Protocol does not receive the voucher
      *   - Transfer of voucher to the buyer fails for some reasong (e.g. buyer is contract that doesn't accept voucher)
      * - Call to price discovery contract fails
      * - Protocol fee and royalties combined exceed the secondary price
@@ -190,7 +191,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
      * During sequential commit to offer, we expect to receive the boson voucher, therefore we need to implement onERC721Received
      * Alternative option, where vouchers are modified to not invoke onERC721Received when to is protocol is unsafe, since one can abuse it to send vouchers to protocol
      * This should return true value only when protocol expects to receive the voucher
-     * Should revert if called from any other address
+     * Should revert if called from any other address or with any other token id
 
      * @return - the ERC721 received function signature
      */

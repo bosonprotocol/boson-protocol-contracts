@@ -688,6 +688,39 @@ describe("IBosonSequentialCommitHandler", function () {
                   .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price })
               ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
             });
+
+            it("price discovery does not send the voucher to the protocol", async function () {
+              // Deploy bad price discovery contract
+              const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscoveryNoTransfer");
+              priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
+              await priceDiscoveryContract.deployed();
+
+              // Prepare calldata for PriceDiscovery contract
+              let order = {
+                seller: buyer.address,
+                buyer: buyer2.address,
+                voucherContract: expectedCloneAddress,
+                tokenId: exchangeId,
+                exchangeToken: offer.exchangeToken,
+                price: price2,
+              };
+
+              const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
+
+              priceDiscovery = new PriceDiscovery(
+                price2,
+                priceDiscoveryContract.address,
+                priceDiscoveryData,
+                Direction.Buy
+              );
+
+              // Attempt to sequentially commit, expecting revert
+              await expect(
+                sequentialCommitHandler
+                  .connect(buyer2)
+                  .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 })
+              ).to.revertedWith(RevertReasons.VOUCHER_NOT_RECEIVED);
+            });
           });
         });
 

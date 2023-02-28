@@ -55,6 +55,7 @@ contract PriceDiscoveryBase is ProtocolBase {
      * - Offer price is in some ERC20 token and caller also sends native currency
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - Received ERC20 token amount differs from the expected value
+     * - Protocol does not receive the voucher
      * - Transfer of voucher to the buyer fails for some reasong (e.g. buyer is contract that doesn't accept voucher)
      * - Call to price discovery contract fails
      *
@@ -99,6 +100,10 @@ contract PriceDiscoveryBase is ProtocolBase {
             string memory errorMessage = (returnData.length == 0) ? FUNCTION_CALL_NOT_SUCCESSFUL : (string(returnData));
             require(success, errorMessage);
         }
+
+        // Make sure that the price discovery contract has transferred the voucher to the protocol
+        require(IBosonVoucher(cloneAddress).ownerOf(_exchangeId) == address(this), VOUCHER_NOT_RECEIVED);
+
         // If token is ERC20, reset approval
         if (_exchangeToken != address(0)) {
             IERC20(_exchangeToken).approve(address(_priceDiscovery.priceDiscoveryContract), 0);
@@ -147,7 +152,9 @@ contract PriceDiscoveryBase is ProtocolBase {
         // No need to reset approval
 
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[_initialSellerId]);
+
         // Transfer seller's voucher to protocol
+        // Don't need to use safe transfer from, since that protocol can handle the voucher
         bosonVoucher.transferFrom(msgSender(), address(this), _exchangeId);
 
         if (_exchangeToken == address(0)) _exchangeToken = address(weth);
