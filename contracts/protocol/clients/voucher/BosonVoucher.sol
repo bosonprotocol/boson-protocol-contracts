@@ -10,6 +10,7 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import { ERC2771ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
 import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
@@ -25,6 +26,8 @@ import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchan
  *      that is only for convenience, to avoid conflicts with mixed imports.
  */
 contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
+    using Address for address;
+
     // Struct that is used to manipulate private variables from ERC721UpgradeableStorage
     struct ERC721UpgradeableStorage {
         // Mapping from token ID to owner address
@@ -586,15 +589,10 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @param _to - address of the contract to call
      * @param _data - data to pass to the external contract
      */
-    function callExternalContract(address _to, bytes memory _data) external onlyOwner {
+    function callExternalContract(address _to, bytes memory _data) external payable onlyOwner {
         require(_to != address(0), INVALID_ADDRESS);
 
-        (bool success, ) = _to.call(_data);
-
-        if (!success) {
-            // Reverts with default message
-            revert(EXTERNAL_CALL_FAILED);
-        }
+        _to.functionCallWithValue(_data, msg.value, FUNCTION_CALL_NOT_SUCCESSFUL);
     }
 
     /** @notice Set approval for all to the vouchers owned by this contract

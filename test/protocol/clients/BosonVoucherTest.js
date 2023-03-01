@@ -1518,7 +1518,7 @@ describe("IBosonVoucher", function () {
                 agentId
               );
 
-            // Reverse range to assistant
+            // Reserve range to assistant
             await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
             // Pool needs to cover both seller deposit and price
             const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
@@ -1726,7 +1726,7 @@ describe("IBosonVoucher", function () {
             const voucherAddress = calculateContractAddress(accountHandler.address, "1");
             bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
 
-            // Reverse range to contract
+            // Reserve range to contract
             await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, bosonVoucher.address);
 
             // Pool needs to cover both seller deposit and price
@@ -2469,9 +2469,13 @@ describe("IBosonVoucher", function () {
       it("External call reverts", async function () {
         calldata = mockSimpleContract.interface.encodeFunctionData("testRevert");
 
-        calldata = await expect(
+        await expect(
           bosonVoucher.connect(assistant).callExternalContract(mockSimpleContract.address, calldata)
-        ).to.be.revertedWith(RevertReasons.EXTERNAL_CALL_FAILED);
+        ).to.be.revertedWith("Reverted");
+      });
+
+      it("To address is not a contract", async function () {
+        await expect(bosonVoucher.connect(assistant).callExternalContract(rando.address, calldata)).to.be.reverted;
       });
     });
   });

@@ -3,6 +3,7 @@ const ethers = hre.ethers;
 const { constants, BigNumber } = ethers;
 const { getOfferOrConsiderationItem, calculateOrderHash } = require("./utils");
 const { expect } = require("chai");
+const OrderType = require("./OrderTypeEnum");
 
 const seaportFixtures = async (seaport) => {
   const getTestVoucher = function (identifierOrCriteria, token, startAmount = 1, endAmount = 1) {
@@ -31,7 +32,7 @@ const seaportFixtures = async (seaport) => {
     zone = constants.AddressZero,
     offer,
     consideration,
-    orderType = 0,
+    orderType = OrderType.FULL_OPEN,
     startTime,
     endTime,
     zoneHash = constants.HashZero,

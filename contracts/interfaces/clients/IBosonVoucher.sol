@@ -246,7 +246,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @param _to - address of the contract to call
      * @param _data - data to pass to the external contract
      */
-    function callExternalContract(address _to, bytes memory _data) external;
+    function callExternalContract(address _to, bytes memory _data) external payable;
 
     /** @notice Set approval for all to the vouchers owned by this contract
      *
