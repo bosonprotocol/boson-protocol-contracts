@@ -102,7 +102,8 @@ contract PriceDiscoveryBase is ProtocolBase {
         }
 
         // Make sure that the price discovery contract has transferred the voucher to the protocol
-        require(IBosonVoucher(cloneAddress).ownerOf(_exchangeId) == address(this), VOUCHER_NOT_RECEIVED);
+        IBosonVoucher bosonVoucher = IBosonVoucher(cloneAddress);
+        require(bosonVoucher.ownerOf(_exchangeId) == address(this), VOUCHER_NOT_RECEIVED);
 
         // If token is ERC20, reset approval
         if (_exchangeToken != address(0)) {
@@ -125,7 +126,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         }
 
         // Transfer voucher to buyer
-        IBosonVoucher(cloneAddress).transferFrom(address(this), _buyer, _exchangeId);
+        bosonVoucher.transferFrom(address(this), _buyer, _exchangeId);
     }
 
     /**

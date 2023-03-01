@@ -63,7 +63,8 @@ describe("IBosonFundsHandler", function () {
     offerHandler,
     configHandler,
     disputeHandler,
-    pauseHandler;
+    pauseHandler,
+    sequentialCommitHandler;
   let support;
   let seller;
   let buyer, offerToken, offerNative;
@@ -206,6 +207,7 @@ describe("IBosonFundsHandler", function () {
       "AccountHandlerFacet",
       "ProtocolInitializationHandlerFacet",
       "ConfigHandlerFacet",
+      "SequentialCommitHandlerFacet",
     ];
 
     const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
@@ -215,7 +217,7 @@ describe("IBosonFundsHandler", function () {
     await weth.deployed();
 
     // Add WETH
-    facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [weth.address];
+    facetsToDeploy["SequentialCommitHandlerFacet"].constructorArgs = [weth.address];
 
     // Cut the protocol handler facets into the Diamond
     const { deployedFacets } = await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
@@ -241,6 +243,9 @@ describe("IBosonFundsHandler", function () {
 
     // Cast Diamond to IBosonConfigHandler
     configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonSequentialCommitHandler
+    sequentialCommitHandler = await ethers.getContractAt("IBosonSequentialCommitHandler", protocolDiamond.address);
 
     // Deploy the mock token
     [mockToken] = await deployMockTokens(["Foreign20"]);
@@ -4575,7 +4580,7 @@ describe("IBosonFundsHandler", function () {
                   await mockToken.connect(trade.buyer).approve(protocolDiamond.address, order.price);
 
                   // commit to offer
-                  await exchangeHandler
+                  await sequentialCommitHandler
                     .connect(trade.buyer)
                     .sequentialCommitToOffer(trade.buyer.address, exchangeId, priceDiscovery, {
                       gasPrice: 0,
@@ -6182,7 +6187,7 @@ describe("IBosonFundsHandler", function () {
                 await mockToken.connect(trade.buyer).approve(protocolDiamond.address, order.price);
 
                 // commit to offer
-                await exchangeHandler
+                await sequentialCommitHandler
                   .connect(trade.buyer)
                   .sequentialCommitToOffer(trade.buyer.address, exchangeId, priceDiscovery, {
                     gasPrice: 0,

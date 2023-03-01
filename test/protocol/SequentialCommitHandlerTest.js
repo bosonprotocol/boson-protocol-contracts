@@ -227,8 +227,8 @@ describe("IBosonSequentialCommitHandler", function () {
     });
   });
 
-  // All supported Exchange methods
-  context("📋 Exchange Handler Methods", async function () {
+  // All supported Sequential commit methods
+  context("📋 Sequential Commit Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
       exchangeId = offerId = "1";
@@ -692,7 +692,7 @@ describe("IBosonSequentialCommitHandler", function () {
             it("price discovery does not send the voucher to the protocol", async function () {
               // Deploy bad price discovery contract
               const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscoveryNoTransfer");
-              priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
+              const priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
               await priceDiscoveryContract.deployed();
 
               // Prepare calldata for PriceDiscovery contract
