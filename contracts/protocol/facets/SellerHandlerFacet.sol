@@ -162,6 +162,9 @@ contract SellerHandlerFacet is SellerBase {
             // Update treasury
             seller.treasury = _seller.treasury;
 
+            // Update default royalty recipient
+            lookups.royaltyRecipientsBySeller[_seller.id][0].wallet = _seller.treasury;
+
             // Notify watchers of state change
             emit SellerUpdateApplied(
                 _seller.id,
@@ -329,6 +332,137 @@ contract SellerHandlerFacet is SellerBase {
                 msgSender()
             );
         }
+    }
+
+    function addRoyaltyRecepients(uint256 _sellerId, RoyaltyRecipient[] calldata _royaltyRecipients) external {
+        // TODO: refactor this + and updateSeller + removeRoyaltyRecepients
+
+        // Check Seller exists in sellers mapping
+        (bool exists, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
+
+        // Seller must already exist
+        require(exists, NO_SUCH_SELLER);
+
+        // Cache protocol lookups and sender for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        // Get message sender
+        address sender = msgSender();
+
+        // Check that caller is authorized to call this function
+        if (authToken.tokenType != AuthTokenType.None) {
+            address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
+            address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
+            require(tokenIdOwner == sender, NOT_ADMIN);
+        } else {
+            require(seller.admin == sender, NOT_ADMIN);
+        }
+
+        RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
+        for (uint256 i = 0; i < _royaltyRecipients.length; i++) {
+            // No uniqueness check. Duplicate addresses/externalids do not break protocol and wrong entries can be removed by admin
+            require(
+                _royaltyRecipients[i].minRoyaltyPercentage <= protocolLimits().maxRoyaltyPecentage,
+                INVALID_ROYALTY_FEE_PERCENTAGE
+            );
+            royaltyRecipients.push(_royaltyRecipients[i]);
+        }
+    }
+
+    function updateRoyaltyRecepients(
+        uint256 _sellerId,
+        uint256[] calldata _royaltyRecipientIds,
+        RoyaltyRecipient[] calldata _royaltyRecipients
+    ) external {
+        // TODO: refactor this + and updateSeller + removeRoyaltyRecepients
+
+        // Check Seller exists in sellers mapping
+        (bool exists, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
+
+        // Seller must already exist
+        require(exists, NO_SUCH_SELLER);
+
+        // Cache protocol lookups and sender for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        // Get message sender
+        address sender = msgSender();
+
+        // Check that caller is authorized to call this function
+        if (authToken.tokenType != AuthTokenType.None) {
+            address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
+            address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
+            require(tokenIdOwner == sender, NOT_ADMIN);
+        } else {
+            require(seller.admin == sender, NOT_ADMIN);
+        }
+
+        require(_royaltyRecipientIds.length == _royaltyRecipients.length, ARRAY_LENGTH_MISMATCH);
+
+        RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
+        uint256 royaltyRecipientIdsLength = _royaltyRecipientIds.length;
+        for (uint256 i = 0; i < royaltyRecipientIdsLength; i++) {
+            uint256 royaltyRecipientId = _royaltyRecipientIds[i];
+            require(royaltyRecipientId < royaltyRecipientIdsLength, INVALID_ROYALTY_RECIPIENT_ID);
+            if (_royaltyRecipientIds[i] == 0) {
+                require(_royaltyRecipients[i].wallet == seller.treasury, WRONG_DEFAULT_RECIPIENT);
+            }
+            require(
+                _royaltyRecipients[i].minRoyaltyPercentage <= protocolLimits().maxRoyaltyPecentage,
+                INVALID_ROYALTY_FEE_PERCENTAGE
+            );
+            royaltyRecipients[_royaltyRecipientIds[i]] = _royaltyRecipients[i];
+        }
+    }
+
+    function removeRoyaltyRecepients(uint256 _sellerId, uint256[] calldata _royaltyRecipientIds) external {
+        // TODO: refactor this + and updateSeller + removeRoyaltyRecepients
+
+        // Check Seller exists in sellers mapping
+        (bool exists, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
+
+        // Seller must already exist
+        require(exists, NO_SUCH_SELLER);
+
+        // Cache protocol lookups and sender for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        // Get message sender
+        address sender = msgSender();
+
+        // Check that caller is authorized to call this function
+        if (authToken.tokenType != AuthTokenType.None) {
+            address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
+            address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
+            require(tokenIdOwner == sender, NOT_ADMIN);
+        } else {
+            require(seller.admin == sender, NOT_ADMIN);
+        }
+
+        RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
+
+        // We loop from the end of the array to ensure correct ids are removed
+        // _royaltyRecipients must be sorted in ascending order
+        uint256 previousId = royaltyRecipients.length; // this is 1 more than the max id. This is used to ensure that royaltyRecipients is sorted in ascending order
+        uint256 lastRoyaltyRecipientsId = previousId - 1; // will never underflow, since at least default recipient always exists
+
+        for (uint256 i = _royaltyRecipientIds.length - 1; i >= 0; i--) {
+            uint256 royaltyRecipientId = _royaltyRecipientIds[i];
+            require(royaltyRecipientId < previousId, ROYALTY_RECIPIENT_IDS_NOT_SORTED); // this also ensures that royaltyRecipientId will never be out of bounds
+
+            if (royaltyRecipientId != lastRoyaltyRecipientsId)
+                royaltyRecipients[royaltyRecipientId] = royaltyRecipients[lastRoyaltyRecipientsId];
+            delete royaltyRecipients[lastRoyaltyRecipientsId];
+            lastRoyaltyRecipientsId--; // will never underflow. Even if all non-default royalty recipients are removed, default recipient will remain
+
+            // Update previous id
+            previousId = royaltyRecipientId;
+        }
+    }
+
+    function getRoyaltyRecipients(uint256 _sellerId) external view returns (RoyaltyRecipient[] memory) {
+        // TODO: move lower
+        return protocolLookups().royaltyRecipientsBySeller[_sellerId];
     }
 
     /**

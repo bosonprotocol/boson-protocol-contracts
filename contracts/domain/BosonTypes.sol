@@ -284,4 +284,10 @@ contract BosonTypes {
         string contractURI;
         uint256 royaltyPercentage;
     }
+
+    struct RoyaltyRecipient {
+        address wallet;
+        uint256 minRoyaltyPercentage;
+        string externalId;
+    }
 }

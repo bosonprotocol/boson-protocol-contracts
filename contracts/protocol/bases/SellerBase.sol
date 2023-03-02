@@ -98,6 +98,16 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         _seller.id = sellerId;
         storeSeller(_seller, _authToken, lookups);
 
+        // Set treasury as the default royalty recipient
+        require(
+            _voucherInitValues.royaltyPercentage <= protocolLimits().maxRoyaltyPecentage,
+            INVALID_ROYALTY_FEE_PERCENTAGE
+        );
+        RoyaltyRecipient storage defaultRoyaltyRecipient = lookups.royaltyRecipientsBySeller[sellerId].push();
+        defaultRoyaltyRecipient.wallet = _seller.treasury;
+        defaultRoyaltyRecipient.minRoyaltyPercentage = _voucherInitValues.royaltyPercentage;
+        defaultRoyaltyRecipient.externalId = DEFAULT_ROYALTY_RECIPIENT;
+
         // Create clone and store its address cloneAddress
         address voucherCloneAddress = cloneBosonVoucher(sellerId, _seller.assistant, _voucherInitValues);
         lookups.cloneAddress[sellerId] = voucherCloneAddress;
