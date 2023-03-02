@@ -184,6 +184,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.DisputeResolver) pendingAddressUpdatesByDisputeResolver;
         // seller id => royalty recipients
         mapping(uint256 => BosonTypes.RoyaltyRecipient[]) royaltyRecipientsBySeller;
+        // seller id => royalty recipient => index of royalty recipient in royaltyRecipientsBySeller
+        mapping(uint256 => mapping(address => uint256)) royaltyRecipientIndexBySellerAndRecipient;
     }
 
     // Incrementing id counters

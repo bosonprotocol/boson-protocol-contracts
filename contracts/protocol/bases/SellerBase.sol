@@ -101,12 +101,13 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         // Set treasury as the default royalty recipient
         require(
             _voucherInitValues.royaltyPercentage <= protocolLimits().maxRoyaltyPecentage,
-            INVALID_ROYALTY_FEE_PERCENTAGE
+            INVALID_ROYALTY_PERCENTAGE
         );
         RoyaltyRecipient storage defaultRoyaltyRecipient = lookups.royaltyRecipientsBySeller[sellerId].push();
         defaultRoyaltyRecipient.wallet = _seller.treasury;
         defaultRoyaltyRecipient.minRoyaltyPercentage = _voucherInitValues.royaltyPercentage;
         defaultRoyaltyRecipient.externalId = DEFAULT_ROYALTY_RECIPIENT;
+        lookups.royaltyRecipientIndexBySellerAndRecipient[sellerId][_seller.treasury] = 1; // start with 1, as 0 is the default value
 
         // Create clone and store its address cloneAddress
         address voucherCloneAddress = cloneBosonVoucher(sellerId, _seller.assistant, _voucherInitValues);

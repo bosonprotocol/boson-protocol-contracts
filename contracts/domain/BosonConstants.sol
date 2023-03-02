@@ -73,9 +73,11 @@ string constant NO_PENDING_UPDATE_FOR_ACCOUNT = "No pending updates for the give
 string constant UNAUTHORIZED_CALLER_UPDATE = "Caller has no permission to approve this update";
 string constant DEFAULT_ROYALTY_RECIPIENT = "Treasury";
 string constant WRONG_DEFAULT_RECIPIENT = "Default royalty recipient must be treasury";
-string constant INVALID_ROYALTY_FEE_PERCENTAGE = "Invalid royalty fee percentage";
+string constant INVALID_ROYALTY_PERCENTAGE = "Invalid royalty percentage";
 string constant INVALID_ROYALTY_RECIPIENT_ID = "Invalid royalty recipient id";
 string constant ROYALTY_RECIPIENT_IDS_NOT_SORTED = "Royalty recipient ids must be sorted";
+string constant RECIPIENT_NOT_UNIQUE = "Royalty recipient id must be unique";
+string constant INVALID_ROYALTY_RECIPIENT = "Invalid royalty recipient";
 
 // Revert Reasons: Offer related
 string constant NO_SUCH_OFFER = "No such offer";

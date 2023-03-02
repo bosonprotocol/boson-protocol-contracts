@@ -112,53 +112,79 @@ contract SellerHandlerFacet is SellerBase {
         // Clean old seller pending update data if exists
         delete lookups.pendingAddressUpdatesBySeller[_seller.id];
 
-        bool needsApproval;
         (, Seller storage sellerPendingUpdate, AuthToken storage authTokenPendingUpdate) = fetchSellerPendingUpdate(
             _seller.id
         );
 
-        // Admin address or AuthToken data must be present in parameters. A seller can have one or the other. Check passed in parameters
-        if (_authToken.tokenType != AuthTokenType.None) {
-            // If AuthToken data is different from the one in storage, then set it as pending update
-            if (authToken.tokenType != _authToken.tokenType || authToken.tokenId != _authToken.tokenId) {
-                // Check that auth token is unique to this seller
-                uint256 check = lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId];
-                require(check == 0, AUTH_TOKEN_MUST_BE_UNIQUE);
+        {
+            bool needsApproval;
+            // Admin address or AuthToken data must be present in parameters. A seller can have one or the other. Check passed in parameters
+            if (_authToken.tokenType != AuthTokenType.None) {
+                // If AuthToken data is different from the one in storage, then set it as pending update
+                if (authToken.tokenType != _authToken.tokenType || authToken.tokenId != _authToken.tokenId) {
+                    // Check that auth token is unique to this seller
+                    uint256 check = lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId];
+                    require(check == 0, AUTH_TOKEN_MUST_BE_UNIQUE);
 
-                // Auth token owner must approve the update to prevent front-running
-                authTokenPendingUpdate.tokenType = _authToken.tokenType;
-                authTokenPendingUpdate.tokenId = _authToken.tokenId;
+                    // Auth token owner must approve the update to prevent front-running
+                    authTokenPendingUpdate.tokenType = _authToken.tokenType;
+                    authTokenPendingUpdate.tokenId = _authToken.tokenId;
+                    needsApproval = true;
+                }
+            } else if (_seller.admin != seller.admin) {
+                preUpdateSellerCheck(_seller.id, _seller.admin, lookups);
+                // If admin address exists, admin address owner must approve the update to prevent front-running
+                sellerPendingUpdate.admin = _seller.admin;
                 needsApproval = true;
             }
-        } else if (_seller.admin != seller.admin) {
-            preUpdateSellerCheck(_seller.id, _seller.admin, lookups);
-            // If admin address exists, admin address owner must approve the update to prevent front-running
-            sellerPendingUpdate.admin = _seller.admin;
-            needsApproval = true;
-        }
 
-        if (_seller.assistant != seller.assistant) {
-            preUpdateSellerCheck(_seller.id, _seller.assistant, lookups);
-            require(_seller.assistant != address(0), INVALID_ADDRESS);
-            // Assistant address owner must approve the update to prevent front-running
-            sellerPendingUpdate.assistant = _seller.assistant;
-            needsApproval = true;
-        }
+            if (_seller.assistant != seller.assistant) {
+                preUpdateSellerCheck(_seller.id, _seller.assistant, lookups);
+                require(_seller.assistant != address(0), INVALID_ADDRESS);
+                // Assistant address owner must approve the update to prevent front-running
+                sellerPendingUpdate.assistant = _seller.assistant;
+                needsApproval = true;
+            }
 
-        if (_seller.clerk != seller.clerk) {
-            preUpdateSellerCheck(_seller.id, _seller.clerk, lookups);
-            require(_seller.clerk != address(0), INVALID_ADDRESS);
-            // Clerk address owner must approve the update to prevent front-running
-            sellerPendingUpdate.clerk = _seller.clerk;
-            needsApproval = true;
-        }
+            if (_seller.clerk != seller.clerk) {
+                preUpdateSellerCheck(_seller.id, _seller.clerk, lookups);
+                require(_seller.clerk != address(0), INVALID_ADDRESS);
+                // Clerk address owner must approve the update to prevent front-running
+                sellerPendingUpdate.clerk = _seller.clerk;
+                needsApproval = true;
+            }
 
-        if (needsApproval) {
-            emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, sender);
+            if (needsApproval) {
+                emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, sender);
+            }
         }
 
         if (_seller.treasury != seller.treasury) {
             require(_seller.treasury != address(0), INVALID_ADDRESS);
+
+            // Delete old treasury index mapping
+            delete lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][seller.treasury];
+
+            uint256 royaltyRecipientId = lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][
+                _seller.treasury
+            ];
+            RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_seller.id];
+
+            if (royaltyRecipientId != 0) {
+                // If the new treasury is already a royalty recipient, remove it
+                // TODO: check if can be refactored to use with removeRoyaltyRecipient
+
+                uint256 lastRoyaltyRecipientsId = royaltyRecipients.length - 1;
+                if (royaltyRecipientId != lastRoyaltyRecipientsId) {
+                    royaltyRecipients[royaltyRecipientId] = royaltyRecipients[lastRoyaltyRecipientsId];
+                    lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][
+                        royaltyRecipients[royaltyRecipientId].wallet
+                    ] = royaltyRecipientId;
+                }
+                delete royaltyRecipients[lastRoyaltyRecipientsId];
+            }
+            lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][_seller.treasury] = 1;
+
             // Update treasury
             seller.treasury = _seller.treasury;
 
@@ -360,12 +386,19 @@ contract SellerHandlerFacet is SellerBase {
 
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
         for (uint256 i = 0; i < _royaltyRecipients.length; i++) {
-            // No uniqueness check. Duplicate addresses/externalids do not break protocol and wrong entries can be removed by admin
+            // No uniqueness check for externalIds since they are not used in the protocol
+            require(
+                lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][_royaltyRecipients[i].wallet] == 0,
+                RECIPIENT_NOT_UNIQUE
+            );
             require(
                 _royaltyRecipients[i].minRoyaltyPercentage <= protocolLimits().maxRoyaltyPecentage,
-                INVALID_ROYALTY_FEE_PERCENTAGE
+                INVALID_ROYALTY_PERCENTAGE
             );
             royaltyRecipients.push(_royaltyRecipients[i]);
+            lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                _royaltyRecipients[i].wallet
+            ] = royaltyRecipients.length; // can be optimized to use counter instead of array length
         }
     }
 
@@ -376,27 +409,31 @@ contract SellerHandlerFacet is SellerBase {
     ) external {
         // TODO: refactor this + and updateSeller + removeRoyaltyRecepients
 
-        // Check Seller exists in sellers mapping
-        (bool exists, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
-
-        // Seller must already exist
-        require(exists, NO_SUCH_SELLER);
-
         // Cache protocol lookups and sender for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        // Get message sender
-        address sender = msgSender();
+        // Check Seller exists in sellers mapping
+        Seller storage seller;
+        {
+            bool exists;
+            AuthToken storage authToken;
+            (exists, seller, authToken) = fetchSeller(_sellerId);
 
-        // Check that caller is authorized to call this function
-        if (authToken.tokenType != AuthTokenType.None) {
-            address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
-            address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
-            require(tokenIdOwner == sender, NOT_ADMIN);
-        } else {
-            require(seller.admin == sender, NOT_ADMIN);
+            // Seller must already exist
+            require(exists, NO_SUCH_SELLER);
+
+            // Get message sender
+            address sender = msgSender();
+
+            // Check that caller is authorized to call this function
+            if (authToken.tokenType != AuthTokenType.None) {
+                address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
+                address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
+                require(tokenIdOwner == sender, NOT_ADMIN);
+            } else {
+                require(seller.admin == sender, NOT_ADMIN);
+            }
         }
-
         require(_royaltyRecipientIds.length == _royaltyRecipients.length, ARRAY_LENGTH_MISMATCH);
 
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
@@ -404,14 +441,30 @@ contract SellerHandlerFacet is SellerBase {
         for (uint256 i = 0; i < royaltyRecipientIdsLength; i++) {
             uint256 royaltyRecipientId = _royaltyRecipientIds[i];
             require(royaltyRecipientId < royaltyRecipientIdsLength, INVALID_ROYALTY_RECIPIENT_ID);
-            if (_royaltyRecipientIds[i] == 0) {
+            if (_royaltyRecipientIds[i] == 1) {
                 require(_royaltyRecipients[i].wallet == seller.treasury, WRONG_DEFAULT_RECIPIENT);
+            } else {
+                uint256 royaltyRecipientIndex = lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                    _royaltyRecipients[i].wallet
+                ];
+                if (royaltyRecipientIndex == 0) {
+                    // update index
+                    lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                        _royaltyRecipients[i].wallet
+                    ] = royaltyRecipientId;
+                    delete lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                        royaltyRecipients[royaltyRecipientId].wallet
+                    ];
+                } else {
+                    // add
+                    require(royaltyRecipientIndex == royaltyRecipientId, RECIPIENT_NOT_UNIQUE);
+                }
             }
             require(
                 _royaltyRecipients[i].minRoyaltyPercentage <= protocolLimits().maxRoyaltyPecentage,
-                INVALID_ROYALTY_FEE_PERCENTAGE
+                INVALID_ROYALTY_PERCENTAGE
             );
-            royaltyRecipients[_royaltyRecipientIds[i]] = _royaltyRecipients[i];
+            royaltyRecipients[royaltyRecipientId] = _royaltyRecipients[i];
         }
     }
 
@@ -450,8 +503,16 @@ contract SellerHandlerFacet is SellerBase {
             uint256 royaltyRecipientId = _royaltyRecipientIds[i];
             require(royaltyRecipientId < previousId, ROYALTY_RECIPIENT_IDS_NOT_SORTED); // this also ensures that royaltyRecipientId will never be out of bounds
 
-            if (royaltyRecipientId != lastRoyaltyRecipientsId)
+            delete lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                royaltyRecipients[royaltyRecipientId].wallet
+            ];
+
+            if (royaltyRecipientId != lastRoyaltyRecipientsId) {
                 royaltyRecipients[royaltyRecipientId] = royaltyRecipients[lastRoyaltyRecipientsId];
+                lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                    royaltyRecipients[royaltyRecipientId].wallet
+                ] = royaltyRecipientId;
+            }
             delete royaltyRecipients[lastRoyaltyRecipientsId];
             lastRoyaltyRecipientsId--; // will never underflow. Even if all non-default royalty recipients are removed, default recipient will remain
 

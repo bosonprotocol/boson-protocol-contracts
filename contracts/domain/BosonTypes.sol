@@ -145,6 +145,7 @@ contract BosonTypes {
         string metadataUri;
         string metadataHash;
         bool voided;
+        RoyaltyInfo royaltyInfo;
     }
 
     struct OfferDates {
@@ -289,5 +290,10 @@ contract BosonTypes {
         address wallet;
         uint256 minRoyaltyPercentage;
         string externalId;
+    }
+
+    struct RoyaltyInfo {
+        address payable[] recipients;
+        uint256[] bps;
     }
 }
