@@ -14,6 +14,7 @@ exports.RevertReasons = {
   ALREADY_PAUSED: "Protocol is already paused",
   NOT_PAUSED: "Protocol is not currently paused",
   REGION_PAUSED: "This region of the protocol is currently paused",
+  ZERO_DEPOSIT_NOT_ALLOWED: "Zero deposit not allowed",
 
   // General
   INVALID_ADDRESS: "Invalid address",

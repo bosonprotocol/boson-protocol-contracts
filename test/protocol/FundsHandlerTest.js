@@ -374,6 +374,15 @@ describe("IBosonFundsHandler", function () {
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
+        it("Amount to deposit is zero", async function () {
+          depositAmount = 0;
+
+          // Attempt to deposit funds, expecting revert
+          await expect(
+            fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, depositAmount)
+          ).to.revertedWith(RevertReasons.ZERO_DEPOSIT_NOT_ALLOWED);
+        });
+
         it("Seller id does not exist", async function () {
           // Attempt to deposit the funds, expecting revert
           seller.id = "555";
@@ -408,6 +417,13 @@ describe("IBosonFundsHandler", function () {
           await expect(
             fundsHandler.connect(rando).depositFunds(seller.id, bosonToken.address, depositAmount)
           ).to.revertedWith(RevertReasons.SAFE_ERC20_LOW_LEVEL_CALL);
+        });
+
+        it("No native currency deposited and token address is zero", async function () {
+          // Attempt to deposit the funds, expecting revert
+          await expect(
+            fundsHandler.connect(rando).depositFunds(seller.id, ethers.constants.AddressZero, depositAmount)
+          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
         it("Token address is not a contract", async function () {

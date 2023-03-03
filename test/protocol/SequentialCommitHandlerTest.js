@@ -1201,7 +1201,19 @@ describe("IBosonSequentialCommitHandler", function () {
               ).to.revertedWith(RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
             });
 
-            it("Only seller can call, if side is Ask", async function () {
+            it("price discovery sends less than expected", async function () {
+              // Set higher price in price discovery
+              priceDiscovery.price = ethers.BigNumber.from(priceDiscovery.price).add(1);
+
+              // Attempt to sequentially commit to, expecting revert
+              await expect(
+                sequentialCommitHandler
+                  .connect(reseller)
+                  .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery)
+              ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+            });
+
+            it("Only seller can call, if side is bid", async function () {
               // Sequential commit to offer, retrieving the event
               await expect(
                 sequentialCommitHandler
