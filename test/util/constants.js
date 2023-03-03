@@ -9,6 +9,7 @@ const oneWeek = oneDay * 7; // 7 days in seconds
 const oneMonth = oneDay * 31; // 31 days in seconds
 const VOUCHER_NAME = "Boson Voucher (rNFT)";
 const VOUCHER_SYMBOL = "BOSON_VOUCHER_RNFT";
+const DEFAULT_ROYALTY_RECIPIENT = "Treasury";
 
 const tipMultiplier = ethers.BigNumber.from(environments.tipMultiplier);
 const tipSuggestion = "1500000000"; // ethers.js always returns this constant, it does not vary per block
@@ -21,3 +22,4 @@ exports.oneMonth = oneMonth;
 exports.VOUCHER_NAME = VOUCHER_NAME;
 exports.VOUCHER_SYMBOL = VOUCHER_SYMBOL;
 exports.maxPriorityFeePerGas = maxPriorityFeePerGas;
+exports.DEFAULT_ROYALTY_RECIPIENT = DEFAULT_ROYALTY_RECIPIENT;

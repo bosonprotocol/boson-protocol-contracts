@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x1f891681
+ * The ERC-165 identifier for this interface is: 0x2a993fc0
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -436,4 +436,20 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @return nextAccountId - the account id
      */
     function getNextAccountId() external view returns (uint256 nextAccountId);
+
+    function addRoyaltyRecipients(uint256 _sellerId, BosonTypes.RoyaltyRecipient[] calldata _royaltyRecipients)
+        external;
+
+    function updateRoyaltyRecipients(
+        uint256 _sellerId,
+        uint256[] calldata _royaltyRecipientIds,
+        BosonTypes.RoyaltyRecipient[] calldata _royaltyRecipients
+    ) external;
+
+    function removeRoyaltyRecipients(uint256 _sellerId, uint256[] calldata _royaltyRecipientIds) external;
+
+    function getRoyaltyRecipients(uint256 _sellerId)
+        external
+        view
+        returns (BosonTypes.RoyaltyRecipient[] memory royaltyRecipients);
 }

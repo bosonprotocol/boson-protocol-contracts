@@ -92,6 +92,12 @@ exports.RevertReasons = {
     "Sum of agent fee percentage and protocol fee percentage should be <= max fee percentage limit",
   NO_PENDING_UPDATE_FOR_ACCOUNT: "No pending updates for the given account",
   UNAUTHORIZED_CALLER_UPDATE: "Caller has no permission to approve this update",
+  RECIPIENT_NOT_UNIQUE: "Royalty recipient id must be unique",
+  INVALID_ROYALTY_RECIPIENT_ID: "Invalid royalty recipient id",
+  WRONG_DEFAULT_RECIPIENT: "Default royalty recipient must be treasury",
+  INVALID_ROYALTY_PERCENTAGE: "Invalid royalty percentage",
+  ROYALTY_RECIPIENT_IDS_NOT_SORTED: "Royalty recipient ids must be sorted",
+  CANNOT_REMOVE_DEFAULT_RECIPIENT: "Cannot remove default royalty recipient",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",

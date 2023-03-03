@@ -360,8 +360,12 @@ contract SellerHandlerFacet is SellerBase {
         }
     }
 
-    function addRoyaltyRecepients(uint256 _sellerId, RoyaltyRecipient[] calldata _royaltyRecipients) external {
-        // TODO: refactor this + and updateSeller + removeRoyaltyRecepients
+    function addRoyaltyRecipients(uint256 _sellerId, RoyaltyRecipient[] calldata _royaltyRecipients)
+        external
+        sellersNotPaused
+        nonReentrant
+    {
+        // TODO: refactor this + and updateSeller + removeRoyaltyRecipients
 
         // Check Seller exists in sellers mapping
         (bool exists, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
@@ -400,14 +404,16 @@ contract SellerHandlerFacet is SellerBase {
                 _royaltyRecipients[i].wallet
             ] = royaltyRecipients.length; // can be optimized to use counter instead of array length
         }
+
+        emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, msgSender());
     }
 
-    function updateRoyaltyRecepients(
+    function updateRoyaltyRecipients(
         uint256 _sellerId,
         uint256[] calldata _royaltyRecipientIds,
         RoyaltyRecipient[] calldata _royaltyRecipients
-    ) external {
-        // TODO: refactor this + and updateSeller + removeRoyaltyRecepients
+    ) external sellersNotPaused nonReentrant {
+        // TODO: refactor this + and updateSeller + removeRoyaltyRecipients
 
         // Cache protocol lookups and sender for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
@@ -423,7 +429,7 @@ contract SellerHandlerFacet is SellerBase {
             require(exists, NO_SUCH_SELLER);
 
             // Get message sender
-            address sender = msgSender();
+            address sender = msgSender(); // TODO: move out and reuse in event
 
             // Check that caller is authorized to call this function
             if (authToken.tokenType != AuthTokenType.None) {
@@ -437,11 +443,13 @@ contract SellerHandlerFacet is SellerBase {
         require(_royaltyRecipientIds.length == _royaltyRecipients.length, ARRAY_LENGTH_MISMATCH);
 
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
-        uint256 royaltyRecipientIdsLength = _royaltyRecipientIds.length;
-        for (uint256 i = 0; i < royaltyRecipientIdsLength; i++) {
+        // uint256 royaltyRecipientIdsLength = _royaltyRecipientIds.length; // TODO can be optimized?
+        uint256 royaltyRecipientsLength = royaltyRecipients.length;
+        for (uint256 i = 0; i < _royaltyRecipientIds.length; i++) {
             uint256 royaltyRecipientId = _royaltyRecipientIds[i];
-            require(royaltyRecipientId < royaltyRecipientIdsLength, INVALID_ROYALTY_RECIPIENT_ID);
-            if (_royaltyRecipientIds[i] == 1) {
+
+            require(royaltyRecipientId < royaltyRecipientsLength, INVALID_ROYALTY_RECIPIENT_ID);
+            if (royaltyRecipientId == 0) {
                 require(_royaltyRecipients[i].wallet == seller.treasury, WRONG_DEFAULT_RECIPIENT);
             } else {
                 uint256 royaltyRecipientIndex = lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
@@ -449,15 +457,14 @@ contract SellerHandlerFacet is SellerBase {
                 ];
                 if (royaltyRecipientIndex == 0) {
                     // update index
-                    lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
-                        _royaltyRecipients[i].wallet
-                    ] = royaltyRecipientId;
+                    lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][_royaltyRecipients[i].wallet] =
+                        royaltyRecipientId +
+                        1;
                     delete lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
                         royaltyRecipients[royaltyRecipientId].wallet
                     ];
                 } else {
-                    // add
-                    require(royaltyRecipientIndex == royaltyRecipientId, RECIPIENT_NOT_UNIQUE);
+                    require(royaltyRecipientIndex - 1 == royaltyRecipientId, RECIPIENT_NOT_UNIQUE);
                 }
             }
             require(
@@ -466,32 +473,38 @@ contract SellerHandlerFacet is SellerBase {
             );
             royaltyRecipients[royaltyRecipientId] = _royaltyRecipients[i];
         }
+
+        emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, msgSender());
     }
 
-    function removeRoyaltyRecepients(uint256 _sellerId, uint256[] calldata _royaltyRecipientIds) external {
-        // TODO: refactor this + and updateSeller + removeRoyaltyRecepients
-
-        // Check Seller exists in sellers mapping
-        (bool exists, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
-
-        // Seller must already exist
-        require(exists, NO_SUCH_SELLER);
+    function removeRoyaltyRecipients(uint256 _sellerId, uint256[] calldata _royaltyRecipientIds)
+        external
+        sellersNotPaused
+        nonReentrant
+    {
+        // TODO: refactor this + and updateSeller + removeRoyaltyRecipients
 
         // Cache protocol lookups and sender for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Get message sender
         address sender = msgSender();
+        {
+            // Check Seller exists in sellers mapping
+            (bool exists, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
 
-        // Check that caller is authorized to call this function
-        if (authToken.tokenType != AuthTokenType.None) {
-            address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
-            address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
-            require(tokenIdOwner == sender, NOT_ADMIN);
-        } else {
-            require(seller.admin == sender, NOT_ADMIN);
+            // Seller must already exist
+            require(exists, NO_SUCH_SELLER);
+
+            // Check that caller is authorized to call this function
+            if (authToken.tokenType != AuthTokenType.None) {
+                address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
+                address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
+                require(tokenIdOwner == sender, NOT_ADMIN);
+            } else {
+                require(seller.admin == sender, NOT_ADMIN);
+            }
         }
-
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
 
         // We loop from the end of the array to ensure correct ids are removed
@@ -499,9 +512,11 @@ contract SellerHandlerFacet is SellerBase {
         uint256 previousId = royaltyRecipients.length; // this is 1 more than the max id. This is used to ensure that royaltyRecipients is sorted in ascending order
         uint256 lastRoyaltyRecipientsId = previousId - 1; // will never underflow, since at least default recipient always exists
 
-        for (uint256 i = _royaltyRecipientIds.length - 1; i >= 0; i--) {
-            uint256 royaltyRecipientId = _royaltyRecipientIds[i];
+        for (uint256 i = _royaltyRecipientIds.length; i > 0; i--) {
+            uint256 royaltyRecipientId = _royaltyRecipientIds[i - 1];
+
             require(royaltyRecipientId < previousId, ROYALTY_RECIPIENT_IDS_NOT_SORTED); // this also ensures that royaltyRecipientId will never be out of bounds
+            require(royaltyRecipientId != 0, CANNOT_REMOVE_DEFAULT_RECIPIENT);
 
             delete lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
                 royaltyRecipients[royaltyRecipientId].wallet
@@ -513,12 +528,14 @@ contract SellerHandlerFacet is SellerBase {
                     royaltyRecipients[royaltyRecipientId].wallet
                 ] = royaltyRecipientId;
             }
-            delete royaltyRecipients[lastRoyaltyRecipientsId];
+            royaltyRecipients.pop();
             lastRoyaltyRecipientsId--; // will never underflow. Even if all non-default royalty recipients are removed, default recipient will remain
 
             // Update previous id
             previousId = royaltyRecipientId;
         }
+
+        emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, msgSender());
     }
 
     function getRoyaltyRecipients(uint256 _sellerId) external view returns (RoyaltyRecipient[] memory) {
