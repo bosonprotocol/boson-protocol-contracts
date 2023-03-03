@@ -8,6 +8,7 @@ import { IWETH9Like } from "../../interfaces/IWETH9Like.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
+import { Address } from "../../ext_libs/Address.sol";
 
 /**
  * @title PriceDiscoveryBase
@@ -15,6 +16,8 @@ import { FundsLib } from "../libs/FundsLib.sol";
  * @dev Provides methods for fulfiling orders on external price discovery contracts.
  */
 contract PriceDiscoveryBase is ProtocolBase {
+    using Address for address;
+
     IWETH9Like public immutable weth;
 
     constructor(address _weth) {
@@ -22,7 +25,7 @@ contract PriceDiscoveryBase is ProtocolBase {
     }
 
     /**
-     * @notice Fulfils an order on external contract. Helper function passes data to either buy or sell order.
+     * @notice @notice Fulfils an order on an external contract. Helper function passes data to either ask or bid orders.
      *
      * See descriptions of `fulfilBuyOrder` and `fulfilSellOrder` for more details.
      *
@@ -40,15 +43,15 @@ contract PriceDiscoveryBase is ProtocolBase {
         address _buyer,
         uint256 _initialSellerId
     ) internal returns (uint256 actualPrice) {
-        if (_priceDiscovery.direction == Direction.Buy) {
-            return fulfilBuyOrder(_exchangeId, _exchangeToken, _priceDiscovery, _buyer, _initialSellerId);
+        if (_priceDiscovery.side == Side.Ask) {
+            return fulfilAskOrder(_exchangeId, _exchangeToken, _priceDiscovery, _buyer, _initialSellerId);
         } else {
-            return fulfilSellOrder(_exchangeId, _exchangeToken, _priceDiscovery, _initialSellerId);
+            return fulfilBidOrder(_exchangeId, _exchangeToken, _priceDiscovery, _initialSellerId);
         }
     }
 
     /**
-     * @notice Fulfils a buy order on external contract.
+     * @notice Fulfils an ask order on external contract.
      *
      * Reverts if:
      * - Offer price is in native token and caller does not send enough
@@ -66,7 +69,7 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @param _initialSellerId - the id of the original seller
      * @return actualPrice - the actual price of the order
      */
-    function fulfilBuyOrder(
+    function fulfilAskOrder(
         uint256 _exchangeId,
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
@@ -90,16 +93,8 @@ contract PriceDiscoveryBase is ProtocolBase {
         ps.incomingVoucherId = _exchangeId;
         ps.incomingVoucherCloneAddress = cloneAddress;
 
-        {
-            // Call the price discovery contract
-            (bool success, bytes memory returnData) = address(_priceDiscovery.priceDiscoveryContract).call{
-                value: msg.value
-            }(_priceDiscovery.priceDiscoveryData);
-
-            // If error, return error message
-            string memory errorMessage = (returnData.length == 0) ? FUNCTION_CALL_NOT_SUCCESSFUL : (string(returnData));
-            require(success, errorMessage);
-        }
+        // Call the price discovery contract
+        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
 
         // Make sure that the price discovery contract has transferred the voucher to the protocol
         IBosonVoucher bosonVoucher = IBosonVoucher(cloneAddress);
@@ -130,7 +125,7 @@ contract PriceDiscoveryBase is ProtocolBase {
     }
 
     /**
-     * @notice Fulfils a sell order on external contract.
+     * @notice Fulfils a bid order on external contract.
      *
      * Reverts if:
      *  - Voucher owner did not approve protocol to transfer the voucher
@@ -143,15 +138,12 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @param _initialSellerId - the id of the original seller
      * @return actualPrice - the actual price of the order
      */
-    function fulfilSellOrder(
+    function fulfilBidOrder(
         uint256 _exchangeId,
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
         uint256 _initialSellerId
     ) internal returns (uint256 actualPrice) {
-        // what about non-zero msg.value?
-        // No need to reset approval
-
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[_initialSellerId]);
 
         // Transfer seller's voucher to protocol
@@ -163,25 +155,31 @@ contract PriceDiscoveryBase is ProtocolBase {
         // Get protocol balance before the exchange
         uint256 protocolBalanceBefore = getBalance(_exchangeToken);
 
-        // Approve price discovery contract to transfer voucher
+        // Track native balance just in case if seller send some native currency or price discovery contract does
+        uint256 protocolNativeBalanceBefore = getBalance(address(0));
+
+        // Approve price discovery contract to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
         bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, _exchangeId);
 
-        {
-            // Call the price discovery contract
-            (bool success, bytes memory returnData) = address(_priceDiscovery.priceDiscoveryContract).call{
-                value: msg.value
-            }(_priceDiscovery.priceDiscoveryData);
-
-            // If error, return error message
-            string memory errorMessage = (returnData.length == 0) ? FUNCTION_CALL_NOT_SUCCESSFUL : (string(returnData));
-            require(success, errorMessage);
-        }
+        // Call the price discovery contract
+        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
 
         // Check the escrow amount
         uint256 protocolBalanceAfter = getBalance(_exchangeToken);
 
+        // Check the native balance and return the surplus to seller
+        uint256 protocolNativeBalanceAfter = getBalance(address(0));
+        if (protocolNativeBalanceAfter > protocolNativeBalanceBefore) {
+            // Return the surplus to seller
+            FundsLib.transferFundsFromProtocol(
+                address(0),
+                payable(msgSender()),
+                protocolNativeBalanceAfter - protocolNativeBalanceBefore
+            );
+        }
+
         actualPrice = protocolBalanceAfter - protocolBalanceBefore;
-        require(actualPrice >= _priceDiscovery.price, "Price discovery contract returned less than expected");
+        require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
     }
 
     /**

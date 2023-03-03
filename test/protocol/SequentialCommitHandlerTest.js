@@ -6,7 +6,7 @@ const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const PriceDiscovery = require("../../scripts/domain/PriceDiscovery");
-const Direction = require("../../scripts/domain/Direction");
+const Side = require("../../scripts/domain/Side");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -347,7 +347,7 @@ describe("IBosonSequentialCommitHandler", function () {
         reseller = buyer;
       });
 
-      context("Buy order", async function () {
+      context("Ask order", async function () {
         context("General actions", async function () {
           beforeEach(async function () {
             // Price on secondary market
@@ -365,12 +365,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
 
-            priceDiscovery = new PriceDiscovery(
-              price2,
-              priceDiscoveryContract.address,
-              priceDiscoveryData,
-              Direction.Buy
-            );
+            priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Side.Ask);
 
             // Seller needs to deposit weth in order to fill the escrow at the last step
             // Price2 is theoretically the highest amount needed, in practice it will be less (around price2-price)
@@ -707,12 +702,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
               const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
 
-              priceDiscovery = new PriceDiscovery(
-                price2,
-                priceDiscoveryContract.address,
-                priceDiscoveryData,
-                Direction.Buy
-              );
+              priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Side.Ask);
 
               // Attempt to sequentially commit, expecting revert
               await expect(
@@ -767,7 +757,7 @@ describe("IBosonSequentialCommitHandler", function () {
                   price2,
                   priceDiscoveryContract.address,
                   priceDiscoveryData,
-                  Direction.Buy
+                  Side.Ask
                 );
 
                 // Seller needs to deposit weth in order to fill the escrow at the last step
@@ -887,7 +877,7 @@ describe("IBosonSequentialCommitHandler", function () {
         });
       });
 
-      context("Sell order", async function () {
+      context("Bid order", async function () {
         context("General actions", async function () {
           beforeEach(async function () {
             // Price on secondary market
@@ -905,12 +895,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilSellOrder", [order]);
 
-            priceDiscovery = new PriceDiscovery(
-              price2,
-              priceDiscoveryContract.address,
-              priceDiscoveryData,
-              Direction.Sell
-            );
+            priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Side.Bid);
 
             // Approve transfers
             // Buyer2 needs to approve price discovery to transfer the ETH
@@ -1216,7 +1201,7 @@ describe("IBosonSequentialCommitHandler", function () {
               ).to.revertedWith(RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
             });
 
-            it("Only seller can call, if direction is Sell", async function () {
+            it("Only seller can call, if side is Ask", async function () {
               // Sequential commit to offer, retrieving the event
               await expect(
                 sequentialCommitHandler
@@ -1271,7 +1256,7 @@ describe("IBosonSequentialCommitHandler", function () {
                   price2,
                   priceDiscoveryContract.address,
                   priceDiscoveryData,
-                  Direction.Sell
+                  Side.Bid
                 );
 
                 // Approve transfers
@@ -1433,7 +1418,7 @@ describe("IBosonSequentialCommitHandler", function () {
         // Seller approves price discovery to transfer the voucher
         await bosonVoucherClone.connect(reseller).setApprovalForAll(priceDiscoveryContract.address, true);
 
-        priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Direction.Buy);
+        priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Side.Ask);
 
         // buyer is owner of voucher
         expect(await bosonVoucherClone.connect(buyer).ownerOf(exchangeId)).to.equal(buyer.address);
@@ -1472,12 +1457,7 @@ describe("IBosonSequentialCommitHandler", function () {
           // Seller approves price discovery to transfer the voucher
           await bosonVoucherClone.connect(reseller).setApprovalForAll(priceDiscoveryContract.address, true);
 
-          priceDiscovery = new PriceDiscovery(
-            price2,
-            priceDiscoveryContract.address,
-            priceDiscoveryData,
-            Direction.Buy
-          );
+          priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Side.Ask);
 
           // Attempt to sequentially commit, expecting revert
           await expect(
@@ -1511,12 +1491,7 @@ describe("IBosonSequentialCommitHandler", function () {
           // Seller approves price discovery to transfer the voucher
           await bosonVoucherClone.connect(reseller).setApprovalForAll(priceDiscoveryContract.address, true);
 
-          priceDiscovery = new PriceDiscovery(
-            price2,
-            priceDiscoveryContract.address,
-            priceDiscoveryData,
-            Direction.Buy
-          );
+          priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Side.Ask);
 
           // Attempt to sequentially commit, expecting revert
           await expect(

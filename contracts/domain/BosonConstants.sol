@@ -153,6 +153,7 @@ string constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
 string constant INSUFFICIENT_VALUE_RECEIVED = "Insufficient value received";
 string constant INSUFFICIENT_AVAILABLE_FUNDS = "Insufficient available funds";
 string constant NATIVE_NOT_ALLOWED = "Transfer of native currency not allowed";
+string constant ZERO_DEPOSIT_NOT_ALLOWED = "Zero deposit not allowed";
 
 // Revert Reasons: Meta-Transactions related
 string constant NONCE_USED_ALREADY = "Nonce used already";

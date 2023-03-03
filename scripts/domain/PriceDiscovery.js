@@ -1,4 +1,4 @@
-const Direction = require("./Direction");
+const Side = require("./Side");
 const { bigNumberIsValid, addressIsValid, bytesIsValid, enumIsValid } = require("../util/validations.js");
 
 /**
@@ -12,15 +12,15 @@ class PriceDiscovery {
       uint256 price;
       address priceDiscoveryContract;
       bytes priceDiscoveryData;
-      Direction direction;
+      Side side;
       }
   */
 
-  constructor(price, priceDiscoveryContract, priceDiscoveryData, direction) {
+  constructor(price, priceDiscoveryContract, priceDiscoveryData, side) {
     this.price = price;
     this.priceDiscoveryContract = priceDiscoveryContract;
     this.priceDiscoveryData = priceDiscoveryData;
-    this.direction = direction;
+    this.side = side;
   }
 
   /**
@@ -29,8 +29,8 @@ class PriceDiscovery {
    * @returns {PriceDiscovery}
    */
   static fromObject(o) {
-    const { price, priceDiscoveryContract, priceDiscoveryData, direction } = o;
-    return new PriceDiscovery(price, priceDiscoveryContract, priceDiscoveryData, direction);
+    const { price, priceDiscoveryContract, priceDiscoveryData, side } = o;
+    return new PriceDiscovery(price, priceDiscoveryContract, priceDiscoveryData, side);
   }
 
   /**
@@ -39,16 +39,16 @@ class PriceDiscovery {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let price, priceDiscoveryContract, priceDiscoveryData, direction;
+    let price, priceDiscoveryContract, priceDiscoveryData, side;
 
     // destructure struct
-    [price, priceDiscoveryContract, priceDiscoveryData, direction] = struct;
+    [price, priceDiscoveryContract, priceDiscoveryData, side] = struct;
 
     return PriceDiscovery.fromObject({
       price: price.toString(),
       priceDiscoveryContract: priceDiscoveryContract,
       priceDiscoveryData: priceDiscoveryData,
-      direction: direction,
+      side: side,
     });
   }
 
@@ -73,7 +73,7 @@ class PriceDiscovery {
    * @returns {string}
    */
   toStruct() {
-    return [this.price, this.priceDiscoveryContract, this.priceDiscoveryData, this.direction];
+    return [this.price, this.priceDiscoveryContract, this.priceDiscoveryData, this.side];
   }
 
   /**
@@ -112,12 +112,12 @@ class PriceDiscovery {
   }
 
   /**
-   * Is this PriceDiscovery instance's direction field valid?
-   * Must be a number belonging to the Direction enum
+   * Is this PriceDiscovery instance's side field valid?
+   * Must be a number belonging to the Side enum
    * @returns {boolean}
    */
-  directionIsValid() {
-    return enumIsValid(this.direction, Direction.Types);
+  sideIsValid() {
+    return enumIsValid(this.side, Side.Types);
   }
 
   /**
@@ -129,7 +129,7 @@ class PriceDiscovery {
       this.priceIsValid() &&
       this.priceDiscoveryContractIsValid() &&
       this.priceDiscoveryDataIsValid() &&
-      this.directionIsValid()
+      this.sideIsValid()
     );
   }
 }

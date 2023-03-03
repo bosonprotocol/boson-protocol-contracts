@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const PriceDiscovery = require("../../scripts/domain/PriceDiscovery");
-const Direction = require("../../scripts/domain/Direction");
+const Side = require("../../scripts/domain/Side");
 
 /**
  *  Test the PriceDiscovery domain entity
@@ -10,7 +10,7 @@ const Direction = require("../../scripts/domain/Direction");
 describe("PriceDiscovery", function () {
   // Suite-wide scope
   let priceDiscovery, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let accounts, price, priceDiscoveryContract, priceDiscoveryData, direction;
+  let accounts, price, priceDiscoveryContract, priceDiscoveryData, side;
 
   beforeEach(async function () {
     // Get a list of accounts
@@ -20,16 +20,16 @@ describe("PriceDiscovery", function () {
     price = "150";
     priceDiscoveryContract = accounts[1].address;
     priceDiscoveryData = "0xdeadbeef";
-    direction = Direction.Buy;
+    side = Side.Ask;
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated PriceDiscovery instance", async function () {
-      priceDiscovery = new PriceDiscovery(price, priceDiscoveryContract, priceDiscoveryData, direction);
+      priceDiscovery = new PriceDiscovery(price, priceDiscoveryContract, priceDiscoveryData, side);
       expect(priceDiscovery.priceIsValid()).is.true;
       expect(priceDiscovery.priceDiscoveryContractIsValid()).is.true;
       expect(priceDiscovery.priceDiscoveryDataIsValid()).is.true;
-      expect(priceDiscovery.directionIsValid()).is.true;
+      expect(priceDiscovery.sideIsValid()).is.true;
       expect(priceDiscovery.isValid()).is.true;
     });
   });
@@ -37,7 +37,7 @@ describe("PriceDiscovery", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid priceDiscovery, then set fields in tests directly
-      priceDiscovery = new PriceDiscovery(price, priceDiscoveryContract, priceDiscoveryData, direction);
+      priceDiscovery = new PriceDiscovery(price, priceDiscoveryContract, priceDiscoveryData, side);
       expect(priceDiscovery.isValid()).is.true;
     });
 
@@ -122,25 +122,25 @@ describe("PriceDiscovery", function () {
       expect(priceDiscovery.isValid()).is.true;
     });
 
-    it("If present, direction must be a Direction enum", async function () {
+    it("If present, side must be a Side enum", async function () {
       // Invalid field value
-      priceDiscovery.direction = "zedzdeadbaby";
-      expect(priceDiscovery.directionIsValid()).is.false;
+      priceDiscovery.side = "zedzdeadbaby";
+      expect(priceDiscovery.sideIsValid()).is.false;
       expect(priceDiscovery.isValid()).is.false;
 
       // Invalid field value
-      priceDiscovery.direction = new Date();
-      expect(priceDiscovery.directionIsValid()).is.false;
+      priceDiscovery.side = new Date();
+      expect(priceDiscovery.sideIsValid()).is.false;
       expect(priceDiscovery.isValid()).is.false;
 
       // Invalid field value
-      priceDiscovery.direction = 12;
-      expect(priceDiscovery.directionIsValid()).is.false;
+      priceDiscovery.side = 12;
+      expect(priceDiscovery.sideIsValid()).is.false;
       expect(priceDiscovery.isValid()).is.false;
 
       // Valid field value
-      priceDiscovery.direction = Direction.Sell;
-      expect(priceDiscovery.directionIsValid()).is.true;
+      priceDiscovery.side = Side.Bid;
+      expect(priceDiscovery.sideIsValid()).is.true;
       expect(priceDiscovery.isValid()).is.true;
     });
   });
@@ -148,7 +148,7 @@ describe("PriceDiscovery", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid priceDiscovery, then set fields in tests directly
-      priceDiscovery = new PriceDiscovery(price, priceDiscoveryContract, priceDiscoveryData, direction);
+      priceDiscovery = new PriceDiscovery(price, priceDiscoveryContract, priceDiscoveryData, side);
       expect(priceDiscovery.isValid()).is.true;
 
       // Get plain object
@@ -156,11 +156,11 @@ describe("PriceDiscovery", function () {
         price,
         priceDiscoveryContract,
         priceDiscoveryData,
-        direction,
+        side,
       };
 
       // Struct representation
-      struct = [price, priceDiscoveryContract, priceDiscoveryData, direction];
+      struct = [price, priceDiscoveryContract, priceDiscoveryData, side];
     });
 
     context("👉 Static", async function () {

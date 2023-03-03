@@ -6,7 +6,7 @@ const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const PriceDiscovery = require("../../scripts/domain/PriceDiscovery");
-const Direction = require("../../scripts/domain/Direction");
+const Side = require("../../scripts/domain/Side");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -4565,7 +4565,7 @@ describe("IBosonFundsHandler", function () {
                     order.price,
                     priceDiscoveryContract.address,
                     priceDiscoveryData,
-                    Direction.Buy
+                    Side.Ask
                   );
 
                   // voucher owner approves protocol to transfer the tokens
@@ -6172,7 +6172,7 @@ describe("IBosonFundsHandler", function () {
                   order.price,
                   priceDiscoveryContract.address,
                   priceDiscoveryData,
-                  Direction.Buy
+                  Side.Ask
                 );
 
                 // voucher owner approves protocol to transfer the tokens

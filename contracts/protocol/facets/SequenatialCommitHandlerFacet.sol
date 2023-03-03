@@ -11,20 +11,6 @@ import "../../domain/BosonConstants.sol";
 import { Address } from "../../ext_libs/Address.sol";
 import { Math } from "../../ext_libs/Math.sol";
 
-interface WETH9Like {
-    function withdraw(uint256) external;
-
-    function deposit() external payable;
-
-    function transfer(address, uint256) external returns (bool);
-
-    function transferFrom(
-        address,
-        address,
-        uint256
-    ) external returns (bool);
-}
-
 /**
  * @title SequentialCommitHandlerFacet
  *
@@ -104,7 +90,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             seller = currentBuyer.wallet;
         }
 
-        if (_priceDiscovery.direction == Direction.Sell) {
+        if (_priceDiscovery.side == Side.Bid) {
             require(seller == msgSender(), NOT_VOUCHER_HOLDER);
         }
 
@@ -137,12 +123,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 uint256 len = sequentialCommits.length;
                 uint256 currentPrice = len == 0 ? offer.price : sequentialCommits[len - 1].price;
 
-                // Calculate the amount to be immediately released to current voucher owner
-                // escrowAmount =
-                //     actualPrice -
-                //     Math.min(currentPrice, actualPrice - protocolFeeAmount - royaltyAmount);
-                // escrowAmount =
-                //     Math.max(actualPrice-currentPrice,  protocolFeeAmount + royaltyAmount); // can underflow
+                // Calculate the minimal amount to be kept in the escrow
                 escrowAmount = Math.max(actualPrice, protocolFeeAmount + royaltyAmount + currentPrice) - currentPrice;
 
                 // Update sequential commit
@@ -157,11 +138,14 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             }
 
             // Make sure enough get escrowed
-            if (_priceDiscovery.direction == Direction.Buy) {
+            if (_priceDiscovery.side == Side.Ask) {
                 if (escrowAmount > 0) {
                     // Price discovery should send funds to the seller
                     // Nothing in escrow, need to pull everything from seller
                     if (tokenAddress == address(0)) {
+                        // If exchange is native currency, seller cannot directly approve protocol to transfer funds
+                        // They need to approve wrapper contract, so protocol can pull funds from wrapper
+                        // But since protocol otherwise normally operates with native currency, needs to unwrap it (i.e. withdraw)
                         FundsLib.transferFundsToProtocol(address(weth), seller, escrowAmount);
                         weth.withdraw(escrowAmount);
                     } else {
@@ -169,7 +153,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                     }
                 }
             } else {
-                // when sell direction, we have full proceeds in escrow. Keep minimal in, return the difference
+                // when bid side, we have full proceeds in escrow. Keep minimal in, return the difference
                 if (tokenAddress == address(0)) {
                     tokenAddress = address(weth);
                     if (escrowAmount > 0) weth.withdraw(escrowAmount);

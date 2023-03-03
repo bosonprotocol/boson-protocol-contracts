@@ -213,7 +213,7 @@ library FundsLib {
                 price,
                 exchangeToken
             );
-            sellerPayoff += sequentialRoyalties; // revisit this
+            sellerPayoff += sequentialRoyalties;
             protocolFee += sequentialProtocolFee;
         }
 
@@ -237,6 +237,19 @@ library FundsLib {
         }
     }
 
+    /**
+     * @notice Takes in the exchange id and releases the funds to all intermediate reseller, depending on the state of the exchange.
+     * It is called only from releaseFunds. Protocol fee and royalties are calculated and returned to releaseFunds, where are added to the total.
+     *
+     * Emits FundsReleased events for non zero payoffs.
+     *
+     * @param _exchangeId - exchange id
+     * @param _exchangeState - state of the exchange
+     * @param _initialPrice - initial price of the offer
+     * @param _exchangeToken - address of the token used for the exchange
+     * @return protocolFee - protocol fee from secondary sales
+     * @return royalties - royalties from secondary sales
+     */
     function releaseFundsToIntermediateSellers(
         uint256 _exchangeId,
         BosonTypes.ExchangeState _exchangeState,
@@ -252,6 +265,7 @@ library FundsLib {
 
             sequentialCommits = pe.sequentialCommits[_exchangeId];
 
+            // if no sequential commit happened, just return
             if (sequentialCommits.length == 0) {
                 return (0, 0);
             }
@@ -286,24 +300,38 @@ library FundsLib {
             }
         }
 
-        uint256 resellerBuyPrice = _initialPrice;
+        uint256 resellerBuyPrice = _initialPrice; // the price that reseller paid for the voucher
         address msgSender = EIP712Lib.msgSender();
         uint256 len = sequentialCommits.length;
         for (uint256 i = 0; i < len; i++) {
-            BosonTypes.SequentialCommit memory sc = sequentialCommits[i]; // we need all members of the struct
+            BosonTypes.SequentialCommit storage sc = sequentialCommits[i];
 
-            protocolFee += sc.protocolFeeAmount;
-            royalties += sc.royaltyAmount;
+            // amount to be released
+            uint256 currentResellerAmount;
 
-            uint256 reducedSecondaryPrice = sc.price - sc.protocolFeeAmount - sc.royaltyAmount;
+            // inside the scope to avoid stack too deep error
+            {
+                uint256 price = sc.price;
+                uint256 protocolFeeAmount = sc.protocolFeeAmount;
+                uint256 royaltyAmount = sc.royaltyAmount;
 
-            uint256 currentResellerAmount = (
-                reducedSecondaryPrice > resellerBuyPrice
-                    ? effectivePriceMultiplier * (reducedSecondaryPrice - resellerBuyPrice)
-                    : (10000 - effectivePriceMultiplier) * (resellerBuyPrice - reducedSecondaryPrice)
-            ) / 10000;
+                protocolFee += protocolFeeAmount;
+                royalties += royaltyAmount;
 
-            resellerBuyPrice = sc.price;
+                // secondary price without protocol fee and royalties
+                uint256 reducedSecondaryPrice = price - protocolFeeAmount - royaltyAmount;
+
+                // current reseller gets the difference between final payout and the immediate payout they received at the time of secondary sale
+                currentResellerAmount =
+                    (
+                        reducedSecondaryPrice > resellerBuyPrice
+                            ? effectivePriceMultiplier * (reducedSecondaryPrice - resellerBuyPrice)
+                            : (10000 - effectivePriceMultiplier) * (resellerBuyPrice - reducedSecondaryPrice)
+                    ) /
+                    10000;
+
+                resellerBuyPrice = price;
+            }
 
             if (currentResellerAmount > 0) {
                 increaseAvailableFundsAndEmitEvent(
@@ -316,10 +344,22 @@ library FundsLib {
             }
         }
 
+        // protocolFee and royalties can be multiplied by effectivePriceMultiplier just at the end
         protocolFee = (protocolFee * effectivePriceMultiplier) / 10000;
         royalties = (royalties * effectivePriceMultiplier) / 10000;
     }
 
+    /**
+     * @notice Forwared values to increaseAvailableFunds and emits notifies external listeners.
+     *
+     * Emits FundsReleased events
+     *
+     * @param _exchangeId - exchange id
+     * @param _entityId - id of the entity to which the funds are released
+     * @param _tokenAddress - address of the token used for the exchange
+     * @param _amount - amount of tokens to be released
+     * @param _sender - address of the sender that executed the transaction
+     */
     function increaseAvailableFundsAndEmitEvent(
         uint256 _exchangeId,
         uint256 _entityId,
