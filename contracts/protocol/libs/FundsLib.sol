@@ -238,8 +238,8 @@ library FundsLib {
     }
 
     /**
-     * @notice Takes in the exchange id and releases the funds to all intermediate reseller, depending on the state of the exchange.
-     * It is called only from releaseFunds. Protocol fee and royalties are calculated and returned to releaseFunds, where are added to the total.
+     * @notice Takes the exchange id and releases the funds to all intermediate resellers, depending on the state of the exchange.
+     * It is called only from releaseFunds. Protocol fee and royalties are calculated and returned to releaseFunds, where they are added to the total.
      *
      * Emits FundsReleased events for non zero payoffs.
      *
