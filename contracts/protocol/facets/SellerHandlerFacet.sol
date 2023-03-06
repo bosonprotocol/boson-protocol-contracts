@@ -101,13 +101,7 @@ contract SellerHandlerFacet is SellerBase {
         address sender = msgSender();
 
         // Check that caller is authorized to call this function
-        if (authToken.tokenType != AuthTokenType.None) {
-            address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
-            address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
-            require(tokenIdOwner == sender, NOT_ADMIN);
-        } else {
-            require(seller.admin == sender, NOT_ADMIN);
-        }
+        isCallerAuthorizedCheck(lookups, seller, authToken, sender);
 
         // Clean old seller pending update data if exists
         delete lookups.pendingAddressUpdatesBySeller[_seller.id];
@@ -204,7 +198,7 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
-     * @notice Opt-in to a pending seller update
+     * @notice Opt-in to a pending seller update.
      *
      * Emits a SellerUpdateApplied event if successful.
      *
@@ -360,33 +354,32 @@ contract SellerHandlerFacet is SellerBase {
         }
     }
 
+    /**
+     * @notice Adds royalty recipients to a seller.
+     *
+     * Emits a RoyalRecipientsUpdated event if successful.
+     *
+     *  Reverts if:
+     *  - The sellers region of protocol is paused
+     *  - Seller does not exist
+     *  - Caller is not the seller admin
+     *  - Caller does not own auth token
+     *  - Some recipient is not unique
+     *  - some royalty percentage is above the limit
+     *
+     * @param _sellerId - seller id
+     * @param _royaltyRecipients - list of royalty recipients to add
+     */
     function addRoyaltyRecipients(uint256 _sellerId, RoyaltyRecipient[] calldata _royaltyRecipients)
         external
         sellersNotPaused
         nonReentrant
     {
-        // TODO: refactor this + and updateSeller + removeRoyaltyRecipients
-
-        // Check Seller exists in sellers mapping
-        (bool exists, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
-
-        // Seller must already exist
-        require(exists, NO_SUCH_SELLER);
-
         // Cache protocol lookups and sender for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        // Get message sender
-        address sender = msgSender();
-
-        // Check that caller is authorized to call this function
-        if (authToken.tokenType != AuthTokenType.None) {
-            address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
-            address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
-            require(tokenIdOwner == sender, NOT_ADMIN);
-        } else {
-            require(seller.admin == sender, NOT_ADMIN);
-        }
+        // Make sure admin is the caller and get the sender's address
+        (, address sender) = validateAdminStatus(lookups, _sellerId);
 
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
         for (uint256 i = 0; i < _royaltyRecipients.length; i++) {
@@ -405,41 +398,40 @@ contract SellerHandlerFacet is SellerBase {
             ] = royaltyRecipients.length; // can be optimized to use counter instead of array length
         }
 
-        emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, msgSender());
+        emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, sender);
     }
 
+    /**
+     * @notice Updates seller's royalty recipients.
+     *
+     * Emits a RoyalRecipientsUpdated event if successful.
+     *
+     *  Reverts if:
+     *  - The sellers region of protocol is paused
+     *  - Seller does not exist
+     *  - Caller is not the seller admin
+     *  - Caller does not own auth token
+     *  - Length of ids to change does not match length of new values
+     *  - Id to update does not exist
+     *  - Seller tries to update the address of default recipient
+     *  - Some recipient is not unique
+     *  - Some royalty percentage is above the limit
+     *
+     * @param _sellerId - seller id
+     * @param _royaltyRecipientIds - list of royalty recipient ids to update
+     * @param _royaltyRecipients - list of new royalty recipients corresponding to ids
+     */
     function updateRoyaltyRecipients(
         uint256 _sellerId,
         uint256[] calldata _royaltyRecipientIds,
         RoyaltyRecipient[] calldata _royaltyRecipients
     ) external sellersNotPaused nonReentrant {
-        // TODO: refactor this + and updateSeller + removeRoyaltyRecipients
-
         // Cache protocol lookups and sender for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        // Check Seller exists in sellers mapping
-        Seller storage seller;
-        {
-            bool exists;
-            AuthToken storage authToken;
-            (exists, seller, authToken) = fetchSeller(_sellerId);
+        // Make sure admin is the caller and get the seller
+        (Seller storage seller, ) = validateAdminStatus(lookups, _sellerId);
 
-            // Seller must already exist
-            require(exists, NO_SUCH_SELLER);
-
-            // Get message sender
-            address sender = msgSender(); // TODO: move out and reuse in event
-
-            // Check that caller is authorized to call this function
-            if (authToken.tokenType != AuthTokenType.None) {
-                address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
-                address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
-                require(tokenIdOwner == sender, NOT_ADMIN);
-            } else {
-                require(seller.admin == sender, NOT_ADMIN);
-            }
-        }
         require(_royaltyRecipientIds.length == _royaltyRecipients.length, ARRAY_LENGTH_MISMATCH);
 
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
@@ -477,34 +469,34 @@ contract SellerHandlerFacet is SellerBase {
         emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, msgSender());
     }
 
+    /**
+     * @notice Removes seller's royalty recipients.
+     *
+     * Emits a RoyalRecipientsUpdated event if successful.
+     *
+     *  Reverts if:
+     *  - The sellers region of protocol is paused
+     *  - Seller does not exist
+     *  - Caller is not the seller admin
+     *  - Caller does not own auth token
+     *  - List of ids to remove is not sorted in ascending order
+     *  - Id to remove does not exist
+     *  - Seller tries to remove the default recipient
+     *
+     * @param _sellerId - seller id
+     * @param _royaltyRecipientIds - list of royalty recipient ids to remove
+     */
     function removeRoyaltyRecipients(uint256 _sellerId, uint256[] calldata _royaltyRecipientIds)
         external
         sellersNotPaused
         nonReentrant
     {
-        // TODO: refactor this + and updateSeller + removeRoyaltyRecipients
-
         // Cache protocol lookups and sender for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        // Get message sender
-        address sender = msgSender();
-        {
-            // Check Seller exists in sellers mapping
-            (bool exists, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
+        // Make sure admin is the caller and get the sender's address
+        (, address sender) = validateAdminStatus(lookups, _sellerId);
 
-            // Seller must already exist
-            require(exists, NO_SUCH_SELLER);
-
-            // Check that caller is authorized to call this function
-            if (authToken.tokenType != AuthTokenType.None) {
-                address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
-                address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
-                require(tokenIdOwner == sender, NOT_ADMIN);
-            } else {
-                require(seller.admin == sender, NOT_ADMIN);
-            }
-        }
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
 
         // We loop from the end of the array to ensure correct ids are removed
@@ -535,12 +527,7 @@ contract SellerHandlerFacet is SellerBase {
             previousId = royaltyRecipientId;
         }
 
-        emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, msgSender());
-    }
-
-    function getRoyaltyRecipients(uint256 _sellerId) external view returns (RoyaltyRecipient[] memory) {
-        // TODO: move lower
-        return protocolLookups().royaltyRecipientsBySeller[_sellerId];
+        emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, sender);
     }
 
     /**
@@ -632,6 +619,20 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
+     * @notice Gets seller's royalty recipients.
+     *
+     * @param _sellerId - seller id
+     * @return royaltyRecipients - list of royalty recipients
+     */
+    function getRoyaltyRecipients(uint256 _sellerId)
+        external
+        view
+        returns (RoyaltyRecipient[] memory royaltyRecipients)
+    {
+        return protocolLookups().royaltyRecipientsBySeller[_sellerId];
+    }
+
+    /**
      * @notice Pre update Seller checks
      *
      * Reverts if:
@@ -658,6 +659,64 @@ contract SellerHandlerFacet is SellerBase {
                     (check3 == 0 || check3 == _sellerId),
                 SELLER_ADDRESS_MUST_BE_UNIQUE
             );
+        }
+    }
+
+    /**
+     * @notice Gets seller and callers info and validates that the caller is authorized to call a function.
+     *
+     * Reverts if:
+     *   - Seller does not exist
+     *   - Seller uses address for authorization and caller is not the seller's admin address
+     *   - Seller uses NFT Auth for authorization and caller is not the owner of auth NFT
+     *
+     * @param _lookups - the lookups struct
+     * @param _sellerId - the id of the seller to check
+     */
+    function validateAdminStatus(ProtocolLib.ProtocolLookups storage _lookups, uint256 _sellerId)
+        internal
+        view
+        returns (Seller storage seller, address sender)
+    {
+        // Get message sender
+        sender = msgSender();
+
+        // Check Seller exists in sellers mapping
+        bool exists;
+        AuthToken storage authToken;
+        (exists, seller, authToken) = fetchSeller(_sellerId);
+
+        // Seller must already exist
+        require(exists, NO_SUCH_SELLER);
+
+        // Check that caller is authorized to call this function
+        isCallerAuthorizedCheck(_lookups, seller, authToken, sender);
+    }
+
+    /**
+     * @notice Validates that the address is authorized to call a function.
+     *
+     * Reverts if:
+     *   - Seller uses address for authorization and supplied address is not the seller's admin address
+     *   - Seller uses NFT Auth for authorization and supplied address is not the owner of auth NFT
+     *
+     * @param _lookups - the lookups struct
+     * @param _seller - the seller to check
+     * @param _authToken - the auth token to check
+     * @param _sender - the address to check
+     */
+    function isCallerAuthorizedCheck(
+        ProtocolLib.ProtocolLookups storage _lookups,
+        Seller storage _seller,
+        AuthToken storage _authToken,
+        address _sender
+    ) internal view {
+        if (_authToken.tokenType != AuthTokenType.None) {
+            address authTokenContract = _lookups.authTokenContracts[_authToken.tokenType];
+            address tokenIdOwner = IERC721(authTokenContract).ownerOf(_authToken.tokenId);
+            require(tokenIdOwner == _sender, NOT_ADMIN);
+        } else {
+            require(_seller.admin == _sender, NOT_ADMIN);
         }
     }
 }

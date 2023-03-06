@@ -141,6 +141,70 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function optInToSellerUpdate(uint256 _sellerId, BosonTypes.SellerUpdateFields[] calldata _fieldsToUpdate) external;
 
     /**
+     * @notice Adds royalty recipients to a seller.
+     *
+     * Emits a RoyalRecipientsUpdated event if successful.
+     *
+     *  Reverts if:
+     *  - The sellers region of protocol is paused
+     *  - Seller does not exist
+     *  - Caller is not the seller admin
+     *  - Caller does not own auth token
+     *  - Some recipient is not unique
+     *  - some royalty percentage is above the limit
+     *
+     * @param _sellerId - seller id
+     * @param _royaltyRecipients - list of royalty recipients to add
+     */
+    function addRoyaltyRecipients(uint256 _sellerId, BosonTypes.RoyaltyRecipient[] calldata _royaltyRecipients)
+        external;
+
+    /**
+     * @notice Updates seller's royalty recipients.
+     *
+     * Emits a RoyalRecipientsUpdated event if successful.
+     *
+     *  Reverts if:
+     *  - The sellers region of protocol is paused
+     *  - Seller does not exist
+     *  - Caller is not the seller admin
+     *  - Caller does not own auth token
+     *  - Length of ids to change does not match length of new values
+     *  - Id to update does not exist
+     *  - Seller tries to update the address of default recipient
+     *  - Some recipient is not unique
+     *  - Some royalty percentage is above the limit
+     *
+     * @param _sellerId - seller id
+     * @param _royaltyRecipientIds - list of royalty recipient ids to update
+     * @param _royaltyRecipients - list of new royalty recipients corresponding to ids
+     */
+    function updateRoyaltyRecipients(
+        uint256 _sellerId,
+        uint256[] calldata _royaltyRecipientIds,
+        BosonTypes.RoyaltyRecipient[] calldata _royaltyRecipients
+    ) external;
+
+    /**
+     * @notice Removes seller's royalty recipients.
+     *
+     * Emits a RoyalRecipientsUpdated event if successful.
+     *
+     *  Reverts if:
+     *  - The sellers region of protocol is paused
+     *  - Seller does not exist
+     *  - Caller is not the seller admin
+     *  - Caller does not own auth token
+     *  - List of ids to remove is not sorted in ascending order
+     *  - Id to remove does not exist
+     *  - Seller tries to remove the default recipient
+     *
+     * @param _sellerId - seller id
+     * @param _royaltyRecipientIds - list of royalty recipient ids to remove
+     */
+    function removeRoyaltyRecipients(uint256 _sellerId, uint256[] calldata _royaltyRecipientIds) external;
+
+    /**
      * @notice Updates a buyer, with the exception of the active flag.
      *         All other fields should be filled, even those staying the same.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
@@ -361,6 +425,17 @@ interface IBosonAccountHandler is IBosonAccountEvents {
         );
 
     /**
+     * @notice Gets seller's royalty recipients.
+     *
+     * @param _sellerId - seller id
+     * @return royaltyRecipients - list of royalty recipients
+     */
+    function getRoyaltyRecipients(uint256 _sellerId)
+        external
+        view
+        returns (BosonTypes.RoyaltyRecipient[] memory royaltyRecipients);
+
+    /**
      * @notice Gets the details about a buyer.
      *
      * @param _buyerId - the id of the buyer to check
@@ -436,20 +511,4 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @return nextAccountId - the account id
      */
     function getNextAccountId() external view returns (uint256 nextAccountId);
-
-    function addRoyaltyRecipients(uint256 _sellerId, BosonTypes.RoyaltyRecipient[] calldata _royaltyRecipients)
-        external;
-
-    function updateRoyaltyRecipients(
-        uint256 _sellerId,
-        uint256[] calldata _royaltyRecipientIds,
-        BosonTypes.RoyaltyRecipient[] calldata _royaltyRecipients
-    ) external;
-
-    function removeRoyaltyRecipients(uint256 _sellerId, uint256[] calldata _royaltyRecipientIds) external;
-
-    function getRoyaltyRecipients(uint256 _sellerId)
-        external
-        view
-        returns (BosonTypes.RoyaltyRecipient[] memory royaltyRecipients);
 }
