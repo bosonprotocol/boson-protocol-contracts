@@ -1,3 +1,4 @@
+const RoyaltyInfo = require("./RoyaltyInfo.js");
 const { bigNumberIsValid, addressIsValid, booleanIsValid, stringIsValid } = require("../util/validations.js");
 
 /**
@@ -18,6 +19,7 @@ class Offer {
             string metadataUri;
             string metadataHash;
             bool voided;
+            RoyaltyInfo royaltyInfo;
         }
     */
 
@@ -31,7 +33,8 @@ class Offer {
     exchangeToken,
     metadataUri,
     metadataHash,
-    voided
+    voided,
+    royaltyInfo
   ) {
     this.id = id;
     this.sellerId = sellerId;
@@ -43,6 +46,7 @@ class Offer {
     this.metadataUri = metadataUri;
     this.metadataHash = metadataHash;
     this.voided = voided;
+    this.royaltyInfo = royaltyInfo;
   }
 
   /**
@@ -62,6 +66,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      royaltyInfo,
     } = o;
 
     return new Offer(
@@ -74,7 +79,8 @@ class Offer {
       exchangeToken,
       metadataUri,
       metadataHash,
-      voided
+      voided,
+      royaltyInfo
     );
   }
 
@@ -93,7 +99,8 @@ class Offer {
       exchangeToken,
       metadataUri,
       metadataHash,
-      voided;
+      voided,
+      royaltyInfo;
 
     // destructure struct
     [
@@ -107,6 +114,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      royaltyInfo,
     ] = struct;
 
     return Offer.fromObject({
@@ -120,6 +128,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      royaltyInfo: RoyaltyInfo.fromStruct(royaltyInfo),
     });
   }
 
@@ -155,6 +164,7 @@ class Offer {
       this.metadataUri,
       this.metadataHash,
       this.voided,
+      this.royaltyInfo.toStruct(),
     ];
   }
 
@@ -260,6 +270,20 @@ class Offer {
   }
 
   /**
+   * Is this Offer instance's royaltyInfo field valid?
+   * Must be a valid RoyaltyInfo instance
+   * @returns {boolean}
+   */
+  royaltyInfoIsValid() {
+    let valid = false;
+    let { royaltyInfo } = this;
+    try {
+      valid = typeof royaltyInfo == "object" && royaltyInfo.isValid();
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
    * Is this Offer instance valid?
    * @returns {boolean}
    */
@@ -274,7 +298,8 @@ class Offer {
       this.exchangeTokenIsValid() &&
       this.metadataUriIsValid() &&
       this.metadataHashIsValid() &&
-      this.voidedIsValid()
+      this.voidedIsValid() &&
+      this.royaltyInfoIsValid()
     );
   }
 }

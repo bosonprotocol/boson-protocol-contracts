@@ -113,7 +113,7 @@ class RoyaltyRecipient {
    * @returns {boolean}
    */
   isValid() {
-    return this.walletIsValid() && this.idIsValid() && this.externalIdIsValid();
+    return this.walletIsValid() && this.minRoyaltyPercentageIsValid() && this.externalIdIsValid();
   }
 }
 

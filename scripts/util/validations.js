@@ -75,6 +75,21 @@ function addressIsValid(address) {
 }
 
 /**
+ * Must be a array of eip55 compliant Ethereum addresses
+ * @param addressArray
+ * @returns {boolean}
+ */
+function addressArrayIsValid(addressArray) {
+  let valid = false;
+  try {
+    valid =
+      Array.isArray(addressArray) &&
+      addressArray.reduce((previousValue, currentValue) => previousValue && addressIsValid(currentValue), true);
+  } catch (e) {}
+  return valid;
+}
+
+/**
  * Must be a boolean
  * @returns {boolean}
  */
@@ -124,3 +139,4 @@ exports.booleanIsValid = booleanIsValid;
 exports.bigNumberArrayIsValid = bigNumberArrayIsValid;
 exports.stringIsValid = stringIsValid;
 exports.bytes4ArrayIsValid = bytes4ArrayIsValid;
+exports.addressArrayIsValid = addressArrayIsValid;

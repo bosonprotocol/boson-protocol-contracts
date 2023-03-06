@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
+const RoyaltyInfo = require("../../scripts/domain/RoyaltyInfo");
 
 /**
  *  Test the Offer domain entity
@@ -19,7 +20,8 @@ describe("Offer", function () {
     exchangeToken,
     metadataUri,
     metadataHash,
-    voided;
+    voided,
+    royaltyInfo;
 
   beforeEach(async function () {
     // Get a list of accounts
@@ -35,6 +37,10 @@ describe("Offer", function () {
     metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
     metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
     voided = false;
+    royaltyInfo = new RoyaltyInfo(
+      accounts.slice(0, 3).map((a) => a.address),
+      ["16", "32", "64"]
+    );
   });
 
   context("📋 Constructor", async function () {
@@ -50,7 +56,8 @@ describe("Offer", function () {
         exchangeToken,
         metadataUri,
         metadataHash,
-        voided
+        voided,
+        royaltyInfo
       );
       expect(offer.idIsValid()).is.true;
       expect(offer.sellerIdIsValid()).is.true;
@@ -62,6 +69,7 @@ describe("Offer", function () {
       expect(offer.metadataUriIsValid()).is.true;
       expect(offer.metadataHashIsValid()).is.true;
       expect(offer.voidedIsValid()).is.true;
+      expect(offer.royaltyInfoIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
   });
@@ -79,7 +87,8 @@ describe("Offer", function () {
         exchangeToken,
         metadataUri,
         metadataHash,
-        voided
+        voided,
+        royaltyInfo
       );
       expect(offer.isValid()).is.true;
     });
@@ -323,6 +332,31 @@ describe("Offer", function () {
       expect(offer.voidedIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
+
+    it("Always present, royaltyInfo must be a RoyaltyInfo instance", async function () {
+      // Invalid field value
+      offer.royaltyInfo = 12;
+      expect(offer.royaltyInfoIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.royaltyInfo = "zedzdeadbaby";
+      expect(offer.royaltyInfoIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Valid field value
+      offer.royaltyInfo = new RoyaltyInfo(
+        accounts.slice(0, 3).map((a) => a.address),
+        ["16", "32", "64"]
+      );
+      expect(offer.royaltyInfoIsValid()).is.true;
+      expect(offer.isValid()).is.true;
+
+      // Valid field value
+      offer.royaltyInfo = new RoyaltyInfo([], []);
+      expect(offer.royaltyInfoIsValid()).is.true;
+      expect(offer.isValid()).is.true;
+    });
   });
 
   context("📋 Utility functions", async function () {
@@ -341,7 +375,8 @@ describe("Offer", function () {
         exchangeToken,
         metadataUri,
         metadataHash,
-        voided
+        voided,
+        royaltyInfo
       );
       expect(offer.isValid()).is.true;
 
@@ -357,6 +392,7 @@ describe("Offer", function () {
         metadataUri,
         metadataHash,
         voided,
+        royaltyInfo,
       };
     });
 
@@ -386,6 +422,7 @@ describe("Offer", function () {
           offer.metadataUri,
           offer.metadataHash,
           offer.voided,
+          offer.royaltyInfo.toStruct(),
         ];
 
         // Get struct
