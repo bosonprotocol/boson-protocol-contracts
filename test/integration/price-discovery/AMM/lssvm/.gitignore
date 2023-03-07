@@ -1,0 +1,10 @@
+# Node
+node_modules
+
+# Dapptools
+out/
+
+.env
+
+# Forge
+cache/
