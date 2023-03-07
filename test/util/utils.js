@@ -2,6 +2,8 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
 const { keccak256, RLP } = ethers.utils;
+const { expect } = require("chai");
+const Offer = require("../../scripts/domain/Offer");
 
 function getEvent(receipt, factory, eventName) {
   let found = false;
@@ -80,6 +82,36 @@ function compareArgs(eventArgs, args) {
     if (args[i] != eventArgs[i]) return false;
   }
 
+  return true;
+}
+
+/** Predicate to compare offer structs in emitted events
+ * Bind expected offer struct to this function and pass it to .withArgs() instead of the expected offer struct
+ * If returned and expected offer structs are equal, the test will pass, otherwise it raises an error
+ * 
+ * Example
+ * 
+ *  await expect(
+        offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+      )
+        .to.emit(offerHandler, "OfferCreated")
+        .withArgs(
+          nextOfferId,
+          offer.sellerId,
+          compareOfferStructs.bind(offerStruct),  <====== BIND OFFER STRUCT TO THIS FUNCTION
+          offerDatesStruct,
+          offerDurationsStruct,
+          disputeResolutionTermsStruct,
+          offerFeesStruct,
+          agentId,
+          assistant.address,
+        );
+ * 
+ * @param {*} returnedOffer 
+ * @returns 
+ */
+function compareOfferStructs(returnedOffer) {
+  expect(Offer.fromStruct(returnedOffer).toStruct()).to.deep.equal(this);
   return true;
 }
 
@@ -240,3 +272,4 @@ exports.applyPercentage = applyPercentage;
 exports.getMappingStoragePosition = getMappingStoragePosition;
 exports.paddingType = paddingType;
 exports.getFacetsWithArgs = getFacetsWithArgs;
+exports.compareOfferStructs = compareOfferStructs;

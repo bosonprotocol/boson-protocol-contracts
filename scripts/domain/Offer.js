@@ -80,7 +80,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
-      royaltyInfo
+      RoyaltyInfo.fromObject(royaltyInfo)
     );
   }
 

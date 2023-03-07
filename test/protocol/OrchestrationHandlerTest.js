@@ -24,7 +24,13 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { getEvent, applyPercentage, calculateContractAddress, getFacetsWithArgs } = require("../util/utils.js");
+const {
+  getEvent,
+  applyPercentage,
+  calculateContractAddress,
+  getFacetsWithArgs,
+  compareOfferStructs,
+} = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL, maxPriorityFeePerGas } = require("../util/constants");
 const {
@@ -672,7 +678,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             offer.sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -725,7 +731,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             offer.sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -951,7 +957,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             offer.sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -1000,7 +1006,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -1033,7 +1039,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -1074,7 +1080,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -1110,7 +1116,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -1143,7 +1149,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -1173,7 +1179,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -1216,7 +1222,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -1268,7 +1274,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               offer.sellerId,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -2192,7 +2198,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               offer.sellerId,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -2300,7 +2306,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2389,7 +2395,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2427,7 +2433,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2472,7 +2478,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2499,7 +2505,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2523,7 +2529,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2544,7 +2550,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2575,7 +2581,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2628,7 +2634,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -2691,7 +2697,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -2990,7 +2996,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3078,7 +3084,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3116,7 +3122,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3161,7 +3167,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3188,7 +3194,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3212,7 +3218,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3233,7 +3239,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3264,7 +3270,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3317,7 +3323,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -3377,7 +3383,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -3615,7 +3621,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3717,7 +3723,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3770,7 +3776,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3829,7 +3835,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3856,7 +3862,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3882,7 +3888,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3903,7 +3909,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3934,7 +3940,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3987,7 +3993,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -4058,7 +4064,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -4382,7 +4388,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4529,7 +4535,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4600,7 +4606,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4677,7 +4683,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4712,7 +4718,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4746,7 +4752,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4775,7 +4781,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4814,7 +4820,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4884,7 +4890,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -4965,7 +4971,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -5284,7 +5290,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -5542,7 +5548,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -5621,7 +5627,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -5686,7 +5692,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -6003,7 +6009,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -6289,7 +6295,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -6386,7 +6392,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -6466,7 +6472,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -6842,7 +6848,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -7159,7 +7165,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -7264,7 +7270,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -7367,7 +7373,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
