@@ -31,8 +31,7 @@ const {
   getFacetsWithArgs,
   prepareDataSignatureParameters,
 } = require("../../util/utils.js");
-const { waffle } = hre;
-const { deployMockContract } = waffle;
+const { deployMockContract } = require("@ethereum-waffle/mock-contract");
 const FormatTypes = ethers.utils.FormatTypes;
 
 describe("IBosonVoucher", function () {
@@ -2321,7 +2320,7 @@ describe("IBosonVoucher", function () {
         // royalty percentage too high, expectig revert
         await expect(
           accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
-        ).to.be.revertedWith(RevertReasons.ROYALTY_FEE_INVALID);
+        ).to.be.revertedWith(RevertReasons.INVALID_ROYALTY_PERCENTAGE);
       });
     });
   });

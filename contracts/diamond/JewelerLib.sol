@@ -288,7 +288,9 @@ library JewelerLib {
             if (!success) {
                 if (error.length > 0) {
                     // bubble up the error
-                    revert(string(error));
+                    assembly {
+                        revert(add(32, error), mload(error))
+                    }
                 } else {
                     revert("LibDiamondCut: _init function reverted");
                 }

@@ -785,7 +785,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         offerToken.id = "2";
         offerToken.exchangeToken = mockToken.address;
 
-        // Check if domais are valid
+        // Check if domains are valid
         expect(offerNative.isValid()).is.true;
         expect(offerToken.isValid()).is.true;
         expect(offerDates.isValid()).is.true;

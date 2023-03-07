@@ -253,8 +253,17 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         (bool success, bytes memory returnData) = address(this).call{ value: msg.value }(_functionSignature);
 
         // If error, return error message
-        string memory errorMessage = (returnData.length == 0) ? FUNCTION_CALL_NOT_SUCCESSFUL : (string(returnData));
-        require(success, errorMessage);
+        if (!success) {
+            if (returnData.length > 0) {
+                // bubble up the error
+                assembly {
+                    revert(add(32, returnData), mload(returnData))
+                }
+            } else {
+                // Reverts with default message
+                revert(FUNCTION_CALL_NOT_SUCCESSFUL);
+            }
+        }
 
         // Reset current transaction signer and transaction type.
         setCurrentSenderAddress(address(0));

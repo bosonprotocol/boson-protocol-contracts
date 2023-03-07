@@ -79,7 +79,9 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             if (!success) {
                 if (error.length > 0) {
                     // bubble up the error
-                    revert(string(error));
+                    assembly {
+                        revert(add(32, error), mload(error))
+                    }
                 } else {
                     // Reverts with default message
                     revert(PROTOCOL_INITIALIZATION_FAILED);
