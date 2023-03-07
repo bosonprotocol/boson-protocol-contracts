@@ -26,7 +26,7 @@ const SellerUpdateFields = require("../../../scripts/domain/SellerUpdateFields")
 
 const oldVersion = "v2.1.0";
 // TODO: change to v2.2.0
-const newVersion = "HEAD";
+const newVersion = "v2.2.0";
 // Script that was used to deploy v2.1.0 was created after v2.1.0 tag was created.
 // This is the commit hash when deployment happened, so it represents the state of the code at that time.
 const v2_1_0_scripts = "v2.1.0-scripts";
