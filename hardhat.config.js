@@ -190,14 +190,14 @@ module.exports = {
   paths: {
     sources: "./src",
     tests: "./test",
-    cache: "./cache_hardhat",
+    cache: "./cache",
     artifacts: "./artifacts",
   },
   mocha: {
     timeout: 100000,
   },
   preprocess: {
-    eachLine: (hre) => ({
+    eachLine: () => ({
       transform: (line) => {
         if (line.match(/^\s*import /i)) {
           for (const [from, to] of getRemappings()) {
@@ -211,5 +211,4 @@ module.exports = {
       },
     }),
   },
-
 };
