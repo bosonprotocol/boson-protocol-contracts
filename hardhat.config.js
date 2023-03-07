@@ -2,7 +2,12 @@ const dotEnvConfig = require("dotenv");
 dotEnvConfig.config();
 
 const environments = require("./environments");
-const { task } = require("hardhat/config");
+const { task, subtask } = require("hardhat/config");
+const path = require("node:path");
+const fs = require("fs");
+const { glob } = require("glob");
+const { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } = require("hardhat/builtin-tasks/task-names");
+require("hardhat-preprocessor");
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-web3");
@@ -98,6 +103,20 @@ task("split-unit-tests-into-chunks", "Splits unit tests into chunks")
     await splitUnitTestsIntoChunks(chunks);
   });
 
+function getRemappings() {
+  return fs
+    .readFileSync("remappings.txt", "utf8")
+    .split("\n")
+    .filter(Boolean) // remove empty lines
+    .map((line) => line.trim().split("="));
+}
+
+subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS, async (_, { config }) => {
+  const contracts = await glob(path.join(config.paths.root, "contracts/**/*.sol"));
+  const sudoswapContracts = await glob(path.join(config.paths.root, "test/integration/AMM/lssvm/src/*.sol"));
+  return [...contracts, ...sudoswapContracts].map(path.normalize);
+});
+
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {
@@ -149,6 +168,11 @@ module.exports = {
             },
           },
         },
+        outputSelection: {
+          "*": {
+            "*": ["evm.bytecode", "evm.deployedBytecode*"],
+          },
+        },
       },
       {
         version: "0.5.17", // Mock weth contract
@@ -164,12 +188,28 @@ module.exports = {
     showMethodSig: false,
   },
   paths: {
-    sources: "./contracts",
+    sources: "./src",
     tests: "./test",
-    cache: "./cache",
+    cache: "./cache_hardhat",
     artifacts: "./artifacts",
   },
   mocha: {
     timeout: 100000,
   },
+  preprocess: {
+    eachLine: (hre) => ({
+      transform: (line) => {
+        if (line.match(/^\s*import /i)) {
+          for (const [from, to] of getRemappings()) {
+            if (line.includes(from)) {
+              line = line.replace(from, to);
+              break;
+            }
+          }
+        }
+        return line;
+      },
+    }),
+  },
+
 };

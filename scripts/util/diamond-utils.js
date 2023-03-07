@@ -57,6 +57,8 @@ async function getInterfaceId(contractName, skipBaseCheck = false) {
 
       // Remove interface id of base contracts
       interfaceId = interfaceId.xor(baseContractInterfaceId);
+      console.log(baseName);
+      console.log(interaceId);
     }
   }
   return interfaceId.isZero() ? "0x00000000" : ethers.utils.hexZeroPad(interfaceId.toHexString(), 4);

@@ -1,0 +1,4 @@
+ds-test/=test/integration/AMM/lssvm/lib/ds-test/src/
+solmate/=test/integration/AMM/lssvm/lib/solmate/src/
+manifoldxyz/=test/integration/AMM/lssvm/lib/royalty-registry-solidity.git/contracts/
+@manifoldxyz/=test/integration/AMM/lssvm/lib/

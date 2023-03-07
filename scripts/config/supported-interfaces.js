@@ -45,7 +45,8 @@ async function getInterfaceIds(useCache = true) {
     skip[iFace] = true;
     return skip;
   }, {});
-  ["IBosonVoucher", "IERC1155", "IERC721", "IERC2981", "IAccessControl", "IBosonSequentialCommitHandler"].forEach(
+
+  ["IBosonVoucher", "IERC1155", "IERC721", "contracts/interfaces/IERC2981.sol:IERC2981", "IAccessControl", "IBosonSequentialCommitHandler"].forEach(
     (iFace) => {
       skipBaseCheck[iFace] = false;
     }
@@ -69,7 +70,12 @@ async function getInterfaceNames() {
 
   // Filter out names that are not in interfaces folder and are not in skip list
   let interfaces = contractNames.flatMap((contractName) => {
-    const [source, name] = contractName.split(":");
+    let name, source;
+    [source, name] = contractName.split(":");
+
+    if(name = 'IERC2981') {
+      name = '@openzeppelin/contracts/interfaces/IERC2981.sol:IERC2981'
+    }
 
     // If starts with prefix and is not in skip list, return name
     return /.*contracts\/interfaces\/(.*)/.test(source) &&

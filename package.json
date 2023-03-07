@@ -70,7 +70,8 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.8.1",
-    "@openzeppelin/contracts-upgradeable": "^4.7.1"
+    "@openzeppelin/contracts-upgradeable": "^4.7.1",
+    "hardhat-preprocessor": "^0.1.5"
   },
   "devDependencies": {
     "@bosonprotocol/solidoc": "3.0.3",
@@ -88,6 +89,7 @@
     "eslint-plugin-no-only-tests": "^3.1.0",
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.7.2",
+    "glob": "^9.2.1",
     "hardhat": "^2.8.3",
     "hardhat-contract-sizer": "^2.7.0",
     "hardhat-gas-reporter": "^1.0.9",
@@ -97,6 +99,7 @@
     "simple-statistics": "^7.8.2",
     "solhint": "^3.3.8",
     "solidity-coverage": "^0.8.2",
+    "solmate": "^6.7.0",
     "truffle": "^5.5.23",
     "web3": "^1.8.1"
   }
