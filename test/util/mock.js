@@ -1,5 +1,7 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+
+const decache = require("decache");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const Offer = require("../../scripts/domain/Offer");
@@ -12,8 +14,6 @@ const Twin = require("../../scripts/domain/Twin.js");
 const Exchange = require("../../scripts/domain/Exchange.js");
 const TwinReceipt = require("../../scripts/domain/TwinReceipt.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
-const DisputeResolver = require("../../scripts/domain/DisputeResolver");
-const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const AuthToken = require("../../scripts/domain/AuthToken");
@@ -24,6 +24,8 @@ const Voucher = require("../../scripts/domain/Voucher");
 const Dispute = require("../../scripts/domain/Dispute");
 const { applyPercentage } = require("../../test/util/utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
+let DisputeResolver = require("../../scripts/domain/DisputeResolver.js");
+let Seller = require("../../scripts/domain/Seller");
 
 function* incrementer() {
   let i = 1;
@@ -110,7 +112,12 @@ function mockTwin(tokenAddress, tokenType) {
   return new Twin(id, sellerId, amount, supplyAvailable, tokenId, tokenAddress, tokenType);
 }
 
-function mockDisputeResolver(assistantAddress, adminAddress, clerkAddress, treasuryAddress, active) {
+function mockDisputeResolver(assistantAddress, adminAddress, clerkAddress, treasuryAddress, active, refreshModule) {
+  if (refreshModule) {
+    decache("../../scripts/domain/DisputeResolver.js");
+    DisputeResolver = require("../../scripts/domain/DisputeResolver.js");
+  }
+
   const metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
   return new DisputeResolver(
     accountId.next().value,
@@ -124,7 +131,11 @@ function mockDisputeResolver(assistantAddress, adminAddress, clerkAddress, treas
   );
 }
 
-function mockSeller(assistantAddress, adminAddress, clerkAddress, treasuryAddress) {
+function mockSeller(assistantAddress, adminAddress, clerkAddress, treasuryAddress, refreshModule) {
+  if (refreshModule) {
+    decache("../../scripts/domain/Seller.js");
+    Seller = require("../../scripts/domain/Seller.js");
+  }
   return new Seller(accountId.next().value, assistantAddress, adminAddress, clerkAddress, treasuryAddress, true);
 }
 

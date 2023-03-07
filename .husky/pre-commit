@@ -1,6 +1,8 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-find . -name '*.js' -not -path '*/node_modules/*' | xargs git diff --cached --name-only | xargs npm run tidy:scripts
-git diff --cached --name-only | grep contracts | xargs npm run tidy:contracts
+find . -name '*.js' -not -path '*/node_modules/*' | xargs git diff --cached --name-only | xargs npx eslint --fix
+find . -name '*.js' -not -path '*/node_modules/*' | xargs git diff --cached --name-only | xargs npx prettier --write
+git diff --cached --name-only | grep contracts | xargs npx solhint --fix 
+git diff --cached --name-only | grep contracts | xargs npx prettier --write
 npm run natspec-interface-id:fix

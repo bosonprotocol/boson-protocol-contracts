@@ -32,6 +32,7 @@ interface IBosonOfferEvents {
         uint256 indexed sellerId,
         uint256 startExchangeId,
         uint256 endExchangeId,
+        address owner,
         address indexed executedBy
     );
 }

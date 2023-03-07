@@ -1,4 +1,4 @@
-const { bigNumberIsValid } = require("../util/validations.js");
+const { bigNumberIsValid, addressIsValid } = require("../util/validations.js");
 
 /**
  * Boson Client Entity: Range
@@ -12,14 +12,16 @@ class Range {
       uint256 length;
       uint256 minted;
       uint256 lastBurnedTokenId;
+      address owner;
       }
   */
 
-  constructor(start, length, minted, lastBurnedTokenId) {
+  constructor(start, length, minted, lastBurnedTokenId, owner) {
     this.start = start;
     this.length = length;
     this.minted = minted;
     this.lastBurnedTokenId = lastBurnedTokenId;
+    this.owner = owner;
   }
 
   /**
@@ -28,8 +30,8 @@ class Range {
    * @returns {Range}
    */
   static fromObject(o) {
-    const { start, length, minted, lastBurnedTokenId } = o;
-    return new Range(start, length, minted, lastBurnedTokenId);
+    const { start, length, minted, lastBurnedTokenId, owner } = o;
+    return new Range(start, length, minted, lastBurnedTokenId, owner);
   }
 
   /**
@@ -38,16 +40,15 @@ class Range {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let start, length, minted, lastBurnedTokenId;
-
     // destructure struct
-    [start, length, minted, lastBurnedTokenId] = struct;
+    let [start, length, minted, lastBurnedTokenId, owner] = struct;
 
     return Range.fromObject({
       start: start.toString(),
       length: length.toString(),
       minted: minted.toString(),
       lastBurnedTokenId: lastBurnedTokenId.toString(),
+      owner,
     });
   }
 
@@ -72,7 +73,7 @@ class Range {
    * @returns {string}
    */
   toStruct() {
-    return [this.start, this.length, this.minted, this.lastBurnedTokenId];
+    return [this.start, this.length, this.minted, this.lastBurnedTokenId, this.owner];
   }
 
   /**
@@ -117,6 +118,15 @@ class Range {
    */
   lastBurnedTokenIdIsValid() {
     return bigNumberIsValid(this.lastBurnedTokenId, { optional: true });
+  }
+
+  /**
+   * Is this Range instance's owner field valid?
+   * Must be a eip55 compliant Ethereum address
+   * @returns {boolean}
+   */
+  ownerIsValid() {
+    return addressIsValid(this.owner);
   }
 
   /**
