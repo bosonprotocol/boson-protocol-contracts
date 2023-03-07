@@ -46,7 +46,7 @@ async function getInterfaceIds(useCache = true) {
     return skip;
   }, {});
 
-  ["IBosonVoucher", "IERC1155", "IERC721", "contracts/interfaces/IERC2981.sol:IERC2981", "IAccessControl", "IBosonSequentialCommitHandler"].forEach(
+  ["IBosonVoucher", "IERC1155", "IERC721", "IERC2981", "IAccessControl", "IBosonSequentialCommitHandler"].forEach(
     (iFace) => {
       skipBaseCheck[iFace] = false;
     }
@@ -60,11 +60,10 @@ async function getInterfaceIds(useCache = true) {
   return interfaceIds;
 }
 
+const skip = ["events", "IERC20.sol", "IERC20Metadata"]; // ERC20 interfaces are skipped since no contract implements them directly.
+
 // Function to get all interface names
 async function getInterfaceNames() {
-  // Folder where interfaces are stored
-  const skip = ["events", "IERC20.sol", "IERC20Metadata"]; // ERC20 interfaces are skipped since no contract implements them directly.
-
   // Get build info
   const contractNames = await hre.artifacts.getAllFullyQualifiedNames();
 
@@ -72,10 +71,6 @@ async function getInterfaceNames() {
   let interfaces = contractNames.flatMap((contractName) => {
     let name, source;
     [source, name] = contractName.split(":");
-
-    if(name = 'IERC2981') {
-      name = '@openzeppelin/contracts/interfaces/IERC2981.sol:IERC2981'
-    }
 
     // If starts with prefix and is not in skip list, return name
     return /.*contracts\/interfaces\/(.*)/.test(source) &&

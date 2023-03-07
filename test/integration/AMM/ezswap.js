@@ -30,28 +30,27 @@ describe("[@skip-on-coverage] EZSwap integration", function () {
     let protocolTreasury;
     [deployer, protocol, assistant, protocolTreasury, buyer, DR, ezswapDeployer] = await ethers.getSigners();
 
-    let artifact = require("./lssvm/artifacts/src/LSSVMPairEnumerableETH.sol/LSSVMPairEnumerableETH.json");
-    const LSSVMPairEnumerableETH = await ethers.getContractFactoryFromArtifact(artifact, ezswapDeployer);
+    const LSSVMPairEnumerableETH = await ethers.getContractFactory("LSSVMPairEnumerableETH", ezswapDeployer);
     const lssvmPairEnumerableETH = await LSSVMPairEnumerableETH.deploy();
     await lssvmPairEnumerableETH.deployed();
 
-    artifact = require("./lssvm/artifacts/src/LSSVMPairEnumerableERC20.sol/LSSVMPairEnumerableERC20.json");
-
-    const LSSVMPairEnumerableERC20 = await ethers.getContractFactoryFromArtifact(artifact, ezswapDeployer);
-
+    const LSSVMPairEnumerableERC20 = await ethers.getContractFactory("LSSVMPairEnumerableERC20", ezswapDeployer);
     const lssvmPairEnumerableERC20 = await LSSVMPairEnumerableERC20.deploy();
     await lssvmPairEnumerableERC20.deployed();
 
-    artifact = require("./lssvm/artifacts/src/LSSVMPairMissingEnumerableETH.sol/LSSVMPairMissingEnumerableETH.json");
-    const LSSVMPairMissingEnumerableETH = await ethers.getContractFactoryFromArtifact(artifact, ezswapDeployer);
+    const LSSVMPairMissingEnumerableETH = await ethers.getContractFactory(
+      "LSSVMPairMissingEnumerableETH",
+      ezswapDeployer
+    );
     const lssvmPairMissingEnumerableETH = await LSSVMPairMissingEnumerableETH.deploy();
 
-    artifact = require("./lssvm/artifacts/src/LSSVMPairMissingEnumerableERC20.sol/LSSVMPairMissingEnumerableERC20.json");
-    const LSSVMPairMissingEnumerableERC20 = await ethers.getContractFactoryFromArtifact(artifact, ezswapDeployer);
+    const LSSVMPairMissingEnumerableERC20 = await ethers.getContractFactory(
+      "LSSVMPairMissingEnumerableERC20",
+      ezswapDeployer
+    );
     const lssvmPairMissingEnumerableERC20 = await LSSVMPairMissingEnumerableERC20.deploy();
 
-    artifact = require("./lssvm/artifacts/src/LSSVMPairFactory.sol/LSSVMPairFactory.json");
-    const LSSVMPairFactory = await ethers.getContractFactoryFromArtifact(artifact, ezswapDeployer);
+    const LSSVMPairFactory = await ethers.getContractFactory("LSSVMPairFactory", ezswapDeployer);
 
     const ezswapFeeMultiplier = "5000000000000000";
 
@@ -66,8 +65,7 @@ describe("[@skip-on-coverage] EZSwap integration", function () {
     await lssvmPairFactory.deployed();
 
     // Deploy bonding curves
-    artifact = require("./lssvm/artifacts/src/bonding-curves/LinearCurve.sol/LinearCurve.json");
-    const LinearCurve = await ethers.getContractFactoryFromArtifact(artifact, ezswapDeployer);
+    const LinearCurve = await ethers.getContractFactory("LinearCurve", ezswapDeployer);
     linearCurve = await LinearCurve.deploy();
     await linearCurve.deployed();
 

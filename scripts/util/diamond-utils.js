@@ -31,9 +31,21 @@ function getSelectors(contract, returnSignatureToNameMapping = false) {
   return selectors;
 }
 
+const interfacesOZ = ["IERC1155", "IERC721", "IERC2981"];
+
 // get interface id
 async function getInterfaceId(contractName, skipBaseCheck = false) {
-  const contract = await ethers.getContractAt(contractName, ethers.constants.AddressZero);
+  let contract, sourceName;
+  if (interfacesOZ.includes(contractName)) {
+  }
+
+  try {
+    contract = await ethers.getContractAt(contractName, ethers.constants.AddressZero);
+  } catch (err) {
+    sourceName = `contracts/interfaces/${contractName}.sol`;
+    contract = await ethers.getContractAt(`${sourceName}:${contractName}`, ethers.constants.AddressZero);
+  }
+
   const signatures = Object.keys(contract.interface.functions);
   const selectors = signatures.reduce((acc, val) => {
     acc.push(ethers.BigNumber.from(contract.interface.getSighash(val)));
@@ -45,7 +57,9 @@ async function getInterfaceId(contractName, skipBaseCheck = false) {
   // If contract inherits other contracts, their interfaces must be xor-ed
   if (!skipBaseCheck) {
     // Get base contracts
-    const { sourceName } = await hre.artifacts.readArtifact(contractName);
+    if (!sourceName) {
+      ({ sourceName } = await hre.artifacts.readArtifact(contractName));
+    }
     const buildInfo = await hre.artifacts.getBuildInfo(`${sourceName}:${contractName}`);
 
     const nodes = buildInfo.output?.sources?.[sourceName]?.ast?.nodes;
@@ -57,11 +71,17 @@ async function getInterfaceId(contractName, skipBaseCheck = false) {
 
       // Remove interface id of base contracts
       interfaceId = interfaceId.xor(baseContractInterfaceId);
-      console.log(baseName);
-      console.log(interaceId);
     }
   }
-  return interfaceId.isZero() ? "0x00000000" : ethers.utils.hexZeroPad(interfaceId.toHexString(), 4);
+
+  let response = "";
+
+  try {
+    response = interfaceId.isZero() ? "0x00000000" : ethers.utils.hexZeroPad(interfaceId.toHexString(), 4);
+  } catch (e) {
+    console.log(e);
+  }
+  return response;
 }
 
 // get function selector from function signature

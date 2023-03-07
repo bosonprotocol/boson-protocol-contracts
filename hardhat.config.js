@@ -114,7 +114,10 @@ function getRemappings() {
 subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS, async (_, { config }) => {
   const contracts = await glob(path.join(config.paths.root, "contracts/**/*.sol"));
   const sudoswapContracts = await glob(path.join(config.paths.root, "test/integration/AMM/lssvm/src/*.sol"));
-  return [...contracts, ...sudoswapContracts].map(path.normalize);
+  const bondingCurveContracts = await glob(
+    path.join(config.paths.root, "test/integration/AMM/lssvm/src/bonding-curves/*.sol")
+  );
+  return [...contracts, ...sudoswapContracts, ...bondingCurveContracts].map(path.normalize);
 });
 
 module.exports = {
