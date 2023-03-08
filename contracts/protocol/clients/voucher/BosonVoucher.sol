@@ -7,6 +7,7 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { IERC2981Upgradeable } from "@openzeppelin/contracts-upgradeable/interfaces/IERC2981Upgradeable.sol";
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { IERC721ReceiverUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import { ERC2771ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
@@ -25,7 +26,13 @@ import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchan
  * N.B. Although this contract extends OwnableUpgradeable and ERC721Upgradeable,
  *      that is only for convenience, to avoid conflicts with mixed imports.
  */
-contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
+contract BosonVoucherBase is
+    IBosonVoucher,
+    BeaconClientBase,
+    OwnableUpgradeable,
+    ERC721Upgradeable,
+    IERC721ReceiverUpgradeable
+{
     using Address for address;
 
     // Struct that is used to manipulate private variables from ERC721UpgradeableStorage
@@ -603,7 +610,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * - _operator is this contract
      *
      * @param _operator - address of the operator to set approval for
-     * @param _approved - true if the operator is approved, false to revoke approval
+     * @param _approved - true to approve the operator in question, false to revoke approval
      */
     function setApprovalForAllToContract(address _operator, bool _approved) external onlyOwner {
         require(_operator != address(0), INVALID_ADDRESS);
@@ -613,6 +620,20 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
     // @dev Contract must be allowed to receive native token as it can be used as voucher's owner
     receive() external payable {}
+
+    /**
+     * @dev See {IERC721Receiver-onERC721Received}.
+     *
+     * Always returns `IERC721Receiver.onERC721Received.selector`.
+     */
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes memory
+    ) public virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
 
     /**
      * @notice Sets new contract URI.

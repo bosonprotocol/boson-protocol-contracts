@@ -256,7 +256,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * - _operator is this contract
      *
      * @param _operator - address of the operator to set approval for
-     * @param _approved - true if the operator is approved, false to revoke approval
+     * @param _approved - true to approve the operator in question, false to revoke approval
      */
     function setApprovalForAllToContract(address _operator, bool _approved) external;
 }
