@@ -1,6 +1,3 @@
-[submodule "seaport"]
-	path = submodules/seaport
-	url = git@github.com:ProjectOpenSea/seaport.git
 [submodule "submodules/seaport"]
 	path = submodules/seaport
 	url = git@github.com:ProjectOpenSea/seaport.git
