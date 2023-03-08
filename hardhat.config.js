@@ -98,6 +98,8 @@ task("split-unit-tests-into-chunks", "Splits unit tests into chunks")
     await splitUnitTestsIntoChunks(chunks);
   });
 
+
+
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {
@@ -135,16 +137,23 @@ module.exports = {
     },
   },
   solidity: {
-    version: "0.8.9",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
-        details: {
-          yul: true,
+    compilers: [
+      {
+        version: "0.8.9",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+            details: {
+              yul: true,
+            },
+          },
         },
       },
-    },
+      {
+        version: "0.8.17"
+      }
+    ]
   },
   gasReporter: {
     currency: "USD",

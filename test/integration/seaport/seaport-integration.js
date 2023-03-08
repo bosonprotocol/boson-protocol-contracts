@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { constants, BigNumber } = ethers;
+const { constants, BigNumber, utils } = ethers;
 const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond");
 const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets");
@@ -13,24 +13,22 @@ const Role = require("../../../scripts/domain/Role");
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
 let { seaportFixtures } = require("./fixtures.js");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
-const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 
 // Requirements to run this test:
 // - Seaport submodule contains a `artifacts` folder inside it. Run `git submodule update --init --recursive` to get it.
 // - Set hardhat config to hardhat-fork.config.js. e.g.:
-//   npx hardhat test test/integration/seaport/seaport-integration.js --config ./hardhat-fork.config.js
-describe("[@skip-on-coverage] Seaport integration", function () {
+//   npx hardhat test test/integration/seaport/seaport-integration.js --config ./test/integration/seaport/hardhat-fork.config.js
+describe("[@skip-on-coverage] Seaport integration", function() {
   let seaport;
   let bosonVoucher, bosonToken;
   let deployer, protocol, assistant, buyer, DR;
   let calldata, order, orderHash, value;
 
-  before(async function () {
+  before(async function() {
     let protocolTreasury;
     [deployer, protocol, assistant, protocolTreasury, buyer, DR] = await ethers.getSigners();
 
-    const { abi } = require("../../../seaport/artifacts/contracts/Seaport.sol/Seaport.json");
-    seaport = await ethers.getContractAt(abi, SEAPORT_ADDRESS);
+    seaport = await ethers.getContractAt("Seaport", SEAPORT_ADDRESS);
 
     seaportFixtures = await seaportFixtures(seaport);
 
@@ -161,7 +159,7 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     calldata = seaport.interface.encodeFunctionData("validate", [orders]);
   });
 
-  it("Voucher contract can be used to call seaport validate", async function () {
+  it("Voucher contract can be used to call seaport validate", async function() {
     const tx = await bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata);
     const receipt = await tx.wait();
 
@@ -170,7 +168,7 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     assert.deepEqual(orderParameters, objectToArray(order.parameters));
   });
 
-  it("Seaport is allowed to transfer vouchers", async function () {
+  it("Seaport is allowed to transfer vouchers", async function() {
     await bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata);
     await bosonVoucher.connect(assistant).setApprovalForAllToContract(seaport.address, true);
 
@@ -191,15 +189,14 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     assert.equal(orderHash, event[0]);
   });
 
-  context("💔 Revert Reasons", function () {
-    it("Boson voucher callExternalContract reverts if the seaport call reverts", async function () {
+  context("💔 Revert Reasons", function() {
+    it("Boson voucher callExternalContract reverts if the seaport call reverts", async function() {
       order.parameters.totalOriginalConsiderationItems = BigNumber.from(2);
       const orders = [objectToArray(order)];
       calldata = seaport.interface.encodeFunctionData("validate", [orders]);
 
       await expect(bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata)).to.be.revertedWith(
-        RevertReasons.EXTERNAL_CALL_FAILED
-      );
+        "0x466aa616"); //MissingOriginalConsiderationItems
     });
   });
 });
