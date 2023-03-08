@@ -38,6 +38,9 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - Royalty recipient is not on seller's allow list
+     * - Royalty percentage is less that the value decided by the admin
+     * - Total royalty percentage is more than max royalty percentage
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -79,6 +82,9 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - When agent ids are non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit

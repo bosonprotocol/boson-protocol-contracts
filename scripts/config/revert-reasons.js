@@ -98,6 +98,7 @@ exports.RevertReasons = {
   INVALID_ROYALTY_PERCENTAGE: "Invalid royalty percentage",
   ROYALTY_RECIPIENT_IDS_NOT_SORTED: "Royalty recipient ids must be sorted",
   CANNOT_REMOVE_DEFAULT_RECIPIENT: "Cannot remove default royalty recipient",
+  INVALID_ROYALTY_RECIPIENT: "Invalid royalty recipient",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",

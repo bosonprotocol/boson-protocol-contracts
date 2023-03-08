@@ -19,6 +19,8 @@ const TokenType = require("../../scripts/domain/TokenType");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Range = require("../../scripts/domain/Range");
+const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
+const RoyaltyInfo = require("../../scripts/domain/RoyaltyInfo");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -1229,6 +1231,39 @@ describe("IBosonOrchestrationHandler", function () {
             offerFeesStruct,
             agentId,
             rando.address
+          );
+      });
+
+      it("Should allow creation of an offer with royalty recipients", async function () {
+        // Add royalty info to the offer
+        offer.royaltyInfo = new RoyaltyInfo([treasury.address], ["10"]);
+
+        // Create a seller and an offer, testing for the event
+        await expect(
+          orchestrationHandler
+            .connect(assistant)
+            .createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId
+            )
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            seller.id,
+            compareOfferStructs.bind(offer.toStruct()),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            offerFeesStruct,
+            agentId,
+            assistant.address
           );
       });
 
@@ -2604,6 +2639,37 @@ describe("IBosonOrchestrationHandler", function () {
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
 
+      it("Should allow creation of an offer with royalty recipients", async function () {
+        // Add royalty recipients
+        const royaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(other1.address, "100", "other1"),
+          new RoyaltyRecipient(other2.address, "200", "other2"),
+        ]);
+        await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+        // Add royalty info to the offer
+        offer.royaltyInfo = new RoyaltyInfo([other1.address, treasury.address], ["150", "10"]);
+
+        // Create an offer with condition, testing for the events
+        await expect(
+          orchestrationHandler
+            .connect(assistant)
+            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            seller.id,
+            compareOfferStructs.bind(offer.toStruct()),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            offerFeesStruct,
+            agentId,
+            assistant.address
+          );
+      });
+
       context("When offers have non zero agent ids", async function () {
         beforeEach(async function () {
           // Required constructor params
@@ -2909,6 +2975,56 @@ describe("IBosonOrchestrationHandler", function () {
               .connect(assistant)
               .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
+        });
+
+        context("Offers with royalty info", async function () {
+          // Other offer creation related revert reasons are tested in the previous context
+          // This is an exception, since these tests make more sense if seller has multiple royalty recipients
+
+          beforeEach(async function () {
+            // Add royalty recipients
+            const royaltyRecipientList = new RoyaltyRecipientList([
+              new RoyaltyRecipient(other1.address, "100", "other"),
+              new RoyaltyRecipient(other2.address, "200", "other2"),
+            ]);
+            await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+          });
+
+          it("Royalty recipient is not on seller's allow list", async function () {
+            // Add royalty info to the offer
+            offer.royaltyInfo = new RoyaltyInfo([other1.address, rando.address], ["150", "10"]);
+
+            // Attempt to create an offer with condition, expecting revert
+            await expect(
+              orchestrationHandler
+                .connect(assistant)
+                .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+            ).to.revertedWith(RevertReasons.INVALID_ROYALTY_RECIPIENT);
+          });
+
+          it("Royalty percentage is less that the value decided by the admin", async function () {
+            // Add royalty info to the offer
+            offer.royaltyInfo = new RoyaltyInfo([other1.address, other2.address], ["90", "250"]);
+
+            // Attempt to create an offer with condition, expecting revert
+            await expect(
+              orchestrationHandler
+                .connect(assistant)
+                .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+            ).to.revertedWith(RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+          });
+
+          it("Total royalty percentage is more than max royalty percentage", async function () {
+            // Add royalty info to the offer
+            offer.royaltyInfo = new RoyaltyInfo([other1.address, other2.address], ["5000", "4000"]);
+
+            // Attempt to create an offer with condition, expecting revert
+            await expect(
+              orchestrationHandler
+                .connect(assistant)
+                .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+            ).to.revertedWith(RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+          });
         });
       });
     });
@@ -3291,6 +3407,37 @@ describe("IBosonOrchestrationHandler", function () {
             .connect(assistant)
             .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
         ).to.emit(orchestrationHandler, "OfferCreated");
+      });
+
+      it("Should allow creation of an offer with royalty recipients", async function () {
+        // Add royalty recipients
+        const royaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(other1.address, "100", "other1"),
+          new RoyaltyRecipient(other2.address, "200", "other2"),
+        ]);
+        await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+        // Add royalty info to the offer
+        offer.royaltyInfo = new RoyaltyInfo([other1.address, treasury.address], ["150", "10"]);
+
+        // Create an offer, add it to the group, testing for the events
+        await expect(
+          orchestrationHandler
+            .connect(assistant)
+            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            seller.id,
+            compareOfferStructs.bind(offer.toStruct()),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            offerFeesStruct,
+            agentId,
+            assistant.address
+          );
       });
 
       context("When offers have non zero agent ids", async function () {
@@ -3961,6 +4108,37 @@ describe("IBosonOrchestrationHandler", function () {
             .connect(assistant)
             .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
         ).to.emit(orchestrationHandler, "OfferCreated");
+      });
+
+      it("Should allow creation of an offer with royalty recipients", async function () {
+        // Add royalty recipients
+        const royaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(other1.address, "100", "other1"),
+          new RoyaltyRecipient(other2.address, "200", "other2"),
+        ]);
+        await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+        // Add royalty info to the offer
+        offer.royaltyInfo = new RoyaltyInfo([other1.address, treasury.address], ["150", "10"]);
+
+        // Create an offer, a twin and a bundle, testing for the events
+        await expect(
+          orchestrationHandler
+            .connect(assistant)
+            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            seller.id,
+            compareOfferStructs.bind(offer.toStruct()),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            offerFeesStruct,
+            agentId,
+            assistant.address
+          );
       });
 
       context("When offers have non zero agent ids", async function () {
@@ -4849,6 +5027,45 @@ describe("IBosonOrchestrationHandler", function () {
               agentId
             )
         ).to.emit(orchestrationHandler, "OfferCreated");
+      });
+
+      it("Should allow creation of an offer with royalty recipients", async function () {
+        // Add royalty recipients
+        const royaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(other1.address, "100", "other1"),
+          new RoyaltyRecipient(other2.address, "200", "other2"),
+        ]);
+        await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+        // Add royalty info to the offer
+        offer.royaltyInfo = new RoyaltyInfo([other1.address, treasury.address], ["150", "10"]);
+
+        // Create an offer with condition, twin and bundle testing for the events
+        await expect(
+          orchestrationHandler
+            .connect(assistant)
+            .createOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              condition,
+              twin,
+              agentId
+            )
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            seller.id,
+            compareOfferStructs.bind(offer.toStruct()),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            offerFeesStruct,
+            agentId,
+            assistant.address
+          );
       });
 
       context("When offers have non zero agent ids", async function () {

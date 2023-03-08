@@ -38,6 +38,9 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - Royalty recipient is not on seller's allow list
+     * - Royalty percentage is less that the value decided by the admin
+     * - Total royalty percentage is more than max royalty percentage
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -98,6 +101,9 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - Royalty recipient is not on seller's allow list
+     * - Royalty percentage is less that the value decided by the admin
+     * - Total royalty percentage is more than max royalty percentage
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -266,7 +272,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                 totalRoyalties = _offer.royaltyInfo.bps[i];
             }
 
-            require(totalRoyalties <= limits.maxRoyaltyPecentage);
+            require(totalRoyalties <= limits.maxRoyaltyPecentage, INVALID_ROYALTY_PERCENTAGE);
         }
 
         // Operate in a block to avoid "stack too deep" error

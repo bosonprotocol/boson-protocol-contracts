@@ -52,13 +52,14 @@ interface IBosonOrchestrationHandler is
     /**
      * @notice Creates a seller (with optional auth token) and an offer in a single transaction.
      *
-     * Limitation of the method:
-     * If chosen dispute resolver has seller allow list, this method will not succeed, since seller that will be created
+     * Limitations:
+     * 1. If chosen dispute resolver has seller allow list, this method will not succeed, since seller that will be created
      * cannot be on that list. To avoid the failure you can
      * - Choose a dispute resolver without seller allow list
      * - Make an absolute zero offer without and dispute resolver specified
      * - First create a seller {AccountHandler.createSeller}, make sure that dispute resolver adds seller to its allow list
      *   and then continue with the offer creation
+     * 2. Only the default royalty recipient can be used. Other roalty recipients can be added to seller later and next offers can use them.
      *
      * Emits a SellerCreated and an OfferCreated event if successful.
      *
@@ -90,6 +91,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -159,6 +163,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -216,6 +223,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -267,6 +277,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -321,6 +334,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - When adding to the group if:
      *   - Group does not exists
      *   - Caller is not the assistant of the group
@@ -375,6 +391,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - When adding to the group if:
      *   - Group does not exists
      *   - Caller is not the assistant of the group
@@ -433,6 +452,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -492,6 +514,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -556,6 +581,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
@@ -620,6 +648,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
@@ -702,6 +733,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -777,6 +811,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -856,6 +893,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -939,6 +979,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -1026,6 +1069,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
@@ -1114,6 +1160,9 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less that the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token

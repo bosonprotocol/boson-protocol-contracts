@@ -11,6 +11,8 @@ const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTe
 const OfferFees = require("../../scripts/domain/OfferFees");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const Range = require("../../scripts/domain/Range");
+const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
+const RoyaltyInfo = require("../../scripts/domain/RoyaltyInfo");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -51,6 +53,7 @@ describe("IBosonOfferHandler", function () {
     clerkDR,
     treasuryDR,
     other,
+    other2,
     protocolAdmin,
     protocolTreasury;
   let erc165,
@@ -110,7 +113,7 @@ describe("IBosonOfferHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, pauser, admin, treasury, rando, adminDR, treasuryDR, other, protocolAdmin, protocolTreasury] =
+    [deployer, pauser, admin, treasury, rando, adminDR, treasuryDR, other, other2, protocolAdmin, protocolTreasury] =
       await ethers.getSigners();
 
     // make all account the same
@@ -610,6 +613,35 @@ describe("IBosonOfferHandler", function () {
         ).to.emit(offerHandler, "OfferCreated");
       });
 
+      it("Should allow creation of an offer with royalty recipients", async function () {
+        // Add royalty recipients
+        const royaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(other.address, "100", "other"),
+          new RoyaltyRecipient(other2.address, "200", "other2"),
+        ]);
+        await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+        // Add royalty info to the offer
+        offer.royaltyInfo = new RoyaltyInfo([other.address, treasury.address], ["150", "10"]);
+
+        // Create an offer testing for the event
+        await expect(
+          offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+        )
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            offer.id,
+            sellerId,
+            compareOfferStructs.bind(offer.toStruct()),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            offerFeesStruct,
+            agentId,
+            assistant.address
+          );
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
@@ -852,6 +884,53 @@ describe("IBosonOfferHandler", function () {
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
           ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
+        });
+
+        context("With royalty info", async function () {
+          beforeEach(async function () {
+            // Add royalty recipients
+            const royaltyRecipientList = new RoyaltyRecipientList([
+              new RoyaltyRecipient(other.address, "100", "other"),
+              new RoyaltyRecipient(other2.address, "200", "other2"),
+            ]);
+            await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+          });
+
+          it("Royalty recipient is not on seller's allow list", async function () {
+            // Add royalty info to the offer
+            offer.royaltyInfo = new RoyaltyInfo([other.address, rando.address], ["150", "10"]);
+
+            // Create an offer testing for the event
+            await expect(
+              offerHandler
+                .connect(assistant)
+                .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+            ).to.revertedWith(RevertReasons.INVALID_ROYALTY_RECIPIENT);
+          });
+
+          it("Royalty percentage is less that the value decided by the admin", async function () {
+            // Add royalty info to the offer
+            offer.royaltyInfo = new RoyaltyInfo([other.address, other2.address], ["90", "250"]);
+
+            // Create an offer testing for the event
+            await expect(
+              offerHandler
+                .connect(assistant)
+                .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+            ).to.revertedWith(RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+          });
+
+          it("Total royalty percentage is more than max royalty percentage", async function () {
+            // Add royalty info to the offer
+            offer.royaltyInfo = new RoyaltyInfo([other.address, other2.address], ["5000", "4000"]);
+
+            // Create an offer testing for the event
+            await expect(
+              offerHandler
+                .connect(assistant)
+                .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+            ).to.revertedWith(RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+          });
         });
       });
 
@@ -1874,6 +1953,15 @@ describe("IBosonOfferHandler", function () {
       disputeResolutionTermsList[4] = new DisputeResolutionTerms("0", "0", "0", "0");
       disputeResolutionTermsStructs[4] = disputeResolutionTermsList[4].toStruct();
       offerFeesStructs[4] = offerFeesList[4].toStruct();
+
+      // offer with royalty recipients
+      const royaltyRecipientList = new RoyaltyRecipientList([
+        new RoyaltyRecipient(other.address, "100", "other"),
+        new RoyaltyRecipient(other2.address, "200", "other2"),
+      ]);
+      await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+      offers[3].royaltyInfo = new RoyaltyInfo([other.address, treasury.address], ["150", "10"]);
+      offerStructs[3] = offers[3].toStruct();
     });
 
     afterEach(async () => {
@@ -2573,6 +2661,42 @@ describe("IBosonOfferHandler", function () {
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
           ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+        });
+
+        it("Royalty recipient is not on seller's allow list", async function () {
+          // Add royalty info to the offer
+          offers[3].royaltyInfo = new RoyaltyInfo([other.address, rando.address], ["150", "10"]);
+
+          // Create an offer testing for the event
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+          ).to.revertedWith(RevertReasons.INVALID_ROYALTY_RECIPIENT);
+        });
+
+        it("Royalty percentage is less that the value decided by the admin", async function () {
+          // Add royalty info to the offer
+          offers[3].royaltyInfo = new RoyaltyInfo([other.address, other2.address], ["90", "250"]);
+
+          // Create an offer testing for the event
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+          ).to.revertedWith(RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+        });
+
+        it("Total royalty percentage is more than max royalty percentage", async function () {
+          // Add royalty info to the offer
+          offers[3].royaltyInfo = new RoyaltyInfo([other.address, other2.address], ["5000", "4000"]);
+
+          // Create an offer testing for the event
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+          ).to.revertedWith(RevertReasons.INVALID_ROYALTY_PERCENTAGE);
         });
       });
 
