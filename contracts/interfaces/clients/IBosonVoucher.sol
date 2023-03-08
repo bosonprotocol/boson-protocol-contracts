@@ -86,10 +86,10 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @return receiver - address of who should be sent the royalty payment
      * @return royaltyAmount - the royalty payment amount for the given sale price
      */
-    function royaltyInfo(uint256 _tokenId, uint256 _salePrice)
-        external
-        view
-        returns (address receiver, uint256 royaltyAmount);
+    function royaltyInfo(
+        uint256 _tokenId,
+        uint256 _salePrice
+    ) external view returns (address receiver, uint256 royaltyAmount);
 
     /**
      * @notice Sets the royalty percentage.
@@ -131,12 +131,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @param _length - the length of the range
      * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      */
-    function reserveRange(
-        uint256 _offerId,
-        uint256 _start,
-        uint256 _length,
-        address _to
-    ) external;
+    function reserveRange(uint256 _offerId, uint256 _start, uint256 _length, address _to) external;
 
     /**
      * @notice Pre-mints all or part of an offer's reserved vouchers.

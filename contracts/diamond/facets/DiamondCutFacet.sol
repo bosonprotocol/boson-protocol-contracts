@@ -34,11 +34,7 @@ contract DiamondCutFacet is IDiamondCut {
      * @param _init - the address of the contract or facet to execute _calldata
      * @param _calldata - a function call, including function selector and arguments
      */
-    function diamondCut(
-        FacetCut[] calldata _facetCuts,
-        address _init,
-        bytes calldata _calldata
-    ) external override {
+    function diamondCut(FacetCut[] calldata _facetCuts, address _init, bytes calldata _calldata) external override {
         // Get the diamond storage slot
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 

@@ -190,11 +190,10 @@ contract SellerHandlerFacet is SellerBase {
      * @param _sellerId - seller id
      * @param _fieldsToUpdate - fields to update, see SellerUpdateFields enum
      */
-    function optInToSellerUpdate(uint256 _sellerId, SellerUpdateFields[] calldata _fieldsToUpdate)
-        external
-        sellersNotPaused
-        nonReentrant
-    {
+    function optInToSellerUpdate(
+        uint256 _sellerId,
+        SellerUpdateFields[] calldata _fieldsToUpdate
+    ) external sellersNotPaused nonReentrant {
         Seller storage sellerPendingUpdate;
         AuthToken storage authTokenPendingUpdate;
 
@@ -340,15 +339,9 @@ contract SellerHandlerFacet is SellerBase {
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
-    function getSeller(uint256 _sellerId)
-        external
-        view
-        returns (
-            bool exists,
-            Seller memory seller,
-            AuthToken memory authToken
-        )
-    {
+    function getSeller(
+        uint256 _sellerId
+    ) external view returns (bool exists, Seller memory seller, AuthToken memory authToken) {
         return fetchSeller(_sellerId);
     }
 
@@ -363,15 +356,9 @@ contract SellerHandlerFacet is SellerBase {
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
-    function getSellerByAddress(address _associatedAddress)
-        external
-        view
-        returns (
-            bool exists,
-            Seller memory seller,
-            AuthToken memory authToken
-        )
-    {
+    function getSellerByAddress(
+        address _associatedAddress
+    ) external view returns (bool exists, Seller memory seller, AuthToken memory authToken) {
         uint256 sellerId;
 
         (exists, sellerId) = getSellerIdByAssistant(_associatedAddress);
@@ -402,15 +389,9 @@ contract SellerHandlerFacet is SellerBase {
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
-    function getSellerByAuthToken(AuthToken calldata _associatedAuthToken)
-        external
-        view
-        returns (
-            bool exists,
-            Seller memory seller,
-            AuthToken memory authToken
-        )
-    {
+    function getSellerByAuthToken(
+        AuthToken calldata _associatedAuthToken
+    ) external view returns (bool exists, Seller memory seller, AuthToken memory authToken) {
         uint256 sellerId;
 
         (exists, sellerId) = getSellerIdByAuthToken(_associatedAuthToken);

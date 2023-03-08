@@ -31,11 +31,7 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      * @param _tokenAddress - contract address of token that is being deposited (0 for native currency)
      * @param _amount - amount to be credited
      */
-    function depositFunds(
-        uint256 _sellerId,
-        address _tokenAddress,
-        uint256 _amount
-    ) external payable;
+    function depositFunds(uint256 _sellerId, address _tokenAddress, uint256 _amount) external payable;
 
     /**
      * @notice Withdraws the specified funds. Can be called for seller, buyer or agent.
@@ -55,11 +51,7 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      * @param _tokenList - list of contract addresses of tokens that are being withdrawn
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */
-    function withdrawFunds(
-        uint256 _entityId,
-        address[] calldata _tokenList,
-        uint256[] calldata _tokenAmounts
-    ) external;
+    function withdrawFunds(uint256 _entityId, address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external;
 
     /**
      * @notice Withdraws the protocol fees.

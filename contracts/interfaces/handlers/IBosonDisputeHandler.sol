@@ -216,14 +216,12 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @return dispute - the dispute details. See {BosonTypes.Dispute}
      * @return disputeDates - the dispute dates details {BosonTypes.DisputeDates}
      */
-    function getDispute(uint256 _exchangeId)
+    function getDispute(
+        uint256 _exchangeId
+    )
         external
         view
-        returns (
-            bool exists,
-            BosonTypes.Dispute memory dispute,
-            BosonTypes.DisputeDates memory disputeDates
-        );
+        returns (bool exists, BosonTypes.Dispute memory dispute, BosonTypes.DisputeDates memory disputeDates);
 
     /**
      * @notice Gets the state of a given dispute.
