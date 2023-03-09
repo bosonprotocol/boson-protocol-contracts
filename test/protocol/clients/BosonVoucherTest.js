@@ -56,7 +56,8 @@ describe("IBosonVoucher", function () {
     treasuryDR,
     seller,
     protocolTreasury,
-    bosonToken;
+    bosonToken,
+    foreign20;
   let beacon;
   let disputeResolver, disputeResolverFees;
   let emptyAuthToken;
@@ -114,7 +115,7 @@ describe("IBosonVoucher", function () {
     const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
     const buyerEscalationDepositPercentage = "1000"; // 10%
 
-    [bosonToken] = await deployMockTokens();
+    [foreign20, bosonToken] = await deployMockTokens(["Foreign20", "BosonToken"]);
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
@@ -198,6 +199,7 @@ describe("IBosonVoucher", function () {
   context("General", async function () {
     it("Contract can receive native token", async function () {
       const balanceBefore = await ethers.provider.getBalance(bosonVoucher.address);
+
       const amount = ethers.utils.parseUnits("1", "ether");
 
       await admin.sendTransaction({ to: bosonVoucher.address, value: amount });
@@ -2485,6 +2487,51 @@ describe("IBosonVoucher", function () {
       await expect(bosonVoucher.connect(assistant).setApprovalForAllToContract(rando.address, true))
         .to.emit(bosonVoucher, "ApprovalForAll")
         .withArgs(bosonVoucher.address, rando.address, true);
+    });
+  });
+
+  context("withdrawToProtocol", function () {
+    beforeEach(async function () {
+      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+
+      // Prepare the AuthToken and VoucherInitValues
+      emptyAuthToken = mockAuthToken();
+      voucherInitValues = mockVoucherInitValues();
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+    });
+
+    it("Can withdraw native token", async function () {
+      const amount = ethers.utils.parseUnits("1", "ether");
+      await admin.sendTransaction({ to: bosonVoucher.address, value: amount });
+
+      await expect(() =>
+        bosonVoucher.connect(rando).withdrawToProtocol([ethers.constants.AddressZero])
+      ).to.changeEtherBalances([bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
+    });
+
+    it("Can withdraw ERC20", async function () {
+      const amount = ethers.utils.parseUnits("1", "ether");
+      await foreign20.connect(deployer).mint(deployer.address, amount);
+      await foreign20.connect(deployer).transfer(bosonVoucher.address, amount);
+
+      await expect(() => bosonVoucher.connect(rando).withdrawToProtocol([foreign20.address])).to.changeTokenBalances(
+        foreign20,
+        [bosonVoucher, protocolDiamond],
+        [amount.mul(-1), amount]
+      );
+    });
+
+    it("Should withdraw all tokens when list lenght > 1", async function () {
+      const amount = ethers.utils.parseUnits("1", "ether");
+      await admin.sendTransaction({ to: bosonVoucher.address, value: amount });
+      await foreign20.connect(deployer).mint(deployer.address, amount);
+      await foreign20.connect(deployer).transfer(bosonVoucher.address, amount);
+
+      const tx = await bosonVoucher
+        .connect(rando)
+        .withdrawToProtocol([ethers.constants.AddressZero, foreign20.address]);
+      expect(() => tx).to.changeEtherBalances([bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
+      expect(() => tx).to.changeTokenBalances(foreign20, [bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
     });
   });
 

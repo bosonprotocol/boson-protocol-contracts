@@ -18,6 +18,8 @@ import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
 import { IClientExternalAddresses } from "../../../interfaces/clients/IClientExternalAddresses.sol";
 import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
 import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchangeHandler.sol";
+import { IERC20 } from "../../../interfaces/IERC20.sol";
+import { IBosonFundsHandler } from "../../../interfaces/handlers/IBosonFundsHandler.sol";
 
 /**
  * @title BosonVoucherBase
@@ -838,6 +840,28 @@ contract BosonVoucherBase is
                         low = mid + 1;
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * @notice Withdraw funds from the contract to the protocol seller pool
+     *
+     * @param _tokenList - list of tokens to withdraw, including native token (address(0))
+     */
+    function withdrawToProtocol(address[] calldata _tokenList) external {
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+        uint256 sellerId = getSellerId();
+
+        for (uint256 i = 0; i < _tokenList.length; i++) {
+            address token = _tokenList[i];
+            if (token == address(0)) {
+                uint256 balance = address(this).balance;
+                IBosonFundsHandler(protocolDiamond).depositFunds{ value: balance }(sellerId, token, balance);
+            } else {
+                uint256 balance = IERC20(token).balanceOf(address(this));
+                IERC20(token).approve(protocolDiamond, balance);
+                IBosonFundsHandler(protocolDiamond).depositFunds(sellerId, token, balance);
             }
         }
     }
