@@ -183,3 +183,96 @@ You might need to remove its interfaceId from "supportsInterface" manually.
 📋 Diamond upgraded.
 
 
+--------------------------------------------------------------------------------
+Boson Protocol Client Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Thu Mar 09 2023 11:28:19 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+
+📋 Deploying new logic contract
+
+📋 Updating implementation address on beacon
+✅ BosonVoucher Logic deployed to: 0x945a419a988921A758A94D6bB88A264aaD2fa646
+--------------------------------------------------------------------------------
+✅ Contracts written to /home/klemen/boson/clean/boson-protocol-contracts/scripts/util/../../addresses/80001-mumbai-test.json
+--------------------------------------------------------------------------------
+
+📋 Client upgraded.
+
+
+--------------------------------------------------------------------------------
+Boson Protocol Contract Suite Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Thu Mar 09 2023 11:29:40 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+✅ OfferHandlerFacet deployed to: 0x4b94267Aa5Ca691429D4da3d29C36C9e8888487D
+✅ OrchestrationHandlerFacet1 deployed to: 0x2354D6CBC8Ff222898ea1D22eF3d28043A6d710b
+
+📋 Facet: OfferHandlerFacet
+💎 Add selectors:
+	reserveRange(uint256,uint256,address): 0x7f5c9236
+💎 Replace selectors:
+	createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256): 0x44c64d38
+	createOfferBatch((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool)[],(uint256,uint256,uint256,uint256)[],(uint256,uint256,uint256)[],uint256[],uint256[]): 0xdf3ce320
+	extendOffer(uint256,uint256): 0xcc00c061
+	extendOfferBatch(uint256[],uint256): 0xdb7af92f
+	getAgentIdByOffer(uint256): 0x1ac3e64a
+	getNextOfferId(): 0x1d73add8
+	getOffer(uint256): 0x4579268a
+	isOfferVoided(uint256): 0x4bec59f4
+	voidOffer(uint256): 0x4915907b
+	voidOfferBatch(uint256[]): 0x12b52cf5
+💎 Remove selectors:
+	undefined: 0x032d3400
+
+📋 Facet: OrchestrationHandlerFacet1
+💎 Add selectors:
+	createPremintedOfferAddToGroup((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,uint256,uint256): 0x6c943896
+	createPremintedOfferAndTwinWithBundle((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,(uint256,uint256,uint256,uint256,uint256,address,uint8),uint256): 0x34e80651
+	createPremintedOfferWithCondition((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,(uint8,uint8,address,uint256,uint256,uint256),uint256): 0xf69c9a40
+	createPremintedOfferWithConditionAndTwinAndBundle((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint256,uint256,uint256,uint256,address,uint8),uint256): 0xf9384c29
+	createSellerAndPremintedOffer((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,(uint256,uint8),(string,uint256),uint256): 0xde3ad0a9
+	createSellerAndPremintedOfferAndTwinWithBundle((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,(uint256,uint256,uint256,uint256,uint256,address,uint8),(uint256,uint8),(string,uint256),uint256): 0x3eafa1e2
+	createSellerAndPremintedOfferWithCondition((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint8),(string,uint256),uint256): 0xc136a32e
+	createSellerAndPremintedOfferWithConditionAndTwinAndBundle((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint256,uint256,uint256,uint256,address,uint8),(uint256,uint8),(string,uint256),uint256): 0x9b7750be
+💎 Replace selectors:
+	createOfferAddToGroup((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,uint256): 0x34fa96a6
+	createOfferAndTwinWithBundle((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint256,uint256,uint256,uint256,uint256,address,uint8),uint256): 0x36358824
+	createOfferWithCondition((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint8,uint8,address,uint256,uint256,uint256),uint256): 0x1b002277
+	createOfferWithConditionAndTwinAndBundle((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint256,uint256,uint256,uint256,address,uint8),uint256): 0x3e03b0f6
+	createSellerAndOffer((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint256,uint8),(string,uint256),uint256): 0x088177c8
+	createSellerAndOfferAndTwinWithBundle((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint256,uint256,uint256,uint256,uint256,address,uint8),(uint256,uint8),(string,uint256),uint256): 0x05686244
+	createSellerAndOfferWithCondition((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint8),(string,uint256),uint256): 0x0b1bb608
+	createSellerAndOfferWithConditionAndTwinAndBundle((uint256,address,address,address,address,bool),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint256,uint256,uint256,uint256,address,uint8),(uint256,uint8),(string,uint256),uint256): 0x97a6f155
+💎 Remove selectors:
+	undefined: 0xa9112e4f
+	undefined: 0xa29ec520
+	undefined: 0xf11a3f76
+	undefined: 0xc559f8c0
+	undefined: 0x4d0b4b57
+	undefined: 0xe82544ed
+	undefined: 0xc17de2b6
+	undefined: 0x7abd4dab
+
+💀 Removed facets:
+	
+📋 Added interfaces:
+	0xa1598d02
+	0xa38bc2e7
+💀 Removed interfaces:
+	0xdd282b34
+	0x6fa524ec
+--------------------------------------------------------------------------------
+
+📋 New version: 2.2.0-rc.4                      
+--------------------------------------------------------------------------------
+✅ Contracts written to /home/klemen/boson/clean/boson-protocol-contracts/scripts/util/../../addresses/80001-mumbai-test.json
+--------------------------------------------------------------------------------
+
+📋 Diamond upgraded.
+
+

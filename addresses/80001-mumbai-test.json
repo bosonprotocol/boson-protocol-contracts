@@ -2,7 +2,7 @@
   "chainId": 80001,
   "network": "mumbai",
   "env": "test",
-  "protocolVersion": "2.2.0-rc.3",
+  "protocolVersion": "2.2.0-rc.4",
   "contracts": [
     {
       "name": "AccessController",
@@ -126,12 +126,6 @@
       "interfaceId": "0xb3e4e803"
     },
     {
-      "name": "BosonVoucher Logic",
-      "address": "0x3e88931206A9617BBA6b6027Cf3097FC509f1475",
-      "args": [],
-      "interfaceId": ""
-    },
-    {
       "name": "BundleHandlerFacet",
       "address": "0x1900CC5d6Ef138ac659eA06907af28793c3563F3",
       "args": [],
@@ -162,18 +156,6 @@
       "interfaceId": "0xe2bf2256"
     },
     {
-      "name": "OfferHandlerFacet",
-      "address": "0x27536cDa454453FA78cCF85300Cf92330bF305a8",
-      "args": [],
-      "interfaceId": "0xdd282b34"
-    },
-    {
-      "name": "OrchestrationHandlerFacet1",
-      "address": "0x4A1e04CCB93E1Ae498d78554f3106955750d0Fb8",
-      "args": [],
-      "interfaceId": "0x6fa524ec"
-    },
-    {
       "name": "SellerHandlerFacet",
       "address": "0xd371032da579e1EAb45AD03ec83Ca4485Bda51a4",
       "args": [],
@@ -184,6 +166,24 @@
       "address": "0xadBE44E0f41F291934e0937FF7B646EE0a965488",
       "args": [],
       "interfaceId": "0x60b30e70"
+    },
+    {
+      "name": "BosonVoucher Logic",
+      "address": "0x945a419a988921A758A94D6bB88A264aaD2fa646",
+      "args": [],
+      "interfaceId": ""
+    },
+    {
+      "name": "OfferHandlerFacet",
+      "address": "0x4b94267Aa5Ca691429D4da3d29C36C9e8888487D",
+      "args": [],
+      "interfaceId": "0xa1598d02"
+    },
+    {
+      "name": "OrchestrationHandlerFacet1",
+      "address": "0x2354D6CBC8Ff222898ea1D22eF3d28043A6d710b",
+      "args": [],
+      "interfaceId": "0xa38bc2e7"
     }
   ]
 }
