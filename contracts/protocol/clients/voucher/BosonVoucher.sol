@@ -7,15 +7,20 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { IERC2981Upgradeable } from "@openzeppelin/contracts-upgradeable/interfaces/IERC2981Upgradeable.sol";
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { IERC721ReceiverUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import { ERC2771ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
 import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
 import { IClientExternalAddresses } from "../../../interfaces/clients/IClientExternalAddresses.sol";
 import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
 import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchangeHandler.sol";
+import { IERC20 } from "../../../interfaces/IERC20.sol";
+import { DAIAliases as DAI } from "../../../interfaces/DAIAliases.sol";
+import { IBosonFundsHandler } from "../../../interfaces/handlers/IBosonFundsHandler.sol";
 
 /**
  * @title BosonVoucherBase
@@ -24,7 +29,15 @@ import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchan
  * N.B. Although this contract extends OwnableUpgradeable and ERC721Upgradeable,
  *      that is only for convenience, to avoid conflicts with mixed imports.
  */
-contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
+contract BosonVoucherBase is
+    IBosonVoucher,
+    BeaconClientBase,
+    OwnableUpgradeable,
+    ERC721Upgradeable,
+    IERC721ReceiverUpgradeable
+{
+    using Address for address;
+
     // Struct that is used to manipulate private variables from ERC721UpgradeableStorage
     struct ERC721UpgradeableStorage {
         // Mapping from token ID to owner address
@@ -439,6 +452,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     /**
      * @notice Non-standard ERC721 function to transfer a pre-minted token from one address to another.
      *
+     * @dev  This function is more efficient than generic transferFrom methods, since it does not have to perform binary search.
+     *
      * Reverts if:
      * - TokenId was already used to commit
      * - TokenId already exists (i.e. has an owner)
@@ -572,6 +587,67 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      */
     function setContractURI(string calldata _newContractURI) external override onlyOwner {
         _setContractURI(_newContractURI);
+    }
+
+    /** @notice Make a call to an external contract.
+     *
+     * Reverts if:
+     * - _to is zero address
+     * - call to external contract fails
+     * - caller is not the owner
+     * - caller tries to call ERC20 method that would allow transfer of tokens from this contract
+     *
+     * @param _to - address of the contract to call
+     * @param _data - data to pass to the external contract
+     */
+    function callExternalContract(address _to, bytes calldata _data) external payable onlyOwner {
+        require(_to != address(0), INVALID_ADDRESS);
+
+        // Prevent invocation of functions that would allow transfer of tokens from this contract
+        bytes4 selector = bytes4(_data[:4]);
+        require(
+            selector != IERC20.transfer.selector &&
+                selector != IERC20.approve.selector &&
+                selector != IERC20.transferFrom.selector &&
+                selector != DAI.push.selector &&
+                selector != DAI.move.selector,
+            FUNCTION_NOT_ALLOWLISTED
+        );
+
+        _to.functionCallWithValue(_data, msg.value, FUNCTION_CALL_NOT_SUCCESSFUL);
+    }
+
+    /** @notice Set approval for all to the vouchers owned by this contract
+     *
+     * Reverts if:
+     * - _operator is zero address
+     * - caller is not the owner
+     * - _operator is this contract
+     *
+     * @param _operator - address of the operator to set approval for
+     * @param _approved - true to approve the operator in question, false to revoke approval
+     */
+    function setApprovalForAllToContract(address _operator, bool _approved) external onlyOwner {
+        require(_operator != address(0), INVALID_ADDRESS);
+
+        _setApprovalForAll(address(this), _operator, _approved);
+    }
+
+    // @dev Contract must be allowed to receive native token as it can be used as voucher's owner
+    receive() external payable {}
+
+    /**
+     * @dev See {IERC721Receiver-onERC721Received}.
+     *
+     * Always returns `IERC721Receiver.onERC721Received.selector`.
+     */
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes memory
+    ) public virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 
     /**
@@ -777,6 +853,28 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
                         low = mid + 1;
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * @notice Withdraw funds from the contract to the protocol seller pool
+     *
+     * @param _tokenList - list of tokens to withdraw, including native token (address(0))
+     */
+    function withdrawToProtocol(address[] calldata _tokenList) external {
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+        uint256 sellerId = getSellerId();
+
+        for (uint256 i = 0; i < _tokenList.length; i++) {
+            address token = _tokenList[i];
+            if (token == address(0)) {
+                uint256 balance = address(this).balance;
+                IBosonFundsHandler(protocolDiamond).depositFunds{ value: balance }(sellerId, token, balance);
+            } else {
+                uint256 balance = IERC20(token).balanceOf(address(this));
+                IERC20(token).approve(protocolDiamond, balance);
+                IBosonFundsHandler(protocolDiamond).depositFunds(sellerId, token, balance);
             }
         }
     }
