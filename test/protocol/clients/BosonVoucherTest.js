@@ -2479,6 +2479,43 @@ describe("IBosonVoucher", function () {
       it("To address is not a contract", async function () {
         await expect(bosonVoucher.connect(assistant).callExternalContract(rando.address, calldata)).to.be.reverted;
       });
+
+      it("Owner tries to invoke method to transfer funds", async function () {
+        const erc20 = await ethers.getContractFactory("Foreign20");
+
+        // transfer
+        calldata = erc20.interface.encodeFunctionData("transfer", [assistant.address, 20]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(rando.address, calldata)).to.be.revertedWith(
+          RevertReasons.FUNCTION_NOT_ALLOWLISTED
+        );
+
+        // transferFrom
+        calldata = erc20.interface.encodeFunctionData("transferFrom", [bosonVoucher.address, assistant.address, 20]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(rando.address, calldata)).to.be.revertedWith(
+          RevertReasons.FUNCTION_NOT_ALLOWLISTED
+        );
+
+        // approve
+        calldata = erc20.interface.encodeFunctionData("approve", [assistant.address, 20]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(rando.address, calldata)).to.be.revertedWith(
+          RevertReasons.FUNCTION_NOT_ALLOWLISTED
+        );
+
+        // DAI
+        const dai = await ethers.getContractAt("DAIAliases", ethers.constants.AddressZero);
+
+        // push
+        calldata = dai.interface.encodeFunctionData("push", [assistant.address, 20]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(rando.address, calldata)).to.be.revertedWith(
+          RevertReasons.FUNCTION_NOT_ALLOWLISTED
+        );
+
+        // move
+        calldata = dai.interface.encodeFunctionData("move", [bosonVoucher.address, assistant.address, 20]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(rando.address, calldata)).to.be.revertedWith(
+          RevertReasons.FUNCTION_NOT_ALLOWLISTED
+        );
+      });
     });
   });
 
@@ -2521,7 +2558,7 @@ describe("IBosonVoucher", function () {
       );
     });
 
-    it("Should withdraw all tokens when list lenght > 1", async function () {
+    it("Should withdraw all tokens when list length > 1", async function () {
       const amount = ethers.utils.parseUnits("1", "ether");
       await admin.sendTransaction({ to: bosonVoucher.address, value: amount });
       await foreign20.connect(deployer).mint(deployer.address, amount);

@@ -19,6 +19,7 @@ import { IClientExternalAddresses } from "../../../interfaces/clients/IClientExt
 import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
 import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IERC20 } from "../../../interfaces/IERC20.sol";
+import { DAIAliases as DAI } from "../../../interfaces/DAIAliases.sol";
 import { IBosonFundsHandler } from "../../../interfaces/handlers/IBosonFundsHandler.sol";
 
 /**
@@ -594,12 +595,24 @@ contract BosonVoucherBase is
      * - _to is zero address
      * - call to external contract fails
      * - caller is not the owner
+     * - caller tries to call ERC20 method that would allow transfer of tokens from this contract
      *
      * @param _to - address of the contract to call
      * @param _data - data to pass to the external contract
      */
-    function callExternalContract(address _to, bytes memory _data) external payable onlyOwner {
+    function callExternalContract(address _to, bytes calldata _data) external payable onlyOwner {
         require(_to != address(0), INVALID_ADDRESS);
+
+        // Prevent invocation of functions that would allow transfer of tokens from this contract
+        bytes4 selector = bytes4(_data[:4]);
+        require(
+            selector != IERC20.transfer.selector &&
+                selector != IERC20.approve.selector &&
+                selector != IERC20.transferFrom.selector &&
+                selector != DAI.push.selector &&
+                selector != DAI.move.selector,
+            FUNCTION_NOT_ALLOWLISTED
+        );
 
         _to.functionCallWithValue(_data, msg.value, FUNCTION_CALL_NOT_SUCCESSFUL);
     }

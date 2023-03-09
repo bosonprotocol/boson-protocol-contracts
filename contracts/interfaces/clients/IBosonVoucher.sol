@@ -242,6 +242,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * - _to is zero address
      * - call to external contract fails
      * - caller is not the owner
+     * - caller tries to call ERC20 method that would allow transfer of tokens from this contract
      *
      * @param _to - address of the contract to call
      * @param _data - data to pass to the external contract
