@@ -55,7 +55,8 @@ contract BosonVoucherBase is
     string private _contractURI;
 
     // Royalty percentage requested by seller (for all offers)
-    uint256 private _royaltyPercentage;
+    // Not used anymore. Need to stay to avoid storage shift.
+    uint256 private _royaltyPercentageUnused;
 
     // Map an offerId to a Range for pre-minted offers
     mapping(uint256 => Range) private _rangeByOfferId;
@@ -96,9 +97,7 @@ contract BosonVoucherBase is
 
         _setContractURI(voucherInitValues.contractURI);
 
-        _setRoyaltyPercentage(voucherInitValues.royaltyPercentage);
-
-        emit VoucherInitialized(_sellerId, _royaltyPercentage, _contractURI);
+        emit VoucherInitialized(_sellerId, _contractURI);
     }
 
     /**
@@ -680,53 +679,7 @@ contract BosonVoucherBase is
     {
         uint256 royaltyPercentage;
         (receiver, royaltyPercentage) = getExchangeEIP2981Royalties(_tokenId);
-        royaltyAmount = (_salePrice * _royaltyPercentage) / 10000;
-    }
-
-    /**
-     * @notice Sets the royalty percentage.
-     * Can only be called by the owner or during the initialization
-     *
-     * Emits RoyaltyPercentageChanged if successful.
-     *
-     * Reverts if:
-     * - Caller is not the owner.
-     * - `_newRoyaltyPercentage` is greater than max royalty percentage defined in the protocol
-     *
-     * @param _newRoyaltyPercentage fee in percentage. e.g. 500 = 5%
-     */
-    function setRoyaltyPercentage(uint256 _newRoyaltyPercentage) external override onlyOwner {
-        _setRoyaltyPercentage(_newRoyaltyPercentage);
-    }
-
-    /**
-     * @notice Gets the royalty percentage.
-     *
-     * @return _royaltyPercentage fee in percentage. e.g. 500 = 5%
-     */
-    function getRoyaltyPercentage() external view returns (uint256) {
-        return _royaltyPercentage;
-    }
-
-    /**
-     * @notice Sets royalty percentage.
-     * Can only be called by the owner or during the initialization.
-     *
-     * Emits RoyaltyPercentageChanged if successful.
-     *
-     * @param _newRoyaltyPercentage - new royalty percentage
-     */
-    function _setRoyaltyPercentage(uint256 _newRoyaltyPercentage) internal {
-        // get max royalty percentage from the protocol
-        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        uint16 maxRoyaltyPecentage = IBosonConfigHandler(protocolDiamond).getMaxRoyaltyPecentage();
-
-        // make sure that new royalty percentage does not exceed the max value set in the protocol
-        require(_newRoyaltyPercentage <= maxRoyaltyPecentage, ROYALTY_FEE_INVALID);
-
-        _royaltyPercentage = _newRoyaltyPercentage;
-
-        emit RoyaltyPercentageChanged(_newRoyaltyPercentage);
+        royaltyAmount = (_salePrice * royaltyPercentage) / 10000;
     }
 
     /**

@@ -3029,13 +3029,11 @@ describe("SellerHandler", function () {
 
           // update data
           royaltyRecipientIds = [1, 0, 3];
-          royaltyRecipientListUpdates = new RoyaltyRecipientList(
-            [
-              new RoyaltyRecipient(other4.address, "400", "other1"), // change address and percentage, keep name
-              new RoyaltyRecipient(seller.treasury, "100", "itisme"), // change external id of default recipient
-              new RoyaltyRecipient(other3.address, "300", "other3"),
-            ] // change nothing
-          );
+          royaltyRecipientListUpdates = new RoyaltyRecipientList([
+            new RoyaltyRecipient(other4.address, "400", "other1"), // change address and percentage, keep name
+            new RoyaltyRecipient(seller.treasury, "100", "itisme"), // change external id of default recipient
+            new RoyaltyRecipient(other3.address, "300", "other3"), // change nothing
+          ]);
 
           expectedRoyaltyRecipientList = new RoyaltyRecipientList([
             new RoyaltyRecipient(seller.treasury, "100", "itisme"),

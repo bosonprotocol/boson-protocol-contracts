@@ -10,6 +10,8 @@ const Role = require("../../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const Range = require("../../../scripts/domain/Range");
 const VoucherInitValues = require("../../../scripts/domain/VoucherInitValues");
+const RoyaltyInfo = require("../../../scripts/domain/RoyaltyInfo");
+const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../../scripts/domain/RoyaltyRecipient.js");
 
 const { mockOffer, mockExchange, mockVoucher } = require("../../util/mock.js");
 const { assert, expect } = require("chai");
@@ -2195,6 +2197,7 @@ describe("IBosonVoucher", function () {
 
       // prepare the VoucherInitValues
       voucherInitValues = mockVoucherInitValues();
+      voucherInitValues.royaltyPercentage = "1000"; // 10%
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
@@ -2227,6 +2230,8 @@ describe("IBosonVoucher", function () {
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+      offer.royaltyInfo = new RoyaltyInfo([seller.treasury], [voucherInitValues.royaltyPercentage]); // 10%
+
       await offerHandler
         .connect(assistant)
         .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
@@ -2245,88 +2250,6 @@ describe("IBosonVoucher", function () {
       accountId.next(true);
     });
 
-    context("setRoyaltyPercentage()", function () {
-      beforeEach(async function () {
-        // give ownership to assistant
-        await bosonVoucher.connect(protocol).transferOwnership(assistant.address);
-      });
-
-      it("should emit RoyaltyPercentageChanged event", async function () {
-        royaltyPercentage = "0"; //0%
-        await expect(bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage))
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(royaltyPercentage);
-      });
-
-      it("should set a royalty fee percentage", async function () {
-        // First, set royalty fee as 0
-        royaltyPercentage = "0"; //0%
-        await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
-
-        let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).royaltyInfo(exchangeId, offerPrice);
-
-        // Expectations
-        let expectedRecipient = seller.treasury;
-        let expectedRoyaltyAmount = "0";
-
-        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
-
-        // Now, set royalty fee as 10%
-        royaltyPercentage = "1000"; //10%
-        await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
-
-        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).royaltyInfo(exchangeId, offerPrice);
-
-        // Expectations
-        expectedRecipient = seller.treasury;
-        expectedRoyaltyAmount = applyPercentage(offerPrice, royaltyPercentage);
-
-        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("should revert if caller is not the owner", async function () {
-          // random caller
-          await expect(bosonVoucher.connect(rando).setRoyaltyPercentage(royaltyPercentage)).to.be.revertedWith(
-            RevertReasons.OWNABLE_NOT_OWNER
-          );
-
-          // protocol as the caller
-          await expect(bosonVoucher.connect(protocol).setRoyaltyPercentage(royaltyPercentage)).to.be.revertedWith(
-            RevertReasons.OWNABLE_NOT_OWNER
-          );
-        });
-
-        it("should revert if royaltyPercentage is greater than max royalty percentage defined in the protocol", async function () {
-          // Set royalty fee as 15% (protocol limit is 10%)
-          royaltyPercentage = "1500"; //15%
-
-          // royalty percentage too high, expectig revert
-          await expect(bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage)).to.be.revertedWith(
-            RevertReasons.ROYALTY_FEE_INVALID
-          );
-        });
-      });
-    });
-
-    context("getRoyaltyPercentage()", function () {
-      it("should return the royalty fee percentage", async function () {
-        // give ownership to assistant
-        await bosonVoucher.connect(protocol).transferOwnership(assistant.address);
-
-        royaltyPercentage = "1000"; //10%
-        await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
-
-        expect(await bosonVoucher.connect(rando).getRoyaltyPercentage()).to.equal(
-          royaltyPercentage,
-          "Invalid royalty percentage"
-        );
-      });
-    });
-
     context("royaltyInfo()", function () {
       beforeEach(async function () {
         // give ownership to assistant
@@ -2334,60 +2257,115 @@ describe("IBosonVoucher", function () {
       });
 
       it("should return a recipient and royalty fee", async function () {
-        // First, set royalty fee as 0
-        royaltyPercentage = "0"; //0%
-        await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
-
-        let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+        let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = seller.treasury;
-        let expectedRoyaltyAmount = "0";
-
-        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
-
-        // Now, set royalty fee as 10%
-        royaltyPercentage = "1000"; //10%
-        await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
-
-        [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
-
-        // Expectations
-        expectedRecipient = seller.treasury;
-        expectedRoyaltyAmount = applyPercentage(offerPrice, royaltyPercentage);
-
-        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
-
-        // Any random address can check the royalty info
-        // Now, set royalty fee as 8%
-        royaltyPercentage = "800"; //8%
-        await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
-
-        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).royaltyInfo(exchangeId, offerPrice);
-
-        // Expectations
-        expectedRecipient = seller.treasury;
-        expectedRoyaltyAmount = applyPercentage(offerPrice, royaltyPercentage);
+        let expectedRoyaltyAmount = applyPercentage(offerPrice, voucherInitValues.royaltyPercentage);
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
-      it("if exchange doesn't exist it should return 0 values", async function () {
-        // Set royalty fee as 10%
-        royaltyPercentage = "1000"; //10%
-        await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
+      it("changing fee does not affect existing offers/exchange", async function () {
+        // Offer was created with 10% royalty fee
+        // Now, set royalty fee to 5%
+        royaltyPercentage = "500"; //5%
+        const royaltyRecipientIds = [0];
+        const royaltyRecipientListUpdates = new RoyaltyRecipientList([
+          new RoyaltyRecipient(seller.treasury, royaltyPercentage, "treasury"),
+        ]);
+        await accountHandler
+          .connect(admin)
+          .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct());
+
+        let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = seller.treasury;
+        let expectedRoyaltyAmount = applyPercentage(offerPrice, voucherInitValues.royaltyPercentage);
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+      });
+
+      it("eip2981 always returns only the first entry as the recipient", async function () {
+        await configHandler.connect(deployer).setMaxRoyaltyPecentage("10000");
+
+        // Add multiple royalty recipients
+        const royaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(rando.address, "100", "other1"),
+          new RoyaltyRecipient(rando2.address, "200", "other2"),
+        ]);
+        await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+        // Create an offer with multiple recipients
+        const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+        offer.royaltyInfo = new RoyaltyInfo(
+          [rando.address, seller.treasury, rando2.address],
+          ["200", voucherInitValues.royaltyPercentage, "250"]
+        );
+        offer.id = 2;
+
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
+        await fundsHandler
+          .connect(admin)
+          .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
 
         // Set inexistent exchangeId
-        exchangeId = "100000";
+        exchangeId = "2";
         const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
-        // Receiver and amount should be 0
-        assert.equal(receiver, ethers.constants.AddressZero, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toNumber(), 0, "Royalty amount is incorrect");
+        // Expectations
+        let expectedRecipient = rando.address;
+        let expectedRoyaltyAmount = applyPercentage(
+          offerPrice,
+          Number(voucherInitValues.royaltyPercentage) + 200 + 250
+        );
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+      });
+
+      it("for offer without royalty recipients, it returns 0 values", async function () {
+        // Create an offer with multiple recipients
+        const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+        offer.royaltyInfo = new RoyaltyInfo([], []);
+        offer.id = 2;
+
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
+        await fundsHandler
+          .connect(admin)
+          .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
+
+        // Set inexistent exchangeId
+        exchangeId = "2";
+        const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = ethers.constants.AddressZero;
+        let expectedRoyaltyAmount = "0";
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("exchange does not exist", async function () {
+          // create invalid voucherInitValues
+          exchangeId = "1234";
+
+          // royalty percentage too high, expecting revert
+          await expect(bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice)).to.be.revertedWith(
+            RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
       });
     });
 
@@ -2401,7 +2379,7 @@ describe("IBosonVoucher", function () {
         seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
         seller.id = "2";
 
-        // royalty percentage too high, expectig revert
+        // royalty percentage too high, expecting revert
         await expect(
           accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
         ).to.be.revertedWith(RevertReasons.INVALID_ROYALTY_PERCENTAGE);

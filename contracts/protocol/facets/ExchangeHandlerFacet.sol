@@ -635,21 +635,18 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         returns (address receiver, uint256 royaltyPercentage)
     {
         // EIP2981 returns only 1 recipient. Summ all bps and return treasury address as recipient
-        (RoyaltyInfo storage royaltyInfo, uint256 sellerId) = fetchExchangeRoyalties(_exchangeId);
+        RoyaltyInfo storage royaltyInfo = fetchExchangeRoyalties(_exchangeId);
 
-        if (royaltyInfo.recipients.length == 0) return (address(0), uint256(0));
+        uint256 recipientLength = royaltyInfo.recipients.length;
+        if (recipientLength == 0) return (address(0), uint256(0));
 
         uint256 totalBps;
 
-        for (uint256 i = 0; i < royaltyInfo.recipients.length; i++) {
+        for (uint256 i = 0; i < recipientLength; i++) {
             totalBps += royaltyInfo.bps[i];
         }
 
-        // get treasury address
-        // not using fetchSeller to reduce gas costs (limitation of royalty registry)
-        receiver = protocolEntities().sellers[sellerId].treasury;
-
-        return (receiver, totalBps);
+        return (royaltyInfo.recipients[0], totalBps);
     }
 
     /**
@@ -664,7 +661,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @return royaltyInfo - list of royalty recipients and corresponding bps
      */
     function getExchangeRoyalties(uint256 _exchangeId) external view returns (RoyaltyInfo memory royaltyInfo) {
-        (royaltyInfo, ) = fetchExchangeRoyalties(_exchangeId);
+        return fetchExchangeRoyalties(_exchangeId);
     }
 
     /**
@@ -1089,19 +1086,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _exchangeId - the exchange id
      * @return royaltyInfo - list of royalty recipients and corresponding bps
-     * @return sellerId - the seller id
      */
-    function fetchExchangeRoyalties(uint256 _exchangeId)
-        internal
-        view
-        returns (RoyaltyInfo storage royaltyInfo, uint256 sellerId)
-    {
+    function fetchExchangeRoyalties(uint256 _exchangeId) internal view returns (RoyaltyInfo storage royaltyInfo) {
         (bool exists, Exchange storage exchange) = fetchExchange(_exchangeId);
         require(exists, NO_SUCH_EXCHANGE);
 
         // not using fetchOffer to reduce gas costs (limitation of royalty registry)
-        Offer storage offer = protocolEntities().offers[exchange.offerId];
-
-        return (offer.royaltyInfo, offer.sellerId);
+        return protocolEntities().offers[exchange.offerId].royaltyInfo;
     }
 }
