@@ -2252,8 +2252,11 @@ describe("IBosonVoucher", function () {
 
     context("royaltyInfo()", function () {
       beforeEach(async function () {
-        // give ownership to assistant
-        await bosonVoucher.connect(protocol).transferOwnership(assistant.address);
+        // // give ownership to assistant
+        // await bosonVoucher.connect(protocol).transferOwnership(assistant.address);
+
+        const voucherAddress = calculateContractAddress(accountHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
       });
 
       it("should return a recipient and royalty fee", async function () {
@@ -2344,7 +2347,7 @@ describe("IBosonVoucher", function () {
           .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
 
-        // Set inexistent exchangeId
+        // Set exchangeId
         exchangeId = "2";
         const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
@@ -2356,14 +2359,42 @@ describe("IBosonVoucher", function () {
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
+      it("should return a recipient and royalty fee for preminted offers", async function () {
+        // Create an offer with multiple recipients
+        const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+        offer.royaltyInfo = new RoyaltyInfo([seller.treasury], [voucherInitValues.royaltyPercentage]);
+        offer.id = 2;
+        offer.quantityAvailable = 20;
+
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
+        await fundsHandler
+          .connect(admin)
+          .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+        await offerHandler.connect(assistant).reserveRange(offer.id, 20, assistant.address);
+        await bosonVoucher.connect(assistant).preMint(offer.id, 20);
+
+        // Set exchangeId
+        exchangeId = "2";
+        const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = seller.treasury;
+        let expectedRoyaltyAmount = applyPercentage(offerPrice, voucherInitValues.royaltyPercentage);
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+      });
+
       context("💔 Revert Reasons", async function () {
         it("exchange does not exist", async function () {
-          // create invalid voucherInitValues
+          // set invalid exchangeId
           exchangeId = "1234";
 
           // royalty percentage too high, expecting revert
           await expect(bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice)).to.be.revertedWith(
-            RevertReasons.NO_SUCH_EXCHANGE
+            RevertReasons.INVALID_TOKEN_ID
           );
         });
       });

@@ -11,7 +11,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x17378c81
+ * The ERC-165 identifier for this interface is: 0x423140f2
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
@@ -258,11 +258,12 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      *
      * Reverts if exchange does not exist.
      *
-     * @param _exchangeId - the exchange id
+     * @param _queryId - if _isPreminted this is offer id, else is the exchange id
+     * @param _isPreminted - indicates if the query is for preminted voucher
      * @return receiver - the address of the royalty receiver (seller's treasury address)
      * @return royaltyPercentage - the royalty percentage in bps
      */
-    function getExchangeEIP2981Royalties(uint256 _exchangeId)
+    function getExchangeEIP2981Royalties(uint256 _queryId, bool _isPreminted)
         external
         view
         returns (address receiver, uint256 royaltyPercentage);
@@ -275,10 +276,11 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      *
      * Reverts if exchange does not exist.
      *
-     * @param _exchangeId - the exchange id
+     * @param _queryId - if _isPreminted this is offer id, else is the exchange id
+     * @param _isPreminted - indicates if the query is for preminted voucher
      * @return royaltyInfo - list of royalty recipients and corresponding bps
      */
-    function getExchangeRoyalties(uint256 _exchangeId)
+    function getExchangeRoyalties(uint256 _queryId, bool _isPreminted)
         external
         view
         returns (BosonTypes.RoyaltyInfo memory royaltyInfo);

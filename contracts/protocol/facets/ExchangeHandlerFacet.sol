@@ -625,17 +625,18 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * Reverts if exchange does not exist.
      *
-     * @param _exchangeId - the exchange id
+     * @param _queryId - if _isPreminted this is offer id, else is the exchange id
+     * @param _isPreminted - indicates if the query is for preminted voucher
      * @return receiver - the address of the royalty receiver (seller's treasury address)
      * @return royaltyPercentage - the royalty percentage in bps
      */
-    function getExchangeEIP2981Royalties(uint256 _exchangeId)
+    function getExchangeEIP2981Royalties(uint256 _queryId, bool _isPreminted)
         external
         view
         returns (address receiver, uint256 royaltyPercentage)
     {
         // EIP2981 returns only 1 recipient. Summ all bps and return treasury address as recipient
-        RoyaltyInfo storage royaltyInfo = fetchExchangeRoyalties(_exchangeId);
+        RoyaltyInfo storage royaltyInfo = fetchExchangeRoyalties(_queryId, _isPreminted);
 
         uint256 recipientLength = royaltyInfo.recipients.length;
         if (recipientLength == 0) return (address(0), uint256(0));
@@ -657,11 +658,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * Reverts if exchange does not exist.
      *
-     * @param _exchangeId - the exchange id
+     * @param _queryId - if _isPreminted this is offer id, else is the exchange id
+     * @param _isPreminted - indicates if the query is for preminted voucher
      * @return royaltyInfo - list of royalty recipients and corresponding bps
      */
-    function getExchangeRoyalties(uint256 _exchangeId) external view returns (RoyaltyInfo memory royaltyInfo) {
-        return fetchExchangeRoyalties(_exchangeId);
+    function getExchangeRoyalties(uint256 _queryId, bool _isPreminted)
+        external
+        view
+        returns (RoyaltyInfo memory royaltyInfo)
+    {
+        return fetchExchangeRoyalties(_queryId, _isPreminted);
     }
 
     /**
@@ -1084,14 +1090,23 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * Reverts if exchange does not exist.
      *
-     * @param _exchangeId - the exchange id
+     * @param _queryId - if _isPreminted this is offer id, else is the exchange id
+     * @param _isPreminted - indicates if the query is for preminted voucher
      * @return royaltyInfo - list of royalty recipients and corresponding bps
      */
-    function fetchExchangeRoyalties(uint256 _exchangeId) internal view returns (RoyaltyInfo storage royaltyInfo) {
-        (bool exists, Exchange storage exchange) = fetchExchange(_exchangeId);
-        require(exists, NO_SUCH_EXCHANGE);
+    function fetchExchangeRoyalties(uint256 _queryId, bool _isPreminted)
+        internal
+        view
+        returns (RoyaltyInfo storage royaltyInfo)
+    {
+        if (!_isPreminted) {
+            (bool exists, Exchange storage exchange) = fetchExchange(_queryId);
+            require(exists, NO_SUCH_EXCHANGE);
 
-        // not using fetchOffer to reduce gas costs (limitation of royalty registry)
-        return protocolEntities().offers[exchange.offerId].royaltyInfo;
+            // not using fetchOffer to reduce gas costs (limitation of royalty registry)
+            return protocolEntities().offers[exchange.offerId].royaltyInfo;
+        }
+
+        return protocolEntities().offers[_queryId].royaltyInfo;
     }
 }

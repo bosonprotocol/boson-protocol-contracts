@@ -50,17 +50,18 @@ abstract contract BeaconClientBase is BosonTypes {
     /**
      * @notice Gets the royalty information for a chosen exchange from the protocol.
      *
-     * @param _exchangeId - the exchange id
+     * @param _queryId - if _isPreminted this is offer id, else is the exchange id
+     * @param _isPreminted - indicates if the query is for preminted voucher
      * @return receiver - the address of the royalty receiver (seller's treasury address)
      * @return royaltyPercentage - the royalty percentage in bps
      */
-    function getExchangeEIP2981Royalties(uint256 _exchangeId)
+    function getExchangeEIP2981Royalties(uint256 _queryId, bool _isPreminted)
         internal
         view
         returns (address receiver, uint256 royaltyPercentage)
     {
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        return IBosonExchangeHandler(protocolDiamond).getExchangeEIP2981Royalties(_exchangeId);
+        return IBosonExchangeHandler(protocolDiamond).getExchangeEIP2981Royalties(_queryId, _isPreminted);
     }
 
     /**

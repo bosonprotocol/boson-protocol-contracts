@@ -677,8 +677,18 @@ contract BosonVoucherBase is
         override
         returns (address receiver, uint256 royaltyAmount)
     {
+        uint256 offerId;
+        bool isPreminted;
+        if (!_exists(_tokenId)) {
+            // might not exists or is preminted
+            (isPreminted, offerId, ) = getPreMintStatus(_tokenId);
+            if (!isPreminted) {
+                revert(INVALID_TOKEN_ID);
+            }
+        }
+
         uint256 royaltyPercentage;
-        (receiver, royaltyPercentage) = getExchangeEIP2981Royalties(_tokenId);
+        (receiver, royaltyPercentage) = getExchangeEIP2981Royalties(isPreminted ? offerId : _tokenId, isPreminted);
         royaltyAmount = (_salePrice * royaltyPercentage) / 10000;
     }
 
