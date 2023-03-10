@@ -615,6 +615,59 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
+     * @notice Gets EIP2981 style royalty information for a chosen exchange.
+     *
+     * EIP2981 supports only 1 recipient, there fore this method defaults to treasury address.
+     * This method is not exactly compliant with EIP2981, since it does not accept `salePrice` and does not return `royaltyAmount,
+     * but it rather returns `royaltyPercentage` which is the sum of all bps (exchange can have multiple reoyalty recipients).
+     *
+     * This function is meant to be primarly used by boson voucher client, which implements EIP2981.
+     *
+     * Reverts if exchange does not exist.
+     *
+     * @param _exchangeId - the exchange id
+     * @return receiver - the address of the royalty receiver (seller's treasury address)
+     * @return royaltyPercentage - the royalty percentage in bps
+     */
+    function getExchangeEIP2981Royalties(uint256 _exchangeId)
+        external
+        view
+        returns (address receiver, uint256 royaltyPercentage)
+    {
+        // EIP2981 returns only 1 recipient. Summ all bps and return treasury address as recipient
+        (RoyaltyInfo storage royaltyInfo, uint256 sellerId) = fetchExchangeRoyalties(_exchangeId);
+
+        if (royaltyInfo.recipients.length == 0) return (address(0), uint256(0));
+
+        uint256 totalBps;
+
+        for (uint256 i = 0; i < royaltyInfo.recipients.length; i++) {
+            totalBps += royaltyInfo.bps[i];
+        }
+
+        // get treasury address
+        // not using fetchSeller to reduce gas costs (limitation of royalty registry)
+        receiver = protocolEntities().sellers[sellerId].treasury;
+
+        return (receiver, totalBps);
+    }
+
+    /**
+     * @notice Gets royalty information for a chosen exchange.
+     *
+     * Returns a list of royalty recipients and corresponding bps. Format is compatible with Manifold and Foundation royalties
+     * and can be directly used by royalty registry.
+     *
+     * Reverts if exchange does not exist.
+     *
+     * @param _exchangeId - the exchange id
+     * @return royaltyInfo - list of royalty recipients and corresponding bps
+     */
+    function getExchangeRoyalties(uint256 _exchangeId) external view returns (RoyaltyInfo memory royaltyInfo) {
+        (royaltyInfo, ) = fetchExchangeRoyalties(_exchangeId);
+    }
+
+    /**
      * @notice Transitions exchange to a "finalized" state
      *
      * Target state must be Completed, Revoked, or Canceled.
@@ -1027,5 +1080,28 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         if (conditionExists) {
             receipt.condition = condition;
         }
+    }
+
+    /**
+     * @notice Internal helper to get royalty information and sellerfor a chosen exchange.
+     *
+     * Reverts if exchange does not exist.
+     *
+     * @param _exchangeId - the exchange id
+     * @return royaltyInfo - list of royalty recipients and corresponding bps
+     * @return sellerId - the seller id
+     */
+    function fetchExchangeRoyalties(uint256 _exchangeId)
+        internal
+        view
+        returns (RoyaltyInfo storage royaltyInfo, uint256 sellerId)
+    {
+        (bool exists, Exchange storage exchange) = fetchExchange(_exchangeId);
+        require(exists, NO_SUCH_EXCHANGE);
+
+        // not using fetchOffer to reduce gas costs (limitation of royalty registry)
+        Offer storage offer = protocolEntities().offers[exchange.offerId];
+
+        return (offer.royaltyInfo, offer.sellerId);
     }
 }

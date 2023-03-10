@@ -1,0 +1,3 @@
+[submodule "submodules/royalty-registry-solidity"]
+	path = submodules/royalty-registry-solidity
+	url = git@github.com:manifoldxyz/royalty-registry-solidity.git

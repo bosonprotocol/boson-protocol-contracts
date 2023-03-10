@@ -2292,12 +2292,12 @@ describe("IBosonVoucher", function () {
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
-      it("if exhanfe doesn't exist it should return 0 values", async function () {
+      it("if exchange doesn't exist it should return 0 values", async function () {
         // Set royalty fee as 10%
         royaltyPercentage = "1000"; //10%
         await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
 
-        // Set inexistentexchangeId
+        // Set inexistent exchangeId
         exchangeId = "100000";
         const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 

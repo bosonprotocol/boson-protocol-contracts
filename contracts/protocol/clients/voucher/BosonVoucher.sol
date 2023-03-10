@@ -602,16 +602,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         override
         returns (address receiver, uint256 royaltyAmount)
     {
-        // get offer
-        (bool offerExists, Offer memory offer) = getBosonOfferByExchangeId(_tokenId);
-
-        if (offerExists) {
-            (, Seller memory seller) = getBosonSeller(offer.sellerId);
-            // get receiver
-            receiver = seller.treasury;
-            // Calculate royalty amount
-            royaltyAmount = (_salePrice * _royaltyPercentage) / 10000;
-        }
+        uint256 royaltyPercentage;
+        (receiver, royaltyPercentage) = getExchangeEIP2981Royalties(_tokenId);
+        royaltyAmount = (_salePrice * _royaltyPercentage) / 10000;
     }
 
     /**
