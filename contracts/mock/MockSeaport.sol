@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-
 enum ItemType {
     NATIVE,
     ERC20,
@@ -57,10 +56,7 @@ struct Order {
 }
 
 contract MockSeaport {
-    function validate(
-        Order[] calldata orders
-    ) external returns (bool validated)
-    {
-      return true;
+    function validate(Order[] calldata orders) external returns (bool validated) {
+        return true;
     }
 }
