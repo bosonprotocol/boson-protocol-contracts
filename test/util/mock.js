@@ -24,6 +24,7 @@ const Voucher = require("../../scripts/domain/Voucher");
 const Dispute = require("../../scripts/domain/Dispute");
 const { applyPercentage } = require("../../test/util/utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
+const OfferPrice = require("../../scripts/domain/OfferPrice");
 
 function* incrementer() {
   let i = 1;
@@ -76,6 +77,7 @@ async function mockOffer() {
   const metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
   const metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
   const voided = false;
+  const priceType = OfferPrice.Static;
 
   // Create a valid offer, then set fields in tests directly
   let offer = new Offer(
@@ -88,7 +90,8 @@ async function mockOffer() {
     exchangeToken,
     metadataUri,
     metadataHash,
-    voided
+    voided,
+    priceType
   );
 
   const offerDates = await mockOfferDates();

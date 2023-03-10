@@ -1,4 +1,11 @@
-const { bigNumberIsValid, addressIsValid, booleanIsValid, stringIsValid } = require("../util/validations.js");
+const {
+  bigNumberIsValid,
+  addressIsValid,
+  booleanIsValid,
+  stringIsValid,
+  enumIsValid,
+} = require("../util/validations.js");
+const OfferPrice = require("./OfferPrice.js");
 
 /**
  * Boson Protocol Domain Entity: Offer
@@ -18,6 +25,7 @@ class Offer {
             string metadataUri;
             string metadataHash;
             bool voided;
+            OfferPrice priceType;
         }
     */
 
@@ -31,7 +39,8 @@ class Offer {
     exchangeToken,
     metadataUri,
     metadataHash,
-    voided
+    voided,
+    priceType
   ) {
     this.id = id;
     this.sellerId = sellerId;
@@ -43,6 +52,7 @@ class Offer {
     this.metadataUri = metadataUri;
     this.metadataHash = metadataHash;
     this.voided = voided;
+    this.priceType = priceType;
   }
 
   /**
@@ -62,6 +72,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      priceType,
     } = o;
 
     return new Offer(
@@ -74,7 +85,8 @@ class Offer {
       exchangeToken,
       metadataUri,
       metadataHash,
-      voided
+      voided,
+      priceType
     );
   }
 
@@ -93,7 +105,8 @@ class Offer {
       exchangeToken,
       metadataUri,
       metadataHash,
-      voided;
+      voided,
+      priceType;
 
     // destructure struct
     [
@@ -107,6 +120,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      priceType,
     ] = struct;
 
     return Offer.fromObject({
@@ -120,6 +134,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      priceType,
     });
   }
 
@@ -155,6 +170,7 @@ class Offer {
       this.metadataUri,
       this.metadataHash,
       this.voided,
+      this.priceType,
     ];
   }
 
@@ -257,6 +273,10 @@ class Offer {
    */
   voidedIsValid() {
     return booleanIsValid(this.voided);
+  }
+
+  priceTypeIsValid() {
+    return enumIsValid(this.priceType, OfferPrice);
   }
 
   /**

@@ -126,7 +126,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         address payable _buyer,
         uint256 _offerId,
         PriceDiscovery calldata _priceDiscovery
-    ) external exchangesNotPaused buyersNotPaused nonReentrant {
+    ) external payable exchangesNotPaused buyersNotPaused nonReentrant {
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
 

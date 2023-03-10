@@ -18,12 +18,18 @@ const Role = require("../../../../scripts/domain/Role");
 const { deployMockTokens } = require("../../../../scripts/util/deploy-mock-tokens");
 const { DisputeResolverFee } = require("../../../../scripts/domain/DisputeResolverFee");
 const { RevertReasons } = require("../../../../scripts/config/revert-reasons");
+const Side = require("../../../../scripts/domain/Side");
+const PriceDiscovery = require("../../../../scripts/domain/PriceDiscovery");
+const { constants } = require("ethers");
+const OfferPrice = require("../../../../scripts/domain/OfferPrice");
 
 describe("[@skip-on-coverage] sudoswap integration", function () {
-  let lssvmPairFactory, linearCurve;
+  this.timeout(100000000);
+  let lssvmPairFactory, lssvmPair, linearCurve;
   let bosonVoucher, bosonToken;
   let deployer, protocol, assistant, buyer, DR, sudoswapDeployer;
   let calldata, order, orderHash, value, offer;
+  let exchangeHandler;
 
   before(async function () {
     let protocolTreasury;
@@ -78,6 +84,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
     const offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
     const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
     const fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
+    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
 
     // Grant roles
     await accessController.grantRole(Role.PROTOCOL, protocol.address);
@@ -144,6 +151,13 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 
+    const wethFactory = await ethers.getContractFactory("WETH9");
+    weth = await wethFactory.deploy();
+    await weth.deployed();
+
+    // Add WETH
+    facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [weth.address];
+
     // Cut the protocol handler facets into the Diamond
     await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
 
@@ -163,6 +177,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
     let offerDates, offerDurations, disputeResolverId;
     ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
     offer.quantityAvailable = 10;
+    offer.priceType = OfferPrice.Discovery;
 
     await offerHandler
       .connect(assistant)
@@ -191,31 +206,65 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
   //        "_spotPrice": "The initial selling spot price"
 
   it("sudoswap is used as price discovery mechanism for a offer", async function () {
-    // IERC721 _nft,
-    // ICurve _bondingCurve,
-    // address payable _assetRecipient,
-    // LSSVMPair.PoolType _poolType,
-    // uint128 _delta,
-    // uint96 _fee,
-    // uint128 _spotPrice,
-    // uint256[] calldata _initialNFTIDs
-    const poolType = 0; // NFT
+    const poolType = 1; // NFT
     const delta = "100";
     const fee = "0";
-    const spotPrice = "1000";
+    const spotPrice = offer.price;
     const nftIds = [];
-    await lssvmPairFactory
+    let tx = await lssvmPairFactory
       .connect(assistant)
       .createPairETH(
         bosonVoucher.address,
         linearCurve.address,
-        bosonVoucher.address,
+        constants.AddressZero,
         poolType,
         delta,
         fee,
         spotPrice,
         nftIds
       );
-    await expect(exchangeHandler.connect(buyer).commitToPreMintedOffer(buyer.address, offer.id));
+
+    const receipt = await tx.wait();
+
+    const [contractAddress] = receipt.events[1].args;
+
+    // need to deposit NFTs
+    await bosonVoucher.connect(assistant).setApprovalForAll(lssvmPairFactory.address, true);
+    tx = await lssvmPairFactory.connect(assistant).depositNFTs(bosonVoucher.address, [1], contractAddress);
+
+    const priceDiscoveryContract = await ethers.getContractAt("LSSVMPairMissingEnumerableETH", contractAddress);
+    const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("swapTokenForAnyNFTs", [
+      1,
+      offer.price + delta,
+      exchangeHandler.address, // protocol diamond
+      false,
+      constants.AddressZero,
+    ]);
+    const priceDiscovery = new PriceDiscovery(
+      offer.price,
+      priceDiscoveryContract.address,
+      priceDiscoveryData,
+      Side.Ask
+    );
+
+    // Seller needs to deposit weth in order to fill the escrow at the last step
+    // Price is theoretically the highest amount needed
+    await weth.connect(buyer).deposit({ value: offer.price });
+    await weth.connect(buyer).approve(exchangeHandler.address, offer.price);
+
+    // Approve transfers
+    // Buyer does not approve, since its in ETH.
+    // Seller approves price discovery to transfer the voucher
+    await bosonVoucher.connect(buyer).setApprovalForAll(priceDiscoveryContract.address, true);
+
+    tx = await exchangeHandler
+      .connect(buyer)
+      .commitToPreMintedOfferWithPriceDiscovery(buyer.address, offer.id, priceDiscovery, {
+        value: offer.price + delta,
+      });
+
+    await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+    await expect(tx).to.emit(priceDiscoveryContract, "SwapNFTOutPair");
   });
 });
