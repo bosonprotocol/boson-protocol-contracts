@@ -1,0 +1,3 @@
+@manifoldxyz/libraries-solidity/=submodules/royalty-registry-solidity/lib/libraries-solidity/
+@openzeppelin/contracts/utils/introspection/IERC165.sol=contracts/interfaces/IERC165.sol
+./IERC165.sol=contracts/interfaces/IERC165.sol

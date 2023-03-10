@@ -138,7 +138,7 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200,
+            runs: 190,
             details: {
               yul: true,
             },
@@ -147,6 +147,15 @@ module.exports = {
       },
       {
         version: "0.8.17",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 190,
+            details: {
+              yul: true,
+            },
+          },
+        },
       },
     ],
   },

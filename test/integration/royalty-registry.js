@@ -15,7 +15,7 @@ const RoyaltyInfo = require("../../scripts/domain/RoyaltyInfo");
 const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
 
 // Requirements to run this test:
-// - Seaport submodule contains a `artifacts` folder inside it. Run `git submodule update --init --recursive` to get it.
+// - Royalty registry is a submodule. If you didn't clone repository recursively, run `git submodule update --init --recursive` to get it.
 // - Set hardhat config to hardhat-fork.config.js. e.g.:
 //   npx hardhat test test/integration/royalty-registry.js --config ./hardhat-fork.config.js
 describe("[@skip-on-coverage] Royalty registry integration", function () {
@@ -28,8 +28,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
     let protocolTreasury;
     [deployer, protocol, assistant, protocolTreasury, buyer, DR, other1, other2] = await ethers.getSigners();
 
-    const { abi } = require("../../submodules/royalty-registry-solidity/out/RoyaltyEngineV1.sol/RoyaltyEngineV1.json");
-    royaltyRegistry = await ethers.getContractAt(abi, ROYALTY_REGISTRY_ADDRESS);
+    royaltyRegistry = await ethers.getContractAt("RoyaltyEngineV1", ROYALTY_REGISTRY_ADDRESS);
 
     // Deploy diamond
     let [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
