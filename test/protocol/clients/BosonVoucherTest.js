@@ -30,7 +30,9 @@ const {
   setNextBlockTimestamp,
   getFacetsWithArgs,
   prepareDataSignatureParameters,
+  getEvent,
 } = require("../../util/utils.js");
+const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
 const { deployMockContract } = require("@ethereum-waffle/mock-contract");
 const FormatTypes = ethers.utils.FormatTypes;
 
@@ -53,7 +55,8 @@ describe("IBosonVoucher", function () {
     treasuryDR,
     seller,
     protocolTreasury,
-    bosonToken;
+    bosonToken,
+    foreign20;
   let beacon;
   let disputeResolver, disputeResolverFees;
   let emptyAuthToken;
@@ -69,7 +72,7 @@ describe("IBosonVoucher", function () {
 
   beforeEach(async function () {
     // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
-    [deployer, protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR, protocolTreasury, bosonToken] =
+    [deployer, protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR, protocolTreasury] =
       await ethers.getSigners();
 
     // make all account the same
@@ -110,6 +113,8 @@ describe("IBosonVoucher", function () {
 
     const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
     const buyerEscalationDepositPercentage = "1000"; // 10%
+
+    [foreign20, bosonToken] = await deployMockTokens(["Foreign20", "BosonToken"]);
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
@@ -187,6 +192,19 @@ describe("IBosonVoucher", function () {
         support = await bosonVoucher.supportsInterface(interfaceIds["IERC2981"]);
         expect(support, "IERC2981 interface not supported").is.true;
       });
+    });
+  });
+
+  context("General", async function () {
+    it("Contract can receive native token", async function () {
+      const balanceBefore = await ethers.provider.getBalance(bosonVoucher.address);
+
+      const amount = ethers.utils.parseUnits("1", "ether");
+
+      await admin.sendTransaction({ to: bosonVoucher.address, value: amount });
+
+      const balanceAfter = await ethers.provider.getBalance(bosonVoucher.address);
+      expect(balanceAfter.sub(balanceBefore)).to.eq(amount);
     });
   });
 
@@ -1485,7 +1503,7 @@ describe("IBosonVoucher", function () {
           });
         });
 
-        context("Transfer of a preminted voucher", async function () {
+        context("Transfer of a preminted voucher when owner is assistant", async function () {
           let voucherRedeemableFrom, voucherValid, offerValid;
           beforeEach(async function () {
             // Create preminted offer
@@ -1500,6 +1518,8 @@ describe("IBosonVoucher", function () {
                 disputeResolverId,
                 agentId
               );
+
+            // Reserve range to assistant
             await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
             // Pool needs to cover both seller deposit and price
             const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
@@ -1686,6 +1706,67 @@ describe("IBosonVoucher", function () {
             });
           });
         });
+
+        context("Transfer of a preminted voucher when owner is contract", async function () {
+          beforeEach(async function () {
+            // Create preminted offer
+            const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+            offer.quantityAvailable = "2";
+
+            await offerHandler
+              .connect(assistant)
+              .createOffer(
+                offer.toStruct(),
+                offerDates.toStruct(),
+                offerDurations.toStruct(),
+                disputeResolverId,
+                agentId
+              );
+
+            // Update boson voucher address to actual seller's voucher
+            const voucherAddress = calculateContractAddress(accountHandler.address, "1");
+            bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
+
+            // Reserve range to contract
+            await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, bosonVoucher.address);
+
+            // Pool needs to cover both seller deposit and price
+            const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
+            await fundsHandler.connect(admin).depositFunds(seller.id, ethers.constants.AddressZero, pool, {
+              value: pool,
+            });
+
+            // Store correct values
+            tokenId = offerId = "1";
+
+            // amount to premint
+            await bosonVoucher.connect(assistant).preMint(offerId, offer.quantityAvailable);
+          });
+
+          it("If voucher contract is the owner of voucher, transfer on behalf of should work normally", async function () {
+            // Approve another address to transfer the voucher
+            await bosonVoucher.connect(assistant).setApprovalForAllToContract(rando2.address, true);
+
+            const tx = await bosonVoucher
+              .connect(rando2)
+              [selector](bosonVoucher.address, rando.address, tokenId, ...additionalArgs);
+
+            await expect(tx).to.emit(bosonVoucher, "Transfer").withArgs(bosonVoucher.address, rando.address, tokenId);
+          });
+
+          it("If voucher contract is the owner of voucher, transferPremintedFrom should work normally", async function () {
+            // Approve another address to transfer the voucher
+            await bosonVoucher.connect(assistant).setApprovalForAllToContract(rando2.address, true);
+
+            await expect(
+              bosonVoucher
+                .connect(rando2)
+                .transferPremintedFrom(bosonVoucher.address, rando.address, offerId, tokenId, "0x")
+            )
+              .to.emit(bosonVoucher, "Transfer")
+              .withArgs(bosonVoucher.address, rando.address, tokenId);
+          });
+        });
       });
     });
 
@@ -1700,7 +1781,10 @@ describe("IBosonVoucher", function () {
         await offerHandler
           .connect(assistant)
           .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
+
+        // Reserve range to assistant
         await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
+
         // Pool needs to cover both seller deposit and price
         const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
         await fundsHandler.connect(admin).depositFunds(seller.id, ethers.constants.AddressZero, pool, {
@@ -2345,6 +2429,145 @@ describe("IBosonVoucher", function () {
 
       // Reset the accountId iterator
       accountId.next(true);
+    });
+  });
+
+  context("callExternalContract()", function () {
+    let mockSimpleContract, calldata;
+
+    beforeEach(async function () {
+      // Deploy a random contract
+      const MockSimpleContract = await ethers.getContractFactory("MockSimpleContract");
+      mockSimpleContract = await MockSimpleContract.deploy();
+      await mockSimpleContract.deployed();
+
+      // Generate calldata
+      calldata = mockSimpleContract.interface.encodeFunctionData("testEvent");
+    });
+
+    it("Should call external contract and emit its events", async function () {
+      const tx = await bosonVoucher.connect(assistant).callExternalContract(mockSimpleContract.address, calldata);
+
+      const receipt = await tx.wait();
+      const event = getEvent(receipt, mockSimpleContract, "TestEvent");
+
+      assert.equal(event._value.toString(), "1");
+    });
+
+    context("💔 Revert Reasons", async function () {
+      it("_to is the zero address", async function () {
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(ethers.constants.AddressZero, calldata)
+        ).to.be.revertedWith(RevertReasons.INVALID_ADDRESS);
+      });
+
+      it("Caller is not the contract owner", async function () {
+        await expect(
+          bosonVoucher.connect(rando).callExternalContract(mockSimpleContract.address, calldata)
+        ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
+      });
+
+      it("External call reverts", async function () {
+        calldata = mockSimpleContract.interface.encodeFunctionData("testRevert");
+
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(mockSimpleContract.address, calldata)
+        ).to.be.revertedWith("Reverted");
+      });
+
+      it("To address is not a contract", async function () {
+        await expect(bosonVoucher.connect(assistant).callExternalContract(rando.address, calldata)).to.be.reverted;
+      });
+
+      it("Owner tries to invoke method to transfer funds", async function () {
+        const erc20 = await ethers.getContractFactory("Foreign20");
+
+        // transfer
+        calldata = erc20.interface.encodeFunctionData("transfer", [assistant.address, 20]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(rando.address, calldata)).to.be.revertedWith(
+          RevertReasons.FUNCTION_NOT_ALLOWLISTED
+        );
+
+        // transferFrom
+        calldata = erc20.interface.encodeFunctionData("transferFrom", [bosonVoucher.address, assistant.address, 20]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(rando.address, calldata)).to.be.revertedWith(
+          RevertReasons.FUNCTION_NOT_ALLOWLISTED
+        );
+
+        // approve
+        calldata = erc20.interface.encodeFunctionData("approve", [assistant.address, 20]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(rando.address, calldata)).to.be.revertedWith(
+          RevertReasons.FUNCTION_NOT_ALLOWLISTED
+        );
+
+        // DAI
+        const dai = await ethers.getContractAt("DAIAliases", ethers.constants.AddressZero);
+
+        // push
+        calldata = dai.interface.encodeFunctionData("push", [assistant.address, 20]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(rando.address, calldata)).to.be.revertedWith(
+          RevertReasons.FUNCTION_NOT_ALLOWLISTED
+        );
+
+        // move
+        calldata = dai.interface.encodeFunctionData("move", [bosonVoucher.address, assistant.address, 20]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(rando.address, calldata)).to.be.revertedWith(
+          RevertReasons.FUNCTION_NOT_ALLOWLISTED
+        );
+      });
+    });
+  });
+
+  context("setApprovalForAllToContract", function () {
+    it("Should emit ApprovalForAll event", async function () {
+      await expect(bosonVoucher.connect(assistant).setApprovalForAllToContract(rando.address, true))
+        .to.emit(bosonVoucher, "ApprovalForAll")
+        .withArgs(bosonVoucher.address, rando.address, true);
+    });
+  });
+
+  context("withdrawToProtocol", function () {
+    beforeEach(async function () {
+      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+
+      // Prepare the AuthToken and VoucherInitValues
+      emptyAuthToken = mockAuthToken();
+      voucherInitValues = mockVoucherInitValues();
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+    });
+
+    it("Can withdraw native token", async function () {
+      const amount = ethers.utils.parseUnits("1", "ether");
+      await admin.sendTransaction({ to: bosonVoucher.address, value: amount });
+
+      await expect(() =>
+        bosonVoucher.connect(rando).withdrawToProtocol([ethers.constants.AddressZero])
+      ).to.changeEtherBalances([bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
+    });
+
+    it("Can withdraw ERC20", async function () {
+      const amount = ethers.utils.parseUnits("1", "ether");
+      await foreign20.connect(deployer).mint(deployer.address, amount);
+      await foreign20.connect(deployer).transfer(bosonVoucher.address, amount);
+
+      await expect(() => bosonVoucher.connect(rando).withdrawToProtocol([foreign20.address])).to.changeTokenBalances(
+        foreign20,
+        [bosonVoucher, protocolDiamond],
+        [amount.mul(-1), amount]
+      );
+    });
+
+    it("Should withdraw all tokens when list length > 1", async function () {
+      const amount = ethers.utils.parseUnits("1", "ether");
+      await admin.sendTransaction({ to: bosonVoucher.address, value: amount });
+      await foreign20.connect(deployer).mint(deployer.address, amount);
+      await foreign20.connect(deployer).transfer(bosonVoucher.address, amount);
+
+      const tx = await bosonVoucher
+        .connect(rando)
+        .withdrawToProtocol([ethers.constants.AddressZero, foreign20.address]);
+      expect(() => tx).to.changeEtherBalances([bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
+      expect(() => tx).to.changeTokenBalances(foreign20, [bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
     });
   });
 

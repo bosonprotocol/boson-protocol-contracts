@@ -109,6 +109,9 @@ describe("IBosonOfferHandler", function () {
   before(async function () {
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
+
+    // reset account id (if multiple tests are run, accountId can get cached and cannot rely that other tests will reset it)
+    accountId.next(true);
   });
 
   beforeEach(async function () {
