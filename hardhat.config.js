@@ -111,16 +111,16 @@ function getRemappings() {
     .map((line) => line.trim().split("="));
 }
 
-subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS, async (_, { config }) => {
-  const contracts = await glob(path.join(config.paths.root, "contracts/**/*.sol"));
-  const sudoswapContracts = await glob(
-    path.join(config.paths.root, "test/integration/price-discovery/AMM/lssvm/src/*.sol")
-  );
-  const bondingCurveContracts = await glob(
-    path.join(config.paths.root, "test/integration/price-discovery/AMM/lssvm/src/bonding-curves/*.sol")
-  );
-  return [...contracts, ...sudoswapContracts, ...bondingCurveContracts].map(path.normalize);
-});
+// subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS, async (_, { config }) => {
+//   const contracts = await glob(path.join(config.paths.root, "contracts/**/*.sol"));
+//   const sudoswapContracts = await glob(
+//     path.join(config.paths.root, "test/integration/price-discovery/AMM/lssvm/src/*.sol")
+//   );
+//   const bondingCurveContracts = await glob(
+//     path.join(config.paths.root, "test/integration/price-discovery/AMM/lssvm/src/bonding-curves/*.sol")
+//   );
+//   return [...contracts, ...sudoswapContracts, ...bondingCurveContracts].map(path.normalize);
+// });
 
 module.exports = {
   defaultNetwork: "hardhat",
