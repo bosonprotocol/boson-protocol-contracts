@@ -821,7 +821,7 @@ describe("IBosonExchangeHandler", function () {
       let tokenId;
       beforeEach(async function () {
         // Reserve range
-        await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable);
+        await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
 
         // expected address of the first clone
         const voucherCloneAddress = calculateContractAddress(accountHandler.address, "1");
@@ -947,7 +947,7 @@ describe("IBosonExchangeHandler", function () {
           .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
 
         // reserve half of the offer, so it's still possible to commit directly
-        await offerHandler.connect(assistant).reserveRange(offerId, rangeLength);
+        await offerHandler.connect(assistant).reserveRange(offerId, rangeLength, assistant.address);
 
         // Commit to offer directly
         expect(
@@ -1030,7 +1030,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Reserve a range and premint vouchers
           tokenId = await exchangeHandler.getNextExchangeId();
-          await offerHandler.connect(assistant).reserveRange(offerId, "1");
+          await offerHandler.connect(assistant).reserveRange(offerId, "1", assistant.address);
           await bosonVoucher.connect(assistant).preMint(offerId, "1");
 
           // Attempt to commit to the not availabe offer, expecting revert

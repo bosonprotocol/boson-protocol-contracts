@@ -256,7 +256,14 @@ async function populateProtocolContract(
     // create entities
     switch (entity) {
       case entityType.DR: {
-        const disputeResolver = mockDisputeResolver(wallet.address, wallet.address, wallet.address, wallet.address);
+        const disputeResolver = mockDisputeResolver(
+          wallet.address,
+          wallet.address,
+          wallet.address,
+          wallet.address,
+          true,
+          true
+        );
         const disputeResolverFees = [
           new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
           new DisputeResolverFee(mockToken.address, "MockToken", "0"),
@@ -272,13 +279,13 @@ async function populateProtocolContract(
           disputeResolverFees,
           sellerAllowList,
         });
-
         //ADMIN role activates Dispute Resolver
         await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+
         break;
       }
       case entityType.SELLER: {
-        const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address);
+        const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address, true);
         const id = seller.id;
         let authToken;
         // randomly decide if auth token is used or not
@@ -1392,7 +1399,14 @@ async function populateVoucherContract(
       // create entities
       switch (entity) {
         case entityType.DR: {
-          const disputeResolver = mockDisputeResolver(wallet.address, wallet.address, wallet.address, wallet.address);
+          const disputeResolver = mockDisputeResolver(
+            wallet.address,
+            wallet.address,
+            wallet.address,
+            wallet.address,
+            true,
+            true
+          );
           const disputeResolverFees = [
             new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
             new DisputeResolverFee(mockToken.address, "MockToken", "0"),
@@ -1414,7 +1428,7 @@ async function populateVoucherContract(
           break;
         }
         case entityType.SELLER: {
-          const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address);
+          const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address, true);
           const id = seller.id;
           let authToken = mockAuthToken();
 
@@ -1600,6 +1614,12 @@ async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buye
   return bosonVouchersState;
 }
 
+function revertState() {
+  shell.exec(`rm -rf contracts/* scripts/*`);
+  shell.exec(`git checkout HEAD contracts scripts`);
+  shell.exec(`git reset HEAD contracts scripts`);
+}
+
 exports.deploySuite = deploySuite;
 exports.upgradeSuite = upgradeSuite;
 exports.upgradeClients = upgradeClients;
@@ -1609,3 +1629,4 @@ exports.getStorageLayout = getStorageLayout;
 exports.compareStorageLayouts = compareStorageLayouts;
 exports.populateVoucherContract = populateVoucherContract;
 exports.getVoucherContractState = getVoucherContractState;
+exports.revertState = revertState;

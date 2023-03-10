@@ -46,6 +46,8 @@ All PRs must pass all tests before being merged.
 
 By being in this community, you agree to the [Code of Conduct](/docs/code-of-conduct.md). Take a look at it, if you haven't already.
 
+Before starting to contribute, please check out [Local development](/docs/local-development.md) guide.
+
 ## License
 
 Licensed under [GPL-v3](LICENSE).

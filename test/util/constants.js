@@ -10,7 +10,7 @@ const oneMonth = oneDay * 31; // 31 days in seconds
 const VOUCHER_NAME = "Boson Voucher (rNFT)";
 const VOUCHER_SYMBOL = "BOSON_VOUCHER_RNFT";
 const LSSVM_PAIR_FACTORY = "0x4332465E5C9Ac98e91EEeeCe7989bDD0387f0cBA";
-
+const SEAPORT_ADDRESS = "0x00000000000001ad428e4906aE43D8F9852d0dD6"; // 1.4
 const tipMultiplier = ethers.BigNumber.from(environments.tipMultiplier);
 const tipSuggestion = "1500000000"; // ethers.js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = ethers.BigNumber.from(tipSuggestion).mul(tipMultiplier);
@@ -23,3 +23,4 @@ exports.VOUCHER_NAME = VOUCHER_NAME;
 exports.VOUCHER_SYMBOL = VOUCHER_SYMBOL;
 exports.maxPriorityFeePerGas = maxPriorityFeePerGas;
 exports.LSSVM_PAIR_FACTORY = LSSVM_PAIR_FACTORY;
+exports.SEAPORT_ADDRESS = SEAPORT_ADDRESS;

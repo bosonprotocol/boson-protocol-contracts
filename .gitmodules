@@ -1,3 +1,6 @@
 [submodule "test/integration/AMM/lssvm"]
 	path = test/integration/AMM/lssvm
 	url = https://github.com/sudoswap/lssvm
+[submodule "submodules/seaport"]
+	path = submodules/seaport
+	url = git@github.com:ProjectOpenSea/seaport.git

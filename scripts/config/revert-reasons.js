@@ -146,6 +146,8 @@ exports.RevertReasons = {
   OFFER_STILL_VALID: "Offer still valid",
   NOTHING_TO_BURN: "Nothing to burn",
   NOT_COMMITTABLE: "Token not committable",
+  INVALID_TO_ADDRESS: "Tokens can only be pre-mined to the contract or contract owner address",
+  EXTERNAL_CALL_FAILED: "External call failed",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",

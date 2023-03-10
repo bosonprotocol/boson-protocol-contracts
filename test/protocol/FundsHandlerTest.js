@@ -1924,7 +1924,9 @@ describe("IBosonFundsHandler", function () {
         const sellersAvailableFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
         // reserve a range and premint vouchers
-        await offerHandler.connect(assistant).reserveRange(offerToken.id, offerToken.quantityAvailable);
+        await offerHandler
+          .connect(assistant)
+          .reserveRange(offerToken.id, offerToken.quantityAvailable, assistant.address);
         const voucherCloneAddress = calculateContractAddress(accountHandler.address, "1");
         const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
         await bosonVoucher.connect(assistant).preMint(offerToken.id, offerToken.quantityAvailable);
@@ -1965,7 +1967,9 @@ describe("IBosonFundsHandler", function () {
 
         // reserve a range and premint vouchers
         tokenId = await exchangeHandler.getNextExchangeId();
-        await offerHandler.connect(assistant).reserveRange(offerNative.id, offerNative.quantityAvailable);
+        await offerHandler
+          .connect(assistant)
+          .reserveRange(offerNative.id, offerNative.quantityAvailable, assistant.address);
         await bosonVoucher.connect(assistant).preMint(offerNative.id, offerNative.quantityAvailable);
 
         // commit to an offer via preminted voucher
@@ -2108,7 +2112,9 @@ describe("IBosonFundsHandler", function () {
 
         it("Seller'a availableFunds is less than the required sellerDeposit + price for preminted offer", async function () {
           // reserve a range and premint vouchers for offer in tokens
-          await offerHandler.connect(assistant).reserveRange(offerToken.id, offerToken.quantityAvailable);
+          await offerHandler
+            .connect(assistant)
+            .reserveRange(offerToken.id, offerToken.quantityAvailable, assistant.address);
           const voucherCloneAddress = calculateContractAddress(accountHandler.address, "1");
           const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
           await bosonVoucher.connect(assistant).preMint(offerToken.id, offerToken.quantityAvailable);
@@ -2124,7 +2130,9 @@ describe("IBosonFundsHandler", function () {
 
           // reserve a range and premint vouchers for offer in native currency
           tokenId = await exchangeHandler.getNextExchangeId();
-          await offerHandler.connect(assistant).reserveRange(offerNative.id, offerNative.quantityAvailable);
+          await offerHandler
+            .connect(assistant)
+            .reserveRange(offerNative.id, offerNative.quantityAvailable, assistant.address);
           await bosonVoucher.connect(assistant).preMint(offerNative.id, offerNative.quantityAvailable);
 
           // Attempt to commit to an offer, expecting revert

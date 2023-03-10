@@ -137,12 +137,18 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Range length is greater than quantity available
      * - Range length is greater than maximum allowed range length
      * - Call to BosonVoucher.reserveRange() reverts
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @param _offerId - the id of the offer
      * @param _length - the length of the range
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      */
-    function reserveRange(uint256 _offerId, uint256 _length) external override nonReentrant {
-        reserveRangeInternal(_offerId, _length);
+    function reserveRange(
+        uint256 _offerId,
+        uint256 _length,
+        address _to
+    ) external override nonReentrant {
+        reserveRangeInternal(_offerId, _length, _to);
     }
 
     /**

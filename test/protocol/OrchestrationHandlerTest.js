@@ -1234,7 +1234,7 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, OfferCreated and RangeReserved events with auth token", async function () {
@@ -1251,6 +1251,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               authToken,
               voucherInitValues,
               agentId
@@ -1278,7 +1279,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
           // Voucher clone contract
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
@@ -1311,6 +1312,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               authToken,
               voucherInitValues,
               agentId
@@ -1458,6 +1460,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 emptyAuthToken,
                 voucherInitValues,
                 agentId
@@ -2081,6 +2084,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 emptyAuthToken,
                 voucherInitValues,
                 agentId
@@ -2103,6 +2107,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 emptyAuthToken,
                 voucherInitValues,
                 agentId
@@ -2125,6 +2130,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 emptyAuthToken,
                 voucherInitValues,
                 agentId
@@ -2655,11 +2661,12 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", bosonVoucher.address);
         });
 
         it("should emit an OfferCreated, a GroupCreated and a RangeReserved events", async function () {
@@ -2673,6 +2680,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              bosonVoucher.address,
               condition,
               agentId
             );
@@ -2695,7 +2703,7 @@ describe("IBosonOrchestrationHandler", function () {
           // RangeReserved event (on protocol contract)
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, bosonVoucher.address, assistant.address);
 
           // Events with structs that contain arrays must be tested differently
           const txReceipt = await tx.wait();
@@ -2725,6 +2733,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              bosonVoucher.address,
               condition,
               agentId
             );
@@ -2833,6 +2842,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                bosonVoucher.address,
                 condition,
                 agentId
               )
@@ -3339,7 +3349,7 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
@@ -3356,6 +3366,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               nextGroupId,
               agentId
             );
@@ -3378,7 +3389,7 @@ describe("IBosonOrchestrationHandler", function () {
           // RangeReserved event (on protocol contract)
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
           // Events with structs that contain arrays must be tested differently
           const txReceipt = await tx.wait();
@@ -3407,6 +3418,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               nextGroupId,
               agentId
             );
@@ -3506,6 +3518,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 nextGroupId,
                 agentId
               )
@@ -4016,11 +4029,12 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", bosonVoucher.address);
         });
 
         it("should emit an OfferCreated, a TwinCreated, a BundleCreated and a RangeReserved events", async function () {
@@ -4033,6 +4047,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              bosonVoucher.address,
               twin,
               agentId
             );
@@ -4055,7 +4070,7 @@ describe("IBosonOrchestrationHandler", function () {
           // RangeReserved event (on protocol contract)
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, bosonVoucher.address, assistant.address);
 
           // Events with structs that contain arrays must be tested differently
           const txReceipt = await tx.wait();
@@ -4094,6 +4109,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              bosonVoucher.address,
               twin,
               agentId
             );
@@ -4220,6 +4236,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                bosonVoucher.address,
                 twin,
                 agentId
               )
@@ -4919,7 +4936,7 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
@@ -4936,6 +4953,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               condition,
               twin,
               agentId
@@ -4959,7 +4977,7 @@ describe("IBosonOrchestrationHandler", function () {
           // RangeReserved event (on protocol contract)
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
           // Events with structs that contain arrays must be tested differently
           const txReceipt = await tx.wait();
@@ -5008,6 +5026,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               condition,
               twin,
               agentId
@@ -5206,6 +5225,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 condition,
                 twin,
                 agentId
@@ -5633,7 +5653,7 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, an OfferCreated, a GroupCreated and a RangeReserved event", async function () {
@@ -5647,6 +5667,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               condition,
               emptyAuthToken,
               voucherInitValues,
@@ -5676,7 +5697,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
           // Events with structs that contain arrays must be tested differently
           const txReceipt = await tx.wait();
@@ -5719,6 +5740,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               condition,
               emptyAuthToken,
               voucherInitValues,
@@ -5911,6 +5933,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 condition,
                 emptyAuthToken,
                 voucherInitValues,
@@ -6407,7 +6430,7 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, an OfferCreated, a TwinCreated, a BundleCreated and RangeReserved event", async function () {
@@ -6424,6 +6447,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               twin,
               emptyAuthToken,
               voucherInitValues,
@@ -6453,7 +6477,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
           // Events with structs that contain arrays must be tested differently
           const txReceipt = await tx.wait();
@@ -6511,6 +6535,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               twin,
               emptyAuthToken,
               voucherInitValues,
@@ -6731,6 +6756,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
@@ -7304,7 +7330,7 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, an OfferCreated, a GroupCreated, a TwinCreated, a BundleCreated and a RangeReserved event", async function () {
@@ -7321,6 +7347,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               condition,
               twin,
               emptyAuthToken,
@@ -7351,7 +7378,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
           // Events with structs that contain arrays must be tested differently
           const txReceipt = await tx.wait();
@@ -7417,6 +7444,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               condition,
               twin,
               emptyAuthToken,
@@ -7685,6 +7713,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                bosonVoucher.address,
                 condition,
                 twin,
                 emptyAuthToken,
