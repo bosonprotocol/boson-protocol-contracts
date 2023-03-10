@@ -37,16 +37,16 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @return actualPrice - the actual price of the order
      */
     function fulFilOrder(
-        uint256 _exchangeId,
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
         address _buyer,
-        uint256 _initialSellerId
+        uint256 _initialSellerId,
+        uint256 _exchangeId
     ) internal returns (uint256 actualPrice) {
         if (_priceDiscovery.side == Side.Ask) {
-            return fulfilAskOrder(_exchangeId, _exchangeToken, _priceDiscovery, _buyer, _initialSellerId);
+            return fulfilAskOrder(_exchangeToken, _priceDiscovery, _buyer, _initialSellerId, _exchangeId);
         } else {
-            return fulfilBidOrder(_exchangeId, _exchangeToken, _priceDiscovery, _initialSellerId);
+            return fulfilBidOrder(_exchangeToken, _priceDiscovery, _initialSellerId, _exchangeId);
         }
     }
 
@@ -70,11 +70,11 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @return actualPrice - the actual price of the order
      */
     function fulfilAskOrder(
-        uint256 _exchangeId,
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
         address _buyer,
-        uint256 _initialSellerId
+        uint256 _initialSellerId,
+        uint256 _exchangeId
     ) internal returns (uint256 actualPrice) {
         // Transfer buyers funds to protocol
         FundsLib.validateIncomingPayment(_exchangeToken, _priceDiscovery.price);
@@ -95,6 +95,11 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // Call the price discovery contract
         _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
+
+        if (_exchangeId == 0) {
+            // incomingVoucherId was set to the exchanged voucher id inside onERC721Received method
+            _exchangeId = ps.incomingVoucherId;
+        }
 
         // Make sure that the price discovery contract has transferred the voucher to the protocol
         IBosonVoucher bosonVoucher = IBosonVoucher(cloneAddress);
@@ -139,10 +144,10 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @return actualPrice - the actual price of the order
      */
     function fulfilBidOrder(
-        uint256 _exchangeId,
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
-        uint256 _initialSellerId
+        uint256 _initialSellerId,
+        uint256 _exchangeId
     ) internal returns (uint256 actualPrice) {
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[_initialSellerId]);
 

@@ -83,6 +83,11 @@ contract BosonTypes {
         Clerk
     }
 
+    enum OfferPrice {
+        Static, // Default should always be at index 0. Never change this value.
+        Discovery
+    }
+
     struct AuthToken {
         uint256 tokenId;
         AuthTokenType tokenType;
@@ -145,6 +150,7 @@ contract BosonTypes {
         string metadataUri;
         string metadataHash;
         bool voided;
+        OfferPrice priceType;
     }
 
     struct OfferDates {

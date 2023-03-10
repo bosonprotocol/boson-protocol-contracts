@@ -14,14 +14,17 @@ import { Address } from "../../ext_libs/Address.sol";
 import { IERC1155 } from "../../interfaces/IERC1155.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
+import { PriceDiscoveryBase } from "../bases/PriceDiscoveryBase.sol";
 
 /**
  * @title ExchangeHandlerFacet
  *
  * @notice Handles exchanges associated with offers within the protocol.
  */
-contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
+contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, PriceDiscoveryBase {
     using Address for address;
+
+    constructor(address _weth) PriceDiscoveryBase(_weth) {}
 
     /**
      * @notice Initializes facet.
@@ -77,7 +80,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Make sure offer exists, is available, and isn't void, expired, or sold out
         require(exists, NO_SUCH_OFFER);
 
-        commitToOfferInternal(_buyer, offer, 0, false);
+        commitToOfferInternal(_buyer, offer, 0, false, offer.price);
     }
 
     /**
@@ -116,7 +119,42 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         (bool exists, ) = fetchExchange(_exchangeId);
         require(!exists, EXCHANGE_ALREADY_EXISTS);
 
-        commitToOfferInternal(_buyer, offer, _exchangeId, true);
+        commitToOfferInternal(_buyer, offer, _exchangeId, true, offer.price);
+    }
+
+    function commitToPreMintedOfferWithPriceDiscovery(
+        address payable _buyer,
+        uint256 _offerId,
+        PriceDiscovery calldata _priceDiscovery
+    ) external exchangesNotPaused buyersNotPaused nonReentrant {
+        // Make sure buyer address is not zero address
+        require(_buyer != address(0), INVALID_ADDRESS);
+
+        // Get the offer
+        bool exists;
+        Offer storage offer;
+        (exists, offer) = fetchOffer(_offerId);
+
+        // Make sure offer exists, is available, and isn't void, expired, or sold out
+        require(exists, NO_SUCH_OFFER);
+        uint256 price;
+
+        // Make sure  caller provided price discovery data if offer price type is discovery
+        if (offer.priceType == OfferPrice.Discovery) {
+            require(
+                _priceDiscovery.price > 0 &&
+                    _priceDiscovery.priceDiscoveryContract != address(0) &&
+                    _priceDiscovery.priceDiscoveryData.length > 0,
+                "INVALID_PRICE_DISCOVERY"
+            );
+
+            // First call price discovery and get actual price
+            // It might be lower tha submitted for buy orders and higher for sell orders
+            price = fulFilOrder(offer.exchangeToken, _priceDiscovery, _buyer, offer.sellerId, 0);
+        } else {
+            price = offer.price;
+        }
+        commitToOfferInternal(_buyer, offer, 0, true, price);
     }
 
     /**
@@ -145,12 +183,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _offer - storage pointer to the offer
      * @param _exchangeId - the id of the exchange
      * @param _isPreminted - whether the offer is preminted
+     * @param _price - price of the offer
      */
     function commitToOfferInternal(
         address payable _buyer,
         Offer storage _offer,
         uint256 _exchangeId,
-        bool _isPreminted
+        bool _isPreminted,
+        uint256 _price
     ) internal {
         uint256 _offerId = _offer.id;
         // Make sure offer is available, and isn't void, expired, or sold out
@@ -174,7 +214,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 buyerId = getValidBuyer(_buyer);
 
         // Encumber funds before creating the exchange
-        FundsLib.encumberFunds(_offerId, buyerId, _isPreminted);
+        FundsLib.encumberFunds(_offerId, buyerId, _isPreminted, _price);
 
         // Create and store a new exchange
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];

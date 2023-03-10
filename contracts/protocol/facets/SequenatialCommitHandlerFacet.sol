@@ -96,7 +96,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
         // First call price discovery and get actual price
         // It might be lower tha submitted for buy orders and higher for sell orders
-        uint256 actualPrice = fulFilOrder(_exchangeId, tokenAddress, _priceDiscovery, _buyer, offer.sellerId);
+        uint256 actualPrice = fulFilOrder(tokenAddress, _priceDiscovery, _buyer, offer.sellerId, _exchangeId);
 
         // Calculate the amount to be kept in escrow
         uint256 escrowAmount;
@@ -184,8 +184,12 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         address,
         uint256 _tokenId,
         bytes calldata
-    ) external view override returns (bytes4) {
+    ) external override returns (bytes4) {
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+        // If incomingVoucherId is 0, it means that the PD does not differentiate between vouchers. In this case, we only know the voucher id here
+        if (ps.incomingVoucherId == 0) {
+            ps.incomingVoucherId = _tokenId;
+        }
         require(
             ps.incomingVoucherId == _tokenId && ps.incomingVoucherCloneAddress == msg.sender,
             UNEXPECTED_ERC721_RECEIVED

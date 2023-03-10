@@ -55,8 +55,8 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     lssvmPairFactory = await LSSVMPairFactory.deploy(
       lssvmPairEnumerableETH.address,
-      lssvmPairEnumerableERC20.address,
       lssvmPairMissingEnumerableETH.address,
+      lssvmPairEnumerableERC20.address,
       lssvmPairMissingEnumerableERC20.address,
       sudoswapDeployer.address,
       sudoswapFeeMultiplier
@@ -191,6 +191,14 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
   //        "_spotPrice": "The initial selling spot price"
 
   it("sudoswap is used as price discovery mechanism for a offer", async function () {
+    // IERC721 _nft,
+    // ICurve _bondingCurve,
+    // address payable _assetRecipient,
+    // LSSVMPair.PoolType _poolType,
+    // uint128 _delta,
+    // uint96 _fee,
+    // uint128 _spotPrice,
+    // uint256[] calldata _initialNFTIDs
     const poolType = 0; // NFT
     const delta = "100";
     const fee = "0";
@@ -201,12 +209,13 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
       .createPairETH(
         bosonVoucher.address,
         linearCurve.address,
-        ethers.constants.AddressZero,
+        bosonVoucher.address,
         poolType,
         delta,
         fee,
         spotPrice,
         nftIds
       );
+    await expect(exchangeHandler.connect(buyer).commitToPreMintedOffer(buyer.address, offer.id));
   });
 });

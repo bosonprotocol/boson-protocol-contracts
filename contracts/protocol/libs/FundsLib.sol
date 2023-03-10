@@ -65,7 +65,8 @@ library FundsLib {
     function encumberFunds(
         uint256 _offerId,
         uint256 _buyerId,
-        bool _isPreminted
+        bool _isPreminted,
+        uint256 _price
     ) internal {
         // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
@@ -77,17 +78,16 @@ library FundsLib {
         // this will be called only from commitToOffer so we expect that exchange actually exist
         BosonTypes.Offer storage offer = pe.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
-        uint256 price = offer.price;
 
         // if offer is non-preminted, validate incoming payment
         if (!_isPreminted) {
-            validateIncomingPayment(exchangeToken, price);
-            emit FundsEncumbered(_buyerId, exchangeToken, price, sender);
+            validateIncomingPayment(exchangeToken, _price);
+            emit FundsEncumbered(_buyerId, exchangeToken, _price, sender);
         }
 
         // decrease available funds
         uint256 sellerId = offer.sellerId;
-        uint256 sellerFundsEncumbered = offer.sellerDeposit + (_isPreminted ? price : 0); // for preminted offer, encumber also price from seller's available funds
+        uint256 sellerFundsEncumbered = offer.sellerDeposit + (_isPreminted ? _price : 0); // for preminted offer, encumber also price from seller's available funds
         decreaseAvailableFunds(sellerId, exchangeToken, sellerFundsEncumbered);
 
         // notify external observers

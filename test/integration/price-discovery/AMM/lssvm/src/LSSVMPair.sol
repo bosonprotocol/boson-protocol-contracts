@@ -1,25 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
-import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import {OwnableWithTransferCallback} from "./lib/OwnableWithTransferCallback.sol";
-import {ReentrancyGuard} from "./lib/ReentrancyGuard.sol";
-import {ICurve} from "./bonding-curves/ICurve.sol";
-import {LSSVMRouter} from "./LSSVMRouter.sol";
-import {ILSSVMPairFactoryLike} from "./ILSSVMPairFactoryLike.sol";
-import {CurveErrorCodes} from "./bonding-curves/CurveErrorCodes.sol";
-import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "hardhat/console.sol";
+import { ERC20 } from "solmate/tokens/ERC20.sol";
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import { OwnableWithTransferCallback } from "./lib/OwnableWithTransferCallback.sol";
+import { ReentrancyGuard } from "./lib/ReentrancyGuard.sol";
+import { ICurve } from "./bonding-curves/ICurve.sol";
+import { LSSVMRouter } from "./LSSVMRouter.sol";
+import { ILSSVMPairFactoryLike } from "./ILSSVMPairFactoryLike.sol";
+import { CurveErrorCodes } from "./bonding-curves/CurveErrorCodes.sol";
+import { ERC1155Holder } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 
 /// @title The base contract for an NFT/TOKEN AMM pair
 /// @author boredGenius and 0xmons
 /// @notice This implements the core swap logic from NFT to TOKEN
-abstract contract LSSVMPair is
-    OwnableWithTransferCallback,
-    ReentrancyGuard,
-    ERC1155Holder
-{
+abstract contract LSSVMPair is OwnableWithTransferCallback, ReentrancyGuard, ERC1155Holder {
     enum PoolType {
         TOKEN,
         NFT,
@@ -88,22 +85,17 @@ abstract contract LSSVMPair is
         ICurve _bondingCurve = bondingCurve();
         PoolType _poolType = poolType();
 
+        console.log(uint256(_poolType));
         if ((_poolType == PoolType.TOKEN) || (_poolType == PoolType.NFT)) {
             require(_fee == 0, "Only Trade Pools can have nonzero fee");
             assetRecipient = _assetRecipient;
         } else if (_poolType == PoolType.TRADE) {
             require(_fee < MAX_FEE, "Trade fee must be less than 90%");
-            require(
-                _assetRecipient == address(0),
-                "Trade pools can't set asset recipient"
-            );
+            require(_assetRecipient == address(0), "Trade pools can't set asset recipient");
             fee = _fee;
         }
         require(_bondingCurve.validateDelta(_delta), "Invalid delta for curve");
-        require(
-            _bondingCurve.validateSpotPrice(_spotPrice),
-            "Invalid new spot price for curve"
-        );
+        require(_bondingCurve.validateSpotPrice(_spotPrice), "Invalid new spot price for curve");
         delta = _delta;
         spotPrice = _spotPrice;
     }
@@ -141,14 +133,8 @@ abstract contract LSSVMPair is
         // Input validation
         {
             PoolType _poolType = poolType();
-            require(
-                _poolType == PoolType.NFT || _poolType == PoolType.TRADE,
-                "Wrong Pool type"
-            );
-            require(
-                (numNFTs > 0) && (numNFTs <= _nft.balanceOf(address(this))),
-                "Ask for > 0 and <= balanceOf NFTs"
-            );
+            require(_poolType == PoolType.NFT || _poolType == PoolType.TRADE, "Wrong Pool type");
+            require((numNFTs > 0) && (numNFTs <= _nft.balanceOf(address(this))), "Ask for > 0 and <= balanceOf NFTs");
         }
 
         // Call bonding curve for pricing information
@@ -160,13 +146,7 @@ abstract contract LSSVMPair is
             _factory
         );
 
-        _pullTokenInputAndPayProtocolFee(
-            inputAmount,
-            isRouter,
-            routerCaller,
-            _factory,
-            protocolFee
-        );
+        _pullTokenInputAndPayProtocolFee(inputAmount, isRouter, routerCaller, _factory, protocolFee);
 
         _sendAnyNFTsToRecipient(_nft, nftRecipient, numNFTs);
 
@@ -204,10 +184,7 @@ abstract contract LSSVMPair is
         // Input validation
         {
             PoolType _poolType = poolType();
-            require(
-                _poolType == PoolType.NFT || _poolType == PoolType.TRADE,
-                "Wrong Pool type"
-            );
+            require(_poolType == PoolType.NFT || _poolType == PoolType.TRADE, "Wrong Pool type");
             require((nftIds.length > 0), "Must ask for > 0 NFTs");
         }
 
@@ -220,13 +197,7 @@ abstract contract LSSVMPair is
             _factory
         );
 
-        _pullTokenInputAndPayProtocolFee(
-            inputAmount,
-            isRouter,
-            routerCaller,
-            _factory,
-            protocolFee
-        );
+        _pullTokenInputAndPayProtocolFee(inputAmount, isRouter, routerCaller, _factory, protocolFee);
 
         _sendSpecificNFTsToRecipient(nft(), nftRecipient, nftIds);
 
@@ -262,10 +233,7 @@ abstract contract LSSVMPair is
         // Input validation
         {
             PoolType _poolType = poolType();
-            require(
-                _poolType == PoolType.TOKEN || _poolType == PoolType.TRADE,
-                "Wrong Pool type"
-            );
+            require(_poolType == PoolType.TOKEN || _poolType == PoolType.TRADE, "Wrong Pool type");
             require(nftIds.length > 0, "Must ask for > 0 NFTs");
         }
 
@@ -306,13 +274,7 @@ abstract contract LSSVMPair is
             uint256 protocolFee
         )
     {
-        (
-            error,
-            newSpotPrice,
-            newDelta,
-            inputAmount,
-            protocolFee
-        ) = bondingCurve().getBuyInfo(
+        (error, newSpotPrice, newDelta, inputAmount, protocolFee) = bondingCurve().getBuyInfo(
             spotPrice,
             delta,
             numNFTs,
@@ -336,13 +298,7 @@ abstract contract LSSVMPair is
             uint256 protocolFee
         )
     {
-        (
-            error,
-            newSpotPrice,
-            newDelta,
-            outputAmount,
-            protocolFee
-        ) = bondingCurve().getSellInfo(
+        (error, newSpotPrice, newDelta, outputAmount, protocolFee) = bondingCurve().getSellInfo(
             spotPrice,
             delta,
             numNFTs,
@@ -359,19 +315,12 @@ abstract contract LSSVMPair is
     /**
         @notice Returns the pair's variant (NFT is enumerable or not, pair uses ETH or ERC20)
      */
-    function pairVariant()
-        public
-        pure
-        virtual
-        returns (ILSSVMPairFactoryLike.PairVariant);
+    function pairVariant() public pure virtual returns (ILSSVMPairFactoryLike.PairVariant);
 
     function factory() public pure returns (ILSSVMPairFactoryLike _factory) {
         uint256 paramsLength = _immutableParamsLength();
         assembly {
-            _factory := shr(
-                0x60,
-                calldataload(sub(calldatasize(), paramsLength))
-            )
+            _factory := shr(0x60, calldataload(sub(calldatasize(), paramsLength)))
         }
     }
 
@@ -381,10 +330,7 @@ abstract contract LSSVMPair is
     function bondingCurve() public pure returns (ICurve _bondingCurve) {
         uint256 paramsLength = _immutableParamsLength();
         assembly {
-            _bondingCurve := shr(
-                0x60,
-                calldataload(add(sub(calldatasize(), paramsLength), 20))
-            )
+            _bondingCurve := shr(0x60, calldataload(add(sub(calldatasize(), paramsLength), 20)))
         }
     }
 
@@ -394,10 +340,7 @@ abstract contract LSSVMPair is
     function nft() public pure returns (IERC721 _nft) {
         uint256 paramsLength = _immutableParamsLength();
         assembly {
-            _nft := shr(
-                0x60,
-                calldataload(add(sub(calldatasize(), paramsLength), 40))
-            )
+            _nft := shr(0x60, calldataload(add(sub(calldatasize(), paramsLength), 40)))
         }
     }
 
@@ -407,10 +350,7 @@ abstract contract LSSVMPair is
     function poolType() public pure returns (PoolType _poolType) {
         uint256 paramsLength = _immutableParamsLength();
         assembly {
-            _poolType := shr(
-                0xf8,
-                calldataload(add(sub(calldatasize(), paramsLength), 60))
-            )
+            _poolType := shr(0xf8, calldataload(add(sub(calldatasize(), paramsLength), 60)))
         }
     }
 
@@ -418,11 +358,7 @@ abstract contract LSSVMPair is
         @notice Returns the address that assets that receives assets when a swap is done with this pair
         Can be set to another address by the owner, if set to address(0), defaults to the pair's own address
      */
-    function getAssetRecipient()
-        public
-        view
-        returns (address payable _assetRecipient)
-    {
+    function getAssetRecipient() public view returns (address payable _assetRecipient) {
         // If it's a TRADE pool, we know the recipient is 0 (TRADE pools can't set asset recipients)
         // so just return address(this)
         if (poolType() == PoolType.TRADE) {
@@ -463,13 +399,7 @@ abstract contract LSSVMPair is
         uint128 newSpotPrice;
         uint128 currentDelta = delta;
         uint128 newDelta;
-        (
-            error,
-            newSpotPrice,
-            newDelta,
-            inputAmount,
-            protocolFee
-        ) = _bondingCurve.getBuyInfo(
+        (error, newSpotPrice, newDelta, inputAmount, protocolFee) = _bondingCurve.getBuyInfo(
             currentSpotPrice,
             currentDelta,
             numNFTs,
@@ -523,13 +453,7 @@ abstract contract LSSVMPair is
         uint128 newSpotPrice;
         uint128 currentDelta = delta;
         uint128 newDelta;
-        (
-            error,
-            newSpotPrice,
-            newDelta,
-            outputAmount,
-            protocolFee
-        ) = _bondingCurve.getSellInfo(
+        (error, newSpotPrice, newDelta, outputAmount, protocolFee) = _bondingCurve.getSellInfo(
             currentSpotPrice,
             currentDelta,
             numNFTs,
@@ -543,10 +467,7 @@ abstract contract LSSVMPair is
         }
 
         // Revert if output is too little
-        require(
-            outputAmount >= minExpectedTokenOutput,
-            "Out too little tokens"
-        );
+        require(outputAmount >= minExpectedTokenOutput, "Out too little tokens");
 
         // Consolidate writes to save gas
         if (currentSpotPrice != newSpotPrice || currentDelta != newDelta) {
@@ -591,20 +512,14 @@ abstract contract LSSVMPair is
     /**
         @notice Sends protocol fee (if it exists) back to the LSSVMPairFactory from the pair
      */
-    function _payProtocolFeeFromPair(
-        ILSSVMPairFactoryLike _factory,
-        uint256 protocolFee
-    ) internal virtual;
+    function _payProtocolFeeFromPair(ILSSVMPairFactoryLike _factory, uint256 protocolFee) internal virtual;
 
     /**
         @notice Sends tokens to a recipient
         @param tokenRecipient The address receiving the tokens
         @param outputAmount The amount of tokens to send
      */
-    function _sendTokenOutput(
-        address payable tokenRecipient,
-        uint256 outputAmount
-    ) internal virtual;
+    function _sendTokenOutput(address payable tokenRecipient, uint256 outputAmount) internal virtual;
 
     /**
         @notice Sends some number of NFTs to a recipient address, ID agnostic
@@ -666,44 +581,21 @@ abstract contract LSSVMPair is
                 if (numNFTs > 1) {
                     uint256 beforeBalance = _nft.balanceOf(_assetRecipient);
                     for (uint256 i = 0; i < numNFTs; ) {
-                        router.pairTransferNFTFrom(
-                            _nft,
-                            routerCaller,
-                            _assetRecipient,
-                            nftIds[i],
-                            pairVariant()
-                        );
+                        router.pairTransferNFTFrom(_nft, routerCaller, _assetRecipient, nftIds[i], pairVariant());
 
                         unchecked {
                             ++i;
                         }
                     }
-                    require(
-                        (_nft.balanceOf(_assetRecipient) - beforeBalance) ==
-                            numNFTs,
-                        "NFTs not transferred"
-                    );
+                    require((_nft.balanceOf(_assetRecipient) - beforeBalance) == numNFTs, "NFTs not transferred");
                 } else {
-                    router.pairTransferNFTFrom(
-                        _nft,
-                        routerCaller,
-                        _assetRecipient,
-                        nftIds[0],
-                        pairVariant()
-                    );
-                    require(
-                        _nft.ownerOf(nftIds[0]) == _assetRecipient,
-                        "NFT not transferred"
-                    );
+                    router.pairTransferNFTFrom(_nft, routerCaller, _assetRecipient, nftIds[0], pairVariant());
+                    require(_nft.ownerOf(nftIds[0]) == _assetRecipient, "NFT not transferred");
                 }
             } else {
                 // Pull NFTs directly from sender
                 for (uint256 i; i < numNFTs; ) {
-                    _nft.safeTransferFrom(
-                        msg.sender,
-                        _assetRecipient,
-                        nftIds[i]
-                    );
+                    _nft.safeTransferFrom(msg.sender, _assetRecipient, nftIds[i]);
 
                     unchecked {
                         ++i;
@@ -728,9 +620,7 @@ abstract contract LSSVMPair is
         @param a The NFT to transfer
         @param nftIds The list of IDs of the NFTs to send to the owner
      */
-    function withdrawERC721(IERC721 a, uint256[] calldata nftIds)
-        external
-        virtual;
+    function withdrawERC721(IERC721 a, uint256[] calldata nftIds) external virtual;
 
     /**
         @notice Rescues ERC20 tokens from the pair to the owner. Only callable by the owner (onlyOwnable modifier is in the implemented function).
@@ -759,10 +649,7 @@ abstract contract LSSVMPair is
      */
     function changeSpotPrice(uint128 newSpotPrice) external onlyOwner {
         ICurve _bondingCurve = bondingCurve();
-        require(
-            _bondingCurve.validateSpotPrice(newSpotPrice),
-            "Invalid new spot price for curve"
-        );
+        require(_bondingCurve.validateSpotPrice(newSpotPrice), "Invalid new spot price for curve");
         if (spotPrice != newSpotPrice) {
             spotPrice = newSpotPrice;
             emit SpotPriceUpdate(newSpotPrice);
@@ -775,10 +662,7 @@ abstract contract LSSVMPair is
      */
     function changeDelta(uint128 newDelta) external onlyOwner {
         ICurve _bondingCurve = bondingCurve();
-        require(
-            _bondingCurve.validateDelta(newDelta),
-            "Invalid delta for curve"
-        );
+        require(_bondingCurve.validateDelta(newDelta), "Invalid delta for curve");
         if (delta != newDelta) {
             delta = newDelta;
             emit DeltaUpdate(newDelta);
@@ -806,10 +690,7 @@ abstract contract LSSVMPair is
         trades. Only callable by the owner.
         @param newRecipient The new asset recipient
      */
-    function changeAssetRecipient(address payable newRecipient)
-        external
-        onlyOwner
-    {
+    function changeAssetRecipient(address payable newRecipient) external onlyOwner {
         PoolType _poolType = poolType();
         require(_poolType != PoolType.TRADE, "Not for Trade pools");
         if (assetRecipient != newRecipient) {
@@ -824,13 +705,10 @@ abstract contract LSSVMPair is
         @param target The contract to call
         @param data The calldata to pass to the contract
      */
-    function call(address payable target, bytes calldata data)
-        external
-        onlyOwner
-    {
+    function call(address payable target, bytes calldata data) external onlyOwner {
         ILSSVMPairFactoryLike _factory = factory();
         require(_factory.callAllowed(target), "Target must be whitelisted");
-        (bool result, ) = target.call{value: 0}(data);
+        (bool result, ) = target.call{ value: 0 }(data);
         require(result, "Call failed");
     }
 
@@ -840,14 +718,9 @@ abstract contract LSSVMPair is
         @param calls The calldata for each call to make
         @param revertOnFail Whether or not to revert the entire tx if any of the calls fail
      */
-    function multicall(bytes[] calldata calls, bool revertOnFail)
-        external
-        onlyOwner
-    {
+    function multicall(bytes[] calldata calls, bool revertOnFail) external onlyOwner {
         for (uint256 i; i < calls.length; ) {
-            (bool success, bytes memory result) = address(this).delegatecall(
-                calls[i]
-            );
+            (bool success, bytes memory result) = address(this).delegatecall(calls[i]);
             if (!success && revertOnFail) {
                 revert(_getRevertMsg(result));
             }
@@ -858,21 +731,14 @@ abstract contract LSSVMPair is
         }
 
         // Prevent multicall from malicious frontend sneaking in ownership change
-        require(
-            owner() == msg.sender,
-            "Ownership cannot be changed in multicall"
-        );
+        require(owner() == msg.sender, "Ownership cannot be changed in multicall");
     }
 
     /**
       @param _returnData The data returned from a multicall result
       @dev Used to grab the revert string from the underlying call
      */
-    function _getRevertMsg(bytes memory _returnData)
-        internal
-        pure
-        returns (string memory)
-    {
+    function _getRevertMsg(bytes memory _returnData) internal pure returns (string memory) {
         // If the _res length is less than 68, then the transaction failed silently (without a revert message)
         if (_returnData.length < 68) return "Transaction reverted silently";
 
