@@ -13,11 +13,10 @@ const {
   mockOffer,
   mockDisputeResolver,
 } = require("../../../util/mock");
-const { assert, expect } = require("chai");
+const { expect } = require("chai");
 const Role = require("../../../../scripts/domain/Role");
 const { deployMockTokens } = require("../../../../scripts/util/deploy-mock-tokens");
 const { DisputeResolverFee } = require("../../../../scripts/domain/DisputeResolverFee");
-const { RevertReasons } = require("../../../../scripts/config/revert-reasons");
 const Side = require("../../../../scripts/domain/Side");
 const PriceDiscovery = require("../../../../scripts/domain/PriceDiscovery");
 const { constants } = require("ethers");
@@ -25,11 +24,12 @@ const OfferPrice = require("../../../../scripts/domain/OfferPrice");
 
 describe("[@skip-on-coverage] sudoswap integration", function () {
   this.timeout(100000000);
-  let lssvmPairFactory, lssvmPair, linearCurve;
+  let lssvmPairFactory, linearCurve;
   let bosonVoucher, bosonToken;
   let deployer, protocol, assistant, buyer, DR, sudoswapDeployer;
-  let calldata, order, orderHash, value, offer;
+  let offer;
   let exchangeHandler;
+  let weth;
 
   before(async function () {
     let protocolTreasury;
@@ -57,15 +57,13 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     const LSSVMPairFactory = await ethers.getContractFactory("LSSVMPairFactory", sudoswapDeployer);
 
-    const sudoswapFeeMultiplier = "5000000000000000";
-
     lssvmPairFactory = await LSSVMPairFactory.deploy(
       lssvmPairEnumerableETH.address,
       lssvmPairMissingEnumerableETH.address,
       lssvmPairEnumerableERC20.address,
       lssvmPairMissingEnumerableERC20.address,
       sudoswapDeployer.address,
-      sudoswapFeeMultiplier
+      "0"
     );
     await lssvmPairFactory.deployed();
 
@@ -193,7 +191,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
     });
 
     // Pre mint range
-    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable);
+    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
     await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
   });
   // "_assetRecipient": "The address that will receive the assets traders give during trades. If set to address(0), assets will be sent to the pool address. Not available to TRADE pools. ",
@@ -207,7 +205,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
   it("sudoswap is used as price discovery mechanism for a offer", async function () {
     const poolType = 1; // NFT
-    const delta = "100";
+    const delta = ethers.utils.parseUnits("0.25", "ether").toString();
     const fee = "0";
     const spotPrice = offer.price;
     const nftIds = [];
@@ -233,15 +231,17 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
     tx = await lssvmPairFactory.connect(assistant).depositNFTs(bosonVoucher.address, [1], contractAddress);
 
     const priceDiscoveryContract = await ethers.getContractAt("LSSVMPairMissingEnumerableETH", contractAddress);
+    const [, , , inputAmount] = await priceDiscoveryContract.getBuyNFTQuote(1);
+
     const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("swapTokenForAnyNFTs", [
       1,
-      offer.price + delta,
-      exchangeHandler.address, // protocol diamond
+      inputAmount,
+      exchangeHandler.address, // receiver is protocol diamond
       false,
       constants.AddressZero,
     ]);
     const priceDiscovery = new PriceDiscovery(
-      offer.price,
+      inputAmount,
       priceDiscoveryContract.address,
       priceDiscoveryData,
       Side.Ask
@@ -249,8 +249,8 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     // Seller needs to deposit weth in order to fill the escrow at the last step
     // Price is theoretically the highest amount needed
-    await weth.connect(buyer).deposit({ value: offer.price });
-    await weth.connect(buyer).approve(exchangeHandler.address, offer.price);
+    await weth.connect(buyer).deposit({ value: inputAmount });
+    await weth.connect(buyer).approve(exchangeHandler.address, inputAmount);
 
     // Approve transfers
     // Buyer does not approve, since its in ETH.
@@ -260,11 +260,10 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
     tx = await exchangeHandler
       .connect(buyer)
       .commitToPreMintedOfferWithPriceDiscovery(buyer.address, offer.id, priceDiscovery, {
-        value: offer.price + delta,
+        value: inputAmount,
       });
 
     await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
-
     await expect(tx).to.emit(priceDiscoveryContract, "SwapNFTOutPair");
   });
 });

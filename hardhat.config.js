@@ -2,11 +2,8 @@ const dotEnvConfig = require("dotenv");
 dotEnvConfig.config();
 
 const environments = require("./environments");
-const { task, subtask } = require("hardhat/config");
-const path = require("node:path");
+const { task } = require("hardhat/config");
 const fs = require("fs");
-const { glob } = require("glob");
-const { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } = require("hardhat/builtin-tasks/task-names");
 require("hardhat-preprocessor");
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-waffle");
@@ -184,6 +181,9 @@ module.exports = {
       },
       {
         version: "0.8.17",
+      },
+      {
+        version: "0.8.19",
       },
     ],
   },

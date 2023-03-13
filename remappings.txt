@@ -1,4 +1,4 @@
-ds-test/=test/integration/price-discovery/AMM/lssvm/lib/ds-test/src/
-solmate/=test/integration/price-discovery/AMM/lssvm/lib/solmate/src/
-manifoldxyz/=test/integration/price-discovery/AMM/lssvm/lib/royalty-registry-solidity.git/contracts/
-@manifoldxyz/=test/integration/price-discovery/AMM/lssvm/lib/
+ds-test/=submodules/lssvm/lib/ds-test/src/
+solmate/=submodules/lssvm/lib/solmate/src/
+@manifoldxyz/=submodules/lssvm/lib/
+manifoldxyz/=submodules/lssvm/lib/royalty-registry-solidity.git/contracts/

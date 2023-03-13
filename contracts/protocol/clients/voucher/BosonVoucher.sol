@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 import "../../../domain/BosonConstants.sol";
+import "hardhat/console.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
@@ -404,7 +405,8 @@ contract BosonVoucherBase is
         } else {
             bool committable;
             // If _tokenId does not exist, but offer is committable, report contract owner as token owner
-            (committable, , owner) = getPreMintStatus(_tokenId);
+            (committable, , owner, ) = getPreMintStatus(_tokenId);
+            console.log("commitable", committable);
             if (committable) return owner;
 
             // Otherwise revert
@@ -420,9 +422,9 @@ contract BosonVoucherBase is
         address _to,
         uint256 _tokenId
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
-        (bool committable, uint256 offerId, ) = getPreMintStatus(_tokenId);
+        (bool committable, uint256 offerId, , OfferPrice priceType) = getPreMintStatus(_tokenId);
 
-        if (committable) {
+        if (committable && priceType != OfferPrice.Discovery) {
             // If offer is committable, temporarily update _owners, so transfer succeeds
             silentMintAndSetPremintStatus(_from, _tokenId, offerId);
         }
@@ -439,9 +441,9 @@ contract BosonVoucherBase is
         uint256 _tokenId,
         bytes memory _data
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
-        (bool committable, uint256 offerId, ) = getPreMintStatus(_tokenId);
+        (bool committable, uint256 offerId, , OfferPrice priceType) = getPreMintStatus(_tokenId);
 
-        if (committable) {
+        if (committable && priceType != OfferPrice.Discovery) {
             // If offer is committable, temporarily update _owners, so transfer succeeds
             silentMintAndSetPremintStatus(_from, _tokenId, offerId);
         }
@@ -535,7 +537,7 @@ contract BosonVoucherBase is
         (bool exists, Offer memory offer) = getBosonOfferByExchangeId(_tokenId);
 
         if (!exists) {
-            (bool committable, uint256 offerId, ) = getPreMintStatus(_tokenId);
+            (bool committable, uint256 offerId, , ) = getPreMintStatus(_tokenId);
             if (committable) {
                 exists = true;
                 (offer, ) = getBosonOffer(offerId);
@@ -812,7 +814,8 @@ contract BosonVoucherBase is
         returns (
             bool committable,
             uint256 offerId,
-            address owner
+            address owner,
+            OfferPrice priceType
         )
     {
         // Not committable if _committed already or if token has an owner
@@ -845,6 +848,8 @@ contract BosonVoucherBase is
                             // Has it been pre-minted and not burned yet?
                             committable = true;
                             offerId = currentOfferId;
+                            (Offer memory offer, ) = getBosonOffer(offerId);
+                            priceType = offer.priceType;
                             owner = range.owner;
                         }
                         break; // Found!
@@ -911,6 +916,26 @@ contract BosonVoucherBase is
         _premintStatus.committable = true;
         _premintStatus.offerId = _offerId;
     }
+
+    function _ownerOf(uint256 tokenId) internal view virtual override returns (address) {
+        return super._ownerOf(tokenId);
+    }
+
+    // function _ownerOf(uint256 tokenId) internal view virtual override returns (address) {
+    //     address owner = super._ownerOf(tokenId);
+
+    //     if (owner != address(0)) {
+    //         return owner;
+    //     } else {
+    //         bool committable;
+    //         // If _tokenId does not exist, but offer is committable, report contract owner as token owner
+    //         (committable, , owner, ) = getPreMintStatus(tokenId);
+    //         if (committable) return owner;
+
+    //         // Otherwise revert
+    //         revert("ERC721: invalid token ID");
+    //     }
+    // }
 }
 
 /**

@@ -66,7 +66,8 @@ library FundsLib {
         uint256 _offerId,
         uint256 _buyerId,
         bool _isPreminted,
-        uint256 _price
+        uint256 _price,
+        BosonTypes.OfferPrice _priceType
     ) internal {
         // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
@@ -79,8 +80,8 @@ library FundsLib {
         BosonTypes.Offer storage offer = pe.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
 
-        // if offer is non-preminted, validate incoming payment
-        if (!_isPreminted) {
+        // if offer is non-preminted or price type is discovery, validate incoming payment
+        if (!_isPreminted || _priceType == BosonTypes.OfferPrice.Discovery) {
             validateIncomingPayment(exchangeToken, _price);
             emit FundsEncumbered(_buyerId, exchangeToken, _price, sender);
         }

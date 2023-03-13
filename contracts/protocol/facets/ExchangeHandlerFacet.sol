@@ -14,6 +14,7 @@ import { Address } from "../../ext_libs/Address.sol";
 import { IERC1155 } from "../../interfaces/IERC1155.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
+import { IERC721Receiver } from "../../interfaces/IERC721Receiver.sol";
 import { PriceDiscoveryBase } from "../bases/PriceDiscoveryBase.sol";
 
 /**
@@ -21,7 +22,7 @@ import { PriceDiscoveryBase } from "../bases/PriceDiscoveryBase.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  */
-contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, PriceDiscoveryBase {
+contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, PriceDiscoveryBase, IERC721Receiver {
     using Address for address;
 
     constructor(address _weth) PriceDiscoveryBase(_weth) {}
@@ -214,7 +215,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         uint256 buyerId = getValidBuyer(_buyer);
 
         // Encumber funds before creating the exchange
-        FundsLib.encumberFunds(_offerId, buyerId, _isPreminted, _price);
+        FundsLib.encumberFunds(_offerId, buyerId, _isPreminted, _price, _offer.priceType);
 
         // Create and store a new exchange
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];
@@ -1061,5 +1062,29 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         if (conditionExists) {
             receipt.condition = condition;
         }
+    }
+
+    /**
+     * @dev See {IERC721Receiver-onERC721Received}.
+     *
+     * Always returns `IERC721Receiver.onERC721Received.selector`.
+     */
+    function onERC721Received(
+        address,
+        address,
+        uint256 _tokenId,
+        bytes calldata
+    ) public virtual override returns (bytes4) {
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+
+        // If incomingVoucherId is 0, it means that the PD does not differentiate between vouchers. In this case, we only know the voucher id here
+        if (ps.incomingVoucherId == 0) {
+            ps.incomingVoucherId = _tokenId;
+        }
+        require(
+            ps.incomingVoucherId == _tokenId && ps.incomingVoucherCloneAddress == msg.sender,
+            UNEXPECTED_ERC721_RECEIVED
+        );
+        return this.onERC721Received.selector;
     }
 }
