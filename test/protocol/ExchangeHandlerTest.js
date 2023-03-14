@@ -44,6 +44,7 @@ const {
   calculateContractAddress,
   applyPercentage,
   getFacetsWithArgs,
+  premintedTokenId,
 } = require("../util/utils.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const { FundsList } = require("../../scripts/domain/Funds");
@@ -827,6 +828,7 @@ describe("IBosonExchangeHandler", function () {
         await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
         tokenId = "1";
+        tokenId = premintedTokenId(offer.id, exchangeId);
       });
 
       it("should emit a BuyerCommitted event", async function () {

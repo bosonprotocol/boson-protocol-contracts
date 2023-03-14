@@ -284,6 +284,10 @@ function objectToArray(input) {
   return result;
 }
 
+function premintedTokenId(offerId, exchangeId) {
+  return hre.ethers.BigNumber.from(offerId).shl(128).add(exchangeId);
+}
+
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.eventEmittedWithArgs = eventEmittedWithArgs;
@@ -296,3 +300,4 @@ exports.paddingType = paddingType;
 exports.getFacetsWithArgs = getFacetsWithArgs;
 exports.compareOfferStructs = compareOfferStructs;
 exports.objectToArray = objectToArray;
+exports.premintedTokenId = premintedTokenId;

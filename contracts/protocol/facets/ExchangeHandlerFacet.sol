@@ -307,6 +307,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeId - the id of the exchange
      */
     function revokeVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
+        _exchangeId = _exchangeId & type(uint128).max; // take only 128 right bits
+
         // Get the exchange, should be in committed state
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -340,6 +342,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeId - the id of the exchange
      */
     function cancelVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
+        _exchangeId = _exchangeId & type(uint128).max; // take only 128 right bits
+
         // Get the exchange, should be in committed state
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -367,6 +371,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeId - the id of the exchange
      */
     function expireVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
+        _exchangeId = _exchangeId & type(uint128).max; // take only 128 right bits
+
         // Get the exchange, should be in committed state
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -399,6 +405,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _validUntilDate - the new voucher expiry date
      */
     function extendVoucher(uint256 _exchangeId, uint256 _validUntilDate) external exchangesNotPaused nonReentrant {
+        _exchangeId = _exchangeId & type(uint128).max; // take only 128 right bits
+
         // Get the exchange, should be in committed state
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -445,6 +453,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      */
     function redeemVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
         // Get the exchange, should be in committed state
+        _exchangeId = _exchangeId & type(uint128).max; // take only 128 right bits
+
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
         uint256 offerId = exchange.offerId;
 
@@ -501,6 +511,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        _exchangeId = _exchangeId & type(uint128).max; // take only 128 right bits
 
         // Get the exchange, should be in committed state
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);

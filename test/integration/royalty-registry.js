@@ -3,7 +3,7 @@ const ethers = hre.ethers;
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
-const { getFacetsWithArgs, calculateContractAddress, applyPercentage } = require("../util/utils");
+const { getFacetsWithArgs, calculateContractAddress, applyPercentage, premintedTokenId } = require("../util/utils");
 const { oneWeek, oneMonth, maxPriorityFeePerGas, ROYALTY_REGISTRY_ADDRESS } = require("../util/constants");
 
 const { mockSeller, mockAuthToken, mockVoucherInitValues, mockOffer, mockDisputeResolver } = require("../util/mock");
@@ -188,8 +188,10 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       await offerHandler.connect(assistant).reserveRange(offerId, 1, assistant.address);
       await bosonVoucher.connect(assistant).preMint(offerId, 1);
 
+      const tokenId = premintedTokenId(offerId, exchangeId);
+
       // get royalty info directly from voucher contract
-      let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(exchangeId, offerPrice);
+      let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(tokenId, offerPrice);
 
       // Expectations
       let expectedRecipient = other1.address;
@@ -199,7 +201,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
       // get royalty info directly from royalty registry
-      let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(bosonVoucher.address, exchangeId, offerPrice);
+      let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(bosonVoucher.address, tokenId, offerPrice);
 
       // Expectations
       let expectedRecipients = [expectedRecipient];
@@ -224,7 +226,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       const offerDatesStruct = offerDates.toStruct();
       const offerDurationsStruct = offerDurations.toStruct();
 
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 100; i++) {
         await offerHandler
           .connect(assistant)
           .createOffer(offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolverId, "0");
@@ -234,13 +236,14 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
         await offerHandler.connect(assistant).reserveRange(offerId, 10, assistant.address);
         // await bosonVoucher.connect(assistant).preMint(offerId, 10);
       }
-      offerId = 25;
+      offerId = 50;
       exchangeId = (offerId - 2) * 10 + 5; // offer 5 has vouchers between 31 and 40
+      const tokenId = premintedTokenId(offerId, exchangeId);
 
       await bosonVoucher.connect(assistant).preMint(offerId, 10);
 
       // get royalty info directly from voucher contract
-      let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(exchangeId, offerPrice);
+      let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(tokenId, offerPrice);
 
       // Expectations
       let expectedRecipient = other1.address;
@@ -250,7 +253,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
       // get royalty info directly from royalty registry
-      let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(bosonVoucher.address, exchangeId, offerPrice);
+      let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(bosonVoucher.address, tokenId, offerPrice);
 
       // Expectations
       let expectedRecipients = [expectedRecipient];
