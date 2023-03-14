@@ -114,6 +114,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         require(msg.sender == protocolLookups().cloneAddress[offer.sellerId], ACCESS_DENIED);
 
         // Exchange must not exist already
+        _exchangeId = _exchangeId & type(uint128).max;
         (bool exists, ) = fetchExchange(_exchangeId);
         require(!exists, EXCHANGE_ALREADY_EXISTS);
 

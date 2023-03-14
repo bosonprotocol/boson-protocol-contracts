@@ -23,7 +23,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
   let bosonVoucher, bosonToken;
   let deployer, protocol, assistant, buyer, DR, other1, other2;
   let seller, royaltyInfo;
-  let offerHandler, exchangeHandler;
+  let accountHandler, offerHandler, exchangeHandler, fundsHandler;
   let offerId, offerPrice, exchangeId;
 
   before(async function () {
@@ -36,9 +36,9 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
     let [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Cast Diamond to contract interfaces
-    const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-    const fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
+    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
     exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
 
     // Grant roles
@@ -130,31 +130,33 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
     const sellerAllowList = [];
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-
-    const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
-    offer.quantityAvailable = 10;
-    offer.royaltyInfo = new RoyaltyInfo([other1.address], [100]);
-    royaltyInfo = offer.royaltyInfo;
-    offerPrice = offer.price;
-
-    await offerHandler
-      .connect(assistant)
-      .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
-
-    const voucherAddress = calculateContractAddress(accountHandler.address, seller.id);
-    bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
-
-    // Pool needs to cover both seller deposit and price
-    const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
-    await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, pool, {
-      value: pool,
-    });
-
-    exchangeId = 1;
-    offerId = 1;
   });
 
   context("EIP2981", function () {
+    beforeEach(async function () {
+      const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+      offer.quantityAvailable = 10;
+      offer.royaltyInfo = new RoyaltyInfo([other1.address], [100]);
+      royaltyInfo = offer.royaltyInfo;
+      offerPrice = offer.price;
+
+      await offerHandler
+        .connect(assistant)
+        .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
+
+      const voucherAddress = calculateContractAddress(accountHandler.address, seller.id);
+      bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
+
+      // Pool needs to cover both seller deposit and price
+      const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
+      await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, pool, {
+        value: pool,
+      });
+
+      exchangeId = 1;
+      offerId = 1;
+    });
+
     it("Normal voucher", async function () {
       // Commit to an offer
       await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: offerPrice });
@@ -188,6 +190,8 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       await offerHandler.connect(assistant).reserveRange(offerId, 1, assistant.address);
       await bosonVoucher.connect(assistant).preMint(offerId, 1);
 
+      console.log("o,e", offerId, exchangeId);
+      console.log(bosonVoucher.address);
       const tokenId = premintedTokenId(offerId, exchangeId);
 
       // get royalty info directly from voucher contract
@@ -236,7 +240,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
         await offerHandler.connect(assistant).reserveRange(offerId, 10, assistant.address);
         // await bosonVoucher.connect(assistant).preMint(offerId, 10);
       }
-      offerId = 50;
+      offerId = 49;
       exchangeId = (offerId - 2) * 10 + 5; // offer 5 has vouchers between 31 and 40
       const tokenId = premintedTokenId(offerId, exchangeId);
 

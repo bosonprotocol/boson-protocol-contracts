@@ -1029,11 +1029,13 @@ describe("IBosonExchangeHandler", function () {
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
           // Reserve a range and premint vouchers
-          tokenId = await exchangeHandler.getNextExchangeId();
+          exchangeId = await exchangeHandler.getNextExchangeId();
           await offerHandler.connect(assistant).reserveRange(offerId, "1", assistant.address);
           await bosonVoucher.connect(assistant).preMint(offerId, "1");
 
-          // Attempt to commit to the not availabe offer, expecting revert
+          tokenId = premintedTokenId(offerId, exchangeId);
+
+          // Attempt to commit to the not available offer, expecting revert
           await expect(
             bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
           ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
