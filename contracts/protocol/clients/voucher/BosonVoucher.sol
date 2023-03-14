@@ -683,7 +683,7 @@ contract BosonVoucherBase is
             // might not exists or is preminted
             (isPreminted, offerId, ) = getPreMintStatus(_tokenId);
             if (!isPreminted) {
-                revert(INVALID_TOKEN_ID);
+                return (address(0), 0);
             }
         }
 

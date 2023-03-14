@@ -2191,7 +2191,9 @@ describe("IBosonVoucher", function () {
     });
   });
 
-  context("ERC2981 NFT Royalty fee", function () {
+  context("EIP2981 NFT Royalty fee", function () {
+    let voucherRedeemableFrom;
+
     beforeEach(async function () {
       seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
 
@@ -2231,6 +2233,7 @@ describe("IBosonVoucher", function () {
 
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
       offer.royaltyInfo = new RoyaltyInfo([seller.treasury], [voucherInitValues.royaltyPercentage]); // 10%
+      voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
 
       await offerHandler
         .connect(assistant)
@@ -2252,9 +2255,6 @@ describe("IBosonVoucher", function () {
 
     context("royaltyInfo()", function () {
       beforeEach(async function () {
-        // // give ownership to assistant
-        // await bosonVoucher.connect(protocol).transferOwnership(assistant.address);
-
         const voucherAddress = calculateContractAddress(accountHandler.address, "1");
         bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
       });
@@ -2387,16 +2387,32 @@ describe("IBosonVoucher", function () {
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
-      context("💔 Revert Reasons", async function () {
-        it("exchange does not exist", async function () {
-          // set invalid exchangeId
-          exchangeId = "1234";
+      it("should return 0 values if token does not exist", async function () {
+        // set invalid exchangeId
+        exchangeId = "1234";
 
-          // royalty percentage too high, expecting revert
-          await expect(bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice)).to.be.revertedWith(
-            RevertReasons.INVALID_TOKEN_ID
-          );
-        });
+        let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = ethers.constants.AddressZero;
+        let expectedRoyaltyAmount = "0";
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+      });
+
+      it("should return 0 values if voucher was redeemed", async function () {
+        await setNextBlockTimestamp(ethers.BigNumber.from(voucherRedeemableFrom).toHexString());
+        await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+        let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = ethers.constants.AddressZero;
+        let expectedRoyaltyAmount = "0";
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
     });
 
