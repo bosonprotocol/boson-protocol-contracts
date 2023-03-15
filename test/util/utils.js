@@ -257,8 +257,7 @@ async function getFacetsWithArgs(facetNames, config) {
   const facets = await getFacets(config);
   const keys = Object.keys(facets).filter((key) => facetNames.includes(key));
   return keys.reduce((obj, key) => {
-    obj[key] = { init: facets[key] };
-    if (key == "ExchangeHandlerFacet") obj[key].constructorArgs = [1]; // Set starting exchange id for v2.2.0. In tests, this is 1.
+    obj[key] = facets[key];
     return obj;
   }, {});
 }
