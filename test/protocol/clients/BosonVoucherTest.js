@@ -255,7 +255,7 @@ describe("IBosonVoucher", function () {
         const offerId = "5";
         const start = "10";
         const length = "123";
-        const tokenId = deriveTokenId(offerId,"15"); // token within reserved range
+        const tokenId = deriveTokenId(offerId, "15"); // token within reserved range
 
         // Deploy mock protocol
         const mockProtocol = await deployMockProtocol();
@@ -282,7 +282,7 @@ describe("IBosonVoucher", function () {
       offerId = "5";
       start = "10";
       length = "123";
-      tokenStartId = deriveTokenId(offerId, start);
+      const tokenStartId = deriveTokenId(offerId, start);
 
       range = new Range(tokenStartId.toString(), length, "0", "0", assistant.address);
     });
@@ -790,13 +790,7 @@ describe("IBosonVoucher", function () {
       // Last burned id should be updated
       const tokenIdStart = deriveTokenId(offerId, start);
       let lastBurnedId = tokenIdStart.add(maxPremintedVouchers - 1);
-      let range = new Range(
-        tokenIdStart.toString(),
-        length,
-        amount,
-        lastBurnedId.toString(),
-        assistant.address
-      );
+      let range = new Range(tokenIdStart.toString(), length, amount, lastBurnedId.toString(), assistant.address);
       let returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
 
@@ -1049,7 +1043,7 @@ describe("IBosonVoucher", function () {
       offerId = "5";
       start = "10";
       length = "1000";
-      tokenIdStart = deriveTokenId(offerId, start);
+      const tokenIdStart = deriveTokenId(offerId, start);
 
       range = new Range(tokenIdStart.toString(), length, "0", "0", assistant.address);
 

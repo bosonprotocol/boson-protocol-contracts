@@ -364,7 +364,8 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         // Burn the voucher
         (, Offer storage offer) = fetchOffer(_exchange.offerId);
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
-        bosonVoucher.burnVoucher(_exchange.id);
+        uint256 tokenId = _exchange.id + (_exchange.offerId << 128);
+        bosonVoucher.burnVoucher(tokenId);
     }
 
     /**

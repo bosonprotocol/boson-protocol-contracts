@@ -706,7 +706,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         // Burn the voucher
         uint256 offerId = _exchange.offerId;
-        (, Offer storage offer) = fetchOffer(_exchange.offerId);
+        (, Offer storage offer) = fetchOffer(offerId);
         IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);
 
         uint256 tokenId = _exchange.id;
