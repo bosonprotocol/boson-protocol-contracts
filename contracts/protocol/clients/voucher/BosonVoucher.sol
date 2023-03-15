@@ -258,7 +258,7 @@ contract BosonVoucherBase is
         require(!offer.voided && (offerDates.validUntil > block.timestamp), OFFER_EXPIRED_OR_VOIDED);
 
         // Get the first token to mint
-        uint256 start = range.start + range.minted;
+        uint256 start = range.start + range.minted + (_offerId << 128);
         address to = range.owner;
 
         // Pre-mint the range
@@ -328,6 +328,12 @@ contract BosonVoucherBase is
             end = start + maxPremintedVouchers;
         }
 
+        // Update last burned token id
+        range.lastBurnedTokenId = end - 1;
+
+        start += (_offerId << 128);
+        end += (_offerId << 128);
+
         // Burn the range
         address seller = owner();
         uint256 burned;
@@ -338,9 +344,6 @@ contract BosonVoucherBase is
                 burned++;
             }
         }
-
-        // Update last burned token id
-        range.lastBurnedTokenId = end - 1;
 
         // Update seller's total balance
         getERC721UpgradeableStorage()._balances[seller] -= burned;
@@ -532,7 +535,8 @@ contract BosonVoucherBase is
         override(ERC721Upgradeable, IERC721MetadataUpgradeable)
         returns (string memory)
     {
-        (bool exists, Offer memory offer) = getBosonOfferByExchangeId(_tokenId);
+        uint256 exchangeId = _tokenId & type(uint128).max;
+        (bool exists, Offer memory offer) = getBosonOfferByExchangeId(exchangeId);
 
         if (!exists) {
             (bool committable, uint256 offerId, ) = getPreMintStatus(_tokenId);
@@ -679,7 +683,8 @@ contract BosonVoucherBase is
         returns (address receiver, uint256 royaltyAmount)
     {
         // get offer
-        (bool offerExists, Offer memory offer) = getBosonOfferByExchangeId(_tokenId);
+        uint256 exchangeId = _tokenId & type(uint128).max;
+        (bool offerExists, Offer memory offer) = getBosonOfferByExchangeId(exchangeId);
 
         if (offerExists) {
             (, Seller memory seller) = getBosonSeller(offer.sellerId);
@@ -816,42 +821,28 @@ contract BosonVoucherBase is
         )
     {
         // Not committable if _committed already or if token has an owner
+
         if (!_committed[_tokenId] && !_exists(_tokenId)) {
-            // If are reserved ranges, search them
-            uint256 length = _rangeOfferIds.length;
-            if (length > 0) {
-                // Binary search the ranges array
-                uint256 low = 0; // Lower bound of search (array index)
-                uint256 high = length; // Upper bound of search
+            // it might be a pre-minted token. Preminted tokens have offerId in the upper 128 bits
+            offerId = _tokenId >> 128;
 
-                while (low < high) {
-                    // Calculate the current midpoint and get the offer id
-                    uint256 mid = (high + low) / 2;
-                    uint256 currentOfferId = _rangeOfferIds[mid];
+            if (offerId > 0) {
+                // Get the range stored at the midpoint
+                Range storage range = _rangeByOfferId[offerId];
 
-                    // Get the range stored at the midpoint
-                    Range storage range = _rangeByOfferId[currentOfferId];
+                // Get the beginning of the range once for reference
+                uint256 start = range.start;
+                _tokenId = _tokenId & type(uint128).max;
 
-                    // Get the beginning of the range once for reference
-                    uint256 start = range.start;
-
-                    if (start > _tokenId) {
-                        // Split low and search again if target too high
-                        high = mid;
-                    } else if (start + range.length - 1 >= _tokenId) {
-                        // Is token in target's reserved range?
-
-                        if (start + range.minted - 1 >= _tokenId && _tokenId > range.lastBurnedTokenId) {
-                            // Has it been pre-minted and not burned yet?
-                            committable = true;
-                            offerId = currentOfferId;
-                            owner = range.owner;
-                        }
-                        break; // Found!
-                    } else {
-                        // No? It may be in a higher range
-                        low = mid + 1;
-                    }
+                if (
+                    start > 0 &&
+                    start <= _tokenId &&
+                    start + range.minted - 1 >= _tokenId &&
+                    _tokenId > range.lastBurnedTokenId
+                ) {
+                    // Has it been pre-minted and not burned yet?
+                    committable = true;
+                    owner = range.owner;
                 }
             }
         }
