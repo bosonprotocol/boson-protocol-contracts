@@ -2,7 +2,7 @@
   "chainId": 80001,
   "network": "mumbai",
   "env": "test",
-  "protocolVersion": "2.2.0-rc.1",
+  "protocolVersion": "2.2.0-rc.4",
   "contracts": [
     {
       "name": "AccessController",
@@ -73,11 +73,6 @@
       "args": []
     },
     {
-      "name": "GroupHandlerFacet",
-      "address": "0x3D05697E821A91c38AF1ed145B6f667E68d5aC8b",
-      "args": []
-    },
-    {
       "name": "PauseHandlerFacet",
       "address": "0x8528d132331Ec469A2d7CE412A7089Feb54392EC",
       "args": []
@@ -108,32 +103,15 @@
       "interfaceId": "0x1f891681"
     },
     {
-      "name": "BosonVoucher Logic",
-      "address": "0x85B3Ae514fF85E9931314C3fD26f498a28841b39",
-      "args": [],
-      "interfaceId": ""
-    },
-    {
       "name": "ProtocolInitializationHandlerFacet",
       "address": "0xAA7D28Bcc8127E706B0630208D53652F8BA306BD",
       "args": [],
       "interfaceId": "0x0d8e6e2c"
     },
     {
-      "name": "OrchestrationHandlerFacet1",
-      "address": "0x0A0C68dD3f844d32BC7497c5e33714852A4C313A",
-      "args": []
-    },
-    {
       "name": "OrchestrationHandlerFacet2",
       "address": "0x6286d3d8E5ceCB5F17f4255957A5926450d37C21",
       "args": []
-    },
-    {
-      "name": "BundleHandlerFacet",
-      "address": "0x173adA3Bb27aC711CD07669785c558ccaEab5BE3",
-      "args": [],
-      "interfaceId": "0x7b53dece"
     },
     {
       "name": "ConfigHandlerFacet",
@@ -142,46 +120,70 @@
       "interfaceId": "0xe393ad01"
     },
     {
-      "name": "DisputeHandlerFacet",
-      "address": "0x137312CE9641C8627915BE4f080dDDBa63cD2E8A",
-      "args": [],
-      "interfaceId": "0xd9ea8317"
-    },
-    {
-      "name": "DisputeResolverHandlerFacet",
-      "address": "0xd737766891D40ceE4E27b07B7A4D4cF678234DD3",
-      "args": [],
-      "interfaceId": "0x1f891681"
-    },
-    {
-      "name": "ExchangeHandlerFacet",
-      "address": "0xbd95A57897AF8A18D7389768fAC3Ca672a5AC4ea",
-      "args": [],
-      "interfaceId": "0xe300dfc1"
-    },
-    {
       "name": "MetaTransactionsHandlerFacet",
       "address": "0x7156930e1c08fFB1D6e7DB22C3cc48eB405fb268",
       "args": [],
       "interfaceId": "0xb3e4e803"
     },
     {
-      "name": "OfferHandlerFacet",
-      "address": "0x7707fCe9eFD69f25d35cA817A6936374c8DFD52f",
+      "name": "BundleHandlerFacet",
+      "address": "0x1900CC5d6Ef138ac659eA06907af28793c3563F3",
       "args": [],
-      "interfaceId": "0xdd282b34"
+      "interfaceId": "0x7b53dece"
+    },
+    {
+      "name": "DisputeHandlerFacet",
+      "address": "0xE62D307086A16cabe67580b18F38e1a079736B97",
+      "args": [],
+      "interfaceId": "0xd9ea8317"
+    },
+    {
+      "name": "DisputeResolverHandlerFacet",
+      "address": "0xFFf432C546DcB78f047f7119498745AB382dEc91",
+      "args": [],
+      "interfaceId": "0x1f891681"
+    },
+    {
+      "name": "ExchangeHandlerFacet",
+      "address": "0x953D7b35cBC150e4E2a63c07F02f6c3e2D32d3c3",
+      "args": [],
+      "interfaceId": "0xe300dfc1"
+    },
+    {
+      "name": "GroupHandlerFacet",
+      "address": "0x26a3a5B73E1f8f4CC86b5C65d8500acB1e0a082c",
+      "args": [],
+      "interfaceId": "0xe2bf2256"
     },
     {
       "name": "SellerHandlerFacet",
-      "address": "0xB6778C2F131eFf794b7379337FD888475E4213bb",
+      "address": "0xd371032da579e1EAb45AD03ec83Ca4485Bda51a4",
       "args": [],
       "interfaceId": "0x1f891681"
     },
     {
       "name": "TwinHandlerFacet",
-      "address": "0x234485F4A7D8d9CB5f45c25d670b519CdbFbF9b9",
+      "address": "0xadBE44E0f41F291934e0937FF7B646EE0a965488",
       "args": [],
       "interfaceId": "0x60b30e70"
+    },
+    {
+      "name": "BosonVoucher Logic",
+      "address": "0x945a419a988921A758A94D6bB88A264aaD2fa646",
+      "args": [],
+      "interfaceId": ""
+    },
+    {
+      "name": "OfferHandlerFacet",
+      "address": "0x4b94267Aa5Ca691429D4da3d29C36C9e8888487D",
+      "args": [],
+      "interfaceId": "0xa1598d02"
+    },
+    {
+      "name": "OrchestrationHandlerFacet1",
+      "address": "0x2354D6CBC8Ff222898ea1D22eF3d28043A6d710b",
+      "args": [],
+      "interfaceId": "0xa38bc2e7"
     }
   ]
 }
