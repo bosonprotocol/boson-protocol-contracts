@@ -19,6 +19,7 @@ const {
   applyPercentage,
   calculateContractAddress,
   getFacetsWithArgs,
+  deriveTokenId,
 } = require("../util/utils.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const {
@@ -1887,7 +1888,7 @@ describe("IBosonFundsHandler", function () {
         await bosonVoucher.connect(assistant).preMint(offerToken.id, offerToken.quantityAvailable);
 
         // commit to an offer via preminted voucher
-        let tokenId = "1";
+        let tokenId = deriveTokenId(offerToken.id, "1");
         tx = await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
 
         // it should emit FundsEncumbered event with amount equal to sellerDeposit + price
@@ -1921,7 +1922,8 @@ describe("IBosonFundsHandler", function () {
         const buyerNativeBalanceBefore = await ethers.provider.getBalance(buyer.address);
 
         // reserve a range and premint vouchers
-        tokenId = await exchangeHandler.getNextExchangeId();
+        exchangeId = await exchangeHandler.getNextExchangeId();
+        tokenId = deriveTokenId(offerNative.id, exchangeId);
         await offerHandler
           .connect(assistant)
           .reserveRange(offerNative.id, offerNative.quantityAvailable, assistant.address);
@@ -2078,13 +2080,14 @@ describe("IBosonFundsHandler", function () {
           // Add the check in case if the sellerDeposit is changed in the future
           assert.isBelow(Number(sellerDeposit), Number(price), "Seller's availableFunds is not less than price");
           // Attempt to commit to an offer via preminted voucher, expecting revert
-          let tokenId = "1";
+          let tokenId = deriveTokenId(offerToken.id, "1");
           await expect(
             bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
           ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
 
           // reserve a range and premint vouchers for offer in native currency
-          tokenId = await exchangeHandler.getNextExchangeId();
+          exchangeId = await exchangeHandler.getNextExchangeId();
+          tokenId = deriveTokenId(offerNative.id, exchangeId);
           await offerHandler
             .connect(assistant)
             .reserveRange(offerNative.id, offerNative.quantityAvailable, assistant.address);

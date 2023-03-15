@@ -2117,7 +2117,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Reserved range length is greater than maximum allowed range length", async function () {
           // Set reserved range length to more than maximum allowed range length
-          let reservedRangeLength = ethers.BigNumber.from(2).pow(128).sub(1);
+          let reservedRangeLength = ethers.BigNumber.from(2).pow(64).sub(1);
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
