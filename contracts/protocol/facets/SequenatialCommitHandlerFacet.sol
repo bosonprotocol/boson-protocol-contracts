@@ -96,7 +96,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
         // First call price discovery and get actual price
         // It might be lower tha submitted for buy orders and higher for sell orders
-        uint256 actualPrice = fulFilOrder(tokenAddress, _priceDiscovery, _buyer, offer.sellerId, _exchangeId);
+        uint256 actualPrice = fulfilOrder(offer.id, _priceDiscovery, _buyer, offer.sellerId, _exchangeId);
 
         // Calculate the amount to be kept in escrow
         uint256 escrowAmount;

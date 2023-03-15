@@ -88,6 +88,11 @@ contract BosonTypes {
         Discovery
     }
 
+    enum OfferType {
+        Regular, // transaction must start from one of protocol methods
+        External // hook within Voucher _beforeTransfer
+    }
+
     struct AuthToken {
         uint256 tokenId;
         AuthTokenType tokenType;
@@ -150,6 +155,7 @@ contract BosonTypes {
         string metadataUri;
         string metadataHash;
         bool voided;
+        OfferType offerType;
         OfferPrice priceType;
     }
 

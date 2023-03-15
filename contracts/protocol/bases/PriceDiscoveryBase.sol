@@ -29,24 +29,23 @@ contract PriceDiscoveryBase is ProtocolBase {
      *
      * See descriptions of `fulfilBuyOrder` and `fulfilSellOrder` for more details.
      *
-     * @param _exchangeId - the id of the exchange to commit to
-     * @param _exchangeToken - the address of the ERC20 token used for the exchange (zero address for native)
+     * @param _offerId - the id of the offer
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _initialSellerId - the id of the original seller
      * @return actualPrice - the actual price of the order
      */
-    function fulFilOrder(
-        address _exchangeToken,
+    function fulfilOrder(
+        uint256 _offerId,
         PriceDiscovery calldata _priceDiscovery,
         address _buyer,
         uint256 _initialSellerId,
         uint256 _exchangeId
     ) internal returns (uint256 actualPrice) {
         if (_priceDiscovery.side == Side.Ask) {
-            return fulfilAskOrder(_exchangeToken, _priceDiscovery, _buyer, _initialSellerId, _exchangeId);
+            return fulfilAskOrder(_offerId, _priceDiscovery, _buyer, _initialSellerId, _exchangeId);
         } else {
-            return fulfilBidOrder(_exchangeToken, _priceDiscovery, _initialSellerId, _exchangeId);
+            return fulfilBidOrder(_offerId, _priceDiscovery, _initialSellerId, _exchangeId);
         }
     }
 
@@ -62,29 +61,31 @@ contract PriceDiscoveryBase is ProtocolBase {
      * - Transfer of voucher to the buyer fails for some reasong (e.g. buyer is contract that doesn't accept voucher)
      * - Call to price discovery contract fails
      *
-     * @param _exchangeId - the id of the exchange to commit to
-     * @param _exchangeToken - the address of the ERC20 token used for the exchange (zero address for native)
+     * @param _offerId - the id of the offer
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _initialSellerId - the id of the original seller
      * @return actualPrice - the actual price of the order
      */
     function fulfilAskOrder(
-        address _exchangeToken,
+        uint256 _offerId,
         PriceDiscovery calldata _priceDiscovery,
         address _buyer,
         uint256 _initialSellerId,
         uint256 _exchangeId
     ) internal returns (uint256 actualPrice) {
-        // Transfer buyers funds to protocol
-        FundsLib.validateIncomingPayment(_exchangeToken, _priceDiscovery.price);
+        // Load protocol entities storage
+        ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
+
+        Offer storage offer = pe.offers[_offerId];
+        address exchangeToken = offer.exchangeToken;
 
         // At this point, protocol temporary holds buyer's payment
-        uint256 protocolBalanceBefore = getBalance(_exchangeToken);
+        uint256 protocolBalanceBefore = getBalance(exchangeToken);
 
         // If token is ERC20, approve price discovery contract to transfer funds
-        if (_exchangeToken != address(0)) {
-            IERC20(_exchangeToken).approve(address(_priceDiscovery.priceDiscoveryContract), _priceDiscovery.price);
+        if (exchangeToken != address(0)) {
+            IERC20(exchangeToken).approve(address(_priceDiscovery.priceDiscoveryContract), _priceDiscovery.price);
         }
 
         // Store the information about incoming voucher
@@ -105,25 +106,30 @@ contract PriceDiscoveryBase is ProtocolBase {
         IBosonVoucher bosonVoucher = IBosonVoucher(cloneAddress);
         require(bosonVoucher.ownerOf(_exchangeId) == address(this), VOUCHER_NOT_RECEIVED);
 
+        // Check the escrow amount
+        uint256 protocolBalanceAfter = getBalance(exchangeToken);
+        actualPrice = protocolBalanceBefore - protocolBalanceAfter;
+
+        (, uint256 buyerId) = getBuyerIdByWallet(_buyer);
+
+        // Encumber funds before creating the exchange.
+        FundsLib.encumberFunds(_offerId, buyerId, actualPrice, OfferType.Regular);
+
         // If token is ERC20, reset approval
-        if (_exchangeToken != address(0)) {
-            IERC20(_exchangeToken).approve(address(_priceDiscovery.priceDiscoveryContract), 0);
+        if (exchangeToken != address(0)) {
+            IERC20(exchangeToken).approve(address(_priceDiscovery.priceDiscoveryContract), 0);
         }
 
         // Clear the storage
         delete ps.incomingVoucherId;
         delete ps.incomingVoucherCloneAddress;
 
-        // Check the escrow amount
-        uint256 protocolBalanceAfter = getBalance(_exchangeToken);
-        actualPrice = protocolBalanceBefore - protocolBalanceAfter;
+        // uint256 overchargedAmount = _priceDiscovery.price - actualPrice;
 
-        uint256 overchargedAmount = _priceDiscovery.price - actualPrice;
-
-        if (overchargedAmount > 0) {
-            // Return the surplus to buyer
-            FundsLib.transferFundsFromProtocol(_exchangeToken, payable(_buyer), overchargedAmount);
-        }
+        // if (overchargedAmount > 0) {
+        //     // Return the surplus to buyer
+        //     FundsLib.transferFundsFromProtocol(exchangeToken, payable(_buyer), overchargedAmount);
+        // }
 
         // Transfer voucher to buyer
         bosonVoucher.transferFrom(address(this), _buyer, _exchangeId);
@@ -137,14 +143,13 @@ contract PriceDiscoveryBase is ProtocolBase {
      *  - Price received from price discovery is lower than the expected price
      *  - Reseller did not approve protocol to transfer exchange token in escrow
      *
-     * @param _exchangeId - the id of the exchange to commit to
-     * @param _exchangeToken - the address of the ERC20 token used for the exchange (zero address for native)
+     * @param _offerId - the id of the offer
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
      * @param _initialSellerId - the id of the original seller
      * @return actualPrice - the actual price of the order
      */
     function fulfilBidOrder(
-        address _exchangeToken,
+        uint256 _offerId,
         PriceDiscovery calldata _priceDiscovery,
         uint256 _initialSellerId,
         uint256 _exchangeId
@@ -155,10 +160,16 @@ contract PriceDiscoveryBase is ProtocolBase {
         // Don't need to use safe transfer from, since that protocol can handle the voucher
         bosonVoucher.transferFrom(msgSender(), address(this), _exchangeId);
 
-        if (_exchangeToken == address(0)) _exchangeToken = address(weth);
+        // Load protocol entities storage
+        ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
+
+        Offer storage offer = pe.offers[_offerId];
+        address exchangeToken = offer.exchangeToken;
+
+        if (exchangeToken == address(0)) exchangeToken = address(weth);
 
         // Get protocol balance before the exchange
-        uint256 protocolBalanceBefore = getBalance(_exchangeToken);
+        uint256 protocolBalanceBefore = getBalance(exchangeToken);
 
         // Track native balance just in case if seller send some native currency or price discovery contract does
         uint256 protocolNativeBalanceBefore = getBalance(address(0));
@@ -170,7 +181,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
 
         // Check the escrow amount
-        uint256 protocolBalanceAfter = getBalance(_exchangeToken);
+        uint256 protocolBalanceAfter = getBalance(exchangeToken);
 
         // Check the native balance and return the surplus to seller
         uint256 protocolNativeBalanceAfter = getBalance(address(0));

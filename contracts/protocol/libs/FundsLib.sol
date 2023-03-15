@@ -60,14 +60,13 @@ library FundsLib {
      *
      * @param _offerId - id of the offer with the details
      * @param _buyerId - id of the buyer
-     * @param _isPreminted - flag indicating if the offer is preminted
+     * @param _price - the price, either price discovered externally or set on offer creation
      */
     function encumberFunds(
         uint256 _offerId,
         uint256 _buyerId,
-        bool _isPreminted,
         uint256 _price,
-        BosonTypes.OfferPrice _priceType
+        BosonTypes.OfferType _offerType
     ) internal {
         // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
@@ -80,15 +79,16 @@ library FundsLib {
         BosonTypes.Offer storage offer = pe.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
 
-        // if offer is non-preminted or price type is discovery, validate incoming payment
-        if (!_isPreminted || _priceType == BosonTypes.OfferPrice.Discovery) {
+        // if offer is non-preminted or is preMinted but price type is discovery the transaction is starting from protocol and caller msut provide the payment
+        if (_offerType == BosonTypes.OfferType.Regular) {
             validateIncomingPayment(exchangeToken, _price);
             emit FundsEncumbered(_buyerId, exchangeToken, _price, sender);
         }
 
         // decrease available funds
         uint256 sellerId = offer.sellerId;
-        uint256 sellerFundsEncumbered = offer.sellerDeposit + (_isPreminted ? _price : 0); // for preminted offer, encumber also price from seller's available funds
+        uint256 sellerFundsEncumbered = offer.sellerDeposit +
+            (_offerType == BosonTypes.OfferType.External ? _price : 0); // for preminted offer and price type is fixed, encumber also price from seller's available funds
         decreaseAvailableFunds(sellerId, exchangeToken, sellerFundsEncumbered);
 
         // notify external observers

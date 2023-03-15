@@ -81,7 +81,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Make sure offer exists, is available, and isn't void, expired, or sold out
         require(exists, NO_SUCH_OFFER);
 
-        commitToOfferInternal(_buyer, offer, 0, false, offer.price);
+        commitToOfferInternal(_buyer, offer, 0, false);
     }
 
     /**
@@ -120,7 +120,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         (bool exists, ) = fetchExchange(_exchangeId);
         require(!exists, EXCHANGE_ALREADY_EXISTS);
 
-        commitToOfferInternal(_buyer, offer, _exchangeId, true, offer.price);
+        commitToOfferInternal(_buyer, offer, _exchangeId, true);
     }
 
     function commitToPreMintedOfferWithPriceDiscovery(
@@ -141,21 +141,17 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         uint256 price;
 
         // Make sure  caller provided price discovery data if offer price type is discovery
-        if (offer.priceType == OfferPrice.Discovery) {
-            require(
-                _priceDiscovery.price > 0 &&
-                    _priceDiscovery.priceDiscoveryContract != address(0) &&
-                    _priceDiscovery.priceDiscoveryData.length > 0,
-                "INVALID_PRICE_DISCOVERY"
-            );
+        require(offer.priceType == OfferPrice.Discovery, "INVALID_PRICE_TYPE");
+        require(
+            _priceDiscovery.price > 0 &&
+                _priceDiscovery.priceDiscoveryContract != address(0) &&
+                _priceDiscovery.priceDiscoveryData.length > 0,
+            "INVALID_PRICE_DISCOVERY"
+        );
 
-            // First call price discovery and get actual price
-            // It might be lower tha submitted for buy orders and higher for sell orders
-            price = fulFilOrder(offer.exchangeToken, _priceDiscovery, _buyer, offer.sellerId, 0);
-        } else {
-            price = offer.price;
-        }
-        commitToOfferInternal(_buyer, offer, 0, true, price);
+        // call price discovery and get actual price which then will can commitToPreMintedOffer on when price discovery contract calls `beforeTokenTransfer`
+        // It might be lower tha submitted for buy orders and higher for sell orders
+        fulfilOrder(offer.id, _priceDiscovery, _buyer, offer.sellerId, 0); // we don't know the exchange id yet
     }
 
     /**
@@ -184,14 +180,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * @param _offer - storage pointer to the offer
      * @param _exchangeId - the id of the exchange
      * @param _isPreminted - whether the offer is preminted
-     * @param _price - price of the offer
      */
     function commitToOfferInternal(
         address payable _buyer,
         Offer storage _offer,
         uint256 _exchangeId,
-        bool _isPreminted,
-        uint256 _price
+        bool _isPreminted
     ) internal {
         uint256 _offerId = _offer.id;
         // Make sure offer is available, and isn't void, expired, or sold out
@@ -204,7 +198,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             // For non-preminted offers, quantityAvailable must be greater than zero, since it gets decremented
             require(_offer.quantityAvailable > 0, OFFER_SOLD_OUT);
 
-            // Get next exchange id for non-preminted offers
+            // Get next exchange id for preminted offers
             _exchangeId = protocolCounters().nextExchangeId++;
         }
 
@@ -214,8 +208,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Fetch or create buyer
         uint256 buyerId = getValidBuyer(_buyer);
 
-        // Encumber funds before creating the exchange
-        FundsLib.encumberFunds(_offerId, buyerId, _isPreminted, _price, _offer.priceType);
+        // price discovery offers funds are encumber after we get the acution on PriceDiscoveryBase fulfilOrder
+        if (_offer.priceType == OfferPrice.Static) {
+            // Encumber funds before creating the exchange.
+            FundsLib.encumberFunds(_offerId, buyerId, _offer.price, _offer.offerType);
+        }
 
         // Create and store a new exchange
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];

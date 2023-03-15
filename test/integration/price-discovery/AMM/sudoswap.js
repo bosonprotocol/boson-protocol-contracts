@@ -167,8 +167,8 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     const disputeResolver = mockDisputeResolver(DR.address, DR.address, DR.address, DR.address, true);
 
-    const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
-    const sellerAllowList = [];
+    const disputeResolverFees = [new DisputeResolverFee(constants.AddressZero, "Native", "0")];
+    const sellerAllowList = [seller.id];
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
