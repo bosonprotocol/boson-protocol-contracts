@@ -60,9 +60,6 @@ contract BosonVoucherBase is
     // Map an offerId to a Range for pre-minted offers
     mapping(uint256 => Range) private _rangeByOfferId;
 
-    // All ranges as an array
-    uint256[] private _rangeOfferIds;
-
     // Premint status, used only temporarly in transfers
     PremintStatus private _premintStatus;
 
@@ -74,7 +71,7 @@ contract BosonVoucherBase is
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[43] private __gap;
+    uint256[44] private __gap;
 
     /**
      * @notice Initializes the voucher.
@@ -173,21 +170,12 @@ contract BosonVoucherBase is
         // Prevent reservation of an empty range
         require(_length > 0, INVALID_RANGE_LENGTH);
 
+        // Adjust start id to include offer id
+        require(_start > 0, INVALID_RANGE_START);
+        _start += (_offerId << 128);
+
         // Prevent overflow in issueVoucher and preMint
         require(_start <= type(uint256).max - _length, INVALID_RANGE_LENGTH);
-
-        // Make sure that ranges are in ascending order
-        uint256 rangeOfferIdsLength = _rangeOfferIds.length;
-        if (rangeOfferIdsLength > 0) {
-            // Get latest registered range
-            Range storage lastRange = _rangeByOfferId[_rangeOfferIds[rangeOfferIdsLength - 1]];
-
-            // New range should start after the end of last range
-            require(_start >= lastRange.start + lastRange.length, INVALID_RANGE_START);
-        } else {
-            // Make sure range start is valid
-            require(_start > 0, INVALID_RANGE_START);
-        }
 
         // Get storage slot for the range
         Range storage range = _rangeByOfferId[_offerId];
@@ -199,7 +187,6 @@ contract BosonVoucherBase is
         range.start = _start;
         range.length = _length;
         range.owner = _to;
-        _rangeOfferIds.push(_offerId);
 
         emit RangeReserved(_offerId, range);
     }
@@ -258,7 +245,7 @@ contract BosonVoucherBase is
         require(!offer.voided && (offerDates.validUntil > block.timestamp), OFFER_EXPIRED_OR_VOIDED);
 
         // Get the first token to mint
-        uint256 start = range.start + range.minted + (_offerId << 128);
+        uint256 start = range.start + range.minted;
         address to = range.owner;
 
         // Pre-mint the range
@@ -330,9 +317,6 @@ contract BosonVoucherBase is
 
         // Update last burned token id
         range.lastBurnedTokenId = end - 1;
-
-        start += (_offerId << 128);
-        end += (_offerId << 128);
 
         // Burn the range
         address seller = owner();
@@ -832,7 +816,7 @@ contract BosonVoucherBase is
 
                 // Get the beginning of the range once for reference
                 uint256 start = range.start;
-                _tokenId = _tokenId & type(uint128).max;
+                // _tokenId = _tokenId & type(uint128).max;
 
                 if (
                     start > 0 &&
