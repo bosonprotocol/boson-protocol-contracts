@@ -71,8 +71,9 @@ async function deployAndCutFacets(
  * Reused between deployment script and unit tests for consistency.
  *
  * @param facetNames - array of facet names to deploy
- * @param facetsToInit - object with facet names and corresponding initialization arguments {facetName1: initializerArguments1, facetName2: initializerArguments2, ...}
- *                       provide only for facets that should be initialized
+ * @param facetsToInit - object with facet names and corresponding constructor and/or initialization arguments
+ *                       {facetName1: {constructorArgs: constructorArguments1, init: initializerArguments1}, facetName2: {init: initializerArguments2}, ...}
+ *                       provide only for facets that have constructor or should be initialized
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
@@ -82,7 +83,11 @@ async function deployProtocolFacets(facetNames, facetsToInit, maxPriorityFeePerG
   // Deploy all handler facets
   for (const facetName of facetNames) {
     let FacetContractFactory = await ethers.getContractFactory(facetName);
-    const facetContract = await FacetContractFactory.deploy(await getFees(maxPriorityFeePerGas));
+    const constructorArguments = (facetsToInit[facetName] && facetsToInit[facetName].constructorArgs) || [];
+    const facetContract = await FacetContractFactory.deploy(
+      ...constructorArguments,
+      await getFees(maxPriorityFeePerGas)
+    );
     await facetContract.deployTransaction.wait(confirmations);
 
     const deployedFacet = {
@@ -91,10 +96,10 @@ async function deployProtocolFacets(facetNames, facetsToInit, maxPriorityFeePerG
       cut: [],
     };
 
-    if (facetsToInit[facetName] && facetName !== "ProtocolInitializationHandlerFacet") {
+    if (facetsToInit[facetName] && facetsToInit[facetName].init && facetName !== "ProtocolInitializationHandlerFacet") {
       const calldata = facetContract.interface.encodeFunctionData(
         "initialize",
-        facetsToInit[facetName].length && facetsToInit[facetName]
+        facetsToInit[facetName].init.length && facetsToInit[facetName].init
       );
 
       deployedFacet.initialize = calldata;

@@ -26,12 +26,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
     uint256 private immutable EXCHANGE_ID_2_2_0;
 
-    // constructor(uint256 _firstExchangeId2_2_0) {
-    //     EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
-    // }
-
-    constructor() {
-        EXCHANGE_ID_2_2_0 = 0;
+    /**
+     * @notice After v2.2.0, token ids are derived from offerId and exchangeId.
+     * EXCHANGE_ID_2_2_0 is the first exchange id to use for 2.2.0.
+     * Set EXCHANGE_ID_2_2_0 in the constructor.
+     *
+     * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
+     */
+    constructor(uint256 _firstExchangeId2_2_0) {
+        EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
     }
 
     /**
@@ -710,7 +713,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);
 
         uint256 tokenId = _exchange.id;
-        if (tokenId > EXCHANGE_ID_2_2_0) tokenId += (offerId << 128);
+        if (tokenId >= EXCHANGE_ID_2_2_0) tokenId += (offerId << 128);
         bosonVoucher.burnVoucher(tokenId);
     }
 
