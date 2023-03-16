@@ -59,8 +59,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         // Seller must exist
         require(exists, NO_SUCH_SELLER);
 
-        console.log("amount: %s", _amount);
-        console.log("msg.value: %s", msg.value);
         if (msg.value != 0) {
             // Receiving native currency
             require(_tokenAddress == address(0), NATIVE_WRONG_ADDRESS);

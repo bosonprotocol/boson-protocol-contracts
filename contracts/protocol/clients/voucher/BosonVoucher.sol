@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 import "../../../domain/BosonConstants.sol";
-import "hardhat/console.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
@@ -70,12 +69,14 @@ contract BosonVoucherBase is
     // Tell if preminted voucher has already been _committed
     mapping(uint256 => bool) private _committed;
 
+    address priceDiscoveryContract;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[43] private __gap;
+    uint256[42] private __gap;
 
     /**
      * @notice Initializes the voucher.
@@ -403,13 +404,11 @@ contract BosonVoucherBase is
             // If _tokenId exists, it does not matter if vouchers were preminted or not
             return super.ownerOf(_tokenId);
         } else {
-            bool committable;
-            // If _tokenId does not exist, but offer is committable, report contract owner as token owner
-            (committable, , owner, ) = getPreMintStatus(_tokenId);
-            if (committable) return owner;
+            // If _tokenId does not exist, but offer is committable, report range owner as token owner
+            (, , owner, ) = getPreMintStatus(_tokenId);
 
-            // Otherwise revert
-            revert("ERC721: invalid token ID");
+            // revisit this
+            require(owner != address(0), "ERC721: invalid token ID");
         }
     }
 
@@ -423,12 +422,16 @@ contract BosonVoucherBase is
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
         (bool committable, uint256 offerId, , OfferPrice priceType) = getPreMintStatus(_tokenId);
 
-        if (committable) {
+        if (offerId != 0) {
             // If offer is committable, temporarily update _owners, so transfer succeeds
             silentMint(_from, _tokenId);
+
             _premintStatus.offerId = offerId;
-            // Update premint status
-            _premintStatus.committable = true;
+
+            if (committable || _from == priceDiscoveryContract) {
+                // Update premint status
+                _premintStatus.committable = true;
+            }
         }
 
         super.transferFrom(_from, _to, _tokenId);
@@ -445,16 +448,15 @@ contract BosonVoucherBase is
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
         (bool committable, uint256 offerId, , OfferPrice priceType) = getPreMintStatus(_tokenId);
 
-        console.log("safeTransferFrom", committable);
-        console.log("safeTransferFrom", offerId);
-        console.log("token id", _tokenId);
-        if (committable) {
+        if (offerId != 0) {
             // If offer is committable, temporarily update _owners, so transfer succeeds
             silentMint(_from, _tokenId);
             _premintStatus.offerId = offerId;
 
-            // Update premint status
-            _premintStatus.committable = true;
+            if (committable || _from == priceDiscoveryContract) {
+                // Update premint status
+                _premintStatus.committable = true;
+            }
         }
 
         super.safeTransferFrom(_from, _to, _tokenId, _data);
@@ -547,7 +549,7 @@ contract BosonVoucherBase is
 
         if (!exists) {
             (bool committable, uint256 offerId, , ) = getPreMintStatus(_tokenId);
-            if (committable) {
+            if (offerId != 0) {
                 exists = true;
                 (offer, ) = getBosonOffer(offerId);
             }
@@ -747,6 +749,12 @@ contract BosonVoucherBase is
         emit RoyaltyPercentageChanged(_newRoyaltyPercentage);
     }
 
+    function setPriceDiscoveryContract(address _priceDiscoveryContract) external override onlyOwner {
+        priceDiscoveryContract = _priceDiscoveryContract;
+
+        emit PriceDiscoveryContractChanged(_priceDiscoveryContract);
+    }
+
     /**
      * @notice Performs special case transfer hooks.
      *
@@ -786,21 +794,20 @@ contract BosonVoucherBase is
         // If is committable, invoke commitToPreMintedOffer on the protocol
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
 
-        if (_premintStatus.committable && _msgSender() != protocolDiamond) {
+        if (_premintStatus.committable) {
             // Store offerId so _premintStatus can be deleted before making an external call
             uint256 offerId = _premintStatus.offerId;
 
             // Set the preminted token as committed
             _committed[_tokenId] = true;
+            delete _premintStatus;
 
             IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(payable(_to), offerId, _tokenId);
-        } else if (_from != address(0) && _to != address(0) && _from != _to) {
+        } else if (_from != address(0) && _to != address(0) && _from != _to && _to != priceDiscoveryContract) {
             // Update the buyer associated with the voucher in the protocol
             // Only when transferring, not when minting or burning
             onVoucherTransferred(_tokenId, payable(_to));
         }
-
-        delete _premintStatus;
     }
 
     /**
@@ -828,7 +835,7 @@ contract BosonVoucherBase is
         )
     {
         // Not committable if _committed already or if token has an owner
-        if (!_committed[_tokenId] && !_exists(_tokenId)) {
+        if (!_committed[_tokenId] && (!_exists(_tokenId) || ownerOf(_tokenId) == priceDiscoveryContract)) {
             // If are reserved ranges, search them
             uint256 length = _rangeOfferIds.length;
             if (length > 0) {
@@ -854,11 +861,13 @@ contract BosonVoucherBase is
                         // Is token in target's reserved range?
 
                         if (start + range.minted - 1 >= _tokenId && _tokenId > range.lastBurnedTokenId) {
-                            // Has it been pre-minted, not burned yet and
-                            committable = true;
                             offerId = currentOfferId;
                             (Offer memory offer, ) = getBosonOffer(offerId);
-                            priceType = offer.priceType;
+
+                            if (offer.offerType == OfferType.External || _msgSender() == priceDiscoveryContract) {
+                                // Has it been pre-minted, not burned yet and is an external offer
+                                committable = true;
+                            }
                             owner = range.owner;
                         }
                         break; // Found!
@@ -912,7 +921,7 @@ contract BosonVoucherBase is
      * Updates owners, but do not emit Transfer event. Event was already emited during pre-mint.
      */
     function silentMint(address _from, uint256 _tokenId) internal {
-        require(_from == owner() || _from == address(this), NO_SILENT_MINT_ALLOWED);
+        require(_from == owner() || _from == address(this) || _from == priceDiscoveryContract, NO_SILENT_MINT_ALLOWED);
 
         // update data, so transfer will succeed
         getERC721UpgradeableStorage()._owners[_tokenId] = _from;

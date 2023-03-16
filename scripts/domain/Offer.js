@@ -6,6 +6,7 @@ const {
   enumIsValid,
 } = require("../util/validations.js");
 const OfferPrice = require("./OfferPrice.js");
+const OfferType = require("./OfferType.js");
 
 /**
  * Boson Protocol Domain Entity: Offer
@@ -25,6 +26,7 @@ class Offer {
             string metadataUri;
             string metadataHash;
             bool voided;
+            OfferType offerType;
             OfferPrice priceType;
         }
     */
@@ -40,6 +42,7 @@ class Offer {
     metadataUri,
     metadataHash,
     voided,
+    offerType,
     priceType
   ) {
     this.id = id;
@@ -52,6 +55,7 @@ class Offer {
     this.metadataUri = metadataUri;
     this.metadataHash = metadataHash;
     this.voided = voided;
+    this.offerType = offerType;
     this.priceType = priceType;
   }
 
@@ -72,6 +76,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      offerType,
       priceType,
     } = o;
 
@@ -86,6 +91,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      offerType,
       priceType
     );
   }
@@ -106,6 +112,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      offerType,
       priceType;
 
     // destructure struct
@@ -120,6 +127,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      offerType,
       priceType,
     ] = struct;
 
@@ -134,6 +142,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      offerType,
       priceType,
     });
   }
@@ -170,6 +179,7 @@ class Offer {
       this.metadataUri,
       this.metadataHash,
       this.voided,
+      this.offerType,
       this.priceType,
     ];
   }
@@ -279,6 +289,10 @@ class Offer {
     return enumIsValid(this.priceType, OfferPrice);
   }
 
+  offerTypeIsValid() {
+    return enumIsValid(this.offerType, OfferType);
+  }
+
   /**
    * Is this Offer instance valid?
    * @returns {boolean}
@@ -286,15 +300,17 @@ class Offer {
   isValid() {
     return (
       this.idIsValid() &&
-      this.sellerIdIsValid() &&
-      this.priceIsValid() &&
-      this.sellerDepositIsValid() &&
-      this.buyerCancelPenaltyIsValid() &&
-      this.quantityAvailableIsValid() &&
-      this.exchangeTokenIsValid() &&
-      this.metadataUriIsValid() &&
-      this.metadataHashIsValid() &&
-      this.voidedIsValid()
+        this.sellerIdIsValid() &&
+        this.priceIsValid() &&
+        this.sellerDepositIsValid() &&
+        this.buyerCancelPenaltyIsValid() &&
+        this.quantityAvailableIsValid() &&
+        this.exchangeTokenIsValid() &&
+        this.metadataUriIsValid() &&
+        this.metadataHashIsValid() &&
+        this.voidedIsValid(),
+      this.priceTypeIsValid(),
+      this.offerTypeIsValid()
     );
   }
 }

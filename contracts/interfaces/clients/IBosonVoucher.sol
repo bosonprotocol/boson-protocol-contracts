@@ -16,6 +16,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     event RoyaltyPercentageChanged(uint256 royaltyPercentage);
     event VoucherInitialized(uint256 indexed sellerId, uint256 indexed royaltyPercentage, string indexed contractURI);
     event RangeReserved(uint256 indexed offerId, Range range);
+    event PriceDiscoveryContractChanged(address indexed priceDiscoveryContract);
 
     // Describe a reserved range of token ids
     struct Range {
@@ -267,4 +268,6 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @param _tokenList - list of tokens to withdraw, including native token (address(0))
      */
     function withdrawToProtocol(address[] calldata _tokenList) external;
+
+    function setPriceDiscoveryContract(address _priceDiscoveryContract) external;
 }

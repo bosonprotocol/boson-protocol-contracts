@@ -109,12 +109,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         address payable _buyer,
         uint256 _offerId,
         uint256 _exchangeId
-    ) external exchangesNotPaused buyersNotPaused nonReentrant {
+    ) external exchangesNotPaused buyersNotPaused {
         // Fetch the offer info
         (, Offer storage offer) = fetchOffer(_offerId);
 
         // Make sure that the voucher was issued on the clone that is making a call
-        require(msg.sender == protocolLookups().cloneAddress[offer.sellerId], ACCESS_DENIED);
+        require(
+            msg.sender == protocolLookups().cloneAddress[offer.sellerId] || msg.sender == address(this),
+            ACCESS_DENIED
+        );
 
         // Exchange must not exist already
         (bool exists, ) = fetchExchange(_exchangeId);
@@ -141,7 +144,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         uint256 price;
 
         // Make sure  caller provided price discovery data if offer price type is discovery
-        require(offer.priceType == OfferPrice.Discovery, "INVALID_PRICE_TYPE");
+        // require(offer.priceType == OfferPrice.Discovery, "INVALID_PRICE_TYPE");
         require(
             _priceDiscovery.price > 0 &&
                 _priceDiscovery.priceDiscoveryContract != address(0) &&

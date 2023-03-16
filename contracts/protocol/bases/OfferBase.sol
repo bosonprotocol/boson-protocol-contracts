@@ -243,8 +243,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.exchangeToken = _offer.exchangeToken;
         offer.metadataUri = _offer.metadataUri;
         offer.metadataHash = _offer.metadataHash;
-        offer.offerType = _offer.offerType;
         offer.priceType = _offer.priceType;
+        offer.offerType = _offer.offerType;
 
         // Get storage location for offer dates
         OfferDates storage offerDates = fetchOfferDates(_offer.id);

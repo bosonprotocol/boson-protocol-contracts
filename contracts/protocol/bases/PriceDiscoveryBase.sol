@@ -98,7 +98,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
 
         if (_exchangeId == 0) {
-            // incomingVoucherId was set to the exchanged voucher id inside onERC721Received method
+            // incomingVoucherId was set inside onERC721Received method
             _exchangeId = ps.incomingVoucherId;
         }
 
