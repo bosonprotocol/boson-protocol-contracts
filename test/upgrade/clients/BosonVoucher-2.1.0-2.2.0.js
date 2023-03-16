@@ -87,11 +87,21 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       forwarder = await upgradeClients(newVersion);
 
       // upgrade suite
-      ({ offerHandler, configHandler, accountHandler } = await upgradeSuite(newVersion, protocolDiamondAddress, {
-        offerHandler: "IBosonOfferHandler",
-        configHandler: "IBosonConfigHandler",
-        accountHandler: "IBosonAccountHandler",
-      }));
+      ({ offerHandler, configHandler, accountHandler } = await upgradeSuite(
+        newVersion,
+        protocolDiamondAddress,
+        {
+          offerHandler: "IBosonOfferHandler",
+          configHandler: "IBosonConfigHandler",
+          accountHandler: "IBosonAccountHandler",
+        },
+        undefined,
+        {
+          facetsToInit: {
+            ExchangeHandlerFacet: { constructorArgs: [preUpgradeEntities.exchanges.length + 1] },
+          },
+        }
+      ));
 
       snapshot = await ethers.provider.send("evm_snapshot", []);
 

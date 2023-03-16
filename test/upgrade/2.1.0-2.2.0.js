@@ -106,15 +106,25 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         orchestrationHandler,
         offerHandler,
         exchangeHandler,
-      } = await upgradeSuite(newVersion, protocolDiamondAddress, {
-        accountHandler: "IBosonAccountHandler",
-        metaTransactionsHandler: "IBosonMetaTransactionsHandler",
-        protocolInitializationHandler: "IBosonProtocolInitializationHandler",
-        configHandler: "IBosonConfigHandler",
-        orchestrationHandler: "IBosonOrchestrationHandler",
-        offerHandler: "IBosonOfferHandler",
-        exchangeHandler: "IBosonExchangeHandler",
-      }));
+      } = await upgradeSuite(
+        newVersion,
+        protocolDiamondAddress,
+        {
+          accountHandler: "IBosonAccountHandler",
+          metaTransactionsHandler: "IBosonMetaTransactionsHandler",
+          protocolInitializationHandler: "IBosonProtocolInitializationHandler",
+          configHandler: "IBosonConfigHandler",
+          orchestrationHandler: "IBosonOrchestrationHandler",
+          offerHandler: "IBosonOfferHandler",
+          exchangeHandler: "IBosonExchangeHandler",
+        },
+        undefined,
+        {
+          facetsToInit: {
+            ExchangeHandlerFacet: { constructorArgs: [protocolContractState.exchangeContractState.nextExchangeId] },
+          },
+        }
+      ));
 
       protocolContracts = {
         ...protocolContracts,
@@ -132,17 +142,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
       // and those values are undefined if this is placed outside "before".
       // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
-      // context(
-      //   "Generic tests",
-      getGenericContext(
-        deployer,
-        protocolDiamondAddress,
-        protocolContracts,
-        mockContracts,
-        protocolContractState,
-        preUpgradeEntities,
-        snapshot,
-        newVersion
+      context(
+        "Generic tests",
+        getGenericContext(
+          deployer,
+          protocolDiamondAddress,
+          protocolContracts,
+          mockContracts,
+          protocolContractState,
+          preUpgradeEntities,
+          snapshot,
+          newVersion
+        )
       );
     } catch (err) {
       // revert to latest version of scripts and contracts

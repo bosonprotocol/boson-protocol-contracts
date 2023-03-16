@@ -1,4 +1,5 @@
 const shell = require("shelljs");
+const _ = require("lodash");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
 const ethers = hre.ethers;
@@ -136,7 +137,7 @@ async function deploySuite(deployer, tag, scriptsTag) {
 
 // upgrade the suite to new version and returns handlers with upgraded interfaces
 // upgradedInterfaces is object { handlerName : "interfaceName"}
-async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scriptsTag) {
+async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scriptsTag, overrideFacetConfig) {
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`rm -rf scripts/*`);
   if (scriptsTag) {
@@ -158,11 +159,16 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scr
   }
 
   const facets = await getFacets();
+  let facetConfig = facets.upgrade[tag] || facets.upgrade["latest"];
+  if (overrideFacetConfig) {
+    facetConfig = _.merge(facetConfig, overrideFacetConfig);
+  }
+
   // compile new contracts
   await hre.run("compile");
   await hre.run("upgrade-facets", {
     env: "upgrade-test",
-    facetConfig: JSON.stringify(facets.upgrade[tag] || facets.upgrade["latest"]),
+    facetConfig: JSON.stringify(facetConfig),
   });
 
   // Cast to updated interface

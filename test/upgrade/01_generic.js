@@ -49,7 +49,7 @@ function getGenericContext(
           preUpgradeEntities
         );
 
-        if (newVersion == "v2.2.0-rc.1" || newVersion == "HEAD") {
+        if (newVersion == "v2.2.0") {
           // Meta transactions private state was changed on v2.2.0 and should be tested separately
           // We need to remove the old state from the protocol state
           delete protocolContractStateAfterUpgrade.metaTxPrivateContractState;
@@ -144,7 +144,7 @@ function getGenericContext(
         delete protocolContractState.twinContractState.nextTwinId;
         delete protocolContractState.bundleContractState.nextBundleId;
 
-        if (newVersion == "v2.2.0-rc.1" || newVersion == "HEAD") {
+        if (newVersion == "v2.2.0") {
           // Meta transactions private state was changed on v2.2.0 and should be tested separately
           // We need to remove the old state from the protocol state
           delete protocolContractStateAfterUpgradeAndActions.metaTxPrivateContractState;

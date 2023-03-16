@@ -137,7 +137,7 @@ async function getFacets() {
               ],
             ],
           },
-          ExchangeHandlerFacet: { constructorArgs: [1] }, // ??
+          ExchangeHandlerFacet: { constructorArgs: [1] }, // should be overridden in tests to match the exact exchange id
         },
         initializationData: "0x0000000000000000000000000000000000000000000000000000000000002710", // input for initV2_2_0, representing maxPremintedVoucher (0x2710=10000)
       },
