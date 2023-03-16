@@ -88,7 +88,7 @@ async function main(env, clientConfig) {
 
   // Remove old entry from contracts
   contracts = contracts.filter((i) => i.name !== "BosonVoucher Logic");
-  deploymentComplete("BosonVoucher Logic", bosonVoucherImplementation.address, [], "", contracts);
+  deploymentComplete("BosonVoucher Logic", bosonVoucherImplementation.address, clientImplementationArgs, "", contracts);
 
   const contractsPath = await writeContracts(contracts, env);
   console.log(divider);
