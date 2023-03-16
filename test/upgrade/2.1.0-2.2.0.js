@@ -24,7 +24,12 @@ const { getGenericContext } = require("./01_generic");
 const { keccak256, toUtf8Bytes } = require("ethers/lib/utils");
 const TokenType = require("../../scripts/domain/TokenType");
 const Twin = require("../../scripts/domain/Twin");
-const { prepareDataSignatureParameters, applyPercentage, calculateContractAddress } = require("../util/utils");
+const {
+  prepareDataSignatureParameters,
+  applyPercentage,
+  calculateContractAddress,
+  deriveTokenId,
+} = require("../util/utils");
 const { RevertReasons } = require("../../scripts/config/revert-reasons");
 const { readContracts } = require("../../scripts/util/utils.js");
 const { VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
@@ -101,7 +106,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         orchestrationHandler,
         offerHandler,
         exchangeHandler,
-      } = await upgradeSuite(undefined, protocolDiamondAddress, {
+      } = await upgradeSuite(newVersion, protocolDiamondAddress, {
         accountHandler: "IBosonAccountHandler",
         metaTransactionsHandler: "IBosonMetaTransactionsHandler",
         protocolInitializationHandler: "IBosonProtocolInitializationHandler",
@@ -1122,7 +1127,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         context("📋 ExchangeHandlerFacet", async function () {
           it("👉 commitToPremintedOffer", async function () {
             // Get next token id
-            const tokenId = await exchangeHandler.getNextExchangeId();
+            const exchangeId = await exchangeHandler.getNextExchangeId();
+            const tokenId = deriveTokenId(offer.id, exchangeId);
 
             // Reserve range
             await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
@@ -1213,7 +1219,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       const length = "1";
       const tx = await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
       const { events } = await tx.wait();
-      const { startExchangeId: voucherId } = events.find((e) => e.event === "RangeReserved").args;
+      const { startExchangeId } = events.find((e) => e.event === "RangeReserved").args;
 
       // Find voucher contract
       const sellerIndex = sellers.findIndex((s) => s.id === seller.id);
@@ -1224,6 +1230,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       await bosonVoucher.connect(assistant).preMint(offerId, 1);
 
       // Get metadata URI
+      const voucherId = deriveTokenId(offerId, startExchangeId);
       const tokenURI = await bosonVoucher.tokenURI(voucherId);
       expect(tokenURI).eq(offer.metadataUri);
     });

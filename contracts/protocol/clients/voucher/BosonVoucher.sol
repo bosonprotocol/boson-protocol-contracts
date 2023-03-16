@@ -501,12 +501,9 @@ contract BosonVoucherBase is
      * @param _tokenId - id of the voucher's associated exchange or pre-minted token id
      * @return the uri for the associated offer's off-chain metadata (blank if not found)
      */
-    function tokenURI(uint256 _tokenId)
-        public
-        view
-        override(ERC721Upgradeable, IERC721MetadataUpgradeable)
-        returns (string memory)
-    {
+    function tokenURI(
+        uint256 _tokenId
+    ) public view override(ERC721Upgradeable, IERC721MetadataUpgradeable) returns (string memory) {
         uint256 exchangeId = _tokenId & type(uint128).max;
         (bool exists, Offer memory offer) = getBosonOfferByExchangeId(exchangeId);
 
@@ -615,12 +612,7 @@ contract BosonVoucherBase is
      *
      * Always returns `IERC721Receiver.onERC721Received.selector`.
      */
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes memory
-    ) public virtual override returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes memory) public virtual override returns (bytes4) {
         return this.onERC721Received.selector;
     }
 

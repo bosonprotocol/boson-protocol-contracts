@@ -599,16 +599,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      * @return voucher - the voucher details. See {BosonTypes.Voucher}
      */
-    function getExchange(uint256 _exchangeId)
-        external
-        view
-        override
-        returns (
-            bool exists,
-            Exchange memory exchange,
-            Voucher memory voucher
-        )
-    {
+    function getExchange(
+        uint256 _exchangeId
+    ) external view override returns (bool exists, Exchange memory exchange, Voucher memory voucher) {
         _exchangeId = extractExchangeId(_exchangeId);
         (exists, exchange) = fetchExchange(_exchangeId);
         voucher = fetchVoucher(_exchangeId);

@@ -18,14 +18,13 @@ const {
   mockOffer,
   accountId,
 } = require("../../util/mock");
-const { calculateContractAddress, prepareDataSignatureParameters } = require("../../util/utils");
+const { calculateContractAddress, prepareDataSignatureParameters, deriveTokenId } = require("../../util/utils");
 const Range = require("../../../scripts/domain/Range");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const { getGenericContext } = require("./01_generic");
 const SellerUpdateFields = require("../../../scripts/domain/SellerUpdateFields");
 
 const oldVersion = "v2.1.0";
-// TODO: change to v2.2.0
 const newVersion = "v2.2.0";
 // Script that was used to deploy v2.1.0 was created after v2.1.0 tag was created.
 // This is the commit hash when deployment happened, so it represents the state of the code at that time.
@@ -78,7 +77,9 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         deployer,
         protocolDiamondAddress,
         protocolContracts,
-        mockContracts
+        mockContracts,
+        undefined, // no existing entities
+        oldVersion
       );
       voucherContractState = await getVoucherContractState(preUpgradeEntities);
 
@@ -86,8 +87,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       forwarder = await upgradeClients(newVersion);
 
       // upgrade suite
-      // TODO: change undefined to v2.2.0
-      ({ offerHandler, configHandler, accountHandler } = await upgradeSuite(undefined, protocolDiamondAddress, {
+      ({ offerHandler, configHandler, accountHandler } = await upgradeSuite(newVersion, protocolDiamondAddress, {
         offerHandler: "IBosonOfferHandler",
         configHandler: "IBosonConfigHandler",
         accountHandler: "IBosonAccountHandler",
@@ -295,7 +295,8 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       // Reserve range
       await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
 
-      const range = new Range(start.toString(), length, "0", "0", assistant.address);
+      const startTokenId = deriveTokenId(offerId, start);
+      const range = new Range(startTokenId.toString(), length, "0", "0", assistant.address);
 
       // Get range object from contract
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));

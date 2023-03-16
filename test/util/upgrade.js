@@ -165,8 +165,6 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scr
     facetConfig: JSON.stringify(facets.upgrade[tag] || facets.upgrade["latest"]),
   });
 
-  shell.exec(`npx hardhat compile`);
-
   // Cast to updated interface
   let newHandlers = {};
   for (const [handlerName, interfaceName] of Object.entries(upgradedInterfaces)) {
