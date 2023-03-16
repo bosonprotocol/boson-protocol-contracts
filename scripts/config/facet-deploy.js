@@ -70,8 +70,9 @@ async function getFacets(config) {
     return acc;
   }, {});
 
-  facetArgs["ConfigHandlerFacet"] = ConfigHandlerFacetInitArgs;
-  facetArgs["MetaTransactionsHandlerFacet"] = [MetaTransactionsHandlerFacetInitArgs];
+  facetArgs["ConfigHandlerFacet"] = { init: ConfigHandlerFacetInitArgs };
+  facetArgs["MetaTransactionsHandlerFacet"] = { init: [MetaTransactionsHandlerFacetInitArgs] };
+  facetArgs["ExchangeHandlerFacet"] = { constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network]] };
 
   return facetArgs;
 }

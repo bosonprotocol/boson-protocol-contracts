@@ -69,4 +69,10 @@ module.exports = {
     mumbai: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
   },
+
+  EXCHANGE_ID_2_2_0: {
+    hardhat: 1,
+    mumbai: 1, // TODO: adjust for actual deployment
+    polygon: 2, // TODO: adjust for actual deployment
+  },
 };

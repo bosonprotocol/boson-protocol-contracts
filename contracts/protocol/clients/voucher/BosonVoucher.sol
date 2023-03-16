@@ -7,15 +7,20 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { IERC2981Upgradeable } from "@openzeppelin/contracts-upgradeable/interfaces/IERC2981Upgradeable.sol";
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { IERC721ReceiverUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import { ERC2771ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
 import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
 import { IClientExternalAddresses } from "../../../interfaces/clients/IClientExternalAddresses.sol";
 import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
 import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchangeHandler.sol";
+import { IERC20 } from "../../../interfaces/IERC20.sol";
+import { DAIAliases as DAI } from "../../../interfaces/DAIAliases.sol";
+import { IBosonFundsHandler } from "../../../interfaces/handlers/IBosonFundsHandler.sol";
 
 /**
  * @title BosonVoucherBase
@@ -24,7 +29,15 @@ import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchan
  * N.B. Although this contract extends OwnableUpgradeable and ERC721Upgradeable,
  *      that is only for convenience, to avoid conflicts with mixed imports.
  */
-contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
+contract BosonVoucherBase is
+    IBosonVoucher,
+    BeaconClientBase,
+    OwnableUpgradeable,
+    ERC721Upgradeable,
+    IERC721ReceiverUpgradeable
+{
+    using Address for address;
+
     // Struct that is used to manipulate private variables from ERC721UpgradeableStorage
     struct ERC721UpgradeableStorage {
         // Mapping from token ID to owner address
@@ -47,9 +60,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     // Map an offerId to a Range for pre-minted offers
     mapping(uint256 => Range) private _rangeByOfferId;
 
-    // All ranges as an array
-    uint256[] private _rangeOfferIds;
-
     // Premint status, used only temporarly in transfers
     PremintStatus private _premintStatus;
 
@@ -61,7 +71,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[43] private __gap;
+    uint256[44] private __gap;
 
     /**
      * @notice Initializes the voucher.
@@ -155,21 +165,12 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         // Prevent reservation of an empty range
         require(_length > 0, INVALID_RANGE_LENGTH);
 
+        // Adjust start id to include offer id
+        require(_start > 0, INVALID_RANGE_START);
+        _start += (_offerId << 128);
+
         // Prevent overflow in issueVoucher and preMint
         require(_start <= type(uint256).max - _length, INVALID_RANGE_LENGTH);
-
-        // Make sure that ranges are in ascending order
-        uint256 rangeOfferIdsLength = _rangeOfferIds.length;
-        if (rangeOfferIdsLength > 0) {
-            // Get latest registered range
-            Range storage lastRange = _rangeByOfferId[_rangeOfferIds[rangeOfferIdsLength - 1]];
-
-            // New range should start after the end of last range
-            require(_start >= lastRange.start + lastRange.length, INVALID_RANGE_START);
-        } else {
-            // Make sure range start is valid
-            require(_start > 0, INVALID_RANGE_START);
-        }
 
         // Get storage slot for the range
         Range storage range = _rangeByOfferId[_offerId];
@@ -181,7 +182,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         range.start = _start;
         range.length = _length;
         range.owner = _to;
-        _rangeOfferIds.push(_offerId);
 
         emit RangeReserved(_offerId, range);
     }
@@ -310,6 +310,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             end = start + maxPremintedVouchers;
         }
 
+        // Update last burned token id
+        range.lastBurnedTokenId = end - 1;
+
         // Burn the range
         address seller = owner();
         uint256 burned;
@@ -320,9 +323,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
                 burned++;
             }
         }
-
-        // Update last burned token id
-        range.lastBurnedTokenId = end - 1;
 
         // Update seller's total balance
         getERC721UpgradeableStorage()._balances[seller] -= burned;
@@ -430,6 +430,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     /**
      * @notice Non-standard ERC721 function to transfer a pre-minted token from one address to another.
      *
+     * @dev  This function is more efficient than generic transferFrom methods, since it does not have to perform binary search.
+     *
      * Reverts if:
      * - TokenId was already used to commit
      * - TokenId already exists (i.e. has an owner)
@@ -499,10 +501,14 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @param _tokenId - id of the voucher's associated exchange or pre-minted token id
      * @return the uri for the associated offer's off-chain metadata (blank if not found)
      */
-    function tokenURI(
-        uint256 _tokenId
-    ) public view override(ERC721Upgradeable, IERC721MetadataUpgradeable) returns (string memory) {
-        (bool exists, Offer memory offer) = getBosonOfferByExchangeId(_tokenId);
+    function tokenURI(uint256 _tokenId)
+        public
+        view
+        override(ERC721Upgradeable, IERC721MetadataUpgradeable)
+        returns (string memory)
+    {
+        uint256 exchangeId = _tokenId & type(uint128).max;
+        (bool exists, Offer memory offer) = getBosonOfferByExchangeId(exchangeId);
 
         if (!exists) {
             (bool committable, uint256 offerId, ) = getPreMintStatus(_tokenId);
@@ -557,6 +563,67 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         _setContractURI(_newContractURI);
     }
 
+    /** @notice Make a call to an external contract.
+     *
+     * Reverts if:
+     * - _to is zero address
+     * - call to external contract fails
+     * - caller is not the owner
+     * - caller tries to call ERC20 method that would allow transfer of tokens from this contract
+     *
+     * @param _to - address of the contract to call
+     * @param _data - data to pass to the external contract
+     */
+    function callExternalContract(address _to, bytes calldata _data) external payable onlyOwner {
+        require(_to != address(0), INVALID_ADDRESS);
+
+        // Prevent invocation of functions that would allow transfer of tokens from this contract
+        bytes4 selector = bytes4(_data[:4]);
+        require(
+            selector != IERC20.transfer.selector &&
+                selector != IERC20.approve.selector &&
+                selector != IERC20.transferFrom.selector &&
+                selector != DAI.push.selector &&
+                selector != DAI.move.selector,
+            FUNCTION_NOT_ALLOWLISTED
+        );
+
+        _to.functionCallWithValue(_data, msg.value, FUNCTION_CALL_NOT_SUCCESSFUL);
+    }
+
+    /** @notice Set approval for all to the vouchers owned by this contract
+     *
+     * Reverts if:
+     * - _operator is zero address
+     * - caller is not the owner
+     * - _operator is this contract
+     *
+     * @param _operator - address of the operator to set approval for
+     * @param _approved - true to approve the operator in question, false to revoke approval
+     */
+    function setApprovalForAllToContract(address _operator, bool _approved) external onlyOwner {
+        require(_operator != address(0), INVALID_ADDRESS);
+
+        _setApprovalForAll(address(this), _operator, _approved);
+    }
+
+    // @dev Contract must be allowed to receive native token as it can be used as voucher's owner
+    receive() external payable {}
+
+    /**
+     * @dev See {IERC721Receiver-onERC721Received}.
+     *
+     * Always returns `IERC721Receiver.onERC721Received.selector`.
+     */
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes memory
+    ) public virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
+
     /**
      * @notice Sets new contract URI.
      * Can only be called by the owner or during the initialization.
@@ -584,7 +651,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         uint256 _salePrice
     ) external view override returns (address receiver, uint256 royaltyAmount) {
         // get offer
-        (bool offerExists, Offer memory offer) = getBosonOfferByExchangeId(_tokenId);
+        uint256 exchangeId = _tokenId & type(uint128).max;
+        (bool offerExists, Offer memory offer) = getBosonOfferByExchangeId(exchangeId);
 
         if (offerExists) {
             (, Seller memory seller) = getBosonSeller(offer.sellerId);
@@ -709,43 +777,51 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      */
     function getPreMintStatus(uint256 _tokenId) public view returns (bool committable, uint256 offerId, address owner) {
         // Not committable if _committed already or if token has an owner
+
         if (!_committed[_tokenId] && !_exists(_tokenId)) {
-            // If are reserved ranges, search them
-            uint256 length = _rangeOfferIds.length;
-            if (length > 0) {
-                // Binary search the ranges array
-                uint256 low = 0; // Lower bound of search (array index)
-                uint256 high = length; // Upper bound of search
+            // it might be a pre-minted token. Preminted tokens have offerId in the upper 128 bits
+            offerId = _tokenId >> 128;
 
-                while (low < high) {
-                    // Calculate the current midpoint and get the offer id
-                    uint256 mid = (high + low) / 2;
-                    uint256 currentOfferId = _rangeOfferIds[mid];
+            if (offerId > 0) {
+                // Get the range stored at the midpoint
+                Range storage range = _rangeByOfferId[offerId];
 
-                    // Get the range stored at the midpoint
-                    Range storage range = _rangeByOfferId[currentOfferId];
+                // Get the beginning of the range once for reference
+                uint256 start = range.start;
+                // _tokenId = _tokenId & type(uint128).max;
 
-                    // Get the beginning of the range once for reference
-                    uint256 start = range.start;
-
-                    if (start > _tokenId) {
-                        // Split low and search again if target too high
-                        high = mid;
-                    } else if (start + range.length - 1 >= _tokenId) {
-                        // Is token in target's reserved range?
-
-                        if (start + range.minted - 1 >= _tokenId && _tokenId > range.lastBurnedTokenId) {
-                            // Has it been pre-minted and not burned yet?
-                            committable = true;
-                            offerId = currentOfferId;
-                            owner = range.owner;
-                        }
-                        break; // Found!
-                    } else {
-                        // No? It may be in a higher range
-                        low = mid + 1;
-                    }
+                if (
+                    start > 0 &&
+                    start <= _tokenId &&
+                    start + range.minted - 1 >= _tokenId &&
+                    _tokenId > range.lastBurnedTokenId
+                ) {
+                    // Has it been pre-minted and not burned yet?
+                    committable = true;
+                    owner = range.owner;
                 }
+            }
+        }
+    }
+
+    /**
+     * @notice Withdraw funds from the contract to the protocol seller pool
+     *
+     * @param _tokenList - list of tokens to withdraw, including native token (address(0))
+     */
+    function withdrawToProtocol(address[] calldata _tokenList) external {
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+        uint256 sellerId = getSellerId();
+
+        for (uint256 i = 0; i < _tokenList.length; i++) {
+            address token = _tokenList[i];
+            if (token == address(0)) {
+                uint256 balance = address(this).balance;
+                IBosonFundsHandler(protocolDiamond).depositFunds{ value: balance }(sellerId, token, balance);
+            } else {
+                uint256 balance = IERC20(token).balanceOf(address(this));
+                IERC20(token).approve(protocolDiamond, balance);
+                IBosonFundsHandler(protocolDiamond).depositFunds(sellerId, token, balance);
             }
         }
     }

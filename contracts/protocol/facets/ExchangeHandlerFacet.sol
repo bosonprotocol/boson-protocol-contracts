@@ -24,6 +24,19 @@ import { IERC20 } from "../../interfaces/IERC20.sol";
 contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     using Address for address;
 
+    uint256 private immutable EXCHANGE_ID_2_2_0;
+
+    /**
+     * @notice After v2.2.0, token ids are derived from offerId and exchangeId.
+     * EXCHANGE_ID_2_2_0 is the first exchange id to use for 2.2.0.
+     * Set EXCHANGE_ID_2_2_0 in the constructor.
+     *
+     * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
+     */
+    constructor(uint256 _firstExchangeId2_2_0) {
+        EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
+    }
+
     /**
      * @notice Initializes facet.
      * This function is callable only once.
@@ -110,6 +123,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         require(msg.sender == protocolLookups().cloneAddress[offer.sellerId], ACCESS_DENIED);
 
         // Exchange must not exist already
+        _exchangeId = extractExchangeId(_exchangeId);
         (bool exists, ) = fetchExchange(_exchangeId);
         require(!exists, EXCHANGE_ALREADY_EXISTS);
 
@@ -212,7 +226,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             lookups.voucherCount[buyerId]++;
             if (!_isPreminted) {
                 IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
-                bosonVoucher.issueVoucher(_exchangeId, _buyer);
+                uint256 tokenId = _exchangeId + (_offerId << 128);
+                bosonVoucher.issueVoucher(tokenId, _buyer);
             }
         }
 
@@ -235,6 +250,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      */
     function completeExchange(uint256 _exchangeId) public override exchangesNotPaused nonReentrant {
         // Get the exchange, should be in redeemed state
+        _exchangeId = extractExchangeId(_exchangeId);
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Redeemed);
         uint256 offerId = exchange.offerId;
 
@@ -303,6 +319,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeId - the id of the exchange
      */
     function revokeVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
+        _exchangeId = extractExchangeId(_exchangeId);
+
         // Get the exchange, should be in committed state
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -336,6 +354,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeId - the id of the exchange
      */
     function cancelVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
+        _exchangeId = extractExchangeId(_exchangeId);
+
         // Get the exchange, should be in committed state
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -363,6 +383,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeId - the id of the exchange
      */
     function expireVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
+        _exchangeId = extractExchangeId(_exchangeId);
+
         // Get the exchange, should be in committed state
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -395,6 +417,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _validUntilDate - the new voucher expiry date
      */
     function extendVoucher(uint256 _exchangeId, uint256 _validUntilDate) external exchangesNotPaused nonReentrant {
+        _exchangeId = extractExchangeId(_exchangeId);
+
         // Get the exchange, should be in committed state
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -441,6 +465,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      */
     function redeemVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
         // Get the exchange, should be in committed state
+        _exchangeId = extractExchangeId(_exchangeId);
+
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
         uint256 offerId = exchange.offerId;
 
@@ -496,6 +522,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
+        _exchangeId = extractExchangeId(_exchangeId);
+
         // Get the exchange, should be in committed state
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -536,6 +564,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      */
     function isExchangeFinalized(uint256 _exchangeId) public view override returns (bool exists, bool isFinalized) {
         Exchange storage exchange;
+        _exchangeId = extractExchangeId(_exchangeId);
 
         // Get the exchange
         (exists, exchange) = fetchExchange(_exchangeId);
@@ -570,9 +599,17 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      * @return voucher - the voucher details. See {BosonTypes.Voucher}
      */
-    function getExchange(
-        uint256 _exchangeId
-    ) external view override returns (bool exists, Exchange memory exchange, Voucher memory voucher) {
+    function getExchange(uint256 _exchangeId)
+        external
+        view
+        override
+        returns (
+            bool exists,
+            Exchange memory exchange,
+            Voucher memory voucher
+        )
+    {
+        _exchangeId = extractExchangeId(_exchangeId);
         (exists, exchange) = fetchExchange(_exchangeId);
         voucher = fetchVoucher(_exchangeId);
     }
@@ -585,6 +622,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @return state - the exchange state. See {BosonTypes.ExchangeStates}
      */
     function getExchangeState(uint256 _exchangeId) external view override returns (bool exists, ExchangeState state) {
+        _exchangeId = extractExchangeId(_exchangeId);
         Exchange storage exchange;
         (exists, exchange) = fetchExchange(_exchangeId);
         if (exists) state = exchange.state;
@@ -664,9 +702,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         lookups.voucherCount[_exchange.buyerId]--;
 
         // Burn the voucher
-        (, Offer storage offer) = fetchOffer(_exchange.offerId);
+        uint256 offerId = _exchange.offerId;
+        (, Offer storage offer) = fetchOffer(offerId);
         IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);
-        bosonVoucher.burnVoucher(_exchange.id);
+
+        uint256 tokenId = _exchange.id;
+        if (tokenId >= EXCHANGE_ID_2_2_0) tokenId += (offerId << 128);
+        bosonVoucher.burnVoucher(tokenId);
     }
 
     /**
@@ -942,6 +984,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @return receipt - the receipt for the exchange. See {BosonTypes.Receipt}
      */
     function getReceipt(uint256 _exchangeId) external view returns (Receipt memory receipt) {
+        _exchangeId = extractExchangeId(_exchangeId);
+
         // Get the exchange
         (bool exists, Exchange storage exchange) = fetchExchange(_exchangeId);
         require(exists, NO_SUCH_EXCHANGE);
@@ -1010,5 +1054,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         if (conditionExists) {
             receipt.condition = condition;
         }
+    }
+
+    /**
+     * @notice Returns lower 128 bits of the given exchange id.
+     * Needed in case if tokenId is passed in istead of an exchangeId.
+     *
+     * @param _exchangeId - the input exchange id
+     * @return exchangeId - the exchange id
+     */
+    function extractExchangeId(uint256 _exchangeId) internal pure returns (uint256 exchangeId) {
+        return _exchangeId & type(uint128).max; // take lower 128 right bits
     }
 }

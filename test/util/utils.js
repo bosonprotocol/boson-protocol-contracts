@@ -1,13 +1,15 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { utils, provider, BigNumber } = hre.ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
-const { keccak256, RLP } = ethers.utils;
+const { keccak256, RLP } = utils;
+const { expect } = require("chai");
+const Offer = require("../../scripts/domain/Offer");
 
 function getEvent(receipt, factory, eventName) {
   let found = false;
 
   const eventFragment = factory.interface.fragments.filter((e) => e.name == eventName);
-  const iface = new ethers.utils.Interface(eventFragment);
+  const iface = new utils.Interface(eventFragment);
 
   for (const log in receipt.logs) {
     const topics = receipt.logs[log].topics;
@@ -42,7 +44,7 @@ function eventEmittedWithArgs(receipt, factory, eventName, args) {
   let match = false;
 
   const eventFragment = factory.interface.fragments.filter((e) => e.name == eventName);
-  const iface = new ethers.utils.Interface(eventFragment);
+  const iface = new utils.Interface(eventFragment);
 
   for (const log in receipt.logs) {
     const topics = receipt.logs[log].topics;
@@ -83,13 +85,43 @@ function compareArgs(eventArgs, args) {
   return true;
 }
 
+/** Predicate to compare offer structs in emitted events
+ * Bind expected offer struct to this function and pass it to .withArgs() instead of the expected offer struct
+ * If returned and expected offer structs are equal, the test will pass, otherwise it raises an error
+ * 
+ * Example
+ * 
+ *  await expect(
+        offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+      )
+        .to.emit(offerHandler, "OfferCreated")
+        .withArgs(
+          nextOfferId,
+          offer.sellerId,
+          compareOfferStructs.bind(offerStruct),  <====== BIND OFFER STRUCT TO THIS FUNCTION
+          offerDatesStruct,
+          offerDurationsStruct,
+          disputeResolutionTermsStruct,
+          offerFeesStruct,
+          agentId,
+          assistant.address,
+        );
+ * 
+ * @param {*} returnedOffer 
+ * @returns 
+ */
+function compareOfferStructs(returnedOffer) {
+  expect(Offer.fromStruct(returnedOffer).toStruct()).to.deep.equal(this);
+  return true;
+}
+
 async function setNextBlockTimestamp(timestamp) {
-  await ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
-  await ethers.provider.send("evm_mine", []);
+  await provider.send("evm_setNextBlockTimestamp", [timestamp]);
+  await provider.send("evm_mine", []);
 }
 
 function getSignatureParameters(signature) {
-  if (!ethers.utils.isHexString(signature)) {
+  if (!utils.isHexString(signature)) {
     throw new Error('Given value "'.concat(signature, '" is not a valid hex string.'));
   }
 
@@ -139,9 +171,9 @@ async function prepareDataSignatureParameters(
 
   if (type == "Protocol") {
     //hardhat default chain id is 31337
-    domainData.salt = ethers.utils.hexZeroPad(ethers.BigNumber.from(31337).toHexString(), 32);
+    domainData.salt = utils.hexZeroPad(BigNumber.from(31337).toHexString(), 32);
   } else {
-    const { chainId } = await ethers.provider.getNetwork();
+    const { chainId } = await provider.getNetwork();
     domainData.chainId = chainId;
   }
 
@@ -160,7 +192,7 @@ async function prepareDataSignatureParameters(
   });
 
   // Sign the data
-  const signature = await ethers.provider.send("eth_signTypedData_v4", [user.address, dataToSign]);
+  const signature = await provider.send("eth_signTypedData_v4", [user.address, dataToSign]);
 
   // Collect the Signature components
   const { r, s, v } = getSignatureParameters(signature);
@@ -174,18 +206,18 @@ async function prepareDataSignatureParameters(
 }
 
 function calculateVoucherExpiry(block, voucherRedeemableFromDate, voucherValidDuration) {
-  const startDate = ethers.BigNumber.from(block.timestamp).gte(ethers.BigNumber.from(voucherRedeemableFromDate))
-    ? ethers.BigNumber.from(block.timestamp)
-    : ethers.BigNumber.from(voucherRedeemableFromDate);
-  return startDate.add(ethers.BigNumber.from(voucherValidDuration)).toString();
+  const startDate = BigNumber.from(block.timestamp).gte(BigNumber.from(voucherRedeemableFromDate))
+    ? BigNumber.from(block.timestamp)
+    : BigNumber.from(voucherRedeemableFromDate);
+  return startDate.add(BigNumber.from(voucherValidDuration)).toString();
 }
 
 function applyPercentage(base, percentage) {
-  return ethers.BigNumber.from(base).mul(percentage).div("10000").toString();
+  return BigNumber.from(base).mul(percentage).div("10000").toString();
 }
 
 function calculateContractAddress(senderAddress, senderNonce) {
-  const nonce = ethers.BigNumber.from(senderNonce);
+  const nonce = BigNumber.from(senderNonce);
   const nonceHex = nonce.eq(0) ? "0x" : nonce.toHexString();
 
   const input_arr = [senderAddress, nonceHex];
@@ -195,7 +227,7 @@ function calculateContractAddress(senderAddress, senderNonce) {
 
   const contract_address = "0x" + contract_address_long.substring(26); //Trim the first 24 characters.
 
-  return ethers.utils.getAddress(contract_address);
+  return utils.getAddress(contract_address);
 }
 
 const paddingType = {
@@ -208,10 +240,10 @@ function getMappingStoragePosition(slot, key, padding = paddingType.NONE) {
   let keyBuffer;
   switch (padding) {
     case paddingType.NONE:
-      keyBuffer = ethers.utils.toUtf8Bytes(key);
+      keyBuffer = utils.toUtf8Bytes(key);
       break;
     case paddingType.START:
-      keyBuffer = Buffer.from(ethers.utils.hexZeroPad(key, 32).toString().slice(2), "hex");
+      keyBuffer = Buffer.from(utils.hexZeroPad(key, 32).toString().slice(2), "hex");
       break;
     case paddingType.END:
       keyBuffer = Buffer.from(key.slice(2).padEnd(64, "0"), "hex"); // assume key is prefixed with 0x
@@ -230,6 +262,32 @@ async function getFacetsWithArgs(facetNames, config) {
   }, {});
 }
 
+function objectToArray(input) {
+  // If the input is not an object, return it as-is
+  if (BigNumber.isBigNumber(input) || typeof input !== "object" || input === null) {
+    return input;
+  }
+
+  // If the input is an array, convert its elements recursively
+  if (Array.isArray(input)) {
+    return input.map((element) => objectToArray(element));
+  }
+
+  // If the input is an object, convert its properties recursively
+  const keys = Object.keys(input);
+  const result = new Array(keys.length);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const value = objectToArray(input[key]);
+    result[i] = value;
+  }
+  return result;
+}
+
+function deriveTokenId(offerId, exchangeId) {
+  return hre.ethers.BigNumber.from(offerId).shl(128).add(exchangeId);
+}
+
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.eventEmittedWithArgs = eventEmittedWithArgs;
@@ -240,3 +298,6 @@ exports.applyPercentage = applyPercentage;
 exports.getMappingStoragePosition = getMappingStoragePosition;
 exports.paddingType = paddingType;
 exports.getFacetsWithArgs = getFacetsWithArgs;
+exports.compareOfferStructs = compareOfferStructs;
+exports.objectToArray = objectToArray;
+exports.deriveTokenId = deriveTokenId;

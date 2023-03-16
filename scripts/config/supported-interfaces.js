@@ -17,7 +17,6 @@ const interfaceImplementers = {
   GroupHandlerFacet: "IBosonGroupHandler",
   MetaTransactionsHandlerFacet: "IBosonMetaTransactionsHandler",
   OfferHandlerFacet: "IBosonOfferHandler",
-  OrchestrationHandlerFacet: "IBosonOrchestrationHandler",
   OrchestrationHandlerFacet1: "IBosonOrchestrationHandler",
   OrchestrationHandlerFacet2: "IBosonOrchestrationHandler",
   TwinHandlerFacet: "IBosonTwinHandler",

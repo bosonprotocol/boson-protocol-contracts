@@ -43,7 +43,7 @@ async function main(env, facetConfig) {
   // Bail now if hardhat network, unless the upgrade is tested
   if (network === "hardhat" && env !== "upgrade-test") process.exit();
 
-  const chainId = (await ethers.provider.getNetwork()).chainId;
+  const { chainId } = await ethers.provider.getNetwork();
   const contractsFile = readContracts(chainId, network, env);
   let contracts = contractsFile.contracts;
   const interfaceIds = await getInterfaceIds(false);

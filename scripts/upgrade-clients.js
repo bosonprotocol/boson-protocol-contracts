@@ -69,13 +69,15 @@ async function main(env, clientConfig) {
   // Validate that admin has UPGRADER role
   checkRole(contracts, Role.UPGRADER, adminAddress);
 
-  clientConfig = clientConfig ? JSON.parse(clientConfig) : require("./config/client-upgrade");
+  clientConfig = (clientConfig && JSON.parse(clientConfig)) || require("./config/client-upgrade");
 
   // Deploy Protocol Client implementation contracts
   console.log(`\n📋 Deploying new logic contract`);
 
-  const implementationArgs = Object.values(clientConfig).map((config) => config[network]);
-  const [bosonVoucherImplementation] = await deployProtocolClientImpls(implementationArgs, maxPriorityFeePerGas);
+  const clientImplementationArgs = Object.values(clientConfig).map(
+    (config) => process.env.FORWARDER_ADDRESS || config[network]
+  );
+  const [bosonVoucherImplementation] = await deployProtocolClientImpls(clientImplementationArgs, maxPriorityFeePerGas);
 
   // Update implementation address on beacon contract
   console.log(`\n📋 Updating implementation address on beacon`);

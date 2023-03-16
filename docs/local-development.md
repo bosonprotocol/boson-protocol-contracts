@@ -23,7 +23,7 @@ To follow the manual and to get your local environment running you'll need to ha
 ## Clone your forked repo locally
 Assuming your fork is `myaccount/boson-protocol-contracts`, you can clone the repo locally with:
 
-`git clone git@github.com:myaccount/boson-protocol-contracts.git`
+`git clone --recursive git@github.com:myaccount/boson-protocol-contracts.git`
 
 You may now make branches locally, commit to them, and push them to your fork. 
 
