@@ -298,6 +298,26 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         assert.deepEqual(accountContractStateAfter, accountContractState);
       });
 
+      it("Redeeming the last voucher before the upgrade", async function () {
+        const exchange = preUpgradeEntities.exchanges[preUpgradeEntities.exchanges.length - 1];
+        const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
+        await expect(exchangeHandler.connect(buyerWallet).redeemVoucher(exchange.exchangeId))
+          .to.emit(exchangeHandler, "VoucherRedeemed")
+          .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
+      });
+
+      it("Redeeming the first voucher after the upgrade", async function () {
+        const exchangeId = await exchangeHandler.getNextExchangeId();
+        const buyerWallet = preUpgradeEntities.buyers[0].wallet;
+
+        const { id: offerId, price } = preUpgradeEntities.offers[0].offer;
+        await exchangeHandler.commitToOffer(buyerWallet.address, offerId, { value: price });
+
+        await expect(exchangeHandler.connect(buyerWallet).redeemVoucher(exchangeId))
+          .to.emit(exchangeHandler, "VoucherRedeemed")
+          .withArgs(offerId, exchangeId, buyerWallet.address);
+      });
+
       context("MetaTransactionsHandler", async function () {
         let seller, functionSignature, metaTransactionType, customTransactionType, nonce, message;
 
