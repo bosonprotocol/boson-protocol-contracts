@@ -276,3 +276,22 @@ Boson Protocol Contract Suite Upgrader
 📋 Diamond upgraded.
 
 
+--------------------------------------------------------------------------------
+Boson Protocol Client Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Thu Mar 16 2023 16:24:43 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+
+📋 Deploying new logic contract
+
+📋 Updating implementation address on beacon
+✅ BosonVoucher Logic deployed to: 0x2e784BeA2e2AEC0eefF14Fe0D9dC9219DD74B167
+--------------------------------------------------------------------------------
+✅ Contracts written to /home/klemen/boson/clean/boson-protocol-contracts/scripts/util/../../addresses/80001-mumbai-test.json
+--------------------------------------------------------------------------------
+
+📋 Client upgraded.
+
+

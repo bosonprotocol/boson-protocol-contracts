@@ -168,12 +168,6 @@
       "interfaceId": "0x60b30e70"
     },
     {
-      "name": "BosonVoucher Logic",
-      "address": "0x945a419a988921A758A94D6bB88A264aaD2fa646",
-      "args": [],
-      "interfaceId": ""
-    },
-    {
       "name": "OfferHandlerFacet",
       "address": "0x4b94267Aa5Ca691429D4da3d29C36C9e8888487D",
       "args": [],
@@ -184,6 +178,14 @@
       "address": "0x2354D6CBC8Ff222898ea1D22eF3d28043A6d710b",
       "args": [],
       "interfaceId": "0xa38bc2e7"
+    },
+    {
+      "name": "BosonVoucher Logic",
+      "address": "0x2e784BeA2e2AEC0eefF14Fe0D9dC9219DD74B167",
+      "args": [
+        "0x69015912AA33720b842dCD6aC059Ed623F28d9f7"
+      ],
+      "interfaceId": ""
     }
   ]
 }

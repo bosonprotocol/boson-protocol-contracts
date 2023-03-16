@@ -11,6 +11,7 @@ async function verifyOnBlockExplorer(contract) {
 
   console.log("contract object in verify function ", contract);
   try {
+    if (contract.name == "BosonVoucher Logic") contract.name == "BosonVoucher";
     if (contract.name == "BosonVoucher Beacon") {
       await hre.run("verify:verify", {
         contract: "contracts/protocol/clients/proxy/BosonClientBeacon.sol:BosonClientBeacon",
