@@ -1888,7 +1888,8 @@ describe("IBosonFundsHandler", function () {
         await bosonVoucher.connect(assistant).preMint(offerToken.id, offerToken.quantityAvailable);
 
         // commit to an offer via preminted voucher
-        let tokenId = deriveTokenId(offerToken.id, "1");
+        let exchangeId = "1";
+        let tokenId = deriveTokenId(offerToken.id, exchangeId);
         tx = await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
 
         // it should emit FundsEncumbered event with amount equal to sellerDeposit + price
@@ -1915,7 +1916,7 @@ describe("IBosonFundsHandler", function () {
 
         // make sure that buyer is actually the buyer of the exchange
         let exchange;
-        [, exchange] = await exchangeHandler.getExchange(tokenId);
+        [, exchange] = await exchangeHandler.getExchange(exchangeId);
         expect(exchange.buyerId.toString()).to.eql(buyerId, "Wrong buyer id");
 
         // get native currency balance before the commit
@@ -1955,7 +1956,7 @@ describe("IBosonFundsHandler", function () {
         ).to.eql(encumberedFunds.toString(), "Native currency seller available funds mismatch");
 
         // make sure that buyer is actually the buyer of the exchange
-        [, exchange] = await exchangeHandler.getExchange(tokenId);
+        [, exchange] = await exchangeHandler.getExchange(exchangeId);
         expect(exchange.buyerId.toString()).to.eql(buyerId, "Wrong buyer id");
       });
 

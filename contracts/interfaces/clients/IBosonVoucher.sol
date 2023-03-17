@@ -32,19 +32,19 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * Minted voucher supply is sent to the buyer.
      * Caller must have PROTOCOL role.
      *
-     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     * @param _tokenId - voucher token id corresponds to <<uint128(offerId)>>.<<uint128(exchangeId)>>
      * @param _buyer - the buyer address
      */
-    function issueVoucher(uint256 _exchangeId, address _buyer) external;
+    function issueVoucher(uint256 _tokenId, address _buyer) external;
 
     /**
      * @notice Burns a voucher.
      *
      * Caller must have PROTOCOL role.
      *
-     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     * @param _tokenId - voucher token id corresponds to <<uint128(offerId)>>.<<uint128(exchangeId)>>
      */
-    function burnVoucher(uint256 _exchangeId) external;
+    function burnVoucher(uint256 _tokenId) external;
 
     /**
      * @notice Gets the seller id.

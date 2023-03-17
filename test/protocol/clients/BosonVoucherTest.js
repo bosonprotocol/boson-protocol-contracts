@@ -1673,7 +1673,7 @@ describe("IBosonVoucher", function () {
 
               // Redeem voucher, effectively burning it
               await setNextBlockTimestamp(ethers.BigNumber.from(voucherRedeemableFrom).toHexString());
-              await exchangeHandler.connect(buyer).redeemVoucher(tokenId);
+              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
               // Transfer should fail, since voucher has been burned
               await expect(
@@ -1936,7 +1936,7 @@ describe("IBosonVoucher", function () {
 
           // Redeem voucher, effectively burning it
           await setNextBlockTimestamp(ethers.BigNumber.from(voucherRedeemableFrom).toHexString());
-          await exchangeHandler.connect(buyer).redeemVoucher(tokenId);
+          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
           // Transfer should fail, since voucher has been burned
           await expect(
