@@ -1068,7 +1068,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
     /**
      * @notice Returns lower 128 bits of the given exchange id.
-     * Needed in case if tokenId is passed in istead of an exchangeId.
+     * Needed in case tokenId is passed in instead of an exchangeId.
      *
      * @param _exchangeId - the input exchange id
      * @return exchangeId - the exchange id

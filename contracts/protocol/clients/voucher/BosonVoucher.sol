@@ -816,8 +816,9 @@ contract BosonVoucherBase is
 
                 // Get the beginning of the range once for reference
                 uint256 start = range.start;
-                // _tokenId = _tokenId & type(uint128).max;
 
+                // Start is 0 if the range does not exist
+                // Token is committable if is within the range and has not been burned already
                 if (
                     start > 0 &&
                     start <= _tokenId &&
