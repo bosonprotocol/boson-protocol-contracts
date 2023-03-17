@@ -276,6 +276,7 @@ async function populateProtocolContract(
   ];
 
   let nextAccountId = Number(await accountHandler.getNextAccountId());
+  let voucherIndex = 1;
 
   for (const entity of entities) {
     const wallet = ethers.Wallet.createRandom();
@@ -343,7 +344,17 @@ async function populateProtocolContract(
         // set unique new voucherInitValues
         const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
         await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
-        sellers.push({ wallet: connectedWallet, id, seller, authToken, voucherInitValues, offerIds: [] });
+
+        const voucherContractAddress = calculateContractAddress(accountHandler.address, voucherIndex++);
+        sellers.push({
+          wallet: connectedWallet,
+          id,
+          seller,
+          authToken,
+          voucherInitValues,
+          offerIds: [],
+          voucherContractAddress,
+        });
 
         // mint mock token to sellers just in case they need them
         await mockToken.mint(connectedWallet.address, "10000000000");

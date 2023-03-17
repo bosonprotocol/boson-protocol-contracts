@@ -298,24 +298,124 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         assert.deepEqual(accountContractStateAfter, accountContractState);
       });
 
-      it("Redeeming the last voucher before the upgrade", async function () {
-        const exchange = preUpgradeEntities.exchanges[preUpgradeEntities.exchanges.length - 1];
-        const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
-        await expect(exchangeHandler.connect(buyerWallet).redeemVoucher(exchange.exchangeId))
-          .to.emit(exchangeHandler, "VoucherRedeemed")
-          .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
+      context("Actions with the last voucher before the upgrade (tokenID=last old token id)", async function () {
+        let exchange, buyerWallet, sellerWallet;
+        let bosonVoucher, tokenId;
+
+        beforeEach(async function () {
+          exchange = preUpgradeEntities.exchanges[preUpgradeEntities.exchanges.length - 1];
+          buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
+
+          const offer = preUpgradeEntities.offers.find((o) => o.offer.id == exchange.offerId);
+          const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.sellerId);
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", seller.voucherContractAddress);
+          tokenId = exchange.exchangeId;
+          sellerWallet = seller.wallet;
+        });
+
+        it("Redeem old voucher", async function () {
+          const tx = await exchangeHandler.connect(buyerWallet).redeemVoucher(exchange.exchangeId);
+
+          // Protocol event
+          await expect(tx)
+            .to.emit(exchangeHandler, "VoucherRedeemed")
+            .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
+
+          // Voucher burned event
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(buyerWallet.address, ethers.constants.AddressZero, tokenId);
+        });
+
+        it("Cancel old voucher", async function () {
+          const tx = await exchangeHandler.connect(buyerWallet).cancelVoucher(exchange.exchangeId);
+
+          // Protocol event
+          await expect(tx)
+            .to.emit(exchangeHandler, "VoucherCanceled")
+            .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
+
+          // Voucher burned event
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(buyerWallet.address, ethers.constants.AddressZero, tokenId);
+        });
+
+        it("Revoke old voucher", async function () {
+          const tx = exchangeHandler.connect(sellerWallet).revokeVoucher(exchange.exchangeId);
+
+          // Protocol event
+          await expect(tx)
+            .to.emit(exchangeHandler, "VoucherRevoked")
+            .withArgs(exchange.offerId, exchange.exchangeId, sellerWallet.address);
+
+          // Voucher burned event
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(buyerWallet.address, ethers.constants.AddressZero, tokenId);
+        });
       });
 
-      it("Redeeming the first voucher after the upgrade", async function () {
-        const exchangeId = await exchangeHandler.getNextExchangeId();
-        const buyerWallet = preUpgradeEntities.buyers[0].wallet;
+      context("Actions with the first voucher after the upgrade (tokenID=first new token id)", async function () {
+        let exchangeId, buyerWallet, offerId, tokenId, sellerWallet;
+        let bosonVoucher;
 
-        const { id: offerId, price } = preUpgradeEntities.offers[0].offer;
-        await exchangeHandler.commitToOffer(buyerWallet.address, offerId, { value: price });
+        beforeEach(async function () {
+          exchangeId = await exchangeHandler.getNextExchangeId();
+          buyerWallet = preUpgradeEntities.buyers[0].wallet;
 
-        await expect(exchangeHandler.connect(buyerWallet).redeemVoucher(exchangeId))
-          .to.emit(exchangeHandler, "VoucherRedeemed")
-          .withArgs(offerId, exchangeId, buyerWallet.address);
+          let price;
+          ({ id: offerId, price } = preUpgradeEntities.offers[0].offer);
+          await exchangeHandler.commitToOffer(buyerWallet.address, offerId, { value: price });
+
+          const offer = preUpgradeEntities.offers.find((o) => o.offer.id == offerId);
+          const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.sellerId);
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", seller.voucherContractAddress);
+          tokenId = deriveTokenId(offerId, exchangeId);
+          sellerWallet = seller.wallet;
+        });
+
+        it("Redeem new voucher", async function () {
+          const tx = await exchangeHandler.connect(buyerWallet).redeemVoucher(exchangeId);
+
+          // Protocol event
+          await expect(tx)
+            .to.emit(exchangeHandler, "VoucherRedeemed")
+            .withArgs(offerId, exchangeId, buyerWallet.address);
+
+          // Voucher burned event
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(buyerWallet.address, ethers.constants.AddressZero, tokenId);
+        });
+
+        it("Cancel new voucher", async function () {
+          const tx = await exchangeHandler.connect(buyerWallet).cancelVoucher(exchangeId);
+
+          // Protocol event
+          await expect(tx)
+            .to.emit(exchangeHandler, "VoucherCanceled")
+            .withArgs(offerId, exchangeId, buyerWallet.address);
+
+          // Voucher burned event
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(buyerWallet.address, ethers.constants.AddressZero, tokenId);
+        });
+
+        it("Revoke new voucher", async function () {
+          const tx = await exchangeHandler.connect(sellerWallet).revokeVoucher(exchangeId);
+
+          // Protocol event
+          await expect(tx)
+            .to.emit(exchangeHandler, "VoucherRevoked")
+            .withArgs(offerId, exchangeId, sellerWallet.address);
+
+          // Voucher burned event
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(buyerWallet.address, ethers.constants.AddressZero, tokenId);
+        });
       });
 
       context("MetaTransactionsHandler", async function () {
