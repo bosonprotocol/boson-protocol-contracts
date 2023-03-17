@@ -429,46 +429,6 @@ contract BosonVoucherBase is
     }
 
     /**
-     * @notice Non-standard ERC721 function to transfer a pre-minted token from one address to another.
-     *
-     * @dev  This function is more efficient than generic transferFrom methods, since it does not have to perform binary search.
-     *
-     * Reverts if:
-     * - TokenId was already used to commit
-     * - TokenId already exists (i.e. has an owner)
-     * - TokenId has not been preminted yet
-     * - TokenId was already burned
-     * - From is not the owner of the voucher contract
-     *
-     * @param _from - the address to transfer from
-     * @param _to - the address to transfer to
-     * @param _offerId - the id of the offer
-     * @param _tokenId - the id of the token
-     * @param _data - data to pass if receiver is contract
-     */
-    function transferPremintedFrom(
-        address _from,
-        address _to,
-        uint256 _offerId,
-        uint256 _tokenId,
-        bytes memory _data
-    ) external override {
-        // Check that token has not been used yet
-        require(!_committed[_tokenId] && !_exists(_tokenId), NOT_COMMITTABLE);
-
-        // Get range associated with offer
-        Range storage range = _rangeByOfferId[_offerId];
-
-        // Check if token is committable
-        require(range.start + range.minted - 1 >= _tokenId && _tokenId > range.lastBurnedTokenId, NOT_COMMITTABLE);
-
-        // Temporarily update _owners, so transfer succeeds
-        silentMintAndSetPremintStatus(_from, _tokenId);
-
-        super.safeTransferFrom(_from, _to, _tokenId, _data);
-    }
-
-    /**
      * @notice Implements the {IERC165} interface.
      *
      * N.B. This method is inherited from several parents and
