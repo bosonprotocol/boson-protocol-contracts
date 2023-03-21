@@ -329,12 +329,12 @@ contract BosonVoucherBase is
         }
 
         // Burn the range
-        address seller = range.owner;
+        address rangeOwner = range.owner;
         uint256 burned;
         for (uint256 tokenId = start; tokenId < end; tokenId++) {
             // Burn only if not already _committed
             if (!_committed[tokenId]) {
-                emit Transfer(seller, address(0), tokenId);
+                emit Transfer(rangeOwner, address(0), tokenId);
                 burned++;
             }
         }
@@ -342,8 +342,8 @@ contract BosonVoucherBase is
         // Update last burned token id
         range.lastBurnedTokenId = end - 1;
 
-        // Update seller's total balance
-        getERC721UpgradeableStorage()._balances[seller] -= burned;
+        // Update owner's total balance
+        getERC721UpgradeableStorage()._balances[rangeOwner] -= burned;
     }
 
     /**
