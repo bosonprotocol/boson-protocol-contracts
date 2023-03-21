@@ -751,13 +751,15 @@ describe("IBosonVoucher", function () {
         // Transfer ownership to rando
         await bosonVoucher.connect(protocol).transferOwnership(rando.address);
 
-        // Old owner's balance before
-        const ownerBalanceBefore = await bosonVoucher.balanceOf(assistant.address);
-
         // Burn tokens, test for event
-        const tx = await bosonVoucher.connect(rando).burnPremintedVouchers(offerId);
+        let tx;
+        await expect(() => {
+          tx = bosonVoucher.connect(rando).burnPremintedVouchers(offerId);
+          return tx;
+        }).to.changeTokenBalance(bosonVoucher, assistant, Number(amount) * -1);
 
         // Number of events emitted should be equal to amount
+        tx = await tx;
         assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
 
         // Expect an event for every burn, where owner is the old owner (assistant)
@@ -766,10 +768,6 @@ describe("IBosonVoucher", function () {
             .to.emit(bosonVoucher, "Transfer")
             .withArgs(assistant.address, ethers.constants.AddressZero, i + Number(start));
         }
-
-        // Seller's balance should be decreased for the total burn amount
-        const ownerBalanceAfter = await bosonVoucher.balanceOf(assistant.address);
-        assert.equal(ownerBalanceAfter.toNumber(), ownerBalanceBefore.sub(amount).toNumber(), "Balance mismatch");
       });
 
       it("Contract itself is the owner", async function () {
@@ -794,13 +792,15 @@ describe("IBosonVoucher", function () {
           .withArgs(offerId)
           .returns(true, offer, offerDates, offerDurations, disputeResolutionTerms, offerFees);
 
-        // Old owner's balance before
-        const ownerBalanceBefore = await bosonVoucher.balanceOf(bosonVoucher.address);
-
         // Burn tokens, test for event
-        const tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+        let tx;
+        await expect(() => {
+          tx = bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+          return tx;
+        }).to.changeTokenBalance(bosonVoucher, bosonVoucher, Number(amount) * -1);
 
         // Number of events emitted should be equal to amount
+        tx = await tx;
         assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
 
         // Expect an event for every burn
@@ -809,10 +809,6 @@ describe("IBosonVoucher", function () {
             .to.emit(bosonVoucher, "Transfer")
             .withArgs(bosonVoucher.address, ethers.constants.AddressZero, i + Number(start));
         }
-
-        // Seller's balance should be decreased for the total burn amount
-        const ownerBalanceAfter = await bosonVoucher.balanceOf(bosonVoucher.address);
-        assert.equal(ownerBalanceAfter.toNumber(), ownerBalanceBefore.sub(amount).toNumber(), "Balance mismatch");
       });
     });
 
