@@ -329,7 +329,7 @@ contract BosonVoucherBase is
         }
 
         // Burn the range
-        address seller = owner();
+        address seller = range.owner;
         uint256 burned;
         for (uint256 tokenId = start; tokenId < end; tokenId++) {
             // Burn only if not already _committed

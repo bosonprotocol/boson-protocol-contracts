@@ -746,6 +746,76 @@ describe("IBosonVoucher", function () {
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
     });
 
+    context("Contract owner is not owner of preminted vouchers", function () {
+      it("Ownership is transferred", async function () {
+        // Transfer ownership to rando
+        await bosonVoucher.connect(protocol).transferOwnership(rando.address);
+
+        // Old owner's balance before
+        const ownerBalanceBefore = await bosonVoucher.balanceOf(assistant.address);
+
+        // Burn tokens, test for event
+        const tx = await bosonVoucher.connect(rando).burnPremintedVouchers(offerId);
+
+        // Number of events emitted should be equal to amount
+        assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
+
+        // Expect an event for every burn, where owner is the old owner (assistant)
+        for (let i = 0; i < Number(amount); i++) {
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(assistant.address, ethers.constants.AddressZero, i + Number(start));
+        }
+
+        // Seller's balance should be decreased for the total burn amount
+        const ownerBalanceAfter = await bosonVoucher.balanceOf(assistant.address);
+        assert.equal(ownerBalanceAfter.toNumber(), ownerBalanceBefore.sub(amount).toNumber(), "Balance mismatch");
+      });
+
+      it("Contract itself is the owner", async function () {
+        // create a new offer, so new range owner can be set
+        offerId = "6";
+        offer.voided = false;
+        await mockProtocol.mock.getOffer
+          .withArgs(offerId)
+          .returns(true, offer, offerDates, offerDurations, disputeResolutionTerms, offerFees);
+
+        // reserve a range
+        start = "2000";
+        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, bosonVoucher.address);
+
+        // amount to mint
+        amount = "10";
+        await bosonVoucher.connect(assistant).preMint(offerId, amount);
+
+        // "void" the offer
+        offer.voided = true;
+        await mockProtocol.mock.getOffer
+          .withArgs(offerId)
+          .returns(true, offer, offerDates, offerDurations, disputeResolutionTerms, offerFees);
+
+        // Old owner's balance before
+        const ownerBalanceBefore = await bosonVoucher.balanceOf(bosonVoucher.address);
+
+        // Burn tokens, test for event
+        const tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+
+        // Number of events emitted should be equal to amount
+        assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
+
+        // Expect an event for every burn
+        for (let i = 0; i < Number(amount); i++) {
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(bosonVoucher.address, ethers.constants.AddressZero, i + Number(start));
+        }
+
+        // Seller's balance should be decreased for the total burn amount
+        const ownerBalanceAfter = await bosonVoucher.balanceOf(bosonVoucher.address);
+        assert.equal(ownerBalanceAfter.toNumber(), ownerBalanceBefore.sub(amount).toNumber(), "Balance mismatch");
+      });
+    });
+
     it("Should burn all vouchers if there is less than MaxPremintedVouchers to burn", async function () {
       // Burn tokens, test for event
       let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
@@ -825,7 +895,7 @@ describe("IBosonVoucher", function () {
       );
     });
 
-    it("Should skip all vouchers were already commited", async function () {
+    it("Should skip all vouchers were already committed", async function () {
       let commitedVouchers = [11, 14];
 
       // Transfer some preminted vouchers
