@@ -10,6 +10,7 @@ const Role = require("../../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const Range = require("../../../scripts/domain/Range");
 const VoucherInitValues = require("../../../scripts/domain/VoucherInitValues");
+const { Funds, FundsList } = require("../../../scripts/domain/Funds");
 
 const { mockOffer, mockExchange, mockVoucher } = require("../../util/mock.js");
 const { assert, expect } = require("chai");
@@ -2567,16 +2568,38 @@ describe("IBosonVoucher", function () {
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
     });
 
+    afterEach(async function () {
+      // Reset the accountId iterator
+      accountId.next(true);
+    });
+
     it("Can withdraw native token", async function () {
+      // Sellers available funds should be empty
+      const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+      let expectedAvailableFunds = new FundsList([]);
+      expect(sellersFundsBefore).to.eql(expectedAvailableFunds);
+
       const amount = ethers.utils.parseUnits("1", "ether");
       await admin.sendTransaction({ to: bosonVoucher.address, value: amount });
 
       await expect(() =>
         bosonVoucher.connect(rando).withdrawToProtocol([ethers.constants.AddressZero])
       ).to.changeEtherBalances([bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
+
+      // Seller's available balance should increase
+      expectedAvailableFunds = new FundsList([
+        new Funds(ethers.constants.AddressZero, "Native currency", amount.toString()),
+      ]);
+      const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+      expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
     });
 
     it("Can withdraw ERC20", async function () {
+      // Sellers available funds should be empty
+      const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+      let expectedAvailableFunds = new FundsList([]);
+      expect(sellersFundsBefore).to.eql(expectedAvailableFunds);
+
       const amount = ethers.utils.parseUnits("1", "ether");
       await foreign20.connect(deployer).mint(deployer.address, amount);
       await foreign20.connect(deployer).transfer(bosonVoucher.address, amount);
@@ -2586,9 +2609,19 @@ describe("IBosonVoucher", function () {
         [bosonVoucher, protocolDiamond],
         [amount.mul(-1), amount]
       );
+
+      // Seller's available balance should increase
+      expectedAvailableFunds = new FundsList([new Funds(foreign20.address, "Foreign20", amount.toString())]);
+      const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+      expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
     });
 
     it("Should withdraw all tokens when list length > 1", async function () {
+      // Sellers available funds should be empty
+      const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+      let expectedAvailableFunds = new FundsList([]);
+      expect(sellersFundsBefore).to.eql(expectedAvailableFunds);
+
       const amount = ethers.utils.parseUnits("1", "ether");
       await admin.sendTransaction({ to: bosonVoucher.address, value: amount });
       await foreign20.connect(deployer).mint(deployer.address, amount);
@@ -2599,6 +2632,14 @@ describe("IBosonVoucher", function () {
         .withdrawToProtocol([ethers.constants.AddressZero, foreign20.address]);
       expect(() => tx).to.changeEtherBalances([bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
       expect(() => tx).to.changeTokenBalances(foreign20, [bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
+
+      // Seller's available balance should increase
+      expectedAvailableFunds = new FundsList([
+        new Funds(ethers.constants.AddressZero, "Native currency", amount.toString()),
+        new Funds(foreign20.address, "Foreign20", amount.toString()),
+      ]);
+      const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+      expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
     });
   });
 
