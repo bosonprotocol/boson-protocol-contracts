@@ -145,6 +145,7 @@ contract BosonTypes {
         string metadataUri;
         string metadataHash;
         bool voided;
+        uint256 collectionIndex;
     }
 
     struct OfferDates {

@@ -82,12 +82,12 @@ contract BosonVoucherBase is
      */
     function initializeVoucher(
         uint256 _sellerId,
-        uint256 _collectionId,
+        uint256 _collectionIndex,
         address _newOwner,
         VoucherInitValues calldata voucherInitValues
     ) public initializer {
         string memory sellerId = string(
-            abi.encodePacked(Strings.toString(_sellerId), "_", Strings.toString(_collectionId))
+            abi.encodePacked(Strings.toString(_sellerId), "_", Strings.toString(_collectionIndex))
         );
         string memory voucherName = string(abi.encodePacked(VOUCHER_NAME, " ", sellerId));
         string memory voucherSymbol = string(abi.encodePacked(VOUCHER_SYMBOL, "_", sellerId));

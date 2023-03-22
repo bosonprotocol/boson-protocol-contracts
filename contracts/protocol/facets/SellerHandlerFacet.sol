@@ -254,7 +254,13 @@ contract SellerHandlerFacet is SellerBase {
                 seller.assistant = sender;
 
                 // Transfer ownership of voucher contract to new assistant
-                IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender);
+                IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender); // default voucher contract
+                address[] storage sellersAdditionalCloneAddresses = lookups.additionalCloneAddresses[_sellerId];
+                uint256 collectionCount;
+                for (i = 0; i < collectionCount; i++) {
+                    // Additional collections (if they exist)
+                    IBosonVoucher(sellersAdditionalCloneAddresses[i]).transferOwnership(sender);
+                }
 
                 // Store new seller id by assistant mapping
                 lookups.sellerIdByAssistant[sender] = _sellerId;
@@ -356,7 +362,7 @@ contract SellerHandlerFacet is SellerBase {
         address[] storage sellersAdditionalCloneAddresses = protocolLookups().additionalCloneAddresses[sellerId];
         uint256 collectionIndex = sellersAdditionalCloneAddresses.length + 1; // 0 is reserved for the original collection
 
-        // Create clone and store its address cloneAddress
+        // Create clone and store its address to additionalCloneAddresses
         address voucherCloneAddress = cloneBosonVoucher(sellerId, collectionIndex, assistant, _voucherInitValues);
         sellersAdditionalCloneAddresses.push(voucherCloneAddress);
 

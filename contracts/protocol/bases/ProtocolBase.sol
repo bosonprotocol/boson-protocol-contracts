@@ -730,4 +730,15 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         // Determine existence
         exists = (_exchangeId > 0 && condition.method != EvaluationMethod.None);
     }
+
+    function getCloneAddress(
+        ProtocolLib.ProtocolLookups storage _lookups,
+        uint256 _sellerId,
+        uint256 _collectionIndex
+    ) internal view returns (address cloneAddress) {
+        return
+            _collectionIndex == 0
+                ? _lookups.cloneAddress[_sellerId]
+                : _lookups.additionalCloneAddresses[_sellerId][_collectionIndex - 1];
+    }
 }

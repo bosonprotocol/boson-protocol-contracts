@@ -111,7 +111,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         (, Offer storage offer) = fetchOffer(_offerId);
 
         // Make sure that the voucher was issued on the clone that is making a call
-        require(msg.sender == protocolLookups().cloneAddress[offer.sellerId], ACCESS_DENIED);
+        require(msg.sender == getCloneAddress(protocolLookups(), offer.sellerId, offer.collectionIndex), ACCESS_DENIED);
 
         // Exchange must not exist already
         (bool exists, ) = fetchExchange(_exchangeId);
@@ -215,7 +215,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // Issue voucher, unless it already exist (for preminted offers)
             lookups.voucherCount[buyerId]++;
             if (!_isPreminted) {
-                IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
+                IBosonVoucher bosonVoucher = IBosonVoucher(
+                    getCloneAddress(lookups, _offer.sellerId, _offer.collectionIndex)
+                );
                 bosonVoucher.issueVoucher(_exchangeId, _buyer);
             }
         }
@@ -511,7 +513,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Make sure that the voucher was issued on the clone that is making a call
-        require(msg.sender == lookups.cloneAddress[offer.sellerId], ACCESS_DENIED);
+        require(msg.sender == getCloneAddress(lookups, offer.sellerId, offer.collectionIndex), ACCESS_DENIED);
 
         // Decrease voucher counter for old buyer
         lookups.voucherCount[exchange.buyerId]--;
@@ -678,7 +680,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         // Burn the voucher
         (, Offer storage offer) = fetchOffer(_exchange.offerId);
-        IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);
+        IBosonVoucher bosonVoucher = IBosonVoucher(getCloneAddress(lookups, offer.sellerId, offer.collectionIndex));
         bosonVoucher.burnVoucher(_exchange.id);
     }
 
