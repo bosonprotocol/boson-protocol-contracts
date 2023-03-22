@@ -332,6 +332,38 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
+     * @notice Creates a new seller collection.
+     *
+     * Emits a CollectionCreated event if successful.
+     *
+     *  Reverts if:
+     *  - The offers region of protocol is paused
+     *  - Caller is not the seller assistant
+     *
+     * @param _externalId - external collection id
+     * @param _contractURI - contract URI
+     */
+    function createNewCollection(string calldata _externalId, string calldata _contractURI) external {
+        address assistant = msgSender();
+
+        (bool exists, uint256 sellerId) = getSellerIdByAssistant(assistant);
+        require(exists, NO_SUCH_SELLER);
+
+        VoucherInitValues memory _voucherInitValues;
+        _voucherInitValues.contractURI = _contractURI;
+        // NB: we don't set any royalties here, since they are managed inside the protocol after BPIP-5
+
+        address[] storage sellersAdditionalCloneAddresses = protocolLookups().additionalCloneAddresses[sellerId];
+        uint256 collectionIndex = sellersAdditionalCloneAddresses.length + 1; // 0 is reserved for the original collection
+
+        // Create clone and store its address cloneAddress
+        address voucherCloneAddress = cloneBosonVoucher(sellerId, collectionIndex, assistant, _voucherInitValues);
+        sellersAdditionalCloneAddresses.push(voucherCloneAddress);
+
+        emit CollectionCreated(sellerId, collectionIndex, voucherCloneAddress, _externalId, assistant);
+    }
+
+    /**
      * @notice Gets the details about a seller.
      *
      * @param _sellerId - the id of the seller to check

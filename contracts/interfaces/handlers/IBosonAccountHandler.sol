@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x1f891681
+ * The ERC-165 identifier for this interface is: 0xee3cb2a6
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -300,6 +300,20 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _sellerAllowList - list of seller ids to remove from allowed list
      */
     function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external;
+
+    /**
+     * @notice Creates a new seller collection.
+     *
+     * Emits a CollectionCreated event if successful.
+     *
+     *  Reverts if:
+     *  - The offers region of protocol is paused
+     *  - Caller is not the seller assistant
+     *
+     * @param _externalId - external collection id
+     * @param _contractURI - contract URI
+     */
+    function createNewCollection(string calldata _externalId, string calldata _contractURI) external;
 
     /**
      * @notice Gets the details about a seller.

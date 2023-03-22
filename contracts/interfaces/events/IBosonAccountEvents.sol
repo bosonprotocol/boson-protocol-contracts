@@ -68,4 +68,11 @@ interface IBosonAccountEvents {
         address indexed executedBy
     );
     event AgentCreated(uint256 indexed agentId, BosonTypes.Agent agent, address indexed executedBy);
+    event CollectionCreated(
+        uint256 indexed sellerId,
+        uint256 collectionIndex,
+        address collectionAddress,
+        string indexed externalId,
+        address indexed executedBy
+    );
 }

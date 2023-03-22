@@ -99,7 +99,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         storeSeller(_seller, _authToken, lookups);
 
         // Create clone and store its address cloneAddress
-        address voucherCloneAddress = cloneBosonVoucher(sellerId, _seller.assistant, _voucherInitValues);
+        address voucherCloneAddress = cloneBosonVoucher(sellerId, 0, _seller.assistant, _voucherInitValues);
         lookups.cloneAddress[sellerId] = voucherCloneAddress;
 
         // Notify watchers of state change
@@ -152,14 +152,16 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      * @notice Creates a minimal clone of the Boson Voucher Contract.
      *
      * @param _sellerId - id of the seller
+     * @param _collectionId - id of the collection.
      * @param _assistant - address of the assistant
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @return cloneAddress - the address of newly created clone
      */
     function cloneBosonVoucher(
         uint256 _sellerId,
+        uint256 _collectionId,
         address _assistant,
-        VoucherInitValues calldata _voucherInitValues
+        VoucherInitValues memory _voucherInitValues
     ) internal returns (address cloneAddress) {
         // Pointer to stored addresses
         ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
@@ -178,7 +180,12 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Initialize the clone
         IInitializableVoucherClone(cloneAddress).initialize(pa.voucherBeacon);
-        IInitializableVoucherClone(cloneAddress).initializeVoucher(_sellerId, _assistant, _voucherInitValues);
+        IInitializableVoucherClone(cloneAddress).initializeVoucher(
+            _sellerId,
+            _collectionId,
+            _assistant,
+            _voucherInitValues
+        );
     }
 
     /**
