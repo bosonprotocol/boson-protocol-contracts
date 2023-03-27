@@ -285,4 +285,9 @@ contract BosonTypes {
         string contractURI;
         uint256 royaltyPercentage;
     }
+
+    struct Collection {
+        address collectionAddress;
+        string externalId;
+    }
 }

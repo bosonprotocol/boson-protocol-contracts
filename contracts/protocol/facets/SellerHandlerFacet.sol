@@ -255,11 +255,11 @@ contract SellerHandlerFacet is SellerBase {
 
                 // Transfer ownership of voucher contract to new assistant
                 IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender); // default voucher contract
-                address[] storage sellersAdditionalCloneAddresses = lookups.additionalCloneAddresses[_sellerId];
+                Collection[] storage sellersAdditionalCollections = lookups.additionalCollections[_sellerId];
                 uint256 collectionCount;
                 for (i = 0; i < collectionCount; i++) {
                     // Additional collections (if they exist)
-                    IBosonVoucher(sellersAdditionalCloneAddresses[i]).transferOwnership(sender);
+                    IBosonVoucher(sellersAdditionalCollections[i].collectionAddress).transferOwnership(sender);
                 }
 
                 // Store new seller id by assistant mapping
@@ -359,12 +359,15 @@ contract SellerHandlerFacet is SellerBase {
         _voucherInitValues.contractURI = _contractURI;
         // NB: we don't set any royalties here, since they are managed inside the protocol after BPIP-5
 
-        address[] storage sellersAdditionalCloneAddresses = protocolLookups().additionalCloneAddresses[sellerId];
-        uint256 collectionIndex = sellersAdditionalCloneAddresses.length + 1; // 0 is reserved for the original collection
+        Collection[] storage sellersAdditionalCollections = protocolLookups().additionalCollections[sellerId];
+        uint256 collectionIndex = sellersAdditionalCollections.length + 1; // 0 is reserved for the original collection
 
-        // Create clone and store its address to additionalCloneAddresses
+        // Create clone and store its address to additionalCollections
         address voucherCloneAddress = cloneBosonVoucher(sellerId, collectionIndex, assistant, _voucherInitValues);
-        sellersAdditionalCloneAddresses.push(voucherCloneAddress);
+        Collection memory newCollection;
+        newCollection.collectionAddress = voucherCloneAddress;
+        newCollection.externalId = _externalId;
+        sellersAdditionalCollections.push(newCollection);
 
         emit CollectionCreated(sellerId, collectionIndex, voucherCloneAddress, _externalId, assistant);
     }
@@ -455,6 +458,22 @@ contract SellerHandlerFacet is SellerBase {
         if (exists) {
             return fetchSeller(sellerId);
         }
+    }
+
+    /**
+     * @notice Gets the details about a seller's collections.
+     *
+     * @param _sellerId - the id of the seller to check
+     * @return defaultVoucherAddress - the address of the default voucher contract for the seller
+     * @return additionalCollections - an array of additional collections that the seller has created
+     */
+    function getSellersCollections(uint256 _sellerId)
+        external
+        view
+        returns (address defaultVoucherAddress, Collection[] memory additionalCollections)
+    {
+        ProtocolLib.ProtocolLookups storage pl = protocolLookups();
+        return (pl.cloneAddress[_sellerId], pl.additionalCollections[_sellerId]);
     }
 
     /**

@@ -739,6 +739,6 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         return
             _collectionIndex == 0
                 ? _lookups.cloneAddress[_sellerId]
-                : _lookups.additionalCloneAddresses[_sellerId][_collectionIndex - 1];
+                : _lookups.additionalCollections[_sellerId][_collectionIndex - 1].collectionAddress;
     }
 }

@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xee3cb2a6
+ * The ERC-165 identifier for this interface is: 0xfe645260
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -373,6 +373,18 @@ interface IBosonAccountHandler is IBosonAccountEvents {
             BosonTypes.Seller memory seller,
             BosonTypes.AuthToken memory authToken
         );
+
+    /**
+     * @notice Gets the details about a seller's collections.
+     *
+     * @param _sellerId - the id of the seller to check
+     * @return defaultVoucherAddress - the address of the default voucher contract for the seller
+     * @return additionalCollections - an array of additional collections that the seller has created
+     */
+    function getSellersCollections(uint256 _sellerId)
+        external
+        view
+        returns (address defaultVoucherAddress, BosonTypes.Collection[] memory additionalCollections);
 
     /**
      * @notice Gets the details about a buyer.

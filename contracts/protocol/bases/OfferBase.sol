@@ -199,7 +199,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             // Collection must exist. Collections with index 0 exist by default.
             if (_offer.collectionIndex > 0) {
                 require(
-                    lookups.additionalCloneAddresses[_offer.sellerId][_offer.collectionIndex] != address(0),
+                    lookups.additionalCollections[_offer.sellerId][_offer.collectionIndex].collectionAddress !=
+                        address(0),
                     NO_SUCH_COLLECTION
                 );
             }

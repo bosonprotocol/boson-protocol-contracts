@@ -809,16 +809,26 @@ describe("IBosonOrchestrationHandler", function () {
           expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
 
-        // Voucher clone contract
+        // Get the collections information
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        const [defaultVoucherAddress, additionalCollections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(seller.id);
+        expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+        expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+        // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(
+          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          "Wrong voucher client symbol"
+        );
       });
 
       it("should update state when voucherInitValues has zero royaltyPercentage and exchangeId does not exist", async function () {
@@ -842,11 +852,21 @@ describe("IBosonOrchestrationHandler", function () {
             agentId
           );
 
+        // Get the collections information
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        const [defaultVoucherAddress, additionalCollections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(seller.id);
+        expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+        expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(
+          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          "Wrong voucher client symbol"
+        );
 
         // Prepare random parameters
         let exchangeId = "1234"; // An exchange id that does not exist
@@ -890,11 +910,21 @@ describe("IBosonOrchestrationHandler", function () {
             agentId
           );
 
+        // Get the collections information
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        const [defaultVoucherAddress, additionalCollections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(seller.id);
+        expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+        expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(
+          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          "Wrong voucher client symbol"
+        );
 
         // Prepare random parameters
         let exchangeId = "1234"; // An exchange id that does not exist
@@ -1363,16 +1393,29 @@ describe("IBosonOrchestrationHandler", function () {
             expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
           }
 
-          // Voucher clone contract
+          // Get the collections information
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+          const [defaultVoucherAddress, additionalCollections] = await accountHandler
+            .connect(rando)
+            .getSellersCollections(seller.id);
+          expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+          expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+          // Voucher clone contract
           bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
           expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-          expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-          expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+          expect(await bosonVoucher.name()).to.equal(
+            VOUCHER_NAME + " " + seller.id + "_0",
+            "Wrong voucher client name"
+          );
+          expect(await bosonVoucher.symbol()).to.equal(
+            VOUCHER_SYMBOL + "_" + seller.id + "_0",
+            "Wrong voucher client symbol"
+          );
           const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
           assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
           const availablePremints = await bosonVoucher.getAvailablePreMints(offer.id);
@@ -5398,16 +5441,26 @@ describe("IBosonOrchestrationHandler", function () {
           expect(JSON.stringify(returnedCondition[key]) === JSON.stringify(value)).is.true;
         }
 
-        // Voucher clone contract
+        // Get the collections information
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        const [defaultVoucherAddress, additionalCollections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(seller.id);
+        expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+        expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+        // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(
+          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          "Wrong voucher client symbol"
+        );
       });
 
       it("should update state when voucherInitValues has zero royaltyPercentage and exchangeId does not exist", async function () {
@@ -5430,12 +5483,22 @@ describe("IBosonOrchestrationHandler", function () {
             agentId
           );
 
-        // Voucher clone contract
+        // Get the collections information
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        const [defaultVoucherAddress, additionalCollections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(seller.id);
+        expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+        expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+        // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(
+          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          "Wrong voucher client symbol"
+        );
 
         // Prepare random parameters
         let exchangeId = "1234"; // An exchange id that does not exist
@@ -5478,12 +5541,22 @@ describe("IBosonOrchestrationHandler", function () {
             agentId
           );
 
-        // Voucher clone contract
+        // Get the collections information
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        const [defaultVoucherAddress, additionalCollections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(seller.id);
+        expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+        expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+        // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(
+          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          "Wrong voucher client symbol"
+        );
 
         // Prepare random parameters
         let exchangeId = "1234"; // An exchange id that does not exist
@@ -5811,16 +5884,29 @@ describe("IBosonOrchestrationHandler", function () {
             expect(JSON.stringify(returnedCondition[key]) === JSON.stringify(value)).is.true;
           }
 
-          // Voucher clone contract
+          // Get the collections information
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+          const [defaultVoucherAddress, additionalCollections] = await accountHandler
+            .connect(rando)
+            .getSellersCollections(seller.id);
+          expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+          expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+          // Voucher clone contract
           bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
           expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-          expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-          expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+          expect(await bosonVoucher.name()).to.equal(
+            VOUCHER_NAME + " " + seller.id + "_0",
+            "Wrong voucher client name"
+          );
+          expect(await bosonVoucher.symbol()).to.equal(
+            VOUCHER_SYMBOL + "_" + seller.id + "_0",
+            "Wrong voucher client symbol"
+          );
           const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
           assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
           const availablePremints = await bosonVoucher.getAvailablePreMints(offer.id);
@@ -6135,16 +6221,26 @@ describe("IBosonOrchestrationHandler", function () {
           expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
         }
 
-        // Voucher clone contract
+        // Get the collections information
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        const [defaultVoucherAddress, additionalCollections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(seller.id);
+        expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+        expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+        // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(
+          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          "Wrong voucher client symbol"
+        );
       });
 
       it("should update state when voucherInitValues has zero royaltyPercentage and exchangeId does not exist", async function () {
@@ -6170,12 +6266,22 @@ describe("IBosonOrchestrationHandler", function () {
             agentId
           );
 
-        // Voucher clone contract
+        // Get the collections information
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        const [defaultVoucherAddress, additionalCollections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(seller.id);
+        expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+        expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+        // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(
+          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          "Wrong voucher client symbol"
+        );
 
         // Prepare random parameters
         let exchangeId = "1234"; // An exchange id that does not exist
@@ -6221,12 +6327,22 @@ describe("IBosonOrchestrationHandler", function () {
             agentId
           );
 
-        // Voucher clone contract
+        // Get the collections information
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        const [defaultVoucherAddress, additionalCollections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(seller.id);
+        expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+        expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+        // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(
+          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          "Wrong voucher client symbol"
+        );
 
         // Prepare random parameters
         let exchangeId = "1234"; // An exchange id that does not exist
@@ -6609,16 +6725,29 @@ describe("IBosonOrchestrationHandler", function () {
             expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
           }
 
-          // Voucher clone contract
+          // Get the collections information
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+          const [defaultVoucherAddress, additionalCollections] = await accountHandler
+            .connect(rando)
+            .getSellersCollections(seller.id);
+          expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+          expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+          // Voucher clone contract
           bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
           expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-          expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-          expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+          expect(await bosonVoucher.name()).to.equal(
+            VOUCHER_NAME + " " + seller.id + "_0",
+            "Wrong voucher client name"
+          );
+          expect(await bosonVoucher.symbol()).to.equal(
+            VOUCHER_SYMBOL + "_" + seller.id + "_0",
+            "Wrong voucher client symbol"
+          );
           const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
           assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
           const availablePremints = await bosonVoucher.getAvailablePreMints(offer.id);
@@ -7002,16 +7131,26 @@ describe("IBosonOrchestrationHandler", function () {
           expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
         }
 
-        // Voucher clone contract
+        // Get the collections information
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        const [defaultVoucherAddress, additionalCollections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(seller.id);
+        expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+        expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+        // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(
+          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          "Wrong voucher client symbol"
+        );
       });
 
       it("should update state when voucherInitValues has zero royaltyPercentage and exchangeId does not exist", async function () {
@@ -7038,12 +7177,22 @@ describe("IBosonOrchestrationHandler", function () {
             agentId
           );
 
-        // Voucher clone contract
+        // Get the collections information
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        const [defaultVoucherAddress, additionalCollections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(seller.id);
+        expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+        expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+        // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(
+          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          "Wrong voucher client symbol"
+        );
 
         // Prepare random parameters
         let exchangeId = "1234"; // An exchange id that does not exist
@@ -7090,12 +7239,22 @@ describe("IBosonOrchestrationHandler", function () {
             agentId
           );
 
-        // Voucher clone contract
+        // Get the collections information
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        const [defaultVoucherAddress, additionalCollections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(seller.id);
+        expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+        expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+        // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(
+          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          "Wrong voucher client symbol"
+        );
 
         // Prepare random parameters
         let exchangeId = "1234"; // An exchange id that does not exist
@@ -7538,16 +7697,29 @@ describe("IBosonOrchestrationHandler", function () {
             expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
           }
 
-          // Voucher clone contract
+          // Get the collections information
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+          const [defaultVoucherAddress, additionalCollections] = await accountHandler
+            .connect(rando)
+            .getSellersCollections(seller.id);
+          expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
+          expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+          // Voucher clone contract
           bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
           expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-          expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
-          expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+          expect(await bosonVoucher.name()).to.equal(
+            VOUCHER_NAME + " " + seller.id + "_0",
+            "Wrong voucher client name"
+          );
+          expect(await bosonVoucher.symbol()).to.equal(
+            VOUCHER_SYMBOL + "_" + seller.id + "_0",
+            "Wrong voucher client symbol"
+          );
           const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
           assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
           const availablePremints = await bosonVoucher.getAvailablePreMints(offer.id);
