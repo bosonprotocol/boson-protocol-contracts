@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
+import "hardhat/console.sol";
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
@@ -95,6 +96,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         ps.incomingVoucherCloneAddress = cloneAddress;
 
         // Call the price discovery contract
+        console.log(_priceDiscovery.priceDiscoveryContract);
         _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
 
         if (_exchangeId == 0) {
