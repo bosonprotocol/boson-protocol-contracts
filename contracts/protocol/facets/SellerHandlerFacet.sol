@@ -349,7 +349,7 @@ contract SellerHandlerFacet is SellerBase {
      * @param _externalId - external collection id
      * @param _contractURI - contract URI
      */
-    function createNewCollection(string calldata _externalId, string calldata _contractURI) external {
+    function createNewCollection(string calldata _externalId, string calldata _contractURI) external sellersNotPaused {
         address assistant = msgSender();
 
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(assistant);

@@ -15,6 +15,7 @@ const { calculateContractAddress, getFacetsWithArgs } = require("../util/utils.j
 const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL, maxPriorityFeePerGas } = require("../util/constants");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockSeller, mockAuthToken, mockVoucherInitValues, accountId } = require("../util/mock");
+const { Collection, CollectionList } = require("../../scripts/domain/Collection");
 
 /**
  *  Test the Boson Seller Handler
@@ -2863,6 +2864,207 @@ describe("SellerHandler", function () {
             accountHandler.connect(other1).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant])
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
+      });
+    });
+
+    context("👉 createNewCollection()", async function () {
+      let externalId, expectedDefaultAddress, expectedCollectionAddress;
+
+      beforeEach(async function () {
+        // Create a seller
+        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        externalId = "Brand1";
+        contractURI = "https://brand1.com";
+        expectedDefaultAddress = calculateContractAddress(accountHandler.address, "1"); // default
+        expectedCollectionAddress = calculateContractAddress(accountHandler.address, "2");
+      });
+
+      it("should emit a CollectionCreated event", async function () {
+        // Create a new collection, testing for the event
+        const tx = await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+
+        await expect(tx)
+          .to.emit(accountHandler, "CollectionCreated")
+          .withArgs(seller.id, 1, expectedCollectionAddress, externalId, assistant.address);
+
+        // Voucher clone contract
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCollectionAddress);
+
+        await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+
+        await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged").withArgs("0");
+
+        await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, "0", contractURI);
+
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCollectionAddress);
+
+        await expect(tx)
+          .to.emit(bosonVoucher, "OwnershipTransferred")
+          .withArgs(ethers.constants.AddressZero, assistant.address);
+      });
+
+      it("should update state", async function () {
+        // Create a new collection
+        await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+
+        const expectedCollections = new CollectionList([new Collection(expectedCollectionAddress, externalId)]);
+
+        // Get the collections information
+        const [defaultVoucherAddress, collections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(seller.id);
+        const additionalCollections = CollectionList.fromStruct(collections);
+        expect(defaultVoucherAddress).to.equal(expectedDefaultAddress, "Wrong default voucher address");
+        expect(additionalCollections).to.deep.equal(expectedCollections, "Wrong additional collections");
+
+        // Voucher clone contract
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCollectionAddress);
+
+        expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
+
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCollectionAddress);
+        expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_1", "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(
+          VOUCHER_SYMBOL + "_" + seller.id + "_1",
+          "Wrong voucher client symbol"
+        );
+      });
+
+      it("create multiple collections", async function () {
+        const expectedCollections = new CollectionList([]);
+
+        for (let i = 1; i < 4; i++) {
+          expectedCollectionAddress = calculateContractAddress(accountHandler.address, (i + 1).toString());
+          externalId = `Brand${i}`;
+          contractURI = `https://brand${i}.com`;
+
+          // Create a new collection, testing for the event
+          const tx = await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+
+          await expect(tx)
+            .to.emit(accountHandler, "CollectionCreated")
+            .withArgs(seller.id, i, expectedCollectionAddress, externalId, assistant.address);
+
+          // Voucher clone contract
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCollectionAddress);
+
+          await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+
+          await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged").withArgs("0");
+
+          await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, "0", contractURI);
+
+          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCollectionAddress);
+
+          await expect(tx)
+            .to.emit(bosonVoucher, "OwnershipTransferred")
+            .withArgs(ethers.constants.AddressZero, assistant.address);
+
+          // Get the collections information
+          expectedCollections.collections.push(new Collection(expectedCollectionAddress, externalId));
+          const [defaultVoucherAddress, collections] = await accountHandler
+            .connect(rando)
+            .getSellersCollections(seller.id);
+          const additionalCollections = CollectionList.fromStruct(collections);
+          expect(defaultVoucherAddress).to.equal(expectedDefaultAddress, "Wrong default voucher address");
+          expect(additionalCollections).to.deep.equal(expectedCollections, "Wrong additional collections");
+
+          // Voucher clone contract
+          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCollectionAddress);
+
+          expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
+
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCollectionAddress);
+          expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+          expect(await bosonVoucher.name()).to.equal(
+            VOUCHER_NAME + " " + seller.id + "_" + i,
+            "Wrong voucher client name"
+          );
+          expect(await bosonVoucher.symbol()).to.equal(
+            VOUCHER_SYMBOL + "_" + seller.id + "_" + i,
+            "Wrong voucher client symbol"
+          );
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("The sellers region of protocol is paused", async function () {
+          // Pause the sellers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
+
+          // Attempt to create a new collection expecting revert
+          await expect(accountHandler.connect(assistant).createNewCollection(externalId, contractURI)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
+        it("Caller is not anyone's assistant", async function () {
+          // Attempt to create a new collection
+          await expect(accountHandler.connect(rando).createNewCollection(externalId, contractURI)).to.revertedWith(
+            RevertReasons.NO_SUCH_SELLER
+          );
+        });
+      });
+    });
+
+    context("👉 getSellersCollections()", async function () {
+      let externalId, expectedDefaultAddress, expectedCollectionAddress;
+
+      beforeEach(async function () {
+        // Create a seller
+        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        expectedDefaultAddress = calculateContractAddress(accountHandler.address, "1"); // default
+      });
+
+      it("should return a default voucher address and an empty collections list if seller does not have any", async function () {
+        const expectedCollections = new CollectionList([]);
+
+        // Get the collections information
+        const [defaultVoucherAddress, collections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(seller.id);
+        const additionalCollections = CollectionList.fromStruct(collections);
+        expect(defaultVoucherAddress).to.equal(expectedDefaultAddress, "Wrong default voucher address");
+        expect(additionalCollections).to.deep.equal(expectedCollections, "Wrong additional collections");
+      });
+
+      it("should return correct collection list", async function () {
+        const expectedCollections = new CollectionList([]);
+
+        for (let i = 1; i < 4; i++) {
+          expectedCollectionAddress = calculateContractAddress(accountHandler.address, (i + 1).toString());
+          externalId = `Brand${i}`;
+          contractURI = `https://brand${i}.com`;
+
+          // Create a new collection
+          await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+
+          // Add to expected collections
+          expectedCollections.collections.push(new Collection(expectedCollectionAddress, externalId));
+        }
+
+        const [defaultVoucherAddress, collections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(seller.id);
+        const additionalCollections = CollectionList.fromStruct(collections);
+        expect(defaultVoucherAddress).to.equal(expectedDefaultAddress, "Wrong default voucher address");
+        expect(additionalCollections).to.deep.equal(expectedCollections, "Wrong additional collections");
+      });
+
+      it("should return zero values if seller does not exist ", async function () {
+        const sellerId = 777;
+        const expectedCollections = new CollectionList([]);
+
+        // Get the collections information
+        const [defaultVoucherAddress, collections] = await accountHandler
+          .connect(rando)
+          .getSellersCollections(sellerId);
+        const additionalCollections = CollectionList.fromStruct(collections);
+        expect(defaultVoucherAddress).to.equal(ethers.constants.AddressZero, "Wrong default voucher address");
+        expect(additionalCollections).to.deep.equal(expectedCollections, "Wrong additional collections");
       });
     });
   });
