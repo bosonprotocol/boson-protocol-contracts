@@ -1,7 +1,10 @@
 const { BigNumber, constants, utils } = require("ethers");
+const { ItemType } = require("./ItemTypeEnum.js");
+const { MerkleTree } = require("merkletreejs");
+const keccak256 = utils.keccak256;
 
 const getOfferOrConsiderationItem = function (
-  itemType = 0,
+  itemType = ItemType.NATIVE,
   token = constants.AddressZero,
   identifierOrCriteria = 0,
   startAmount = 1,
@@ -98,5 +101,20 @@ const calculateOrderHash = (orderComponents) => {
 
   return derivedOrderHash;
 };
+
+function getRootAndProof(startIndex, endIndex, leaf) {
+  const leaves = [];
+  for (let i = startIndex; i <= endIndex; i++) {
+    leaves.push(i);
+  }
+  console.log(leaves);
+
+  const merkleTree = new MerkleTree(leaves, keccak256, { hashLeaves: true });
+
+  const proof = merkleTree.getHexProof(keccak256(leaf));
+
+  return { root: merkleTree.getHexRoot(), proof };
+}
 exports.getOfferOrConsiderationItem = getOfferOrConsiderationItem;
 exports.calculateOrderHash = calculateOrderHash;
+exports.getRootAndProof = getRootAndProof;

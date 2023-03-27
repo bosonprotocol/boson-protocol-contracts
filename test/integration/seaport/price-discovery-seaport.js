@@ -11,14 +11,17 @@ const { expect, assert } = require("chai");
 const Role = require("../../../scripts/domain/Role");
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
+const SeaportSide = require("./SideEnum");
 const Side = require("../../../scripts/domain/Side");
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const { constants } = require("ethers");
 const OfferPrice = require("../../../scripts/domain/OfferPrice");
 const { seaportFixtures } = require("./fixtures");
 const { SEAPORT_ADDRESS } = require("../../util/constants");
+const { getRootAndProof } = require("./utils");
+const ItemType = require("./ItemTypeEnum");
 
-describe("[@skip-on-coverage] seaport integration", function() {
+describe("[@skip-on-coverage] seaport integration", function () {
   this.timeout(100000000);
   let lssvmPairFactory;
   let bosonVoucher, bosonToken;
@@ -29,7 +32,7 @@ describe("[@skip-on-coverage] seaport integration", function() {
   let seller;
   let seaport;
 
-  before(async function() {
+  before(async function () {
     let protocolTreasury;
     [deployer, protocol, assistant, protocolTreasury, buyer, DR] = await ethers.getSigners();
 
@@ -146,13 +149,12 @@ describe("[@skip-on-coverage] seaport integration", function() {
 
     fixtures = await seaportFixtures(seaport);
 
-
     // Pre mint range
     await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, bosonVoucher.address);
     await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
   });
 
-  it("seaport is used as price discovery mechanism for a offer", async function() {
+  it("seaport is used as price discovery mechanism for a offer", async function () {
     await bosonVoucher.connect(assistant).setPriceDiscoveryContract(seaport.address);
 
     // need to deposit NFTs
@@ -160,19 +162,23 @@ describe("[@skip-on-coverage] seaport integration", function() {
 
     // Create seaport offer which tokenId 1
     // const endDate = "0xff00000000000000000000000000";
-    const seaportOffer = fixtures.getTestVoucher(1, bosonVoucher.address, 1, 1);
+    // 10 items;
+    const { root, proof } = getRootAndProof(1, 10, 2); //3
+    const seaportOffer = fixtures.getTestVoucher(ItemType.ERC721_WITH_CRITERIA, root, bosonVoucher.address, 1, 1);
     const consideration = fixtures.getTestToken(
+      ItemType.NATIVE,
       0,
-      undefined,
+      constants.AddressZero,
       offer.price,
-      ethers.BigNumber.from(offer.price).add(ethers.utils.parseUnits("1", "ether")),
-      exchangeHandler.address
+      offer.price,
+      // ethers.BigNumber.from(offer.price).add(ethers.utils.parseUnits("1", "ether"))
+      bosonVoucher.address
     );
 
     const { order, orderHash, value } = await fixtures.getOrder(
       bosonVoucher,
       undefined,
-      [seaportOffer],
+      [seaportOffer], //offer
       [consideration],
       0, // full
       offerDates.validFrom, // startDate
@@ -191,7 +197,19 @@ describe("[@skip-on-coverage] seaport integration", function() {
     assert(isValidated, "Order is not validated");
     assert.equal(totalFilled.toNumber(), 0);
 
-    const priceDiscoveryData = seaport.interface.encodeFunctionData("fulfillOrder", [order, constants.HashZero]);
+    order.denominator = 1;
+    order.numerator = 1;
+    order.extraData = "0x";
+
+    const identifier = 2;
+    const resolvers = [fixtures.getCriteriaResolver(0, SeaportSide.OFFER, 0, identifier, proof)];
+
+    const priceDiscoveryData = seaport.interface.encodeFunctionData("fulfillAdvancedOrder", [
+      order,
+      resolvers,
+      constants.HashZero,
+      constants.AddressZero,
+    ]);
 
     const priceDiscovery = new PriceDiscovery(value, seaport.address, priceDiscoveryData, Side.Ask);
 

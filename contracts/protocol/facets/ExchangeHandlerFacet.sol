@@ -1081,6 +1081,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         if (ps.incomingVoucherId == 0) {
             ps.incomingVoucherId = _tokenId;
         }
+
         require(
             ps.incomingVoucherId == _tokenId && ps.incomingVoucherCloneAddress == msg.sender,
             UNEXPECTED_ERC721_RECEIVED

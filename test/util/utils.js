@@ -119,17 +119,17 @@ async function prepareDataSignatureParameters(
   const domainType =
     type == "Protocol"
       ? [
-          { name: "name", type: "string" },
-          { name: "version", type: "string" },
-          { name: "verifyingContract", type: "address" },
-          { name: "salt", type: "bytes32" },
-        ]
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "verifyingContract", type: "address" },
+        { name: "salt", type: "bytes32" },
+      ]
       : [
-          { name: "name", type: "string" },
-          { name: "version", type: "string" },
-          { name: "chainId", type: "uint256" },
-          { name: "verifyingContract", type: "address" },
-        ];
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "chainId", type: "uint256" },
+        { name: "verifyingContract", type: "address" },
+      ];
 
   const domainData = {
     name: domainName ?? "Boson Protocol",
@@ -251,6 +251,7 @@ function objectToArray(input) {
   }
   return result;
 }
+
 
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;

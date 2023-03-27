@@ -19,6 +19,8 @@ import { Address } from "../../ext_libs/Address.sol";
 contract PriceDiscoveryBase is ProtocolBase {
     using Address for address;
 
+    event CallReturnValue(string data);
+
     IWETH9Like public immutable weth;
 
     constructor(address _weth) {
@@ -96,17 +98,28 @@ contract PriceDiscoveryBase is ProtocolBase {
         ps.incomingVoucherCloneAddress = cloneAddress;
 
         // Call the price discovery contract
-        console.log(_priceDiscovery.priceDiscoveryContract);
-        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
+        bytes memory returnData = _priceDiscovery.priceDiscoveryContract.functionCallWithValue(
+            _priceDiscovery.priceDiscoveryData,
+            msg.value
+        );
+
+        console.log("after");
+        console.log(abi.decode(returnData, (bool)));
 
         if (_exchangeId == 0) {
             // incomingVoucherId was set inside onERC721Received method
             _exchangeId = ps.incomingVoucherId;
         }
 
-        // Make sure that the price discovery contract has transferred the voucher to the protocol
-        IBosonVoucher bosonVoucher = IBosonVoucher(cloneAddress);
-        require(bosonVoucher.ownerOf(_exchangeId) == address(this), VOUCHER_NOT_RECEIVED);
+        require(_exchangeId != 0, "Token id not set");
+
+        {
+            // Make sure that the price discovery contract has transferred the voucher to the protocol
+            IBosonVoucher bosonVoucher = IBosonVoucher(cloneAddress);
+            require(bosonVoucher.ownerOf(_exchangeId) == address(this), VOUCHER_NOT_RECEIVED);
+            // Transfer voucher to buyer
+            bosonVoucher.transferFrom(address(this), _buyer, _exchangeId);
+        }
 
         // Check the escrow amount
         uint256 protocolBalanceAfter = getBalance(exchangeToken);
@@ -132,9 +145,6 @@ contract PriceDiscoveryBase is ProtocolBase {
         //     // Return the surplus to buyer
         //     FundsLib.transferFundsFromProtocol(exchangeToken, payable(_buyer), overchargedAmount);
         // }
-
-        // Transfer voucher to buyer
-        bosonVoucher.transferFrom(address(this), _buyer, _exchangeId);
     }
 
     /**
