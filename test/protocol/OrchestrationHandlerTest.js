@@ -2180,6 +2180,27 @@ describe("IBosonOrchestrationHandler", function () {
               )
           ).to.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
         });
+
+        it("Collection does not exist", async function () {
+          // Set inexistent collection index
+          offer.collectionIndex = "1";
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(assistant)
+              .createSellerAndOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.NO_SUCH_COLLECTION);
+        });
       });
 
       context("When offers have non zero agent ids", async function () {

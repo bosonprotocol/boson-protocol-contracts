@@ -107,6 +107,8 @@ describe("IBosonOfferHandler", function () {
   });
 
   beforeEach(async function () {
+    accountId.next(true);
+
     // Make accounts available
     [deployer, pauser, admin, treasury, rando, adminDR, treasuryDR, other, protocolAdmin, protocolTreasury] =
       await ethers.getSigners();
@@ -235,6 +237,8 @@ describe("IBosonOfferHandler", function () {
   // All supported methods - single offer
   context("📋 Offer Handler Methods", async function () {
     beforeEach(async function () {
+      accountId.next(true);
+
       // create a seller
       // Required constructor params
       id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
@@ -608,6 +612,69 @@ describe("IBosonOfferHandler", function () {
         ).to.emit(offerHandler, "OfferCreated");
       });
 
+      context("Additional collections", async function () {
+        let expectedCollectionAddress;
+
+        beforeEach(async function () {
+          const externalId = "Brand1";
+          const contractURI = "https://brand1.com";
+
+          expectedCollectionAddress = calculateContractAddress(accountHandler.address, "2");
+
+          // Create a new collection, testing for the event
+          await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+
+          // Update collection index
+          offer.collectionIndex = "1";
+        });
+
+        it("Create offer", async function () {
+          // Create an offer, testing for the event
+          await expect(
+            offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+          )
+            .to.emit(offerHandler, "OfferCreated")
+            .withArgs(
+              nextOfferId,
+              offer.sellerId,
+              offer.toStruct(),
+              offerDatesStruct,
+              offerDurationsStruct,
+              disputeResolutionTermsStruct,
+              offerFeesStruct,
+              agentId,
+              assistant.address
+            );
+        });
+
+        it("Reserve range", async function () {
+          offer.quantityAvailable = "200";
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
+          // id of the current offer and increment nextOfferId
+          id = nextOfferId++;
+
+          // expected address of the first clone
+          const bosonVoucher = await ethers.getContractAt("BosonVoucher", expectedCollectionAddress);
+
+          const length = 100;
+          const firstTokenId = 1;
+          const lastTokenId = firstTokenId + length - 1;
+          const range = new Range(firstTokenId.toString(), length.toString(), "0", "0", assistant.address);
+
+          // Reserve a range, testing for the event
+          const tx = await offerHandler.connect(assistant).reserveRange(id, length, assistant.address);
+
+          await expect(tx)
+            .to.emit(offerHandler, "RangeReserved")
+            .withArgs(id, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
+
+          await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(id, range.toStruct());
+        });
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
@@ -850,6 +917,29 @@ describe("IBosonOfferHandler", function () {
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
           ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
+        });
+
+        it("Collection does not exist", async function () {
+          // Set non existent collection index
+          offer.collectionIndex = "1";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+          ).to.revertedWith(RevertReasons.NO_SUCH_COLLECTION);
+
+          // Create a new collection
+          const externalId = "Brand1";
+          const contractURI = "https://brand1.com";
+          await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+
+          // Set non existent collection index
+          offer.collectionIndex = "2";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+          ).to.revertedWith(RevertReasons.NO_SUCH_COLLECTION);
         });
       });
 
@@ -2571,6 +2661,33 @@ describe("IBosonOfferHandler", function () {
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
           ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+        });
+
+        it("For some offer, collection does not exist", async function () {
+          // Set non existent collection index
+          offers[3].collectionIndex = "1";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+          ).to.revertedWith(RevertReasons.NO_SUCH_COLLECTION);
+
+          // Create a new collection
+          const externalId = "Brand1";
+          const contractURI = "https://brand1.com";
+          await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+
+          // Index "1" exists now, but "2" does not
+          offers[3].collectionIndex = "2";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+          ).to.revertedWith(RevertReasons.NO_SUCH_COLLECTION);
         });
       });
 
