@@ -2892,9 +2892,7 @@ describe("SellerHandler", function () {
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCollectionAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-
         await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged").withArgs("0");
-
         await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, "0", contractURI);
 
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCollectionAddress);
