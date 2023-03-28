@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
+
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
@@ -794,10 +795,17 @@ contract BosonVoucherBase is
         // If is committable, invoke commitToPreMintedOffer on the protocol
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
 
-        if (_premintStatus.committable) {
-            // Store offerId so _premintStatus can be deleted before making an external call
-            uint256 offerId = _premintStatus.offerId;
+        // Store offerId so _premintStatus can be deleted before making an external call
+        uint256 offerId = _premintStatus.offerId;
 
+        if (_from == address(this)) {
+            // (Offer memory offer, ) = getBosonOffer(offerId);
+            // if (offer.offerType == OfferType.Regular) {
+            setIncomingVoucherId(_tokenId, offerId);
+            // }
+        }
+
+        if (_premintStatus.committable) {
             // Set the preminted token as committed
             _committed[_tokenId] = true;
             delete _premintStatus;

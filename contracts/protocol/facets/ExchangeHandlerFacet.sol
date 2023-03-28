@@ -114,6 +114,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         (, Offer storage offer) = fetchOffer(_offerId);
 
         // Make sure that the voucher was issued on the clone that is making a call
+        // Why not use _msgSender here?
         require(
             msg.sender == protocolLookups().cloneAddress[offer.sellerId] || msg.sender == address(this),
             ACCESS_DENIED
@@ -1087,5 +1088,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             UNEXPECTED_ERC721_RECEIVED
         );
         return this.onERC721Received.selector;
+    }
+
+    function setIncomingVoucherId(uint256 _incomingVoucherId, uint256 sellerId) external {
+        require(msg.sender == protocolLookups().cloneAddress[sellerId]);
+        protocolStatus().incomingVoucherId = _incomingVoucherId;
     }
 }

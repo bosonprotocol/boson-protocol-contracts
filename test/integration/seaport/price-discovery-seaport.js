@@ -4,7 +4,7 @@ const ethers = hre.ethers;
 const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond");
 const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets");
-const { getFacetsWithArgs, calculateContractAddress, objectToArray } = require("../../util/utils");
+const { getFacetsWithArgs, calculateContractAddress, objectToArray, getEvent } = require("../../util/utils");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants");
 const { mockSeller, mockAuthToken, mockVoucherInitValues, mockOffer, mockDisputeResolver } = require("../../util/mock");
 const { expect, assert } = require("chai");
@@ -23,9 +23,9 @@ const ItemType = require("./ItemTypeEnum");
 
 describe("[@skip-on-coverage] seaport integration", function () {
   this.timeout(100000000);
-  let lssvmPairFactory;
   let bosonVoucher, bosonToken;
-  let deployer, protocol, assistant, buyer, DR, fixtures;
+  let deployer, protocol, assistant, buyer, DR;
+  let fixtures;
   let offer, offerDates;
   let exchangeHandler;
   let weth;
@@ -152,6 +152,11 @@ describe("[@skip-on-coverage] seaport integration", function () {
     // Pre mint range
     await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, bosonVoucher.address);
     await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
+
+    // Deposit seller funds so the commit will succeed
+    await fundsHandler
+      .connect(assistant)
+      .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
   });
 
   it("seaport is used as price discovery mechanism for a offer", async function () {
@@ -164,7 +169,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
     // const endDate = "0xff00000000000000000000000000";
     // 10 items;
     const { root, proof } = getRootAndProof(1, 10, 2); //3
-    const seaportOffer = fixtures.getTestVoucher(ItemType.ERC721_WITH_CRITERIA, root, bosonVoucher.address, 1, 1);
+    const seaportOffer = fixtures.getTestVoucher(ItemType.ERC721_WITH_CRITERIA, 0, bosonVoucher.address, 1, 1);
     const consideration = fixtures.getTestToken(
       ItemType.NATIVE,
       0,
@@ -202,7 +207,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
     order.extraData = "0x";
 
     const identifier = 2;
-    const resolvers = [fixtures.getCriteriaResolver(0, SeaportSide.OFFER, 0, identifier, proof)];
+    const resolvers = [fixtures.getCriteriaResolver(0, SeaportSide.OFFER, 0, identifier, [])];
 
     const priceDiscoveryData = seaport.interface.encodeFunctionData("fulfillAdvancedOrder", [
       order,
@@ -220,12 +225,14 @@ describe("[@skip-on-coverage] seaport integration", function () {
 
     // Approve transfers
     // Buyer does not approve, since its in ETH.
-    // Seller approves price discovery to transfer the voucher
     tx = await exchangeHandler
+      // Seller approves price discovery to transfer the voucher
       .connect(buyer)
       .commitToPreMintedOfferWithPriceDiscovery(buyer.address, offer.id, priceDiscovery, {
         value,
       });
+
+    const receipt = await tx.wait();
 
     ({ totalFilled } = await seaport.getOrderStatus(orderHash));
     assert.equal(totalFilled.toNumber(), 1);

@@ -107,4 +107,10 @@ abstract contract BeaconClientBase is BosonTypes {
 
         (exists, seller, ) = IBosonAccountHandler(protocolDiamond).getSellerByAddress(_sellerAddress);
     }
+
+    function setIncomingVoucherId(uint256 _voucherId, uint256 _offerId) internal {
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+
+        IBosonExchangeHandler(protocolDiamond).setIncomingVoucherId(_voucherId, _offerId);
+    }
 }

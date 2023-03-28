@@ -103,9 +103,6 @@ contract PriceDiscoveryBase is ProtocolBase {
             msg.value
         );
 
-        console.log("after");
-        console.log(abi.decode(returnData, (bool)));
-
         if (_exchangeId == 0) {
             // incomingVoucherId was set inside onERC721Received method
             _exchangeId = ps.incomingVoucherId;
@@ -127,7 +124,6 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         (, uint256 buyerId) = getBuyerIdByWallet(_buyer);
 
-        // Encumber funds before creating the exchange.
         FundsLib.encumberFunds(_offerId, buyerId, actualPrice, OfferType.Regular);
 
         // If token is ERC20, reset approval
