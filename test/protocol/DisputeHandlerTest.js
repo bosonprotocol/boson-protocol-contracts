@@ -2,7 +2,6 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect, assert } = require("chai");
 
-const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
 const Dispute = require("../../scripts/domain/Dispute");
 const DisputeState = require("../../scripts/domain/DisputeState");
@@ -11,17 +10,16 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   setNextBlockTimestamp,
   prepareDataSignatureParameters,
   applyPercentage,
-  getFacetsWithArgs,
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
 } = require("../util/utils.js");
-const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
+const { oneWeek, oneMonth } = require("../util/constants");
 const {
   mockOffer,
   mockDisputeResolver,
@@ -38,8 +36,7 @@ const {
 describe("IBosonDisputeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer,
-    pauser,
+  let pauser,
     assistant,
     admin,
     clerk,
@@ -51,24 +48,21 @@ describe("IBosonDisputeHandler", function () {
     assistantDR,
     adminDR,
     clerkDR,
-    treasuryDR,
-    protocolTreasury;
+    treasuryDR;
   let erc165,
     protocolDiamond,
-    accessController,
     accountHandler,
     exchangeHandler,
     offerHandler,
     fundsHandler,
     disputeHandler,
     pauseHandler;
-  let bosonToken;
   let buyerId, offer, offerId, seller;
   let block, blockNumber, tx;
   let support, newTime;
   let price, quantityAvailable, resolutionPeriod, disputePeriod, sellerDeposit;
   let voucherRedeemableFrom, offerDates, offerDurations;
-  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
+  let buyerEscalationDepositPercentage;
   let exchangeStruct, voucherStruct, finalizedDate, exchangeId;
   let dispute,
     disputedDate,
@@ -88,82 +82,13 @@ describe("IBosonDisputeHandler", function () {
   let voucherInitValues;
   let emptyAuthToken;
   let agentId;
+  let snapshotId;
 
   before(async function () {
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
-  });
 
-  beforeEach(async function () {
-    // Make accounts available
-    [deployer, pauser, admin, treasury, buyer, rando, other1, other2, adminDR, treasuryDR, protocolTreasury] =
-      await ethers.getSigners();
-
-    // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
-
-    // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-
-    // Temporarily grant UPGRADER role to deployer account
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-
-    // Temporarily grant PAUSER role to pauser account
-    await accessController.grantRole(Role.PAUSER, pauser.address);
-
-    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [protocolDiamond.address];
-    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
-    const [beacon] = beacons;
-    const [proxy] = proxies;
-
-    // Deploy the boson token
-    [bosonToken] = await deployMockTokens(["BosonToken"]);
-
-    // set protocolFees
-    protocolFeePercentage = "200"; // 2 %
-    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
-    buyerEscalationDepositPercentage = "1000"; // 10%
-
-    // Add config Handler, so ids start at 1, and so voucher address can be found
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 10000,
-      },
-      // Protocol fees
-      {
-        percentage: protocolFeePercentage,
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
+    // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
     const facetNames = [
       "SellerHandlerFacet",
       "BuyerHandlerFacet",
@@ -177,31 +102,42 @@ describe("IBosonDisputeHandler", function () {
       "ConfigHandlerFacet",
     ];
 
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+    // Specify contracts needed for this test
+    const contracts = {
+      erc165: "ERC165Facet",
+      accountHandler: "IBosonAccountHandler",
+      offerHandler: "IBosonOfferHandler",
+      exchangeHandler: "IBosonExchangeHandler",
+      fundsHandler: "IBosonFundsHandler",
+      disputeHandler: "IBosonDisputeHandler",
+      pauseHandler: "IBosonPauseHandler",
+    };
 
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+    ({
+      signers: [pauser, admin, treasury, buyer, rando, other1, other2, adminDR, treasuryDR],
+      contractInstances: {
+        erc165,
+        accountHandler,
+        offerHandler,
+        exchangeHandler,
+        fundsHandler,
+        disputeHandler,
+        pauseHandler,
+      },
+      protocolConfig: [, , { buyerEscalationDepositPercentage }],
+    } = await setupTestEnvironment(facetNames, contracts));
 
-    // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
+    // make all account the same
+    assistant = clerk = admin;
+    assistantDR = clerkDR = adminDR;
 
-    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+    // Get snapshot id
+    snapshotId = await getSnapshot();
+  });
 
-    // Cast Diamond to IBosonOfferHandler
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonExchangeHandler
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonFundsHandler
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonDisputeHandler
-    disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonPauseHandler
-    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -1065,7 +1001,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Assistant can also have a buyer account and this will work", async function () {
             // Create a valid buyer with assistant's wallet
-            buyer = mockBuyer(assistant.address);
+            let buyer = mockBuyer(assistant.address);
             expect(buyer.isValid()).is.true;
             await accountHandler.connect(assistant).createBuyer(buyer);
 
@@ -1205,7 +1141,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Wallet with buyer account, but not the buyer in this exchange
             // Create a valid buyer
-            buyer = mockBuyer(other2.address);
+            let buyer = mockBuyer(other2.address);
             expect(buyer.isValid()).is.true;
             await accountHandler.connect(other2).createBuyer(buyer);
 
@@ -1307,7 +1243,7 @@ describe("IBosonDisputeHandler", function () {
           // mint tokens to buyer and approve the protocol
           buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
           await mockToken.mint(buyer.address, buyerEscalationDepositToken);
-          await mockToken.connect(buyer).approve(protocolDiamond.address, buyerEscalationDepositToken);
+          await mockToken.connect(buyer).approve(disputeHandler.address, buyerEscalationDepositToken);
 
           // Commit to offer and put exchange all the way to dispute
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
@@ -1339,7 +1275,7 @@ describe("IBosonDisputeHandler", function () {
 
         it("should update state", async function () {
           // Protocol balance before
-          const escrowBalanceBefore = await ethers.provider.getBalance(protocolDiamond.address);
+          const escrowBalanceBefore = await ethers.provider.getBalance(disputeHandler.address);
 
           // Escalate the dispute
           tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
@@ -1375,7 +1311,7 @@ describe("IBosonDisputeHandler", function () {
           assert.equal(response, DisputeState.Escalated, "Dispute state is incorrect");
 
           // Protocol balance should increase for buyer escalation deposit
-          const escrowBalanceAfter = await ethers.provider.getBalance(protocolDiamond.address);
+          const escrowBalanceAfter = await ethers.provider.getBalance(disputeHandler.address);
           expect(escrowBalanceAfter.sub(escrowBalanceBefore)).to.equal(
             buyerEscalationDepositNative,
             "Escrow balance mismatch"
@@ -1386,7 +1322,7 @@ describe("IBosonDisputeHandler", function () {
           const mockToken = await createDisputeExchangeWithToken();
 
           // Protocol balance before
-          const escrowBalanceBefore = await mockToken.balanceOf(protocolDiamond.address);
+          const escrowBalanceBefore = await mockToken.balanceOf(disputeHandler.address);
 
           // Escalate the dispute, testing for the event
           await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId))
@@ -1394,7 +1330,7 @@ describe("IBosonDisputeHandler", function () {
             .withArgs(exchangeId, disputeResolverId, buyer.address);
 
           // Protocol balance should increase for buyer escalation deposit
-          const escrowBalanceAfter = await mockToken.balanceOf(protocolDiamond.address);
+          const escrowBalanceAfter = await mockToken.balanceOf(disputeHandler.address);
           expect(escrowBalanceAfter.sub(escrowBalanceBefore)).to.equal(
             buyerEscalationDepositToken,
             "Escrow balance mismatch"

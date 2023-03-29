@@ -8,7 +8,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
-const { getFacetsWithArgs } = require("../util/utils");
+const { getFacetsWithArgs, getSnapshot, revertToSnapshot } = require("../util/utils");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 
 /**
@@ -17,7 +17,7 @@ const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handl
 describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
-  let accounts, deployer, rando, token, treasury, beacon, proxy, newAccessController;
+  let accounts, deployer, rando, token, treasury, beacon, proxy;
   let maxOffersPerGroup,
     maxTwinsPerBundle,
     maxOffersPerBundle,
@@ -36,22 +36,15 @@ describe("IBosonConfigHandler", function () {
     maxPremintedVouchers;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let erc165, protocolDiamond, accessController, configHandler;
-  let authTokenContract;
+  let snapshotId;
 
   before(async function () {
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
-  });
 
-  beforeEach(async function () {
     // Make accounts available
     accounts = await ethers.getSigners();
-    deployer = accounts[0];
-    rando = accounts[1];
-    token = accounts[2];
-    treasury = accounts[3];
-    beacon = accounts[4];
-    proxy = accounts[5];
+    [deployer, rando, token, treasury, beacon, proxy] = accounts;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -84,6 +77,14 @@ describe("IBosonConfigHandler", function () {
 
     // Cast Diamond to IBosonConfigHandler
     configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+
+    // Get snapshot id
+    snapshotId = await getSnapshot();
+  });
+
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
   describe("Deploy tests", async function () {
@@ -222,7 +223,7 @@ describe("IBosonConfigHandler", function () {
   });
 
   describe("After deploy tests", async function () {
-    beforeEach(async function () {
+    before(async function () {
       // Add config Handler, so twin id starts at 1
       const protocolConfig = [
         // Protocol addresses
@@ -263,6 +264,9 @@ describe("IBosonConfigHandler", function () {
 
       // Cut the protocol handler facets into the Diamond
       await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+
+      // Update id
+      snapshotId = await getSnapshot();
     });
 
     // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -281,6 +285,7 @@ describe("IBosonConfigHandler", function () {
     // All supported methods
     context("📋 Setters", async function () {
       context("👉 setMaxOffersPerGroup()", async function () {
+        let maxOffersPerGroup;
         beforeEach(async function () {
           // set new value for max offers per group
           maxOffersPerGroup = 150;
@@ -320,6 +325,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setMaxTwinsPerBundle()", async function () {
+        let maxTwinsPerBundle;
         beforeEach(async function () {
           // set new value for max twins per bundle
           maxTwinsPerBundle = 150;
@@ -359,6 +365,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setMaxOffersPerBundle()", async function () {
+        let maxOffersPerBundle;
         beforeEach(async function () {
           // set new value for max offers per bundle
           maxOffersPerBundle = 150;
@@ -398,6 +405,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setMaxOffersPerBatch()", async function () {
+        let maxOffersPerBatch;
         beforeEach(async function () {
           // set new value for max offers per batch
           maxOffersPerBatch = 135;
@@ -437,6 +445,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setMaxTokensPerWithdrawal()", async function () {
+        let maxTokensPerWithdrawal;
         beforeEach(async function () {
           // set new value for max tokens per withdrawal
           maxTokensPerWithdrawal = 598;
@@ -476,6 +485,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setTokenAddress()", async function () {
+        let token;
         beforeEach(async function () {
           // set new value for token address
           token = accounts[5];
@@ -514,6 +524,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setTreasuryAddress()", async function () {
+        let treasury;
         beforeEach(async function () {
           // set new value for treasury address
           treasury = accounts[5];
@@ -552,6 +563,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setVoucherBeaconAddress()", async function () {
+        let beacon;
         beforeEach(async function () {
           // set new value for beacon address
           beacon = accounts[9];
@@ -590,6 +602,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setBeaconProxyAddress()", async function () {
+        let proxy;
         beforeEach(async function () {
           // set new value for proxy address
           proxy = accounts[9];
@@ -628,6 +641,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setProtocolFeePercentage()", async function () {
+        let protocolFeePercentage;
         beforeEach(async function () {
           // set new value for protocol fee precentage
           protocolFeePercentage = 10000;
@@ -667,6 +681,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setProtocolFeeFlatBoson()", async function () {
+        let protocolFeeFlatBoson;
         beforeEach(async function () {
           // set new value for flat boson protocol fee
           protocolFeeFlatBoson = ethers.utils.parseUnits("0.02", "ether").toString();
@@ -684,7 +699,7 @@ describe("IBosonConfigHandler", function () {
           await configHandler.connect(deployer).setProtocolFeeFlatBoson(protocolFeeFlatBoson);
 
           // Verify that new value is stored
-          expect(await configHandler.connect(rando).getProtocolFeePercentage()).to.equal(protocolFeePercentage);
+          expect(await configHandler.connect(rando).getProtocolFeeFlatBoson()).to.equal(protocolFeeFlatBoson);
         });
 
         context("💔 Revert Reasons", async function () {
@@ -698,6 +713,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setMaxDisputesPerBatch()", async function () {
+        let maxDisputesPerBatch;
         beforeEach(async function () {
           // set new value for max disputes per batch
           maxDisputesPerBatch = 135;
@@ -737,6 +753,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setMaxFeesPerDisputeResolver()", async function () {
+        let maxFeesPerDisputeResolver;
         beforeEach(async function () {
           // set new value
           maxFeesPerDisputeResolver = 200;
@@ -775,6 +792,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setMaxEscalationResponsePeriod()", async function () {
+        let maxEscalationResponsePeriod;
         beforeEach(async function () {
           // set new value
           maxEscalationResponsePeriod = ethers.BigNumber.from(oneMonth).add(oneWeek);
@@ -815,6 +833,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setBuyerEscalationDepositPercentage()", async function () {
+        let buyerEscalationDepositPercentage;
         beforeEach(async function () {
           // set new value for buyer escalation deposit percentage
           buyerEscalationDepositPercentage = 50;
@@ -858,6 +877,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setMaxAllowedSellers()", async function () {
+        let maxAllowedSellers;
         beforeEach(async function () {
           // set new value for max allowed sellers
           maxAllowedSellers = 222;
@@ -896,6 +916,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setMaxTotalOfferFeePercentage()", async function () {
+        let maxTotalOfferFeePercentage;
         beforeEach(async function () {
           // set new value for Max Total Offer Fee Percentage
           maxTotalOfferFeePercentage = 50;
@@ -937,6 +958,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setMaxRoyaltyPecentage()", async function () {
+        let maxRoyaltyPecentage;
         beforeEach(async function () {
           // set new value for Max Royalty Percentage
           maxRoyaltyPecentage = 250;
@@ -983,6 +1005,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setAuthTokenContract()", async function () {
+        let authTokenContract;
         beforeEach(async function () {
           // set new value for auth token contract
           authTokenContract = accounts[9];
@@ -1039,6 +1062,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setMaxExchangesPerBatch()", async function () {
+        let maxExchangesPerBatch;
         beforeEach(async function () {
           // set new value for max exchanges per batch
           maxExchangesPerBatch = 135;
@@ -1077,6 +1101,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setMaxResolutionPeriod()", async function () {
+        let maxResolutionPeriod;
         beforeEach(async function () {
           // set new value
           maxResolutionPeriod = ethers.BigNumber.from(oneMonth).add(oneWeek);
@@ -1115,6 +1140,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setMinDisputePeriod()", async function () {
+        let minDisputePeriod;
         beforeEach(async function () {
           // set new value
           minDisputePeriod = ethers.BigNumber.from(oneMonth).sub(oneWeek);
@@ -1153,6 +1179,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setMaxPremintedVouchers()", async function () {
+        let maxPremintedVouchers;
         beforeEach(async function () {
           // set new value
           maxPremintedVouchers = 50000;
@@ -1191,6 +1218,7 @@ describe("IBosonConfigHandler", function () {
       });
 
       context("👉 setAccessControllerAddress()", async function () {
+        let newAccessController;
         beforeEach(async function () {
           // set new value
           newAccessController = accounts[9];
