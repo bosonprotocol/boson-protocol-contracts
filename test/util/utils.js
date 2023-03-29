@@ -257,12 +257,19 @@ function objectToArray(input) {
   return result;
 }
 
-async function setupTestEnvironment(facetNames, contracts) {
+async function setupTestEnvironment(
+  facetNames,
+  contracts,
+  { returnClient = false, returnAccessController = false } = {}
+) {
+  let extraReturnValues = {};
+
   const signers = await ethers.getSigners();
   const [deployer, protocolTreasury, bosonToken, pauser] = signers;
 
   // Deploy the Protocol Diamond
   const [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
+  if (returnAccessController) extraReturnValues = { ...extraReturnValues, accessController };
 
   // Temporarily grant UPGRADER role to deployer account
   await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -275,9 +282,18 @@ async function setupTestEnvironment(facetNames, contracts) {
 
   // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
   const protocolClientArgs = [protocolDiamond.address];
-  const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
+  const [implementations, beacons, proxies, clients] = await deployProtocolClients(
+    protocolClientArgs,
+    maxPriorityFeePerGas
+  );
   const [beacon] = beacons;
   const [proxy] = proxies;
+
+  if (returnClient) {
+    const [bosonVoucher] = clients;
+    const [voucherImplementation] = implementations;
+    extraReturnValues = { ...extraReturnValues, bosonVoucher, voucherImplementation };
+  }
 
   // set protocolFees
   const protocolFeePercentage = "200"; // 2 %
@@ -329,7 +345,13 @@ async function setupTestEnvironment(facetNames, contracts) {
     contractInstances[contract] = await ethers.getContractAt(contracts[contract], protocolDiamond.address);
   }
 
-  return { signers: signers.slice(3), contractInstances, protocolConfig };
+  return {
+    signers: signers.slice(3),
+    contractInstances,
+    protocolConfig,
+    diamondAddress: protocolDiamond.address,
+    extraReturnValues,
+  };
 }
 
 async function getSnapshot() {
