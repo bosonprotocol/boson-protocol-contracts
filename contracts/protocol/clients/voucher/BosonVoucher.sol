@@ -512,6 +512,15 @@ contract BosonVoucherBase is
     }
 
     /**
+     * @notice Overriding renounceOwnership() from OwnableUpgradeable, so it's not possible to renounce ownership.
+     *
+     * N.B. In the future it might be possible to renounce ownership via seller deactivation in the protocol.
+     */
+    function renounceOwnership() public pure override {
+        revert(ACCESS_DENIED);
+    }
+
+    /**
      * @notice Returns storefront-level metadata used by OpenSea.
      *
      * @return Contract metadata URI
