@@ -1,5 +1,4 @@
 const hre = require("hardhat");
-
 const ethers = hre.ethers;
 const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond");
@@ -11,15 +10,14 @@ const { expect, assert } = require("chai");
 const Role = require("../../../scripts/domain/Role");
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
-const SeaportSide = require("./SideEnum");
+const SeaportSide = require("../seaport/SideEnum");
 const Side = require("../../../scripts/domain/Side");
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const { constants } = require("ethers");
 const OfferPrice = require("../../../scripts/domain/OfferPrice");
-const { seaportFixtures } = require("./fixtures");
+const { seaportFixtures } = require("../seaport/fixtures");
 const { SEAPORT_ADDRESS } = require("../../util/constants");
-const { getRootAndProof } = require("./utils");
-const ItemType = require("./ItemTypeEnum");
+const ItemType = require("../seaport/ItemTypeEnum");
 
 describe("[@skip-on-coverage] seaport integration", function () {
   this.timeout(100000000);
@@ -114,7 +112,6 @@ describe("[@skip-on-coverage] seaport integration", function () {
     weth = await wethFactory.deploy();
     await weth.deployed();
 
-    // Add WETH
     facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [weth.address];
 
     // Cut the protocol handler facets into the Diamond
@@ -147,6 +144,9 @@ describe("[@skip-on-coverage] seaport integration", function () {
 
     seaport = await ethers.getContractAt("Seaport", SEAPORT_ADDRESS);
 
+    await bosonVoucher.connect(assistant).setPriceDiscoveryContract(seaport.address);
+    await bosonVoucher.connect(assistant).setApprovalForAllToContract(seaport.address, true);
+
     fixtures = await seaportFixtures(seaport);
 
     // Pre mint range
@@ -159,24 +159,15 @@ describe("[@skip-on-coverage] seaport integration", function () {
       .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
   });
 
-  it("seaport is used as price discovery mechanism for a offer", async function () {
-    await bosonVoucher.connect(assistant).setPriceDiscoveryContract(seaport.address);
-
-    // need to deposit NFTs
-    await bosonVoucher.connect(assistant).setApprovalForAllToContract(seaport.address, true);
-
+  it("Seaport criteria-based order is used as price discovery mechanism for a BP offer", async function () {
     // Create seaport offer which tokenId 1
-    // const endDate = "0xff00000000000000000000000000";
-    // 10 items;
-    const { root, proof } = getRootAndProof(1, 10, 2); //3
     const seaportOffer = fixtures.getTestVoucher(ItemType.ERC721_WITH_CRITERIA, 0, bosonVoucher.address, 1, 1);
     const consideration = fixtures.getTestToken(
       ItemType.NATIVE,
       0,
       constants.AddressZero,
       offer.price,
-      offer.price,
-      // ethers.BigNumber.from(offer.price).add(ethers.utils.parseUnits("1", "ether"))
+      ethers.BigNumber.from(offer.price).add(ethers.utils.parseUnits("1", "ether")),
       bosonVoucher.address
     );
 
@@ -202,6 +193,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
     assert(isValidated, "Order is not validated");
     assert.equal(totalFilled.toNumber(), 0);
 
+    // turn order into advanced order
     order.denominator = 1;
     order.numerator = 1;
     order.extraData = "0x";
@@ -219,14 +211,10 @@ describe("[@skip-on-coverage] seaport integration", function () {
     const priceDiscovery = new PriceDiscovery(value, seaport.address, priceDiscoveryData, Side.Ask);
 
     // Seller needs to deposit weth in order to fill the escrow at the last step
-    // Price is theoretically the highest amount needed
     await weth.connect(buyer).deposit({ value });
     await weth.connect(buyer).approve(exchangeHandler.address, value);
 
-    // Approve transfers
-    // Buyer does not approve, since its in ETH.
     tx = await exchangeHandler
-      // Seller approves price discovery to transfer the voucher
       .connect(buyer)
       .commitToPreMintedOfferWithPriceDiscovery(buyer.address, offer.id, priceDiscovery, {
         value,

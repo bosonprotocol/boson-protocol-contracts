@@ -72,9 +72,6 @@ const seaportFixtures = async (seaport) => {
     const order = {
       parameters,
       signature,
-      // numerator: 1, // only used for advanced orders
-      // denominator: 1, // only used for advanced orders
-      // extraData: "0x", // only used for advanced orders
     };
 
     // How much ether (at most) needs to be supplied when fulfilling the order

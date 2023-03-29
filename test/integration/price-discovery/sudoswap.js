@@ -1,26 +1,20 @@
 const hre = require("hardhat");
 
 const ethers = hre.ethers;
-const { deployProtocolClients } = require("../../../../scripts/util/deploy-protocol-clients");
-const { deployProtocolDiamond } = require("../../../../scripts/util/deploy-protocol-diamond");
-const { deployAndCutFacets } = require("../../../../scripts/util/deploy-protocol-handler-facets");
-const { getFacetsWithArgs, calculateContractAddress } = require("../../../util/utils");
-const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../../util/constants");
-const {
-  mockSeller,
-  mockAuthToken,
-  mockVoucherInitValues,
-  mockOffer,
-  mockDisputeResolver,
-} = require("../../../util/mock");
+const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
+const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond");
+const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets");
+const { getFacetsWithArgs, calculateContractAddress } = require("../../util/utils");
+const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants");
+const { mockSeller, mockAuthToken, mockVoucherInitValues, mockOffer, mockDisputeResolver } = require("../../util/mock");
 const { expect } = require("chai");
-const Role = require("../../../../scripts/domain/Role");
-const { deployMockTokens } = require("../../../../scripts/util/deploy-mock-tokens");
-const { DisputeResolverFee } = require("../../../../scripts/domain/DisputeResolverFee");
-const Side = require("../../../../scripts/domain/Side");
-const PriceDiscovery = require("../../../../scripts/domain/PriceDiscovery");
+const Role = require("../../../scripts/domain/Role");
+const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
+const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
+const Side = require("../../../scripts/domain/Side");
+const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const { constants } = require("ethers");
-const OfferPrice = require("../../../../scripts/domain/OfferPrice");
+const OfferPrice = require("../../../scripts/domain/OfferPrice");
 
 describe("[@skip-on-coverage] sudoswap integration", function () {
   this.timeout(100000000);

@@ -102,13 +102,12 @@ const calculateOrderHash = (orderComponents) => {
   return derivedOrderHash;
 };
 
-function getRootAndProof(startIndex, endIndex, leaf) {
+function getRootAndProof(start, end, leaf) {
   const leaves = [];
-  for (let i = startIndex; i <= endIndex; i++) {
+
+  for (let i = start; i <= end; i++) {
     leaves.push(i);
   }
-  console.log(leaves);
-
   const merkleTree = new MerkleTree(leaves, keccak256, { hashLeaves: true });
 
   const proof = merkleTree.getHexProof(keccak256(leaf));
