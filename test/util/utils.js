@@ -260,7 +260,7 @@ function objectToArray(input) {
 async function setupTestEnvironment(
   facetNames,
   contracts,
-  { returnClient = false, returnAccessController = false, bosonTokenAddress } = {}
+  { returnClient = false, returnAccessController = false, bosonTokenAddress, forwarderAddress } = {}
 ) {
   let extraReturnValues = {};
 
@@ -284,7 +284,8 @@ async function setupTestEnvironment(
   const protocolClientArgs = [protocolDiamond.address];
   const [implementations, beacons, proxies, clients] = await deployProtocolClients(
     protocolClientArgs,
-    maxPriorityFeePerGas
+    maxPriorityFeePerGas,
+    forwarderAddress
   );
   const [beacon] = beacons;
   const [proxy] = proxies;
@@ -292,7 +293,7 @@ async function setupTestEnvironment(
   if (returnClient) {
     const [bosonVoucher] = clients;
     const [voucherImplementation] = implementations;
-    extraReturnValues = { ...extraReturnValues, bosonVoucher, voucherImplementation };
+    extraReturnValues = { ...extraReturnValues, bosonVoucher, voucherImplementation, beacon };
   }
 
   // set protocolFees
