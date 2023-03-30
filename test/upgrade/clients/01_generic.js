@@ -7,7 +7,7 @@ const {
   populateVoucherContract,
   getVoucherContractState,
 } = require("../../util/upgrade");
-const { getSnapshot, revertToSnapshot } = require("../util/utils.js");
+const { getSnapshot, revertToSnapshot } = require("../../util/utils.js");
 
 // Returns function with test that can be reused in every upgrade
 function getGenericContext(

@@ -12,6 +12,8 @@ const { setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util
  *  Test the Boson Agent Handler
  */
 describe("AgentHandler", function () {
+  accountId.next(true);
+
   // Common vars
   let pauser, rando, other1, other2, other3;
   let accountHandler, pauseHandler;

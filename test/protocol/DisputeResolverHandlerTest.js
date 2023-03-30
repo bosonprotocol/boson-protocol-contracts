@@ -88,6 +88,8 @@ describe("DisputeResolverHandler", function () {
   }
 
   before(async function () {
+    accountId.next(true);
+
     // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
     const facetNames = [
       "AccountHandlerFacet",
