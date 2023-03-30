@@ -106,6 +106,8 @@ describe("IBosonExchangeHandler", function () {
   let snapshotId;
 
   before(async function () {
+    accountId.next(true);
+
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
 
