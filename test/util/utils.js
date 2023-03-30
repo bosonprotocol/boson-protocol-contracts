@@ -260,7 +260,7 @@ function objectToArray(input) {
 async function setupTestEnvironment(
   facetNames,
   contracts,
-  { returnClient = false, returnAccessController = false } = {}
+  { returnClient = false, returnAccessController = false, bosonTokenAddress } = {}
 ) {
   let extraReturnValues = {};
 
@@ -305,7 +305,7 @@ async function setupTestEnvironment(
     // Protocol addresses
     {
       treasury: protocolTreasury.address,
-      token: bosonToken.address,
+      token: bosonTokenAddress || bosonToken.address,
       voucherBeacon: beacon.address,
       beaconProxy: proxy.address,
     },

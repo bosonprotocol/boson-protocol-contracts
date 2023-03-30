@@ -28,7 +28,7 @@ let DisputeResolver = require("../../scripts/domain/DisputeResolver.js");
 let Seller = require("../../scripts/domain/Seller");
 
 function* incrementer() {
-  let i = 1;
+  let i = 0;
   while (true) {
     const reset = yield (i++).toString();
     if (reset) {
