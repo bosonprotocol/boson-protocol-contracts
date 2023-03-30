@@ -124,7 +124,7 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         (, uint256 buyerId) = getBuyerIdByWallet(_buyer);
 
-        FundsLib.encumberFunds(_offerId, buyerId, actualPrice, OfferType.Regular);
+        FundsLib.encumberFunds(_offerId, buyerId, actualPrice, true, OfferPrice.Discovery);
 
         // If token is ERC20, reset approval
         if (exchangeToken != address(0)) {

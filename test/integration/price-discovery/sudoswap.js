@@ -16,7 +16,7 @@ const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const { constants } = require("ethers");
 const OfferPrice = require("../../../scripts/domain/OfferPrice");
 
-describe("[@skip-on-coverage] sudoswap integration", function () {
+describe("[@skip-on-coverage] sudoswap integration", function() {
   this.timeout(100000000);
   let lssvmPairFactory, linearCurve;
   let bosonVoucher, bosonToken;
@@ -26,7 +26,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
   let weth;
   let seller;
 
-  before(async function () {
+  before(async function() {
     let protocolTreasury;
     [deployer, protocol, assistant, protocolTreasury, buyer, DR, sudoswapDeployer] = await ethers.getSigners();
 
@@ -149,7 +149,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
     await weth.deployed();
 
     // Add WETH
-    facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [weth.address];
+    facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [1, weth.address];
 
     // Cut the protocol handler facets into the Diamond
     await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
@@ -198,7 +198,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
   //        "_poolType": "TOKEN, NFT, or TRADE",
   //        "_spotPrice": "The initial selling spot price"
 
-  it("sudoswap is used as price discovery mechanism for a offer", async function () {
+  it("sudoswap is used as price discovery mechanism for a offer", async function() {
     const poolType = 1; // NFT
     const delta = ethers.utils.parseUnits("0.25", "ether").toString();
     const fee = "0";

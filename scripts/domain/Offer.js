@@ -6,7 +6,6 @@ const {
   enumIsValid,
 } = require("../util/validations.js");
 const OfferPrice = require("./OfferPrice.js");
-const OfferType = require("./OfferType.js");
 
 /**
  * Boson Protocol Domain Entity: Offer
@@ -26,7 +25,6 @@ class Offer {
             string metadataUri;
             string metadataHash;
             bool voided;
-            OfferType offerType;
             OfferPrice priceType;
         }
     */
@@ -289,10 +287,6 @@ class Offer {
     return enumIsValid(this.priceType, OfferPrice);
   }
 
-  offerTypeIsValid() {
-    return enumIsValid(this.offerType, OfferType);
-  }
-
   /**
    * Is this Offer instance valid?
    * @returns {boolean}
@@ -300,17 +294,16 @@ class Offer {
   isValid() {
     return (
       this.idIsValid() &&
-        this.sellerIdIsValid() &&
-        this.priceIsValid() &&
-        this.sellerDepositIsValid() &&
-        this.buyerCancelPenaltyIsValid() &&
-        this.quantityAvailableIsValid() &&
-        this.exchangeTokenIsValid() &&
-        this.metadataUriIsValid() &&
-        this.metadataHashIsValid() &&
-        this.voidedIsValid(),
-      this.priceTypeIsValid(),
-      this.offerTypeIsValid()
+      this.sellerIdIsValid() &&
+      this.priceIsValid() &&
+      this.sellerDepositIsValid() &&
+      this.buyerCancelPenaltyIsValid() &&
+      this.quantityAvailableIsValid() &&
+      this.exchangeTokenIsValid() &&
+      this.metadataUriIsValid() &&
+      this.metadataHashIsValid() &&
+      this.voidedIsValid() &&
+      this.priceTypeIsValid()
     );
   }
 }

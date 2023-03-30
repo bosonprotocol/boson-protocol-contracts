@@ -25,7 +25,18 @@ import { PriceDiscoveryBase } from "../bases/PriceDiscoveryBase.sol";
 contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, PriceDiscoveryBase, IERC721Receiver {
     using Address for address;
 
-    constructor(address _weth) PriceDiscoveryBase(_weth) {}
+    uint256 private immutable EXCHANGE_ID_2_2_0;
+
+    /**
+     * @notice After v2.2.0, token ids are derived from offerId and exchangeId.
+     * EXCHANGE_ID_2_2_0 is the first exchange id to use for 2.2.0.
+     * Set EXCHANGE_ID_2_2_0 in the constructor.
+     *
+     * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
+     */
+    constructor(uint256 _firstExchangeId2_2_0, address _weth) PriceDiscoveryBase(_weth) {
+        EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
+    }
 
     /**
      * @notice Initializes facet.
@@ -212,11 +223,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Fetch or create buyer
         uint256 buyerId = getValidBuyer(_buyer);
 
-        // price discovery offers funds are encumber after we get the acution on PriceDiscoveryBase fulfilOrder
-        if (_offer.priceType == OfferPrice.Static) {
-            // Encumber funds before creating the exchange.
-            FundsLib.encumberFunds(_offerId, buyerId, _offer.price, _offer.offerType);
-        }
+        // Encumber funds before creating the exchange.
+        FundsLib.encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
 
         // Create and store a new exchange
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];
@@ -257,7 +265,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             lookups.voucherCount[buyerId]++;
             if (!_isPreminted) {
                 IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
-                bosonVoucher.issueVoucher(_exchangeId, _buyer);
+                uint256 tokenId = _exchangeId + (_offerId << 128);
+                bosonVoucher.issueVoucher(tokenId, _buyer);
             }
         }
 
@@ -713,9 +722,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         lookups.voucherCount[_exchange.buyerId]--;
 
         // Burn the voucher
-        (, Offer storage offer) = fetchOffer(_exchange.offerId);
+        uint256 offerId = _exchange.offerId;
+        (, Offer storage offer) = fetchOffer(offerId);
         IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);
-        bosonVoucher.burnVoucher(_exchange.id);
+
+        uint256 tokenId = _exchange.id;
+        if (tokenId >= EXCHANGE_ID_2_2_0) tokenId += (offerId << 128);
+        bosonVoucher.burnVoucher(tokenId);
     }
 
     /**

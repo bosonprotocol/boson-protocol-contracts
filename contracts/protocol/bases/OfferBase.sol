@@ -244,7 +244,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.metadataUri = _offer.metadataUri;
         offer.metadataHash = _offer.metadataHash;
         offer.priceType = _offer.priceType;
-        offer.offerType = _offer.offerType;
 
         // Get storage location for offer dates
         OfferDates storage offerDates = fetchOfferDates(_offer.id);
@@ -311,7 +310,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         require(offer.quantityAvailable >= _length, INVALID_RANGE_LENGTH);
 
         // Prevent reservation of too large range, since it affects exchangeId
-        require(_length < (1 << 128), INVALID_RANGE_LENGTH);
+        require(_length < (1 << 64), INVALID_RANGE_LENGTH);
 
         // Get starting token id
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
