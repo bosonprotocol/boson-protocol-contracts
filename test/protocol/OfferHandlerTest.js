@@ -97,19 +97,6 @@ describe("IBosonOfferHandler", function () {
     // Deploy the boson token
     [bosonToken] = await deployMockTokens(["BosonToken"]);
 
-    // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
-    const facetNames = [
-      "SellerHandlerFacet",
-      "AgentHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "OfferHandlerFacet",
-      "PauseHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-      "FundsHandlerFacet",
-      "ExchangeHandlerFacet",
-    ];
-
     // Specify contracts needed for this test
     const contracts = {
       erc165: "ERC165Facet",
@@ -137,7 +124,7 @@ describe("IBosonOfferHandler", function () {
         ,
         { percentage: protocolFeePercentage, flatBoson: protocolFeeFlatBoson, buyerEscalationDepositPercentage },
       ],
-    } = await setupTestEnvironment(facetNames, contracts, { bosonTokenAddress: bosonToken.address }));
+    } = await setupTestEnvironment(contracts, { bosonTokenAddress: bosonToken.address }));
 
     // make all account the same
     assistant = clerk = admin;

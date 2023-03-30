@@ -55,17 +55,6 @@ describe("SellerHandler", function () {
     // Reset the accountId iterator
     accountId.next(true);
 
-    // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
-    const facetNames = [
-      "AccountHandlerFacet",
-      "SellerHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "PauseHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
     // Specify contracts needed for this test
     const contracts = {
       accountHandler: "IBosonAccountHandler",
@@ -77,7 +66,7 @@ describe("SellerHandler", function () {
     ({
       signers: [pauser, admin, treasury, rando, other1, other2, other3, other4, other5, other6, other7, other8],
       contractInstances: { accountHandler, exchangeHandler, pauseHandler, configHandler },
-    } = await setupTestEnvironment(facetNames, contracts));
+    } = await setupTestEnvironment(contracts));
 
     // make all account the same
     authTokenOwner = assistant = clerk = admin;

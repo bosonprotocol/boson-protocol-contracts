@@ -111,25 +111,6 @@ describe("IBosonExchangeHandler", function () {
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
 
-    // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
-    const facetNames = [
-      "AccountHandlerFacet",
-      "AgentHandlerFacet",
-      "SellerHandlerFacet",
-      "BuyerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "FundsHandlerFacet",
-      "DisputeHandlerFacet",
-      "TwinHandlerFacet",
-      "BundleHandlerFacet",
-      "GroupHandlerFacet",
-      "PauseHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
     // Specify contracts needed for this test
     const contracts = {
       erc165: "ERC165Facet",
@@ -163,7 +144,7 @@ describe("IBosonExchangeHandler", function () {
       protocolConfig: [, , { percentage: protocolFeePercentage }],
       extraReturnValues: { bosonVoucher, voucherImplementation, accessController },
       diamondAddress: protocolDiamondAddress,
-    } = await setupTestEnvironment(facetNames, contracts, { returnClient: true, returnAccessController: true }));
+    } = await setupTestEnvironment(contracts, { returnClient: true, returnAccessController: true }));
 
     [deployer] = await ethers.getSigners();
 

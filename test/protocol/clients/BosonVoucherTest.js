@@ -74,17 +74,6 @@ describe("IBosonVoucher", function () {
 
     forwarder = await MockForwarder.deploy();
 
-    // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
-    const facetNames = [
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "SellerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "FundsHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
     // Specify contracts needed for this test
     const contracts = {
       accountHandler: "IBosonAccountHandler",
@@ -98,7 +87,7 @@ describe("IBosonVoucher", function () {
       signers: [protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, configHandler },
       extraReturnValues: { bosonVoucher, beacon, accessController },
-    } = await setupTestEnvironment(facetNames, contracts, {
+    } = await setupTestEnvironment(contracts, {
       forwarderAddress: [forwarder.address],
       returnClient: true,
       returnAccessController: true,

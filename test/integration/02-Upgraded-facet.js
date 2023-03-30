@@ -53,21 +53,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   before(async function () {
     accountId.next(true);
 
-    // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
-    const facetNames = [
-      "AccountHandlerFacet",
-      "AgentHandlerFacet",
-      "SellerHandlerFacet",
-      "BuyerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "FundsHandlerFacet",
-      "DisputeHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
     // Specify contracts needed for this test
     const contracts = {
       accountHandler: "IBosonAccountHandler",
@@ -82,7 +67,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
       protocolConfig: [, , { buyerEscalationDepositPercentage }],
       diamondAddress: protocolDiamondAddress,
-    } = await setupTestEnvironment(facetNames, contracts));
+    } = await setupTestEnvironment(contracts));
 
     // make all account the same
     assistant = clerk = admin;

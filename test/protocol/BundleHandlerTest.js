@@ -66,20 +66,6 @@ describe("IBosonBundleHandler", function () {
     expect(offerDates.isValid()).is.true;
     expect(offerDurations.isValid()).is.true;
 
-    // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
-    const facetNames = [
-      "SellerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "TwinHandlerFacet",
-      "OfferHandlerFacet",
-      "BundleHandlerFacet",
-      "ExchangeHandlerFacet",
-      "FundsHandlerFacet",
-      "PauseHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
     // Specify contracts needed for this test
     const contracts = {
       erc165: "ERC165Facet",
@@ -104,7 +90,7 @@ describe("IBosonBundleHandler", function () {
         fundsHandler,
         pauseHandler,
       },
-    } = await setupTestEnvironment(facetNames, contracts));
+    } = await setupTestEnvironment(contracts));
 
     // make all account the same
     assistant = clerk = admin;

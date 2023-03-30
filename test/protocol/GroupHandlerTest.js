@@ -51,17 +51,6 @@ describe("IBosonGroupHandler", function () {
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
 
-    // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
-    const facetNames = [
-      "SellerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "OfferHandlerFacet",
-      "GroupHandlerFacet",
-      "PauseHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
     // Specify contracts needed for this test
     const contracts = {
       erc165: "ERC165Facet",
@@ -74,7 +63,7 @@ describe("IBosonGroupHandler", function () {
     ({
       signers: [pauser, rando, admin, treasury, adminDR, treasuryDR],
       contractInstances: { erc165, accountHandler, offerHandler, groupHandler, pauseHandler },
-    } = await setupTestEnvironment(facetNames, contracts));
+    } = await setupTestEnvironment(contracts));
 
     // make all account the same
     assistant = clerk = admin;

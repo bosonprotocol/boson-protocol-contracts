@@ -104,7 +104,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
 
-    // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
+    // Specify facets needed for this test
     facetNames = [
       "SellerHandlerFacet",
       "DisputeResolverHandlerFacet",
@@ -117,7 +117,6 @@ describe("IBosonMetaTransactionsHandler", function () {
       "BuyerHandlerFacet",
       "MetaTransactionsHandlerFacet",
       "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
     ];
 
     // Specify contracts needed for this test
@@ -148,7 +147,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       },
       extraReturnValues: { accessController },
       diamondAddress: protocolDiamondAddress,
-    } = await setupTestEnvironment(facetNames, contracts, { returnAccessController: true }));
+    } = await setupTestEnvironment(contracts, { returnAccessController: true }));
 
     // make all account the same
     assistant = clerk = admin;
@@ -158,9 +157,6 @@ describe("IBosonMetaTransactionsHandler", function () {
 
     // Deploy the mock tokens
     [bosonToken, mockToken] = await deployMockTokens(["BosonToken", "Foreign20"]);
-
-    // Remove ConfigHandlerFacet because should not be allowlisted on MetaTransactionHandler
-    facetNames = facetNames.filter((name) => name !== "ConfigHandlerFacet");
 
     // Agent id is optional when creating an offer
     agentId = "0";

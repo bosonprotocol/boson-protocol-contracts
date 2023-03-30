@@ -16,9 +16,6 @@ describe("IClientExternalAddresses", function () {
   let protocolDiamondAddress;
 
   before(async function () {
-    // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
-    const facetNames = ["ConfigHandlerFacet", "ProtocolInitializationHandlerFacet"];
-
     // Specify contracts needed for this test
     const contracts = {};
 
@@ -26,7 +23,7 @@ describe("IClientExternalAddresses", function () {
       signers: [rando, other1, other3],
       diamondAddress: protocolDiamondAddress,
       extraReturnValues: { beacon },
-    } = await setupTestEnvironment(facetNames, contracts, { returnClient: true }));
+    } = await setupTestEnvironment(contracts, { returnClient: true }));
 
     [deployer] = await ethers.getSigners();
 

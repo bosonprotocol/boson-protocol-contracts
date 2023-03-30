@@ -31,17 +31,6 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     seaport = await ethers.getContractAt("Seaport", SEAPORT_ADDRESS);
     seaportFixtures = await seaportFixtures(seaport);
 
-    // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
-    const facetNames = [
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "SellerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "FundsHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
     // Specify contracts needed for this test
     const contracts = {
       accountHandler: "IBosonAccountHandler",
@@ -53,7 +42,7 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     ({
       signers: [assistant, buyer, DR],
       contractInstances: { accountHandler, offerHandler, fundsHandler },
-    } = await setupTestEnvironment(facetNames, contracts));
+    } = await setupTestEnvironment(contracts));
 
     const seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
 

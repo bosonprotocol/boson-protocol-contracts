@@ -122,26 +122,6 @@ describe("IBosonOrchestrationHandler", function () {
     // Deploy the mock tokens
     [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens();
 
-    // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
-    const facetNames = [
-      "SellerHandlerFacet",
-      "AgentHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "GroupHandlerFacet",
-      "TwinHandlerFacet",
-      "BundleHandlerFacet",
-      "DisputeHandlerFacet",
-      "FundsHandlerFacet",
-      "OrchestrationHandlerFacet1",
-      "OrchestrationHandlerFacet2",
-      "PauseHandlerFacet",
-      "AccountHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
     // Specify contracts needed for this test
     const contracts = {
       erc165: "ERC165Facet",
@@ -180,7 +160,7 @@ describe("IBosonOrchestrationHandler", function () {
         { percentage: protocolFeePercentage, flatBoson: protocolFeeFlatBoson, buyerEscalationDepositPercentage },
       ],
       diamondAddress: protocolDiamondAddress,
-    } = await setupTestEnvironment(facetNames, contracts, { bosonTokenAddress: bosonToken.address }));
+    } = await setupTestEnvironment(contracts, { bosonTokenAddress: bosonToken.address }));
 
     // make all account the same
     clerk = assistant = admin;

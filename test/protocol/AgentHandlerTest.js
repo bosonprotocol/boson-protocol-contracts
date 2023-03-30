@@ -23,15 +23,6 @@ describe("AgentHandler", function () {
   let snapshotId;
 
   before(async function () {
-    // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
-    const facetNames = [
-      "AccountHandlerFacet",
-      "AgentHandlerFacet",
-      "PauseHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
     // Specify contracts needed for this test
     const contracts = {
       accountHandler: "IBosonAccountHandler",
@@ -41,7 +32,7 @@ describe("AgentHandler", function () {
     ({
       signers: [pauser, rando, other1, other2, other3],
       contractInstances: { accountHandler, pauseHandler },
-    } = await setupTestEnvironment(facetNames, contracts));
+    } = await setupTestEnvironment(contracts));
 
     // Get snapshot id
     snapshotId = await getSnapshot();

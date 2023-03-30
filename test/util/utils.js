@@ -258,10 +258,30 @@ function objectToArray(input) {
 }
 
 async function setupTestEnvironment(
-  facetNames,
   contracts,
   { returnClient = false, returnAccessController = false, bosonTokenAddress, forwarderAddress } = {}
 ) {
+  const facetNames = [
+    "SellerHandlerFacet",
+    "BuyerHandlerFacet",
+    "AgentHandlerFacet",
+    "DisputeResolverHandlerFacet",
+    "ExchangeHandlerFacet",
+    "OfferHandlerFacet",
+    "GroupHandlerFacet",
+    "TwinHandlerFacet",
+    "BundleHandlerFacet",
+    "DisputeHandlerFacet",
+    "FundsHandlerFacet",
+    "OrchestrationHandlerFacet1",
+    "OrchestrationHandlerFacet2",
+    "PauseHandlerFacet",
+    "AccountHandlerFacet",
+    "ProtocolInitializationHandlerFacet",
+    "ConfigHandlerFacet",
+    "MetaTransactionsHandlerFacet",
+  ];
+
   let extraReturnValues = {};
 
   const signers = await ethers.getSigners();

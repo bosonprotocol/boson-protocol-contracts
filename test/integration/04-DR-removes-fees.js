@@ -39,21 +39,6 @@ describe("[@skip-on-coverage] DR removes fee", function () {
   before(async function () {
     accountId.next(true);
 
-    // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
-    const facetNames = [
-      "AccountHandlerFacet",
-      "SellerHandlerFacet",
-      "BuyerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "AgentHandlerFacet",
-      "OfferHandlerFacet",
-      "ExchangeHandlerFacet",
-      "FundsHandlerFacet",
-      "DisputeHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
     // Specify contracts needed for this test
     const contracts = {
       accountHandler: "IBosonAccountHandler",
@@ -67,7 +52,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
       signers: [admin, treasury, buyer, adminDR, treasuryDR],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
       protocolConfig: [, , { buyerEscalationDepositPercentage }],
-    } = await setupTestEnvironment(facetNames, contracts));
+    } = await setupTestEnvironment(contracts));
 
     // make all account the same
     assistant = clerk = admin;
