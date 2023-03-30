@@ -1,5 +1,4 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
 const { expect } = require("chai");
 
 const {
@@ -13,19 +12,17 @@ const {
   accountId,
 } = require("../util/mock");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
-const Role = require("../../scripts/domain/Role");
 const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
-const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { oneMonth, oneWeek, maxPriorityFeePerGas } = require("../util/constants");
+const { oneMonth } = require("../util/constants");
 const {
   setNextBlockTimestamp,
   calculateContractAddress,
   prepareDataSignatureParameters,
   applyPercentage,
-  getFacetsWithArgs,
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
 } = require("../util/utils.js");
 const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolverUpdateFields");
 
@@ -34,86 +31,14 @@ const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolve
  */
 describe("[@skip-on-coverage] Update account roles addresses", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
-  let deployer,
-    assistant,
-    admin,
-    clerk,
-    treasury,
-    buyer,
-    rando,
-    assistantDR,
-    adminDR,
-    clerkDR,
-    treasuryDR,
-    agent,
-    protocolTreasury,
-    bosonToken;
+  let assistant, admin, clerk, treasury, buyer, rando, assistantDR, adminDR, clerkDR, treasuryDR, agent;
   let buyerEscalationDepositPercentage, redeemedDate;
+  let snapshotId;
 
-  beforeEach(async function () {
-    // Make accounts available
-    [deployer, admin, treasury, buyer, rando, adminDR, treasuryDR, agent, protocolTreasury, bosonToken] =
-      await ethers.getSigners();
+  before(async function () {
+    accountId.next(true);
 
-    // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
-
-    // Deploy the Protocol Diamond
-    const [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-
-    // Temporarily grant UPGRADER role to deployer account
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-
-    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [protocolDiamond.address];
-    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
-    const [beacon] = beacons;
-    const [proxy] = proxies;
-
-    // set protocolFees
-    const protocolFeePercentage = "200"; // 2 %
-    const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
-    buyerEscalationDepositPercentage = "1000"; // 10%
-
-    // Add config Handler, so ids start at 1, and so voucher address can be found
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 10000,
-      },
-      // Protocol fees
-      {
-        percentage: protocolFeePercentage,
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
+    // Specify facets needed for this test // TODO: if evm_revert more efficient, we can always deploy everything
     const facetNames = [
       "AccountHandlerFacet",
       "SellerHandlerFacet",
@@ -128,25 +53,32 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       "ConfigHandlerFacet",
     ];
 
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+    // Specify contracts needed for this test
+    const contracts = {
+      accountHandler: "IBosonAccountHandler",
+      offerHandler: "IBosonOfferHandler",
+      exchangeHandler: "IBosonExchangeHandler",
+      fundsHandler: "IBosonFundsHandler",
+      disputeHandler: "IBosonDisputeHandler",
+    };
 
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+    ({
+      signers: [admin, treasury, buyer, rando, adminDR, treasuryDR, agent],
+      contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
+      protocolConfig: [, , { buyerEscalationDepositPercentage }],
+    } = await setupTestEnvironment(facetNames, contracts));
 
-    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+    // make all account the same
+    assistant = clerk = admin;
+    assistantDR = clerkDR = adminDR;
 
-    // Cast Diamond to IBosonOfferHandler.
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
+    // Get snapshot id
+    snapshotId = await getSnapshot();
+  });
 
-    // Cast Diamond to IBosonExchangeHandler.
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonFundsHandler.
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonDisputeHandler.
-    disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
   context("After commit actions", function () {
