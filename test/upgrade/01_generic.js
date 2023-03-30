@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { assert, expect } = require("chai");
 const { mockOffer, mockVoucher, mockExchange } = require("../util/mock");
-const { getEvent, calculateVoucherExpiry } = require("../util/utils.js");
+const { getEvent, calculateVoucherExpiry, getSnapshot, revertToSnapshot } = require("../util/utils.js");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const { populateProtocolContract, getProtocolContractState } = require("../util/upgrade");
@@ -28,8 +28,8 @@ function getGenericContext(
     afterEach(async function () {
       // Revert to state right after the upgrade.
       // This is used so the lengthly setup (deploy+upgrade) is done only once.
-      await ethers.provider.send("evm_revert", [snapshot]);
-      snapshot = await ethers.provider.send("evm_snapshot", []);
+      await revertToSnapshot(snapshot);
+      snapshot = await getSnapshot();
     });
 
     // Protocol state
