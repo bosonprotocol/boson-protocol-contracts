@@ -1,7 +1,7 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
-const keccak256 = ethers.utils.keccak256;
-const toUtf8Bytes = ethers.utils.toUtf8Bytes;
+const { ethers } = require("hardhat");
+const {
+  utils: { keccak256, toUtf8Bytes },
+} = ethers;
 const { expect, assert } = require("chai");
 
 const Buyer = require("../../scripts/domain/Buyer");
@@ -13,11 +13,14 @@ const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { prepareDataSignatureParameters, setNextBlockTimestamp, getFacetsWithArgs } = require("../util/utils.js");
-const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+const {
+  prepareDataSignatureParameters,
+  setNextBlockTimestamp,
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
+} = require("../util/utils.js");
 const {
   mockOffer,
   mockTwin,
@@ -28,7 +31,7 @@ const {
   accountId,
   mockExchange,
 } = require("../util/mock");
-const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
+const { oneMonth } = require("../util/constants");
 const {
   getSelectors,
   FacetCutAction,
@@ -42,21 +45,8 @@ const {
 describe("IBosonMetaTransactionsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer,
-    pauser,
-    rando,
-    assistant,
-    buyer,
-    admin,
-    clerk,
-    treasury,
-    assistantDR,
-    adminDR,
-    clerkDR,
-    treasuryDR,
-    protocolTreasury;
+  let deployer, pauser, rando, assistant, buyer, admin, clerk, treasury, assistantDR, adminDR, clerkDR, treasuryDR;
   let erc165,
-    protocolDiamond,
     accessController,
     accountHandler,
     fundsHandler,
@@ -82,7 +72,6 @@ describe("IBosonMetaTransactionsHandler", function () {
   let offer, offerDates, offerDurations;
   let sellerDeposit, price;
   let voucherRedeemableFrom;
-  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let exchange;
   let disputeResolver, disputeResolverFees;
   let twin, success;
@@ -106,85 +95,16 @@ describe("IBosonMetaTransactionsHandler", function () {
   let emptyAuthToken;
   let agentId;
   let facetNames;
+  let protocolDiamondAddress;
+  let snapshotId;
 
   before(async function () {
+    accountId.next(true);
+
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
-  });
 
-  beforeEach(async function () {
-    // Make accounts available
-    [deployer, pauser, buyer, rando, admin, treasury, adminDR, treasuryDR, protocolTreasury] =
-      await ethers.getSigners();
-
-    // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
-
-    // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-
-    // Temporarily grant UPGRADER role to deployer account
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-
-    // Temporarily grant PAUSER role to pauser account
-    await accessController.grantRole(Role.PAUSER, pauser.address);
-
-    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [protocolDiamond.address];
-    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
-    const [beacon] = beacons;
-    const [proxy] = proxies;
-
-    // Deploy the boson token
-    [bosonToken] = await deployMockTokens(["BosonToken"]);
-
-    // set protocolFees
-    protocolFeePercentage = "200"; // 2 %
-    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
-    buyerEscalationDepositPercentage = "1000"; // 10%
-
-    agentId = "0"; // agent id is optional while creating an offer
-
-    // Add config Handler
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 10000,
-      },
-      // Protocol fees
-      {
-        percentage: protocolFeePercentage,
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
-    // Cut the protocol handler facets into the Diamond
+    // Specify facets needed for this test
     facetNames = [
       "SellerHandlerFacet",
       "DisputeResolverHandlerFacet",
@@ -197,51 +117,63 @@ describe("IBosonMetaTransactionsHandler", function () {
       "BuyerHandlerFacet",
       "MetaTransactionsHandlerFacet",
       "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
     ];
 
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+    // Specify contracts needed for this test
+    const contracts = {
+      erc165: "ERC165Facet",
+      accountHandler: "IBosonAccountHandler",
+      twinHandler: "IBosonTwinHandler",
+      offerHandler: "IBosonOfferHandler",
+      exchangeHandler: "IBosonExchangeHandler",
+      fundsHandler: "IBosonFundsHandler",
+      disputeHandler: "IBosonDisputeHandler",
+      metaTransactionsHandler: "IBosonMetaTransactionsHandler",
+      pauseHandler: "IBosonPauseHandler",
+    };
 
-    // Remove ConfigHandlerFacet because should not be allowlisted on MetaTransactionHandler
-    facetNames = facetNames.filter((name) => name !== "ConfigHandlerFacet");
+    ({
+      signers: [pauser, buyer, rando, admin, treasury, adminDR, treasuryDR],
+      contractInstances: {
+        erc165,
+        accountHandler,
+        twinHandler,
+        offerHandler,
+        exchangeHandler,
+        fundsHandler,
+        disputeHandler,
+        metaTransactionsHandler,
+        pauseHandler,
+      },
+      extraReturnValues: { accessController },
+      diamondAddress: protocolDiamondAddress,
+    } = await setupTestEnvironment(contracts, { returnAccessController: true }));
 
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+    // make all account the same
+    assistant = clerk = admin;
+    assistantDR = clerkDR = adminDR;
 
-    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
-
-    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonFundsHandler
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonOfferHandler
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonExchangeHandler
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-
-    // Cast Diamond to ITwinHandler
-    twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonDisputeHandler
-    disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonMetaTransactionsHandler
-    metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonPauseHandler
-    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
+    [deployer] = await ethers.getSigners();
 
     // Deploy the mock tokens
     [bosonToken, mockToken] = await deployMockTokens(["BosonToken", "Foreign20"]);
+
+    // Agent id is optional when creating an offer
+    agentId = "0";
+
+    // Get snapshot id
+    snapshotId = await getSnapshot();
+  });
+
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
   async function upgradeMetaTransactionsHandlerFacet() {
     // Upgrade the ExchangeHandlerFacet functions
     // DiamondCutFacet
-    const cutFacetViaDiamond = await ethers.getContractAt("DiamondCutFacet", protocolDiamond.address);
+    const cutFacetViaDiamond = await ethers.getContractAt("DiamondCutFacet", protocolDiamondAddress);
 
     // Deploy MockMetaTransactionsHandlerFacet
     const MockMetaTransactionsHandlerFacet = await ethers.getContractFactory("MockMetaTransactionsHandlerFacet");
@@ -269,7 +201,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     // Cast Diamond to MockMetaTransactionsHandlerFacet
     mockMetaTransactionsHandler = await ethers.getContractAt(
       "MockMetaTransactionsHandlerFacet",
-      protocolDiamond.address
+      protocolDiamondAddress
     );
   }
 
@@ -1266,7 +1198,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           it("Should fail on reenter", async function () {
             // Deploy malicious contracts
             const [maliciousToken] = await deployMockTokens(["Foreign20Malicious"]);
-            await maliciousToken.setProtocolAddress(protocolDiamond.address);
+            await maliciousToken.setProtocolAddress(protocolDiamondAddress);
 
             // Initial ids for all the things
             exchangeId = "1";
@@ -1317,8 +1249,8 @@ describe("IBosonMetaTransactionsHandler", function () {
             await maliciousToken.mint(buyer.address, price);
 
             // Approve protocol to transfer the tokens
-            await maliciousToken.connect(assistant).approve(protocolDiamond.address, sellerDeposit);
-            await maliciousToken.connect(buyer).approve(protocolDiamond.address, price);
+            await maliciousToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
+            await maliciousToken.connect(buyer).approve(protocolDiamondAddress, price);
 
             // Deposit to seller's pool
             await fundsHandler.connect(assistant).depositFunds(seller.id, maliciousToken.address, sellerDeposit);
@@ -1411,11 +1343,11 @@ describe("IBosonMetaTransactionsHandler", function () {
           it("Should emit MetaTransactionExecuted event and update state", async () => {
             // Deploy malicious contracts
             const [maliciousToken] = await deployMockTokens(["Foreign20Malicious2"]);
-            await maliciousToken.setProtocolAddress(protocolDiamond.address);
+            await maliciousToken.setProtocolAddress(protocolDiamondAddress);
 
             // Mint and approve protocol to transfer the tokens
             await maliciousToken.mint(rando.address, "1");
-            await maliciousToken.connect(rando).approve(protocolDiamond.address, "1");
+            await maliciousToken.connect(rando).approve(protocolDiamondAddress, "1");
 
             // Just make a random metaTx signature to some view function that will delete "currentSender"
             // Prepare the function signature for the facet function.
@@ -1565,8 +1497,8 @@ describe("IBosonMetaTransactionsHandler", function () {
             await mockToken.mint(buyer.address, price);
 
             // approve protocol to transfer the tokens
-            await mockToken.connect(assistant).approve(protocolDiamond.address, sellerDeposit);
-            await mockToken.connect(buyer).approve(protocolDiamond.address, price);
+            await mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
+            await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
 
             // deposit to seller's pool
             await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerDeposit);
@@ -3089,8 +3021,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           await mockToken.mint(buyer.address, price);
 
           // approve protocol to transfer the tokens
-          await mockToken.connect(assistant).approve(protocolDiamond.address, sellerDeposit);
-          await mockToken.connect(buyer).approve(protocolDiamond.address, price);
+          await mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
+          await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
 
           // deposit to seller's pool
           await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerDeposit);
@@ -3342,8 +3274,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           await mockToken.mint(buyer.address, price);
 
           // approve protocol to transfer the tokens
-          await mockToken.connect(assistant).approve(protocolDiamond.address, sellerDeposit);
-          await mockToken.connect(buyer).approve(protocolDiamond.address, price);
+          await mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
+          await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
 
           // deposit to seller's pool
           await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerDeposit);

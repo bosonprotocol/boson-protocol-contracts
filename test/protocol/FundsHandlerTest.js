@@ -1,5 +1,4 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
 const { expect, assert } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
@@ -7,9 +6,6 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   setNextBlockTimestamp,
@@ -18,10 +14,11 @@ const {
   prepareDataSignatureParameters,
   applyPercentage,
   calculateContractAddress,
-  getFacetsWithArgs,
   deriveTokenId,
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
 } = require("../util/utils.js");
-const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const {
   mockOffer,
   mockDisputeResolver,
@@ -54,7 +51,6 @@ describe("IBosonFundsHandler", function () {
     other,
     protocolTreasury;
   let erc165,
-    protocolDiamond,
     accessController,
     accountHandler,
     fundsHandler,
@@ -71,7 +67,7 @@ describe("IBosonFundsHandler", function () {
   let offerTokenProtocolFee, offerNativeProtocolFee, price, sellerDeposit;
   let offerDates, voucherRedeemableFrom;
   let resolutionPeriod, offerDurations;
-  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
+  let protocolFeePercentage, buyerEscalationDepositPercentage;
   let block, blockNumber;
   let protocolId, exchangeId, buyerId, randoBuyerId, sellerPayoff, buyerPayoff, protocolPayoff;
   let sellersAvailableFunds,
@@ -98,129 +94,60 @@ describe("IBosonFundsHandler", function () {
     expectedAgentAvailableFunds,
     agentAvailableFunds;
   let DRFee, buyerEscalationDeposit;
-  let protocolInitializationFacet;
+  let protocolDiamondAddress;
+  let snapshotId;
 
   before(async function () {
+    accountId.next(true);
+
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
 
-    // Deploy the mock token
-    [mockToken] = await deployMockTokens(["Foreign20"]);
-  });
+    // Specify contracts needed for this test
+    const contracts = {
+      erc165: "ERC165Facet",
+      accountHandler: "IBosonAccountHandler",
+      offerHandler: "IBosonOfferHandler",
+      exchangeHandler: "IBosonExchangeHandler",
+      fundsHandler: "IBosonFundsHandler",
+      configHandler: "IBosonConfigHandler",
+      pauseHandler: "IBosonPauseHandler",
+      disputeHandler: "IBosonDisputeHandler",
+    };
 
-  beforeEach(async function () {
-    // Make accounts available
-    [deployer, pauser, admin, treasury, rando, buyer, feeCollector, adminDR, treasuryDR, other, protocolTreasury] =
-      await ethers.getSigners();
+    ({
+      signers: [pauser, admin, treasury, rando, buyer, feeCollector, adminDR, treasuryDR, other],
+      contractInstances: {
+        erc165,
+        accountHandler,
+        offerHandler,
+        exchangeHandler,
+        fundsHandler,
+        configHandler,
+        pauseHandler,
+        disputeHandler,
+      },
+      protocolConfig: [, , { percentage: protocolFeePercentage, buyerEscalationDepositPercentage }],
+      diamondAddress: protocolDiamondAddress,
+      extraReturnValues: { accessController },
+    } = await setupTestEnvironment(contracts, { returnAccessController: true }));
 
     // make all account the same
     assistant = clerk = admin;
     assistantDR = clerkDR = adminDR;
 
-    // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-
-    // Temporarily grant UPGRADER role to deployer account
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-
-    // Temporarily grant PAUSER role to pauser account
-    await accessController.grantRole(Role.PAUSER, pauser.address);
-
-    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [protocolDiamond.address];
-    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
-    const [beacon] = beacons;
-    const [proxy] = proxies;
-
-    // Deploy the boson token
-    [bosonToken] = await deployMockTokens(["BosonToken"]);
-
-    // set protocolFees
-    protocolFeePercentage = "200"; // 2 %
-    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
-    buyerEscalationDepositPercentage = "1000"; // 10%
-
-    // Add config Handler, so offer id starts at 1
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 1000,
-      },
-      // Protocol fees
-      {
-        percentage: protocolFeePercentage,
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
-    const facetNames = [
-      "SellerHandlerFacet",
-      "BuyerHandlerFacet",
-      "AgentHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "FundsHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "PauseHandlerFacet",
-      "AccountHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
-
-    // Cut the protocol handler facets into the Diamond
-    const { deployedFacets } = await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
-    protocolInitializationFacet = deployedFacets.find((f) => f.name === "ProtocolInitializationHandlerFacet").contract;
-
-    // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
-
-    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonFundsHandler
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonOfferHandler
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonExchangeHandler
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonPauseHandler
-    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonConfigHandler
-    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+    [deployer, protocolTreasury] = await ethers.getSigners();
 
     // Deploy the mock token
     [mockToken] = await deployMockTokens(["Foreign20"]);
+
+    // Get snapshot id
+    snapshotId = await getSnapshot();
+  });
+
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -257,7 +184,7 @@ describe("IBosonFundsHandler", function () {
       await mockToken.mint(assistant.address, "1000000");
 
       // approve protocol to transfer the tokens
-      await mockToken.connect(assistant).approve(protocolDiamond.address, "1000000");
+      await mockToken.connect(assistant).approve(protocolDiamondAddress, "1000000");
 
       // set the deposit amount
       depositAmount = "100";
@@ -392,7 +319,7 @@ describe("IBosonFundsHandler", function () {
         it("Token contract revert for another reason", async function () {
           // insufficient funds
           // approve more than account actually have
-          await mockToken.connect(rando).approve(protocolDiamond.address, depositAmount);
+          await mockToken.connect(rando).approve(protocolDiamondAddress, depositAmount);
           // Attempt to deposit the funds, expecting revert
           await expect(
             fundsHandler.connect(rando).depositFunds(seller.id, mockToken.address, depositAmount)
@@ -411,7 +338,7 @@ describe("IBosonFundsHandler", function () {
 
           // mint tokens and approve
           await Foreign20WithFee.mint(assistant.address, depositAmount);
-          await Foreign20WithFee.connect(assistant).approve(protocolDiamond.address, depositAmount);
+          await Foreign20WithFee.connect(assistant).approve(protocolDiamondAddress, depositAmount);
 
           // Attempt to deposit funds, expecting revert
           await expect(
@@ -423,7 +350,7 @@ describe("IBosonFundsHandler", function () {
           const [foreign20ReturnFalse] = await deployMockTokens(["Foreign20TransferFromReturnFalse"]);
 
           await foreign20ReturnFalse.connect(assistant).mint(assistant.address, depositAmount);
-          await foreign20ReturnFalse.connect(assistant).approve(protocolDiamond.address, depositAmount);
+          await foreign20ReturnFalse.connect(assistant).approve(protocolDiamondAddress, depositAmount);
 
           await expect(
             fundsHandler.connect(assistant).depositFunds(seller.id, foreign20ReturnFalse.address, depositAmount)
@@ -500,8 +427,8 @@ describe("IBosonFundsHandler", function () {
 
         // approve protocol to transfer the tokens
         await Promise.all([
-          mockToken.connect(assistant).approve(protocolDiamond.address, sellerDeposit),
-          mockToken.connect(buyer).approve(protocolDiamond.address, price),
+          mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit),
+          mockToken.connect(buyer).approve(protocolDiamondAddress, price),
         ]);
 
         // deposit to seller's pool
@@ -826,8 +753,8 @@ describe("IBosonFundsHandler", function () {
             await mockToken.mint(buyer.address, price);
 
             // approve protocol to transfer the tokens
-            await mockToken.connect(assistant).approve(protocolDiamond.address, sellerDeposit);
-            await mockToken.connect(buyer).approve(protocolDiamond.address, price);
+            await mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
+            await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
 
             // deposit to seller's pool
             await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerDeposit);
@@ -871,20 +798,6 @@ describe("IBosonFundsHandler", function () {
           });
 
           it("Withdraw when dispute is retracted, it emits a FundsWithdrawn event", async function () {
-            // ProtocolInitializationHandlerFacet has to be passed to deploy function works
-            const facetsToDeploy = await getFacetsWithArgs(["DisputeHandlerFacet"]);
-
-            await deployAndCutFacets(
-              protocolDiamond.address,
-              facetsToDeploy,
-              maxPriorityFeePerGas,
-              "2.1.0",
-              protocolInitializationFacet
-            );
-
-            // Cast Diamond to IBosonDisputeHandler
-            disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
-
             // raise the dispute
             await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -1087,7 +1000,7 @@ describe("IBosonFundsHandler", function () {
             const [foreign20ReturnFalse] = await deployMockTokens(["Foreign20TransferReturnFalse"]);
 
             await foreign20ReturnFalse.connect(assistant).mint(assistant.address, sellerDeposit);
-            await foreign20ReturnFalse.connect(assistant).approve(protocolDiamond.address, sellerDeposit);
+            await foreign20ReturnFalse.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
 
             await fundsHandler.connect(assistant).depositFunds(seller.id, foreign20ReturnFalse.address, sellerDeposit);
 
@@ -1501,11 +1414,11 @@ describe("IBosonFundsHandler", function () {
     context("👉 getAvailableFunds()", async function () {
       it("Returns info also for ERC20 tokens without the name", async function () {
         // Deploy the mock token with no name
-        [mockToken] = await deployMockTokens(["Foreign20NoName"]);
+        const [mockToken] = await deployMockTokens(["Foreign20NoName"]);
         // top up assistants account
         await mockToken.mint(assistant.address, "1000000");
         // approve protocol to transfer the tokens
-        await mockToken.connect(assistant).approve(protocolDiamond.address, "1000000");
+        await mockToken.connect(assistant).approve(protocolDiamondAddress, "1000000");
 
         // Deposit token
         await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, depositAmount);
@@ -1604,8 +1517,8 @@ describe("IBosonFundsHandler", function () {
       await mockToken.mint(buyer.address, `${2 * price}`);
 
       // approve protocol to transfer the tokens
-      await mockToken.connect(assistant).approve(protocolDiamond.address, `${2 * sellerDeposit}`);
-      await mockToken.connect(buyer).approve(protocolDiamond.address, `${2 * price}`);
+      await mockToken.connect(assistant).approve(protocolDiamondAddress, `${2 * sellerDeposit}`);
+      await mockToken.connect(buyer).approve(protocolDiamondAddress, `${2 * price}`);
 
       // deposit to seller's pool
       await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, `${2 * sellerDeposit}`);
@@ -1665,9 +1578,9 @@ describe("IBosonFundsHandler", function () {
 
       it("should update state", async function () {
         // contract token value
-        const contractTokenBalanceBefore = await mockToken.balanceOf(protocolDiamond.address);
+        const contractTokenBalanceBefore = await mockToken.balanceOf(protocolDiamondAddress);
         // contract native token balance
-        const contractNativeBalanceBefore = await ethers.provider.getBalance(protocolDiamond.address);
+        const contractNativeBalanceBefore = await ethers.provider.getBalance(protocolDiamondAddress);
         // seller's available funds
         const sellersAvailableFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
@@ -1675,7 +1588,7 @@ describe("IBosonFundsHandler", function () {
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
 
         // Check that token balance increased
-        const contractTokenBalanceAfter = await mockToken.balanceOf(protocolDiamond.address);
+        const contractTokenBalanceAfter = await mockToken.balanceOf(protocolDiamondAddress);
         // contract token balance should increase for the incoming price
         // seller's deposit was already held in the contract's pool before
         expect(contractTokenBalanceAfter.sub(contractTokenBalanceBefore).toString()).to.eql(
@@ -1696,7 +1609,7 @@ describe("IBosonFundsHandler", function () {
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
 
         // check that native currency balance increased
-        const contractNativeBalanceAfter = await ethers.provider.getBalance(protocolDiamond.address);
+        const contractNativeBalanceAfter = await ethers.provider.getBalance(protocolDiamondAddress);
         // contract token balance should increase for the incoming price
         // seller's deposit was already held in the contract's pool before
         expect(contractNativeBalanceAfter.sub(contractNativeBalanceBefore).toString()).to.eql(
@@ -1767,7 +1680,7 @@ describe("IBosonFundsHandler", function () {
           await otherToken.mint(assistant.address, sellerDeposit);
 
           // approve protocol to transfer the tokens
-          await otherToken.connect(assistant).approve(protocolDiamond.address, sellerDeposit);
+          await otherToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
 
           // deposit to seller's pool
           await fundsHandler.connect(assistant).depositFunds(seller.id, otherToken.address, sellerDeposit);
@@ -1860,15 +1773,15 @@ describe("IBosonFundsHandler", function () {
         expect(exchange.buyerId.toString()).to.eql(randoBuyerId, "Wrong buyer id");
 
         // make sure that randoBuyerId actually belongs to rando address
-        [, buyer] = await accountHandler.getBuyer(randoBuyerId);
-        expect(buyer.wallet).to.eql(rando.address, "Wrong buyer address");
+        let [, buyerStruct] = await accountHandler.getBuyer(randoBuyerId);
+        expect(buyerStruct.wallet).to.eql(rando.address, "Wrong buyer address");
       });
 
       it("if offer is preminted, only sellers funds are encumbered", async function () {
         // deposit to seller's pool to cover for the price
         const buyerId = mockBuyer().id;
         await mockToken.mint(assistant.address, `${2 * price}`);
-        await mockToken.connect(assistant).approve(protocolDiamond.address, `${2 * price}`);
+        await mockToken.connect(assistant).approve(protocolDiamondAddress, `${2 * price}`);
         await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, `${2 * price}`);
         await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, `${2 * price}`, {
           value: `${2 * price}`,
@@ -2026,7 +1939,7 @@ describe("IBosonFundsHandler", function () {
         it("Token contract revert for another reason", async function () {
           // insufficient funds
           // approve more than account actually have
-          await mockToken.connect(rando).approve(protocolDiamond.address, price);
+          await mockToken.connect(rando).approve(protocolDiamondAddress, price);
           // Attempt to commit to an offer, expecting revert
           await expect(exchangeHandler.connect(rando).commitToOffer(rando.address, offerToken.id)).to.revertedWith(
             RevertReasons.ERC20_EXCEEDS_BALANCE
@@ -2035,7 +1948,7 @@ describe("IBosonFundsHandler", function () {
           // not approved
           await mockToken
             .connect(rando)
-            .approve(protocolDiamond.address, ethers.BigNumber.from(price).sub("1").toString());
+            .approve(protocolDiamondAddress, ethers.BigNumber.from(price).sub("1").toString());
           // Attempt to commit to an offer, expecting revert
           await expect(exchangeHandler.connect(rando).commitToOffer(rando.address, offerToken.id)).to.revertedWith(
             RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE
@@ -2125,7 +2038,7 @@ describe("IBosonFundsHandler", function () {
 
           // mint tokens and approve
           await Foreign20WithFee.mint(buyer.address, offerToken.price);
-          await Foreign20WithFee.connect(buyer).approve(protocolDiamond.address, offerToken.price);
+          await Foreign20WithFee.connect(buyer).approve(protocolDiamondAddress, offerToken.price);
 
           // Attempt to commit to offer, expecting revert
           await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
@@ -2439,8 +2352,8 @@ describe("IBosonFundsHandler", function () {
             await mockToken.mint(buyer.address, `${2 * price}`);
 
             // approve protocol to transfer the tokens
-            await mockToken.connect(assistant).approve(protocolDiamond.address, `${2 * sellerDeposit}`);
-            await mockToken.connect(buyer).approve(protocolDiamond.address, `${2 * price}`);
+            await mockToken.connect(assistant).approve(protocolDiamondAddress, `${2 * sellerDeposit}`);
+            await mockToken.connect(buyer).approve(protocolDiamondAddress, `${2 * price}`);
 
             // deposit to seller's pool
             await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, `${2 * sellerDeposit}`);
@@ -2618,8 +2531,8 @@ describe("IBosonFundsHandler", function () {
             await mockToken.mint(buyer.address, `${2 * price}`);
 
             // approve protocol to transfer the tokens
-            await mockToken.connect(assistant).approve(protocolDiamond.address, `${2 * sellerDeposit}`);
-            await mockToken.connect(buyer).approve(protocolDiamond.address, `${2 * price}`);
+            await mockToken.connect(assistant).approve(protocolDiamondAddress, `${2 * sellerDeposit}`);
+            await mockToken.connect(buyer).approve(protocolDiamondAddress, `${2 * price}`);
 
             // deposit to seller's pool
             await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, `${sellerDeposit}`);
@@ -2693,20 +2606,6 @@ describe("IBosonFundsHandler", function () {
 
       context("Final state DISPUTED", async function () {
         beforeEach(async function () {
-          // ProtocolInitializationHandlerFacet has to be passed to deploy function works
-          const facetsToDeploy = await getFacetsWithArgs(["DisputeHandlerFacet"]);
-
-          await deployAndCutFacets(
-            protocolDiamond.address,
-            facetsToDeploy,
-            maxPriorityFeePerGas,
-            "2.1.0",
-            protocolInitializationFacet
-          );
-
-          // Cast Diamond to IBosonDisputeHandler
-          disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
-
           // Set time forward to the offer's voucherRedeemableFrom
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
@@ -3426,7 +3325,7 @@ describe("IBosonFundsHandler", function () {
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
               // approve protocol to transfer the tokens
-              await mockToken.connect(buyer).approve(protocolDiamond.address, agentOffer.price);
+              await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
               await mockToken.mint(buyer.address, agentOffer.price);
               await exchangeHandler.connect(buyer).commitToOffer(buyer.address, agentOffer.id);
 
@@ -3438,7 +3337,7 @@ describe("IBosonFundsHandler", function () {
 
               // escalate the dispute
               await mockToken.mint(buyer.address, buyerEscalationDeposit);
-              await mockToken.connect(buyer).approve(protocolDiamond.address, buyerEscalationDeposit);
+              await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDeposit);
               await disputeHandler.connect(buyer).escalateDispute(exchangeId);
             });
 
@@ -3605,7 +3504,7 @@ describe("IBosonFundsHandler", function () {
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
               // approve protocol to transfer the tokens
-              await mockToken.connect(buyer).approve(protocolDiamond.address, agentOffer.price);
+              await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
               await mockToken.mint(buyer.address, agentOffer.price);
 
               // Commit to Offer
@@ -3666,7 +3565,7 @@ describe("IBosonFundsHandler", function () {
 
               // escalate the dispute
               await mockToken.mint(buyer.address, buyerEscalationDeposit);
-              await mockToken.connect(buyer).approve(protocolDiamond.address, buyerEscalationDeposit);
+              await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDeposit);
               await disputeHandler.connect(buyer).escalateDispute(exchangeId);
             });
 
@@ -3807,7 +3706,7 @@ describe("IBosonFundsHandler", function () {
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
               // approve protocol to transfer the tokens
-              await mockToken.connect(buyer).approve(protocolDiamond.address, agentOffer.price);
+              await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
               await mockToken.mint(buyer.address, agentOffer.price);
 
               // Commit to Offer
@@ -3850,7 +3749,7 @@ describe("IBosonFundsHandler", function () {
 
               // escalate the dispute
               await mockToken.mint(buyer.address, buyerEscalationDeposit);
-              await mockToken.connect(buyer).approve(protocolDiamond.address, buyerEscalationDeposit);
+              await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDeposit);
               await disputeHandler.connect(buyer).escalateDispute(exchangeId);
             });
 
@@ -3987,7 +3886,7 @@ describe("IBosonFundsHandler", function () {
                   .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
                 // approve protocol to transfer the tokens
-                await mockToken.connect(buyer).approve(protocolDiamond.address, agentOffer.price);
+                await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
                 await mockToken.mint(buyer.address, agentOffer.price);
 
                 // Commit to Offer
@@ -4013,7 +3912,7 @@ describe("IBosonFundsHandler", function () {
 
                 // Escalate the dispute
                 await mockToken.mint(buyer.address, buyerEscalationDeposit);
-                await mockToken.connect(buyer).approve(protocolDiamond.address, buyerEscalationDeposit);
+                await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDeposit);
                 tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
 
                 // Get the block timestamp of the confirmed tx and set escalatedDate
@@ -4164,7 +4063,7 @@ describe("IBosonFundsHandler", function () {
                   .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
 
                 // approve protocol to transfer the tokens
-                await mockToken.connect(buyer).approve(protocolDiamond.address, agentOffer.price);
+                await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
                 await mockToken.mint(buyer.address, agentOffer.price);
 
                 // Commit to Offer
@@ -4190,7 +4089,7 @@ describe("IBosonFundsHandler", function () {
 
                 // Escalate the dispute
                 await mockToken.mint(buyer.address, buyerEscalationDeposit);
-                await mockToken.connect(buyer).approve(protocolDiamond.address, buyerEscalationDeposit);
+                await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDeposit);
                 await disputeHandler.connect(buyer).escalateDispute(exchangeId);
               });
 
@@ -4242,7 +4141,7 @@ describe("IBosonFundsHandler", function () {
       context("Changing the protocol fee", async function () {
         beforeEach(async function () {
           // Cast Diamond to IBosonConfigHandler
-          configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+          configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamondAddress);
 
           // expected payoffs
           // buyer: 0
@@ -4312,7 +4211,7 @@ describe("IBosonFundsHandler", function () {
             exchangeId = "2";
 
             // Cast Diamond to IBosonConfigHandler
-            configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+            configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamondAddress);
 
             // expected payoffs
             // buyer: 0
@@ -4376,8 +4275,8 @@ describe("IBosonFundsHandler", function () {
             await mockToken.mint(buyer.address, price);
 
             // approve protocol to transfer the tokens
-            await mockToken.connect(assistant).approve(protocolDiamond.address, sellerDeposit);
-            await mockToken.connect(buyer).approve(protocolDiamond.address, price);
+            await mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
+            await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
 
             // deposit to seller's pool
             await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerDeposit);

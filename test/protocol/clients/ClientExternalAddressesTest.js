@@ -1,86 +1,39 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
 
-const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets.js");
 const { gasLimit } = require("../../../environments");
-const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
-const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolClientImpls } = require("../../../scripts/util/deploy-protocol-client-impls.js");
 const { deployProtocolClientBeacons } = require("../../../scripts/util/deploy-protocol-client-beacons.js");
-const Role = require("../../../scripts/domain/Role");
 const { expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
-const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants.js");
-const { getFacetsWithArgs } = require("../../util/utils.js");
+const { maxPriorityFeePerGas } = require("../../util/constants.js");
+const { setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../../util/utils.js");
 
 describe("IClientExternalAddresses", function () {
-  let accessController, protocolDiamond;
-  let deployer, rando, other1, other3, proxy, protocolTreasury, bosonToken;
+  let deployer, rando, other1, other3;
   let beacon;
   let voucherImplementation, protocolAddress;
-  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
+  let snapshotId;
+  let protocolDiamondAddress;
 
-  beforeEach(async function () {
-    // Set signers
-    [deployer, rando, other1, other3, proxy, protocolTreasury, bosonToken] = await ethers.getSigners();
+  before(async function () {
+    // Specify contracts needed for this test
+    const contracts = {};
 
-    // Deploy accessController
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
+    ({
+      signers: [rando, other1, other3],
+      diamondAddress: protocolDiamondAddress,
+      extraReturnValues: { beacon },
+    } = await setupTestEnvironment(contracts, { returnClient: true }));
 
-    // grant upgrader role
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
+    [deployer] = await ethers.getSigners();
 
-    // Deploy client
-    const protocolClientArgs = [protocolDiamond.address];
-    const [, beacons] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
-    [beacon] = beacons;
+    // Get snapshot id
+    snapshotId = await getSnapshot();
+  });
 
-    // set protocolFees
-    protocolFeePercentage = "200"; // 2 %
-    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
-    buyerEscalationDepositPercentage = "1000"; // 10%
-
-    // Add config Handler, so ids start at 1, and so voucher address can be found
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 10000,
-      },
-      // Protocol fees
-      {
-        percentage: protocolFeePercentage,
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
-    const facetNames = ["ConfigHandlerFacet", "ProtocolInitializationHandlerFacet"];
-
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
-
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
   // Interface support
@@ -179,7 +132,7 @@ describe("IClientExternalAddresses", function () {
 
         it("_impl address is the zero address", async function () {
           // Client args
-          const protocolClientArgs = [protocolDiamond.address];
+          const protocolClientArgs = [protocolDiamondAddress];
 
           // Deploy the ClientBeacon for BosonVoucher
           const ClientBeacon = await ethers.getContractFactory("BosonClientBeacon");

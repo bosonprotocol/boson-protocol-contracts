@@ -1,6 +1,5 @@
 const shell = require("shelljs");
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
 const { assert, expect } = require("chai");
 const Seller = require("../../scripts/domain/Seller");
 const AuthToken = require("../../scripts/domain/AuthToken");
@@ -11,6 +10,7 @@ const { DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolver
 const { mockAuthToken } = require("../util/mock");
 const { deploySuite, upgradeSuite, populateProtocolContract, getProtocolContractState } = require("../util/upgrade");
 const { getGenericContext } = require("./01_generic");
+const { getSnapshot, revertToSnapshot } = require("../util/utils");
 
 const oldVersion = "v2.0.0";
 const newVersion = "v2.1.0";
@@ -63,7 +63,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     }));
     protocolContracts.accountHandler = accountHandler;
 
-    snapshot = await ethers.provider.send("evm_snapshot", []);
+    snapshot = await getSnapshot();
 
     // This context is placed in an uncommon place due to order of test execution.
     // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
@@ -85,9 +85,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   afterEach(async function () {
     // Revert to state right after the upgrade.
-    // This is used so the lengthly setup (deploy+upgrade) is done only once.
-    await ethers.provider.send("evm_revert", [snapshot]);
-    snapshot = await ethers.provider.send("evm_snapshot", []);
+    // This is used so the lengthy setup (deploy+upgrade) is done only once.
+    await revertToSnapshot(snapshot);
+    snapshot = await getSnapshot();
   });
 
   after(async function () {
@@ -96,7 +96,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   });
 
   // Test actions that worked in previous version, but should not work anymore, or work differently
-  // Test methods that were added to see that upgrade was succesful
+  // Test methods that were added to see that upgrade was successful
   context("📋 Breaking changes and new methods", async function () {
     context("Breaking changes", async function () {
       it("Seller addresses are not updated in one step, except for the treasury", async function () {
