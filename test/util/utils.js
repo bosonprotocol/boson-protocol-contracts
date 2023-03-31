@@ -121,6 +121,8 @@ function compareOfferStructs(returnedOffer) {
 }
 
 async function setNextBlockTimestamp(timestamp) {
+  if (typeof timestamp == "string" && timestamp.startsWith("0x0") && timestamp.length > 3)
+    timestamp = "0x" + timestamp.substring(3);
   await provider.send("evm_setNextBlockTimestamp", [timestamp]);
   await provider.send("evm_mine", []);
 }

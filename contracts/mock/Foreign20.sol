@@ -209,8 +209,7 @@ contract Foreign20WithFee is Foreign20 {
  * @notice Mock ERC-(20) for Unit Testing
  */
 contract Foreign20TransferReturnFalse is Foreign20 {
-    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
-        super.transfer(recipient, amount);
+    function transfer(address, uint256) public virtual override returns (bool) {
         return false;
     }
 }
@@ -223,11 +222,10 @@ contract Foreign20TransferReturnFalse is Foreign20 {
  */
 contract Foreign20TransferFromReturnFalse is Foreign20 {
     function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
+        address,
+        address,
+        uint256
     ) public virtual override returns (bool) {
-        super.transferFrom(sender, recipient, amount);
         return false;
     }
 }

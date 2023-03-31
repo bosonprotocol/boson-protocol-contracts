@@ -29,13 +29,7 @@ import { IBosonFundsHandler } from "../../../interfaces/handlers/IBosonFundsHand
  * N.B. Although this contract extends OwnableUpgradeable and ERC721Upgradeable,
  *      that is only for convenience, to avoid conflicts with mixed imports.
  */
-contract BosonVoucherBase is
-    IBosonVoucher,
-    BeaconClientBase,
-    OwnableUpgradeable,
-    ERC721Upgradeable,
-    IERC721ReceiverUpgradeable
-{
+contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
     using Address for address;
 
     // Struct that is used to manipulate private variables from ERC721UpgradeableStorage

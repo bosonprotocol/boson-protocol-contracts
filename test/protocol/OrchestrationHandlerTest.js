@@ -470,6 +470,18 @@ describe("IBosonOrchestrationHandler", function () {
          * - If calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
          * - Received ERC20 token amount differs from the expected value
          */
+        it("The orchestration region of protocol is paused", async function () {
+          // Pause the orchestration region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Orchestration]);
+
+          // Attempt to raise a dispute, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(buyer)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("The disputes region of protocol is paused", async function () {
           // Pause the disputes region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
