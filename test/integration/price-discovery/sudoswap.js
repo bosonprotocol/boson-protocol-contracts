@@ -263,7 +263,7 @@ describe("[@skip-on-coverage] sudoswap integration", function() {
     await bosonVoucher.connect(assistant).setApprovalForAll(priceDiscoveryContract.address, true);
     tx = await exchangeHandler
       .connect(buyer)
-      .commitToPreMintedOfferWithPriceDiscovery(buyer.address, offer.id, priceDiscovery, {
+      .commitToOffer(buyer.address, offer.id, priceDiscovery, {
         value: inputAmount,
       });
 

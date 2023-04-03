@@ -25,7 +25,7 @@ const { seaportFixtures } = require("../seaport/fixtures");
 const { SEAPORT_ADDRESS } = require("../../util/constants");
 const ItemType = require("../seaport/ItemTypeEnum");
 
-describe("[@skip-on-coverage] seaport integration", function () {
+describe("[@skip-on-coverage] seaport integration", function() {
   this.timeout(100000000);
   let bosonVoucher, bosonToken;
   let deployer, protocol, assistant, buyer, DR;
@@ -36,7 +36,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
   let seller;
   let seaport;
 
-  before(async function () {
+  before(async function() {
     let protocolTreasury;
     [deployer, protocol, assistant, protocolTreasury, buyer, DR] = await ethers.getSigners();
 
@@ -165,7 +165,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
       .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
   });
 
-  it("Seaport criteria-based order is used as price discovery mechanism for a BP offer", async function () {
+  it("Seaport criteria-based order is used as price discovery mechanism for a BP offer", async function() {
     // Create seaport offer which tokenId 1
     const seaportOffer = fixtures.getTestVoucher(ItemType.ERC721_WITH_CRITERIA, 0, bosonVoucher.address, 1, 1);
     const consideration = fixtures.getTestToken(
@@ -223,7 +223,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
 
     tx = await exchangeHandler
       .connect(buyer)
-      .commitToPreMintedOfferWithPriceDiscovery(buyer.address, offer.id, priceDiscovery, {
+      .commitToOffer(buyer.address, offer.id, priceDiscovery, {
         value,
       });
 

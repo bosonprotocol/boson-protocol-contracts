@@ -40,8 +40,13 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
+     * @param _priceDiscovery - price discovery data (if applicable). See BosonTypes.PriceDiscovery
      */
-    function commitToOffer(address payable _buyer, uint256 _offerId) external payable;
+    function commitToOffer(
+        address payable _buyer,
+        uint256 _offerId,
+        BosonTypes.PriceDiscovery calldata _priceDiscovery
+    ) external payable;
 
     /**
      * @notice Commits to a preminted offer (first step of an exchange).
@@ -69,33 +74,6 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
         uint256 _offerId,
         uint256 _exchangeId
     ) external;
-
-    /**
-     * @notice Commits to a preminted offer (first step of an exchange).
-     *
-     * Emits a BuyerCommitted event if successful.
-     *
-     * Reverts if:
-     * - The exchanges region of protocol is paused
-     * - The buyers region of protocol is paused
-     * - Caller is not the voucher contract, owned by the seller
-     * - Exchange exists already
-     * - Offer has been voided
-     * - Offer has expired
-     * - Offer is not yet available for commits
-     * - Buyer account is inactive
-     * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Seller has less funds available than sellerDeposit and price
-     *
-     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _offerId - the id of the offer to commit to
-     * @param _priceDiscovery - price
-     */
-    function commitToPreMintedOfferWithPriceDiscovery(
-        address payable _buyer,
-        uint256 _offerId,
-        BosonTypes.PriceDiscovery calldata _priceDiscovery
-    ) external payable;
 
     /**
      * @notice Completes an exchange.

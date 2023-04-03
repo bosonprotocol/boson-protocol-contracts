@@ -75,15 +75,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
+     * @param _priceDiscovery - price discovery data (if applicable). See BosonTypes.PriceDiscovery
      */
-    function commitToOffer(address payable _buyer, uint256 _offerId)
-        external
-        payable
-        override
-        exchangesNotPaused
-        buyersNotPaused
-        nonReentrant
-    {
+    function commitToOffer(
+        address payable _buyer,
+        uint256 _offerId,
+        PriceDiscovery calldata _priceDiscovery
+    ) external payable override exchangesNotPaused buyersNotPaused {
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
 
@@ -95,7 +93,28 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Make sure offer exists, is available, and isn't void, expired, or sold out
         require(exists, NO_SUCH_OFFER);
 
-        commitToOfferInternal(_buyer, offer, 0, false);
+        if (offer.priceType == OfferPrice.Discovery) {
+            fulfillPriceDiscoveryOrder(_buyer, _offerId, offer.sellerId, _priceDiscovery);
+        } else {
+            commitToOfferInternal(_buyer, offer, 0, false);
+        }
+    }
+
+    function fulfillPriceDiscoveryOrder(
+        address payable _buyer,
+        uint256 _offerId,
+        uint256 _sellerId,
+        PriceDiscovery calldata _priceDiscovery
+    ) internal exchangesNotPaused buyersNotPaused nonReentrant {
+        // Make sure  caller provided price discovery data if offer price type is discovery
+        require(
+            _priceDiscovery.price > 0 &&
+                _priceDiscovery.priceDiscoveryContract != address(0) &&
+                _priceDiscovery.priceDiscoveryData.length > 0,
+            "INVALID_PRICE_DISCOVERY"
+        );
+
+        fulfilOrder(_offerId, _priceDiscovery, _buyer, _sellerId, 0);
     }
 
     /**
@@ -139,36 +158,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         require(!exists, EXCHANGE_ALREADY_EXISTS);
 
         commitToOfferInternal(_buyer, offer, _exchangeId, true);
-    }
-
-    function commitToPreMintedOfferWithPriceDiscovery(
-        address payable _buyer,
-        uint256 _offerId,
-        PriceDiscovery calldata _priceDiscovery
-    ) external payable exchangesNotPaused buyersNotPaused nonReentrant {
-        // Make sure buyer address is not zero address
-        require(_buyer != address(0), INVALID_ADDRESS);
-
-        // Get the offer
-        bool exists;
-        Offer storage offer;
-        (exists, offer) = fetchOffer(_offerId);
-
-        // Make sure offer exists, is available, and isn't void, expired, or sold out
-        require(exists, NO_SUCH_OFFER);
-
-        // Make sure  caller provided price discovery data if offer price type is discovery
-        // require(offer.priceType == OfferPrice.Discovery, "INVALID_PRICE_TYPE");
-        require(
-            _priceDiscovery.price > 0 &&
-                _priceDiscovery.priceDiscoveryContract != address(0) &&
-                _priceDiscovery.priceDiscoveryData.length > 0,
-            "INVALID_PRICE_DISCOVERY"
-        );
-
-        // call price discovery and get actual price which then will can commitToPreMintedOffer on when price discovery contract calls `beforeTokenTransfer`
-        // It might be lower tha submitted for buy orders and higher for sell orders
-        fulfilOrder(offer.id, _priceDiscovery, _buyer, offer.sellerId, 0); // we don't know the exchange id yet
     }
 
     /**
