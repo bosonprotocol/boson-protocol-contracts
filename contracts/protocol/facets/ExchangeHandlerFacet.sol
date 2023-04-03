@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
+import "hardhat/console.sol";
+
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
@@ -223,8 +225,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Fetch or create buyer
         uint256 buyerId = getValidBuyer(_buyer);
 
-        // Encumber funds before creating the exchange.
-        FundsLib.encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
+        if (_offer.priceType != OfferPrice.Discovery) {
+            // Encumber funds before creating the exchange.
+            FundsLib.encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
+        }
 
         // Create and store a new exchange
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];

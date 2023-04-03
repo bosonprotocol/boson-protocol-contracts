@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
+import "hardhat/console.sol";
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
@@ -765,6 +766,7 @@ contract BosonVoucherBase is
     function getPreMintStatus(uint256 _tokenId) public view returns (bool committable, address owner) {
         // Commitable if not committable yet and owners don't exist or the owner is PD contract
         bool exists = _exists(_tokenId);
+
         bool isOwnedByPriceDiscovery = exists && ownerOf(_tokenId) == priceDiscoveryContract;
 
         if (!_committed[_tokenId] && (!exists || (isOwnedByPriceDiscovery && _msgSender() == priceDiscoveryContract))) {

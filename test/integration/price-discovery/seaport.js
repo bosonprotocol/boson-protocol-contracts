@@ -3,7 +3,13 @@ const ethers = hre.ethers;
 const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond");
 const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets");
-const { getFacetsWithArgs, calculateContractAddress, objectToArray, getEvent } = require("../../util/utils");
+const {
+  getFacetsWithArgs,
+  calculateContractAddress,
+  objectToArray,
+  getEvent,
+  deriveTokenId,
+} = require("../../util/utils");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants");
 const { mockSeller, mockAuthToken, mockVoucherInitValues, mockOffer, mockDisputeResolver } = require("../../util/mock");
 const { expect, assert } = require("chai");
@@ -112,7 +118,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
     weth = await wethFactory.deploy();
     await weth.deployed();
 
-    facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [weth.address];
+    facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [1, weth.address];
 
     // Cut the protocol handler facets into the Diamond
     await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
@@ -167,7 +173,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
       0,
       constants.AddressZero,
       offer.price,
-      ethers.BigNumber.from(offer.price).add(ethers.utils.parseUnits("1", "ether")),
+      offer.price,
       bosonVoucher.address
     );
 
@@ -198,7 +204,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
     order.numerator = 1;
     order.extraData = "0x";
 
-    const identifier = 2;
+    const identifier = deriveTokenId(offer.id, 2);
     const resolvers = [fixtures.getCriteriaResolver(0, SeaportSide.OFFER, 0, identifier, [])];
 
     const priceDiscoveryData = seaport.interface.encodeFunctionData("fulfillAdvancedOrder", [
@@ -208,6 +214,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
       constants.AddressZero,
     ]);
 
+    console.log("seaportjs", value);
     const priceDiscovery = new PriceDiscovery(value, seaport.address, priceDiscoveryData, Side.Ask);
 
     // Seller needs to deposit weth in order to fill the escrow at the last step

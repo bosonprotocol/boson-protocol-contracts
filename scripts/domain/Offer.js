@@ -40,7 +40,6 @@ class Offer {
     metadataUri,
     metadataHash,
     voided,
-    offerType,
     priceType
   ) {
     this.id = id;
@@ -53,7 +52,6 @@ class Offer {
     this.metadataUri = metadataUri;
     this.metadataHash = metadataHash;
     this.voided = voided;
-    this.offerType = offerType;
     this.priceType = priceType;
   }
 
@@ -74,7 +72,6 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
-      offerType,
       priceType,
     } = o;
 
@@ -89,7 +86,6 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
-      offerType,
       priceType
     );
   }
@@ -110,7 +106,6 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
-      offerType,
       priceType;
 
     // destructure struct
@@ -125,7 +120,6 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
-      offerType,
       priceType,
     ] = struct;
 
@@ -140,7 +134,6 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
-      offerType,
       priceType,
     });
   }
@@ -177,7 +170,6 @@ class Offer {
       this.metadataUri,
       this.metadataHash,
       this.voided,
-      this.offerType,
       this.priceType,
     ];
   }

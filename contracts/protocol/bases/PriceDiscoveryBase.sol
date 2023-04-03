@@ -135,12 +135,12 @@ contract PriceDiscoveryBase is ProtocolBase {
         delete ps.incomingVoucherId;
         delete ps.incomingVoucherCloneAddress;
 
-        // uint256 overchargedAmount = _priceDiscovery.price - actualPrice;
+        uint256 overchargedAmount = _priceDiscovery.price - actualPrice;
 
-        // if (overchargedAmount > 0) {
-        //     // Return the surplus to buyer
-        //     FundsLib.transferFundsFromProtocol(exchangeToken, payable(_buyer), overchargedAmount);
-        // }
+        if (overchargedAmount > 0) {
+            // Return the surplus to buyer
+            FundsLib.transferFundsFromProtocol(exchangeToken, payable(_buyer), overchargedAmount);
+        }
     }
 
     /**

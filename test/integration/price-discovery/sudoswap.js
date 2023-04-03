@@ -226,7 +226,6 @@ describe("[@skip-on-coverage] sudoswap integration", function() {
     // need to deposit NFTs
     await bosonVoucher.connect(assistant).setApprovalForAll(lssvmPairFactory.address, true);
 
-
     const tokenId = deriveTokenId(offer.id, 1);
     tx = await lssvmPairFactory.connect(assistant).depositNFTs(bosonVoucher.address, [tokenId], contractAddress);
 

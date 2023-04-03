@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
+import "hardhat/console.sol";
 import { IBosonOfferEvents } from "../../interfaces/events/IBosonOfferEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
@@ -243,6 +244,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.exchangeToken = _offer.exchangeToken;
         offer.metadataUri = _offer.metadataUri;
         offer.metadataHash = _offer.metadataHash;
+        console.log("creating offer with type %s", uint8(_offer.priceType));
         offer.priceType = _offer.priceType;
 
         // Get storage location for offer dates

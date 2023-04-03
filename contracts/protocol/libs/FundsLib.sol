@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
+import "hardhat/console.sol";
 import "../../domain/BosonConstants.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
@@ -81,7 +82,7 @@ library FundsLib {
         address exchangeToken = offer.exchangeToken;
 
         bool isPriceDiscovery = _priceType == BosonTypes.OfferPrice.Discovery;
-        // if offer is non-preminted or is preMinted but price type is discovery the transaction is starting from protocol and caller msut provide the payment
+        // if offer is non-preminted or is preMinted but price type is discovery the transaction is starting from protocol and caller must provide the payment
         if (!_isPreminted || isPriceDiscovery) {
             validateIncomingPayment(exchangeToken, _price);
             emit FundsEncumbered(_buyerId, exchangeToken, _price, sender);
@@ -114,6 +115,9 @@ library FundsLib {
      */
     function validateIncomingPayment(address _exchangeToken, uint256 _value) internal {
         if (_exchangeToken == address(0)) {
+            console.log("validateIncomingPayment");
+            console.log(msg.value);
+            console.log(_value);
             // if transfer is in the native currency, msg.value must be at leat the price
             require(msg.value >= _value, INSUFFICIENT_VALUE_RECEIVED);
         } else {
