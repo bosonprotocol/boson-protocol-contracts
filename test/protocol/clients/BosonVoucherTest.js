@@ -152,6 +152,13 @@ describe("IBosonVoucher", function () {
       const balanceAfter = await ethers.provider.getBalance(bosonVoucher.address);
       expect(balanceAfter.sub(balanceBefore)).to.eq(amount);
     });
+
+    it("Cannot initialize voucher twice", async function () {
+      const initalizableClone = await ethers.getContractAt("IInitializableVoucherClone", bosonVoucher.address);
+      await expect(initalizableClone.initializeVoucher(2, assistant.address, voucherInitValues)).to.be.revertedWith(
+        RevertReasons.INITIALIZABLE_ALREADY_INITIALIZED
+      );
+    });
   });
 
   context("issueVoucher()", function () {
