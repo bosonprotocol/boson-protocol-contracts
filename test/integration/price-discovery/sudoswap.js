@@ -4,7 +4,7 @@ const ethers = hre.ethers;
 const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond");
 const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets");
-const { getFacetsWithArgs, calculateContractAddress } = require("../../util/utils");
+const { getFacetsWithArgs, calculateContractAddress, deriveTokenId } = require("../../util/utils");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants");
 const { mockSeller, mockAuthToken, mockVoucherInitValues, mockOffer, mockDisputeResolver } = require("../../util/mock");
 const { expect } = require("chai");
@@ -225,7 +225,10 @@ describe("[@skip-on-coverage] sudoswap integration", function() {
 
     // need to deposit NFTs
     await bosonVoucher.connect(assistant).setApprovalForAll(lssvmPairFactory.address, true);
-    tx = await lssvmPairFactory.connect(assistant).depositNFTs(bosonVoucher.address, [1], contractAddress);
+
+
+    const tokenId = deriveTokenId(offer.id, 1);
+    tx = await lssvmPairFactory.connect(assistant).depositNFTs(bosonVoucher.address, [tokenId], contractAddress);
 
     const priceDiscoveryContract = await ethers.getContractAt("LSSVMPairMissingEnumerableETH", contractAddress);
 

@@ -406,8 +406,12 @@ contract BosonVoucherBase is
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
         (bool committable, ) = getPreMintStatus(_tokenId);
 
-        if (committable && _to != priceDiscoveryContract) {
-            silentMintAndSetPremintStatus(_from, _tokenId);
+        if (committable) {
+            silentMint(_from, _tokenId);
+            if (_to != priceDiscoveryContract) {
+                // Update commitable status
+                _isCommittable = true;
+            }
         }
 
         super.transferFrom(_from, _to, _tokenId);
@@ -424,8 +428,12 @@ contract BosonVoucherBase is
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
         (bool committable, ) = getPreMintStatus(_tokenId);
 
-        if (committable && _to != priceDiscoveryContract) {
-            silentMintAndSetPremintStatus(_from, _tokenId);
+        if (committable) {
+            silentMint(_from, _tokenId);
+            if (_to != priceDiscoveryContract) {
+                // Update commitable status
+                _isCommittable = true;
+            }
         }
 
         super.safeTransferFrom(_from, _to, _tokenId, _data);
@@ -731,16 +739,16 @@ contract BosonVoucherBase is
             // Set _isCommittable to false
             _isCommittable = false;
 
+            // Derive the offer id
+            uint256 offerId = _tokenId >> 128;
+
             if (_msgSender() == priceDiscoveryContract) {
-                uint256 offerId = _tokenId >> 128;
-                setIncomingVoucherId(_tokenId, offerId);
+                uint256 sellerId = getSellerId();
+                setIncomingVoucherId(_tokenId, sellerId);
             }
 
             // Set the preminted token as committed
             _committed[_tokenId] = true;
-
-            // Derive the offer id
-            uint256 offerId = _tokenId >> 128;
 
             // If this is a transfer of preminted token, treat it differently
             address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
@@ -758,8 +766,8 @@ contract BosonVoucherBase is
         // Commitable if not committable yet and owners don't exist or the owner is PD contract
         bool exists = _exists(_tokenId);
         bool isOwnedByPriceDiscovery = exists && ownerOf(_tokenId) == priceDiscoveryContract;
-        bool isFromAndOwnedByPriceDiscovery = isOwnedByPriceDiscovery && _msgSender() == priceDiscoveryContract;
-        if (!_committed[_tokenId] && (!exists || isFromAndOwnedByPriceDiscovery)) {
+
+        if (!_committed[_tokenId] && (!exists || (isOwnedByPriceDiscovery && _msgSender() == priceDiscoveryContract))) {
             // it might be a pre-minted token. Preminted tokens have offerId in the upper 128 bits
             uint256 offerId = _tokenId >> 128;
 
@@ -828,14 +836,16 @@ contract BosonVoucherBase is
     /*
      * Updates owners, but do not emit Transfer event. Event was already emited during pre-mint.
      */
-    function silentMintAndSetPremintStatus(address _from, uint256 _tokenId) internal {
+    function silentMint(address _from, uint256 _tokenId) internal {
         require(_from == owner() || _from == address(this) || _from == priceDiscoveryContract, NO_SILENT_MINT_ALLOWED);
 
         // update data, so transfer will succeed
         getERC721UpgradeableStorage()._owners[_tokenId] = _from;
+    }
 
-        // Update commitable status
-        _isCommittable = true;
+    function _isApprovedOrOwner(address spender, uint256 tokenId) internal view override returns (bool) {
+        address owner = ownerOf(tokenId);
+        return (spender == owner || isApprovedForAll(owner, spender) || getApproved(tokenId) == spender);
     }
 }
 

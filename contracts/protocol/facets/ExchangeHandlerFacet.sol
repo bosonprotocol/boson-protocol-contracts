@@ -33,6 +33,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * Set EXCHANGE_ID_2_2_0 in the constructor.
      *
      * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
+     * @param _weth - the address of the WETH contract
      */
     constructor(uint256 _firstExchangeId2_2_0, address _weth) PriceDiscoveryBase(_weth) {
         EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
@@ -153,7 +154,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
         // Make sure offer exists, is available, and isn't void, expired, or sold out
         require(exists, NO_SUCH_OFFER);
-        uint256 price;
 
         // Make sure  caller provided price discovery data if offer price type is discovery
         // require(offer.priceType == OfferPrice.Discovery, "INVALID_PRICE_TYPE");
@@ -1090,11 +1090,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         bytes calldata
     ) public virtual override returns (bytes4) {
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-
-        // If incomingVoucherId is 0, it means that the PD does not differentiate between vouchers. In this case, we only know the voucher id here
-        if (ps.incomingVoucherId == 0) {
-            ps.incomingVoucherId = _tokenId;
-        }
 
         require(
             ps.incomingVoucherId == _tokenId && ps.incomingVoucherCloneAddress == msg.sender,
