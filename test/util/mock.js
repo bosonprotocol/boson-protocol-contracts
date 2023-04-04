@@ -22,22 +22,12 @@ const Agent = require("../../scripts/domain/Agent");
 const Receipt = require("../../scripts/domain/Receipt");
 const Voucher = require("../../scripts/domain/Voucher");
 const Dispute = require("../../scripts/domain/Dispute");
-const { applyPercentage } = require("../../test/util/utils.js");
+const { applyPercentage, incrementer } = require("../../test/util/utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
 const OfferPrice = require("../../scripts/domain/OfferPrice");
 let DisputeResolver = require("../../scripts/domain/DisputeResolver.js");
 let Seller = require("../../scripts/domain/Seller");
 
-function* incrementer() {
-  let i = 1;
-  while (true) {
-    const reset = yield (i++).toString();
-    if (reset) {
-      // reset to 0 instead of 1 to not count the reset call
-      i = 0;
-    }
-  }
-}
 const accountId = incrementer();
 
 function mockOfferDurations() {

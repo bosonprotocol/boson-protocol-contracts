@@ -9,23 +9,26 @@ const {
   objectToArray,
   getEvent,
   deriveTokenId,
+  incrementer,
 } = require("../../util/utils");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants");
-const { mockSeller, mockAuthToken, mockVoucherInitValues, mockOffer, mockDisputeResolver } = require("../../util/mock");
+const {
+  mockSeller,
+  mockAuthToken,
+  mockVoucherInitValues,
+  mockOffer,
+  mockDisputeResolver,
+  accountId,
+} = require("../../util/mock");
 const { expect, assert } = require("chai");
 const Role = require("../../../scripts/domain/Role");
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
-const SeaportSide = require("../seaport/SideEnum");
-const Side = require("../../../scripts/domain/Side");
-const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const { constants } = require("ethers");
 const OfferPrice = require("../../../scripts/domain/OfferPrice");
-const { seaportFixtures } = require("../seaport/fixtures");
-const { SEAPORT_ADDRESS } = require("../../util/constants");
-const ItemType = require("../seaport/ItemTypeEnum");
+const { AUCTION_HOUSE_ADDRESS } = require("../../util/constants");
 
-describe("[@skip-on-coverage] seaport integration", function () {
+describe("[@skip-on-coverage] auctionProtocol integration", function () {
   this.timeout(100000000);
   let bosonVoucher, bosonToken;
   let deployer, protocol, assistant, buyer, DR;
@@ -34,9 +37,11 @@ describe("[@skip-on-coverage] seaport integration", function () {
   let exchangeHandler;
   let weth;
   let seller;
-  let seaport;
+  let auctionProtocol;
 
   before(async function () {
+    accountId.next(true);
+
     let protocolTreasury;
     [deployer, protocol, assistant, protocolTreasury, buyer, DR] = await ethers.getSigners();
 
@@ -148,16 +153,15 @@ describe("[@skip-on-coverage] seaport integration", function () {
     const voucherAddress = calculateContractAddress(accountHandler.address, seller.id);
     bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
 
-    seaport = await ethers.getContractAt("Seaport", SEAPORT_ADDRESS);
-
-    await bosonVoucher.connect(assistant).setPriceDiscoveryContract(seaport.address);
-    await bosonVoucher.connect(assistant).setApprovalForAllToContract(seaport.address, true);
-
-    fixtures = await seaportFixtures(seaport);
+    const AuctionHouseFactory = await ethers.getContractFactory("AuctionHouse");
+    auctionProtocol = await AuctionHouseFactory.deploy(weth.address);
 
     // Pre mint range
-    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, bosonVoucher.address);
+    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
     await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
+
+    await bosonVoucher.connect(assistant).setPriceDiscoveryContract(auctionProtocol.address);
+    await bosonVoucher.connect(assistant).setApprovalForAll(auctionProtocol.address, true);
 
     // Deposit seller funds so the commit will succeed
     await fundsHandler
@@ -165,72 +169,47 @@ describe("[@skip-on-coverage] seaport integration", function () {
       .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
   });
 
-  it("Seaport criteria-based order is used as price discovery mechanism for a BP offer", async function () {
-    // Create seaport offer which tokenId 1
-    const seaportOffer = fixtures.getTestVoucher(ItemType.ERC721_WITH_CRITERIA, 0, bosonVoucher.address, 1, 1);
-    const consideration = fixtures.getTestToken(
-      ItemType.NATIVE,
+  it("auctionProtocol criteria-based order is used as price discovery mechanism for a BP offer", async function () {
+    // Create auctionProtocol offer which tokenId 1
+    const tokenId = deriveTokenId(offer.id, 2);
+
+    await auctionProtocol.connect(assistant).createAuction(
+      tokenId,
+      bosonVoucher.address,
+      60 * 60 * 24 * 7, // 1 week
+      offer.price,
+      ethers.constants.AddressZero,
       0,
-      constants.AddressZero,
-      offer.price,
-      offer.price,
-      bosonVoucher.address
+      ethers.constants.AddressZero
     );
 
-    const { order, orderHash, value } = await fixtures.getOrder(
-      bosonVoucher,
-      undefined,
-      [seaportOffer], //offer
-      [consideration],
-      0, // full
-      offerDates.validFrom, // startDate
-      offerDates.validUntil // endDate
-    );
+    const auctionId = 0;
+    await auctionProtocol.connect(buyer).createBid(auctionId, offer.price, { value: offer.price });
 
-    const orders = [objectToArray(order)];
-    const calldata = seaport.interface.encodeFunctionData("validate", [orders]);
+    const [, , , , duration, firstBidTime] = await auctionProtocol.auctions(auctionId);
+    const endTime = firstBidTime.add(duration);
 
-    await bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata);
-    await bosonVoucher.connect(assistant).setApprovalForAllToContract(seaport.address, true);
+    await ethers.provider.send("evm_setNextBlockTimestamp", [endTime.toNumber()]);
 
-    let totalFilled, isValidated;
+    await auctionProtocol.endAuction(0);
 
-    ({ isValidated, totalFilled } = await seaport.getOrderStatus(orderHash));
-    assert(isValidated, "Order is not validated");
-    assert.equal(totalFilled.toNumber(), 0);
+    expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
 
-    // turn order into advanced order
-    order.denominator = 1;
-    order.numerator = 1;
-    order.extraData = "0x";
-
-    const identifier = deriveTokenId(offer.id, 2);
-    const resolvers = [fixtures.getCriteriaResolver(0, SeaportSide.OFFER, 0, identifier, [])];
-
-    const priceDiscoveryData = seaport.interface.encodeFunctionData("fulfillAdvancedOrder", [
-      order,
-      resolvers,
-      constants.HashZero,
-      constants.AddressZero,
-    ]);
-
-    console.log("seaportjs", value);
-    const priceDiscovery = new PriceDiscovery(value, seaport.address, priceDiscoveryData, Side.Ask);
-
-    // Seller needs to deposit weth in order to fill the escrow at the last step
-    await weth.connect(buyer).deposit({ value });
-    await weth.connect(buyer).approve(exchangeHandler.address, value);
-
-    tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, priceDiscovery, {
-      value,
-    });
-
-    const receipt = await tx.wait();
-
-    ({ totalFilled } = await seaport.getOrderStatus(orderHash));
-    assert.equal(totalFilled.toNumber(), 1);
-    const event = getEvent(receipt, seaport, "OrderFulfilled");
-
-    assert.equal(orderHash, event[0]);
+    // const calldata = auctionProtocol.interface.encodeFunctionData("endAuction", [orders]);
+    // await bosonVoucher.connect(assistant).callExternalContract(auctionProtocol.addr ess, calldata);
+    // await bosonVoucher.connect(assistant).setApprovalForAllToContract(auctionProtocol.address, true);
+    // const priceDiscoveryData = auctionProtocol.interface.encodeFunctionData("fulfillAdvancedOrder", [
+    //   order,
+    //   resolvers,
+    //   constants.HashZero,
+    //   constants.AddressZero,
+    // ]);
+    // const priceDiscovery = new PriceDiscovery(value, auctionProtocol.address, priceDiscoveryData, Side.Ask);
+    // // Seller needs to deposit weth in order to fill the escrow at the last step
+    // await weth.connect(buyer).deposit({ value });
+    // await weth.connect(buyer).approve(exchangeHandler.address, value);
+    // tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, priceDiscovery, {
+    //   value,
+    // });
   });
 });

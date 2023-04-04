@@ -151,17 +151,17 @@ async function prepareDataSignatureParameters(
   const domainType =
     type == "Protocol"
       ? [
-        { name: "name", type: "string" },
-        { name: "version", type: "string" },
-        { name: "verifyingContract", type: "address" },
-        { name: "salt", type: "bytes32" },
-      ]
+          { name: "name", type: "string" },
+          { name: "version", type: "string" },
+          { name: "verifyingContract", type: "address" },
+          { name: "salt", type: "bytes32" },
+        ]
       : [
-        { name: "name", type: "string" },
-        { name: "version", type: "string" },
-        { name: "chainId", type: "uint256" },
-        { name: "verifyingContract", type: "address" },
-      ];
+          { name: "name", type: "string" },
+          { name: "version", type: "string" },
+          { name: "chainId", type: "uint256" },
+          { name: "verifyingContract", type: "address" },
+        ];
 
   const domainData = {
     name: domainName ?? "Boson Protocol",
@@ -288,6 +288,17 @@ function deriveTokenId(offerId, exchangeId) {
   return hre.ethers.BigNumber.from(offerId).shl(128).add(exchangeId);
 }
 
+function* incrementer() {
+  let i = 0;
+  while (true) {
+    const reset = yield (i++).toString();
+    if (reset) {
+      // reset to 0 instead of 1 to not count the reset call
+      i = 0;
+    }
+  }
+}
+
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.eventEmittedWithArgs = eventEmittedWithArgs;
@@ -301,3 +312,4 @@ exports.getFacetsWithArgs = getFacetsWithArgs;
 exports.compareOfferStructs = compareOfferStructs;
 exports.objectToArray = objectToArray;
 exports.deriveTokenId = deriveTokenId;
+exports.incrementer = incrementer;
