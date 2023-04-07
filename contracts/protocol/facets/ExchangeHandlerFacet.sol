@@ -206,6 +206,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
             // Get next exchange id for preminted offers
             _exchangeId = protocolCounters().nextExchangeId++;
+        } else {
+            require(_exchangeId > 0, INVALID_EXCHANGE_ID);
         }
 
         // Authorize the buyer to commit if offer is in a conditional group
@@ -214,6 +216,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Fetch or create buyer
         uint256 buyerId = getValidBuyer(_buyer);
 
+        // Price discovery offers have the funds encumbered in PriceDiscoveryBase
         if (_offer.priceType != OfferPrice.Discovery) {
             // Encumber funds before creating the exchange.
             FundsLib.encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
@@ -565,6 +568,32 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
         // Notify watchers of state change
         emit VoucherTransferred(exchange.offerId, _exchangeId, buyerId, msgSender());
+    }
+
+    function onPremintedVoucherTransferred(
+        uint256 _tokenId,
+        address payable _buyer,
+        address _from,
+        address rangeOwner
+    ) external override buyersNotPaused {
+        // Derive the offer id
+        uint256 offerId = _tokenId >> 128;
+
+        // Get the offer
+        (, Offer storage offer) = fetchOffer(offerId);
+
+        if (offer.priceType == PriceType.Discovery) {
+            // Store the information about incoming voucher
+            ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+
+            uint256 exchangeId = _tokenId & type(uint128).max;
+
+            (Seller storage seller, ) = fetchSeller(offer.sellerId);
+
+            if (ps.incomingVoucherCloneAddress != address(0)) {
+                commitToOfferInternal(_buyer, offer.id, exchangeId, true);
+            } else if (from == rangeOwner) {}
+        }
     }
 
     /**

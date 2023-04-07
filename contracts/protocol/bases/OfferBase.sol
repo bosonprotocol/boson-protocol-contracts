@@ -244,7 +244,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.exchangeToken = _offer.exchangeToken;
         offer.metadataUri = _offer.metadataUri;
         offer.metadataHash = _offer.metadataHash;
-        console.log("creating offer with type %s", uint8(_offer.priceType));
         offer.priceType = _offer.priceType;
 
         // Get storage location for offer dates

@@ -115,9 +115,6 @@ library FundsLib {
      */
     function validateIncomingPayment(address _exchangeToken, uint256 _value) internal {
         if (_exchangeToken == address(0)) {
-            console.log("validateIncomingPayment");
-            console.log(msg.value);
-            console.log(_value);
             // if transfer is in the native currency, msg.value must be at leat the price
             require(msg.value >= _value, INSUFFICIENT_VALUE_RECEIVED);
         } else {

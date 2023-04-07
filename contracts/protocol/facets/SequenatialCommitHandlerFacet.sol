@@ -168,32 +168,4 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         emit BuyerCommitted(exchange.offerId, exchange.buyerId, _exchangeId, exchange, voucher, msgSender());
         // No need to update exchange detail. Most fields stay as they are, and buyerId was updated at the same time voucher is transferred
     }
-
-    /**
-     * @notice standard onERC721Received function
-     *
-     * During sequential commit to offer, we expect to receive the boson voucher, therefore we need to implement onERC721Received
-     * Alternative option, where vouchers are modified to not invoke onERC721Received when to is protocol is unsafe, since one can abuse it to send vouchers to protocol
-     * This should return true value only when protocol expects to receive the voucher
-     * Should revert if called from any other address or with any other token id
-
-     * @return - the ERC721 received function signature
-     */
-    function onERC721Received(
-        address,
-        address,
-        uint256 _tokenId,
-        bytes calldata
-    ) external override returns (bytes4) {
-        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-        // If incomingVoucherId is 0, it means that the PD does not differentiate between vouchers. In this case, we only know the voucher id here
-        if (ps.incomingVoucherId == 0) {
-            ps.incomingVoucherId = _tokenId;
-        }
-        require(
-            ps.incomingVoucherId == _tokenId && ps.incomingVoucherCloneAddress == msg.sender,
-            UNEXPECTED_ERC721_RECEIVED
-        );
-        return this.onERC721Received.selector;
-    }
 }

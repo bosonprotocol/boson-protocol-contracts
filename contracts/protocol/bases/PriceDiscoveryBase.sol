@@ -94,21 +94,18 @@ contract PriceDiscoveryBase is ProtocolBase {
         // Store the information about incoming voucher
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
         address cloneAddress = protocolLookups().cloneAddress[_initialSellerId];
+
         ps.incomingVoucherId = _exchangeId;
         ps.incomingVoucherCloneAddress = cloneAddress;
 
         // Call the price discovery contract
-        bytes memory returnData = _priceDiscovery.priceDiscoveryContract.functionCallWithValue(
-            _priceDiscovery.priceDiscoveryData,
-            msg.value
-        );
+        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
 
         if (_exchangeId == 0) {
-            // incomingVoucherId was set inside onERC721Received method
             _exchangeId = ps.incomingVoucherId;
         }
 
-        require(_exchangeId != 0, "Token id not set");
+        require(_exchangeId != 0, TOKEN_ID_NOT_FOUND);
 
         {
             // Make sure that the price discovery contract has transferred the voucher to the protocol

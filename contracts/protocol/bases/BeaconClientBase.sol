@@ -70,6 +70,11 @@ abstract contract BeaconClientBase is BosonTypes {
         IBosonExchangeHandler(protocolDiamond).onVoucherTransferred(_exchangeId, _newBuyer);
     }
 
+    function onPremintedVoucherTransferred(uint256 _tokenId, address payable _newBuyer) internal {
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+        IBosonExchangeHandler(protocolDiamond).onPremintedVoucherTransferred(_exchangeId, _newBuyer);
+    }
+
     /**
      * @notice Gets the info about the seller associated with the sellerId.
      *
@@ -94,11 +99,5 @@ abstract contract BeaconClientBase is BosonTypes {
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
 
         (exists, seller, ) = IBosonAccountHandler(protocolDiamond).getSellerByAddress(_sellerAddress);
-    }
-
-    function setIncomingVoucherId(uint256 _voucherId, uint256 _offerId) internal {
-        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-
-        IBosonExchangeHandler(protocolDiamond).setIncomingVoucherId(_voucherId, _offerId);
     }
 }
