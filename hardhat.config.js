@@ -4,7 +4,7 @@ dotEnvConfig.config();
 const environments = require("./environments");
 const { task } = require("hardhat/config");
 const fs = require("fs");
-require("hardhat-preprocessor");
+// require("hardhat-preprocessor");
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-web3");
@@ -204,19 +204,19 @@ module.exports = {
   mocha: {
     timeout: 100000,
   },
-  preprocess: {
-    eachLine: () => ({
-      transform: (line) => {
-        if (line.match(/^\s*import /i)) {
-          for (const [from, to] of getRemappings()) {
-            if (line.includes(from)) {
-              line = line.replace(from, to);
-              break;
-            }
-          }
-        }
-        return line;
-      },
-    }),
-  },
+  // preprocess: {
+  //   eachLine: () => ({
+  //     transform: (line) => {
+  //       if (line.match(/^\s*import /i)) {
+  //         for (const [from, to] of getRemappings()) {
+  //           if (line.includes(from)) {
+  //             line = line.replace(from, to);
+  //             break;
+  //           }
+  //         }
+  //       }
+  //       return line;
+  //     },
+  //   }),
+  // },
 };

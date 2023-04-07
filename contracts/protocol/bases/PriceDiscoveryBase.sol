@@ -19,8 +19,6 @@ import { Address } from "../../ext_libs/Address.sol";
 contract PriceDiscoveryBase is ProtocolBase {
     using Address for address;
 
-    event CallReturnValue(string data);
-
     IWETH9Like public immutable weth;
 
     constructor(address _weth) {
