@@ -204,6 +204,14 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      */
     function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) external;
 
+    function onPremintedVoucherTransferred(
+        uint256 _tokenId,
+        address payable _to,
+        address _from,
+        address _rangeOwner,
+        address _sender
+    ) external;
+
     /**
      * @notice Checks if the given exchange in a finalized state.
      *

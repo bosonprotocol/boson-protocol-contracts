@@ -724,7 +724,7 @@ contract BosonVoucherBase is
         // Derive the exchange id
         uint256 exchangeId = _tokenId & type(uint128).max;
 
-        (bool committable, address owner) = isTokenCommittable(_tokenId);
+        (bool committable, address rangeOwner) = isTokenCommittable(_tokenId);
         if (committable) {
             // Set _isCommittable to false
             _isCommittable = false;
@@ -732,9 +732,9 @@ contract BosonVoucherBase is
             // Set the preminted token as committed
             _committed[_tokenId] = true;
 
-            onPremintedVoucherTransferred(_tokenId, payable(_to), _from, owner);
+            onPremintedVoucherTransferred(_tokenId, payable(_to), _from, rangeOwner, _msgSender());
 
-            if (_from == address(this) || from == owner()) {
+            if (_from == address(this) || _from == owner()) {
                 silentMint(_from, _tokenId);
             }
         } else if (_from != address(0) && _to != address(0) && _from != _to && _to != priceDiscoveryContract) {
@@ -770,7 +770,7 @@ contract BosonVoucherBase is
                     committable = true;
 
                     // owner should be PD contract or range owner when sender is PD contract?
-                    owner = exists(_tokenId) ? ownerOf(_tokenId) : range.owner;
+                    owner = _exists(_tokenId) ? ownerOf(_tokenId) : range.owner;
                 }
             }
         }

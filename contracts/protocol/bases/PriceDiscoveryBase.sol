@@ -103,7 +103,7 @@ contract PriceDiscoveryBase is ProtocolBase {
             _exchangeId = ps.incomingVoucherId;
         }
 
-        require(_exchangeId != 0, TOKEN_ID_NOT_FOUND);
+        require(_exchangeId != 0, EXCHANGE_ID_NOT_FOUND);
 
         {
             // Make sure that the price discovery contract has transferred the voucher to the protocol

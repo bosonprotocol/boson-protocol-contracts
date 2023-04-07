@@ -205,7 +205,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             // Get next exchange id for preminted offers
             _exchangeId = protocolCounters().nextExchangeId++;
         } else {
-            require(_exchangeId > 0, INVALID_EXCHANGE_ID);
+            require(_exchangeId > 0, EXCHANGE_ID_NOT_FOUND);
         }
 
         // Authorize the buyer to commit if offer is in a conditional group
@@ -570,9 +570,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
     function onPremintedVoucherTransferred(
         uint256 _tokenId,
-        address payable _buyer,
+        address payable _to,
         address _from,
-        address rangeOwner
+        address _rangeOwner,
+        address _sender
     ) external override buyersNotPaused {
         // Derive the offer id
         uint256 offerId = _tokenId >> 128;
@@ -580,17 +581,26 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Get the offer
         (, Offer storage offer) = fetchOffer(offerId);
 
-        if (offer.priceType == PriceType.Discovery) {
+        if (offer.priceType == OfferPrice.Discovery) {
             // Store the information about incoming voucher
             ProtocolLib.ProtocolStatus storage ps = protocolStatus();
 
             uint256 exchangeId = _tokenId & type(uint128).max;
 
-            (Seller storage seller, ) = fetchSeller(offer.sellerId);
+            // Cache protocol entities for reference
+            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+            address priceDiscoveryContract = lookups.priceDiscoveryContractByExchange[exchangeId];
 
             if (ps.incomingVoucherCloneAddress != address(0)) {
-                commitToOfferInternal(_buyer, offer.id, exchangeId, true);
-            } else if (from == rangeOwner) {}
+                commitToOfferInternal(_to, offer, exchangeId, true);
+            } else if (_from == _rangeOwner) {
+                lookups.priceDiscoveryContractByExchange[exchangeId] = _sender;
+            } else if (_from == priceDiscoveryContract && _to == _rangeOwner) {
+                delete lookups.priceDiscoveryContractByExchange[exchangeId];
+            } else {
+                revert("Invalid voucher transfer");
+            }
         }
     }
 
