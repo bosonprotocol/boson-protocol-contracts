@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.9;
 
 import { IBosonFundsHandler } from "../interfaces/handlers/IBosonFundsHandler.sol";
 
