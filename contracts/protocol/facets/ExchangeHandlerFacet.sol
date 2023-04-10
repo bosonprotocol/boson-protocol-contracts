@@ -593,7 +593,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             address priceDiscoveryContract = lookups.priceDiscoveryContractByExchange[exchangeId];
 
             if (ps.incomingVoucherCloneAddress != address(0)) {
+                ps.incomingVoucherId = _tokenId;
+
                 commitToOfferInternal(_to, offer, exchangeId, true);
+                IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);
+
+                bosonVoucher.setCommitted(_tokenId, true);
             } else if (_from == _rangeOwner) {
                 lookups.priceDiscoveryContractByExchange[exchangeId] = _sender;
             } else if (_from == priceDiscoveryContract && _to == _rangeOwner) {

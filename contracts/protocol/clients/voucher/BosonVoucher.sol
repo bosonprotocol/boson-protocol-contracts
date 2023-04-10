@@ -48,6 +48,11 @@ contract BosonVoucherBase is
         mapping(address => uint256) _balances;
     }
 
+    struct PremintStatus {
+        bool committable;
+        address owner;
+    }
+
     // Opensea collection config
     string private _contractURI;
 
@@ -58,7 +63,7 @@ contract BosonVoucherBase is
     mapping(uint256 => Range) private _rangeByOfferId;
 
     // Premint status, used only temporarly in transfers
-    bool private _isCommittable;
+    PremintStatus private _premintStatus;
 
     // Tell if voucher has already been _committed
     mapping(uint256 => bool) private _committed;
@@ -407,9 +412,16 @@ contract BosonVoucherBase is
         address _to,
         uint256 _tokenId
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
-        (bool committable, ) = isTokenCommittable(_tokenId);
+        (bool committable, address rangeOwner) = isTokenCommittable(_tokenId);
 
-        if (committable) {}
+        if (committable) {
+            if (_from == address(this) || _from == owner()) {
+                silentMint(_from, _tokenId);
+            }
+
+            _premintStatus.committable = true;
+            _premintStatus.owner = rangeOwner;
+        }
 
         super.transferFrom(_from, _to, _tokenId);
     }
@@ -423,7 +435,17 @@ contract BosonVoucherBase is
         uint256 _tokenId,
         bytes memory _data
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
-        (bool committable, ) = isTokenCommittable(_tokenId);
+        (bool committable, address rangeOwner) = isTokenCommittable(_tokenId);
+
+        console.log("safeTransferFrom:committable", committable);
+        if (committable) {
+            if (_from == address(this) || _from == owner()) {
+                silentMint(_from, _tokenId);
+            }
+
+            _premintStatus.committable = true;
+            _premintStatus.owner = rangeOwner;
+        }
 
         super.safeTransferFrom(_from, _to, _tokenId, _data);
     }
@@ -724,20 +746,15 @@ contract BosonVoucherBase is
         // Derive the exchange id
         uint256 exchangeId = _tokenId & type(uint128).max;
 
-        (bool committable, address rangeOwner) = isTokenCommittable(_tokenId);
-        if (committable) {
-            // Set _isCommittable to false
-            _isCommittable = false;
+        if (_premintStatus.committable) {
+            // Store range owner so _premintStatus can be deleted before making an external call
+            address rangeOwner = _premintStatus.owner;
+            delete _premintStatus;
 
-            // Set the preminted token as committed
-            _committed[_tokenId] = true;
+            console.log("sending to and set as already committed", _to);
 
             onPremintedVoucherTransferred(_tokenId, payable(_to), _from, rangeOwner, _msgSender());
-
-            if (_from == address(this) || _from == owner()) {
-                silentMint(_from, _tokenId);
-            }
-        } else if (_from != address(0) && _to != address(0) && _from != _to && _to != priceDiscoveryContract) {
+        } else if (_from != address(0) && _to != address(0) && _from != _to) {
             // Update the buyer associated with the voucher in the protocol
             // Only when transferring, not when minting or burning
             onVoucherTransferred(exchangeId, payable(_to));
@@ -746,6 +763,7 @@ contract BosonVoucherBase is
 
     function isTokenCommittable(uint256 _tokenId) public view returns (bool committable, address owner) {
         if (_committed[_tokenId]) {
+            console.log("ALREADY COMMITTED");
             return (false, ownerOf(_tokenId));
         } else {
             // it might be a pre-minted token. Preminted tokens have offerId in the upper 128 bits
@@ -796,6 +814,10 @@ contract BosonVoucherBase is
                 IBosonFundsHandler(protocolDiamond).depositFunds(sellerId, token, balance);
             }
         }
+    }
+
+    function setCommitted(uint256 _tokenId, bool _isCommitted) external onlyRole(PROTOCOL) {
+        _committed[_tokenId] = _isCommitted;
     }
 
     /*

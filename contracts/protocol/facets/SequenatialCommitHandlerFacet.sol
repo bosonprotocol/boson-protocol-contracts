@@ -59,19 +59,21 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
      * - Transfer of exchange token fails
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _exchangeId - the id of the exchange to commit to
+     * @param _tokenId - the id of the token to commit to
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
      */
     function sequentialCommitToOffer(
         address payable _buyer,
-        uint256 _exchangeId,
+        uint256 _tokenId,
         PriceDiscovery calldata _priceDiscovery
     ) external payable exchangesNotPaused buyersNotPaused nonReentrant {
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
 
+        uint256 exchangeId = _tokenId & type(uint128).max;
+
         // Exchange must exist
-        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
+        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(exchangeId, ExchangeState.Committed);
 
         // Make sure the voucher is still valid
         require(block.timestamp <= voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
@@ -96,13 +98,13 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
         // First call price discovery and get actual price
         // It might be lower tha submitted for buy orders and higher for sell orders
-        uint256 actualPrice = fulfilOrder(offer.id, _priceDiscovery, _buyer, offer.sellerId, _exchangeId);
+        uint256 actualPrice = fulfilOrder(offer.id, _priceDiscovery, _buyer, offer.sellerId, _tokenId);
 
         // Calculate the amount to be kept in escrow
         uint256 escrowAmount;
         {
             // Get sequential commits for this exchange
-            SequentialCommit[] storage sequentialCommits = protocolEntities().sequentialCommits[_exchangeId];
+            SequentialCommit[] storage sequentialCommits = protocolEntities().sequentialCommits[exchangeId];
 
             {
                 // Calculate fees
@@ -112,7 +114,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
                 // Calculate royalties
                 (, uint256 royaltyAmount) = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]).royaltyInfo(
-                    _exchangeId,
+                    exchangeId,
                     actualPrice
                 );
 
@@ -165,7 +167,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         }
 
         // Since exchange and voucher are passed by reference, they are updated
-        emit BuyerCommitted(exchange.offerId, exchange.buyerId, _exchangeId, exchange, voucher, msgSender());
+        emit BuyerCommitted(exchange.offerId, exchange.buyerId, exchangeId, exchange, voucher, msgSender());
         // No need to update exchange detail. Most fields stay as they are, and buyerId was updated at the same time voucher is transferred
     }
 }

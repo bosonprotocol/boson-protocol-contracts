@@ -11,8 +11,15 @@ const {
   deriveTokenId,
 } = require("../../util/utils");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants");
-const { mockSeller, mockAuthToken, mockVoucherInitValues, mockOffer, mockDisputeResolver } = require("../../util/mock");
-const { expect, assert } = require("chai");
+const {
+  mockSeller,
+  mockAuthToken,
+  mockVoucherInitValues,
+  mockOffer,
+  mockDisputeResolver,
+  accountId,
+} = require("../../util/mock");
+const { assert } = require("chai");
 const Role = require("../../../scripts/domain/Role");
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
@@ -37,6 +44,8 @@ describe("[@skip-on-coverage] seaport integration", function () {
   let seaport;
 
   before(async function () {
+    accountId.next();
+
     let protocolTreasury;
     [deployer, protocol, assistant, protocolTreasury, buyer, DR] = await ethers.getSigners();
 
@@ -46,7 +55,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
     // Cast Diamond to contract interfaces
     const offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
     const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
+    const fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
     exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
 
     // Grant roles
@@ -214,14 +223,13 @@ describe("[@skip-on-coverage] seaport integration", function () {
       constants.AddressZero,
     ]);
 
-    console.log("seaportjs", value);
     const priceDiscovery = new PriceDiscovery(value, seaport.address, priceDiscoveryData, Side.Ask);
 
     // Seller needs to deposit weth in order to fill the escrow at the last step
     await weth.connect(buyer).deposit({ value });
     await weth.connect(buyer).approve(exchangeHandler.address, value);
 
-    tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, priceDiscovery, {
+    const tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, priceDiscovery, {
       value,
     });
 

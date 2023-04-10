@@ -41,12 +41,12 @@ contract PriceDiscoveryBase is ProtocolBase {
         PriceDiscovery calldata _priceDiscovery,
         address _buyer,
         uint256 _initialSellerId,
-        uint256 _exchangeId
+        uint256 _tokenId
     ) internal returns (uint256 actualPrice) {
         if (_priceDiscovery.side == Side.Ask) {
-            return fulfilAskOrder(_offerId, _priceDiscovery, _buyer, _initialSellerId, _exchangeId);
+            return fulfilAskOrder(_offerId, _priceDiscovery, _buyer, _initialSellerId, _tokenId);
         } else {
-            return fulfilBidOrder(_offerId, _priceDiscovery, _initialSellerId, _exchangeId);
+            return fulfilBidOrder(_offerId, _priceDiscovery, _initialSellerId, _tokenId);
         }
     }
 
@@ -73,7 +73,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         PriceDiscovery calldata _priceDiscovery,
         address _buyer,
         uint256 _initialSellerId,
-        uint256 _exchangeId
+        uint256 _tokenId
     ) internal returns (uint256 actualPrice) {
         // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
@@ -93,24 +93,24 @@ contract PriceDiscoveryBase is ProtocolBase {
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
         address cloneAddress = protocolLookups().cloneAddress[_initialSellerId];
 
-        ps.incomingVoucherId = _exchangeId;
         ps.incomingVoucherCloneAddress = cloneAddress;
 
         // Call the price discovery contract
         _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
 
-        if (_exchangeId == 0) {
-            _exchangeId = ps.incomingVoucherId;
+        if (_tokenId != 0) {
+            require(_tokenId == ps.incomingVoucherId, EXCHANGE_ID_NOT_FOUND);
+        } else {
+            _tokenId = ps.incomingVoucherId;
         }
-
-        require(_exchangeId != 0, EXCHANGE_ID_NOT_FOUND);
 
         {
             // Make sure that the price discovery contract has transferred the voucher to the protocol
             IBosonVoucher bosonVoucher = IBosonVoucher(cloneAddress);
-            require(bosonVoucher.ownerOf(_exchangeId) == address(this), VOUCHER_NOT_RECEIVED);
+            require(bosonVoucher.ownerOf(_tokenId) == address(this), VOUCHER_NOT_RECEIVED);
+
             // Transfer voucher to buyer
-            bosonVoucher.transferFrom(address(this), _buyer, _exchangeId);
+            bosonVoucher.transferFrom(address(this), _buyer, _tokenId);
         }
 
         // Check the escrow amount

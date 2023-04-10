@@ -9,7 +9,7 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
  *
  * @notice This is the interface for the Boson Protocol ERC-721 Voucher contract.
  *
- * The ERC-165 identifier for this interface is: 0xaf16da6e
+ * The ERC-165 identifier for this interface is: 0x65321405
  */
 interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     event ContractURIChanged(string contractURI);
@@ -246,4 +246,6 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     function withdrawToProtocol(address[] calldata _tokenList) external;
 
     function setPriceDiscoveryContract(address _priceDiscoveryContract) external;
+
+    function setCommitted(uint256 _tokenId, bool _committed) external;
 }

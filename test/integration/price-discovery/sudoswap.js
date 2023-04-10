@@ -6,7 +6,14 @@ const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol
 const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets");
 const { getFacetsWithArgs, calculateContractAddress, deriveTokenId } = require("../../util/utils");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants");
-const { mockSeller, mockAuthToken, mockVoucherInitValues, mockOffer, mockDisputeResolver } = require("../../util/mock");
+const {
+  mockSeller,
+  mockAuthToken,
+  mockVoucherInitValues,
+  mockOffer,
+  mockDisputeResolver,
+  accountId,
+} = require("../../util/mock");
 const { expect } = require("chai");
 const Role = require("../../../scripts/domain/Role");
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
@@ -16,7 +23,7 @@ const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const { constants } = require("ethers");
 const OfferPrice = require("../../../scripts/domain/OfferPrice");
 
-describe("[@skip-on-coverage] sudoswap integration", function() {
+describe("[@skip-on-coverage] sudoswap integration", function () {
   this.timeout(100000000);
   let lssvmPairFactory, linearCurve;
   let bosonVoucher, bosonToken;
@@ -26,7 +33,9 @@ describe("[@skip-on-coverage] sudoswap integration", function() {
   let weth;
   let seller;
 
-  before(async function() {
+  before(async function () {
+    accountId.next();
+
     let protocolTreasury;
     [deployer, protocol, assistant, protocolTreasury, buyer, DR, sudoswapDeployer] = await ethers.getSigners();
 
@@ -198,7 +207,7 @@ describe("[@skip-on-coverage] sudoswap integration", function() {
   //        "_poolType": "TOKEN, NFT, or TRADE",
   //        "_spotPrice": "The initial selling spot price"
 
-  it("sudoswap is used as price discovery mechanism for a offer", async function() {
+  it("sudoswap is used as price discovery mechanism for a offer", async function () {
     const poolType = 1; // NFT
     const delta = ethers.utils.parseUnits("0.25", "ether").toString();
     const fee = "0";
@@ -261,11 +270,9 @@ describe("[@skip-on-coverage] sudoswap integration", function() {
     // Buyer does not approve, since its in ETH.
     // Seller approves price discovery to transfer the voucher
     await bosonVoucher.connect(assistant).setApprovalForAll(priceDiscoveryContract.address, true);
-    tx = await exchangeHandler
-      .connect(buyer)
-      .commitToOffer(buyer.address, offer.id, priceDiscovery, {
-        value: inputAmount,
-      });
+    tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, priceDiscovery, {
+      value: inputAmount,
+    });
 
     await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
     await expect(tx).to.emit(priceDiscoveryContract, "SwapNFTOutPair");
