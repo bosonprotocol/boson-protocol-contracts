@@ -116,6 +116,9 @@ contract BosonVoucherBase is
         uint256 rangeStart = range.start;
         require((_tokenId < rangeStart) || (_tokenId >= rangeStart + range.length), EXCHANGE_ID_IN_RESERVED_RANGE);
 
+        // Issue voucher is called only during commitToOffer (in protocol), so token can be set as committed
+        _committed[_tokenId] = true;
+
         // Mint the voucher, sending it to the buyer address
         _mint(_buyer, _tokenId);
     }
@@ -754,7 +757,7 @@ contract BosonVoucherBase is
     function getPreMintStatus(uint256 _tokenId) public view returns (bool committable, address owner) {
         // Not committable if _committed already or if token has an owner
 
-        if (!_committed[_tokenId] && !_exists(_tokenId)) {
+        if (!_committed[_tokenId]) {
             // it might be a pre-minted token. Preminted tokens have offerId in the upper 128 bits
             uint256 offerId = _tokenId >> 128;
 
