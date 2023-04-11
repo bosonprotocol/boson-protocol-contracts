@@ -320,7 +320,7 @@ describe("IBosonOfferHandler", function () {
       accountId.next(true);
     });
 
-    context.skip("👉 createOffer()", async function () {
+    context("👉 createOffer()", async function () {
       it("should emit an OfferCreated event", async function () {
         // Create an offer, testing for the event
         await expect(
@@ -1400,7 +1400,7 @@ describe("IBosonOfferHandler", function () {
         );
       });
 
-      context.skip("Owner range is contract", async function () {
+      context("Owner range is contract", async function () {
         beforeEach(async function () {
           range.owner = bosonVoucher.address;
         });

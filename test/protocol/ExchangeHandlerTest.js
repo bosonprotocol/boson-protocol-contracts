@@ -1009,7 +1009,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Simulate a second commit with the same token id
           await expect(
-            exchangeHandler.connect(impersonatedBosonVoucher).commitToPreMintedOffer(buyer.address, offerId, tokenId)
+            exchangeHandler.connect(impersonatedBosonVoucher).commitToPreMintedOffer(buyer.address, offerId, exchangeId)
           ).to.revertedWith(RevertReasons.EXCHANGE_ALREADY_EXISTS);
         });
 
