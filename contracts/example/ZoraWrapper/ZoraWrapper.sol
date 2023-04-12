@@ -10,6 +10,7 @@ import { ERC721 } from "./../support/ERC721.sol";
 import { IERC721Metadata } from "./../support/IERC721Metadata.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 import { IERC165 } from "../../interfaces/IERC165.sol";
+import "../../domain/BosonConstants.sol";
 
 /**
  * @title ZoraWrapper
@@ -26,6 +27,7 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
     address private immutable voucherAddress;
     address private immutable zoraAuctionHouseAddress;
     address private immutable protocolAddress;
+    address private immutable wethAddress;
 
     uint256 private pendingTokenId;
     mapping(uint256 => uint256) public price;
@@ -40,20 +42,22 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
     constructor(
         address _voucherAddress,
         address _zoraAuctionHouseAddress,
-        address _protocolAddress
+        address _protocolAddress,
+        address _wethAddress
     ) ERC721(getVoucherName(_voucherAddress), getVoucherSymbol(_voucherAddress)) {
         voucherAddress = _voucherAddress;
         zoraAuctionHouseAddress = _zoraAuctionHouseAddress;
         protocolAddress = _protocolAddress;
+        wethAddress = _wethAddress;
 
         // Approve Zora Auction House to transfer wrapped vouchers
-        setApprovalForAll(_zoraAuctionHouseAddress, true);
-        setApprovalForAll(msg.sender, true); // msg.sender is the owner of this contract and must be approved to transfer wrapped vouchers to Auction House
+        _setApprovalForAll(address(this),_zoraAuctionHouseAddress, true);
+        _setApprovalForAll(address(this), msg.sender, true); // msg.sender is the owner of this contract and must be approved to transfer wrapped vouchers to Auction House
     }
 
     function getVoucherName(address _voucherAddress) internal view returns (string memory) {
         string memory name = IERC721Metadata(_voucherAddress).name();
-        return string(abi.encodePacked("WRAPPED", name));
+        return string(abi.encodePacked("Wrapped ", name));
     }
 
     function getVoucherSymbol(address _voucherAddress) internal view returns (string memory) {
@@ -75,6 +79,8 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
 
         // Mint to itself, so it can be used with Zora Auction House
         _mint(address(this), _tokenId);
+
+        _approve(owner(), _tokenId);
     }
 
     function unwrap(uint256 _tokenId) external {
@@ -97,7 +103,15 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
 
         // Transfer token to protocol
         if (priceToPay > 0) {
-            IERC20(cachedExchangeToken[_tokenId]).safeTransfer(protocolAddress, priceToPay);
+            if (cachedExchangeToken[_tokenId] == address(0)) {
+                // // send eth
+                // (bool success, ) = protocolAddress.call{ value: priceToPay }("");
+                // require(success, TOKEN_TRANSFER_FAILED);
+                IERC20(wethAddress).safeTransfer(protocolAddress, priceToPay);
+            } else {
+                // send erc token
+                IERC20(cachedExchangeToken[_tokenId]).safeTransfer(protocolAddress, priceToPay);
+            }
         }
 
         // Burn wrapped voucher
@@ -127,6 +141,7 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
     }
 
     function getCurrentBalance(uint256 _tokenId) internal returns (uint256) {
+        // TODO: native token caching 
         address exchangeToken = cachedExchangeToken[_tokenId];
         if (exchangeToken == address(0)) {
             uint256 offerId = _tokenId >> 128;
@@ -135,8 +150,20 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
             (, BosonTypes.Offer memory offer, , , , ) = IBosonOfferHandler(protocolAddress).getOffer(offerId);
             exchangeToken = offer.exchangeToken;
 
+            if (exchangeToken == address(0)) exchangeToken = wethAddress;
             cachedExchangeToken[_tokenId] = exchangeToken;
         }
+        // return exchangeToken == address(0) ? address(this).balance : IERC20(exchangeToken).balanceOf(address(this));
+        
         return IERC20(exchangeToken).balanceOf(address(this));
     }
+
+    // N.B. Don't implemente recieve, so it gets WETH instead of ETH
+    // receive() external payable {
+    //     // Maybe just do nothing?
+    //     if (pendingTokenId != 0) {
+    //         updatePendingTokenPrice(pendingTokenId);
+    //         delete pendingTokenId;
+    //     }
+    // }
 }
