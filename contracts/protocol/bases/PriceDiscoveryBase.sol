@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "hardhat/console.sol";
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
@@ -155,13 +154,16 @@ contract PriceDiscoveryBase is ProtocolBase {
         uint256 _offerId,
         PriceDiscovery calldata _priceDiscovery,
         uint256 _initialSellerId,
-        uint256 _exchangeId
+        uint256 _tokenId
     ) internal returns (uint256 actualPrice) {
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[_initialSellerId]);
 
+        // try {
         // Transfer seller's voucher to protocol
         // Don't need to use safe transfer from, since that protocol can handle the voucher
-        bosonVoucher.transferFrom(msgSender(), address(this), _exchangeId);
+        // bosonVoucher.transferFrom(msgSender(), address(this), _tokenId);
+        // } catch {
+        // }
 
         // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
@@ -177,8 +179,16 @@ contract PriceDiscoveryBase is ProtocolBase {
         // Track native balance just in case if seller send some native currency or price discovery contract does
         uint256 protocolNativeBalanceBefore = getBalance(address(0));
 
-        // Approve price discovery contract to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
-        bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, _exchangeId);
+        if (_tokenId != 0) {
+            // Approve price discovery contract to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
+            bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, _tokenId);
+        }
+
+        // Store the information about incoming voucher
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+        address cloneAddress = protocolLookups().cloneAddress[_initialSellerId];
+
+        ps.incomingVoucherCloneAddress = cloneAddress;
 
         // Call the price discovery contract
         _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
@@ -188,6 +198,7 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // Check the native balance and return the surplus to seller
         uint256 protocolNativeBalanceAfter = getBalance(address(0));
+
         if (protocolNativeBalanceAfter > protocolNativeBalanceBefore) {
             // Return the surplus to seller
             FundsLib.transferFundsFromProtocol(

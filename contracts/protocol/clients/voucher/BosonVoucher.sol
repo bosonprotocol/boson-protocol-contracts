@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
-import "hardhat/console.sol";
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
@@ -437,7 +436,6 @@ contract BosonVoucherBase is
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
         (bool committable, address rangeOwner) = isTokenCommittable(_tokenId);
 
-        console.log("safeTransferFrom:committable", committable);
         if (committable) {
             if (_from == address(this) || _from == owner()) {
                 silentMint(_from, _tokenId);
@@ -751,8 +749,6 @@ contract BosonVoucherBase is
             address rangeOwner = _premintStatus.owner;
             delete _premintStatus;
 
-            console.log("sending to and set as already committed", _to);
-
             onPremintedVoucherTransferred(_tokenId, payable(_to), _from, rangeOwner, _msgSender());
         } else if (_from != address(0) && _to != address(0) && _from != _to) {
             // Update the buyer associated with the voucher in the protocol
@@ -763,7 +759,6 @@ contract BosonVoucherBase is
 
     function isTokenCommittable(uint256 _tokenId) public view returns (bool committable, address owner) {
         if (_committed[_tokenId]) {
-            console.log("ALREADY COMMITTED");
             return (false, ownerOf(_tokenId));
         } else {
             // it might be a pre-minted token. Preminted tokens have offerId in the upper 128 bits

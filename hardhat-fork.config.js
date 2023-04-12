@@ -27,6 +27,7 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS, async (_, { config }) => {
 
   return [...contracts, ...submodules, ...submodulesWithLib].map(path.normalize);
 });
+
 function getRemappings() {
   return fs
     .readFileSync("remappings.txt", "utf8")

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
+import "hardhat/console.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
@@ -145,7 +146,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         (, Offer storage offer) = fetchOffer(_offerId);
 
         // Make sure that the voucher was issued on the clone that is making a call
-        // Why not use _msgSender here?
+        // @TODO Why not use _msgSender here?
         require(
             msg.sender == protocolLookups().cloneAddress[offer.sellerId] || msg.sender == address(this),
             ACCESS_DENIED
@@ -596,9 +597,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
                 ps.incomingVoucherId = _tokenId;
 
                 commitToOfferInternal(_to, offer, exchangeId, true);
-                IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);
 
-                bosonVoucher.setCommitted(_tokenId, true);
+                IBosonVoucher(ps.incomingVoucherCloneAddress).setCommitted(_tokenId, true);
             } else if (_from == _rangeOwner) {
                 lookups.priceDiscoveryContractByExchange[exchangeId] = _sender;
             } else if (_from == priceDiscoveryContract && _to == _rangeOwner) {

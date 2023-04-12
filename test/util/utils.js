@@ -120,6 +120,13 @@ async function setNextBlockTimestamp(timestamp) {
   await provider.send("evm_mine", []);
 }
 
+async function getCurrentBlockAndSetTimeForward(seconds) {
+  const blockNumber = await provider.getBlockNumber();
+  const block = await provider.getBlock(blockNumber);
+  const newTime = BigNumber.from(block.timestamp).add(seconds).toNumber();
+  await setNextBlockTimestamp(newTime);
+}
+
 function getSignatureParameters(signature) {
   if (!utils.isHexString(signature)) {
     throw new Error('Given value "'.concat(signature, '" is not a valid hex string.'));
@@ -151,17 +158,17 @@ async function prepareDataSignatureParameters(
   const domainType =
     type == "Protocol"
       ? [
-          { name: "name", type: "string" },
-          { name: "version", type: "string" },
-          { name: "verifyingContract", type: "address" },
-          { name: "salt", type: "bytes32" },
-        ]
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "verifyingContract", type: "address" },
+        { name: "salt", type: "bytes32" },
+      ]
       : [
-          { name: "name", type: "string" },
-          { name: "version", type: "string" },
-          { name: "chainId", type: "uint256" },
-          { name: "verifyingContract", type: "address" },
-        ];
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "chainId", type: "uint256" },
+        { name: "verifyingContract", type: "address" },
+      ];
 
   const domainData = {
     name: domainName ?? "Boson Protocol",
@@ -313,3 +320,4 @@ exports.compareOfferStructs = compareOfferStructs;
 exports.objectToArray = objectToArray;
 exports.deriveTokenId = deriveTokenId;
 exports.incrementer = incrementer;
+exports.getCurrentBlockAndSetTimeForward = getCurrentBlockAndSetTimeForward;
