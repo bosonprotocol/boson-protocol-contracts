@@ -210,6 +210,11 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         actualPrice = protocolBalanceAfter - protocolBalanceBefore;
         require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
+
+        // If exchange token is native, unwrap it
+        if (offer.exchangeToken == address(0)) {
+            weth.withdraw(actualPrice);
+        }
     }
 
     /**
