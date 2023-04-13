@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
+import "hardhat/console.sol";
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
@@ -396,6 +397,8 @@ contract BosonVoucherBase is
             bool committable;
             // If _tokenId does not exist, but offer is committable, report contract owner as token owner
             (committable, owner) = isTokenCommittable(_tokenId);
+            console.log("token committable", committable);
+            console.log("tokenId", _tokenId);
 
             if (committable) return owner;
 

@@ -93,25 +93,30 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         require(exists, NO_SUCH_OFFER);
 
         if (offer.priceType == OfferPrice.Discovery) {
-            fulfillPriceDiscoveryOrder(_buyer, _offerId, offer.sellerId, _priceDiscovery);
+            fulfillPriceDiscoveryOffer(_buyer, _offerId, offer.sellerId, _priceDiscovery);
         } else {
             commitToOfferInternal(_buyer, offer, 0, false);
         }
     }
 
-    function fulfillPriceDiscoveryOrder(
+    function fulfillPriceDiscoveryOffer(
         address payable _buyer,
         uint256 _offerId,
         uint256 _sellerId,
         PriceDiscovery calldata _priceDiscovery
     ) internal exchangesNotPaused buyersNotPaused nonReentrant {
-        // Make sure  caller provided price discovery data if offer price type is discovery
+        // Make sure caller provided price discovery data
         require(
             _priceDiscovery.price > 0 &&
                 _priceDiscovery.priceDiscoveryContract != address(0) &&
                 _priceDiscovery.priceDiscoveryData.length > 0,
             "INVALID_PRICE_DISCOVERY"
         );
+
+        if (_priceDiscovery.side == Side.Bid) {
+            (, Seller storage seller, ) = fetchSeller(_sellerId);
+            require(seller.assistant == msgSender(), "Only seller can bid");
+        }
 
         fulfilOrder(_offerId, _priceDiscovery, _buyer, _sellerId, 0);
     }
@@ -144,19 +149,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
     ) external exchangesNotPaused buyersNotPaused {
         // Fetch the offer info
         (, Offer storage offer) = fetchOffer(_offerId);
-
-        // Make sure that the voucher was issued on the clone that is making a call
-        // @TODO Why not use _msgSender here?
-        require(
-            msg.sender == protocolLookups().cloneAddress[offer.sellerId] || msg.sender == address(this),
-            ACCESS_DENIED
-        );
-
-        // Exchange must not exist already
-        (bool exists, ) = fetchExchange(_exchangeId);
-        require(!exists, EXCHANGE_ALREADY_EXISTS);
-
-        commitToOfferInternal(_buyer, offer, _exchangeId, true);
     }
 
     /**
@@ -582,30 +574,45 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Get the offer
         (, Offer storage offer) = fetchOffer(offerId);
 
+        uint256 exchangeId = _tokenId & type(uint128).max;
+
+        // Cache protocol entities for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
         if (offer.priceType == OfferPrice.Discovery) {
             // Store the information about incoming voucher
             ProtocolLib.ProtocolStatus storage ps = protocolStatus();
 
-            uint256 exchangeId = _tokenId & type(uint128).max;
-
-            // Cache protocol entities for reference
-            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
-            address priceDiscoveryContract = lookups.priceDiscoveryContractByExchange[exchangeId];
+            address priceDiscoveryContract = lookups.priceDiscoveryContractByVoucher[_tokenId];
 
             if (ps.incomingVoucherCloneAddress != address(0)) {
                 ps.incomingVoucherId = _tokenId;
 
-                commitToOfferInternal(_to, offer, exchangeId, true);
-
                 IBosonVoucher(ps.incomingVoucherCloneAddress).setCommitted(_tokenId, true);
-            } else if (_from == _rangeOwner) {
-                lookups.priceDiscoveryContractByExchange[exchangeId] = _sender;
+
+                commitToOfferInternal(_to, offer, exchangeId, true);
             } else if (_from == priceDiscoveryContract && _to == _rangeOwner) {
-                delete lookups.priceDiscoveryContractByExchange[exchangeId];
+                delete lookups.priceDiscoveryContractByVoucher[_tokenId];
             } else {
-                revert("Invalid voucher transfer");
+                if (_from == _rangeOwner) {
+                    // @TODO: How to differente between when is seller depositing to AMM or a normal preminted token transfer (like opensea bid)
+                    lookups.priceDiscoveryContractByVoucher[_tokenId] = _sender;
+                }
+                lookups.lastVoucherOwner[_tokenId] = _from;
             }
+        } else {
+            IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);
+            // Make sure that the voucher was issued on the clone that is making a call
+            require(msg.sender == address(bosonVoucher) || msg.sender == address(this), ACCESS_DENIED);
+
+            // Exchange must not exist already
+            (bool exists, ) = fetchExchange(exchangeId);
+            require(!exists, EXCHANGE_ALREADY_EXISTS);
+            console.log("calling commitToOfferInternal");
+
+            commitToOfferInternal(_to, offer, exchangeId, true);
+
+            IBosonVoucher(bosonVoucher).setCommitted(_tokenId, true);
         }
     }
 

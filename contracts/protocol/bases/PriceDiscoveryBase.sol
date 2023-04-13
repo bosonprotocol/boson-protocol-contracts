@@ -2,6 +2,7 @@
 pragma solidity 0.8.9;
 
 import "../../domain/BosonConstants.sol";
+import "hardhat/console.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
 import { IWETH9Like } from "../../interfaces/IWETH9Like.sol";
@@ -81,7 +82,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         address exchangeToken = offer.exchangeToken;
 
         // At this point, protocol temporary holds buyer's payment
-        uint256 protocolBalanceBefore = getBalance(exchangeToken);
+        uint256 protocolBalanceBefore = getBalance(exchangeToken, address(this));
 
         // If token is ERC20, approve price discovery contract to transfer funds
         if (exchangeToken != address(0)) {
@@ -113,7 +114,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         }
 
         // Check the escrow amount
-        uint256 protocolBalanceAfter = getBalance(exchangeToken);
+        uint256 protocolBalanceAfter = getBalance(exchangeToken, address(this));
         actualPrice = protocolBalanceBefore - protocolBalanceAfter;
 
         (, uint256 buyerId) = getBuyerIdByWallet(_buyer);
@@ -158,12 +159,23 @@ contract PriceDiscoveryBase is ProtocolBase {
     ) internal returns (uint256 actualPrice) {
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[_initialSellerId]);
 
-        // try {
-        // Transfer seller's voucher to protocol
-        // Don't need to use safe transfer from, since that protocol can handle the voucher
-        // bosonVoucher.transferFrom(msgSender(), address(this), _tokenId);
-        // } catch {
-        // }
+        address owner = bosonVoucher.ownerOf(_tokenId);
+        bool callerIsOwner = owner == msgSender();
+        uint256 balanceBefore;
+
+        if (callerIsOwner) {
+            // Transfer seller's voucher to protocol
+            // Don't need to use safe transfer from, since that protocol can handle the voucher
+            bosonVoucher.transferFrom(msgSender(), address(this), _tokenId);
+
+            owner = address(this);
+
+            // Approve price discovery contract to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
+            bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, _tokenId);
+        } else {
+            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+            owner = lookups.lastVoucherOwner[_tokenId];
+        }
 
         // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
@@ -171,33 +183,31 @@ contract PriceDiscoveryBase is ProtocolBase {
         Offer storage offer = pe.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
 
-        if (exchangeToken == address(0)) exchangeToken = address(weth);
+        // if (exchangeToken == address(0)) exchangeToken = address(weth);
 
         // Get protocol balance before the exchange
-        uint256 protocolBalanceBefore = getBalance(exchangeToken);
+        balanceBefore = getBalance(exchangeToken, address(this));
 
         // Track native balance just in case if seller send some native currency or price discovery contract does
-        uint256 protocolNativeBalanceBefore = getBalance(address(0));
-
-        if (_tokenId != 0) {
-            // Approve price discovery contract to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
-            bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, _tokenId);
-        }
+        uint256 protocolNativeBalanceBefore = getBalance(address(0), address(this));
 
         // Store the information about incoming voucher
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
         address cloneAddress = protocolLookups().cloneAddress[_initialSellerId];
 
+        // Set incoming voucher clone address
         ps.incomingVoucherCloneAddress = cloneAddress;
 
         // Call the price discovery contract
-        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
+        _priceDiscovery.priceDiscoveryContract.functionCall(_priceDiscovery.priceDiscoveryData);
 
-        // Check the escrow amount
-        uint256 protocolBalanceAfter = getBalance(exchangeToken);
+        uint256 balanceAfter = getBalance(exchangeToken, owner);
+
+        actualPrice = balanceAfter - balanceBefore;
+        require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
 
         // Check the native balance and return the surplus to seller
-        uint256 protocolNativeBalanceAfter = getBalance(address(0));
+        uint256 protocolNativeBalanceAfter = getBalance(address(0), address(this));
 
         if (protocolNativeBalanceAfter > protocolNativeBalanceBefore) {
             // Return the surplus to seller
@@ -207,9 +217,6 @@ contract PriceDiscoveryBase is ProtocolBase {
                 protocolNativeBalanceAfter - protocolNativeBalanceBefore
             );
         }
-
-        actualPrice = protocolBalanceAfter - protocolBalanceBefore;
-        require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
     }
 
     /**
@@ -218,7 +225,7 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @param _tokenAddress - the address of the token to check the balance for
      * @return balance - the balance of the protocol for the given token address
      */
-    function getBalance(address _tokenAddress) internal view returns (uint256) {
-        return _tokenAddress == address(0) ? address(this).balance : IERC20(_tokenAddress).balanceOf(address(this));
+    function getBalance(address _tokenAddress, address entity) internal view returns (uint256) {
+        return _tokenAddress == address(0) ? entity.balance : IERC20(_tokenAddress).balanceOf(entity);
     }
 }

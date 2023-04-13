@@ -20,7 +20,7 @@ const {
   mockDisputeResolver,
   accountId,
 } = require("../../util/mock");
-const { expect, assert } = require("chai");
+const { expect } = require("chai");
 const Role = require("../../../scripts/domain/Role");
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
@@ -30,7 +30,7 @@ const Side = require("../../../scripts/domain/Side");
 
 const BID_BASE_UNIT = utils.parseUnits("1000", 9);
 
-describe("[@skip-on-coverage] auctionProtocol integration", function() {
+describe("[@skip-on-coverage] auctionProtocol integration", function () {
   this.timeout(100000000);
   let bosonVoucher, bosonToken;
   let deployer, protocol, assistant, buyer, DR;
@@ -39,7 +39,7 @@ describe("[@skip-on-coverage] auctionProtocol integration", function() {
   let weth;
   let seller;
 
-  before(async function() {
+  before(async function () {
     accountId.next(true);
 
     let protocolTreasury;
@@ -51,7 +51,7 @@ describe("[@skip-on-coverage] auctionProtocol integration", function() {
     // Cast Diamond to contract interfaces
     const offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
     const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
+    const fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
     exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
 
     // Grant roles
@@ -163,7 +163,7 @@ describe("[@skip-on-coverage] auctionProtocol integration", function() {
       .depositFunds(seller.id, constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
   });
 
-  it("Works wiht Sneaky auction", async function() {
+  it("Works wiht Sneaky auction", async function () {
     const SneakyAuctionFactory = await ethers.getContractFactory("SneakyAuction");
     const sneakyAuction = await SneakyAuctionFactory.deploy();
     await sneakyAuction.deployed();
@@ -171,23 +171,21 @@ describe("[@skip-on-coverage] auctionProtocol integration", function() {
     await bosonVoucher.connect(assistant).setPriceDiscoveryContract(sneakyAuction.address);
     await bosonVoucher.connect(assistant).setApprovalForAll(sneakyAuction.address, true);
 
-    // Create auctionProtocol offer which tokenId 1
     const tokenId = deriveTokenId(offer.id, 2);
 
-    // Convert the value in Ether to Wei
     const priceInWei = utils.formatUnits(offer.price, "wei");
 
     // Divide the value in Wei by the BID_BASE_UNIT
     const reservedPrice = BigNumber.from(priceInWei).div(BID_BASE_UNIT);
 
-    await expect(sneakyAuction
-      .connect(assistant)
-      .createAuction(bosonVoucher.address, tokenId, oneWeek, oneWeek, reservedPrice)).to.emit(sneakyAuction, "AuctionCreated");
+    await expect(
+      sneakyAuction.connect(assistant).createAuction(bosonVoucher.address, tokenId, oneWeek, oneWeek, reservedPrice)
+    ).to.emit(sneakyAuction, "AuctionCreated");
 
     const bidPrice = reservedPrice.add(1);
     const bidPriceInWei = utils.formatUnits(bidPrice.mul(BID_BASE_UNIT), "wei");
 
-    const salt = utils.formatBytes32String("123");
+    const salt = utils.formatBytes32String("1");
 
     // get vault address
     const vault = await sneakyAuction.getVaultAddress(bosonVoucher.address, tokenId, 1, buyer.address, bidPrice, salt);
@@ -195,31 +193,32 @@ describe("[@skip-on-coverage] auctionProtocol integration", function() {
     // deposit bid price into vault
     await buyer.sendTransaction({ to: vault, value: bidPriceInWei });
 
-    await getCurrentBlockAndSetTimeForward(oneWeek)
+    await getCurrentBlockAndSetTimeForward(oneWeek);
 
     // first proof has to be empty
     const proof = {
-      // array of bytes 
+      // array of bytes
       accountMerkleProof: [constants.HashZero],
       blockHeaderRLP: constants.HashZero,
-    }
+    };
 
-    const bid = await sneakyAuction.connect(buyer).revealBid(bosonVoucher.address, tokenId, bidPrice, salt, proof);
+    await sneakyAuction.connect(buyer).revealBid(bosonVoucher.address, tokenId, bidPrice, salt, proof);
     await getCurrentBlockAndSetTimeForward(oneWeek);
 
-    const calldata = sneakyAuction.interface.encodeFunctionData("endAuction", [bosonVoucher.address, tokenId, buyer.address, bidPrice, salt]);
-    await bosonVoucher.connect(assistant).callExternalContract(sneakyAuction.address, calldata);
-    await bosonVoucher.connect(assistant).setApprovalForAllToContract(sneakyAuction.address, true);
+    const calldata = sneakyAuction.interface.encodeFunctionData("endAuction", [
+      bosonVoucher.address,
+      tokenId,
+      buyer.address,
+      bidPrice,
+      salt,
+    ]);
 
     const priceDiscovery = new PriceDiscovery(offer.price, sneakyAuction.address, calldata, Side.Bid);
 
     // Seller needs to deposit weth in order to fill the escrow at the last step
     // await weth.connect(buyer).deposit({ value });
     // await weth.connect(buyer).approve(exchangeHandler.address, offer.sellerDepos);
-    //
-    tx = await exchangeHandler.connect(assistant).commitToOffer(buyer.address, offer.id, priceDiscovery, {
-      value: offer.sellerDeposit
-    });
+    await exchangeHandler.connect(assistant).commitToOffer(buyer.address, offer.id, priceDiscovery);
 
     expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
   });
