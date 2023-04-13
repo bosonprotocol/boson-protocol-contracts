@@ -73,37 +73,52 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * - Seller has less funds available than sellerDeposit
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _offerId - the id of the offer to commit to
+     * @param _offerIdOrTokenId - the id of the offer to commit to or the id of the voucher (if pre-minted)
      * @param _priceDiscovery - price discovery data (if applicable). See BosonTypes.PriceDiscovery
      */
     function commitToOffer(
         address payable _buyer,
-        uint256 _offerId,
+        uint256 _offerIdOrTokenId,
         PriceDiscovery calldata _priceDiscovery
     ) external payable override exchangesNotPaused buyersNotPaused {
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
 
         // Get the offer
+        uint256 offerId = _offerIdOrTokenId;
         bool exists;
+        bool isOfferId;
         Offer storage offer;
-        (exists, offer) = fetchOffer(_offerId);
+        (exists, offer) = fetchOffer(offerId);
 
-        // Make sure offer exists, is available, and isn't void, expired, or sold out
+        if (!exists) {
+            // @TODO check tokens created before EXCHANGE_ID_2_2_0
+            offerId = _offerIdOrTokenId >> 128;
+
+            (exists, offer) = fetchOffer(offerId);
+        } else {
+            isOfferId = true;
+        }
+
         require(exists, NO_SUCH_OFFER);
 
         if (offer.priceType == OfferPrice.Discovery) {
-            fulfillPriceDiscoveryOffer(_buyer, _offerId, offer.sellerId, _priceDiscovery);
+            if (isOfferId) {
+                fulfillPriceDiscoveryOffer(0, offer, _priceDiscovery, _buyer);
+            } else {
+                fulfillPriceDiscoveryOffer(_offerIdOrTokenId, offer, _priceDiscovery, _buyer);
+            }
         } else {
+            require(isOfferId, "INVALID_OFFER_ID");
             commitToOfferInternal(_buyer, offer, 0, false);
         }
     }
 
     function fulfillPriceDiscoveryOffer(
-        address payable _buyer,
-        uint256 _offerId,
-        uint256 _sellerId,
-        PriceDiscovery calldata _priceDiscovery
+        uint256 _tokenId,
+        Offer storage _offer,
+        PriceDiscovery calldata _priceDiscovery,
+        address payable _buyer
     ) internal exchangesNotPaused buyersNotPaused nonReentrant {
         // Make sure caller provided price discovery data
         require(
@@ -113,12 +128,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             "INVALID_PRICE_DISCOVERY"
         );
 
-        if (_priceDiscovery.side == Side.Bid) {
-            (, Seller storage seller, ) = fetchSeller(_sellerId);
-            require(seller.assistant == msgSender(), "Only seller can bid");
-        }
+        // if (_priceDiscovery.side == Side.Bid) {
+        //     (, Seller storage seller, ) = fetchSeller(_offer.sellerId);
+        //     require(seller.assistant == msgSender(), "Only seller can bid");
+        // }
 
-        fulfilOrder(_offerId, _priceDiscovery, _buyer, _sellerId, 0);
+        fulfilOrder(_tokenId, _offer, _priceDiscovery, _buyer);
     }
 
     /**
@@ -197,8 +212,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
             // Get next exchange id for preminted offers
             _exchangeId = protocolCounters().nextExchangeId++;
-        } else {
-            require(_exchangeId > 0, EXCHANGE_ID_NOT_FOUND);
         }
 
         // Authorize the buyer to commit if offer is in a conditional group
@@ -527,15 +540,19 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * - Voucher has expired
      * - New buyer's existing account is deactivated
      *
-     * @param _exchangeId - the id of the exchange
+     * @param _tokenId - the voucher id
      * @param _newBuyer - the address of the new buyer
      */
-    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) external override buyersNotPaused {
+    function onVoucherTransferred(uint256 _tokenId, address payable _newBuyer) external override buyersNotPaused {
+        // Derive the exchange id
+        // @TODO what about old vouchers?
+        uint256 exchangeId = _tokenId & type(uint128).max;
+
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Get the exchange, should be in committed state
-        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
+        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(exchangeId, ExchangeState.Committed);
 
         // Make sure that the voucher is still valid
         require(block.timestamp <= voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
@@ -557,8 +574,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Increase voucher counter for new buyer
         lookups.voucherCount[buyerId]++;
 
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+        if (ps.incomingVoucherCloneAddress != address(0)) {
+            ps.incomingVoucherId = _tokenId;
+        }
+
         // Notify watchers of state change
-        emit VoucherTransferred(exchange.offerId, _exchangeId, buyerId, msgSender());
+        emit VoucherTransferred(exchange.offerId, exchangeId, buyerId, msgSender());
     }
 
     function onPremintedVoucherTransferred(
@@ -608,7 +630,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             // Exchange must not exist already
             (bool exists, ) = fetchExchange(exchangeId);
             require(!exists, EXCHANGE_ALREADY_EXISTS);
-            console.log("calling commitToOfferInternal");
 
             commitToOfferInternal(_to, offer, exchangeId, true);
 

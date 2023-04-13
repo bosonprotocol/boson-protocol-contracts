@@ -172,10 +172,10 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - Voucher has expired
      * - New buyer's existing account is deactivated
      *
-     * @param _exchangeId - the id of the exchange
+     * @param _tokenId - the voucher id
      * @param _newBuyer - the address of the new buyer
      */
-    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) external;
+    function onVoucherTransferred(uint256 _tokenId, address payable _newBuyer) external;
 
     function onPremintedVoucherTransferred(
         uint256 _tokenId,

@@ -93,12 +93,13 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         }
 
         if (_priceDiscovery.side == Side.Bid) {
+            // @TODO why don't allow third party to call?
             require(seller == msgSender(), NOT_VOUCHER_HOLDER);
         }
 
         // First call price discovery and get actual price
         // It might be lower tha submitted for buy orders and higher for sell orders
-        uint256 actualPrice = fulfilOrder(offer.id, _priceDiscovery, _buyer, offer.sellerId, _tokenId);
+        uint256 actualPrice = fulfilOrder(_tokenId, offer, _priceDiscovery, _buyer);
 
         // Calculate the amount to be kept in escrow
         uint256 escrowAmount;

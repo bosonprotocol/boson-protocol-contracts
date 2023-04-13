@@ -744,9 +744,6 @@ contract BosonVoucherBase is
         address _to,
         uint256 _tokenId
     ) internal override {
-        // Derive the exchange id
-        uint256 exchangeId = _tokenId & type(uint128).max;
-
         if (_premintStatus.committable) {
             // Store range owner so _premintStatus can be deleted before making an external call
             address rangeOwner = _premintStatus.owner;
@@ -756,7 +753,7 @@ contract BosonVoucherBase is
         } else if (_from != address(0) && _to != address(0) && _from != _to) {
             // Update the buyer associated with the voucher in the protocol
             // Only when transferring, not when minting or burning
-            onVoucherTransferred(exchangeId, payable(_to));
+            onVoucherTransferred(_tokenId, payable(_to));
         }
     }
 
