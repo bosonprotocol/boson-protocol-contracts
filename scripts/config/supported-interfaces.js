@@ -28,6 +28,8 @@ const interfaceImplementers = {
   ProtocolInitializationHandlerFacet: "IBosonProtocolInitializationHandler",
 };
 
+const interfacesWithMultipleArtifacts = ["IERC2981", "IERC1155", "IERC165", "IERC721"];
+
 let interfacesCache; // if getInterfaceIds is called multiple times (e.g. during tests), calculate ids only once and store them to cache
 async function getInterfaceIds(useCache = true) {
   let interfaceIds = {};
@@ -52,9 +54,15 @@ async function getInterfaceIds(useCache = true) {
   for (const iFace of interfaces) {
     interfaceIds[iFace] = await getInterfaceId(iFace, skipBaseCheck[iFace]);
   }
+  const cleanedInterfaceIds = {};
 
-  interfacesCache = interfaceIds;
-  return interfaceIds;
+  for (const key in interfaceIds) {
+    const newKey = key.includes(":") ? key.split(":").pop() : key;
+    cleanedInterfaceIds[newKey] = interfaceIds[key];
+  }
+
+  interfacesCache = cleanedInterfaceIds;
+  return cleanedInterfaceIds;
 }
 
 // Function to get all interface names
@@ -72,7 +80,9 @@ async function getInterfaceNames() {
     // If starts with prefix and is not in skip list, return name
     return /.*contracts\/interfaces\/(.*)/.test(source) &&
       !skip.some((s) => new RegExp(`.*contracts/interfaces/${s}`).test(source))
-      ? name
+      ? interfacesWithMultipleArtifacts.includes(name)
+        ? contractName
+        : name
       : [];
   });
 
