@@ -62,7 +62,7 @@ abstract contract BeaconClientBase is BosonTypes {
     /**
      * @notice Informs protocol of new buyer associated with an exchange
      *
-     * @param _tokenId - the voucherid
+     * @param _tokenId - the voucher id
      * @param _newBuyer - the address of the new buyer
      */
     function onVoucherTransferred(uint256 _tokenId, address payable _newBuyer) internal {

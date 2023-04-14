@@ -109,7 +109,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
                 fulfillPriceDiscoveryOffer(_offerIdOrTokenId, offer, _priceDiscovery, _buyer);
             }
         } else {
-            require(isOfferId, "INVALID_OFFER_ID");
             commitToOfferInternal(_buyer, offer, 0, false);
         }
     }
@@ -220,11 +219,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Fetch or create buyer
         uint256 buyerId = getValidBuyer(_buyer);
 
-        // Price discovery offers have the funds encumbered in PriceDiscoveryBase
-        if (_offer.priceType != OfferPrice.Discovery) {
-            // Encumber funds before creating the exchange.
-            FundsLib.encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
-        }
+        // Encumber funds
+        FundsLib.encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
 
         // Create and store a new exchange
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];

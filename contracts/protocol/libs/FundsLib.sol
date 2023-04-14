@@ -82,11 +82,6 @@ library FundsLib {
         address exchangeToken = offer.exchangeToken;
 
         bool isPriceDiscovery = _priceType == BosonTypes.OfferPrice.Discovery;
-        // if offer is non-preminted or is preMinted but price type is discovery the transaction is starting from protocol and caller must provide the payment
-        if (!_isPreminted || isPriceDiscovery) {
-            validateIncomingPayment(exchangeToken, _price);
-            emit FundsEncumbered(_buyerId, exchangeToken, _price, sender);
-        }
 
         // decrease available funds
         uint256 sellerId = offer.sellerId;

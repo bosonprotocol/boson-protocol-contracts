@@ -168,8 +168,9 @@ contract PriceDiscoveryBase is ProtocolBase {
         } else {
             ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
             owner = lookups.lastVoucherOwner[_tokenId];
+            address priceDiscoveryContract = lookups.priceDiscoveryContractByVoucher[_tokenId];
 
-            require(owner != address(0), "Last voucher owner not found");
+            require(owner != address(0) && owner == priceDiscoveryContract, "UNAUTHORIZED");
         }
 
         address exchangeToken = _offer.exchangeToken;
@@ -195,7 +196,16 @@ contract PriceDiscoveryBase is ProtocolBase {
         uint256 balanceAfter = getBalance(exchangeToken, owner);
 
         actualPrice = balanceAfter - balanceBefore;
+        console.log("actualPrice", actualPrice);
         require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
+        console.log("later", actualPrice);
+
+        // Transfer funds to protocol - caller must pay on behalf of the seller
+        if (!callerIsOwner) {
+            FundsLib.validateIncomingPayment(exchangeToken, actualPrice);
+            // see if is possible (and safe) to use transferFundsToProtocol and get funds directly from the seller
+            FundsLib.transferFundsToProtocol(exchangeToken, payable(owner), actualPrice);
+        }
 
         // Check the native balance and return the surplus to seller
         uint256 protocolNativeBalanceAfter = getBalance(address(0), address(this));

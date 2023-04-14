@@ -30,7 +30,7 @@ const Side = require("../../../scripts/domain/Side");
 
 const BID_BASE_UNIT = utils.parseUnits("1000", 9);
 
-describe("[@skip-on-coverage] auctionProtocol integration", function () {
+describe("[@skip-on-coverage] auction integration", function () {
   this.timeout(100000000);
   let bosonVoucher, bosonToken;
   let deployer, protocol, assistant, buyer, DR;
@@ -218,7 +218,7 @@ describe("[@skip-on-coverage] auctionProtocol integration", function () {
     // Seller needs to deposit weth in order to fill the escrow at the last step
     // await weth.connect(buyer).deposit({ value });
     // await weth.connect(buyer).approve(exchangeHandler.address, offer.sellerDepos);
-    await exchangeHandler.connect(assistant).commitToOffer(buyer.address, offer.id, priceDiscovery);
+    await exchangeHandler.connect(assistant).commitToOffer(buyer.address, tokenId, priceDiscovery);
 
     expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
   });
