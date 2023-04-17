@@ -18,6 +18,7 @@ class Offer {
             string metadataUri;
             string metadataHash;
             bool voided;
+            address feeMutualizer;
         }
     */
 
@@ -31,7 +32,8 @@ class Offer {
     exchangeToken,
     metadataUri,
     metadataHash,
-    voided
+    voided,
+    feeMutualizer
   ) {
     this.id = id;
     this.sellerId = sellerId;
@@ -43,6 +45,7 @@ class Offer {
     this.metadataUri = metadataUri;
     this.metadataHash = metadataHash;
     this.voided = voided;
+    this.feeMutualizer = feeMutualizer;
   }
 
   /**
@@ -62,6 +65,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      feeMutualizer,
     } = o;
 
     return new Offer(
@@ -74,7 +78,8 @@ class Offer {
       exchangeToken,
       metadataUri,
       metadataHash,
-      voided
+      voided,
+      feeMutualizer
     );
   }
 
@@ -93,7 +98,8 @@ class Offer {
       exchangeToken,
       metadataUri,
       metadataHash,
-      voided;
+      voided,
+      feeMutualizer;
 
     // destructure struct
     [
@@ -107,6 +113,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      feeMutualizer,
     ] = struct;
 
     return Offer.fromObject({
@@ -120,6 +127,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      feeMutualizer,
     });
   }
 
@@ -155,6 +163,7 @@ class Offer {
       this.metadataUri,
       this.metadataHash,
       this.voided,
+      this.feeMutualizer,
     ];
   }
 
@@ -260,6 +269,16 @@ class Offer {
   }
 
   /**
+   * Is this Offer instance's feeMutualizer field valid?
+   * Must be a eip55 compliant Ethereum address
+   *
+   * @returns {boolean}
+   */
+  feeMutualizerIsValid() {
+    return addressIsValid(this.feeMutualizer);
+  }
+
+  /**
    * Is this Offer instance valid?
    * @returns {boolean}
    */
@@ -274,7 +293,8 @@ class Offer {
       this.exchangeTokenIsValid() &&
       this.metadataUriIsValid() &&
       this.metadataHashIsValid() &&
-      this.voidedIsValid()
+      this.voidedIsValid() &&
+      this.feeMutualizerIsValid()
     );
   }
 }

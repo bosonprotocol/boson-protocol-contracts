@@ -19,7 +19,8 @@ describe("Offer", function () {
     exchangeToken,
     metadataUri,
     metadataHash,
-    voided;
+    voided,
+    feeMutualizer;
 
   beforeEach(async function () {
     // Get a list of accounts
@@ -35,6 +36,7 @@ describe("Offer", function () {
     metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
     metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
     voided = false;
+    feeMutualizer = ethers.constants.AddressZero.toString(); // self mutualization
   });
 
   context("📋 Constructor", async function () {
@@ -50,7 +52,8 @@ describe("Offer", function () {
         exchangeToken,
         metadataUri,
         metadataHash,
-        voided
+        voided,
+        feeMutualizer
       );
       expect(offer.idIsValid()).is.true;
       expect(offer.sellerIdIsValid()).is.true;
@@ -62,6 +65,7 @@ describe("Offer", function () {
       expect(offer.metadataUriIsValid()).is.true;
       expect(offer.metadataHashIsValid()).is.true;
       expect(offer.voidedIsValid()).is.true;
+      expect(offer.feeMutualizerIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
   });
@@ -79,7 +83,8 @@ describe("Offer", function () {
         exchangeToken,
         metadataUri,
         metadataHash,
-        voided
+        voided,
+        feeMutualizer
       );
       expect(offer.isValid()).is.true;
     });
@@ -323,6 +328,28 @@ describe("Offer", function () {
       expect(offer.voidedIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
+
+    it("Always present, feeMutualizer must be a string representation of an EIP-55 compliant address", async function () {
+      // Invalid field value
+      offer.feeMutualizer = "0xASFADF";
+      expect(offer.feeMutualizerIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.feeMutualizer = "zedzdeadbaby";
+      expect(offer.feeMutualizerIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Valid field value
+      offer.feeMutualizer = accounts[0].address;
+      expect(offer.feeMutualizerIsValid()).is.true;
+      expect(offer.isValid()).is.true;
+
+      // Valid field value
+      offer.feeMutualizer = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
+      expect(offer.feeMutualizerIsValid()).is.true;
+      expect(offer.isValid()).is.true;
+    });
   });
 
   context("📋 Utility functions", async function () {
@@ -341,7 +368,8 @@ describe("Offer", function () {
         exchangeToken,
         metadataUri,
         metadataHash,
-        voided
+        voided,
+        feeMutualizer
       );
       expect(offer.isValid()).is.true;
 
@@ -357,6 +385,7 @@ describe("Offer", function () {
         metadataUri,
         metadataHash,
         voided,
+        feeMutualizer,
       };
     });
 
@@ -386,6 +415,7 @@ describe("Offer", function () {
           offer.metadataUri,
           offer.metadataHash,
           offer.voided,
+          offer.feeMutualizer,
         ];
 
         // Get struct

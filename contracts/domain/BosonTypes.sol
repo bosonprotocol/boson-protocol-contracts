@@ -145,6 +145,7 @@ contract BosonTypes {
         string metadataUri;
         string metadataHash;
         bool voided;
+        address feeMutualizer;
     }
 
     struct OfferDates {
