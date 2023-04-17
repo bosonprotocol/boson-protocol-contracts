@@ -3,6 +3,7 @@
  */
 const { getInterfaceId } = require("../../scripts/util/diamond-utils.js");
 const hre = require("hardhat");
+const { interfacesWithMultipleArtifacts } = require("../util/constants.js");
 
 const interfaceImplementers = {
   AccountHandlerFacet: "IBosonAccountHandler",
@@ -27,8 +28,6 @@ const interfaceImplementers = {
   ConfigHandlerFacet: "IBosonConfigHandler",
   ProtocolInitializationHandlerFacet: "IBosonProtocolInitializationHandler",
 };
-
-const interfacesWithMultipleArtifacts = ["IERC2981", "IERC1155", "IERC165", "IERC721"];
 
 let interfacesCache; // if getInterfaceIds is called multiple times (e.g. during tests), calculate ids only once and store them to cache
 async function getInterfaceIds(useCache = true) {
@@ -59,7 +58,11 @@ async function getInterfaceIds(useCache = true) {
   });
 
   for (const iFace of interfaces) {
-    interfaceIds[iFace] = await getInterfaceId(iFace, skipBaseCheck[iFace]);
+    interfaceIds[iFace] = await getInterfaceId(
+      iFace,
+      skipBaseCheck[iFace],
+      interfacesWithMultipleArtifacts.includes(iFace.split(":").pop())
+    );
   }
   const cleanedInterfaceIds = {};
 
