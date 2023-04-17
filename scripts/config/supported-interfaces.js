@@ -47,7 +47,14 @@ async function getInterfaceIds(useCache = true) {
     skip[iFace] = true;
     return skip;
   }, {});
-  ["IBosonVoucher", "IERC1155", "IERC721", "IERC2981", "IAccessControl"].forEach((iFace) => {
+
+  [
+    "IBosonVoucher",
+    "contracts/interfaces/IERC1155:IERC1155.sol",
+    "contracts/interfaces/IERC721.sol:IERC721",
+    "IERC2981",
+    "IAccessControl",
+  ].forEach((iFace) => {
     skipBaseCheck[iFace] = false;
   });
 
