@@ -49,9 +49,9 @@ async function getInterfaceIds(useCache = true) {
 
   [
     "IBosonVoucher",
-    "contracts/interfaces/IERC1155:IERC1155.sol",
+    "contracts/interfaces/IERC1155.sol:IERC1155",
     "contracts/interfaces/IERC721.sol:IERC721",
-    "IERC2981",
+    "contracts/interfaces/IERC2981.sol:IERC2981",
     "IAccessControl",
   ].forEach((iFace) => {
     skipBaseCheck[iFace] = false;
