@@ -68,11 +68,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Some seller does not exist
      * - Some seller id is duplicated
      * - DisputeResolver is not active (if active == false)
-     * - Fee amount is a non-zero value. Protocol doesn't yet support fees for dispute resolvers
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
-     *                               feeAmount will be ignored because protocol doesn't yet support fees yet but DR still needs to provide array of fees to choose supported tokens
      * @param _sellerAllowList - list of ids of sellers that can choose this dispute resolver. If empty, there are no restrictions on which seller can chose it.
      */
     function createDisputeResolver(
@@ -235,11 +233,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Number of DisputeResolverFee structs in array exceeds max
      * - Number of DisputeResolverFee structs in array is zero
      * - DisputeResolverFee array contains duplicates
-     * - Fee amount is a non-zero value. Protocol doesn't yet support fees for dispute resolvers
      *
      * @param _disputeResolverId - id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
-     *                               feeAmount will be ignored because protocol doesn't yet support fees yet but DR still needs to provide array of fees to choose supported tokens
      */
     function addFeesToDisputeResolver(
         uint256 _disputeResolverId,

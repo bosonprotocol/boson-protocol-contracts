@@ -60,7 +60,6 @@ string constant NO_SUCH_DISPUTE_RESOLVER = "No such dispute resolver";
 string constant INVALID_ESCALATION_PERIOD = "Invalid escalation period";
 string constant INVALID_AMOUNT_DISPUTE_RESOLVER_FEES = "Dispute resolver fees are not present or exceed maximum dispute resolver fees in a single transaction";
 string constant DUPLICATE_DISPUTE_RESOLVER_FEES = "Duplicate dispute resolver fee";
-string constant FEE_AMOUNT_NOT_YET_SUPPORTED = "Non-zero dispute resolver fees not yet supported";
 string constant DISPUTE_RESOLVER_FEE_NOT_FOUND = "Dispute resolver fee not found";
 string constant SELLER_ALREADY_APPROVED = "Seller id is approved already";
 string constant SELLER_NOT_APPROVED = "Seller id is not approved";

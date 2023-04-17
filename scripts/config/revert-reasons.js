@@ -80,7 +80,6 @@ exports.RevertReasons = {
     "Dispute resolver fees are not present or exceed maximum dispute resolver fees in a single transaction",
   DUPLICATE_DISPUTE_RESOLVER_FEES: "Duplicate dispute resolver fee",
   DISPUTE_RESOLVER_FEE_NOT_FOUND: "Dispute resolver fee not found",
-  FEE_AMOUNT_NOT_YET_SUPPORTED: "Non-zero dispute resolver fees not yet supported",
   INVALID_AUTH_TOKEN_TYPE: "Invalid AuthTokenType",
   ADMIN_OR_AUTH_TOKEN: "An admin address or an auth token is required",
   AUTH_TOKEN_MUST_BE_UNIQUE: "Auth token cannot be assigned to another entity of the same type",

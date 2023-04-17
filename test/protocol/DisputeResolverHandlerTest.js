@@ -693,15 +693,6 @@ describe("DisputeResolverHandler", function () {
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
-
-        it("Fee amount is not 0", async function () {
-          disputeResolverFees[0].feeAmount = "200";
-
-          // Attempt to Create a DR, expecting revert
-          await expect(
-            accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.FEE_AMOUNT_NOT_YET_SUPPORTED);
-        });
       });
     });
 
@@ -1640,15 +1631,6 @@ describe("DisputeResolverHandler", function () {
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
-        });
-
-        it("Fee amount is not 0", async function () {
-          disputeResolverFees = [new DisputeResolverFee(other4.address, "MockToken4", "200")];
-
-          // Attempt to Create a DR, expecting revert
-          await expect(
-            accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
-          ).to.revertedWith(RevertReasons.FEE_AMOUNT_NOT_YET_SUPPORTED);
         });
       });
     });
