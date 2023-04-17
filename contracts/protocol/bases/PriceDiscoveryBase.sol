@@ -2,7 +2,6 @@
 pragma solidity 0.8.9;
 
 import "../../domain/BosonConstants.sol";
-import "hardhat/console.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
 import { IWETH9Like } from "../../interfaces/IWETH9Like.sol";
@@ -156,6 +155,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         bool callerIsOwner = owner == msgSender();
         uint256 balanceBefore;
 
+        // If caller is the owner, protocol can act on behalf of the owner
         if (callerIsOwner) {
             // Transfer seller's voucher to protocol
             // Don't need to use safe transfer from, since that protocol can handle the voucher
@@ -167,10 +167,12 @@ contract PriceDiscoveryBase is ProtocolBase {
             bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, _tokenId);
         } else {
             ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-            owner = lookups.lastVoucherOwner[_tokenId];
             address priceDiscoveryContract = lookups.priceDiscoveryContractByVoucher[_tokenId];
 
             require(owner != address(0) && owner == priceDiscoveryContract, "UNAUTHORIZED");
+
+            // balance to check is last voucher owner, who will receive the price paid
+            owner = lookups.lastVoucherOwner[_tokenId];
         }
 
         address exchangeToken = _offer.exchangeToken;
@@ -196,15 +198,13 @@ contract PriceDiscoveryBase is ProtocolBase {
         uint256 balanceAfter = getBalance(exchangeToken, owner);
 
         actualPrice = balanceAfter - balanceBefore;
-        console.log("actualPrice", actualPrice);
         require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
-        console.log("later", actualPrice);
 
         // Transfer funds to protocol - caller must pay on behalf of the seller
         if (!callerIsOwner) {
             FundsLib.validateIncomingPayment(exchangeToken, actualPrice);
             // see if is possible (and safe) to use transferFundsToProtocol and get funds directly from the seller
-            FundsLib.transferFundsToProtocol(exchangeToken, payable(owner), actualPrice);
+            // FundsLib.transferFundsToProtocol(exchangeToken, payable(owner), actualPrice);
         }
 
         // Check the native balance and return the surplus to seller

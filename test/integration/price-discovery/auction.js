@@ -218,7 +218,9 @@ describe("[@skip-on-coverage] auction integration", function () {
     // Seller needs to deposit weth in order to fill the escrow at the last step
     // await weth.connect(buyer).deposit({ value });
     // await weth.connect(buyer).approve(exchangeHandler.address, offer.sellerDepos);
-    await exchangeHandler.connect(assistant).commitToOffer(buyer.address, tokenId, priceDiscovery);
+    await exchangeHandler
+      .connect(assistant)
+      .commitToOffer(buyer.address, tokenId, priceDiscovery, { value: bidPriceInWei });
 
     expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
   });

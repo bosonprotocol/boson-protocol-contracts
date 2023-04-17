@@ -183,7 +183,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
         address _from,
         address _rangeOwner,
         address _sender
-    ) external;
+    ) external payable returns (bool committed);
 
     /**
      * @notice Checks if the given exchange in a finalized state.

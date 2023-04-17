@@ -397,8 +397,6 @@ contract BosonVoucherBase is
             bool committable;
             // If _tokenId does not exist, but offer is committable, report contract owner as token owner
             (committable, owner) = isTokenCommittable(_tokenId);
-            console.log("token committable", committable);
-            console.log("tokenId", _tokenId);
 
             if (committable) return owner;
 
@@ -749,7 +747,11 @@ contract BosonVoucherBase is
             address rangeOwner = _premintStatus.owner;
             delete _premintStatus;
 
-            onPremintedVoucherTransferred(_tokenId, payable(_to), _from, rangeOwner, _msgSender());
+            // Call protocol onPremintedVoucherTransferred
+            bool committed = onPremintedVoucherTransferred(_tokenId, payable(_to), _from, rangeOwner, _msgSender());
+
+            // Set committed status
+            _committed[_tokenId] = committed;
         } else if (_from != address(0) && _to != address(0) && _from != _to) {
             // Update the buyer associated with the voucher in the protocol
             // Only when transferring, not when minting or burning
@@ -809,10 +811,6 @@ contract BosonVoucherBase is
                 IBosonFundsHandler(protocolDiamond).depositFunds(sellerId, token, balance);
             }
         }
-    }
-
-    function setCommitted(uint256 _tokenId, bool _isCommitted) external onlyRole(PROTOCOL) {
-        _committed[_tokenId] = _isCommitted;
     }
 
     /*

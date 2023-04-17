@@ -585,7 +585,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         address _from,
         address _rangeOwner,
         address _sender
-    ) external override buyersNotPaused {
+    ) external payable override buyersNotPaused returns (bool committed) {
         // Derive the offer id
         uint256 offerId = _tokenId >> 128;
 
@@ -596,6 +596,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
         // Cache protocol entities for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        console.log("sending from: ", _from);
+        console.log("owner of range: ", _rangeOwner);
 
         if (offer.priceType == OfferPrice.Discovery) {
             // Store the information about incoming voucher
@@ -606,14 +608,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             if (ps.incomingVoucherCloneAddress != address(0)) {
                 ps.incomingVoucherId = _tokenId;
 
-                IBosonVoucher(ps.incomingVoucherCloneAddress).setCommitted(_tokenId, true);
-
                 commitToOfferInternal(_to, offer, exchangeId, true);
+                return true;
             } else if (_from == priceDiscoveryContract && _to == _rangeOwner) {
                 delete lookups.priceDiscoveryContractByVoucher[_tokenId];
             } else {
                 if (_from == _rangeOwner) {
-                    // @TODO: How to differente between when is seller depositing to AMM or a normal preminted token transfer (like opensea bid)
                     lookups.priceDiscoveryContractByVoucher[_tokenId] = _sender;
                 }
                 lookups.lastVoucherOwner[_tokenId] = _from;
@@ -629,8 +629,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
             commitToOfferInternal(_to, offer, exchangeId, true);
 
-            IBosonVoucher(bosonVoucher).setCommitted(_tokenId, true);
+            return true;
         }
+        return false;
     }
 
     /**

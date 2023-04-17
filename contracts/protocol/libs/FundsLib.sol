@@ -80,6 +80,10 @@ library FundsLib {
         // this will be called only from commitToOffer so we expect that exchange actually exist
         BosonTypes.Offer storage offer = pe.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
+        console.log("Encumber funds of offer %s", _offerId);
+        console.log("price: %s", _price);
+        console.log("value: %s", msg.value);
+        console.log("exchangeToken: %s", exchangeToken);
 
         bool isPriceDiscovery = _priceType == BosonTypes.OfferPrice.Discovery;
 
@@ -109,6 +113,8 @@ library FundsLib {
      * @param _value - value expected to receive
      */
     function validateIncomingPayment(address _exchangeToken, uint256 _value) internal {
+        console.log("validateIncomingPayment: exchangeToken: %s", _exchangeToken);
+        console.log("validateIncomingPayment: value: %s", _value);
         if (_exchangeToken == address(0)) {
             // if transfer is in the native currency, msg.value must be at leat the price
             require(msg.value >= _value, INSUFFICIENT_VALUE_RECEIVED);
@@ -399,7 +405,9 @@ library FundsLib {
             uint256 protocolTokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
 
             // make sure that expected amount of tokens was transferred
+            console.log("transferFundsToProtocol", _amount);
             require(protocolTokenBalanceAfter - protocolTokenBalanceBefore == _amount, INSUFFICIENT_VALUE_RECEIVED);
+            console.log("after transfer funds");
         }
     }
 
