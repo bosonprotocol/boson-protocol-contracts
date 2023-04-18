@@ -7,7 +7,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { SafeERC20 } from "../../ext_libs/SafeERC20.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
-import { ERC721 } from "./support/ERC721.sol";
+import { ERC721 } from "./../support/ERC721.sol";
 
 /**
  * @title SnapshotGate

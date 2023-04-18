@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
-import "hardhat/console.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
@@ -596,8 +595,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
         // Cache protocol entities for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-        console.log("sending from: ", _from);
-        console.log("owner of range: ", _rangeOwner);
 
         if (offer.priceType == OfferPrice.Discovery) {
             // Store the information about incoming voucher
