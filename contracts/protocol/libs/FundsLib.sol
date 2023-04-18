@@ -96,11 +96,13 @@ library FundsLib {
         uint256 sellerId = offer.sellerId;
         uint256 drFee = pe.disputeResolutionTerms[_offerId].feeAmount;
         address mutualizer = offer.feeMutualizer;
-        if (mutualizer == address(0)) {
-            // if mutualizer is not set, encumber DR fee from seller's funds
-            sellerFundsEncumbered += drFee;
-        } else {
-            requestDRFee(_exchangeId, mutualizer, pe.sellers[sellerId].assistant, exchangeToken, drFee);
+        if (drFee > 0) {
+            if (mutualizer == address(0)) {
+                // if mutualizer is not set, encumber DR fee from seller's funds
+                sellerFundsEncumbered += drFee;
+            } else {
+                requestDRFee(_exchangeId, mutualizer, pe.sellers[sellerId].assistant, exchangeToken, drFee);
+            }
         }
 
         // decrease seller's available funds
@@ -139,6 +141,15 @@ library FundsLib {
         }
     }
 
+    struct PayOff {
+        uint256 seller;
+        uint256 buyer;
+        uint256 protocol;
+        uint256 agent;
+        uint256 disputeResolver;
+        uint256 feeMutualizer;
+    }
+
     /**
      * @notice Takes in the exchange id and releases the funds to buyer and seller, depending on the state of the exchange.
      * It is called only from finalizeExchange and finalizeDispute.
@@ -155,17 +166,17 @@ library FundsLib {
         // Since this should be called only from certain functions from exchangeHandler and disputeHandler
         // exchange must exist and be in a completed state, so that's not checked explicitly
         BosonTypes.Exchange storage exchange = pe.exchanges[_exchangeId];
+        uint256 offerId = exchange.offerId;
 
         // Get offer from storage to get the details about sellerDeposit, price, sellerId, exchangeToken and buyerCancelPenalty
-        BosonTypes.Offer storage offer = pe.offers[exchange.offerId];
+        BosonTypes.Offer storage offer = pe.offers[offerId];
+
+        // Get the dispute resolution terms for the offer
+        BosonTypes.DisputeResolutionTerms storage disputeResolutionTerms = pe.disputeResolutionTerms[offerId];
+
         // calculate the payoffs depending on state exchange is in
-        uint256 sellerPayoff;
-        uint256 buyerPayoff;
-        uint256 protocolFee;
-        uint256 agentFee;
-
-        BosonTypes.OfferFees storage offerFee = pe.offerFees[exchange.offerId];
-
+        PayOff memory payOff;
+        uint256 disputeResolverFee = disputeResolutionTerms.feeAmount;
         {
             // scope to avoid stack too deep errors
             BosonTypes.ExchangeState exchangeState = exchange.state;
@@ -174,26 +185,29 @@ library FundsLib {
 
             if (exchangeState == BosonTypes.ExchangeState.Completed) {
                 // COMPLETED
-                protocolFee = offerFee.protocolFee;
+                BosonTypes.OfferFees storage offerFee = pe.offerFees[offerId];
+                payOff.protocol = offerFee.protocolFee;
                 // buyerPayoff is 0
-                agentFee = offerFee.agentFee;
-                sellerPayoff = price + sellerDeposit - protocolFee - agentFee;
+                payOff.agent = offerFee.agentFee;
+                payOff.seller = price + sellerDeposit - payOff.protocol - payOff.agent;
             } else if (exchangeState == BosonTypes.ExchangeState.Revoked) {
                 // REVOKED
                 // sellerPayoff is 0
-                buyerPayoff = price + sellerDeposit;
+                payOff.buyer = price + sellerDeposit;
             } else if (exchangeState == BosonTypes.ExchangeState.Canceled) {
                 // CANCELED
                 uint256 buyerCancelPenalty = offer.buyerCancelPenalty;
-                sellerPayoff = sellerDeposit + buyerCancelPenalty;
-                buyerPayoff = price - buyerCancelPenalty;
+                payOff.seller = sellerDeposit + buyerCancelPenalty;
+                payOff.buyer = price - buyerCancelPenalty;
             } else if (exchangeState == BosonTypes.ExchangeState.Disputed) {
                 // DISPUTED
                 // determine if buyerEscalationDeposit was encumbered or not
                 // if dispute was escalated, disputeDates.escalated is populated
-                uint256 buyerEscalationDeposit = pe.disputeDates[_exchangeId].escalated > 0
-                    ? pe.disputeResolutionTerms[exchange.offerId].buyerEscalationDeposit
-                    : 0;
+                uint256 buyerEscalationDeposit;
+                if (pe.disputeDates[_exchangeId].escalated > 0) {
+                    buyerEscalationDeposit = disputeResolutionTerms.buyerEscalationDeposit;
+                    payOff.disputeResolver = disputeResolverFee; // If REFUSED, this is later set to 0
+                }
 
                 // get the information about the dispute, which must exist
                 BosonTypes.Dispute storage dispute = pe.disputes[_exchangeId];
@@ -201,46 +215,90 @@ library FundsLib {
 
                 if (disputeState == BosonTypes.DisputeState.Retracted) {
                     // RETRACTED - same as "COMPLETED"
-                    protocolFee = offerFee.protocolFee;
-                    agentFee = offerFee.agentFee;
+                    BosonTypes.OfferFees storage offerFee = pe.offerFees[offerId];
+                    payOff.protocol = offerFee.protocolFee;
+                    payOff.agent = offerFee.agentFee;
                     // buyerPayoff is 0
-                    sellerPayoff = price + sellerDeposit - protocolFee - agentFee + buyerEscalationDeposit;
+                    payOff.seller = price + sellerDeposit - payOff.protocol - payOff.agent + buyerEscalationDeposit;
                 } else if (disputeState == BosonTypes.DisputeState.Refused) {
                     // REFUSED
-                    sellerPayoff = sellerDeposit;
-                    buyerPayoff = price + buyerEscalationDeposit;
+                    payOff.seller = sellerDeposit;
+                    payOff.buyer = price + buyerEscalationDeposit;
+                    payOff.disputeResolver = 0;
                 } else {
                     // RESOLVED or DECIDED
                     uint256 pot = price + sellerDeposit + buyerEscalationDeposit;
-                    buyerPayoff = (pot * dispute.buyerPercent) / 10000;
-                    sellerPayoff = pot - buyerPayoff;
+                    payOff.buyer = (pot * dispute.buyerPercent) / 10000;
+                    payOff.seller = pot - payOff.buyer;
                 }
             }
+            // Mutualizer payoff is always the difference between the DR fee and what is paid to the dispute resolver
+            payOff.feeMutualizer = disputeResolverFee - payOff.disputeResolver;
         }
 
         // Store payoffs to availablefunds and notify the external observers
         address exchangeToken = offer.exchangeToken;
-        uint256 sellerId = offer.sellerId;
-        uint256 buyerId = exchange.buyerId;
         address sender = EIP712Lib.msgSender();
-        if (sellerPayoff > 0) {
-            increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
-            emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, sender);
+        // ToDo: use `increaseAvailableFundsAndEmitEvent` from  https://github.com/bosonprotocol/boson-protocol-contracts/pull/569
+        if (payOff.seller > 0) {
+            uint256 sellerId = offer.sellerId;
+            increaseAvailableFunds(sellerId, exchangeToken, payOff.seller);
+            emit FundsReleased(_exchangeId, sellerId, exchangeToken, payOff.seller, sender);
         }
-        if (buyerPayoff > 0) {
-            increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
-            emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, sender);
+        if (payOff.buyer > 0) {
+            uint256 buyerId = exchange.buyerId;
+            increaseAvailableFunds(buyerId, exchangeToken, payOff.buyer);
+            emit FundsReleased(_exchangeId, buyerId, exchangeToken, payOff.buyer, sender);
         }
-        if (protocolFee > 0) {
-            increaseAvailableFunds(0, exchangeToken, protocolFee);
-            emit ProtocolFeeCollected(_exchangeId, exchangeToken, protocolFee, sender);
+        if (payOff.protocol > 0) {
+            increaseAvailableFunds(0, exchangeToken, payOff.protocol);
+            emit ProtocolFeeCollected(_exchangeId, exchangeToken, payOff.protocol, sender);
         }
-        if (agentFee > 0) {
+        if (payOff.agent > 0) {
             // Get the agent for offer
-            uint256 agentId = ProtocolLib.protocolLookups().agentIdByOffer[exchange.offerId];
-            increaseAvailableFunds(agentId, exchangeToken, agentFee);
-            emit FundsReleased(_exchangeId, agentId, exchangeToken, agentFee, sender);
+            uint256 agentId = ProtocolLib.protocolLookups().agentIdByOffer[offerId];
+            increaseAvailableFunds(agentId, exchangeToken, payOff.agent);
+            emit FundsReleased(_exchangeId, agentId, exchangeToken, payOff.agent, sender);
         }
+        if (payOff.disputeResolver > 0) {
+            // Get the dispute resolver for offer
+            uint256 disputeResolveId = disputeResolutionTerms.disputeResolverId;
+            increaseAvailableFunds(disputeResolveId, exchangeToken, payOff.disputeResolver);
+            emit FundsReleased(_exchangeId, disputeResolveId, exchangeToken, payOff.disputeResolver, sender);
+        }
+
+        // always make call to mutualizer, even if payoff is 0
+        returnFeeToMutualizer(offer.feeMutualizer, _exchangeId, exchangeToken, payOff.feeMutualizer);
+
+        IDRFeeMutualizer(offer.feeMutualizer).returnDRFee(
+            ProtocolLib.protocolLookups().mutualizerUUIDByExchange[_exchangeId],
+            exchangeToken,
+            payOff.feeMutualizer,
+            ""
+        );
+    }
+
+    function returnFeeToMutualizer(
+        address _feeMutualizer,
+        uint256 _exchangeId,
+        address _token,
+        uint256 _feeAmount
+    ) internal {
+        uint256 nativePayoff;
+        if (_feeAmount > 0 && _token != address(0)) {
+            // Approve the mutualizer to withdraw the tokens
+            IERC20(_token).approve(_feeMutualizer, _feeAmount);
+        } else {
+            // Even if _feeAmount == 0, this is still true
+            nativePayoff = _feeAmount;
+        }
+
+        IDRFeeMutualizer(_feeMutualizer).returnDRFee(
+            ProtocolLib.protocolLookups().mutualizerUUIDByExchange[_exchangeId],
+            _token,
+            _feeAmount,
+            ""
+        );
     }
 
     /**

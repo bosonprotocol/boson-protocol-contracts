@@ -6,7 +6,7 @@ pragma solidity 0.8.9;
  *
  * @notice This is the interface for the Dispute Resolver fee mutualizers.
  *
- * The ERC-165 identifier for this interface is: 0x0db62fa8
+ * The ERC-165 identifier for this interface is: 0x47f05774
  */
 interface IDRFeeMutualizer {
     event DRFeeRequsted(
