@@ -591,6 +591,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Get the offer
         (, Offer storage offer) = fetchOffer(offerId);
 
+        // Derive the exchange id
         uint256 exchangeId = _tokenId & type(uint128).max;
 
         // Cache protocol entities for reference
@@ -615,7 +616,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
                 }
                 lookups.lastVoucherOwner[_tokenId] = _from;
             } else {
-                revert("Invalid voucher transfer");
+                revert(TRANSFER_NOT_ALLOWED);
             }
         } else {
             IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);
