@@ -44,7 +44,19 @@ contract PriceDiscoveryBase is ProtocolBase {
         if (_priceDiscovery.side == Side.Ask) {
             return fulfilAskOrder(_tokenId, _offer, _priceDiscovery, _buyer);
         } else {
-            return fulfilBidOrder(_tokenId, _offer, _priceDiscovery);
+            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+            IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
+
+            // Get current voucher owner
+            address owner = bosonVoucher.ownerOf(_tokenId);
+
+            // Check if caller is the owner of the voucher
+            bool callerIsOwner = owner == msgSender();
+
+            if (callerIsOwner) {
+                return fulfillBidCallerIsOwner(_tokenId, _offer, _priceDiscovery);
+            }
+            return fulfilBidOrder(_tokenId, _offer, _priceDiscovery, owner);
         }
     }
 
@@ -158,47 +170,30 @@ contract PriceDiscoveryBase is ProtocolBase {
     function fulfilBidOrder(
         uint256 _tokenId,
         Offer storage _offer,
-        PriceDiscovery calldata _priceDiscovery
+        PriceDiscovery calldata _priceDiscovery,
+        address owner
     ) internal returns (uint256 actualPrice) {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
         IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
 
-        // Get current voucher owner
-        address owner = bosonVoucher.ownerOf(_tokenId);
-
-        // Check if caller is the owner of the voucher
-        bool callerIsOwner = owner == msgSender();
         uint256 balanceBefore;
 
-        // If caller is the owner, protocol can act on behalf of the owner
-        if (callerIsOwner) {
-            // Transfer seller's voucher to protocol
-            // Don't need to use safe transfer from, since that protocol can handle the voucher
-            bosonVoucher.transferFrom(msgSender(), address(this), _tokenId);
+        // If caller is not the owner, check if the owner exists and is price discovery contract
+        address priceDiscoveryContract = lookups.priceDiscoveryContractByVoucher[_tokenId];
 
-            // Owner is now protocol
-            owner = address(this);
+        require(owner != address(0) && owner == priceDiscoveryContract, OWNER_MUST_BE_PRICE_DISCOVERY_CONTRACT);
 
-            // Approve price discovery contract to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
-            bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, _tokenId);
-        } else {
-            // If caller is not the owner, check if the owner exists and is price discovery contract
-            address priceDiscoveryContract = lookups.priceDiscoveryContractByVoucher[_tokenId];
+        // Update the owner to the last owner because we should check the last owner's balance since they are the one who should receive the price via the price discovery contract
+        owner = lookups.lastVoucherOwner[_tokenId];
 
-            require(owner != address(0) && owner == priceDiscoveryContract, OWNER_MUST_BE_PRICE_DISCOVERY_CONTRACT);
-
-            // Update the owner to the last owner because we should check the last owner's balance since they are the one who should receive the price via the price discovery contract
-            owner = lookups.lastVoucherOwner[_tokenId];
-
-            require(owner != address(0), LAST_OWNER_NOT_FOUND);
-        }
+        require(owner != address(0), LAST_OWNER_NOT_FOUND);
 
         address exchangeToken = _offer.exchangeToken;
 
         // Native token is not safe, as its value can be intercepted in the receive function.
         if (exchangeToken == address(0)) exchangeToken = address(weth);
 
-        // Get protocol balance before the exchange
+        // Get owner balance before the exchange
         balanceBefore = getBalance(exchangeToken, owner);
 
         // Track native balance just in case if seller send some native currency or price discovery contract does
@@ -224,11 +219,9 @@ contract PriceDiscoveryBase is ProtocolBase {
         require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
 
         // Transfer funds to protocol - caller must pay on behalf of the seller
-        if (!callerIsOwner) {
-            FundsLib.validateIncomingPayment(exchangeToken, actualPrice);
-            // see if is possible (and safe) to use transferFundsToProtocol and get funds directly from the seller
-            // FundsLib.transferFundsToProtocol(exchangeToken, payable(owner), actualPrice);
-        }
+        FundsLib.validateIncomingPayment(exchangeToken, actualPrice);
+        // see if is possible (and safe) to use transferFundsToProtocol and get funds directly from the seller
+        // FundsLib.transferFundsToProtocol(exchangeToken, payable(owner), actualPrice);
 
         // Check the native balance and return the surplus to seller
         uint256 protocolNativeBalanceAfter = getBalance(address(0), address(this));
@@ -242,7 +235,64 @@ contract PriceDiscoveryBase is ProtocolBase {
             );
         }
 
-        owner = bosonVoucher.ownerOf(_tokenId);
+        verifyStateAfterPriceDiscoveryCall(bosonVoucher, _tokenId);
+
+        // Clear the storage
+        clearStorage(ps, lookups, _tokenId);
+    }
+
+    // Protocol act on behalf of the owner
+    function fulfillBidCallerIsOwner(
+        uint256 _tokenId,
+        Offer storage _offer,
+        PriceDiscovery calldata _priceDiscovery
+    ) internal returns (uint256 actualPrice) {
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
+
+        // Transfer seller's voucher to protocol
+        // Don't need to use safe transfer from, since that protocol can handle the voucher
+        bosonVoucher.transferFrom(msgSender(), address(this), _tokenId);
+
+        // Owner is now protocol
+        address owner = address(this);
+
+        // Approve price discovery contract to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
+        bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, _tokenId);
+
+        address exchangeToken = _offer.exchangeToken;
+
+        // Get protocol balance before the exchange
+        uint256 balanceBefore = getBalance(exchangeToken, owner);
+
+        // Store the information about incoming voucher
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+
+        address cloneAddress = lookups.cloneAddress[_offer.sellerId];
+
+        // Set incoming voucher clone address
+        ps.incomingVoucherCloneAddress = cloneAddress;
+
+        // Call the price discovery contract
+        _priceDiscovery.priceDiscoveryContract.functionCall(_priceDiscovery.priceDiscoveryData);
+
+        // Token id expected and token id send to buyer must match
+        require(_tokenId == ps.incomingVoucherId, TOKEN_ID_NOT_FOUND);
+
+        uint256 balanceAfter = getBalance(exchangeToken, owner);
+
+        actualPrice = balanceAfter - balanceBefore;
+
+        require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
+
+        verifyStateAfterPriceDiscoveryCall(bosonVoucher, _tokenId);
+
+        // Clear the storage
+        clearStorage(ps, lookups, _tokenId);
+    }
+
+    function verifyStateAfterPriceDiscoveryCall(IBosonVoucher bosonVoucher, uint256 _tokenId) internal {
+        address owner = bosonVoucher.ownerOf(_tokenId);
 
         uint256 exchangeId = _tokenId & type(uint128).max;
 
@@ -252,8 +302,13 @@ contract PriceDiscoveryBase is ProtocolBase {
         (bool exists, Buyer storage buyer) = fetchBuyer(exchange.buyerId);
 
         require(exists && buyer.wallet == owner, NEW_VOUCHER_OWNER_BUYER_MUST_MATCH);
+    }
 
-        // Clear the storage
+    function clearStorage(
+        ProtocolLib.ProtocolStatus storage ps,
+        ProtocolLib.ProtocolLookups storage lookups,
+        uint256 _tokenId
+    ) internal {
         delete ps.incomingVoucherId;
         delete ps.incomingVoucherCloneAddress;
         delete lookups.lastVoucherOwner[_tokenId];
