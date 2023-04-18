@@ -177,6 +177,17 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      */
     function onVoucherTransferred(uint256 _tokenId, address payable _newBuyer) external;
 
+    /**
+     * @notice Handle pre-minted voucher transfer
+     *
+     * Reverts if
+     *
+     * @param _tokenId - the voucher id
+     * @param _to - the receiver address
+     * @param _from - the sender address
+     * @param _rangeOwner - the owner of the voucher range
+     * @param _sender - the caller address
+     */
     function onPremintedVoucherTransferred(
         uint256 _tokenId,
         address payable _to,

@@ -5,10 +5,7 @@ const fs = require("fs");
 const { subtask } = require("hardhat/config");
 const path = require("node:path");
 const { glob } = require("glob");
-const {
-  TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS,
-  TASK_COMPILE_SOLIDITY_READ_FILE,
-} = require("hardhat/builtin-tasks/task-names");
+const { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } = require("hardhat/builtin-tasks/task-names");
 
 subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS, async (_, { config }, runSuper) => {
   const files = await runSuper();

@@ -186,7 +186,7 @@ describe("[@skip-on-coverage] auction integration", function () {
         .createAuction(tokenId, tokenContract, duration, reservePrice, curator, curatorFeePercentage, auctionCurrency);
     });
 
-    it("Auction ends normally", async function () {
+    it("Auction ends normally if finalise throw Boson Protocol", async function () {
       // 5. Bid
       const auctionId = 0;
       const amount = 10;

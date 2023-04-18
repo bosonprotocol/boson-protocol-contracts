@@ -1,7 +1,7 @@
 /**
  * Seaport Domain Enum: ItemType
  */
-class ItemType { }
+class ItemType {}
 
 ItemType.NATIVE = 0;
 ItemType.ERC20 = 1;
@@ -16,7 +16,7 @@ ItemType.Types = [
   ItemType.ERC721,
   ItemType.ERC1155,
   ItemType.ERC721_WITH_CRITERIA,
-  ItemType.ERC1155_WITH_CRITERIA
+  ItemType.ERC1155_WITH_CRITERIA,
 ];
 
 // Export

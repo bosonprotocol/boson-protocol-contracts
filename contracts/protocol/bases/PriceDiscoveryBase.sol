@@ -41,12 +41,12 @@ contract PriceDiscoveryBase is ProtocolBase {
         PriceDiscovery calldata _priceDiscovery,
         address _buyer
     ) internal returns (uint256 actualPrice) {
-        if (_priceDiscovery.side == Side.Ask) {
-            return fulfilAskOrder(_tokenId, _offer, _priceDiscovery, _buyer);
-        } else {
-            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-            IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
 
+        if (_priceDiscovery.side == Side.Ask) {
+            return fulfilAskOrder(_tokenId, _offer, _priceDiscovery, _buyer, lookups, bosonVoucher);
+        } else {
             // Get current voucher owner
             address owner = bosonVoucher.ownerOf(_tokenId);
 
@@ -54,9 +54,9 @@ contract PriceDiscoveryBase is ProtocolBase {
             bool callerIsOwner = owner == msgSender();
 
             if (callerIsOwner) {
-                return fulfillBidCallerIsOwner(_tokenId, _offer, _priceDiscovery);
+                return fulfilBidCallerIsOwner(_tokenId, _offer, _priceDiscovery, lookups, bosonVoucher);
             }
-            return fulfilBidOrder(_tokenId, _offer, _priceDiscovery, owner);
+            return fulfilBidOrder(_tokenId, _offer, _priceDiscovery, owner, lookups, bosonVoucher);
         }
     }
 
@@ -82,28 +82,31 @@ contract PriceDiscoveryBase is ProtocolBase {
         uint256 _tokenId,
         Offer storage _offer,
         PriceDiscovery calldata _priceDiscovery,
-        address _buyer
+        address _buyer,
+        ProtocolLib.ProtocolLookups storage _lookups,
+        IBosonVoucher bosonVoucher
     ) internal returns (uint256 actualPrice) {
         address exchangeToken = _offer.exchangeToken;
 
         // Transfer buyers funds to protocol
         FundsLib.validateIncomingPayment(exchangeToken, _priceDiscovery.price);
 
-        // At this point, protocol temporary holds buyer's payment if token is native token
-        uint256 protocolBalanceBefore = getBalance(exchangeToken, address(this));
+        address owner = address(this);
 
-        // If token is ERC20, approve price discovery contract to transfer funds
+        // At this point, protocol temporary holds buyer's payment if token is native token
+        uint256 protocolBalanceBefore = getBalance(exchangeToken, owner);
+
+        // If token is ERC20, approve price discovery contract to transfer protocol funds
         if (exchangeToken != address(0)) {
             IERC20(exchangeToken).approve(address(_priceDiscovery.priceDiscoveryContract), _priceDiscovery.price);
         }
 
+        address cloneAddress = _lookups.cloneAddress[_offer.sellerId];
+
         // Store the information about incoming voucher
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-        address cloneAddress = protocolLookups().cloneAddress[_offer.sellerId];
-        ps.incomingVoucherCloneAddress = cloneAddress;
 
-        // Call the price discovery contract
-        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
+        callPriceDiscoveryContract(_priceDiscovery, cloneAddress);
 
         // If caller has provided token id, it must match the token id that the price discovery send to the protocol
         if (_tokenId != 0) {
@@ -115,7 +118,6 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         {
             // Make sure that the price discovery contract has transferred the voucher to the protocol
-            IBosonVoucher bosonVoucher = IBosonVoucher(cloneAddress);
             require(bosonVoucher.ownerOf(_tokenId) == address(this), VOUCHER_NOT_RECEIVED);
 
             // Transfer voucher to buyer
@@ -131,33 +133,30 @@ contract PriceDiscoveryBase is ProtocolBase {
             IERC20(exchangeToken).approve(address(_priceDiscovery.priceDiscoveryContract), 0);
         }
 
-        // Clear the storage
-        delete ps.incomingVoucherId;
-        delete ps.incomingVoucherCloneAddress;
-
         uint256 overchargedAmount = _priceDiscovery.price - actualPrice;
 
         if (overchargedAmount > 0) {
             // Return the surplus to buyer
             FundsLib.transferFundsFromProtocol(exchangeToken, payable(_buyer), overchargedAmount);
         }
+
+        clearStorage(_tokenId);
     }
 
     /**
-     * @notice Fulfils a bid order on external contract.
+     * @notice Fulfils a bid order on external contract when caller is not voucher owner.
      *
      * Reverts if:
      * - Offer price is in native token and caller does not approve WETH
      * - Offer price is in some ERC20 token and caller also sends native currency
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - Received ERC20 token amount differs from the expected value
-     * - Transfer of voucher to the buyer fails for some reasong (e.g. buyer is contract that doesn't accept voucher)
+     * - Transfer of voucher to the buyer fails for some reason (e.g. buyer is contract that doesn't accept voucher)
+     * - Current owner is not price discovery contract
      * - Last voucher owner not found
      * - Call to price discovery contract fails
      * - Exchange doesn't exist after the call to price discovery contract
      * - Exchange is not in the committed state
-     * - Voucher owner did not approve protocol to transfer the voucher if caller is owner
-     * - Caller is not owner and owner is not price discovery contract
      * - Price received from price discovery is lower than the expected price
      * - Reseller did not approve protocol to transfer exchange token in escrow
      * - New voucher owner is not buyer wallet
@@ -171,85 +170,95 @@ contract PriceDiscoveryBase is ProtocolBase {
         uint256 _tokenId,
         Offer storage _offer,
         PriceDiscovery calldata _priceDiscovery,
-        address owner
+        address owner,
+        ProtocolLib.ProtocolLookups storage _lookups,
+        IBosonVoucher bosonVoucher
     ) internal returns (uint256 actualPrice) {
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-        IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
+        address priceDiscoveryContract = _lookups.priceDiscoveryContractByVoucher[_tokenId];
 
-        uint256 balanceBefore;
-
-        // If caller is not the owner, check if the owner exists and is price discovery contract
-        address priceDiscoveryContract = lookups.priceDiscoveryContractByVoucher[_tokenId];
-
+        // If caller is not the owner, check if the owner exists and is voucher price discovery contract
         require(owner != address(0) && owner == priceDiscoveryContract, OWNER_MUST_BE_PRICE_DISCOVERY_CONTRACT);
-
-        // Update the owner to the last owner because we should check the last owner's balance since they are the one who should receive the price via the price discovery contract
-        owner = lookups.lastVoucherOwner[_tokenId];
-
-        require(owner != address(0), LAST_OWNER_NOT_FOUND);
 
         address exchangeToken = _offer.exchangeToken;
 
         // Native token is not safe, as its value can be intercepted in the receive function.
         if (exchangeToken == address(0)) exchangeToken = address(weth);
 
-        // Get owner balance before the exchange
-        balanceBefore = getBalance(exchangeToken, owner);
+        // check the last owner's balance since they are the one who should receive the price via the price discovery contract
+        address lastOwner = _lookups.lastVoucherOwner[_tokenId];
+
+        require(lastOwner != address(0), LAST_OWNER_NOT_FOUND);
+
+        // Check last owner balance before the exchange
+        uint256 balanceBefore = getBalance(exchangeToken, lastOwner);
 
         // Track native balance just in case if seller send some native currency or price discovery contract does
-        uint256 protocolNativeBalanceBefore = getBalance(address(0), address(this));
+        uint256 protocolNativeBalanceBefore = getBalance(address(0), owner);
 
         // Store the information about incoming voucher
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-        address cloneAddress = protocolLookups().cloneAddress[_offer.sellerId];
 
-        // Set incoming voucher clone address
-        ps.incomingVoucherCloneAddress = cloneAddress;
+        {
+            address cloneAddress = _lookups.cloneAddress[_offer.sellerId];
 
-        // Call the price discovery contract
-        _priceDiscovery.priceDiscoveryContract.functionCall(_priceDiscovery.priceDiscoveryData);
+            callPriceDiscoveryContract(_priceDiscovery, cloneAddress);
 
-        // Token id expected and token id send to buyer ust match
-        require(_tokenId == ps.incomingVoucherId, TOKEN_ID_NOT_FOUND);
+            uint256 balanceAfter = getBalance(exchangeToken, lastOwner);
 
-        uint256 balanceAfter = getBalance(exchangeToken, owner);
+            actualPrice = balanceAfter - balanceBefore;
 
-        actualPrice = balanceAfter - balanceBefore;
+            require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
 
-        require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
+            // Transfer funds to protocol - caller must pay on behalf of the seller
+            FundsLib.validateIncomingPayment(exchangeToken, actualPrice);
 
-        // Transfer funds to protocol - caller must pay on behalf of the seller
-        FundsLib.validateIncomingPayment(exchangeToken, actualPrice);
-        // see if is possible (and safe) to use transferFundsToProtocol and get funds directly from the seller
-        // FundsLib.transferFundsToProtocol(exchangeToken, payable(owner), actualPrice);
+            // Check the native balance and return the surplus to seller
+            uint256 protocolNativeBalanceAfter = getBalance(address(0), owner);
 
-        // Check the native balance and return the surplus to seller
-        uint256 protocolNativeBalanceAfter = getBalance(address(0), address(this));
-
-        if (protocolNativeBalanceAfter > protocolNativeBalanceBefore) {
-            // Return the surplus to seller
-            FundsLib.transferFundsFromProtocol(
-                address(0),
-                payable(msgSender()),
-                protocolNativeBalanceAfter - protocolNativeBalanceBefore
-            );
+            if (protocolNativeBalanceAfter > protocolNativeBalanceBefore) {
+                // Return the surplus to seller
+                FundsLib.transferFundsFromProtocol(
+                    address(0),
+                    payable(msgSender()),
+                    protocolNativeBalanceAfter - protocolNativeBalanceBefore
+                );
+            }
         }
 
         verifyStateAfterPriceDiscoveryCall(bosonVoucher, _tokenId);
 
-        // Clear the storage
-        clearStorage(ps, lookups, _tokenId);
+        clearStorage(_tokenId);
     }
 
-    // Protocol act on behalf of the owner
-    function fulfillBidCallerIsOwner(
+    /**
+     * @notice Fulfils a bid order on external contract when caller is voucher owner.
+     * Protocol act on behalf of the voucher owner
+     *
+     * Reverts if:
+     * - Offer price is in native token and caller does not approve WETH
+     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Received ERC20 token amount differs from the expected value
+     * - Transfer of voucher to the buyer fails for some reason (e.g. buyer is contract that doesn't accept voucher)
+     * - Call to price discovery contract fails
+     * - Exchange doesn't exist after the call to price discovery contract
+     * - Exchange is not in the committed state
+     * - Voucher owner did not approve protocol to transfer the voucher
+     * - Price received from price discovery is lower than the expected price
+     * - Reseller did not approve protocol to transfer exchange token in escrow
+     * - New voucher owner is not buyer wallet
+     *
+     * @param _tokenId - the id of the token
+     * @param _offer - the fully populated BosonTypes.Offer struct
+     * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
+     * @return actualPrice - the actual price of the order
+     */
+    function fulfilBidCallerIsOwner(
         uint256 _tokenId,
         Offer storage _offer,
-        PriceDiscovery calldata _priceDiscovery
+        PriceDiscovery calldata _priceDiscovery,
+        ProtocolLib.ProtocolLookups storage _lookups,
+        IBosonVoucher bosonVoucher
     ) internal returns (uint256 actualPrice) {
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-        IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
-
         // Transfer seller's voucher to protocol
         // Don't need to use safe transfer from, since that protocol can handle the voucher
         bosonVoucher.transferFrom(msgSender(), address(this), _tokenId);
@@ -265,19 +274,9 @@ contract PriceDiscoveryBase is ProtocolBase {
         // Get protocol balance before the exchange
         uint256 balanceBefore = getBalance(exchangeToken, owner);
 
-        // Store the information about incoming voucher
-        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+        address cloneAddress = _lookups.cloneAddress[_offer.sellerId];
 
-        address cloneAddress = lookups.cloneAddress[_offer.sellerId];
-
-        // Set incoming voucher clone address
-        ps.incomingVoucherCloneAddress = cloneAddress;
-
-        // Call the price discovery contract
-        _priceDiscovery.priceDiscoveryContract.functionCall(_priceDiscovery.priceDiscoveryData);
-
-        // Token id expected and token id send to buyer must match
-        require(_tokenId == ps.incomingVoucherId, TOKEN_ID_NOT_FOUND);
+        callPriceDiscoveryContract(_priceDiscovery, cloneAddress);
 
         uint256 balanceAfter = getBalance(exchangeToken, owner);
 
@@ -287,12 +286,20 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         verifyStateAfterPriceDiscoveryCall(bosonVoucher, _tokenId);
 
-        // Clear the storage
-        clearStorage(ps, lookups, _tokenId);
+        clearStorage(_tokenId);
     }
 
-    function verifyStateAfterPriceDiscoveryCall(IBosonVoucher bosonVoucher, uint256 _tokenId) internal {
-        address owner = bosonVoucher.ownerOf(_tokenId);
+    /**
+     * @notice Verify exchange and voucher state after the call to price discovery contract
+     *
+     * @param _bosonVoucher - the BosonVoucher contract
+     * @param _tokenId - the voucher id
+     */
+    function verifyStateAfterPriceDiscoveryCall(IBosonVoucher _bosonVoucher, uint256 _tokenId) internal {
+        // Token id expected and token id send to buyer must match
+        require(_tokenId == protocolStatus().incomingVoucherId, TOKEN_ID_NOT_FOUND);
+
+        address owner = _bosonVoucher.ownerOf(_tokenId);
 
         uint256 exchangeId = _tokenId & type(uint128).max;
 
@@ -304,14 +311,11 @@ contract PriceDiscoveryBase is ProtocolBase {
         require(exists && buyer.wallet == owner, NEW_VOUCHER_OWNER_BUYER_MUST_MATCH);
     }
 
-    function clearStorage(
-        ProtocolLib.ProtocolStatus storage ps,
-        ProtocolLib.ProtocolLookups storage lookups,
-        uint256 _tokenId
-    ) internal {
+    function clearStorage(uint256 _tokenId) internal {
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
         delete ps.incomingVoucherId;
         delete ps.incomingVoucherCloneAddress;
-        delete lookups.lastVoucherOwner[_tokenId];
+        delete protocolLookups().lastVoucherOwner[_tokenId];
     }
 
     /**
@@ -322,5 +326,13 @@ contract PriceDiscoveryBase is ProtocolBase {
      */
     function getBalance(address _tokenAddress, address entity) internal view returns (uint256) {
         return _tokenAddress == address(0) ? entity.balance : IERC20(_tokenAddress).balanceOf(entity);
+    }
+
+    function callPriceDiscoveryContract(PriceDiscovery calldata _priceDiscovery, address _cloneAddress) internal {
+        // Set incoming voucher clone address
+        protocolStatus().incomingVoucherCloneAddress = _cloneAddress;
+
+        // Call the price discovery contract
+        _priceDiscovery.priceDiscoveryContract.functionCall(_priceDiscovery.priceDiscoveryData);
     }
 }

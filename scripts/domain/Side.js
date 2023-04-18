@@ -1,7 +1,7 @@
 /**
  * Boson Protocol Domain Enum: Side
  */
-class Side { }
+class Side {}
 
 Side.Ask = 0;
 Side.Bid = 1;

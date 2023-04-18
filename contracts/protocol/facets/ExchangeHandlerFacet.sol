@@ -126,11 +126,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             "INVALID_PRICE_DISCOVERY"
         );
 
-        // if (_priceDiscovery.side == Side.Bid) {
-        //     (, Seller storage seller, ) = fetchSeller(_offer.sellerId);
-        //     require(seller.assistant == msgSender(), "Only seller can bid");
-        // }
-
         fulfilOrder(_tokenId, _offer, _priceDiscovery, _buyer);
     }
 
@@ -578,6 +573,17 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         emit VoucherTransferred(exchange.offerId, exchangeId, buyerId, msgSender());
     }
 
+    /**
+     * @notice Handle pre-minted voucher transfer
+     *
+     * Reverts if
+     *
+     * @param _tokenId - the voucher id
+     * @param _to - the receiver address
+     * @param _from - the sender address
+     * @param _rangeOwner - the owner of the voucher range
+     * @param _sender - the caller address
+     */
     function onPremintedVoucherTransferred(
         uint256 _tokenId,
         address payable _to,
@@ -588,27 +594,30 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Derive the offer id
         uint256 offerId = _tokenId >> 128;
 
-        // Get the offer
-        (, Offer storage offer) = fetchOffer(offerId);
-
         // Derive the exchange id
         uint256 exchangeId = _tokenId & type(uint128).max;
+
+        // Get the offer
+        (, Offer storage offer) = fetchOffer(offerId);
 
         // Cache protocol entities for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         if (offer.priceType == OfferPrice.Discovery) {
-            // Store the information about incoming voucher
             ProtocolLib.ProtocolStatus storage ps = protocolStatus();
 
             address priceDiscoveryContract = lookups.priceDiscoveryContractByVoucher[_tokenId];
 
             if (ps.incomingVoucherCloneAddress != address(0)) {
+                // Store the information about incoming voucher
                 ps.incomingVoucherId = _tokenId;
 
+                // Commit the offer
                 commitToOfferInternal(_to, offer, exchangeId, true);
+
                 return true;
             } else if (_from == priceDiscoveryContract && _to == _rangeOwner) {
+                // The voucher was returned to the range owner, i.e withdrawn from price discovery contract
                 delete lookups.priceDiscoveryContractByVoucher[_tokenId];
             } else if (_sender == _to) {
                 if (_from == _rangeOwner) {
@@ -631,7 +640,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
             return true;
         }
-        return false;
     }
 
     /**
@@ -1156,10 +1164,5 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             UNEXPECTED_ERC721_RECEIVED
         );
         return this.onERC721Received.selector;
-    }
-
-    function setIncomingVoucherId(uint256 _incomingVoucherId, uint256 sellerId) external {
-        require(msg.sender == protocolLookups().cloneAddress[sellerId]);
-        protocolStatus().incomingVoucherId = _incomingVoucherId;
     }
 }
