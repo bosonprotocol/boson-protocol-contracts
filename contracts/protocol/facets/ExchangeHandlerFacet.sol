@@ -609,11 +609,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
                 return true;
             } else if (_from == priceDiscoveryContract && _to == _rangeOwner) {
                 delete lookups.priceDiscoveryContractByVoucher[_tokenId];
-            } else {
+            } else if (_sender == _to) {
                 if (_from == _rangeOwner) {
                     lookups.priceDiscoveryContractByVoucher[_tokenId] = _sender;
                 }
                 lookups.lastVoucherOwner[_tokenId] = _from;
+            } else {
+                revert("Invalid voucher transfer");
             }
         } else {
             IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);

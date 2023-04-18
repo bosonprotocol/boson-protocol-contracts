@@ -28,8 +28,6 @@ const OfferPrice = require("../../../scripts/domain/OfferPrice");
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const Side = require("../../../scripts/domain/Side");
 
-const BID_BASE_UNIT = utils.parseUnits("1000", 9);
-
 describe("[@skip-on-coverage] auction integration", function () {
   this.timeout(100000000);
   let bosonVoucher, bosonToken;
@@ -164,12 +162,12 @@ describe("[@skip-on-coverage] auction integration", function () {
       .depositFunds(seller.id, constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
   });
 
-  it.only("Works with Zora auction", async function () {
-    let tokenId;
+  it("Works with Zora auction", async function () {
+    let tokenId, zoraAuction;
     beforeEach(async function () {
       // 1. Deploy Zora Auction
       const ZoraAuctionFactory = await ethers.getContractFactory("AuctionHouse");
-      const zoraAuction = await ZoraAuctionFactory.deploy(weth.address);
+      zoraAuction = await ZoraAuctionFactory.deploy(weth.address);
 
       // 2. Set approval for all
       tokenId = deriveTokenId(offer.id, 2);
@@ -198,8 +196,8 @@ describe("[@skip-on-coverage] auction integration", function () {
       // 6. Encode endAuction data
       await getCurrentBlockAndSetTimeForward(oneWeek);
 
-      expect(await wrappedBosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
-      expect(await weth.balanceOf(wrappedBosonVoucher.address)).to.equal(amount);
+      expect(await bosonVoucher.ownerOf(tokenId)).to.equal(zoraAuction.address);
+      expect(await weth.balanceOf(assistant.address)).to.equal(amount);
 
       const calldata = zoraAuction.interface.encodeFunctionData("endAuction", [auctionId]);
       const priceDiscovery = new PriceDiscovery(amount, zoraAuction.address, calldata, Side.Bid);
@@ -207,15 +205,15 @@ describe("[@skip-on-coverage] auction integration", function () {
       const protocolBalanceBefore = await ethers.provider.getBalance(exchangeHandler.address);
 
       // 7. Commit to offer
-      tx = await exchangeHandler.connect(assistant).commitToOffer(buyer.address, offer.id, priceDiscovery);
+      const tx = await exchangeHandler.connect(assistant).commitToOffer(buyer.address, offer.id, priceDiscovery);
       const { timestamp } = await ethers.provider.getBlock(tx.blockNumber);
 
       expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
       expect(await ethers.provider.getBalance(exchangeHandler.address)).to.equal(protocolBalanceBefore.add(amount));
 
-      MASK = ethers.BigNumber.from(2).pow(128).sub(1);
+      const MASK = BigNumber.from(2).pow(128).sub(1);
       const exchangeId = tokenId.and(MASK);
-      [, , voucher] = await exchangeHandler.getExchange(exchangeId);
+      const [, , voucher] = await exchangeHandler.getExchange(exchangeId);
 
       expect(voucher.committedDate).to.equal(timestamp);
     });
