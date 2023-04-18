@@ -55,6 +55,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - Received ERC20 token amount differs from the expected value
      * - Seller has less funds available than sellerDeposit
+     * - Mutualizer does not provide enough funds to cover the DR fee
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
@@ -97,6 +98,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - Buyer account is inactive
      * - Buyer is token-gated (conditional commit requirements not met or already used)
      * - Seller has less funds available than sellerDeposit and price
+     * - Mutualizer does not provide enough funds to cover the DR fee
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
@@ -141,6 +143,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *   - Received ERC20 token amount differs from the expected value
      *   - Seller has less funds available than sellerDeposit
      * - Seller has less funds available than sellerDeposit and price for preminted offers
+     * - Mutualizer does not provide enough funds to cover the DR fee
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offer - storage pointer to the offer
@@ -175,7 +178,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 buyerId = getValidBuyer(_buyer);
 
         // Encumber funds before creating the exchange
-        FundsLib.encumberFunds(_offerId, buyerId, _isPreminted);
+        FundsLib.encumberFunds(_offerId, _exchangeId, buyerId, _isPreminted);
 
         // Create and store a new exchange
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];

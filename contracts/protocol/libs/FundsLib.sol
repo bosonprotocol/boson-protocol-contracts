@@ -7,6 +7,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
 import { SafeERC20 } from "../../ext_libs/SafeERC20.sol";
+import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
 
 /**
  * @title FundsLib
@@ -59,11 +60,13 @@ library FundsLib {
      * - Received ERC20 token amount differs from the expected value
      *
      * @param _offerId - id of the offer with the details
+     * @param _exchangeId - id of the exchange
      * @param _buyerId - id of the buyer
      * @param _isPreminted - flag indicating if the offer is preminted
      */
     function encumberFunds(
         uint256 _offerId,
+        uint256 _exchangeId,
         uint256 _buyerId,
         bool _isPreminted
     ) internal {
@@ -78,16 +81,29 @@ library FundsLib {
         BosonTypes.Offer storage offer = pe.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
         uint256 price = offer.price;
+        uint256 sellerFundsEncumbered = offer.sellerDeposit; // minimal that is encumbered for seller
 
-        // if offer is non-preminted, validate incoming payment
-        if (!_isPreminted) {
+        if (_isPreminted) {
+            // for preminted offer, encumber also price from seller's available funds
+            sellerFundsEncumbered += price;
+        } else {
+            // if offer is non-preminted, validate incoming payment
             validateIncomingPayment(exchangeToken, price);
             emit FundsEncumbered(_buyerId, exchangeToken, price, sender);
         }
 
-        // decrease available funds
+        // encumber DR fee
         uint256 sellerId = offer.sellerId;
-        uint256 sellerFundsEncumbered = offer.sellerDeposit + (_isPreminted ? price : 0); // for preminted offer, encumber also price from seller's available funds
+        uint256 drFee = pe.disputeResolutionTerms[_offerId].feeAmount;
+        address mutualizer = offer.feeMutualizer;
+        if (mutualizer == address(0)) {
+            // if mutualizer is not set, encumber DR fee from seller's funds
+            sellerFundsEncumbered += drFee;
+        } else {
+            requestDRFee(_exchangeId, mutualizer, pe.sellers[sellerId].assistant, exchangeToken, drFee);
+        }
+
+        // decrease seller's available funds
         decreaseAvailableFunds(sellerId, exchangeToken, sellerFundsEncumbered);
 
         // notify external observers
@@ -292,6 +308,51 @@ library FundsLib {
 
         // notify the external observers
         emit FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, EIP712Lib.msgSender());
+    }
+
+    /**
+     * @notice Requests the DR fee from the mutualizer, validates it was really sent and store UUID
+     *
+     * Reverts if:
+     * - Mutualizer does not cover the seller
+     * - Mutualizer does not send the fee to the protocol
+     * - Call to mutualizer fails
+     *
+     * @param _exchangeId - the exchange id
+     * @param _mutualizer - address of the mutualizer
+     * @param _sellerAddress - the seller address
+     * @param _exchangeToken - the token address (use 0x0 for ETH)
+     * @param _drFee - the DR fee
+     */
+    function requestDRFee(
+        uint256 _exchangeId,
+        address _mutualizer,
+        address _sellerAddress,
+        address _exchangeToken,
+        uint256 _drFee
+    ) internal {
+        // protocol balance before the request // maybe reuse `getBalance` function from https://github.com/bosonprotocol/boson-protocol-contracts/pull/578
+        uint256 protocolTokenBalanceBefore = _exchangeToken == address(0)
+            ? address(this).balance
+            : IERC20(_exchangeToken).balanceOf(address(this));
+
+        // reqest DR fee from mutualizer
+        (bool isCovered, uint256 mutualizerUUID) = IDRFeeMutualizer(_mutualizer).requestDRFee(
+            _sellerAddress,
+            _exchangeToken,
+            _drFee,
+            ""
+        );
+        require(isCovered, SELLER_NOT_COVERED);
+        ProtocolLib.protocolLookups().mutualizerUUIDByExchange[_exchangeId] = mutualizerUUID;
+
+        // protocol balance after the request
+        uint256 protocolTokenBalanceAfter = _exchangeToken == address(0)
+            ? address(this).balance
+            : IERC20(_exchangeToken).balanceOf(address(this));
+
+        // check if mutualizer sent the fee to the protocol
+        require(protocolTokenBalanceAfter - protocolTokenBalanceBefore == _drFee, DR_FEE_NOT_RECEIVED);
     }
 
     /**

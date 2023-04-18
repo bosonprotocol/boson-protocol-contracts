@@ -182,6 +182,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.AuthToken) pendingAuthTokenUpdatesBySeller;
         // dispute resolver id => DisputeResolver
         mapping(uint256 => BosonTypes.DisputeResolver) pendingAddressUpdatesByDisputeResolver;
+        // exchange id => mutualizer UUID
+        mapping(uint256 => uint256) mutualizerUUIDByExchange;
     }
 
     // Incrementing id counters
