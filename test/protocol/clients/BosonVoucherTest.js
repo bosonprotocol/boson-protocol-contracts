@@ -755,6 +755,72 @@ describe("IBosonVoucher", function () {
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
     });
 
+    context("Contract owner is not owner of preminted vouchers", function () {
+      it("Ownership is transferred", async function () {
+        // Transfer ownership to rando
+        await bosonVoucher.connect(protocol).transferOwnership(rando.address);
+
+        // Burn tokens, test for event
+        let tx;
+        await expect(() => {
+          tx = bosonVoucher.connect(rando).burnPremintedVouchers(offerId);
+          return tx;
+        }).to.changeTokenBalance(bosonVoucher, assistant, Number(amount) * -1);
+
+        // Number of events emitted should be equal to amount
+        tx = await tx;
+        assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
+
+        // Expect an event for every burn, where owner is the old owner (assistant)
+        for (let i = 0; i < Number(amount); i++) {
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(assistant.address, ethers.constants.AddressZero, i + Number(start));
+        }
+      });
+
+      it("Contract itself is the owner", async function () {
+        // create a new offer, so new range owner can be set
+        offerId = "6";
+        offer.voided = false;
+        await mockProtocol.mock.getOffer
+          .withArgs(offerId)
+          .returns(true, offer, offerDates, offerDurations, disputeResolutionTerms, offerFees);
+
+        // reserve a range
+        start = "2000";
+        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, bosonVoucher.address);
+
+        // amount to mint
+        amount = "10";
+        await bosonVoucher.connect(assistant).preMint(offerId, amount);
+
+        // "void" the offer
+        offer.voided = true;
+        await mockProtocol.mock.getOffer
+          .withArgs(offerId)
+          .returns(true, offer, offerDates, offerDurations, disputeResolutionTerms, offerFees);
+
+        // Burn tokens, test for event
+        let tx;
+        await expect(() => {
+          tx = bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+          return tx;
+        }).to.changeTokenBalance(bosonVoucher, bosonVoucher, Number(amount) * -1);
+
+        // Number of events emitted should be equal to amount
+        tx = await tx;
+        assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
+
+        // Expect an event for every burn
+        for (let i = 0; i < Number(amount); i++) {
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(bosonVoucher.address, ethers.constants.AddressZero, i + Number(start));
+        }
+      });
+    });
+
     it("Should burn all vouchers if there is less than MaxPremintedVouchers to burn", async function () {
       // Burn tokens, test for event
       let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
@@ -834,7 +900,7 @@ describe("IBosonVoucher", function () {
       );
     });
 
-    it("Should skip all vouchers were already commited", async function () {
+    it("Should skip all vouchers were already committed", async function () {
       let commitedVouchers = [11, 14];
 
       // Transfer some preminted vouchers
@@ -2583,11 +2649,12 @@ describe("IBosonVoucher", function () {
       await foreign20.connect(deployer).mint(deployer.address, amount);
       await foreign20.connect(deployer).transfer(bosonVoucher.address, amount);
 
-      const tx = await bosonVoucher
-        .connect(rando)
-        .withdrawToProtocol([ethers.constants.AddressZero, foreign20.address]);
-      expect(() => tx).to.changeEtherBalances([bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
-      expect(() => tx).to.changeTokenBalances(foreign20, [bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
+      let tx;
+      await expect(() => {
+        tx = bosonVoucher.connect(rando).withdrawToProtocol([ethers.constants.AddressZero, foreign20.address]);
+        return tx;
+      }).to.changeTokenBalances(foreign20, [bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
+      await expect(() => tx).to.changeEtherBalances([bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
     });
   });
 
