@@ -452,7 +452,7 @@ describe("IBosonVoucher", function () {
 
       // reserve a range
       offerId = "5";
-      start = "10";
+      start = 10;
       length = "1000";
       await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
 
@@ -470,6 +470,15 @@ describe("IBosonVoucher", function () {
           .to.emit(bosonVoucher, "Transfer")
           .withArgs(ethers.constants.AddressZero, assistant.address, i + Number(start));
       }
+    });
+
+    it("Should emit VouchersPreMinted event", async function () {
+      // Premint tokens, test for event
+      const tx = await bosonVoucher.connect(assistant).preMint(offerId, amount);
+
+      await expect(tx)
+        .to.emit(bosonVoucher, "VouchersPreMinted")
+        .withArgs(offerId, start, start + amount - 1);
     });
 
     context("Owner range is contract", async function () {
@@ -2203,7 +2212,7 @@ describe("IBosonVoucher", function () {
       });
 
       it("Even the current owner cannot transfer the ownership", async function () {
-        // succesfully transfer to assistant
+        // successfully transfer to assistant
         await bosonVoucher.connect(protocol).transferOwnership(assistant.address);
 
         // owner tries to transfer, it should fail
@@ -2212,7 +2221,17 @@ describe("IBosonVoucher", function () {
         );
       });
 
-      it("Transfering ownership to 0 is not allowed", async function () {
+      it("Current owner cannot renounce the ownership", async function () {
+        // successfully transfer to assistant
+        await bosonVoucher.connect(protocol).transferOwnership(assistant.address);
+
+        const ownable = await ethers.getContractAt("OwnableUpgradeable", bosonVoucher.address);
+
+        // owner tries to renounce ownership, it should fail
+        await expect(ownable.connect(assistant).renounceOwnership()).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
+      });
+
+      it("Transferring ownership to 0 is not allowed", async function () {
         // try to transfer ownership to address 0, should fail
         await expect(bosonVoucher.connect(protocol).transferOwnership(ethers.constants.AddressZero)).to.be.revertedWith(
           RevertReasons.OWNABLE_ZERO_ADDRESS

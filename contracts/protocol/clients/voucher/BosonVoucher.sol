@@ -274,6 +274,8 @@ contract BosonVoucherBase is
 
         // Update to total balance
         getERC721UpgradeableStorage()._balances[to] += _amount;
+
+        emit VouchersPreMinted(_offerId, start, tokenId);
     }
 
     /**
@@ -568,6 +570,15 @@ contract BosonVoucherBase is
     {
         require(_newOwner != address(0), OWNABLE_ZERO_ADDRESS);
         _transferOwnership(_newOwner);
+    }
+
+    /**
+     * @notice Overriding renounceOwnership() from OwnableUpgradeable, so it's not possible to renounce ownership.
+     *
+     * N.B. In the future it might be possible to renounce ownership via seller deactivation in the protocol.
+     */
+    function renounceOwnership() public pure override {
+        revert(ACCESS_DENIED);
     }
 
     /**
