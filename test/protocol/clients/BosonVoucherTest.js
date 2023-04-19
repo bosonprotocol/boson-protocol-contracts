@@ -441,7 +441,7 @@ describe("IBosonVoucher", function () {
 
       // reserve a range
       offerId = "5";
-      start = "10";
+      start = 10;
       length = "1000";
       await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
 
@@ -460,6 +460,15 @@ describe("IBosonVoucher", function () {
           .to.emit(bosonVoucher, "Transfer")
           .withArgs(ethers.constants.AddressZero, assistant.address, start.add(i));
       }
+    });
+
+    it("Should emit VouchersPreMinted event", async function () {
+      // Premint tokens, test for event
+      const tx = await bosonVoucher.connect(assistant).preMint(offerId, amount);
+
+      start = deriveTokenId(offerId, start);
+
+      await expect(tx).to.emit(bosonVoucher, "VouchersPreMinted").withArgs(offerId, start, start.add(amount).sub(1));
     });
 
     context("Owner range is contract", async function () {
@@ -742,6 +751,74 @@ describe("IBosonVoucher", function () {
       const range = new Range(tokenIdStart.toString(), length, amount, lastBurnedId.toString(), assistant.address);
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+    });
+
+    context("Contract owner is not owner of preminted vouchers", function () {
+      it("Ownership is transferred", async function () {
+        // Transfer ownership to rando
+        await bosonVoucher.connect(protocol).transferOwnership(rando.address);
+
+        // Burn tokens, test for event
+        let tx;
+        await expect(() => {
+          tx = bosonVoucher.connect(rando).burnPremintedVouchers(offerId);
+          return tx;
+        }).to.changeTokenBalance(bosonVoucher, assistant, Number(amount) * -1);
+
+        // Number of events emitted should be equal to amount
+        tx = await tx;
+        assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
+
+        // Expect an event for every burn, where owner is the old owner (assistant)
+        const tokenIdStart = deriveTokenId(offerId, start);
+        for (let i = 0; i < Number(amount); i++) {
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(assistant.address, ethers.constants.AddressZero, tokenIdStart.add(i));
+        }
+      });
+
+      it("Contract itself is the owner", async function () {
+        // create a new offer, so new range owner can be set
+        offerId = "6";
+        offer.voided = false;
+        await mockProtocol.mock.getOffer
+          .withArgs(offerId)
+          .returns(true, offer, offerDates, offerDurations, disputeResolutionTerms, offerFees);
+
+        // reserve a range
+        start = "2000";
+        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, bosonVoucher.address);
+
+        // amount to mint
+        amount = "10";
+        await bosonVoucher.connect(assistant).preMint(offerId, amount);
+
+        // "void" the offer
+        offer.voided = true;
+        await mockProtocol.mock.getOffer
+          .withArgs(offerId)
+          .returns(true, offer, offerDates, offerDurations, disputeResolutionTerms, offerFees);
+
+        // Burn tokens, test for event
+        let tx;
+        await expect(() => {
+          tx = bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+          return tx;
+        }).to.changeTokenBalance(bosonVoucher, bosonVoucher, Number(amount) * -1);
+
+        // Number of events emitted should be equal to amount
+        tx = await tx;
+        assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
+
+        // Expect an event for every burn
+        const tokenIdStart = deriveTokenId(offerId, start);
+        for (let i = 0; i < Number(amount); i++) {
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(bosonVoucher.address, ethers.constants.AddressZero, tokenIdStart.add(i));
+        }
+      });
     });
 
     it("Should burn all vouchers if there is less than MaxPremintedVouchers to burn", async function () {
@@ -1883,8 +1960,8 @@ describe("IBosonVoucher", function () {
 
     it("should return the correct tokenURI", async function () {
       await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: offerPrice });
-      // tokenId = deriveTokenId(offerId, 1);
-      const tokenURI = await bosonVoucher.tokenURI(1);
+      const tokenId = deriveTokenId(offerId, 1);
+      const tokenURI = await bosonVoucher.tokenURI(tokenId);
       expect(tokenURI).eq(metadataUri);
     });
 
@@ -1941,7 +2018,7 @@ describe("IBosonVoucher", function () {
       });
 
       it("Even the current owner cannot transfer the ownership", async function () {
-        // succesfully transfer to assistant
+        // successfully transfer to assistant
         await bosonVoucher.connect(protocol).transferOwnership(assistant.address);
 
         // owner tries to transfer, it should fail
@@ -1950,7 +2027,17 @@ describe("IBosonVoucher", function () {
         );
       });
 
-      it("Transfering ownership to 0 is not allowed", async function () {
+      it("Current owner cannot renounce the ownership", async function () {
+        // successfully transfer to assistant
+        await bosonVoucher.connect(protocol).transferOwnership(assistant.address);
+
+        const ownable = await ethers.getContractAt("OwnableUpgradeable", bosonVoucher.address);
+
+        // owner tries to renounce ownership, it should fail
+        await expect(ownable.connect(assistant).renounceOwnership()).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
+      });
+
+      it("Transferring ownership to 0 is not allowed", async function () {
         // try to transfer ownership to address 0, should fail
         await expect(bosonVoucher.connect(protocol).transferOwnership(ethers.constants.AddressZero)).to.be.revertedWith(
           RevertReasons.OWNABLE_ZERO_ADDRESS
@@ -2369,11 +2456,12 @@ describe("IBosonVoucher", function () {
       await foreign20.connect(deployer).mint(deployer.address, amount);
       await foreign20.connect(deployer).transfer(bosonVoucher.address, amount);
 
-      const tx = await bosonVoucher
-        .connect(rando)
-        .withdrawToProtocol([ethers.constants.AddressZero, foreign20.address]);
-      expect(() => tx).to.changeEtherBalances([bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
-      expect(() => tx).to.changeTokenBalances(foreign20, [bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
+      let tx;
+      await expect(() => {
+        tx = bosonVoucher.connect(rando).withdrawToProtocol([ethers.constants.AddressZero, foreign20.address]);
+        return tx;
+      }).to.changeTokenBalances(foreign20, [bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
+      await expect(() => tx).to.changeEtherBalances([bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
     });
   });
 
