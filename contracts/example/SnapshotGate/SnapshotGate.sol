@@ -247,21 +247,13 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
             require(msg.value == offer.price, "Incorrect payment amount");
 
             // Commit to the offer, passing the message value (native)
-            IBosonExchangeHandler(protocol).commitToOffer{ value: msg.value }(
-                _buyer,
-                _offerId,
-                BosonTypes.PriceDiscovery(0, address(0), new bytes(0), BosonTypes.Side.Ask)
-            );
+            IBosonExchangeHandler(protocol).commitToOffer{ value: msg.value }(_buyer, _offerId);
         } else {
             // Transfer the price into custody of this contract and approve protocol to transfer
             transferFundsToGateAndApproveProtocol(offer.exchangeToken, offer.price);
 
             // Commit to the offer on behalf of the buyer
-            IBosonExchangeHandler(protocol).commitToOffer(
-                _buyer,
-                _offerId,
-                BosonTypes.PriceDiscovery(0, address(0), new bytes(0), BosonTypes.Side.Ask)
-            );
+            IBosonExchangeHandler(protocol).commitToOffer(_buyer, _offerId);
         }
 
         // Remove the transaction details

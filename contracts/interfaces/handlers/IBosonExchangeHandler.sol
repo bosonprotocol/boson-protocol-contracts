@@ -15,7 +15,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
-     * @notice Commits to an offer (first step of an exchange).
+     * @notice Commits to a static offer (first step of an exchange).
      *
      * Emits a BuyerCommitted event if successful.
      * Issues a voucher to the buyer address.
@@ -40,11 +40,40 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
+     */
+    function commitToOffer(address payable _buyer, uint256 _offerId) external payable;
+
+    /**
+     * @notice Commits to a price discovery offer (first step of an exchange).
+     *
+     * Emits a BuyerCommitted event if successful.
+     * Issues a voucher to the buyer address.
+     *
+     * Reverts if:
+     * - The exchanges region of protocol is paused
+     * - The buyers region of protocol is paused
+     * - Offer doesn't exist
+     * - Offer has been voided
+     * - Offer has expired
+     * - Offer is not yet available for commits
+     * - Offer's quantity available is zero
+     * - Buyer address is zero
+     * - Buyer account is inactive
+     * - Buyer is token-gated (conditional commit requirements not met or already used)
+     * - Offer price is in native token and caller does not send enough
+     * - Offer price is in some ERC20 token and caller also sends native currency
+     * - Contract at token address does not support ERC20 function transferFrom
+     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Received ERC20 token amount differs from the expected value
+     * - Seller has less funds available than sellerDeposit
+     *
+     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
+     * @param _tokenIdOrOfferId - the id of the offer to commit to or the id of the voucher (if pre-minted)
      * @param _priceDiscovery - price discovery data (if applicable). See BosonTypes.PriceDiscovery
      */
-    function commitToOffer(
+    function commitToPriceDiscoveryOffer(
         address payable _buyer,
-        uint256 _offerId,
+        uint256 _tokenIdOrOfferId,
         BosonTypes.PriceDiscovery calldata _priceDiscovery
     ) external payable;
 

@@ -244,6 +244,4 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @param _tokenList - list of tokens to withdraw, including native token (address(0))
      */
     function withdrawToProtocol(address[] calldata _tokenList) external;
-
-    function setPriceDiscoveryContract(address _priceDiscoveryContract) external;
 }

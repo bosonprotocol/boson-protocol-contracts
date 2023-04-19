@@ -67,8 +67,6 @@ contract BosonVoucherBase is
     // Tell if voucher has already been _committed
     mapping(uint256 => bool) private _committed;
 
-    address priceDiscoveryContract;
-
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
@@ -697,12 +695,6 @@ contract BosonVoucherBase is
         _royaltyPercentage = _newRoyaltyPercentage;
 
         emit RoyaltyPercentageChanged(_newRoyaltyPercentage);
-    }
-
-    function setPriceDiscoveryContract(address _priceDiscoveryContract) external override onlyOwner {
-        priceDiscoveryContract = _priceDiscoveryContract;
-
-        emit PriceDiscoveryContractChanged(_priceDiscoveryContract);
     }
 
     /**

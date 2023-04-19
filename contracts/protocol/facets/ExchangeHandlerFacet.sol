@@ -48,7 +48,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
     }
 
     /**
-     * @notice Commits to an offer (first step of an exchange).
+     * @notice Commits to a price static offer (first step of an exchange).
      *
      * Emits a BuyerCommitted event if successful.
      * Issues a voucher to the buyer address.
@@ -57,6 +57,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * - The exchanges region of protocol is paused
      * - The buyers region of protocol is paused
      * - OfferId is invalid
+     * - Offer price type is not static
      * - Offer has been voided
      * - Offer has expired
      * - Offer is not yet available for commits
@@ -72,61 +73,98 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * - Seller has less funds available than sellerDeposit
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _offerIdOrTokenId - the id of the offer to commit to or the id of the voucher (if pre-minted)
-     * @param _priceDiscovery - price discovery data (if applicable). See BosonTypes.PriceDiscovery
+     * @param _offerId - the id of the offer to commit to
      */
-    function commitToOffer(
-        address payable _buyer,
-        uint256 _offerIdOrTokenId,
-        PriceDiscovery calldata _priceDiscovery
-    ) external payable override exchangesNotPaused buyersNotPaused {
+    function commitToOffer(address payable _buyer, uint256 _offerId)
+        external
+        payable
+        override
+        exchangesNotPaused
+        buyersNotPaused
+    {
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
 
         // Get the offer
-        uint256 offerId = _offerIdOrTokenId;
-        bool exists;
+        (bool exists, Offer storage offer) = fetchOffer(_offerId);
+
+        // Make sure offer exists, is available, and isn't void, expired, or sold out
+        require(exists, NO_SUCH_OFFER);
+
+        require(offer.priceType == PriceType.Static, INVALID_PRICE_TYPE);
+
+        commitToOfferInternal(_buyer, offer, 0, false);
+    }
+
+    /**
+     * @notice Commits to a price discovery offer (first step of an exchange).
+     *
+     * Emits a BuyerCommitted event if successful.
+     * Issues a voucher to the buyer address.
+     *
+     * Reverts if:
+     * - Offer price type is not discovery
+     * - Price discovery argument invalid
+     * - Exchange exists already
+     * - Offer has been voided
+     * - Offer has expired
+     * - Offer is not yet available for commits
+     * - Buyer address is zero
+     * - Buyer account is inactive
+     * - Buyer is token-gated (conditional commit requirements not met or already used)
+     * - Offer price is in native token and caller does not send enough
+     * - Offer price is in some ERC20 token and caller also sends native currency
+     * - Contract at token address does not support ERC20 function transferFrom
+     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Received amount differs from the expected value set in price discovery
+     * - Seller has less funds available than sellerDeposit
+     * - Protocol does not receive the voucher when is ask side
+     * - Transfer of voucher to the buyer fails for some reasong (e.g. buyer is contract that doesn't accept voucher)
+     * - Call to price discovery contract fails
+     *
+     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
+     * @param _tokenIdOrOfferId - the id of the offer to commit to or the id of the voucher (if pre-minted)
+     * @param _priceDiscovery - price discovery data (if applicable). See BosonTypes.PriceDiscovery
+     */
+    function commitToPriceDiscoveryOffer(
+        address payable _buyer,
+        uint256 _tokenIdOrOfferId,
+        PriceDiscovery calldata _priceDiscovery
+    ) external payable override exchangesNotPaused buyersNotPaused {
         bool isOfferId;
-        Offer storage offer;
-        (exists, offer) = fetchOffer(offerId);
+        uint256 offerId = _tokenIdOrOfferId;
+
+        (bool exists, Offer storage offer) = fetchOffer(offerId);
 
         if (!exists) {
             // @TODO check tokens created before EXCHANGE_ID_2_2_0
-            offerId = _offerIdOrTokenId >> 128;
+            offerId = _tokenIdOrOfferId >> 128;
 
             (exists, offer) = fetchOffer(offerId);
         } else {
             isOfferId = true;
         }
 
+        // Make sure offer exists, is available, and isn't void, expired, or sold out
         require(exists, NO_SUCH_OFFER);
 
-        if (offer.priceType == OfferPrice.Discovery) {
-            if (isOfferId) {
-                fulfillPriceDiscoveryOffer(0, offer, _priceDiscovery, _buyer);
-            } else {
-                fulfillPriceDiscoveryOffer(_offerIdOrTokenId, offer, _priceDiscovery, _buyer);
-            }
-        } else {
-            commitToOfferInternal(_buyer, offer, 0, false);
-        }
-    }
+        require(offer.priceType == PriceType.Discovery, INVALID_PRICE_TYPE);
 
-    function fulfillPriceDiscoveryOffer(
-        uint256 _tokenId,
-        Offer storage _offer,
-        PriceDiscovery calldata _priceDiscovery,
-        address payable _buyer
-    ) internal exchangesNotPaused buyersNotPaused nonReentrant {
         // Make sure caller provided price discovery data
         require(
             _priceDiscovery.price > 0 &&
                 _priceDiscovery.priceDiscoveryContract != address(0) &&
                 _priceDiscovery.priceDiscoveryData.length > 0,
-            "INVALID_PRICE_DISCOVERY"
+            INVALID_PRICE_DISCOVERY
         );
 
-        fulfilOrder(_tokenId, _offer, _priceDiscovery, _buyer);
+        if (offer.priceType == PriceType.Discovery) {
+            if (isOfferId) {
+                fulfilOrder(0, offer, _priceDiscovery, _buyer);
+            } else {
+                fulfilOrder(_tokenIdOrOfferId, offer, _priceDiscovery, _buyer);
+            }
+        }
     }
 
     /**
@@ -603,7 +641,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Cache protocol entities for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        if (offer.priceType == OfferPrice.Discovery) {
+        if (offer.priceType == PriceType.Discovery) {
             ProtocolLib.ProtocolStatus storage ps = protocolStatus();
 
             address priceDiscoveryContract = lookups.priceDiscoveryContractByVoucher[_tokenId];

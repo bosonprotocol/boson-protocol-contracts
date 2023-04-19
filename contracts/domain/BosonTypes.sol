@@ -83,7 +83,7 @@ contract BosonTypes {
         Clerk
     }
 
-    enum OfferPrice {
+    enum PriceType {
         Static, // Default should always be at index 0. Never change this value.
         Discovery
     }
@@ -150,7 +150,7 @@ contract BosonTypes {
         string metadataUri;
         string metadataHash;
         bool voided;
-        OfferPrice priceType;
+        PriceType priceType;
     }
 
     struct OfferDates {

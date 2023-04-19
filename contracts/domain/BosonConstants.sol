@@ -115,6 +115,8 @@ string constant TOKEN_ID_NOT_FOUND = "Token id not found";
 string constant OWNER_MUST_BE_PRICE_DISCOVERY_CONTRACT = "Owner must be price discovery contract";
 string constant LAST_OWNER_NOT_FOUND = "Last owner not found";
 string constant NEW_VOUCHER_OWNER_BUYER_MUST_MATCH = "New voucher owner must be the buyer";
+string constant INVALID_PRICE_TYPE = "Invalid price type";
+string constant INVALID_PRICE_DISCOVERY = "Invalid price discovery argument";
 
 // Revert Reasons: Sequential commit related
 string constant UNEXPECTED_ERC721_RECEIVED = "Unexpected ERC721 received";

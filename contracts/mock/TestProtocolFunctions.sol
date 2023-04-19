@@ -18,11 +18,7 @@ contract TestProtocolFunctions {
     }
 
     function commit(uint256 offerId) external payable {
-        protocol.commitToOffer{ value: msg.value }(
-            payable(address(this)),
-            offerId,
-            BosonTypes.PriceDiscovery(0, address(0), new bytes(0), BosonTypes.Side.Ask)
-        );
+        protocol.commitToOffer{ value: msg.value }(payable(address(this)), offerId);
     }
 
     function redeem(uint256 exchangeId) external {

@@ -67,7 +67,7 @@ library FundsLib {
         uint256 _buyerId,
         uint256 _price,
         bool _isPreminted,
-        BosonTypes.OfferPrice _priceType
+        BosonTypes.PriceType _priceType
     ) internal {
         // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
@@ -80,7 +80,7 @@ library FundsLib {
         BosonTypes.Offer storage offer = pe.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
 
-        bool isPriceDiscovery = _priceType == BosonTypes.OfferPrice.Discovery;
+        bool isPriceDiscovery = _priceType == BosonTypes.PriceType.Discovery;
 
         // decrease available funds
         uint256 sellerId = offer.sellerId;
