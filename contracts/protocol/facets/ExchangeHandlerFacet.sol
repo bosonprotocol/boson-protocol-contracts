@@ -615,7 +615,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
                 // Commit the offer
                 commitToOfferInternal(_to, offer, exchangeId, true);
 
-                return true;
+                committed = true;
             } else if (_from == priceDiscoveryContract && _to == _rangeOwner) {
                 // The voucher was returned to the range owner, i.e withdrawn from price discovery contract
                 delete lookups.priceDiscoveryContractByVoucher[_tokenId];
@@ -638,7 +638,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
             commitToOfferInternal(_to, offer, exchangeId, true);
 
-            return true;
+            committed = true;
         }
     }
 
