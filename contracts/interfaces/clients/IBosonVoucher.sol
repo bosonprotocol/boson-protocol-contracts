@@ -16,6 +16,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     event RoyaltyPercentageChanged(uint256 royaltyPercentage);
     event VoucherInitialized(uint256 indexed sellerId, uint256 indexed royaltyPercentage, string indexed contractURI);
     event RangeReserved(uint256 indexed offerId, Range range);
+    event VouchersPreMinted(uint256 indexed offerId, uint256 startId, uint256 endId);
 
     // Describe a reserved range of token ids
     struct Range {
