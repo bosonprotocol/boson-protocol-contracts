@@ -274,6 +274,8 @@ contract BosonVoucherBase is
 
         // Update to total balance
         getERC721UpgradeableStorage()._balances[to] += _amount;
+
+        emit VouchersPreMinted(_offerId, start, tokenId);
     }
 
     /**

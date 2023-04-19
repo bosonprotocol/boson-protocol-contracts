@@ -452,7 +452,7 @@ describe("IBosonVoucher", function () {
 
       // reserve a range
       offerId = "5";
-      start = "10";
+      start = 10;
       length = "1000";
       await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
 
@@ -470,6 +470,15 @@ describe("IBosonVoucher", function () {
           .to.emit(bosonVoucher, "Transfer")
           .withArgs(ethers.constants.AddressZero, assistant.address, i + Number(start));
       }
+    });
+
+    it("Should emit VouchersPreMinted event", async function () {
+      // Premint tokens, test for event
+      const tx = await bosonVoucher.connect(assistant).preMint(offerId, amount);
+
+      await expect(tx)
+        .to.emit(bosonVoucher, "VouchersPreMinted")
+        .withArgs(offerId, start, start + amount - 1);
     });
 
     context("Owner range is contract", async function () {
