@@ -2146,7 +2146,7 @@ describe("IBosonVoucher", function () {
       });
 
       it("Even the current owner cannot transfer the ownership", async function () {
-        // succesfully transfer to assistant
+        // successfully transfer to assistant
         await bosonVoucher.connect(protocol).transferOwnership(assistant.address);
 
         // owner tries to transfer, it should fail
@@ -2155,7 +2155,17 @@ describe("IBosonVoucher", function () {
         );
       });
 
-      it("Transfering ownership to 0 is not allowed", async function () {
+      it("Current owner cannot renounce the ownership", async function () {
+        // successfully transfer to assistant
+        await bosonVoucher.connect(protocol).transferOwnership(assistant.address);
+
+        const ownable = await ethers.getContractAt("OwnableUpgradeable", bosonVoucher.address);
+
+        // owner tries to renounce ownership, it should fail
+        await expect(ownable.connect(assistant).renounceOwnership()).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
+      });
+
+      it("Transferring ownership to 0 is not allowed", async function () {
         // try to transfer ownership to address 0, should fail
         await expect(bosonVoucher.connect(protocol).transferOwnership(ethers.constants.AddressZero)).to.be.revertedWith(
           RevertReasons.OWNABLE_ZERO_ADDRESS
