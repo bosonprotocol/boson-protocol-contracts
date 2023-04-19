@@ -50,13 +50,12 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * Issues a voucher to the buyer address.
      *
      * Reverts if:
-     * - The exchanges region of protocol is paused
-     * - The buyers region of protocol is paused
-     * - Offer doesn't exist
+     * - Offer price type is not discovery
+     * - Price discovery argument invalid
+     * - Exchange exists already
      * - Offer has been voided
      * - Offer has expired
      * - Offer is not yet available for commits
-     * - Offer's quantity available is zero
      * - Buyer address is zero
      * - Buyer account is inactive
      * - Buyer is token-gated (conditional commit requirements not met or already used)
@@ -64,8 +63,11 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - Offer price is in some ERC20 token and caller also sends native currency
      * - Contract at token address does not support ERC20 function transferFrom
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - Received ERC20 token amount differs from the expected value
+     * - Received amount differs from the expected value set in price discovery
      * - Seller has less funds available than sellerDeposit
+     * - Protocol does not receive the voucher when is ask side
+     * - Transfer of voucher to the buyer fails for some reasong (e.g. buyer is contract that doesn't accept voucher)
+     * - Call to price discovery contract fails
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _tokenIdOrOfferId - the id of the offer to commit to or the id of the voucher (if pre-minted)
@@ -210,12 +212,24 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @notice Handle pre-minted voucher transfer
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
+     * - The buyers region of protocol is paused
+     * - Caller is not the voucher contract, owned by the seller
+     * - Exchange exists already
+     * - Offer has been voided
+     * - Offer has expired
+     * - Offer is not yet available for commits
+     * - Buyer account is inactive
+     * - Buyer is token-gated (conditional commit requirements not met or already used)
+     * - Seller has less funds available than sellerDeposit and price
+     *
      *
      * @param _tokenId - the voucher id
      * @param _to - the receiver address
      * @param _from - the sender address
      * @param _rangeOwner - the owner of the voucher range
      * @param _sender - the caller address
+     * @return committed - true if the voucher was committed
      */
     function onPremintedVoucherTransferred(
         uint256 _tokenId,
@@ -223,7 +237,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
         address _from,
         address _rangeOwner,
         address _sender
-    ) external payable returns (bool committed);
+    ) external returns (bool committed);
 
     /**
      * @notice Checks if the given exchange in a finalized state.

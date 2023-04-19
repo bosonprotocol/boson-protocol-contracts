@@ -27,12 +27,12 @@ const SeaportSide = require("../seaport/SideEnum");
 const Side = require("../../../scripts/domain/Side");
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const { constants } = require("ethers");
-const OfferPrice = require("../../../scripts/domain/OfferPrice");
+const PriceType = require("../../../scripts/domain/PriceType");
 const { seaportFixtures } = require("../seaport/fixtures");
 const { SEAPORT_ADDRESS } = require("../../util/constants");
 const ItemType = require("../seaport/ItemTypeEnum");
 
-describe("[@skip-on-coverage] seaport integration", function () {
+describe("[@skip-on-coverage] seaport integration", function() {
   this.timeout(100000000);
   let bosonVoucher, bosonToken;
   let deployer, protocol, assistant, buyer, DR;
@@ -43,7 +43,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
   let seller;
   let seaport;
 
-  before(async function () {
+  before(async function() {
     accountId.next();
 
     let protocolTreasury;
@@ -148,7 +148,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
     let offerDurations, disputeResolverId;
     ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
     offer.quantityAvailable = 10;
-    offer.priceType = OfferPrice.Discovery;
+    offer.priceType = PriceType.Discovery;
 
     await offerHandler
       .connect(assistant)
@@ -159,7 +159,6 @@ describe("[@skip-on-coverage] seaport integration", function () {
 
     seaport = await ethers.getContractAt("Seaport", SEAPORT_ADDRESS);
 
-    await bosonVoucher.connect(assistant).setPriceDiscoveryContract(seaport.address);
     await bosonVoucher.connect(assistant).setApprovalForAllToContract(seaport.address, true);
 
     fixtures = await seaportFixtures(seaport);
@@ -174,7 +173,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
       .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
   });
 
-  it("Seaport criteria-based order is used as price discovery mechanism for a BP offer", async function () {
+  it("Seaport criteria-based order is used as price discovery mechanism for a BP offer", async function() {
     // Create seaport offer which tokenId 1
     const seaportOffer = fixtures.getTestVoucher(ItemType.ERC721_WITH_CRITERIA, 0, bosonVoucher.address, 1, 1);
     const consideration = fixtures.getTestToken(

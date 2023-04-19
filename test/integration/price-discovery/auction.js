@@ -24,7 +24,7 @@ const { expect } = require("chai");
 const Role = require("../../../scripts/domain/Role");
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
-const OfferPrice = require("../../../scripts/domain/OfferPrice");
+const PriceType = require("../../../scripts/domain/PriceType");
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const Side = require("../../../scripts/domain/Side");
 
@@ -142,7 +142,7 @@ describe("[@skip-on-coverage] auction integration", function () {
     let offerDurations, disputeResolverId;
     ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
     offer.quantityAvailable = 10;
-    offer.priceType = OfferPrice.Discovery;
+    offer.priceType = PriceType.Discovery;
     offer.exchangeToken = weth.address;
 
     await offerHandler

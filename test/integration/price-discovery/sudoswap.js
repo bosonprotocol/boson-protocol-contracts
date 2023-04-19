@@ -21,7 +21,7 @@ const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverF
 const Side = require("../../../scripts/domain/Side");
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const { constants } = require("ethers");
-const OfferPrice = require("../../../scripts/domain/OfferPrice");
+const PriceType = require("../../../scripts/domain/PriceType");
 
 describe("[@skip-on-coverage] sudoswap integration", function () {
   this.timeout(100000000);
@@ -179,7 +179,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
     let offerDates, offerDurations, disputeResolverId;
     ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
     offer.quantityAvailable = 10;
-    offer.priceType = OfferPrice.Discovery;
+    offer.priceType = PriceType.Discovery;
 
     await offerHandler
       .connect(assistant)

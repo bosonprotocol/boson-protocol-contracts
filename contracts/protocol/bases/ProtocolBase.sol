@@ -730,4 +730,11 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         // Determine existence
         exists = (_exchangeId > 0 && condition.method != EvaluationMethod.None);
     }
+
+    function getProtocolFee(address _exchangeToken, uint256 _price) internal view returns (uint256 protocolFee) {
+        // Calculate and set the protocol fee
+        protocolFee = _exchangeToken == protocolAddresses().token
+            ? protocolFees().flatBoson
+            : (protocolFees().percentage * _price) / 10000;
+    }
 }

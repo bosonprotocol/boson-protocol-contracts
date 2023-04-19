@@ -1,7 +1,7 @@
 /**
  * Boson Protocol Domain Enum: PriceType
  */
-class PriceType { }
+class PriceType {}
 
 PriceType.Static = 0;
 PriceType.Discovery = 1;

@@ -103,15 +103,14 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
         // Calculate the amount to be kept in escrow
         uint256 escrowAmount;
+
         {
             // Get sequential commits for this exchange
             SequentialCommit[] storage sequentialCommits = protocolEntities().sequentialCommits[exchangeId];
 
             {
                 // Calculate fees
-                uint256 protocolFeeAmount = tokenAddress == protocolAddresses().token
-                    ? protocolFees().flatBoson
-                    : (protocolFees().percentage * actualPrice) / 10000;
+                uint256 protocolFeeAmount = getProtocolFee(tokenAddress, actualPrice);
 
                 // Calculate royalties
                 (, uint256 royaltyAmount) = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]).royaltyInfo(
@@ -148,8 +147,8 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                     if (tokenAddress == address(0)) {
                         // If exchange is native currency, seller cannot directly approve protocol to transfer funds
                         // They need to approve wrapper contract, so protocol can pull funds from wrapper
-                        // But since protocol otherwise normally operates with native currency, needs to unwrap it (i.e. withdraw)
                         FundsLib.transferFundsToProtocol(address(weth), seller, escrowAmount);
+                        // But since protocol otherwise normally operates with native currency, needs to unwrap it (i.e. withdraw)
                         weth.withdraw(escrowAmount);
                     } else {
                         FundsLib.transferFundsToProtocol(tokenAddress, seller, escrowAmount);
@@ -166,6 +165,8 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 if (payout > 0) FundsLib.transferFundsFromProtocol(tokenAddress, payable(seller), payout);
             }
         }
+
+        clearStorage(_tokenId);
 
         // Since exchange and voucher are passed by reference, they are updated
         emit BuyerCommitted(exchange.offerId, exchange.buyerId, exchangeId, exchange, voucher, msgSender());

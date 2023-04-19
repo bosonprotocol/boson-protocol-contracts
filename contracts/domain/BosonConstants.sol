@@ -111,12 +111,13 @@ string constant TOO_MANY_EXCHANGES = "Exceeded maximum exchanges in a single tra
 string constant EXCHANGE_IS_NOT_IN_A_FINAL_STATE = "Exchange is not in a final state";
 string constant EXCHANGE_ALREADY_EXISTS = "Exchange already exists";
 string constant INVALID_RANGE_LENGTH = "Range length is too large or zero";
-string constant TOKEN_ID_NOT_FOUND = "Token id not found";
+string constant TOKEN_ID_MISMATCH = "Token id mismatch";
 string constant OWNER_MUST_BE_PRICE_DISCOVERY_CONTRACT = "Owner must be price discovery contract";
 string constant LAST_OWNER_NOT_FOUND = "Last owner not found";
 string constant NEW_VOUCHER_OWNER_BUYER_MUST_MATCH = "New voucher owner must be the buyer";
 string constant INVALID_PRICE_TYPE = "Invalid price type";
 string constant INVALID_PRICE_DISCOVERY = "Invalid price discovery argument";
+string constant INCOMING_VOUCHER_ALREADY_SET = "Incoming voucher already set";
 
 // Revert Reasons: Sequential commit related
 string constant UNEXPECTED_ERC721_RECEIVED = "Unexpected ERC721 received";
