@@ -1,5 +1,4 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
 const { expect, assert } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
@@ -18,9 +17,6 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   mockOffer,
@@ -43,10 +39,12 @@ const {
   prepareDataSignatureParameters,
   calculateContractAddress,
   applyPercentage,
-  getFacetsWithArgs,
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
   deriveTokenId,
 } = require("../util/utils.js");
-const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
+const { oneWeek, oneMonth } = require("../util/constants");
 const { FundsList } = require("../../scripts/domain/Funds");
 const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
 
@@ -69,11 +67,8 @@ describe("IBosonExchangeHandler", function () {
     assistantDR,
     adminDR,
     clerkDR,
-    treasuryDR,
-    protocolTreasury,
-    bosonToken;
+    treasuryDR;
   let erc165,
-    protocolDiamond,
     accessController,
     accountHandler,
     exchangeHandler,
@@ -94,7 +89,7 @@ describe("IBosonExchangeHandler", function () {
   let price, sellerPool;
   let voucherRedeemableFrom;
   let disputePeriod, voucherValid;
-  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
+  let protocolFeePercentage;
   let voucher, validUntilDate;
   let exchange, response, exists;
   let disputeResolver, disputeResolverFees;
@@ -108,164 +103,73 @@ describe("IBosonExchangeHandler", function () {
   let exchangesToComplete, exchangeId;
   let offer, offerFees;
   let offerDates, offerDurations;
+  let protocolDiamondAddress;
+  let snapshotId;
   let tokenId;
 
   before(async function () {
+    accountId.next(true);
+
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
-  });
 
-  beforeEach(async function () {
-    // Make accounts available
-    [
-      deployer,
-      pauser,
-      admin,
-      treasury,
-      buyer,
-      rando,
-      newOwner,
-      fauxClient,
-      adminDR,
-      treasuryDR,
-      protocolTreasury,
-      bosonToken,
-    ] = await ethers.getSigners();
+    // Specify contracts needed for this test
+    const contracts = {
+      erc165: "ERC165Facet",
+      accountHandler: "IBosonAccountHandler",
+      twinHandler: "IBosonTwinHandler",
+      bundleHandler: "IBosonBundleHandler",
+      offerHandler: "IBosonOfferHandler",
+      exchangeHandler: "IBosonExchangeHandler",
+      fundsHandler: "IBosonFundsHandler",
+      disputeHandler: "IBosonDisputeHandler",
+      groupHandler: "IBosonGroupHandler",
+      pauseHandler: "IBosonPauseHandler",
+      configHandler: "IBosonConfigHandler",
+    };
+
+    ({
+      signers: [pauser, admin, treasury, buyer, rando, newOwner, fauxClient, adminDR, treasuryDR],
+      contractInstances: {
+        erc165,
+        accountHandler,
+        twinHandler,
+        bundleHandler,
+        offerHandler,
+        exchangeHandler,
+        fundsHandler,
+        disputeHandler,
+        groupHandler,
+        pauseHandler,
+        configHandler,
+      },
+      protocolConfig: [, , { percentage: protocolFeePercentage }],
+      extraReturnValues: { bosonVoucher, voucherImplementation, accessController },
+      diamondAddress: protocolDiamondAddress,
+    } = await setupTestEnvironment(contracts));
+
+    [deployer] = await ethers.getSigners();
 
     // make all account the same
     assistant = clerk = admin;
     assistantDR = clerkDR = adminDR;
 
-    // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-
-    // Temporarily grant UPGRADER role to deployer account
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-
-    // Temporarily grant PAUSER role to pauser account
-    await accessController.grantRole(Role.PAUSER, pauser.address);
-
-    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [protocolDiamond.address];
-    const [implementations, beacons, proxies, clients] = await deployProtocolClients(
-      protocolClientArgs,
-      maxPriorityFeePerGas
-    );
-    [bosonVoucher] = clients;
-    const [beacon] = beacons;
-    const [proxy] = proxies;
-    [voucherImplementation] = implementations;
-
     // Deploy the mock tokens
     [foreign20, foreign721, foreign1155] = await deployMockTokens(["Foreign20", "Foreign721", "Foreign1155"]);
 
-    // set protocolFees
-    protocolFeePercentage = "200"; // 2 %
-    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
-    buyerEscalationDepositPercentage = "1000"; // 10%
+    // Get snapshot id
+    snapshotId = await getSnapshot();
+  });
 
-    // Add config Handler, so ids start at 1, and so voucher address can be found
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 50,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 1000,
-      },
-      // Protocol fees
-      {
-        percentage: protocolFeePercentage,
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
-    const facetNames = [
-      "AccountHandlerFacet",
-      "AgentHandlerFacet",
-      "SellerHandlerFacet",
-      "BuyerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "FundsHandlerFacet",
-      "DisputeHandlerFacet",
-      "TwinHandlerFacet",
-      "BundleHandlerFacet",
-      "GroupHandlerFacet",
-      "PauseHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
-
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
-
-    // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
-
-    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonOfferHandler
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonExchangeHandler
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonFundsHandler
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonDisputeHandler
-    disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
-
-    // Cast Diamond to ITwinHandler
-    twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBundleHandler
-    bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
-
-    // Cast Diamond to IGroupHandler
-    groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonPauseHandler
-    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
-
-    // Cast Diamond to IConfigHandler
-    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
-
-    // Deploy the mock tokens
-    [foreign20, foreign721, foreign1155] = await deployMockTokens(["Foreign20", "Foreign721", "Foreign1155"]);
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
   async function upgradeMetaTransactionsHandlerFacet() {
     // Upgrade the ExchangeHandlerFacet functions
     // DiamondCutFacet
-    const cutFacetViaDiamond = await ethers.getContractAt("DiamondCutFacet", protocolDiamond.address);
+    const cutFacetViaDiamond = await ethers.getContractAt("DiamondCutFacet", protocolDiamondAddress);
 
     // Deploy MockMetaTransactionsHandlerFacet
     const MockMetaTransactionsHandlerFacet = await ethers.getContractFactory("MockMetaTransactionsHandlerFacet");
@@ -293,7 +197,7 @@ describe("IBosonExchangeHandler", function () {
     // Cast Diamond to MockMetaTransactionsHandlerFacet
     mockMetaTransactionsHandler = await ethers.getContractAt(
       "MockMetaTransactionsHandlerFacet",
-      protocolDiamond.address
+      protocolDiamondAddress
     );
   }
 
@@ -699,7 +603,7 @@ describe("IBosonExchangeHandler", function () {
         const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
         // Set protocolFee to zero so we don't get the error AGENT_FEE_AMOUNT_TOO_HIGH
-        protocolFeePercentage = "0";
+        let protocolFeePercentage = "0";
         await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
         offerFees.protocolFee = "0";
 
@@ -1680,8 +1584,8 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("Completing too many exchanges", async function () {
-          // Try to complete more than 50 exchanges
-          exchangesToComplete = [...Array(51).keys()];
+          // Try to complete more than 100 exchanges
+          exchangesToComplete = [...Array(101).keys()];
 
           // Attempt to complete the exchange, expecting revert
           await expect(exchangeHandler.connect(rando).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
@@ -2135,9 +2039,9 @@ describe("IBosonExchangeHandler", function () {
         await foreign1155.connect(assistant).mint("1", "500");
 
         // Approve the protocol diamond to transfer seller's tokens
-        await foreign20.connect(assistant).approve(protocolDiamond.address, "30");
-        await foreign721.connect(assistant).setApprovalForAll(protocolDiamond.address, true);
-        await foreign1155.connect(assistant).setApprovalForAll(protocolDiamond.address, true);
+        await foreign20.connect(assistant).approve(protocolDiamondAddress, "30");
+        await foreign721.connect(assistant).setApprovalForAll(protocolDiamondAddress, true);
+        await foreign1155.connect(assistant).setApprovalForAll(protocolDiamondAddress, true);
 
         // Create an ERC20 twin
         twin20 = mockTwin(foreign20.address);
@@ -2286,7 +2190,7 @@ describe("IBosonExchangeHandler", function () {
         context("Twin transfer fail", async function () {
           it("should revoke exchange when buyer is an EOA", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
-            await foreign20.connect(assistant).approve(protocolDiamond.address, "0");
+            await foreign20.connect(assistant).approve(protocolDiamondAddress, "0");
 
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
@@ -2309,7 +2213,7 @@ describe("IBosonExchangeHandler", function () {
             const [foreign20ReturnFalse] = await deployMockTokens(["Foreign20TransferFromReturnFalse"]);
 
             await foreign20ReturnFalse.connect(assistant).mint(assistant.address, "500");
-            await foreign20ReturnFalse.connect(assistant).approve(protocolDiamond.address, "100");
+            await foreign20ReturnFalse.connect(assistant).approve(protocolDiamondAddress, "100");
 
             // Create a new ERC20 twin
             twin20 = mockTwin(foreign20ReturnFalse.address, TokenType.FungibleToken);
@@ -2348,11 +2252,11 @@ describe("IBosonExchangeHandler", function () {
 
           it("should raise a dispute when buyer account is a contract", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
-            await foreign20.connect(assistant).approve(protocolDiamond.address, "0");
+            await foreign20.connect(assistant).approve(protocolDiamondAddress, "0");
 
             // Deploy contract to test redeem called by another contract
             let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
-            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address);
+            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamondAddress);
             await testProtocolFunctions.deployed();
 
             await testProtocolFunctions.commit(offerId, { value: price });
@@ -2498,7 +2402,7 @@ describe("IBosonExchangeHandler", function () {
             await other721.connect(assistant).mint("0", "2");
 
             // Approve the protocol diamond to transfer seller's tokens
-            await other721.connect(assistant).setApprovalForAll(protocolDiamond.address, true);
+            await other721.connect(assistant).setApprovalForAll(protocolDiamondAddress, true);
 
             const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
             offer.quantityAvailable = "2";
@@ -2581,7 +2485,7 @@ describe("IBosonExchangeHandler", function () {
         context("Twin transfer fail", async function () {
           it("should revoke exchange when buyer is an EOA", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
-            await foreign721.connect(assistant).setApprovalForAll(protocolDiamond.address, false);
+            await foreign721.connect(assistant).setApprovalForAll(protocolDiamondAddress, false);
 
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
@@ -2603,7 +2507,7 @@ describe("IBosonExchangeHandler", function () {
           it("should raise a dispute when buyer account is a contract", async function () {
             // Deploy contract to test redeem called by another contract
             let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
-            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address);
+            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamondAddress);
             await testProtocolFunctions.deployed();
 
             await testProtocolFunctions.commit(offerId, { value: price });
@@ -2754,7 +2658,7 @@ describe("IBosonExchangeHandler", function () {
         context("Twin transfer fail", async function () {
           it("should revoke exchange when buyer is an EOA", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
-            await foreign1155.connect(assistant).setApprovalForAll(protocolDiamond.address, false);
+            await foreign1155.connect(assistant).setApprovalForAll(protocolDiamondAddress, false);
 
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
             await expect(tx)
@@ -2782,7 +2686,7 @@ describe("IBosonExchangeHandler", function () {
           it("should raise a dispute when buyer account is a contract", async function () {
             // Deploy contract to test redeem called by another contract
             let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
-            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address);
+            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamondAddress);
             await testProtocolFunctions.deployed();
 
             await testProtocolFunctions.commit(offerId, { value: price });
@@ -2973,7 +2877,7 @@ describe("IBosonExchangeHandler", function () {
             await other721.connect(assistant).mint("0", "2");
 
             // Approve the protocol diamond to transfer seller's tokens
-            await other721.connect(assistant).setApprovalForAll(protocolDiamond.address, true);
+            await other721.connect(assistant).setApprovalForAll(protocolDiamondAddress, true);
 
             const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
             offer.quantityAvailable = "2";
@@ -3090,7 +2994,7 @@ describe("IBosonExchangeHandler", function () {
         context("Twin transfer fail", async function () {
           it("should revoke exchange when buyer is an EOA", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
-            await foreign20.connect(assistant).approve(protocolDiamond.address, "0");
+            await foreign20.connect(assistant).approve(protocolDiamondAddress, "0");
 
             let exchangeId = exchange.id;
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -3127,11 +3031,11 @@ describe("IBosonExchangeHandler", function () {
 
           it("should raise a dispute when buyer account is a contract", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
-            await foreign20.connect(assistant).approve(protocolDiamond.address, "0");
+            await foreign20.connect(assistant).approve(protocolDiamondAddress, "0");
 
             // Deploy contract to test redeem called by another contract
             let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
-            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address);
+            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamondAddress);
             await testProtocolFunctions.deployed();
 
             await testProtocolFunctions.commit(offerId, { value: price });
@@ -3817,7 +3721,7 @@ describe("IBosonExchangeHandler", function () {
 
       it("price, sellerDeposit, and disputeResolverId must be 0 if is an absolute zero offer", async function () {
         // Set protocolFee to zero so we don't get the error AGENT_FEE_AMOUNT_TOO_HIGH
-        protocolFeePercentage = "0";
+        let protocolFeePercentage = "0";
         await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
         offerFees.protocolFee = "0";
 
@@ -4061,8 +3965,8 @@ describe("IBosonExchangeHandler", function () {
           await foreign721.connect(assistant).mint("0", "10");
 
           // Approve the protocol diamond to transfer seller's tokens
-          await foreign20.connect(assistant).approve(protocolDiamond.address, "3");
-          await foreign721.connect(assistant).setApprovalForAll(protocolDiamond.address, true);
+          await foreign20.connect(assistant).approve(protocolDiamondAddress, "3");
+          await foreign721.connect(assistant).setApprovalForAll(protocolDiamondAddress, true);
 
           // Create an ERC20 twin
           twin20 = mockTwin(foreign20.address);

@@ -2,10 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 
 const DisputeResolutionTerms = require("../../../scripts/domain/DisputeResolutionTerms");
-const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { getInterfaceIds } = require("../../../scripts/config/supported-interfaces.js");
-const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond.js");
-const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets.js");
 const Role = require("../../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const Range = require("../../../scripts/domain/Range");
@@ -14,7 +11,6 @@ const VoucherInitValues = require("../../../scripts/domain/VoucherInitValues");
 const { mockOffer, mockExchange, mockVoucher } = require("../../util/mock.js");
 const { assert, expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
-const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants");
 const {
   mockDisputeResolver,
   mockSeller,
@@ -28,7 +24,9 @@ const {
   calculateContractAddress,
   calculateVoucherExpiry,
   setNextBlockTimestamp,
-  getFacetsWithArgs,
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
   prepareDataSignatureParameters,
   getEvent,
   deriveTokenId,
@@ -40,7 +38,7 @@ const FormatTypes = ethers.utils.FormatTypes;
 
 describe("IBosonVoucher", function () {
   let interfaceIds;
-  let protocolDiamond, accessController;
+  let accessController;
   let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler, configHandler;
   let deployer,
     protocol,
@@ -56,8 +54,6 @@ describe("IBosonVoucher", function () {
     clerkDR,
     treasuryDR,
     seller,
-    protocolTreasury,
-    bosonToken,
     foreign20;
   let beacon;
   let disputeResolver, disputeResolverFees;
@@ -65,108 +61,44 @@ describe("IBosonVoucher", function () {
   let agentId;
   let voucherInitValues, contractURI, royaltyPercentage, exchangeId, offerPrice;
   let forwarder;
+  let snapshotId;
 
   before(async function () {
+    accountId.next(true);
+
     // Get interface id
     const { IBosonVoucher, IERC721, IERC2981 } = await getInterfaceIds();
     interfaceIds = { IBosonVoucher, IERC721, IERC2981 };
-  });
-
-  beforeEach(async function () {
-    // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
-    [deployer, protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR, protocolTreasury] =
-      await ethers.getSigners();
-
-    // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
-
-    // Deploy diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-
-    // Cast Diamond to contract interfaces
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
-
-    // Grant roles
-    await accessController.grantRole(Role.PROTOCOL, protocol.address);
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    const protocolClientArgs = [protocolDiamond.address];
 
     // Mock forwarder to test metatx
     const MockForwarder = await ethers.getContractFactory("MockForwarder");
 
     forwarder = await MockForwarder.deploy();
 
-    const implementationArgs = [forwarder.address];
-    const [, beacons, proxies, bv] = await deployProtocolClients(
-      protocolClientArgs,
-      maxPriorityFeePerGas,
-      implementationArgs
-    );
-    [bosonVoucher] = bv;
-    [beacon] = beacons;
-    const [proxy] = proxies;
+    // Specify contracts needed for this test
+    const contracts = {
+      accountHandler: "IBosonAccountHandler",
+      offerHandler: "IBosonOfferHandler",
+      exchangeHandler: "IBosonExchangeHandler",
+      fundsHandler: "IBosonFundsHandler",
+      configHandler: "IBosonConfigHandler",
+    };
 
-    const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
-    const buyerEscalationDepositPercentage = "1000"; // 10%
+    ({
+      signers: [protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR],
+      contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, configHandler },
+      extraReturnValues: { bosonVoucher, beacon, accessController },
+    } = await setupTestEnvironment(contracts, {
+      forwarderAddress: [forwarder.address],
+    }));
 
-    [foreign20, bosonToken] = await deployMockTokens(["Foreign20", "BosonToken"]);
+    // make all account the same
+    assistant = clerk = admin;
+    assistantDR = clerkDR = adminDR;
+    [deployer] = await ethers.getSigners();
 
-    // Add config Handler, so ids start at 1, and so voucher address can be found
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 10000,
-      },
-      //Protocol fees
-      {
-        percentage: 200, // 2%
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
-    const facetNames = [
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "SellerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "FundsHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
-
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+    // Grant protocol role to eoa so it's easier to test
+    await accessController.grantRole(Role.PROTOCOL, protocol.address);
 
     // Initialize voucher contract
     const sellerId = 1;
@@ -176,6 +108,16 @@ describe("IBosonVoucher", function () {
     const bosonVoucherInit = await ethers.getContractAt("BosonVoucher", bosonVoucher.address);
 
     await bosonVoucherInit.initializeVoucher(sellerId, assistant.address, voucherInitValues);
+
+    [foreign20] = await deployMockTokens(["Foreign20", "BosonToken"]);
+
+    // Get snapshot id
+    snapshotId = await getSnapshot();
+  });
+
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
   // Interface support
@@ -1449,6 +1391,8 @@ describe("IBosonVoucher", function () {
   });
 
   context("Token transfers", function () {
+    let bosonVoucher;
+
     afterEach(async function () {
       // Reset the accountId iterator
       accountId.next(true);
@@ -1897,6 +1841,7 @@ describe("IBosonVoucher", function () {
 
   context("tokenURI", function () {
     let metadataUri, offerId, offerPrice;
+    let bosonVoucher;
 
     beforeEach(async function () {
       seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
@@ -2435,7 +2380,7 @@ describe("IBosonVoucher", function () {
 
       await expect(() =>
         bosonVoucher.connect(rando).withdrawToProtocol([ethers.constants.AddressZero])
-      ).to.changeEtherBalances([bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
+      ).to.changeEtherBalances([bosonVoucher, fundsHandler], [amount.mul(-1), amount]);
     });
 
     it("Can withdraw ERC20", async function () {
@@ -2445,7 +2390,7 @@ describe("IBosonVoucher", function () {
 
       await expect(() => bosonVoucher.connect(rando).withdrawToProtocol([foreign20.address])).to.changeTokenBalances(
         foreign20,
-        [bosonVoucher, protocolDiamond],
+        [bosonVoucher, fundsHandler],
         [amount.mul(-1), amount]
       );
     });
@@ -2460,8 +2405,8 @@ describe("IBosonVoucher", function () {
       await expect(() => {
         tx = bosonVoucher.connect(rando).withdrawToProtocol([ethers.constants.AddressZero, foreign20.address]);
         return tx;
-      }).to.changeTokenBalances(foreign20, [bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
-      await expect(() => tx).to.changeEtherBalances([bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
+      }).to.changeTokenBalances(foreign20, [bosonVoucher, fundsHandler], [amount.mul(-1), amount]);
+      await expect(() => tx).to.changeEtherBalances([bosonVoucher, fundsHandler], [amount.mul(-1), amount]);
     });
   });
 
