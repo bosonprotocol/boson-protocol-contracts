@@ -555,7 +555,7 @@ describe("IBosonTwinHandler", function () {
           await twinHandler.connect(assistant).createTwin(twin);
 
           // Create new twin with same token address
-          // twin.supplyAvailable = "2"
+          twin.supplyAvailable = "2";
           await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
             RevertReasons.INVALID_TWIN_TOKEN_RANGE
           );
