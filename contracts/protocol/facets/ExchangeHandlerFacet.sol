@@ -182,7 +182,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         uint256 exchangeId = tokenId & type(uint128).max;
 
         // Get sequential commits for this exchange
-        SequentialCommit[] storage sequentialCommits = protocolEntities().sequentialCommits[exchangeId];
+        ExchangeCosts[] storage exchangeCosts = protocolEntities().exchangeCosts[exchangeId];
 
         // Calculate fees
         uint256 protocolFeeAmount = getProtocolFee(offer.exchangeToken, actualPrice);
@@ -198,8 +198,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
         uint256 buyerId = getValidBuyer(_buyer);
 
-        sequentialCommits.push(
-            SequentialCommit({
+        exchangeCosts.push(
+            ExchangeCosts({
                 resellerId: buyerId,
                 price: actualPrice,
                 protocolFeeAmount: protocolFeeAmount,
@@ -664,6 +664,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         address _rangeOwner,
         address _sender
     ) external override buyersNotPaused returns (bool committed) {
+        // Cache protocol status for reference
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+
+        // Make sure that protocol is not reentered
+        // Cannot use modifier `nonReentrant` since it also changes reentrancyStatus to `ENTERED`
+        // This would break the flow since the protocol should be allowed to re-enter in this case.
+        require(ps.reentrancyStatus != ENTERED, REENTRANCY_GUARD);
+
         // Derive the offer id
         uint256 offerId = _tokenId >> 128;
 
@@ -677,8 +685,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         if (offer.priceType == PriceType.Discovery) {
-            ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-
             address priceDiscoveryContract = lookups.priceDiscoveryContractByVoucher[_tokenId];
             address lastVoucherOwner = lookups.lastVoucherOwner[_tokenId];
 
@@ -696,9 +702,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
                 // Price discovery is returning voucher to last voucher owner, e.g withdrawn from price discovery contract
                 delete lookups.priceDiscoveryContractByVoucher[_tokenId];
             } else if (_sender == _to) {
-                if (_from == _rangeOwner) {
-                    lookups.priceDiscoveryContractByVoucher[_tokenId] = _sender;
-                }
+                // Voucher owner is depositing voucher to price discovery contract, e.g depositing into a pool
+                lookups.priceDiscoveryContractByVoucher[_tokenId] = _sender;
                 lookups.lastVoucherOwner[_tokenId] = _from;
             } else {
                 revert(TRANSFER_NOT_ALLOWED);

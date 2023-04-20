@@ -122,8 +122,8 @@ contract PriceDiscoveryBase is ProtocolBase {
         uint256 overchargedAmount = _priceDiscovery.price - actualPrice;
 
         if (overchargedAmount > 0) {
-            // Return the surplus to buyer
-            FundsLib.transferFundsFromProtocol(exchangeToken, payable(_buyer), overchargedAmount);
+            // Return the surplus to caller
+            FundsLib.transferFundsFromProtocol(exchangeToken, payable(msgSender()), overchargedAmount);
         }
     }
 
@@ -179,7 +179,7 @@ contract PriceDiscoveryBase is ProtocolBase {
 
             require(owner != address(0) && owner == priceDiscoveryContract, OWNER_MUST_BE_PRICE_DISCOVERY_CONTRACT);
 
-            // check the last owner's balance since they are the one who should receive the price via the price discovery contract
+            // Check the last owner's balance since they are the one who should receive the price via the price discovery contract
             owner = lookups.lastVoucherOwner[_tokenId];
 
             require(owner != address(0), LAST_OWNER_NOT_FOUND);
@@ -207,14 +207,21 @@ contract PriceDiscoveryBase is ProtocolBase {
 
             require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
 
+            if (exchangeToken == address(weth)) {
+                //  Protocol operates with native currency, needs to unwrap it (i.e. withdraw)
+                weth.withdraw(actualPrice);
+                // Set exchange token to address(0) again
+                exchangeToken = address(0);
+            }
+
             // Transfer funds to protocol - caller must pay on behalf of the seller
             FundsLib.validateIncomingPayment(exchangeToken, actualPrice);
 
-            // Check the native balance and return the surplus to seller
+            // Check the native balance and return the surplus to caller
             uint256 protocolNativeBalanceAfter = getBalance(address(0), address(this));
 
             if (protocolNativeBalanceAfter > protocolNativeBalanceBefore) {
-                // Return the surplus to seller
+                // Return the surplus to caller
                 FundsLib.transferFundsFromProtocol(
                     address(0),
                     payable(msgSender()),
@@ -223,7 +230,7 @@ contract PriceDiscoveryBase is ProtocolBase {
             }
         }
 
-        // Token id expected and token id send to buyer must match
+        // Token id expected by caller and token id send to buyer must match
         require(_tokenId == protocolStatus().incomingVoucherId, TOKEN_ID_MISMATCH);
     }
 

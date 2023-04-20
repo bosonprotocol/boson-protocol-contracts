@@ -189,7 +189,7 @@ contract BosonTypes {
         ExchangeState state;
     }
 
-    struct SequentialCommit {
+    struct ExchangeCosts {
         uint256 resellerId;
         uint256 price;
         uint256 protocolFeeAmount;

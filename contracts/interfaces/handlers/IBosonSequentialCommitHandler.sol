@@ -10,7 +10,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles sequential commits.
  *
- * The ERC-165 identifier for this interface is: 0x1566334a
+ * The ERC-165 identifier for this interface is: 0x407725cd
  */
 interface IBosonSequentialCommitHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
     /**
@@ -46,7 +46,7 @@ interface IBosonSequentialCommitHandler is IBosonExchangeEvents, IBosonFundsLibE
      * @param _exchangeId - the id of the exchange to commit to
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
      */
-    function sequentialCommitToOffer(
+    function exchangeCostsToOffer(
         address payable _buyer,
         uint256 _exchangeId,
         BosonTypes.PriceDiscovery calldata _priceDiscovery

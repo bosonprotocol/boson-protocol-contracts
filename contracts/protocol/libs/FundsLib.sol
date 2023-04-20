@@ -84,7 +84,7 @@ library FundsLib {
 
         // decrease available funds
         uint256 sellerId = offer.sellerId;
-        uint256 sellerFundsEncumbered = offer.sellerDeposit + (_isPreminted && !isPriceDiscovery ? _price : 0); // for preminted offer and price type is fixed, encumber also price from seller's available funds
+        uint256 sellerFundsEncumbered = offer.sellerDeposit + (_isPreminted && !isPriceDiscovery ? _price : 0); // for preminted offer and price type is static, encumber also price from seller's available funds
         decreaseAvailableFunds(sellerId, exchangeToken, sellerFundsEncumbered);
 
         // notify external observers
@@ -253,17 +253,17 @@ library FundsLib {
         uint256 _initialPrice,
         address _exchangeToken
     ) internal returns (uint256 protocolFee, uint256 royalties) {
-        BosonTypes.SequentialCommit[] storage sequentialCommits;
+        BosonTypes.ExchangeCosts[] storage exchangeCosts;
 
         // calculate effective price multiplier
         uint256 effectivePriceMultiplier;
         {
             ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
 
-            sequentialCommits = pe.sequentialCommits[_exchangeId];
+            exchangeCosts = pe.exchangeCosts[_exchangeId];
 
             // if no sequential commit happened, just return
-            if (sequentialCommits.length == 0) {
+            if (exchangeCosts.length == 0) {
                 return (0, 0);
             }
 
@@ -299,9 +299,9 @@ library FundsLib {
 
         uint256 resellerBuyPrice = _initialPrice; // the price that reseller paid for the voucher
         address msgSender = EIP712Lib.msgSender();
-        uint256 len = sequentialCommits.length;
+        uint256 len = exchangeCosts.length;
         for (uint256 i = 0; i < len; i++) {
-            BosonTypes.SequentialCommit storage sc = sequentialCommits[i];
+            BosonTypes.ExchangeCosts storage sc = exchangeCosts[i];
 
             // amount to be released
             uint256 currentResellerAmount;

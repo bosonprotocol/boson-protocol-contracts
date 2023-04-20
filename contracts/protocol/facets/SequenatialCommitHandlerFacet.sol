@@ -62,7 +62,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
      * @param _tokenId - the id of the token to commit to
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
      */
-    function sequentialCommitToOffer(
+    function exchangeCostsToOffer(
         address payable _buyer,
         uint256 _tokenId,
         PriceDiscovery calldata _priceDiscovery
@@ -106,7 +106,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
         {
             // Get sequential commits for this exchange
-            SequentialCommit[] storage sequentialCommits = protocolEntities().sequentialCommits[exchangeId];
+            ExchangeCosts[] storage exchangeCosts = protocolEntities().exchangeCosts[exchangeId];
 
             {
                 // Calculate fees
@@ -122,15 +122,15 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 require((protocolFeeAmount + royaltyAmount) <= actualPrice, FEE_AMOUNT_TOO_HIGH);
 
                 // Get price paid by current buyer
-                uint256 len = sequentialCommits.length;
-                uint256 currentPrice = len == 0 ? offer.price : sequentialCommits[len - 1].price;
+                uint256 len = exchangeCosts.length;
+                uint256 currentPrice = len == 0 ? offer.price : exchangeCosts[len - 1].price;
 
                 // Calculate the minimal amount to be kept in the escrow
                 escrowAmount = Math.max(actualPrice, protocolFeeAmount + royaltyAmount + currentPrice) - currentPrice;
 
                 // Update sequential commit
-                sequentialCommits.push(
-                    SequentialCommit({
+                exchangeCosts.push(
+                    ExchangeCosts({
                         resellerId: buyerId,
                         price: actualPrice,
                         protocolFeeAmount: protocolFeeAmount,
