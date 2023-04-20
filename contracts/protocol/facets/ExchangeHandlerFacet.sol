@@ -24,6 +24,19 @@ import { IERC20 } from "../../interfaces/IERC20.sol";
 contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     using Address for address;
 
+    uint256 private immutable EXCHANGE_ID_2_2_0;
+
+    /**
+     * @notice After v2.2.0, token ids are derived from offerId and exchangeId.
+     * EXCHANGE_ID_2_2_0 is the first exchange id to use for 2.2.0.
+     * Set EXCHANGE_ID_2_2_0 in the constructor.
+     *
+     * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
+     */
+    constructor(uint256 _firstExchangeId2_2_0) {
+        EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
+    }
+
     /**
      * @notice Initializes facet.
      * This function is callable only once.
@@ -216,7 +229,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             lookups.voucherCount[buyerId]++;
             if (!_isPreminted) {
                 IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
-                bosonVoucher.issueVoucher(_exchangeId, _buyer);
+                uint256 tokenId = _exchangeId | (_offerId << 128);
+                bosonVoucher.issueVoucher(tokenId, _buyer);
             }
         }
 
@@ -677,9 +691,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         lookups.voucherCount[_exchange.buyerId]--;
 
         // Burn the voucher
-        (, Offer storage offer) = fetchOffer(_exchange.offerId);
+        uint256 offerId = _exchange.offerId;
+        (, Offer storage offer) = fetchOffer(offerId);
         IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);
-        bosonVoucher.burnVoucher(_exchange.id);
+
+        uint256 tokenId = _exchange.id;
+        if (tokenId >= EXCHANGE_ID_2_2_0) tokenId |= (offerId << 128);
+        bosonVoucher.burnVoucher(tokenId);
     }
 
     /**
