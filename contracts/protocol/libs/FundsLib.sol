@@ -43,6 +43,32 @@ library FundsLib {
         uint256 amount,
         address executedBy
     );
+    event DRFeeEncumbered(
+        address indexed feeMutualizer,
+        uint256 indexed uuid,
+        uint256 indexed exchangeId,
+        address tokenAddress,
+        uint256 feeAmount,
+        address executedBy
+    );
+    event DRFeeReturned(
+        address indexed feeMutualizer,
+        uint256 indexed uuid,
+        uint256 indexed exchangeId,
+        address tokenAddress,
+        uint256 feeAmount,
+        address executedBy
+    );
+
+    // This struct is not defined in BosonTypes because it is used only in this library
+    struct PayOff {
+        uint256 seller;
+        uint256 buyer;
+        uint256 protocol;
+        uint256 agent;
+        uint256 disputeResolver;
+        uint256 feeMutualizer;
+    }
 
     /**
      * @notice Takes in the offer id and buyer id and encumbers buyer's and seller's funds during the commitToOffer.
@@ -139,15 +165,6 @@ library FundsLib {
             // if transfer is in ERC20 token, try to transfer the amount from buyer to the protocol
             transferFundsToProtocol(_exchangeToken, _value);
         }
-    }
-
-    struct PayOff {
-        uint256 seller;
-        uint256 buyer;
-        uint256 protocol;
-        uint256 agent;
-        uint256 disputeResolver;
-        uint256 feeMutualizer;
     }
 
     /**
@@ -267,38 +284,8 @@ library FundsLib {
             emit FundsReleased(_exchangeId, disputeResolveId, exchangeToken, payOff.disputeResolver, sender);
         }
 
-        // always make call to mutualizer, even if payoff is 0
+        // always make call to mutualizer, even if the payoff is 0
         returnFeeToMutualizer(offer.feeMutualizer, _exchangeId, exchangeToken, payOff.feeMutualizer);
-
-        IDRFeeMutualizer(offer.feeMutualizer).returnDRFee(
-            ProtocolLib.protocolLookups().mutualizerUUIDByExchange[_exchangeId],
-            exchangeToken,
-            payOff.feeMutualizer,
-            ""
-        );
-    }
-
-    function returnFeeToMutualizer(
-        address _feeMutualizer,
-        uint256 _exchangeId,
-        address _token,
-        uint256 _feeAmount
-    ) internal {
-        uint256 nativePayoff;
-        if (_feeAmount > 0 && _token != address(0)) {
-            // Approve the mutualizer to withdraw the tokens
-            IERC20(_token).approve(_feeMutualizer, _feeAmount);
-        } else {
-            // Even if _feeAmount == 0, this is still true
-            nativePayoff = _feeAmount;
-        }
-
-        IDRFeeMutualizer(_feeMutualizer).returnDRFee(
-            ProtocolLib.protocolLookups().mutualizerUUIDByExchange[_exchangeId],
-            _token,
-            _feeAmount,
-            ""
-        );
     }
 
     /**
@@ -371,6 +358,8 @@ library FundsLib {
     /**
      * @notice Requests the DR fee from the mutualizer, validates it was really sent and store UUID
      *
+     * Emits DRFeeEncumbered event if successful.
+     *
      * Reverts if:
      * - Mutualizer does not cover the seller
      * - Mutualizer does not send the fee to the protocol
@@ -411,6 +400,42 @@ library FundsLib {
 
         // check if mutualizer sent the fee to the protocol
         require(protocolTokenBalanceAfter - protocolTokenBalanceBefore == _drFee, DR_FEE_NOT_RECEIVED);
+
+        emit DRFeeEncumbered(_mutualizer, mutualizerUUID, _exchangeId, _exchangeToken, _drFee, EIP712Lib.msgSender());
+    }
+
+    /**
+     * @notice Makes a call to the mutualizer to return the fee to the mutualizer.
+     *
+     * Emits DRFeeReturned event.
+     *
+     * Even if the call to the mutualizer fails, the protocol will still continue, otherwise the exchange would be stuck.
+     *
+     * @param _exchangeId - exchange id
+     */
+    function returnFeeToMutualizer(
+        address _feeMutualizer,
+        uint256 _exchangeId,
+        address _exchangeToken,
+        uint256 _feeAmount
+    ) internal {
+        uint256 nativePayoff;
+        if (_feeAmount > 0 && _exchangeToken != address(0)) {
+            // Approve the mutualizer to withdraw the tokens
+            IERC20(_exchangeToken).approve(_feeMutualizer, _feeAmount);
+        } else {
+            // Even if _feeAmount == 0, this is still true
+            nativePayoff = _feeAmount;
+        }
+
+        // Call the mutualizer to return the fee
+        // Even if the call fails, the protocol will still be able to continue
+        uint256 uuid = ProtocolLib.protocolLookups().mutualizerUUIDByExchange[_exchangeId];
+        try
+            IDRFeeMutualizer(_feeMutualizer).returnDRFee{ value: nativePayoff }(uuid, _exchangeToken, _feeAmount, "")
+        {} catch {}
+
+        emit DRFeeReturned(_feeMutualizer, uuid, _exchangeId, _exchangeToken, _feeAmount, EIP712Lib.msgSender());
     }
 
     /**
