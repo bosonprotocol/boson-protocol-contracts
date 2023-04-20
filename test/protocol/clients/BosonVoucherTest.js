@@ -90,8 +90,6 @@ describe("IBosonVoucher", function () {
       extraReturnValues: { bosonVoucher, beacon, accessController },
     } = await setupTestEnvironment(contracts, {
       forwarderAddress: [forwarder.address],
-      returnClient: true,
-      returnAccessController: true,
     }));
 
     // make all account the same

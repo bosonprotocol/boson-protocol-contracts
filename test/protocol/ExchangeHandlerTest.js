@@ -146,7 +146,7 @@ describe("IBosonExchangeHandler", function () {
       protocolConfig: [, , { percentage: protocolFeePercentage }],
       extraReturnValues: { bosonVoucher, voucherImplementation, accessController },
       diamondAddress: protocolDiamondAddress,
-    } = await setupTestEnvironment(contracts, { returnClient: true, returnAccessController: true }));
+    } = await setupTestEnvironment(contracts));
 
     [deployer] = await ethers.getSigners();
 

@@ -147,7 +147,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       },
       extraReturnValues: { accessController },
       diamondAddress: protocolDiamondAddress,
-    } = await setupTestEnvironment(contracts, { returnAccessController: true }));
+    } = await setupTestEnvironment(contracts));
 
     // make all account the same
     assistant = clerk = admin;

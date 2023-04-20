@@ -289,10 +289,7 @@ function objectToArray(input) {
   return result;
 }
 
-async function setupTestEnvironment(
-  contracts,
-  { returnClient = false, returnAccessController = false, bosonTokenAddress, forwarderAddress } = {}
-) {
+async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAddress } = {}) {
   const facetNames = [
     "SellerHandlerFacet",
     "BuyerHandlerFacet",
@@ -314,14 +311,11 @@ async function setupTestEnvironment(
     "MetaTransactionsHandlerFacet",
   ];
 
-  let extraReturnValues = {};
-
   const signers = await ethers.getSigners();
   const [deployer, protocolTreasury, bosonToken, pauser] = signers;
 
   // Deploy the Protocol Diamond
   const [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-  if (returnAccessController) extraReturnValues = { ...extraReturnValues, accessController };
 
   // Temporarily grant UPGRADER role to deployer account
   await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -341,12 +335,8 @@ async function setupTestEnvironment(
   );
   const [beacon] = beacons;
   const [proxy] = proxies;
-
-  if (returnClient) {
-    const [bosonVoucher] = clients;
-    const [voucherImplementation] = implementations;
-    extraReturnValues = { ...extraReturnValues, bosonVoucher, voucherImplementation, beacon };
-  }
+  const [bosonVoucher] = clients;
+  const [voucherImplementation] = implementations;
 
   // set protocolFees
   const protocolFeePercentage = "200"; // 2 %
@@ -397,6 +387,8 @@ async function setupTestEnvironment(
   for (const contract of Object.keys(contracts)) {
     contractInstances[contract] = await ethers.getContractAt(contracts[contract], protocolDiamond.address);
   }
+
+  const extraReturnValues = { accessController, bosonVoucher, voucherImplementation, beacon };
 
   return {
     signers: signers.slice(3),
