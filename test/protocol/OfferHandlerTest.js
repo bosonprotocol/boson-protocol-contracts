@@ -19,6 +19,7 @@ const {
   setupTestEnvironment,
   getSnapshot,
   revertToSnapshot,
+  deriveTokenId,
 } = require("../util/utils.js");
 const { oneWeek, oneMonth, oneDay } = require("../util/constants");
 const {
@@ -222,7 +223,7 @@ describe("IBosonOfferHandler", function () {
 
       offerFeesStruct = offerFees.toStruct();
 
-      // Set despute resolution terms
+      // Set dispute resolution terms
       disputeResolutionTerms = new DisputeResolutionTerms(
         disputeResolver.id,
         disputeResolver.escalationResponsePeriod,
@@ -1219,7 +1220,8 @@ describe("IBosonOfferHandler", function () {
         length = 100;
         firstTokenId = 1;
         lastTokenId = firstTokenId + length - 1;
-        range = new Range(firstTokenId.toString(), length.toString(), "0", "0", assistant.address);
+        const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+        range = new Range(tokenIdStart.toString(), length.toString(), "0", "0", assistant.address);
       });
 
       it("should emit an RangeReserved event", async function () {
@@ -1260,7 +1262,7 @@ describe("IBosonOfferHandler", function () {
         assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
       });
 
-      it("it's possible to reserve range even if somebody already commited to", async function () {
+      it("it's possible to reserve range even if somebody already committed to", async function () {
         // Deposit seller funds so the commit will succeed
         const sellerPool = ethers.BigNumber.from(offer.sellerDeposit).mul(2);
         await fundsHandler
@@ -1285,7 +1287,7 @@ describe("IBosonOfferHandler", function () {
           .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
         // Set maximum allowed length
-        length = ethers.BigNumber.from(2).pow(128).sub(1);
+        length = ethers.BigNumber.from(2).pow(64).sub(1);
         await expect(offerHandler.connect(assistant).reserveRange(nextOfferId, length, assistant.address)).to.emit(
           offerHandler,
           "RangeReserved"
@@ -1459,7 +1461,7 @@ describe("IBosonOfferHandler", function () {
             .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
           // Set length to more than maximum allowed range length
-          length = ethers.BigNumber.from(2).pow(128);
+          length = ethers.BigNumber.from(2).pow(64);
 
           // Attempt to reserve a range, expecting revert
           await expect(

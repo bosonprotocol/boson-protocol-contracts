@@ -46,11 +46,6 @@ contract BosonVoucherBase is
         mapping(address => uint256) _balances;
     }
 
-    struct PremintStatus {
-        bool committable;
-        uint256 offerId;
-    }
-
     // Opensea collection config
     string private _contractURI;
 
@@ -60,11 +55,8 @@ contract BosonVoucherBase is
     // Map an offerId to a Range for pre-minted offers
     mapping(uint256 => Range) private _rangeByOfferId;
 
-    // All ranges as an array
-    uint256[] private _rangeOfferIds;
-
     // Premint status, used only temporarly in transfers
-    PremintStatus private _premintStatus;
+    bool private _isCommitable;
 
     // Tell if preminted voucher has already been _committed
     mapping(uint256 => bool) private _committed;
@@ -74,7 +66,7 @@ contract BosonVoucherBase is
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[43] private __gap;
+    uint256[45] private __gap;
 
     /**
      * @notice Initializes the voucher.
@@ -110,25 +102,25 @@ contract BosonVoucherBase is
      * Reverts if:
      * - Exchange id falls within a reserved range
      *
-     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     * @param _tokenId - voucher token id corresponds to <<uint128(offerId)>>.<<uint128(exchangeId)>>
      * @param _buyer - the buyer address
      */
-    function issueVoucher(uint256 _exchangeId, address _buyer) external override onlyRole(PROTOCOL) {
-        // Get the exchange
-        (, Exchange memory exchange) = getBosonExchange(_exchangeId);
+    function issueVoucher(uint256 _tokenId, address _buyer) external override onlyRole(PROTOCOL) {
+        // Derive offerId
+        uint256 offerId = _tokenId >> 128;
 
         // See if the offer id is associated with a range
-        Range storage range = _rangeByOfferId[exchange.offerId];
+        Range storage range = _rangeByOfferId[offerId];
 
         // Revert if exchange id falls within a reserved range
         uint256 rangeStart = range.start;
-        require(
-            (_exchangeId < rangeStart) || (_exchangeId >= rangeStart + range.length),
-            EXCHANGE_ID_IN_RESERVED_RANGE
-        );
+        require((_tokenId < rangeStart) || (_tokenId >= rangeStart + range.length), EXCHANGE_ID_IN_RESERVED_RANGE);
+
+        // Issue voucher is called only during commitToOffer (in protocol), so token can be set as committed
+        _committed[_tokenId] = true;
 
         // Mint the voucher, sending it to the buyer address
-        _mint(_buyer, _exchangeId);
+        _mint(_buyer, _tokenId);
     }
 
     /**
@@ -136,10 +128,10 @@ contract BosonVoucherBase is
      *
      * Caller must have PROTOCOL role.
      *
-     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     * @param _tokenId - voucher token id corresponds to <<uint128(offerId)>>.<<uint128(exchangeId)>>
      */
-    function burnVoucher(uint256 _exchangeId) external override onlyRole(PROTOCOL) {
-        _burn(_exchangeId);
+    function burnVoucher(uint256 _tokenId) external override onlyRole(PROTOCOL) {
+        _burn(_tokenId);
     }
 
     /**
@@ -173,21 +165,12 @@ contract BosonVoucherBase is
         // Prevent reservation of an empty range
         require(_length > 0, INVALID_RANGE_LENGTH);
 
+        // Adjust start id to include offer id
+        require(_start > 0, INVALID_RANGE_START);
+        _start += (_offerId << 128);
+
         // Prevent overflow in issueVoucher and preMint
         require(_start <= type(uint256).max - _length, INVALID_RANGE_LENGTH);
-
-        // Make sure that ranges are in ascending order
-        uint256 rangeOfferIdsLength = _rangeOfferIds.length;
-        if (rangeOfferIdsLength > 0) {
-            // Get latest registered range
-            Range storage lastRange = _rangeByOfferId[_rangeOfferIds[rangeOfferIdsLength - 1]];
-
-            // New range should start after the end of last range
-            require(_start >= lastRange.start + lastRange.length, INVALID_RANGE_START);
-        } else {
-            // Make sure range start is valid
-            require(_start > 0, INVALID_RANGE_START);
-        }
 
         // Get storage slot for the range
         Range storage range = _rangeByOfferId[_offerId];
@@ -199,7 +182,6 @@ contract BosonVoucherBase is
         range.start = _start;
         range.length = _length;
         range.owner = _to;
-        _rangeOfferIds.push(_offerId);
 
         emit RangeReserved(_offerId, range);
     }
@@ -274,6 +256,8 @@ contract BosonVoucherBase is
 
         // Update to total balance
         getERC721UpgradeableStorage()._balances[to] += _amount;
+
+        emit VouchersPreMinted(_offerId, start, tokenId);
     }
 
     /**
@@ -329,12 +313,12 @@ contract BosonVoucherBase is
         }
 
         // Burn the range
-        address seller = owner();
+        address rangeOwner = range.owner;
         uint256 burned;
         for (uint256 tokenId = start; tokenId < end; tokenId++) {
             // Burn only if not already _committed
             if (!_committed[tokenId]) {
-                emit Transfer(seller, address(0), tokenId);
+                emit Transfer(rangeOwner, address(0), tokenId);
                 burned++;
             }
         }
@@ -342,8 +326,8 @@ contract BosonVoucherBase is
         // Update last burned token id
         range.lastBurnedTokenId = end - 1;
 
-        // Update seller's total balance
-        getERC721UpgradeableStorage()._balances[seller] -= burned;
+        // Update owner's total balance
+        getERC721UpgradeableStorage()._balances[rangeOwner] -= burned;
     }
 
     /**
@@ -404,7 +388,7 @@ contract BosonVoucherBase is
         } else {
             bool committable;
             // If _tokenId does not exist, but offer is committable, report contract owner as token owner
-            (committable, , owner) = getPreMintStatus(_tokenId);
+            (committable, owner) = getPreMintStatus(_tokenId);
             if (committable) return owner;
 
             // Otherwise revert
@@ -420,11 +404,11 @@ contract BosonVoucherBase is
         address _to,
         uint256 _tokenId
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
-        (bool committable, uint256 offerId, ) = getPreMintStatus(_tokenId);
+        (bool committable, ) = getPreMintStatus(_tokenId);
 
         if (committable) {
             // If offer is committable, temporarily update _owners, so transfer succeeds
-            silentMintAndSetPremintStatus(_from, _tokenId, offerId);
+            silentMintAndSetPremintStatus(_from, _tokenId);
         }
 
         super.transferFrom(_from, _to, _tokenId);
@@ -439,52 +423,12 @@ contract BosonVoucherBase is
         uint256 _tokenId,
         bytes memory _data
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
-        (bool committable, uint256 offerId, ) = getPreMintStatus(_tokenId);
+        (bool committable, ) = getPreMintStatus(_tokenId);
 
         if (committable) {
             // If offer is committable, temporarily update _owners, so transfer succeeds
-            silentMintAndSetPremintStatus(_from, _tokenId, offerId);
+            silentMintAndSetPremintStatus(_from, _tokenId);
         }
-
-        super.safeTransferFrom(_from, _to, _tokenId, _data);
-    }
-
-    /**
-     * @notice Non-standard ERC721 function to transfer a pre-minted token from one address to another.
-     *
-     * @dev  This function is more efficient than generic transferFrom methods, since it does not have to perform binary search.
-     *
-     * Reverts if:
-     * - TokenId was already used to commit
-     * - TokenId already exists (i.e. has an owner)
-     * - TokenId has not been preminted yet
-     * - TokenId was already burned
-     * - From is not the owner of the voucher contract
-     *
-     * @param _from - the address to transfer from
-     * @param _to - the address to transfer to
-     * @param _offerId - the id of the offer
-     * @param _tokenId - the id of the token
-     * @param _data - data to pass if receiver is contract
-     */
-    function transferPremintedFrom(
-        address _from,
-        address _to,
-        uint256 _offerId,
-        uint256 _tokenId,
-        bytes memory _data
-    ) external override {
-        // Check that token has not been used yet
-        require(!_committed[_tokenId] && !_exists(_tokenId), NOT_COMMITTABLE);
-
-        // Get range associated with offer
-        Range storage range = _rangeByOfferId[_offerId];
-
-        // Check if token is committable
-        require(range.start + range.minted - 1 >= _tokenId && _tokenId > range.lastBurnedTokenId, NOT_COMMITTABLE);
-
-        // Temporarily update _owners, so transfer succeeds
-        silentMintAndSetPremintStatus(_from, _tokenId, _offerId);
 
         super.safeTransferFrom(_from, _to, _tokenId, _data);
     }
@@ -532,11 +476,13 @@ contract BosonVoucherBase is
         override(ERC721Upgradeable, IERC721MetadataUpgradeable)
         returns (string memory)
     {
-        (bool exists, Offer memory offer) = getBosonOfferByExchangeId(_tokenId);
+        uint256 exchangeId = _tokenId & type(uint128).max;
+        (bool exists, Offer memory offer) = getBosonOfferByExchangeId(exchangeId);
 
         if (!exists) {
-            (bool committable, uint256 offerId, ) = getPreMintStatus(_tokenId);
+            (bool committable, ) = getPreMintStatus(_tokenId);
             if (committable) {
+                uint256 offerId = _tokenId >> 128;
                 exists = true;
                 (offer, ) = getBosonOffer(offerId);
             }
@@ -568,6 +514,15 @@ contract BosonVoucherBase is
     {
         require(_newOwner != address(0), OWNABLE_ZERO_ADDRESS);
         _transferOwnership(_newOwner);
+    }
+
+    /**
+     * @notice Overriding renounceOwnership() from OwnableUpgradeable, so it's not possible to renounce ownership.
+     *
+     * N.B. In the future it might be possible to renounce ownership via seller deactivation in the protocol.
+     */
+    function renounceOwnership() public pure override {
+        revert(ACCESS_DENIED);
     }
 
     /**
@@ -679,7 +634,8 @@ contract BosonVoucherBase is
         returns (address receiver, uint256 royaltyAmount)
     {
         // get offer
-        (bool offerExists, Offer memory offer) = getBosonOfferByExchangeId(_tokenId);
+        uint256 exchangeId = _tokenId & type(uint128).max;
+        (bool offerExists, Offer memory offer) = getBosonOfferByExchangeId(exchangeId);
 
         if (offerExists) {
             (, Seller memory seller) = getBosonSeller(offer.sellerId);
@@ -772,23 +728,27 @@ contract BosonVoucherBase is
         address _to,
         uint256 _tokenId
     ) internal override {
-        if (_premintStatus.committable) {
+        // Derive the exchange id
+        uint256 exchangeId = _tokenId & type(uint128).max;
+        if (_isCommitable) {
             // If is committable, invoke commitToPreMintedOffer on the protocol
 
-            // Store offerId so _premintStatus can be deleted before making an external call
-            uint256 offerId = _premintStatus.offerId;
-            delete _premintStatus;
+            // Set _isCommitable to false
+            _isCommitable = false;
 
             // Set the preminted token as committed
             _committed[_tokenId] = true;
 
+            // Derive the offer id
+            uint256 offerId = _tokenId >> 128;
+
             // If this is a transfer of preminted token, treat it differently
             address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-            IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(payable(_to), offerId, _tokenId);
+            IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(payable(_to), offerId, exchangeId);
         } else if (_from != address(0) && _to != address(0) && _from != _to) {
             // Update the buyer associated with the voucher in the protocol
             // Only when transferring, not when minting or burning
-            onVoucherTransferred(_tokenId, payable(_to));
+            onVoucherTransferred(exchangeId, payable(_to));
         }
     }
 
@@ -803,55 +763,33 @@ contract BosonVoucherBase is
      *
      * @param _tokenId - the token id to check
      * @return committable - whether the token is committable
-     * @return offerId - the associated offer id if committable
      * @return owner - the token owner
      */
-    function getPreMintStatus(uint256 _tokenId)
-        public
-        view
-        returns (
-            bool committable,
-            uint256 offerId,
-            address owner
-        )
-    {
+    function getPreMintStatus(uint256 _tokenId) public view returns (bool committable, address owner) {
         // Not committable if _committed already or if token has an owner
-        if (!_committed[_tokenId] && !_exists(_tokenId)) {
-            // If are reserved ranges, search them
-            uint256 length = _rangeOfferIds.length;
-            if (length > 0) {
-                // Binary search the ranges array
-                uint256 low = 0; // Lower bound of search (array index)
-                uint256 high = length; // Upper bound of search
 
-                while (low < high) {
-                    // Calculate the current midpoint and get the offer id
-                    uint256 mid = (high + low) / 2;
-                    uint256 currentOfferId = _rangeOfferIds[mid];
+        if (!_committed[_tokenId]) {
+            // it might be a pre-minted token. Preminted tokens have offerId in the upper 128 bits
+            uint256 offerId = _tokenId >> 128;
 
-                    // Get the range stored at the midpoint
-                    Range storage range = _rangeByOfferId[currentOfferId];
+            if (offerId > 0) {
+                // Get the range stored at the midpoint
+                Range storage range = _rangeByOfferId[offerId];
 
-                    // Get the beginning of the range once for reference
-                    uint256 start = range.start;
+                // Get the beginning of the range once for reference
+                uint256 start = range.start;
 
-                    if (start > _tokenId) {
-                        // Split low and search again if target too high
-                        high = mid;
-                    } else if (start + range.length - 1 >= _tokenId) {
-                        // Is token in target's reserved range?
-
-                        if (start + range.minted - 1 >= _tokenId && _tokenId > range.lastBurnedTokenId) {
-                            // Has it been pre-minted and not burned yet?
-                            committable = true;
-                            offerId = currentOfferId;
-                            owner = range.owner;
-                        }
-                        break; // Found!
-                    } else {
-                        // No? It may be in a higher range
-                        low = mid + 1;
-                    }
+                // Start is 0 if the range does not exist
+                // Token is committable if is within the range and has not been burned already
+                if (
+                    start > 0 &&
+                    start <= _tokenId &&
+                    start + range.minted - 1 >= _tokenId &&
+                    _tokenId > range.lastBurnedTokenId
+                ) {
+                    // Has it been pre-minted and not burned yet?
+                    committable = true;
+                    owner = range.owner;
                 }
             }
         }
@@ -897,19 +835,14 @@ contract BosonVoucherBase is
     /*
      * Updates owners, but do not emit Transfer event. Event was already emited during pre-mint.
      */
-    function silentMintAndSetPremintStatus(
-        address _from,
-        uint256 _tokenId,
-        uint256 _offerId
-    ) internal {
+    function silentMintAndSetPremintStatus(address _from, uint256 _tokenId) internal {
         require(_from == owner() || _from == address(this), NO_SILENT_MINT_ALLOWED);
 
         // update data, so transfer will succeed
         getERC721UpgradeableStorage()._owners[_tokenId] = _from;
 
-        // Update premint status
-        _premintStatus.committable = true;
-        _premintStatus.offerId = _offerId;
+        // Update commitable status
+        _isCommitable = true;
     }
 }
 

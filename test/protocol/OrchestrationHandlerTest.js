@@ -40,7 +40,7 @@ const {
   mockCondition,
   accountId,
 } = require("../util/mock");
-const { setNextBlockTimestamp } = require("../util/utils");
+const { setNextBlockTimestamp, deriveTokenId } = require("../util/utils");
 const Dispute = require("../../scripts/domain/Dispute");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const DisputeDates = require("../../scripts/domain/DisputeDates");
@@ -1146,7 +1146,8 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, OfferCreated and RangeReserved events with auth token", async function () {
@@ -2029,7 +2030,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Reserved range length is greater than maximum allowed range length", async function () {
           // Set reserved range length to more than maximum allowed range length
-          let reservedRangeLength = ethers.BigNumber.from(2).pow(128).sub(1);
+          let reservedRangeLength = ethers.BigNumber.from(2).pow(64).sub(1);
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -2578,7 +2579,8 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", bosonVoucher.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", bosonVoucher.address);
         });
 
         it("should emit an OfferCreated, a GroupCreated and a RangeReserved events", async function () {
@@ -3261,7 +3263,8 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
@@ -3946,7 +3949,8 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", bosonVoucher.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", bosonVoucher.address);
         });
 
         it("should emit an OfferCreated, a TwinCreated, a BundleCreated and a RangeReserved events", async function () {
@@ -4848,7 +4852,8 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
@@ -5565,7 +5570,8 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, an OfferCreated, a GroupCreated and a RangeReserved event", async function () {
@@ -6342,7 +6348,8 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, an OfferCreated, a TwinCreated, a BundleCreated and RangeReserved event", async function () {
@@ -7242,7 +7249,8 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, an OfferCreated, a GroupCreated, a TwinCreated, a BundleCreated and a RangeReserved event", async function () {

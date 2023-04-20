@@ -7,6 +7,8 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const Role = require("../../scripts/domain/Role");
+const { expect } = require("chai");
+const Offer = require("../../scripts/domain/Offer");
 
 function getEvent(receipt, factory, eventName) {
   let found = false;
@@ -85,6 +87,36 @@ function compareArgs(eventArgs, args) {
     if (args[i] != eventArgs[i]) return false;
   }
 
+  return true;
+}
+
+/** Predicate to compare offer structs in emitted events
+ * Bind expected offer struct to this function and pass it to .withArgs() instead of the expected offer struct
+ * If returned and expected offer structs are equal, the test will pass, otherwise it raises an error
+ * 
+ * Example
+ * 
+ *  await expect(
+        offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+      )
+        .to.emit(offerHandler, "OfferCreated")
+        .withArgs(
+          nextOfferId,
+          offer.sellerId,
+          compareOfferStructs.bind(offerStruct),  <====== BIND OFFER STRUCT TO THIS FUNCTION
+          offerDatesStruct,
+          offerDurationsStruct,
+          disputeResolutionTermsStruct,
+          offerFeesStruct,
+          agentId,
+          assistant.address,
+        );
+ * 
+ * @param {*} returnedOffer 
+ * @returns 
+ */
+function compareOfferStructs(returnedOffer) {
+  expect(Offer.fromStruct(returnedOffer).toStruct()).to.deep.equal(this);
   return true;
 }
 
@@ -383,6 +415,10 @@ async function revertToSnapshot(snapshotId) {
   return await ethers.provider.send("evm_revert", [snapshotId]);
 }
 
+function deriveTokenId(offerId, exchangeId) {
+  return ethers.BigNumber.from(offerId).shl(128).add(exchangeId);
+}
+
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.eventEmittedWithArgs = eventEmittedWithArgs;
@@ -393,7 +429,9 @@ exports.applyPercentage = applyPercentage;
 exports.getMappingStoragePosition = getMappingStoragePosition;
 exports.paddingType = paddingType;
 exports.getFacetsWithArgs = getFacetsWithArgs;
+exports.compareOfferStructs = compareOfferStructs;
 exports.objectToArray = objectToArray;
 exports.setupTestEnvironment = setupTestEnvironment;
 exports.getSnapshot = getSnapshot;
 exports.revertToSnapshot = revertToSnapshot;
+exports.deriveTokenId = deriveTokenId;
