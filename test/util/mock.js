@@ -32,7 +32,6 @@ function* incrementer() {
   while (true) {
     const reset = yield (i++).toString();
     if (reset) {
-      // reset to 0 instead of 1 to not count the reset call
       i = 0;
     }
   }

@@ -14,10 +14,10 @@ const {
   prepareDataSignatureParameters,
   applyPercentage,
   calculateContractAddress,
-  deriveTokenId,
   setupTestEnvironment,
   getSnapshot,
   revertToSnapshot,
+  deriveTokenId,
 } = require("../util/utils.js");
 const {
   mockOffer,
@@ -130,7 +130,7 @@ describe("IBosonFundsHandler", function () {
       protocolConfig: [, , { percentage: protocolFeePercentage, buyerEscalationDepositPercentage }],
       diamondAddress: protocolDiamondAddress,
       extraReturnValues: { accessController },
-    } = await setupTestEnvironment(contracts, { returnAccessController: true }));
+    } = await setupTestEnvironment(contracts));
 
     // make all account the same
     assistant = clerk = admin;

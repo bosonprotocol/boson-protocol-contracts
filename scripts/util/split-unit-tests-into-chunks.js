@@ -20,7 +20,7 @@ const splitUnitTestsIntoChunks = async (chunks) => {
     return { name: f, time };
   });
 
-  // Sort in the descending the list by the time it took to run
+  // Sort in descending order the list by the time it took to run
   files.sort((a, b) => b.time - a.time);
 
   // Sum the total time of all tests
@@ -40,6 +40,9 @@ const splitUnitTestsIntoChunks = async (chunks) => {
   // Iterate over the list of files and add them to the chunks
   for (const item of files) {
     // Get order of chunks by time
+    // First create an array of indices [0, 1, ... number of chunks]
+    // Then sort the indices by the current total time of each chunk. For example if totalTimePerChunk contains values
+    // [10, 5, 15] the indices will be sorted as [2, 0, 1]
     let indices = [...Array(Number(chunks)).keys()];
     indices.sort((a, b) => totalTimePerChunk[b] - totalTimePerChunk[a]);
 
@@ -54,7 +57,7 @@ const splitUnitTestsIntoChunks = async (chunks) => {
       }
     }
 
-    // If adding test exceeded the average time per chunk, add it to the most empty chunk
+    // If adding item would exceed the average time per chunk in all chunks, add it to the most empty chunk
     if (!found) {
       const chunkIndex = indices[indices.length - 1];
       filesByChunk[chunkIndex].push(item.name);

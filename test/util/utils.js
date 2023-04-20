@@ -2,13 +2,13 @@ const { ethers } = require("hardhat");
 const { utils, provider, BigNumber } = ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
 const { keccak256, RLP } = utils;
-const { expect } = require("chai");
-const Offer = require("../../scripts/domain/Offer");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const Role = require("../../scripts/domain/Role");
+const { expect } = require("chai");
+const Offer = require("../../scripts/domain/Offer");
 
 function getEvent(receipt, factory, eventName) {
   let found = false;
@@ -291,14 +291,7 @@ function objectToArray(input) {
   return result;
 }
 
-function deriveTokenId(offerId, exchangeId) {
-  return ethers.BigNumber.from(offerId).shl(128).add(exchangeId);
-}
-
-async function setupTestEnvironment(
-  contracts,
-  { returnClient = false, returnAccessController = false, bosonTokenAddress, forwarderAddress } = {}
-) {
+async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAddress } = {}) {
   const facetNames = [
     "SellerHandlerFacet",
     "BuyerHandlerFacet",
@@ -320,14 +313,11 @@ async function setupTestEnvironment(
     "MetaTransactionsHandlerFacet",
   ];
 
-  let extraReturnValues = {};
-
   const signers = await ethers.getSigners();
   const [deployer, protocolTreasury, bosonToken, pauser] = signers;
 
   // Deploy the Protocol Diamond
   const [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-  if (returnAccessController) extraReturnValues = { ...extraReturnValues, accessController };
 
   // Temporarily grant UPGRADER role to deployer account
   await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -347,12 +337,8 @@ async function setupTestEnvironment(
   );
   const [beacon] = beacons;
   const [proxy] = proxies;
-
-  if (returnClient) {
-    const [bosonVoucher] = clients;
-    const [voucherImplementation] = implementations;
-    extraReturnValues = { ...extraReturnValues, bosonVoucher, voucherImplementation, beacon };
-  }
+  const [bosonVoucher] = clients;
+  const [voucherImplementation] = implementations;
 
   // set protocolFees
   const protocolFeePercentage = "200"; // 2 %
@@ -404,6 +390,8 @@ async function setupTestEnvironment(
     contractInstances[contract] = await ethers.getContractAt(contracts[contract], protocolDiamond.address);
   }
 
+  const extraReturnValues = { accessController, bosonVoucher, voucherImplementation, beacon };
+
   return {
     signers: signers.slice(3),
     contractInstances,
@@ -421,6 +409,10 @@ async function revertToSnapshot(snapshotId) {
   return await ethers.provider.send("evm_revert", [snapshotId]);
 }
 
+function deriveTokenId(offerId, exchangeId) {
+  return ethers.BigNumber.from(offerId).shl(128).add(exchangeId);
+}
+
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.eventEmittedWithArgs = eventEmittedWithArgs;
@@ -433,7 +425,7 @@ exports.paddingType = paddingType;
 exports.getFacetsWithArgs = getFacetsWithArgs;
 exports.compareOfferStructs = compareOfferStructs;
 exports.objectToArray = objectToArray;
-exports.deriveTokenId = deriveTokenId;
 exports.setupTestEnvironment = setupTestEnvironment;
 exports.getSnapshot = getSnapshot;
 exports.revertToSnapshot = revertToSnapshot;
+exports.deriveTokenId = deriveTokenId;

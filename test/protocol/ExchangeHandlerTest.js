@@ -103,9 +103,9 @@ describe("IBosonExchangeHandler", function () {
   let exchangesToComplete, exchangeId;
   let offer, offerFees;
   let offerDates, offerDurations;
-  let tokenId;
   let protocolDiamondAddress;
   let snapshotId;
+  let tokenId;
 
   before(async function () {
     accountId.next(true);
@@ -146,7 +146,7 @@ describe("IBosonExchangeHandler", function () {
       protocolConfig: [, , { percentage: protocolFeePercentage }],
       extraReturnValues: { bosonVoucher, voucherImplementation, accessController },
       diamondAddress: protocolDiamondAddress,
-    } = await setupTestEnvironment(contracts, { returnClient: true, returnAccessController: true }));
+    } = await setupTestEnvironment(contracts));
 
     [deployer] = await ethers.getSigners();
 

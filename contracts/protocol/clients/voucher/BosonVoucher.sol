@@ -250,6 +250,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Update to total balance
         getERC721UpgradeableStorage()._balances[to] += _amount;
+
+        emit VouchersPreMinted(_offerId, start, tokenId);
     }
 
     /**
@@ -304,9 +306,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             end = start + maxPremintedVouchers;
         }
 
-        // Update last burned token id
-        range.lastBurnedTokenId = end - 1;
-
         // Burn the range
         address rangeOwner = range.owner;
         uint256 burned;
@@ -317,6 +316,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
                 burned++;
             }
         }
+
+        // Update last burned token id
+        range.lastBurnedTokenId = end - 1;
 
         // Update owner's total balance
         getERC721UpgradeableStorage()._balances[rangeOwner] -= burned;

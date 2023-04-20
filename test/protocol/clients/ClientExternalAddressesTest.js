@@ -23,7 +23,7 @@ describe("IClientExternalAddresses", function () {
       signers: [rando, other1, other3],
       diamondAddress: protocolDiamondAddress,
       extraReturnValues: { beacon },
-    } = await setupTestEnvironment(contracts, { returnClient: true }));
+    } = await setupTestEnvironment(contracts));
 
     [deployer] = await ethers.getSigners();
 
