@@ -251,6 +251,8 @@ contract BosonVoucherBase is
 
         // Update to total balance
         getERC721UpgradeableStorage()._balances[to] += _amount;
+
+        emit VouchersPreMinted(_offerId, start, tokenId);
     }
 
     /**
@@ -305,22 +307,22 @@ contract BosonVoucherBase is
             end = start + maxPremintedVouchers;
         }
 
-        // Update last burned token id
-        range.lastBurnedTokenId = end - 1;
-
         // Burn the range
-        address seller = owner();
+        address rangeOwner = range.owner;
         uint256 burned;
         for (uint256 tokenId = start; tokenId < end; tokenId++) {
             // Burn only if not already _committed
             if (!_committed[tokenId]) {
-                emit Transfer(seller, address(0), tokenId);
+                emit Transfer(rangeOwner, address(0), tokenId);
                 burned++;
             }
         }
 
-        // Update seller's total balance
-        getERC721UpgradeableStorage()._balances[seller] -= burned;
+        // Update last burned token id
+        range.lastBurnedTokenId = end - 1;
+
+        // Update owner's total balance
+        getERC721UpgradeableStorage()._balances[rangeOwner] -= burned;
     }
 
     /**
@@ -495,6 +497,15 @@ contract BosonVoucherBase is
     ) public override(IBosonVoucher, OwnableUpgradeable) onlyRole(PROTOCOL) {
         require(_newOwner != address(0), OWNABLE_ZERO_ADDRESS);
         _transferOwnership(_newOwner);
+    }
+
+    /**
+     * @notice Overriding renounceOwnership() from OwnableUpgradeable, so it's not possible to renounce ownership.
+     *
+     * N.B. In the future it might be possible to renounce ownership via seller deactivation in the protocol.
+     */
+    function renounceOwnership() public pure override {
+        revert(ACCESS_DENIED);
     }
 
     /**

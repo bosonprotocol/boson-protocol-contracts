@@ -225,7 +225,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             lookups.voucherCount[buyerId]++;
             if (!_isPreminted) {
                 IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
-                uint256 tokenId = _exchangeId + (_offerId << 128);
+                uint256 tokenId = _exchangeId | (_offerId << 128);
                 bosonVoucher.issueVoucher(tokenId, _buyer);
             }
         }
@@ -683,7 +683,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);
 
         uint256 tokenId = _exchange.id;
-        if (tokenId >= EXCHANGE_ID_2_2_0) tokenId += (offerId << 128);
+        if (tokenId >= EXCHANGE_ID_2_2_0) tokenId |= (offerId << 128);
         bosonVoucher.burnVoucher(tokenId);
     }
 

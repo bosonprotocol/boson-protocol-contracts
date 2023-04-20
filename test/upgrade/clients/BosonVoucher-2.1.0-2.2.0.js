@@ -19,7 +19,13 @@ const {
   accountId,
 } = require("../../util/mock");
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
-const { calculateContractAddress, prepareDataSignatureParameters, deriveTokenId } = require("../../util/utils");
+const {
+  calculateContractAddress,
+  prepareDataSignatureParameters,
+  getSnapshot,
+  revertToSnapshot,
+  deriveTokenId,
+} = require("../../util/utils");
 const Range = require("../../../scripts/domain/Range");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const { getGenericContext } = require("./01_generic");
@@ -105,7 +111,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         }
       ));
 
-      snapshot = await ethers.provider.send("evm_snapshot", []);
+      snapshot = await getSnapshot();
 
       // This context is placed in an uncommon place due to order of test execution.
       // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
@@ -134,15 +140,15 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
   afterEach(async function () {
     // Revert to state right after the upgrade.
-    // This is used so the lengthly setup (deploy+upgrade) is done only once.
-    await ethers.provider.send("evm_revert", [snapshot]);
-    snapshot = await ethers.provider.send("evm_snapshot", []);
+    // This is used so the lengthy setup (deploy+upgrade) is done only once.
+    await revertToSnapshot(snapshot);
+    snapshot = await getSnapshot();
 
     // Reset the accountId iterator
     accountId.next(true);
   });
 
-  // Test methods that were added to see that upgrade was succesful
+  // Test methods that were added to see that upgrade was successful
   // Extensive unit tests for this methods are in /test/protocol/clients/BosonVoucherTest.js
   context("📋 New methods", async function () {
     let offerId, start, length, amount;

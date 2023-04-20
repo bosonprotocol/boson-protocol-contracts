@@ -2,10 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 
 const DisputeResolutionTerms = require("../../../scripts/domain/DisputeResolutionTerms");
-const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { getInterfaceIds } = require("../../../scripts/config/supported-interfaces.js");
-const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond.js");
-const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets.js");
 const Role = require("../../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const Range = require("../../../scripts/domain/Range");
@@ -15,7 +12,6 @@ const { Funds, FundsList } = require("../../../scripts/domain/Funds");
 const { mockOffer, mockExchange, mockVoucher } = require("../../util/mock.js");
 const { assert, expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
-const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants");
 const {
   mockDisputeResolver,
   mockSeller,
@@ -29,7 +25,9 @@ const {
   calculateContractAddress,
   calculateVoucherExpiry,
   setNextBlockTimestamp,
-  getFacetsWithArgs,
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
   prepareDataSignatureParameters,
   getEvent,
   deriveTokenId,
@@ -41,7 +39,7 @@ const FormatTypes = ethers.utils.FormatTypes;
 
 describe("IBosonVoucher", function () {
   let interfaceIds;
-  let protocolDiamond, accessController;
+  let accessController;
   let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler, configHandler;
   let deployer,
     protocol,
@@ -57,8 +55,6 @@ describe("IBosonVoucher", function () {
     clerkDR,
     treasuryDR,
     seller,
-    protocolTreasury,
-    bosonToken,
     foreign20;
   let beacon;
   let disputeResolver, disputeResolverFees;
@@ -66,108 +62,44 @@ describe("IBosonVoucher", function () {
   let agentId;
   let voucherInitValues, contractURI, royaltyPercentage, exchangeId, offerPrice;
   let forwarder;
+  let snapshotId;
 
   before(async function () {
+    accountId.next(true);
+
     // Get interface id
     const { IBosonVoucher, IERC721, IERC2981 } = await getInterfaceIds();
     interfaceIds = { IBosonVoucher, IERC721, IERC2981 };
-  });
-
-  beforeEach(async function () {
-    // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
-    [deployer, protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR, protocolTreasury] =
-      await ethers.getSigners();
-
-    // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
-
-    // Deploy diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-
-    // Cast Diamond to contract interfaces
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
-
-    // Grant roles
-    await accessController.grantRole(Role.PROTOCOL, protocol.address);
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    const protocolClientArgs = [protocolDiamond.address];
 
     // Mock forwarder to test metatx
     const MockForwarder = await ethers.getContractFactory("MockForwarder");
 
     forwarder = await MockForwarder.deploy();
 
-    const implementationArgs = [forwarder.address];
-    const [, beacons, proxies, bv] = await deployProtocolClients(
-      protocolClientArgs,
-      maxPriorityFeePerGas,
-      implementationArgs
-    );
-    [bosonVoucher] = bv;
-    [beacon] = beacons;
-    const [proxy] = proxies;
+    // Specify contracts needed for this test
+    const contracts = {
+      accountHandler: "IBosonAccountHandler",
+      offerHandler: "IBosonOfferHandler",
+      exchangeHandler: "IBosonExchangeHandler",
+      fundsHandler: "IBosonFundsHandler",
+      configHandler: "IBosonConfigHandler",
+    };
 
-    const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
-    const buyerEscalationDepositPercentage = "1000"; // 10%
+    ({
+      signers: [protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR],
+      contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, configHandler },
+      extraReturnValues: { bosonVoucher, beacon, accessController },
+    } = await setupTestEnvironment(contracts, {
+      forwarderAddress: [forwarder.address],
+    }));
 
-    [foreign20, bosonToken] = await deployMockTokens(["Foreign20", "BosonToken"]);
+    // make all account the same
+    assistant = clerk = admin;
+    assistantDR = clerkDR = adminDR;
+    [deployer] = await ethers.getSigners();
 
-    // Add config Handler, so ids start at 1, and so voucher address can be found
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 10000,
-      },
-      //Protocol fees
-      {
-        percentage: 200, // 2%
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
-    const facetNames = [
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "SellerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "FundsHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
-
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+    // Grant protocol role to eoa so it's easier to test
+    await accessController.grantRole(Role.PROTOCOL, protocol.address);
 
     // Initialize voucher contract
     const sellerId = 1;
@@ -177,6 +109,16 @@ describe("IBosonVoucher", function () {
     const bosonVoucherInit = await ethers.getContractAt("BosonVoucher", bosonVoucher.address);
 
     await bosonVoucherInit.initializeVoucher(sellerId, assistant.address, voucherInitValues);
+
+    [foreign20] = await deployMockTokens(["Foreign20", "BosonToken"]);
+
+    // Get snapshot id
+    snapshotId = await getSnapshot();
+  });
+
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
   // Interface support
@@ -442,7 +384,7 @@ describe("IBosonVoucher", function () {
 
       // reserve a range
       offerId = "5";
-      start = "10";
+      start = 10;
       length = "1000";
       await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
 
@@ -461,6 +403,15 @@ describe("IBosonVoucher", function () {
           .to.emit(bosonVoucher, "Transfer")
           .withArgs(ethers.constants.AddressZero, assistant.address, start.add(i));
       }
+    });
+
+    it("Should emit VouchersPreMinted event", async function () {
+      // Premint tokens, test for event
+      const tx = await bosonVoucher.connect(assistant).preMint(offerId, amount);
+
+      start = deriveTokenId(offerId, start);
+
+      await expect(tx).to.emit(bosonVoucher, "VouchersPreMinted").withArgs(offerId, start, start.add(amount).sub(1));
     });
 
     context("Owner range is contract", async function () {
@@ -743,6 +694,74 @@ describe("IBosonVoucher", function () {
       const range = new Range(tokenIdStart.toString(), length, amount, lastBurnedId.toString(), assistant.address);
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+    });
+
+    context("Contract owner is not owner of preminted vouchers", function () {
+      it("Ownership is transferred", async function () {
+        // Transfer ownership to rando
+        await bosonVoucher.connect(protocol).transferOwnership(rando.address);
+
+        // Burn tokens, test for event
+        let tx;
+        await expect(() => {
+          tx = bosonVoucher.connect(rando).burnPremintedVouchers(offerId);
+          return tx;
+        }).to.changeTokenBalance(bosonVoucher, assistant, Number(amount) * -1);
+
+        // Number of events emitted should be equal to amount
+        tx = await tx;
+        assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
+
+        // Expect an event for every burn, where owner is the old owner (assistant)
+        const tokenIdStart = deriveTokenId(offerId, start);
+        for (let i = 0; i < Number(amount); i++) {
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(assistant.address, ethers.constants.AddressZero, tokenIdStart.add(i));
+        }
+      });
+
+      it("Contract itself is the owner", async function () {
+        // create a new offer, so new range owner can be set
+        offerId = "6";
+        offer.voided = false;
+        await mockProtocol.mock.getOffer
+          .withArgs(offerId)
+          .returns(true, offer, offerDates, offerDurations, disputeResolutionTerms, offerFees);
+
+        // reserve a range
+        start = "2000";
+        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, bosonVoucher.address);
+
+        // amount to mint
+        amount = "10";
+        await bosonVoucher.connect(assistant).preMint(offerId, amount);
+
+        // "void" the offer
+        offer.voided = true;
+        await mockProtocol.mock.getOffer
+          .withArgs(offerId)
+          .returns(true, offer, offerDates, offerDurations, disputeResolutionTerms, offerFees);
+
+        // Burn tokens, test for event
+        let tx;
+        await expect(() => {
+          tx = bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+          return tx;
+        }).to.changeTokenBalance(bosonVoucher, bosonVoucher, Number(amount) * -1);
+
+        // Number of events emitted should be equal to amount
+        tx = await tx;
+        assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
+
+        // Expect an event for every burn
+        const tokenIdStart = deriveTokenId(offerId, start);
+        for (let i = 0; i < Number(amount); i++) {
+          await expect(tx)
+            .to.emit(bosonVoucher, "Transfer")
+            .withArgs(bosonVoucher.address, ethers.constants.AddressZero, tokenIdStart.add(i));
+        }
+      });
     });
 
     it("Should burn all vouchers if there is less than MaxPremintedVouchers to burn", async function () {
@@ -1373,6 +1392,8 @@ describe("IBosonVoucher", function () {
   });
 
   context("Token transfers", function () {
+    let bosonVoucher;
+
     afterEach(async function () {
       // Reset the accountId iterator
       accountId.next(true);
@@ -1821,6 +1842,7 @@ describe("IBosonVoucher", function () {
 
   context("tokenURI", function () {
     let metadataUri, offerId, offerPrice;
+    let bosonVoucher;
 
     beforeEach(async function () {
       seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
@@ -1884,8 +1906,8 @@ describe("IBosonVoucher", function () {
 
     it("should return the correct tokenURI", async function () {
       await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: offerPrice });
-      // tokenId = deriveTokenId(offerId, 1);
-      const tokenURI = await bosonVoucher.tokenURI(1);
+      const tokenId = deriveTokenId(offerId, 1);
+      const tokenURI = await bosonVoucher.tokenURI(tokenId);
       expect(tokenURI).eq(metadataUri);
     });
 
@@ -1942,7 +1964,7 @@ describe("IBosonVoucher", function () {
       });
 
       it("Even the current owner cannot transfer the ownership", async function () {
-        // succesfully transfer to assistant
+        // successfully transfer to assistant
         await bosonVoucher.connect(protocol).transferOwnership(assistant.address);
 
         // owner tries to transfer, it should fail
@@ -1951,7 +1973,17 @@ describe("IBosonVoucher", function () {
         );
       });
 
-      it("Transfering ownership to 0 is not allowed", async function () {
+      it("Current owner cannot renounce the ownership", async function () {
+        // successfully transfer to assistant
+        await bosonVoucher.connect(protocol).transferOwnership(assistant.address);
+
+        const ownable = await ethers.getContractAt("OwnableUpgradeable", bosonVoucher.address);
+
+        // owner tries to renounce ownership, it should fail
+        await expect(ownable.connect(assistant).renounceOwnership()).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
+      });
+
+      it("Transferring ownership to 0 is not allowed", async function () {
         // try to transfer ownership to address 0, should fail
         await expect(bosonVoucher.connect(protocol).transferOwnership(ethers.constants.AddressZero)).to.be.revertedWith(
           RevertReasons.OWNABLE_ZERO_ADDRESS
@@ -2359,14 +2391,7 @@ describe("IBosonVoucher", function () {
 
       await expect(() =>
         bosonVoucher.connect(rando).withdrawToProtocol([ethers.constants.AddressZero])
-      ).to.changeEtherBalances([bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
-
-      // Seller's available balance should increase
-      expectedAvailableFunds = new FundsList([
-        new Funds(ethers.constants.AddressZero, "Native currency", amount.toString()),
-      ]);
-      const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-      expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
+      ).to.changeEtherBalances([bosonVoucher, fundsHandler], [amount.mul(-1), amount]);
     });
 
     it("Can withdraw ERC20", async function () {
@@ -2381,7 +2406,7 @@ describe("IBosonVoucher", function () {
 
       await expect(() => bosonVoucher.connect(rando).withdrawToProtocol([foreign20.address])).to.changeTokenBalances(
         foreign20,
-        [bosonVoucher, protocolDiamond],
+        [bosonVoucher, fundsHandler],
         [amount.mul(-1), amount]
       );
 
@@ -2402,19 +2427,12 @@ describe("IBosonVoucher", function () {
       await foreign20.connect(deployer).mint(deployer.address, amount);
       await foreign20.connect(deployer).transfer(bosonVoucher.address, amount);
 
-      const tx = await bosonVoucher
-        .connect(rando)
-        .withdrawToProtocol([ethers.constants.AddressZero, foreign20.address]);
-      expect(() => tx).to.changeEtherBalances([bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
-      expect(() => tx).to.changeTokenBalances(foreign20, [bosonVoucher, protocolDiamond], [amount.mul(-1), amount]);
-
-      // Seller's available balance should increase
-      expectedAvailableFunds = new FundsList([
-        new Funds(ethers.constants.AddressZero, "Native currency", amount.toString()),
-        new Funds(foreign20.address, "Foreign20", amount.toString()),
-      ]);
-      const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-      expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
+      let tx;
+      await expect(() => {
+        tx = bosonVoucher.connect(rando).withdrawToProtocol([ethers.constants.AddressZero, foreign20.address]);
+        return tx;
+      }).to.changeTokenBalances(foreign20, [bosonVoucher, fundsHandler], [amount.mul(-1), amount]);
+      await expect(() => tx).to.changeEtherBalances([bosonVoucher, fundsHandler], [amount.mul(-1), amount]);
     });
   });
 
