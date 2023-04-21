@@ -688,6 +688,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             address priceDiscoveryContract = lookups.priceDiscoveryContractByVoucher[_tokenId];
             address lastVoucherOwner = lookups.lastVoucherOwner[_tokenId];
 
+            // Transaction has started by calling one of the commit functions (commitToPriceDiscoveryOffer or sequentialCommitToOffer)
             if (ps.incomingVoucherCloneAddress != address(0)) {
                 // Avoid reentrancy
                 require(ps.incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);

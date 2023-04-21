@@ -174,10 +174,15 @@ contract PriceDiscoveryBase is ProtocolBase {
             // Approve price discovery contract to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
             bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, _tokenId);
         } else {
-            // If caller is not the owner, check if the owner exists and is voucher price discovery contract
+            // If caller is not the owner, check if the owner exists and is price discovery contract
             address priceDiscoveryContract = lookups.priceDiscoveryContractByVoucher[_tokenId];
 
-            require(owner != address(0) && owner == priceDiscoveryContract, OWNER_MUST_BE_PRICE_DISCOVERY_CONTRACT);
+            require(
+                owner != address(0) &&
+                    owner == _priceDiscovery.priceDiscoveryContract &&
+                    priceDiscoveryContract == owner,
+                OWNER_MUST_BE_PRICE_DISCOVERY_CONTRACT
+            );
 
             // Check the last owner's balance since they are the one who should receive the price via the price discovery contract
             owner = lookups.lastVoucherOwner[_tokenId];
