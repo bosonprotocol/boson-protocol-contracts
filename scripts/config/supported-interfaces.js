@@ -3,6 +3,7 @@
  */
 const { getInterfaceId } = require("../../scripts/util/diamond-utils.js");
 const hre = require("hardhat");
+const { interfacesWithMultipleArtifacts } = require("../util/constants.js");
 
 const interfaceImplementers = {
   AccountHandlerFacet: "IBosonAccountHandler",
@@ -47,7 +48,7 @@ async function getInterfaceIds(useCache = true) {
     return skip;
   }, {});
 
-  ["IBosonVoucher", "IERC1155", "IERC721", "IERC2981", "IAccessControl", "IBosonSequentialCommitHandler"].forEach(
+  ["IBosonVoucher", "IERC1155", "ERC721", "IERC2981", "IAccessControl", "IBosonSequentialCommitHandler"].forEach(
     (iFace) => {
       skipBaseCheck[iFace] = false;
     }
@@ -56,9 +57,15 @@ async function getInterfaceIds(useCache = true) {
   for (const iFace of interfaces) {
     interfaceIds[iFace] = await getInterfaceId(iFace, skipBaseCheck[iFace]);
   }
+  const cleanedInterfaceIds = {};
 
-  interfacesCache = interfaceIds;
-  return interfaceIds;
+  for (const key in interfaceIds) {
+    const newKey = key.includes(":") ? key.split(":").pop() : key;
+    cleanedInterfaceIds[newKey] = interfaceIds[key];
+  }
+
+  interfacesCache = cleanedInterfaceIds;
+  return cleanedInterfaceIds;
 }
 
 const skip = ["events", "IERC20.sol", "IERC20Metadata"]; // ERC20 interfaces are skipped since no contract implements them directly.
@@ -74,9 +81,10 @@ async function getInterfaceNames() {
     [source, name] = contractName.split(":");
 
     // If starts with prefix and is not in skip list, return name
-    return /.*contracts\/interfaces\/(.*)/.test(source) &&
-      !skip.some((s) => new RegExp(`.*contracts/interfaces/${s}`).test(source))
-      ? name
+    return /.*contracts\/interfaces\/(.*)/.test(source) && !skip.some((s) => new RegExp(`.*${s}`).test(source))
+      ? interfacesWithMultipleArtifacts.includes(name)
+        ? contractName
+        : name
       : [];
   });
 

@@ -3,6 +3,7 @@ pragma solidity 0.8.9;
 
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
+import { IERC721ReceiverUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 
 /**
  * @title IBosonVoucher
@@ -11,12 +12,12 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
  *
  * The ERC-165 identifier for this interface is: 0xaf16da6e
  */
-interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
+interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable, IERC721ReceiverUpgradeable {
     event ContractURIChanged(string contractURI);
     event RoyaltyPercentageChanged(uint256 royaltyPercentage);
     event VoucherInitialized(uint256 indexed sellerId, uint256 indexed royaltyPercentage, string indexed contractURI);
     event RangeReserved(uint256 indexed offerId, Range range);
-    event PriceDiscoveryContractChanged(address indexed priceDiscoveryContract);
+    event VouchersPreMinted(uint256 indexed offerId, uint256 startId, uint256 endId);
 
     // Describe a reserved range of token ids
     struct Range {

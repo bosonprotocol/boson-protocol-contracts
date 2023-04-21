@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const environments = "../../environments.js";
 const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const FacetCutAction = require("../domain/FacetCutAction");
+const { interfacesWithMultipleArtifacts } = require("./constants");
 const { getFees } = require("./utils");
 const ethers = hre.ethers;
 const keccak256 = ethers.utils.keccak256;
@@ -60,6 +61,7 @@ async function getInterfaceId(contractName, skipBaseCheck = false) {
     if (!sourceName) {
       ({ sourceName } = await hre.artifacts.readArtifact(contractName));
     }
+
     const buildInfo = await hre.artifacts.getBuildInfo(`${sourceName}:${contractName}`);
 
     const nodes = buildInfo.output?.sources?.[sourceName]?.ast?.nodes;
@@ -67,7 +69,15 @@ async function getInterfaceId(contractName, skipBaseCheck = false) {
 
     for (const baseContract of node.baseContracts) {
       const baseName = baseContract.baseName.name;
-      const baseContractInterfaceId = ethers.BigNumber.from(await getInterfaceId(baseName));
+
+      const baseContractInterfaceId = ethers.BigNumber.from(
+        await getInterfaceId(
+          interfacesWithMultipleArtifacts.includes(baseName)
+            ? `contracts/interfaces/${baseName}.sol:${baseName}`
+            : baseName,
+          false
+        )
+      );
 
       // Remove interface id of base contracts
       interfaceId = interfaceId.xor(baseContractInterfaceId);

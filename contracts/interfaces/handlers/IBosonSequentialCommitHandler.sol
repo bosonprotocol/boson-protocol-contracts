@@ -10,7 +10,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles sequential commits.
  *
- * The ERC-165 identifier for this interface is: 0x407725cd
+ * The ERC-165 identifier for this interface is: 0x1566334a
  */
 interface IBosonSequentialCommitHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
     /**

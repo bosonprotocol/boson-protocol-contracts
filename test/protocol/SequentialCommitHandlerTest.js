@@ -2,7 +2,6 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 
-const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const PriceDiscovery = require("../../scripts/domain/PriceDiscovery");
@@ -11,9 +10,6 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   mockOffer,
@@ -31,9 +27,12 @@ const {
   calculateVoucherExpiry,
   calculateContractAddress,
   applyPercentage,
-  getFacetsWithArgs,
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
+  deriveTokenId,
 } = require("../util/utils.js");
-const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
+const { oneMonth } = require("../util/constants");
 
 /**
  *  Test the Boson Sequential Commit Handler interface
@@ -53,12 +52,8 @@ describe("IBosonSequentialCommitHandler", function () {
     assistantDR,
     adminDR,
     clerkDR,
-    treasuryDR,
-    protocolTreasury,
-    bosonToken;
+    treasuryDR;
   let erc165,
-    protocolDiamond,
-    accessController,
     accountHandler,
     exchangeHandler,
     offerHandler,
@@ -73,7 +68,7 @@ describe("IBosonSequentialCommitHandler", function () {
   let price, sellerPool;
   let voucherRedeemableFrom;
   let voucherValid;
-  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
+  let protocolFeePercentage;
   let voucher;
   let exchange;
   let disputeResolver, disputeResolverFees;
@@ -85,133 +80,67 @@ describe("IBosonSequentialCommitHandler", function () {
   let offer, offerFees;
   let offerDates, offerDurations;
   let weth;
+  let protocolDiamondAddress;
+  let snapshotId;
+  let priceDiscoveryContract;
 
   before(async function () {
+    accountId.next(true);
+
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
-  });
 
-  beforeEach(async function () {
-    // Make accounts available
-    [deployer, pauser, admin, treasury, buyer, buyer2, rando, adminDR, treasuryDR, protocolTreasury, bosonToken] =
-      await ethers.getSigners();
+    // Add WETH
+    const wethFactory = await ethers.getContractFactory("WETH9");
+    weth = await wethFactory.deploy();
+    await weth.deployed();
+
+    // Specify contracts needed for this test
+    const contracts = {
+      erc165: "ERC165Facet",
+      accountHandler: "IBosonAccountHandler",
+      offerHandler: "IBosonOfferHandler",
+      exchangeHandler: "IBosonExchangeHandler",
+      fundsHandler: "IBosonFundsHandler",
+      configHandler: "IBosonConfigHandler",
+      pauseHandler: "IBosonPauseHandler",
+      sequentialCommitHandler: "IBosonSequentialCommitHandler",
+    };
+
+    ({
+      signers: [pauser, admin, treasury, buyer, buyer2, rando, adminDR, treasuryDR],
+      contractInstances: {
+        erc165,
+        accountHandler,
+        offerHandler,
+        exchangeHandler,
+        fundsHandler,
+        configHandler,
+        pauseHandler,
+        sequentialCommitHandler,
+      },
+      protocolConfig: [, , { percentage: protocolFeePercentage }],
+      diamondAddress: protocolDiamondAddress,
+    } = await setupTestEnvironment(contracts, { wethAddress: weth.address }));
 
     // make all account the same
     assistant = clerk = admin;
     assistantDR = clerkDR = adminDR;
 
-    // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
+    [deployer] = await ethers.getSigners();
 
-    // Temporarily grant UPGRADER role to deployer account
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
+    // Deploy PriceDiscovery contract
+    const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscovery");
+    priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
+    await priceDiscoveryContract.deployed();
 
-    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+    // Get snapshot id
+    snapshotId = await getSnapshot();
+  });
 
-    // Temporarily grant PAUSER role to pauser account
-    await accessController.grantRole(Role.PAUSER, pauser.address);
-
-    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [protocolDiamond.address];
-    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
-    const [beacon] = beacons;
-    const [proxy] = proxies;
-
-    // set protocolFees
-    protocolFeePercentage = "200"; // 2 %
-    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
-    buyerEscalationDepositPercentage = "1000"; // 10%
-
-    // Add config Handler, so ids start at 1, and so voucher address can be found
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 50,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 1000,
-      },
-      // Protocol fees
-      {
-        percentage: protocolFeePercentage,
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
-    const facetNames = [
-      "AccountHandlerFacet",
-      "AgentHandlerFacet",
-      "SellerHandlerFacet",
-      "BuyerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "FundsHandlerFacet",
-      "DisputeHandlerFacet",
-      "TwinHandlerFacet",
-      "BundleHandlerFacet",
-      "GroupHandlerFacet",
-      "PauseHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-      "SequentialCommitHandlerFacet",
-    ];
-
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
-
-    const wethFactory = await ethers.getContractFactory("WETH9");
-    weth = await wethFactory.deploy();
-    await weth.deployed();
-
-    // Add WETH
-    facetsToDeploy["SequentialCommitHandlerFacet"].constructorArgs = [weth.address];
-
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
-
-    // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
-
-    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonOfferHandler
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonExchangeHandler
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonFundsHandler
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonPauseHandler
-    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
-
-    // Cast Diamond to IConfigHandler
-    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
-
-    // Cast Diamond to ISequentialCommitHandler
-    sequentialCommitHandler = await ethers.getContractAt("IBosonSequentialCommitHandler", protocolDiamond.address);
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -319,16 +248,16 @@ describe("IBosonSequentialCommitHandler", function () {
     });
 
     context("👉 sequentialCommitToOffer()", async function () {
-      let priceDiscoveryContract, priceDiscovery, price2;
+      let priceDiscovery, price2;
       let newBuyer;
       let reseller; // for clarity in tests
 
-      before(async function () {
-        // Deploy PriceDiscovery contract
-        const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscovery");
-        priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
-        await priceDiscoveryContract.deployed();
-      });
+      // before(async function () {
+      //   // Deploy PriceDiscovery contract
+      //   const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscovery");
+      //   priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
+      //   await priceDiscoveryContract.deployed();
+      // });
 
       beforeEach(async function () {
         // Commit to offer with first buyer
@@ -358,7 +287,7 @@ describe("IBosonSequentialCommitHandler", function () {
               seller: buyer.address,
               buyer: buyer2.address,
               voucherContract: expectedCloneAddress,
-              tokenId: exchangeId,
+              tokenId: deriveTokenId(offer.id, exchangeId),
               exchangeToken: offer.exchangeToken,
               price: price2,
             };
@@ -370,7 +299,7 @@ describe("IBosonSequentialCommitHandler", function () {
             // Seller needs to deposit weth in order to fill the escrow at the last step
             // Price2 is theoretically the highest amount needed, in practice it will be less (around price2-price)
             await weth.connect(buyer).deposit({ value: price2 });
-            await weth.connect(buyer).approve(protocolDiamond.address, price2);
+            await weth.connect(buyer).approve(protocolDiamondAddress, price2);
 
             // Approve transfers
             // Buyer does not approve, since its in ETH.
@@ -418,7 +347,8 @@ describe("IBosonSequentialCommitHandler", function () {
 
           it("should transfer the voucher", async function () {
             // buyer is owner of voucher
-            expect(await bosonVoucherClone.connect(buyer).ownerOf(exchangeId)).to.equal(buyer.address);
+            const tokenId = deriveTokenId(offer.id, exchangeId);
+            expect(await bosonVoucherClone.connect(buyer).ownerOf(tokenId)).to.equal(buyer.address);
 
             // Sequential commit to offer
             await sequentialCommitHandler
@@ -426,7 +356,7 @@ describe("IBosonSequentialCommitHandler", function () {
               .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 });
 
             // buyer2 is owner of voucher
-            expect(await bosonVoucherClone.connect(buyer2).ownerOf(exchangeId)).to.equal(buyer2.address);
+            expect(await bosonVoucherClone.connect(buyer2).ownerOf(tokenId)).to.equal(buyer2.address);
           });
 
           it("voucher should remain unchanged", async function () {
@@ -525,7 +455,8 @@ describe("IBosonSequentialCommitHandler", function () {
               .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), rando.address);
 
             // buyer2 is owner of voucher, not rando
-            expect(await bosonVoucherClone.connect(buyer2).ownerOf(exchangeId)).to.equal(buyer2.address);
+            const tokenId = deriveTokenId(offer.id, exchangeId);
+            expect(await bosonVoucherClone.connect(buyer2).ownerOf(tokenId)).to.equal(buyer2.address);
           });
 
           it("It is possible to commit even if offer is voided", async function () {
@@ -695,7 +626,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 seller: buyer.address,
                 buyer: buyer2.address,
                 voucherContract: expectedCloneAddress,
-                tokenId: exchangeId,
+                tokenId: deriveTokenId(offer.id, exchangeId),
                 exchangeToken: offer.exchangeToken,
                 price: price2,
               };
@@ -744,7 +675,7 @@ describe("IBosonSequentialCommitHandler", function () {
                   seller: buyer.address,
                   buyer: buyer2.address,
                   voucherContract: expectedCloneAddress,
-                  tokenId: exchangeId,
+                  tokenId: deriveTokenId(offer.id, exchangeId),
                   exchangeToken: offer.exchangeToken,
                   price: price2,
                 };
@@ -763,7 +694,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 // Seller needs to deposit weth in order to fill the escrow at the last step
                 // Price2 is theoretically the highest amount needed, in practice it will be less (around price2-price)
                 await weth.connect(buyer).deposit({ value: price2 }); // you don't need to approve whole amount, just what goes in escrow
-                await weth.connect(buyer).approve(protocolDiamond.address, price2);
+                await weth.connect(buyer).approve(protocolDiamondAddress, price2);
 
                 // Approve transfers
                 // Buyer does not approve, since its in ETH.
@@ -888,7 +819,7 @@ describe("IBosonSequentialCommitHandler", function () {
               seller: exchangeHandler.address, // since protocol owns the voucher, it acts as seller from price discovery mechanism
               buyer: buyer2.address,
               voucherContract: expectedCloneAddress,
-              tokenId: exchangeId,
+              tokenId: deriveTokenId(offer.id, exchangeId),
               exchangeToken: weth.address, // buyer pays in ETH, but they cannot approve ETH, so we use WETH
               price: price2,
             };
@@ -946,7 +877,8 @@ describe("IBosonSequentialCommitHandler", function () {
 
           it("should transfer the voucher", async function () {
             // reseller is owner of voucher
-            expect(await bosonVoucherClone.connect(reseller).ownerOf(exchangeId)).to.equal(reseller.address);
+            const tokenId = deriveTokenId(offer.id, exchangeId);
+            expect(await bosonVoucherClone.connect(reseller).ownerOf(tokenId)).to.equal(reseller.address);
 
             // Sequential commit to offer
             await sequentialCommitHandler
@@ -954,7 +886,7 @@ describe("IBosonSequentialCommitHandler", function () {
               .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery);
 
             // buyer2 is owner of voucher
-            expect(await bosonVoucherClone.connect(buyer2).ownerOf(exchangeId)).to.equal(buyer2.address);
+            expect(await bosonVoucherClone.connect(buyer2).ownerOf(tokenId)).to.equal(buyer2.address);
           });
 
           it("voucher should remain unchanged", async function () {
@@ -1255,7 +1187,7 @@ describe("IBosonSequentialCommitHandler", function () {
                   seller: exchangeHandler.address, // since protocol owns the voucher, it acts as seller from price discovery mechanism
                   buyer: buyer2.address,
                   voucherContract: expectedCloneAddress,
-                  tokenId: exchangeId,
+                  tokenId: deriveTokenId(offer.id, exchangeId),
                   exchangeToken: weth.address, // buyer pays in ETH, but they cannot approve ETH, so we use WETH
                   price: price2,
                 };
@@ -1401,7 +1333,7 @@ describe("IBosonSequentialCommitHandler", function () {
         // Seller needs to deposit weth in order to fill the escrow at the last step
         // Price2 is theoretically the highest amount needed, in practice it will be less (around price2-price)
         await weth.connect(buyer).deposit({ value: price2 });
-        await weth.connect(buyer).approve(protocolDiamond.address, price2);
+        await weth.connect(buyer).approve(protocolDiamondAddress, price2);
 
         // Approve transfers
         // Buyer does not approve, since its in ETH.
@@ -1420,7 +1352,7 @@ describe("IBosonSequentialCommitHandler", function () {
           seller: reseller.address,
           buyer: buyer2.address,
           voucherContract: expectedCloneAddress,
-          tokenId: exchangeId,
+          tokenId: deriveTokenId(offer.id, exchangeId),
           exchangeToken: offer.exchangeToken,
           price: price2,
         };
@@ -1433,7 +1365,8 @@ describe("IBosonSequentialCommitHandler", function () {
         priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Side.Ask);
 
         // buyer is owner of voucher
-        expect(await bosonVoucherClone.connect(buyer).ownerOf(exchangeId)).to.equal(buyer.address);
+        const tokenId = deriveTokenId(offer.id, exchangeId);
+        expect(await bosonVoucherClone.connect(buyer).ownerOf(tokenId)).to.equal(buyer.address);
 
         // Sequential commit to offer
         await sequentialCommitHandler
@@ -1441,7 +1374,7 @@ describe("IBosonSequentialCommitHandler", function () {
           .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 });
 
         // buyer2 is owner of voucher
-        expect(await bosonVoucherClone.connect(buyer2).ownerOf(exchangeId)).to.equal(buyer2.address);
+        expect(await bosonVoucherClone.connect(buyer2).ownerOf(tokenId)).to.equal(buyer2.address);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -1459,7 +1392,7 @@ describe("IBosonSequentialCommitHandler", function () {
             seller: reseller.address,
             buyer: buyer2.address,
             voucherContract: expectedCloneAddress,
-            tokenId: exchangeId,
+            tokenId: deriveTokenId(offer.id, exchangeId),
             exchangeToken: offer.exchangeToken,
             price: price2,
           };
@@ -1493,7 +1426,7 @@ describe("IBosonSequentialCommitHandler", function () {
             seller: reseller.address,
             buyer: buyer2.address,
             voucherContract: expectedCloneAddress,
-            tokenId: exchangeId,
+            tokenId: deriveTokenId(offer.id, exchangeId),
             exchangeToken: offer.exchangeToken,
             price: price2,
           };
@@ -1522,7 +1455,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
           // Attempt to sequentially commit, expecting revert
           await expect(
-            foreign721["safeTransferFrom(address,address,uint256)"](deployer.address, protocolDiamond.address, tokenId)
+            foreign721["safeTransferFrom(address,address,uint256)"](deployer.address, protocolDiamondAddress, tokenId)
           ).to.revertedWith(RevertReasons.UNEXPECTED_ERC721_RECEIVED);
         });
       });
