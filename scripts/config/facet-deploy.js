@@ -67,12 +67,13 @@ async function getFacets(config) {
   );
 
   const facetArgs = noArgFacetNames.reduce((acc, facetName) => {
-    acc[facetName] = [];
+    acc[facetName] = { init: [] };
     return acc;
   }, {});
 
-  facetArgs["ConfigHandlerFacet"] = ConfigHandlerFacetInitArgs;
-  facetArgs["MetaTransactionsHandlerFacet"] = [MetaTransactionsHandlerFacetInitArgs];
+  facetArgs["ConfigHandlerFacet"] = { init: ConfigHandlerFacetInitArgs };
+  facetArgs["MetaTransactionsHandlerFacet"] = { init: [MetaTransactionsHandlerFacetInitArgs] };
+  facetArgs["ExchangeHandlerFacet"] = { init: [], constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network]] };
 
   return facetArgs;
 }

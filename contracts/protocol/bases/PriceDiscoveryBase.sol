@@ -90,15 +90,19 @@ contract PriceDiscoveryBase is ProtocolBase {
         // Store the information about incoming voucher
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
         address cloneAddress = protocolLookups().cloneAddress[_initialSellerId];
-        ps.incomingVoucherId = _exchangeId;
-        ps.incomingVoucherCloneAddress = cloneAddress;
-
+        uint256 tokenId;
+        {
+            uint256 offerId = protocolEntities().exchanges[_exchangeId].offerId;
+            tokenId = _exchangeId | (offerId << 128);
+            ps.incomingVoucherId = tokenId;
+            ps.incomingVoucherCloneAddress = cloneAddress;
+        }
         // Call the price discovery contract
         _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
 
         // Make sure that the price discovery contract has transferred the voucher to the protocol
         IBosonVoucher bosonVoucher = IBosonVoucher(cloneAddress);
-        require(bosonVoucher.ownerOf(_exchangeId) == address(this), VOUCHER_NOT_RECEIVED);
+        require(bosonVoucher.ownerOf(tokenId) == address(this), VOUCHER_NOT_RECEIVED);
 
         // If token is ERC20, reset approval
         if (_exchangeToken != address(0)) {
@@ -121,7 +125,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         }
 
         // Transfer voucher to buyer
-        bosonVoucher.transferFrom(address(this), _buyer, _exchangeId);
+        bosonVoucher.transferFrom(address(this), _buyer, tokenId);
     }
 
     /**
@@ -148,7 +152,9 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // Transfer seller's voucher to protocol
         // Don't need to use safe transfer from, since that protocol can handle the voucher
-        bosonVoucher.transferFrom(msgSender(), address(this), _exchangeId);
+        uint256 offerId = protocolEntities().exchanges[_exchangeId].offerId;
+        uint256 tokenId = _exchangeId | (offerId << 128);
+        bosonVoucher.transferFrom(msgSender(), address(this), tokenId);
 
         if (_exchangeToken == address(0)) _exchangeToken = address(weth);
 
@@ -159,7 +165,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         uint256 protocolNativeBalanceBefore = getBalance(address(0));
 
         // Approve price discovery contract to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
-        bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, _exchangeId);
+        bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, tokenId);
 
         // Call the price discovery contract
         _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);

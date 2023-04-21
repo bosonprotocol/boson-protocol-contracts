@@ -146,6 +146,8 @@ exports.RevertReasons = {
   OFFER_STILL_VALID: "Offer still valid",
   NOTHING_TO_BURN: "Nothing to burn",
   NOT_COMMITTABLE: "Token not committable",
+  INVALID_TO_ADDRESS: "Tokens can only be pre-mined to the contract or contract owner address",
+  EXTERNAL_CALL_FAILED: "External call failed",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",
@@ -171,6 +173,7 @@ exports.RevertReasons = {
   OWNABLE_ZERO_ADDRESS: "Ownable: new owner is the zero address",
   SAFE_ERC20_LOW_LEVEL_CALL: "SafeERC20: low-level call failed",
   SAFE_ERC20_NOT_SUCCEEDED: "SafeERC20: ERC20 operation did not succeed",
+  INITIALIZABLE_ALREADY_INITIALIZED: "Initializable: contract is already initialized",
 
   // Meta-Transactions related
   NONCE_USED_ALREADY: "Nonce used already",

@@ -153,6 +153,9 @@ module.exports = {
       {
         version: "0.5.17", // Mock weth contract
       },
+      {
+        version: "0.8.17",
+      },
     ],
   },
   gasReporter: {

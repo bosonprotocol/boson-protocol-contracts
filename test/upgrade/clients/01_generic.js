@@ -1,6 +1,5 @@
 const shell = require("shelljs");
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
 const { assert } = require("chai");
 const {
   getStorageLayout,
@@ -8,6 +7,7 @@ const {
   populateVoucherContract,
   getVoucherContractState,
 } = require("../../util/upgrade");
+const { getSnapshot, revertToSnapshot } = require("../../util/utils.js");
 
 // Returns function with test that can be reused in every upgrade
 function getGenericContext(
@@ -23,9 +23,9 @@ function getGenericContext(
   const genericContextFunction = async function () {
     afterEach(async function () {
       // Revert to state right after the upgrade.
-      // This is used so the lengthly setup (deploy+upgrade) is done only once.
-      await ethers.provider.send("evm_revert", [snapshot]);
-      snapshot = await ethers.provider.send("evm_snapshot", []);
+      // This is used so the lengthy setup (deploy+upgrade) is done only once.
+      await revertToSnapshot(snapshot);
+      snapshot = await getSnapshot();
     });
 
     after(async function () {

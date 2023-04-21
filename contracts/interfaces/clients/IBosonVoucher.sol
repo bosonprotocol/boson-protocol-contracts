@@ -3,19 +3,21 @@ pragma solidity 0.8.9;
 
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
+import { IERC721ReceiverUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 
 /**
  * @title IBosonVoucher
  *
  * @notice This is the interface for the Boson Protocol ERC-721 Voucher contract.
  *
- * The ERC-165 identifier for this interface is: 0x60490c39
+ * The ERC-165 identifier for this interface is: 0xaf16da6e
  */
-interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
+interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable, IERC721ReceiverUpgradeable {
     event ContractURIChanged(string contractURI);
     event RoyaltyPercentageChanged(uint256 royaltyPercentage);
     event VoucherInitialized(uint256 indexed sellerId, uint256 indexed royaltyPercentage, string indexed contractURI);
     event RangeReserved(uint256 indexed offerId, Range range);
+    event VouchersPreMinted(uint256 indexed offerId, uint256 startId, uint256 endId);
 
     // Describe a reserved range of token ids
     struct Range {
@@ -23,6 +25,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
         uint256 length; // Length of range
         uint256 minted; // Amount pre-minted so far
         uint256 lastBurnedTokenId; // Last burned token id
+        address owner; // The range owner
     }
 
     /**
@@ -31,19 +34,19 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * Minted voucher supply is sent to the buyer.
      * Caller must have PROTOCOL role.
      *
-     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     * @param _tokenId - voucher token id corresponds to <<uint128(offerId)>>.<<uint128(exchangeId)>>
      * @param _buyer - the buyer address
      */
-    function issueVoucher(uint256 _exchangeId, address _buyer) external;
+    function issueVoucher(uint256 _tokenId, address _buyer) external;
 
     /**
      * @notice Burns a voucher.
      *
      * Caller must have PROTOCOL role.
      *
-     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     * @param _tokenId - voucher token id corresponds to <<uint128(offerId)>>.<<uint128(exchangeId)>>
      */
-    function burnVoucher(uint256 _exchangeId) external;
+    function burnVoucher(uint256 _tokenId) external;
 
     /**
      * @notice Gets the seller id.
@@ -123,15 +126,18 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * - Range length is zero
      * - Range length is too large, i.e., would cause an overflow
      * - Offer id is already associated with a range
+     * - _to is not the contract address or the contract owner
      *
      * @param _offerId - the id of the offer
      * @param _start - the first id of the token range
      * @param _length - the length of the range
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      */
     function reserveRange(
         uint256 _offerId,
         uint256 _start,
-        uint256 _length
+        uint256 _length,
+        address _to
     ) external;
 
     /**
@@ -192,30 +198,6 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     function burnPremintedVouchers(uint256 _offerId) external;
 
     /**
-     * @notice Non-standard ERC721 function to transfer a pre-minted token from one address to another.
-     *
-     * Reverts if:
-     * - TokenId was already used to commit
-     * - TokenId already exists (i.e. has an owner)
-     * - TokenId has not been preminted yet
-     * - TokenId was already burned
-     * - From is not the owner of the voucher contract
-     *
-     * @param _from - the address to transfer from
-     * @param _to - the address to transfer to
-     * @param _offerId - the id of the offer
-     * @param _tokenId - the id of the token
-     * @param _data - data to pass if receiver is contract
-     */
-    function transferPremintedFrom(
-        address _from,
-        address _to,
-        uint256 _offerId,
-        uint256 _tokenId,
-        bytes memory _data
-    ) external;
-
-    /**
      * @notice Gets the number of vouchers available to be pre-minted for an offer.
      *
      * @param _offerId - the id of the offer
@@ -230,4 +212,37 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @return range - range struct with information about range start, length and already minted tokens
      */
     function getRangeByOfferId(uint256 _offerId) external view returns (Range memory range);
+
+    /**
+     * @notice Make a call to an external contract.
+     *
+     * Reverts if:
+     * - _to is zero address
+     * - call to external contract fails
+     * - caller is not the owner
+     * - caller tries to call ERC20 method that would allow transfer of tokens from this contract
+     *
+     * @param _to - address of the contract to call
+     * @param _data - data to pass to the external contract
+     */
+    function callExternalContract(address _to, bytes memory _data) external payable;
+
+    /** @notice Set approval for all to the vouchers owned by this contract
+     *
+     * Reverts if:
+     * - _operator is zero address
+     * - caller is not the owner
+     * - _operator is this contract
+     *
+     * @param _operator - address of the operator to set approval for
+     * @param _approved - true to approve the operator in question, false to revoke approval
+     */
+    function setApprovalForAllToContract(address _operator, bool _approved) external;
+
+    /**
+     * @notice Withdraw funds from the contract to the protocol seller pool
+     *
+     * @param _tokenList - list of tokens to withdraw, including native token (address(0))
+     */
+    function withdrawToProtocol(address[] calldata _tokenList) external;
 }
