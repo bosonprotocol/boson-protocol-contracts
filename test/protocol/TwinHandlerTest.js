@@ -377,12 +377,10 @@ describe("IBosonTwinHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The twins region of protocol is paused", async function () {
           // Pause the twins region of the protocol
-          await pauseHandler
-            .connect(pauser)
-            .pause([PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Twins]);
 
           // Attempt to Remove a twin, expecting revert
-          await expect(twinHandler.connect(assistant).removeTwin(twin.id)).to.revertedWith(RevertReasons.REGION_PAUSED);
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
         it("Caller not assistant of any seller", async function () {
@@ -557,6 +555,7 @@ describe("IBosonTwinHandler", function () {
           await twinHandler.connect(assistant).createTwin(twin);
 
           // Create new twin with same token address
+          twin.supplyAvailable = "2";
           await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
             RevertReasons.INVALID_TWIN_TOKEN_RANGE
           );

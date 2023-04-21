@@ -64,7 +64,7 @@ describe("IBosonPauseHandler", function () {
         // Regions to pause
         regions = [PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles];
 
-        // Pause the protocal, testing for the event
+        // Pause the protocol, testing for the event
         await expect(pauseHandler.connect(pauser).pause(regions))
           .to.emit(pauseHandler, "ProtocolPaused")
           .withArgs(regions, pauser.address);
@@ -106,7 +106,7 @@ describe("IBosonPauseHandler", function () {
         // Pause protocol
         await pauseHandler.connect(pauser).pause([PausableRegion.Sellers, PausableRegion.DisputeResolvers]);
 
-        // Unpause the protocal, testing for the event
+        // Unpause the protocol, testing for the event
         await expect(pauseHandler.connect(pauser).unpause())
           .to.emit(pauseHandler, "ProtocolUnpaused")
           .withArgs(pauser.address);
@@ -116,10 +116,10 @@ describe("IBosonPauseHandler", function () {
         // Pause protocol
         await pauseHandler.connect(pauser).pause([PausableRegion.Sellers, PausableRegion.DisputeResolvers]);
 
-        // Unpause the protocal, testing for the event
+        // Unpause the protocol, testing for the event
         await pauseHandler.connect(pauser).unpause();
 
-        // Pause the protocal, testing for the event
+        // Pause the protocol, testing for the event
         regions = [PausableRegion.Funds];
         await expect(pauseHandler.connect(pauser).pause(regions))
           .to.emit(pauseHandler, "ProtocolPaused")
@@ -132,7 +132,7 @@ describe("IBosonPauseHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to unpause without PAUSER role, expecting revert
-          await expect(pauseHandler.connect(rando).pause([])).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          await expect(pauseHandler.connect(rando).unpause([])).to.revertedWith(RevertReasons.ACCESS_DENIED);
         });
 
         it("Protocol is not currently paused", async function () {

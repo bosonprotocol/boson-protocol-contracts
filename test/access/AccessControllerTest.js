@@ -457,5 +457,15 @@ describe("AccessController", function () {
         `AccessControl: account ${rando.address.toLowerCase()} is missing role ${Role.ADMIN}`
       );
     });
+
+    it("Should revert if caller tries to revokeRole but doesn't have ADMIN role", async function () {
+      // Grant role
+      await accessController.connect(deployer).grantRole(Role.PAUSER, pauser.address);
+
+      // Revoke Role, expecting revert
+      await expect(accessController.connect(rando).revokeRole(Role.PAUSER, pauser.address)).to.be.revertedWith(
+        `AccessControl: account ${rando.address.toLowerCase()} is missing role ${Role.ADMIN}`
+      );
+    });
   });
 });

@@ -688,6 +688,17 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
+        it("Dispute resolver wallet is not registered", async function () {
+          // Set some address that is not registered as a dispute resolver
+          offer.price = "0";
+          disputeResolver.id = "16";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
         // TODO - revisit when account deactivations are supported
         it.skip("Dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it

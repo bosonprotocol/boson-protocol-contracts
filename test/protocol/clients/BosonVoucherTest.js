@@ -150,6 +150,13 @@ describe("IBosonVoucher", function () {
       const balanceAfter = await ethers.provider.getBalance(bosonVoucher.address);
       expect(balanceAfter.sub(balanceBefore)).to.eq(amount);
     });
+
+    it("Cannot initialize voucher twice", async function () {
+      const initalizableClone = await ethers.getContractAt("IInitializableVoucherClone", bosonVoucher.address);
+      await expect(initalizableClone.initializeVoucher(2, assistant.address, voucherInitValues)).to.be.revertedWith(
+        RevertReasons.INITIALIZABLE_ALREADY_INITIALIZED
+      );
+    });
   });
 
   context("issueVoucher()", function () {
@@ -173,6 +180,29 @@ describe("IBosonVoucher", function () {
       const balanceAfter = await bosonVoucher.balanceOf(buyer.address);
 
       expect(balanceAfter.sub(balanceBefore)).eq(1);
+    });
+
+    it("should issue a voucher if it does not overlap with range", async function () {
+      const offerId = "5";
+      const start = "10";
+      const length = "123";
+      const tokenId = deriveTokenId(offerId, start); // token within reserved range
+
+      // Deploy mock protocol
+      await deployMockProtocol();
+
+      // Reserve a range
+      await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
+
+      // Token id just below the range
+      await expect(() =>
+        bosonVoucher.connect(protocol).issueVoucher(tokenId.sub(1), buyerWallet)
+      ).to.changeTokenBalance(bosonVoucher, buyer, 1);
+
+      // Token id just above the range
+      await expect(() =>
+        bosonVoucher.connect(protocol).issueVoucher(tokenId.add(length), buyerWallet)
+      ).to.changeTokenBalance(bosonVoucher, buyer, 1);
     });
 
     context("💔 Revert Reasons", async function () {
@@ -200,10 +230,7 @@ describe("IBosonVoucher", function () {
         const tokenId = deriveTokenId(offerId, "15"); // token within reserved range
 
         // Deploy mock protocol
-        const mockProtocol = await deployMockProtocol();
-
-        // Define what should be returned when getExchange is called
-        await mockProtocol.mock.getExchange.withArgs(tokenId).returns(true, mockExchange({ offerId }), mockVoucher());
+        await deployMockProtocol();
 
         // Reserve a range
         await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, assistant.address);
@@ -1910,6 +1937,11 @@ describe("IBosonVoucher", function () {
       expect(tokenURI).eq(metadataUri);
     });
 
+    it("should return empty tokenURI if token does not exist", async function () {
+      const tokenURI = await bosonVoucher.tokenURI(10);
+      expect(tokenURI).eq("");
+    });
+
     context("pre-minted", async function () {
       let start, tokenId;
       beforeEach(async function () {
@@ -2362,6 +2394,22 @@ describe("IBosonVoucher", function () {
         .to.emit(bosonVoucher, "ApprovalForAll")
         .withArgs(bosonVoucher.address, rando.address, true);
     });
+
+    context("💔 Revert Reasons", async function () {
+      it("should revert if caller is not the owner", async function () {
+        // Expect revert if random user attempts to set approval
+        await expect(bosonVoucher.connect(rando).setApprovalForAllToContract(rando.address, true)).to.revertedWith(
+          RevertReasons.OWNABLE_NOT_OWNER
+        );
+      });
+
+      it("should revert if operator is zero address", async function () {
+        // Expect revert if random user attempts to set approval
+        await expect(
+          bosonVoucher.connect(assistant).setApprovalForAllToContract(ethers.constants.AddressZero, true)
+        ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+      });
+    });
   });
 
   context("withdrawToProtocol", function () {
@@ -2407,6 +2455,19 @@ describe("IBosonVoucher", function () {
         return tx;
       }).to.changeTokenBalances(foreign20, [bosonVoucher, fundsHandler], [amount.mul(-1), amount]);
       await expect(() => tx).to.changeEtherBalances([bosonVoucher, fundsHandler], [amount.mul(-1), amount]);
+    });
+  });
+
+  context("onERC721Received", function () {
+    it("Should return correct selector value", async function () {
+      const expectedSelector = bosonVoucher.interface.getSighash("onERC721Received(address,address,uint256,bytes)");
+      const returnedSelector = await bosonVoucher.callStatic.onERC721Received(
+        assistant.address,
+        rando.address,
+        "1",
+        "0x"
+      );
+      expect(returnedSelector).to.equal(expectedSelector);
     });
   });
 
