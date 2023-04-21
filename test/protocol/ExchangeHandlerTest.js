@@ -39,10 +39,10 @@ const {
   prepareDataSignatureParameters,
   calculateContractAddress,
   applyPercentage,
+  deriveTokenId,
   setupTestEnvironment,
   getSnapshot,
   revertToSnapshot,
-  deriveTokenId,
 } = require("../util/utils.js");
 const { oneWeek, oneMonth } = require("../util/constants");
 const { FundsList } = require("../../scripts/domain/Funds");
@@ -1383,6 +1383,30 @@ describe("IBosonExchangeHandler", function () {
           .withArgs(offerId, buyerId, exchange.id, rando.address);
       });
 
+      it("should emit an ExchangeCompleted event if another buyer calls after dispute period", async function () {
+        // Set time forward to the offer's voucherRedeemableFrom
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+        // Redeem the voucher
+        await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+        // Get the current block info
+        blockNumber = await ethers.provider.getBlockNumber();
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Set time forward to run out the dispute period
+        newTime = ethers.BigNumber.from(block.timestamp).add(disputePeriod).add(1).toNumber();
+        await setNextBlockTimestamp(newTime);
+
+        // Create a rando buyer account
+        await accountHandler.connect(rando).createBuyer(mockBuyer(rando.address));
+
+        // Complete exchange
+        await expect(exchangeHandler.connect(rando).completeExchange(exchange.id))
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchange.id, rando.address);
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
@@ -1433,6 +1457,22 @@ describe("IBosonExchangeHandler", function () {
 
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(rando).completeExchange(exchange.id)).to.revertedWith(
+            RevertReasons.DISPUTE_PERIOD_NOT_ELAPSED
+          );
+        });
+
+        it("caller is a buyer, but not the buyer of the exchange and offer dispute period has not elapsed", async function () {
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Create a rando buyer account
+          await accountHandler.connect(rando).createBuyer(mockBuyer(rando.address));
 
           // Attempt to complete the exchange, expecting revert
           await expect(exchangeHandler.connect(rando).completeExchange(exchange.id)).to.revertedWith(
@@ -2189,7 +2229,7 @@ describe("IBosonExchangeHandler", function () {
 
         context("Twin transfer fail", async function () {
           it("should revoke exchange when buyer is an EOA", async function () {
-            // Remove the approval for the protocal to transfer the seller's tokens
+            // Remove the approval for the protocol to transfer the seller's tokens
             await foreign20.connect(assistant).approve(protocolDiamondAddress, "0");
 
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -2251,7 +2291,7 @@ describe("IBosonExchangeHandler", function () {
           });
 
           it("should raise a dispute when buyer account is a contract", async function () {
-            // Remove the approval for the protocal to transfer the seller's tokens
+            // Remove the approval for the protocol to transfer the seller's tokens
             await foreign20.connect(assistant).approve(protocolDiamondAddress, "0");
 
             // Deploy contract to test redeem called by another contract
