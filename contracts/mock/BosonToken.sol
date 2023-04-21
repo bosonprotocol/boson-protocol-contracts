@@ -54,11 +54,7 @@ contract BosonToken {
     /**
      * @notice The faux ERC-20 _approve implementation
      */
-    function _approve(
-        address _owner,
-        address _spender,
-        uint256 _amount
-    ) internal virtual {
+    function _approve(address _owner, address _spender, uint256 _amount) internal virtual {
         allowances[_owner][_spender] = _amount;
         emit Approval(_owner, _spender, _amount);
     }

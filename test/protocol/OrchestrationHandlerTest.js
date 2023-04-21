@@ -286,7 +286,7 @@ describe("IBosonOrchestrationHandler", function () {
 
     context("👉 raiseAndEscalateDispute()", async function () {
       async function createDisputeExchangeWithToken() {
-        // utility function that deploys a mock token, creates a offer with it, creates an exchange and push it into escalated state
+        // utility function that deploys a mock token, creates a offer with it and creates an exchange
         // deploy a mock token
         const [mockToken] = await deployMockTokens(["Foreign20"]);
 

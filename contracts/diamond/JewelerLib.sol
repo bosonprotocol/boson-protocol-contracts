@@ -40,11 +40,7 @@ library JewelerLib {
      * @param _init - the address of the contract or facet to execute _calldata
      * @param _calldata - a function call, including function selector and arguments
      */
-    function diamondCut(
-        IDiamondCut.FacetCut[] memory _facetCuts,
-        address _init,
-        bytes memory _calldata
-    ) internal {
+    function diamondCut(IDiamondCut.FacetCut[] memory _facetCuts, address _init, bytes memory _calldata) internal {
         // Get the diamond storage slot
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 

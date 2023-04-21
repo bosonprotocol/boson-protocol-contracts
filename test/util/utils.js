@@ -3,9 +3,6 @@ const { utils, provider, BigNumber } = ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
 const { keccak256, RLP } = utils;
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
-const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const Role = require("../../scripts/domain/Role");
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
@@ -292,6 +289,11 @@ function objectToArray(input) {
 }
 
 async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAddress } = {}) {
+  // Load modules only here to avoid the caching issues in upgrade tests
+  const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
+  const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+  const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
+
   const facetNames = [
     "SellerHandlerFacet",
     "BuyerHandlerFacet",

@@ -143,13 +143,10 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @param _tokenList - list of contract addresses of tokens that are being withdrawn
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */
-    function withdrawProtocolFees(address[] calldata _tokenList, uint256[] calldata _tokenAmounts)
-        external
-        override
-        fundsNotPaused
-        onlyRole(FEE_COLLECTOR)
-        nonReentrant
-    {
+    function withdrawProtocolFees(
+        address[] calldata _tokenList,
+        uint256[] calldata _tokenAmounts
+    ) external override fundsNotPaused onlyRole(FEE_COLLECTOR) nonReentrant {
         // Withdraw the funds
         withdrawFundsInternal(protocolAddresses().treasury, 0, _tokenList, _tokenAmounts);
     }
