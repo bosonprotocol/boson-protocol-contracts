@@ -147,12 +147,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @param _length - the length of the range
      * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      */
-    function reserveRange(
-        uint256 _offerId,
-        uint256 _start,
-        uint256 _length,
-        address _to
-    ) external onlyRole(PROTOCOL) {
+    function reserveRange(uint256 _offerId, uint256 _start, uint256 _length, address _to) external onlyRole(PROTOCOL) {
         // _to must be the contract address or the contract owner (operator)
         require(_to == address(this) || _to == owner(), INVALID_TO_ADDRESS);
 
@@ -369,13 +364,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @param _tokenId - the id of the token to check
      * @return owner - the address of the owner
      */
-    function ownerOf(uint256 _tokenId)
-        public
-        view
-        virtual
-        override(ERC721Upgradeable, IERC721Upgradeable)
-        returns (address owner)
-    {
+    function ownerOf(
+        uint256 _tokenId
+    ) public view virtual override(ERC721Upgradeable, IERC721Upgradeable) returns (address owner) {
         if (_exists(_tokenId)) {
             // If _tokenId exists, it does not matter if vouchers were preminted or not
             return super.ownerOf(_tokenId);
@@ -442,12 +433,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      *
      * 0x2a55205a represents ERC2981 interface id
      */
-    function supportsInterface(bytes4 _interfaceId)
-        public
-        view
-        override(ERC721Upgradeable, IERC165Upgradeable)
-        returns (bool)
-    {
+    function supportsInterface(
+        bytes4 _interfaceId
+    ) public view override(ERC721Upgradeable, IERC165Upgradeable) returns (bool) {
         return (_interfaceId == type(IBosonVoucher).interfaceId ||
             _interfaceId == type(IERC2981Upgradeable).interfaceId ||
             super.supportsInterface(_interfaceId));
@@ -464,12 +452,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @param _tokenId - id of the voucher's associated exchange or pre-minted token id
      * @return the uri for the associated offer's off-chain metadata (blank if not found)
      */
-    function tokenURI(uint256 _tokenId)
-        public
-        view
-        override(ERC721Upgradeable, IERC721MetadataUpgradeable)
-        returns (string memory)
-    {
+    function tokenURI(
+        uint256 _tokenId
+    ) public view override(ERC721Upgradeable, IERC721MetadataUpgradeable) returns (string memory) {
         uint256 exchangeId = _tokenId & type(uint128).max;
         (bool exists, Offer memory offer) = getBosonOfferByExchangeId(exchangeId);
 
@@ -501,11 +486,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      *
      * @param _newOwner - the address to which ownership of the voucher contract will be transferred
      */
-    function transferOwnership(address _newOwner)
-        public
-        override(IBosonVoucher, OwnableUpgradeable)
-        onlyRole(PROTOCOL)
-    {
+    function transferOwnership(
+        address _newOwner
+    ) public override(IBosonVoucher, OwnableUpgradeable) onlyRole(PROTOCOL) {
         require(_newOwner != address(0), OWNABLE_ZERO_ADDRESS);
         _transferOwnership(_newOwner);
     }
@@ -590,12 +573,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      *
      * Always returns `IERC721Receiver.onERC721Received.selector`.
      */
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes memory
-    ) public virtual override returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes memory) public virtual override returns (bytes4) {
         return this.onERC721Received.selector;
     }
 
@@ -621,12 +599,10 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @return receiver - address of who should be sent the royalty payment
      * @return royaltyAmount - the royalty payment amount for the given sale price
      */
-    function royaltyInfo(uint256 _tokenId, uint256 _salePrice)
-        external
-        view
-        override
-        returns (address receiver, uint256 royaltyAmount)
-    {
+    function royaltyInfo(
+        uint256 _tokenId,
+        uint256 _salePrice
+    ) external view override returns (address receiver, uint256 royaltyAmount) {
         // get offer
         uint256 exchangeId = _tokenId & type(uint128).max;
         (bool offerExists, Offer memory offer) = getBosonOfferByExchangeId(exchangeId);
@@ -717,11 +693,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @param _to - the address to which the voucher is being transferred
      * @param _tokenId - the tokenId of the voucher that is being transferred
      */
-    function _beforeTokenTransfer(
-        address _from,
-        address _to,
-        uint256 _tokenId
-    ) internal override {
+    function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId) internal override {
         // Derive the exchange id
         uint256 exchangeId = _tokenId & type(uint128).max;
         if (_isCommitable) {

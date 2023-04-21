@@ -11,6 +11,7 @@
     "func-visibility": ["warn", {"ignoreConstructors":true}],
     "reason-string": "off",
     "no-complex-fallback": "off",
-    "no-empty-blocks": "off"
+    "no-empty-blocks": "off",
+    "no-global-import": "off"
   }
 }

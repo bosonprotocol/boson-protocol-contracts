@@ -389,12 +389,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxFeesPerDisputeResolver - the maximum length of dispute resolver fees list when calling {AccountHandlerFacet.createDisputeResolver} or {AccountHandlerFacet.updateDisputeResolver}
      */
-    function setMaxFeesPerDisputeResolver(uint16 _maxFeesPerDisputeResolver)
-        public
-        override
-        onlyRole(ADMIN)
-        nonReentrant
-    {
+    function setMaxFeesPerDisputeResolver(
+        uint16 _maxFeesPerDisputeResolver
+    ) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxFeesPerDisputeResolver is greater than 0
         checkNonZero(_maxFeesPerDisputeResolver);
 
@@ -422,12 +419,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxEscalationResponsePeriod - the maximum escalation response period that a {BosonTypes.DisputeResolver} can specify
      */
-    function setMaxEscalationResponsePeriod(uint256 _maxEscalationResponsePeriod)
-        public
-        override
-        onlyRole(ADMIN)
-        nonReentrant
-    {
+    function setMaxEscalationResponsePeriod(
+        uint256 _maxEscalationResponsePeriod
+    ) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxEscalationResponsePeriod is greater than 0
         checkNonZero(_maxEscalationResponsePeriod);
 
@@ -484,12 +478,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setMaxTotalOfferFeePercentage(uint16 _maxTotalOfferFeePercentage)
-        public
-        override
-        onlyRole(ADMIN)
-        nonReentrant
-    {
+    function setMaxTotalOfferFeePercentage(
+        uint16 _maxTotalOfferFeePercentage
+    ) public override onlyRole(ADMIN) nonReentrant {
         // Make sure percentage is less than 10000
         require(_maxTotalOfferFeePercentage <= 10000, FEE_PERCENTAGE_INVALID);
 
@@ -590,12 +581,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setBuyerEscalationDepositPercentage(uint256 _buyerEscalationDepositPercentage)
-        public
-        override
-        onlyRole(ADMIN)
-        nonReentrant
-    {
+    function setBuyerEscalationDepositPercentage(
+        uint256 _buyerEscalationDepositPercentage
+    ) public override onlyRole(ADMIN) nonReentrant {
         // Make sure percentage is less than 10000
         require(_buyerEscalationDepositPercentage <= 10000, FEE_PERCENTAGE_INVALID);
 
@@ -630,12 +618,10 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _authTokenType - the auth token type, as an Enum value
      * @param _authTokenContract the address of the auth token contract (e.g. Lens or ENS contract address)
      */
-    function setAuthTokenContract(AuthTokenType _authTokenType, address _authTokenContract)
-        external
-        override
-        onlyRole(ADMIN)
-        nonReentrant
-    {
+    function setAuthTokenContract(
+        AuthTokenType _authTokenType,
+        address _authTokenContract
+    ) external override onlyRole(ADMIN) nonReentrant {
         require(
             _authTokenType != AuthTokenType.None && _authTokenType != AuthTokenType.Custom,
             INVALID_AUTH_TOKEN_TYPE
@@ -770,12 +756,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _accessControllerAddress - access controller address
      */
-    function setAccessControllerAddress(address _accessControllerAddress)
-        external
-        override
-        onlyRole(ADMIN)
-        nonReentrant
-    {
+    function setAccessControllerAddress(
+        address _accessControllerAddress
+    ) external override onlyRole(ADMIN) nonReentrant {
         require(_accessControllerAddress != address(0), INVALID_ADDRESS);
         DiamondLib.diamondStorage().accessController = IAccessControl(_accessControllerAddress);
         emit AccessControllerAddressChanged(_accessControllerAddress, msgSender());

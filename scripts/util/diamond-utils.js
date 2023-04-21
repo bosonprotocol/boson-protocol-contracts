@@ -215,7 +215,7 @@ async function cutDiamond(
   }, []);
 
   const transactionResponse = await diamondCutFacet.diamondCut(
-    [...cut, ...facetsToRemove],
+    [...facetsToRemove, ...cut],
     initializationAddress,
     initializeCalldata,
     await getFees(maxPriorityFeePerGas)

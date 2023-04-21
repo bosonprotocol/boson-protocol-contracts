@@ -143,11 +143,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @param _length - the length of the range
      * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      */
-    function reserveRange(
-        uint256 _offerId,
-        uint256 _length,
-        address _to
-    ) external override nonReentrant {
+    function reserveRange(uint256 _offerId, uint256 _length, address _to) external override nonReentrant {
         reserveRangeInternal(_offerId, _length, _to);
     }
 
@@ -274,7 +270,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
      * @return offerFees - the offer fees details. See {BosonTypes.OfferFees}
      */
-    function getOffer(uint256 _offerId)
+    function getOffer(
+        uint256 _offerId
+    )
         external
         view
         override

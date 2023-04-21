@@ -18,22 +18,25 @@ const {
   mockOffer,
   accountId,
 } = require("../../util/mock");
+const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
 const {
   calculateContractAddress,
   prepareDataSignatureParameters,
   getSnapshot,
   revertToSnapshot,
+  deriveTokenId,
 } = require("../../util/utils");
 const Range = require("../../../scripts/domain/Range");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const { getGenericContext } = require("./01_generic");
 const SellerUpdateFields = require("../../../scripts/domain/SellerUpdateFields");
+const { Funds, FundsList } = require("../../../scripts/domain/Funds");
 
 const oldVersion = "v2.1.0";
-const newVersion = "HEAD";
+const newVersion = "v2.2.0";
 // Script that was used to deploy v2.1.0 was created after v2.1.0 tag was created.
 // This is the commit hash when deployment happened, so it represents the state of the code at that time.
-const v2_1_0_scripts = "b02a583ddb720bbe36fa6e29c344d35e957deb8b";
+const v2_1_0_scripts = "v2.1.0-scripts";
 
 let snapshot;
 
@@ -42,7 +45,7 @@ let snapshot;
  */
 describe("[@skip-on-coverage] After client upgrade, everything is still operational", function () {
   // Common vars
-  let deployer, assistant;
+  let deployer, assistant, rando;
 
   // reference protocol state
   let voucherContractState;
@@ -58,7 +61,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
   before(async function () {
     try {
       // Make accounts available
-      [deployer, assistant] = await ethers.getSigners();
+      [deployer, assistant, rando] = await ethers.getSigners();
 
       // temporary update config, so compiler outputs storage layout
       for (const compiler of hre.config.solidity.compilers) {
@@ -82,7 +85,9 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         deployer,
         protocolDiamondAddress,
         protocolContracts,
-        mockContracts
+        mockContracts,
+        undefined, // no existing entities
+        oldVersion
       );
       voucherContractState = await getVoucherContractState(preUpgradeEntities);
 
@@ -90,11 +95,21 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       forwarder = await upgradeClients(newVersion);
 
       // upgrade suite
-      ({ offerHandler, configHandler, accountHandler } = await upgradeSuite(newVersion, protocolDiamondAddress, {
-        offerHandler: "IBosonOfferHandler",
-        configHandler: "IBosonConfigHandler",
-        accountHandler: "IBosonAccountHandler",
-      }));
+      ({ offerHandler, configHandler, accountHandler } = await upgradeSuite(
+        newVersion,
+        protocolDiamondAddress,
+        {
+          offerHandler: "IBosonOfferHandler",
+          configHandler: "IBosonConfigHandler",
+          accountHandler: "IBosonAccountHandler",
+        },
+        undefined,
+        {
+          facetsToInit: {
+            ExchangeHandlerFacet: { constructorArgs: [preUpgradeEntities.exchanges.length + 1] },
+          },
+        }
+      ));
 
       snapshot = await getSnapshot();
 
@@ -298,7 +313,8 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       // Reserve range
       await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
 
-      const range = new Range(start.toString(), length, "0", "0", assistant.address);
+      const startTokenId = deriveTokenId(offerId, start);
+      const range = new Range(startTokenId.toString(), length, "0", "0", assistant.address);
 
       // Get range object from contract
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
@@ -312,6 +328,82 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       // Get available premints from contract
       const availablePremints = await bosonVoucher.getAvailablePreMints(offerId);
       assert.equal(availablePremints.toString(), length, "Available Premints mismatch");
+    });
+
+    it("callExternalContract()", async function () {
+      // Deploy a random contract
+      const MockSimpleContract = await ethers.getContractFactory("MockSimpleContract");
+      const mockSimpleContract = await MockSimpleContract.deploy();
+      await mockSimpleContract.deployed();
+
+      // Generate calldata
+      const calldata = mockSimpleContract.interface.encodeFunctionData("testEvent");
+
+      await expect(bosonVoucher.connect(assistant).callExternalContract(mockSimpleContract.address, calldata))
+        .to.emit(mockSimpleContract, "TestEvent")
+        .withArgs("1");
+    });
+
+    it("setApprovalForAllToContract()", async function () {
+      await expect(bosonVoucher.connect(assistant).setApprovalForAllToContract(rando.address, true))
+        .to.emit(bosonVoucher, "ApprovalForAll")
+        .withArgs(bosonVoucher.address, rando.address, true);
+    });
+
+    context("withdrawToProtocol()", async function () {
+      beforeEach(async function () {
+        // For some reason, ethers.getContractAt and changeEtherBalances don't work together, so we need to explicitly instantiate the contract
+        bosonVoucher = new ethers.Contract(bosonVoucher.address, bosonVoucher.interface, deployer);
+      });
+
+      it("Can withdraw native token", async function () {
+        // Sellers initial available funds
+        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        let expectedAvailableFunds = new FundsList([
+          new Funds(ethers.constants.AddressZero, "Native currency", offer.sellerDeposit),
+        ]);
+        expect(sellersFundsBefore).to.eql(expectedAvailableFunds);
+
+        const amount = ethers.utils.parseUnits("1", "ether");
+        await deployer.sendTransaction({ to: bosonVoucher.address, value: amount });
+
+        await expect(() =>
+          bosonVoucher.connect(rando).withdrawToProtocol([ethers.constants.AddressZero])
+        ).to.changeEtherBalances([bosonVoucher, fundsHandler], [amount.mul(-1), amount]);
+
+        // Seller's available balance should increase
+        expectedAvailableFunds = new FundsList([
+          new Funds(ethers.constants.AddressZero, "Native currency", amount.add(offer.sellerDeposit).toString()),
+        ]);
+        const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
+      });
+
+      it("Can withdraw ERC20", async function () {
+        // Sellers initial available funds
+        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        let expectedAvailableFunds = new FundsList([
+          new Funds(ethers.constants.AddressZero, "Native currency", offer.sellerDeposit),
+        ]);
+        expect(sellersFundsBefore).to.eql(expectedAvailableFunds);
+
+        const [foreign20] = await deployMockTokens(["Foreign20"]);
+
+        const amount = ethers.utils.parseUnits("1", "ether");
+        await foreign20.connect(deployer).mint(deployer.address, amount);
+        await foreign20.connect(deployer).transfer(bosonVoucher.address, amount);
+
+        await expect(() => bosonVoucher.connect(rando).withdrawToProtocol([foreign20.address])).to.changeTokenBalances(
+          foreign20,
+          [bosonVoucher, fundsHandler],
+          [amount.mul(-1), amount]
+        );
+
+        // Seller's available balance should increase
+        expectedAvailableFunds.funds.push(new Funds(foreign20.address, "Foreign20", amount.toString()));
+        const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
+      });
     });
   });
 });

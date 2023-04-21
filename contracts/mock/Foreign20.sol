@@ -95,11 +95,7 @@ contract Foreign20Malicious is Foreign20 {
         protocolAddress = _newProtocolAddress;
     }
 
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual override {
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
         super._beforeTokenTransfer(from, to, amount);
 
         // When funds are transferred from protocol, reenter
@@ -147,11 +143,7 @@ contract Foreign20Malicious2 is Foreign20 {
         attacker = _attacker;
     }
 
-    function _afterTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual override {
+    function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual override {
         super._beforeTokenTransfer(from, to, amount);
 
         // When funds are transferred from protocol, reenter
@@ -185,11 +177,7 @@ contract Foreign20WithFee is Foreign20 {
      * Burn part of the transferred value
      *
      */
-    function _afterTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual override {
+    function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual override {
         if (to != address(0) && from != address(0)) {
             uint256 _fee = (amount * fee) / 100;
             _burn(to, _fee);
@@ -221,11 +209,7 @@ contract Foreign20TransferReturnFalse is Foreign20 {
  * @notice Mock ERC-(20) for Unit Testing
  */
 contract Foreign20TransferFromReturnFalse is Foreign20 {
-    function transferFrom(
-        address,
-        address,
-        uint256
-    ) public virtual override returns (bool) {
+    function transferFrom(address, address, uint256) public virtual override returns (bool) {
         return false;
     }
 }
