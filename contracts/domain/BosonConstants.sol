@@ -32,18 +32,19 @@ string constant PROTOCOL_INITIALIZATION_FAILED = "Protocol initialization failed
 string constant VERSION_MUST_BE_SET = "Version cannot be empty";
 string constant ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH = "Addresses and calldata must be same length";
 string constant WRONG_CURRENT_VERSION = "Wrong current protocol version";
+string constant DIRECT_INITIALIZATION_NOT_ALLOWED = "Direct initializtion is not allowed";
 
 // Revert Reasons: Access related
 string constant ACCESS_DENIED = "Access denied, caller doesn't have role";
-string constant NOT_OPERATOR = "Not seller's operator";
+string constant NOT_ASSISTANT = "Not seller's assistant";
 string constant NOT_ADMIN = "Not admin";
-string constant NOT_OPERATOR_AND_CLERK = "Not operator and clerk";
-string constant NOT_ADMIN_OPERATOR_AND_CLERK = "Not admin, operator and clerk";
+string constant NOT_ASSISTANT_AND_CLERK = "Not assistant and clerk";
+string constant NOT_ADMIN_ASSISTANT_AND_CLERK = "Not admin, assistant and clerk";
 string constant NOT_BUYER_OR_SELLER = "Not buyer or seller";
 string constant NOT_VOUCHER_HOLDER = "Not current voucher holder";
 string constant NOT_BUYER_WALLET = "Not buyer's wallet address";
 string constant NOT_AGENT_WALLET = "Not agent's wallet address";
-string constant NOT_DISPUTE_RESOLVER_OPERATOR = "Not dispute resolver's operator address";
+string constant NOT_DISPUTE_RESOLVER_ASSISTANT = "Not dispute resolver's assistant address";
 
 // Revert Reasons: Account-related
 string constant NO_SUCH_SELLER = "No such seller";
@@ -182,7 +183,7 @@ string constant VOUCHER_SYMBOL = "BOSON_VOUCHER_RNFT";
 string constant EXCHANGE_ID_IN_RESERVED_RANGE = "Exchange id falls within a pre-minted offer's range";
 string constant NO_RESERVED_RANGE_FOR_OFFER = "Offer id not associated with a reserved range";
 string constant OFFER_RANGE_ALREADY_RESERVED = "Offer id already associated with a reserved range";
-string constant INVALID_RANGE_START = "Range start must be greater than zero";
+string constant INVALID_RANGE_START = "Range start too low";
 string constant INVALID_AMOUNT_TO_MINT = "Amount to mint is greater than remaining un-minted in range";
 string constant NO_SILENT_MINT_ALLOWED = "Only owner's mappings can be updated without event";
 string constant TOO_MANY_TO_MINT = "Exceeded maximum amount to mint in a single transaction";
@@ -191,6 +192,9 @@ string constant OFFER_STILL_VALID = "Offer still valid";
 string constant NOTHING_TO_BURN = "Nothing to burn";
 string constant OWNABLE_ZERO_ADDRESS = "Ownable: new owner is the zero address";
 string constant ROYALTY_FEE_INVALID = "ERC2981: royalty fee exceeds protocol limit";
+string constant NOT_COMMITTABLE = "Token not committable";
+string constant INVALID_TO_ADDRESS = "Tokens can only be pre-mined to the contract or contract owner address";
+string constant EXTERNAL_CALL_FAILED = "External call failed";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(

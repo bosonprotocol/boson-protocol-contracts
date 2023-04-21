@@ -15,13 +15,14 @@ const { getFees } = require("./utils");
  *
  *  N.B. Intended for use with both test and deployment scripts
  *
+ * @param implementationArgs - array of implementation constructor args
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolClientImpls(maxPriorityFeePerGas) {
+async function deployProtocolClientImpls(implementationArgs, maxPriorityFeePerGas) {
   // Deploy the BosonVoucher contract
   const BosonVoucher = await ethers.getContractFactory("BosonVoucher");
-  const bosonVoucher = await BosonVoucher.deploy(await getFees(maxPriorityFeePerGas));
+  const bosonVoucher = await BosonVoucher.deploy(...implementationArgs, await getFees(maxPriorityFeePerGas));
   await bosonVoucher.deployTransaction.wait(confirmations);
 
   return [bosonVoucher];

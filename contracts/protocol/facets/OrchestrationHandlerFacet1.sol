@@ -43,7 +43,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -112,7 +112,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The offers region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -142,6 +142,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -151,6 +152,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
@@ -162,6 +164,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
@@ -176,7 +179,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _voucherInitValues,
             _agentId
         );
-        reserveRangeInternal(_offer.id, _reservedRangeLength);
+        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
     }
 
     /**
@@ -189,7 +192,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The groups region of protocol is paused
      * - The orchestration region of protocol is paused
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -254,7 +257,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -274,6 +277,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -281,7 +285,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _agentId - the id of agent
      */
@@ -291,11 +295,12 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         Condition calldata _condition,
         uint256 _agentId
     ) public {
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
-        reserveRangeInternal(_offer.id, _reservedRangeLength);
+        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
     }
 
     /**
@@ -308,7 +313,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The groups region of protocol is paused
      * - The orchestration region of protocol is paused
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -326,7 +331,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Buyer cancel penalty is greater than price
      * - When adding to the group if:
      *   - Group does not exists
-     *   - Caller is not the operator of the group
+     *   - Caller is not the assistant of the group
      *   - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -370,7 +375,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -388,11 +393,12 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Buyer cancel penalty is greater than price
      * - When adding to the group if:
      *   - Group does not exists
-     *   - Caller is not the operator of the group
+     *   - Caller is not the assistant of the group
      *   - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -401,6 +407,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _groupId - id of the group, to which offer will be added
      * @param _agentId - the id of agent
      */
@@ -410,11 +417,12 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         uint256 _groupId,
         uint256 _agentId
     ) external {
         createOfferAddToGroup(_offer, _offerDates, _offerDurations, _disputeResolverId, _groupId, _agentId);
-        reserveRangeInternal(_offer.id, _reservedRangeLength);
+        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
     }
 
     /**
@@ -428,7 +436,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -493,7 +501,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -520,6 +528,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -528,8 +537,11 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
+
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      */
     function createPremintedOfferAndTwinWithBundle(
         Offer memory _offer,
@@ -537,11 +549,12 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         Twin memory _twin,
         uint256 _agentId
     ) public {
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
-        reserveRangeInternal(_offer.id, _reservedRangeLength);
+        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
     }
 
     /**
@@ -557,7 +570,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -628,7 +641,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -656,6 +669,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -664,6 +678,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
@@ -674,6 +689,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         Condition calldata _condition,
         Twin memory _twin,
         uint256 _agentId
@@ -687,7 +703,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _twin,
             _agentId
         );
-        reserveRangeInternal(_offer.id, _reservedRangeLength);
+        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
     }
 
     /**
@@ -709,7 +725,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The offers region of protocol is paused
      * - The groups region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -718,7 +734,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -786,7 +802,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The groups region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -798,7 +814,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -818,6 +834,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -827,6 +844,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
@@ -839,6 +857,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         Condition calldata _condition,
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
@@ -855,7 +874,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _voucherInitValues,
             _agentId
         );
-        reserveRangeInternal(_offer.id, _reservedRangeLength);
+        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
     }
 
     /**
@@ -878,7 +897,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -887,7 +906,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -963,7 +982,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The bundles region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -975,7 +994,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -1002,6 +1021,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -1011,6 +1031,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _twin - the fully populated twin struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
@@ -1023,6 +1044,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         Twin memory _twin,
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
@@ -1039,7 +1061,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _voucherInitValues,
             _agentId
         );
-        reserveRangeInternal(_offer.id, _reservedRangeLength);
+        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
     }
 
     /**
@@ -1063,7 +1085,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -1072,7 +1094,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -1161,7 +1183,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The bundles region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied operator and clerk
+     * - Caller is not the supplied assistant and clerk
      * - Caller is not the supplied admin or does not own supplied auth token
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -1173,7 +1195,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      * - In offer struct:
-     *   - Caller is not an operator
+     *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Both voucher expiration date and voucher expiration period are defined
@@ -1201,6 +1223,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -1210,6 +1233,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -1223,6 +1247,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _reservedRangeLength,
+        address _to,
         Condition calldata _condition,
         Twin memory _twin,
         AuthToken calldata _authToken,
@@ -1241,7 +1266,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _voucherInitValues,
             _agentId
         );
-        reserveRangeInternal(_offer.id, _reservedRangeLength);
+        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
     }
 
     /**

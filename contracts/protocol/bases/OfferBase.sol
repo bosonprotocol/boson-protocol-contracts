@@ -19,7 +19,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * Emits an OfferCreated event if successful.
      *
      * Reverts if:
-     * - Caller is not an operator
+     * - Caller is not an assistant
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
      * - Both voucher expiration date and voucher expiration period are defined
@@ -53,8 +53,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         uint256 _agentId
     ) internal {
         // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
-        require(exists, NOT_OPERATOR);
+        (bool exists, uint256 sellerId) = getSellerIdByAssistant(msgSender());
+        require(exists, NOT_ASSISTANT);
         _offer.sellerId = sellerId;
         // Get the next offerId and increment the counter
         uint256 offerId = protocolCounters().nextOfferId++;
@@ -288,12 +288,18 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Range length is greater than quantity available
      * - Range length is greater than maximum allowed range length
      * - Call to BosonVoucher.reserveRange() reverts
+     * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @param _offerId - the id of the offer
      * @param _length - the length of the range
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      */
-    function reserveRangeInternal(uint256 _offerId, uint256 _length) internal offersNotPaused exchangesNotPaused {
-        // Get offer, make sure the caller is the operator
+    function reserveRangeInternal(
+        uint256 _offerId,
+        uint256 _length,
+        address _to
+    ) internal offersNotPaused exchangesNotPaused {
+        // Get offer, make sure the caller is the assistant
         Offer storage offer = getValidOffer(_offerId);
 
         // Prevent reservation of an empty range
@@ -303,15 +309,21 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         require(offer.quantityAvailable >= _length, INVALID_RANGE_LENGTH);
 
         // Prevent reservation of too large range, since it affects exchangeId
-        require(_length < (1 << 128), INVALID_RANGE_LENGTH);
+        require(_length < (1 << 64), INVALID_RANGE_LENGTH);
 
         // Get starting token id
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
         uint256 _startId = pc.nextExchangeId;
 
-        // Call reserveRange on voucher
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
-        bosonVoucher.reserveRange(_offerId, _startId, _length);
+
+        address sender = msgSender();
+
+        // _to must be the contract address or the contract owner
+        require(_to == address(bosonVoucher) || _to == sender, INVALID_TO_ADDRESS);
+
+        // Call reserveRange on voucher
+        bosonVoucher.reserveRange(_offerId, _startId, _length, _to);
 
         // increase exchangeIds
         pc.nextExchangeId = _startId + _length;
@@ -322,6 +334,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         }
 
         // Notify external observers
-        emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, msgSender());
+        emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, _to, sender);
     }
 }

@@ -1,6 +1,5 @@
 const shell = require("shelljs");
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
 const { assert, expect } = require("chai");
 const Seller = require("../../scripts/domain/Seller");
 const AuthToken = require("../../scripts/domain/AuthToken");
@@ -11,6 +10,7 @@ const { DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolver
 const { mockAuthToken } = require("../util/mock");
 const { deploySuite, upgradeSuite, populateProtocolContract, getProtocolContractState } = require("../util/upgrade");
 const { getGenericContext } = require("./01_generic");
+const { getSnapshot, revertToSnapshot } = require("../util/utils");
 
 const oldVersion = "v2.0.0";
 const newVersion = "v2.1.0";
@@ -20,7 +20,7 @@ const newVersion = "v2.1.0";
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
-  let deployer, rando, admin, operator, clerk, treasury;
+  let deployer, rando, admin, assistant, clerk, treasury;
   let accountHandler, oldHandlers;
   let ERC165Facet;
   let snapshot;
@@ -32,7 +32,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   before(async function () {
     // Make accounts available
-    [deployer, rando, admin, operator, clerk, treasury] = await ethers.getSigners();
+    [deployer, rando, admin, assistant, clerk, treasury] = await ethers.getSigners();
 
     ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(deployer, oldVersion));
 
@@ -63,7 +63,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     }));
     protocolContracts.accountHandler = accountHandler;
 
-    snapshot = await ethers.provider.send("evm_snapshot", []);
+    snapshot = await getSnapshot();
 
     // This context is placed in an uncommon place due to order of test execution.
     // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
@@ -85,9 +85,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   afterEach(async function () {
     // Revert to state right after the upgrade.
-    // This is used so the lengthly setup (deploy+upgrade) is done only once.
-    await ethers.provider.send("evm_revert", [snapshot]);
-    snapshot = await ethers.provider.send("evm_snapshot", []);
+    // This is used so the lengthy setup (deploy+upgrade) is done only once.
+    await revertToSnapshot(snapshot);
+    snapshot = await getSnapshot();
   });
 
   after(async function () {
@@ -96,7 +96,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   });
 
   // Test actions that worked in previous version, but should not work anymore, or work differently
-  // Test methods that were added to see that upgrade was succesful
+  // Test methods that were added to see that upgrade was successful
   context("📋 Breaking changes and new methods", async function () {
     context("Breaking changes", async function () {
       it("Seller addresses are not updated in one step, except for the treasury", async function () {
@@ -105,7 +105,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         const seller = oldSeller.seller.clone();
 
         seller.admin = admin.address;
-        seller.operator = operator.address;
+        seller.assistant = assistant.address;
         seller.clerk = clerk.address;
         seller.treasury = treasury.address;
 
@@ -148,7 +148,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         disputeResolver.escalationResponsePeriod = Number(
           Number(disputeResolver.escalationResponsePeriod) - 100
         ).toString();
-        disputeResolver.operator = operator.address;
+        disputeResolver.assistant = assistant.address;
         disputeResolver.admin = admin.address;
         disputeResolver.clerk = clerk.address;
         disputeResolver.treasury = treasury.address;
@@ -231,7 +231,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         const seller = oldSeller.seller.clone();
         seller.treasury = treasury.address;
         seller.admin = admin.address;
-        seller.operator = operator.address;
+        seller.assistant = assistant.address;
         seller.clerk = clerk.address;
 
         const pendingSellerUpdate = seller.clone();
@@ -268,13 +268,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           .to.emit(accountHandler, "SellerUpdatePending")
           .withArgs(seller.id, pendingSellerUpdate.toStruct(), pendingAuthTokenStruct, oldSeller.wallet.address);
 
-        // Update seller operator
-        tx = await accountHandler.connect(operator).optInToSellerUpdate(seller.id, [SellerUpdateFields.Operator]);
+        // Update seller assistant
+        tx = await accountHandler.connect(assistant).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]);
 
-        pendingSellerUpdate.operator = ethers.constants.AddressZero;
-        expectedSeller.operator = seller.operator;
+        pendingSellerUpdate.assistant = ethers.constants.AddressZero;
+        expectedSeller.assistant = seller.assistant;
 
-        // Check operator update
+        // Check assistant update
         await expect(tx)
           .to.emit(accountHandler, "SellerUpdateApplied")
           .withArgs(
@@ -283,7 +283,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             pendingSellerUpdate.toStruct(),
             oldSellerAuthToken,
             pendingAuthTokenStruct,
-            operator.address
+            assistant.address
           );
 
         // Update seller clerk
@@ -292,7 +292,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         pendingSellerUpdate.clerk = ethers.constants.AddressZero;
         expectedSeller.clerk = seller.clerk;
 
-        // Check operator update
+        // Check assistant update
         await expect(tx)
           .to.emit(accountHandler, "SellerUpdateApplied")
           .withArgs(
@@ -310,7 +310,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         pendingSellerUpdate.admin = ethers.constants.AddressZero;
         expectedSeller.admin = seller.admin;
 
-        // Check operator update
+        // Check assistant update
         await expect(tx)
           .to.emit(accountHandler, "SellerUpdateApplied")
           .withArgs(
@@ -332,7 +332,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         disputeResolver.escalationResponsePeriod = Number(
           Number(disputeResolver.escalationResponsePeriod) - 100
         ).toString();
-        disputeResolver.operator = operator.address;
+        disputeResolver.assistant = assistant.address;
         disputeResolver.admin = admin.address;
         disputeResolver.clerk = clerk.address;
         disputeResolver.treasury = treasury.address;
@@ -355,21 +355,21 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           .to.emit(accountHandler, "DisputeResolverUpdatePending")
           .withArgs(disputeResolver.id, disputeResolverPendingUpdate.toStruct(), oldDisputeResolver.wallet.address);
 
-        // Approve operator update
-        expectedDisputeResolver.operator = disputeResolver.operator;
-        disputeResolverPendingUpdate.operator = ethers.constants.AddressZero;
+        // Approve assistant update
+        expectedDisputeResolver.assistant = disputeResolver.assistant;
+        disputeResolverPendingUpdate.assistant = ethers.constants.AddressZero;
 
         await expect(
           accountHandler
-            .connect(operator)
-            .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Operator])
+            .connect(assistant)
+            .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Assistant])
         )
           .to.emit(accountHandler, "DisputeResolverUpdateApplied")
           .withArgs(
             disputeResolver.id,
             expectedDisputeResolver.toStruct(),
             disputeResolverPendingUpdate.toStruct(),
-            operator.address
+            assistant.address
           );
 
         // Approve admin update

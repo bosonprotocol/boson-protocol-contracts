@@ -3,27 +3,29 @@ pragma solidity 0.8.9;
 
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
+import { IERC721ReceiverUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 
 /**
  * @title IBosonVoucher
  *
  * @notice This is the interface for the Boson Protocol ERC-721 Voucher contract.
  *
- * The ERC-165 identifier for this interface is: 0xc2e9f9ff
+ * The ERC-165 identifier for this interface is: 0xaf16da6e
  */
-interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
+interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable, IERC721ReceiverUpgradeable {
     event ContractURIChanged(string contractURI);
     event RoyaltyPercentageChanged(uint256 royaltyPercentage);
     event VoucherInitialized(uint256 indexed sellerId, uint256 indexed royaltyPercentage, string indexed contractURI);
     event RangeReserved(uint256 indexed offerId, Range range);
+    event VouchersPreMinted(uint256 indexed offerId, uint256 startId, uint256 endId);
 
     // Describe a reserved range of token ids
     struct Range {
-        uint256 offerId;
         uint256 start; // First token id of range
         uint256 length; // Length of range
         uint256 minted; // Amount pre-minted so far
         uint256 lastBurnedTokenId; // Last burned token id
+        address owner; // The range owner
     }
 
     /**
@@ -32,19 +34,19 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * Minted voucher supply is sent to the buyer.
      * Caller must have PROTOCOL role.
      *
-     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     * @param _tokenId - voucher token id corresponds to <<uint128(offerId)>>.<<uint128(exchangeId)>>
      * @param _buyer - the buyer address
      */
-    function issueVoucher(uint256 _exchangeId, address _buyer) external;
+    function issueVoucher(uint256 _tokenId, address _buyer) external;
 
     /**
      * @notice Burns a voucher.
      *
      * Caller must have PROTOCOL role.
      *
-     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     * @param _tokenId - voucher token id corresponds to <<uint128(offerId)>>.<<uint128(exchangeId)>>
      */
-    function burnVoucher(uint256 _exchangeId) external;
+    function burnVoucher(uint256 _tokenId) external;
 
     /**
      * @notice Gets the seller id.
@@ -119,17 +121,23 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * Caller must have PROTOCOL role.
      *
      * Reverts if:
-     * - Start id is not greater than zero
+     * - Start id is not greater than zero for the first range
+     * - Start id is not greater than the end id of the previous range for subsequent ranges
+     * - Range length is zero
+     * - Range length is too large, i.e., would cause an overflow
      * - Offer id is already associated with a range
+     * - _to is not the contract address or the contract owner
      *
      * @param _offerId - the id of the offer
      * @param _start - the first id of the token range
      * @param _length - the length of the range
+     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      */
     function reserveRange(
         uint256 _offerId,
         uint256 _start,
-        uint256 _length
+        uint256 _length,
+        address _to
     ) external;
 
     /**
@@ -152,7 +160,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * causing the token range to be reserved, but only pre-minting
      * a certain amount monthly.
      *
-     * Caller must be contract owner (seller operator address).
+     * Caller must be contract owner (seller assistant address).
      *
      * Reverts if:
      * - Offer id is not associated with a range
@@ -178,7 +186,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * this method can be called multiple times, until the whole
      * range is burned.
      *
-     * Caller must be contract owner (seller operator address).
+     * Caller must be contract owner (seller assistant address).
      *
      * Reverts if:
      * - Offer id is not associated with a range
@@ -204,4 +212,37 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @return range - range struct with information about range start, length and already minted tokens
      */
     function getRangeByOfferId(uint256 _offerId) external view returns (Range memory range);
+
+    /**
+     * @notice Make a call to an external contract.
+     *
+     * Reverts if:
+     * - _to is zero address
+     * - call to external contract fails
+     * - caller is not the owner
+     * - caller tries to call ERC20 method that would allow transfer of tokens from this contract
+     *
+     * @param _to - address of the contract to call
+     * @param _data - data to pass to the external contract
+     */
+    function callExternalContract(address _to, bytes memory _data) external payable;
+
+    /** @notice Set approval for all to the vouchers owned by this contract
+     *
+     * Reverts if:
+     * - _operator is zero address
+     * - caller is not the owner
+     * - _operator is this contract
+     *
+     * @param _operator - address of the operator to set approval for
+     * @param _approved - true to approve the operator in question, false to revoke approval
+     */
+    function setApprovalForAllToContract(address _operator, bool _approved) external;
+
+    /**
+     * @notice Withdraw funds from the contract to the protocol seller pool
+     *
+     * @param _tokenList - list of tokens to withdraw, including native token (address(0))
+     */
+    function withdrawToProtocol(address[] calldata _tokenList) external;
 }

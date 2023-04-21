@@ -23,7 +23,7 @@ To follow the manual and to get your local environment running you'll need to ha
 ## Clone your forked repo locally
 Assuming your fork is `myaccount/boson-protocol-contracts`, you can clone the repo locally with:
 
-`git clone git@github.com:myaccount/boson-protocol-contracts.git`
+`git clone --recursive git@github.com:myaccount/boson-protocol-contracts.git`
 
 You may now make branches locally, commit to them, and push them to your fork. 
 
@@ -113,7 +113,7 @@ To get the examples how to use the admin to perform actions, refer to unit test 
 - FEE_COLLECTOR role: `test/protocol/FundsHandlerTest.js`
 
 ### Upgrade facets
-To test the upgrade functionality, you first need to setup upgrader account as described in previous section.
+To test the upgrade functionality, you first need to setup an upgrader account as described in previous section.
 
 To perform the upgrade you then
 - Update some of the existing facets or create new one.
@@ -127,8 +127,10 @@ To perform the upgrade you then
 - Update `version` in `package.json`. If the version in `package.json` matches the existing version in addresses file, you will have to explicitly confirm that you want to proceed.
 - Run `npm run upgrade-facets:local`. This will deploy new facets and make all necessary diamond cuts. It also updates the existing addresses file `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node) and outputs the upgrade log to the console.
 
+Protocol initialization facet is explained in more detail on a separate page: [Protocol initialization handler facet](protocol-initialization-facet.md).
+
 ### Upgrade clients
-To test the upgrade functionality, you first need to setup upgrader account as described in section [Manage roles](local-development.md#optional-manage-roles)
+To test the upgrade functionality, you first need to setup an upgrader account as described in section [Manage roles](local-development.md#optional-manage-roles)
 
 To perform the upgrade you then
 - Update some of the existing clients

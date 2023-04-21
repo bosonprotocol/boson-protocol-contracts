@@ -1,8 +1,6 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
 const { assert, expect } = require("chai");
 
-const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
@@ -21,12 +19,16 @@ const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Range = require("../../scripts/domain/Range");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { getEvent, applyPercentage, calculateContractAddress, getFacetsWithArgs } = require("../util/utils.js");
+const {
+  getEvent,
+  applyPercentage,
+  calculateContractAddress,
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
+} = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL, maxPriorityFeePerGas } = require("../util/constants");
+const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
 const {
   mockTwin,
   mockOffer,
@@ -38,7 +40,7 @@ const {
   mockCondition,
   accountId,
 } = require("../util/mock");
-const { setNextBlockTimestamp } = require("../util/utils");
+const { setNextBlockTimestamp, deriveTokenId } = require("../util/utils");
 const Dispute = require("../../scripts/domain/Dispute");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const DisputeDates = require("../../scripts/domain/DisputeDates");
@@ -54,20 +56,16 @@ describe("IBosonOrchestrationHandler", function () {
     buyer,
     admin,
     rando,
-    operator,
+    assistant,
     clerk,
     treasury,
     other1,
     other2,
-    operatorDR,
+    assistantDR,
     adminDR,
     clerkDR,
-    treasuryDR,
-    protocolAdmin,
-    protocolTreasury;
+    treasuryDR;
   let erc165,
-    protocolDiamond,
-    accessController,
     accountHandler,
     offerHandler,
     exchangeHandler,
@@ -111,158 +109,72 @@ describe("IBosonOrchestrationHandler", function () {
   let disputeStruct, disputeDatesStruct;
   let returnedDispute, returnedDisputeDates;
   let newTime, voucherStruct, escalatedDate, response;
+  let protocolDiamondAddress;
+  let snapshotId;
 
   before(async function () {
+    // Reset the accountId iterator
+    accountId.next(true);
+
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
-  });
-
-  beforeEach(async function () {
-    // Make accounts available
-    [
-      deployer,
-      pauser,
-      admin,
-      treasury,
-      buyer,
-      rando,
-      other1,
-      other2,
-      adminDR,
-      treasuryDR,
-      protocolAdmin,
-      protocolTreasury,
-    ] = await ethers.getSigners();
-
-    // make all account the same
-    clerk = operator = admin;
-    operatorDR = clerkDR = adminDR;
-
-    // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-
-    // Temporarily grant UPGRADER role to deployer account
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-
-    //Grant ADMIN role to and address that can call restricted functions.
-    //This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
-    await accessController.grantRole(Role.ADMIN, protocolAdmin.address);
-
-    // Temporarily grant PAUSER role to pauser account
-    await accessController.grantRole(Role.PAUSER, pauser.address);
-
-    // Grant PROTOCOL role to ProtocolDiamond address
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
 
     // Deploy the mock tokens
     [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens();
 
-    // set protocolFees
-    protocolFeePercentage = "200"; // 2 %
-    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
-    buyerEscalationDepositPercentage = "1000"; // 10%
+    // Specify contracts needed for this test
+    const contracts = {
+      erc165: "ERC165Facet",
+      accountHandler: "IBosonAccountHandler",
+      groupHandler: "IBosonGroupHandler",
+      twinHandler: "IBosonTwinHandler",
+      bundleHandler: "IBosonBundleHandler",
+      offerHandler: "IBosonOfferHandler",
+      exchangeHandler: "IBosonExchangeHandler",
+      fundsHandler: "IBosonFundsHandler",
+      disputeHandler: "IBosonDisputeHandler",
+      orchestrationHandler: "IBosonOrchestrationHandler",
+      configHandler: "IBosonConfigHandler",
+      pauseHandler: "IBosonPauseHandler",
+    };
 
-    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [protocolDiamond.address];
-    const [, [beacon], [proxy]] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
-
-    // Add config Handler, so offer id starts at 1
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
+    ({
+      signers: [pauser, admin, treasury, buyer, rando, other1, other2, adminDR, treasuryDR],
+      contractInstances: {
+        erc165,
+        accountHandler,
+        groupHandler,
+        twinHandler,
+        bundleHandler,
+        offerHandler,
+        exchangeHandler,
+        fundsHandler,
+        disputeHandler,
+        orchestrationHandler,
+        configHandler,
+        pauseHandler,
       },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 10000,
-      },
-      // Protocol fees
-      {
-        percentage: protocolFeePercentage,
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
+      protocolConfig: [
+        ,
+        ,
+        { percentage: protocolFeePercentage, flatBoson: protocolFeeFlatBoson, buyerEscalationDepositPercentage },
+      ],
+      diamondAddress: protocolDiamondAddress,
+    } = await setupTestEnvironment(contracts, { bosonTokenAddress: bosonToken.address }));
 
-    const facetNames = [
-      "SellerHandlerFacet",
-      "AgentHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "GroupHandlerFacet",
-      "TwinHandlerFacet",
-      "BundleHandlerFacet",
-      "DisputeHandlerFacet",
-      "FundsHandlerFacet",
-      "OrchestrationHandlerFacet1",
-      "OrchestrationHandlerFacet2",
-      "PauseHandlerFacet",
-      "AccountHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
+    // make all account the same
+    clerk = assistant = admin;
+    assistantDR = clerkDR = adminDR;
 
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+    [deployer] = await ethers.getSigners();
 
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+    // Get snapshot id
+    snapshotId = await getSnapshot();
+  });
 
-    // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
-
-    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonExchangeHandler
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonOfferHandler
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonGroupHandler
-    groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonTwinHandler
-    twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonBundleHandler
-    bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonDisputeHandler
-    disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonFundsHandler
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonOrchestrationHandler
-    orchestrationHandler = await ethers.getContractAt("IBosonOrchestrationHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonConfigHandler
-    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonPauseHandler
-    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -283,7 +195,7 @@ describe("IBosonOrchestrationHandler", function () {
     beforeEach(async function () {
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
-        operatorDR.address,
+        assistantDR.address,
         adminDR.address,
         clerkDR.address,
         treasuryDR.address,
@@ -309,7 +221,7 @@ describe("IBosonOrchestrationHandler", function () {
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(operator.address, operator.address, clerk.address, treasury.address);
+      seller = mockSeller(assistant.address, assistant.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       // How that seller looks as a returned struct
@@ -329,10 +241,10 @@ describe("IBosonOrchestrationHandler", function () {
       expect(authToken.isValid()).is.true;
       authTokenStruct = authToken.toStruct();
 
-      // deploy mock auth token and mint one to operator
+      // deploy mock auth token and mint one to assistant
       const [mockAuthERC721Contract] = await deployMockTokens(["Foreign721"]);
       await configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, mockAuthERC721Contract.address);
-      await mockAuthERC721Contract.connect(operator).mint(authToken.tokenId, 1);
+      await mockAuthERC721Contract.connect(assistant).mint(authToken.tokenId, 1);
 
       // The first offer id
       nextOfferId = "1";
@@ -392,12 +304,14 @@ describe("IBosonOrchestrationHandler", function () {
         offer.id++;
 
         // create an offer with erc20 exchange token
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
         // mint tokens to buyer and approve the protocol
         buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
         await mockToken.mint(buyer.address, buyerEscalationDepositToken);
-        await mockToken.connect(buyer).approve(protocolDiamond.address, buyerEscalationDepositToken);
+        await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDepositToken);
 
         // Commit to offer and put exchange all the way to dispute
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
@@ -409,7 +323,7 @@ describe("IBosonOrchestrationHandler", function () {
       beforeEach(async function () {
         // Create the seller and offer
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOffer(
             seller,
             offer,
@@ -435,7 +349,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Deposit seller funds so the commit will succeed
         const fundsToDeposit = ethers.BigNumber.from(sellerDeposit).mul(quantityAvailable);
         await fundsHandler
-          .connect(operator)
+          .connect(assistant)
           .depositFunds(seller.id, ethers.constants.AddressZero, fundsToDeposit, { value: fundsToDeposit });
 
         buyerId = accountId.next().value;
@@ -476,7 +390,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should update state", async function () {
         // Protocol balance before
-        const escrowBalanceBefore = await ethers.provider.getBalance(protocolDiamond.address);
+        const escrowBalanceBefore = await ethers.provider.getBalance(protocolDiamondAddress);
 
         // Raise and escalate the dispute
         tx = await orchestrationHandler
@@ -515,7 +429,7 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(response, DisputeState.Escalated, "Dispute state is incorrect");
 
         // Protocol balance should increase for buyer escalation deposit
-        const escrowBalanceAfter = await ethers.provider.getBalance(protocolDiamond.address);
+        const escrowBalanceAfter = await ethers.provider.getBalance(protocolDiamondAddress);
         expect(escrowBalanceAfter.sub(escrowBalanceBefore)).to.equal(
           buyerEscalationDepositNative,
           "Escrow balance mismatch"
@@ -526,7 +440,7 @@ describe("IBosonOrchestrationHandler", function () {
         const mockToken = await createDisputeExchangeWithToken();
 
         // Protocol balance before
-        const escrowBalanceBefore = await mockToken.balanceOf(protocolDiamond.address);
+        const escrowBalanceBefore = await mockToken.balanceOf(protocolDiamondAddress);
 
         // Escalate the dispute, testing for the event
         await expect(orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId))
@@ -534,7 +448,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(exchangeId, disputeResolverId, buyer.address);
 
         // Protocol balance should increase for buyer escalation deposit
-        const escrowBalanceAfter = await mockToken.balanceOf(protocolDiamond.address);
+        const escrowBalanceAfter = await mockToken.balanceOf(protocolDiamondAddress);
         expect(escrowBalanceAfter.sub(escrowBalanceBefore)).to.equal(
           buyerEscalationDepositToken,
           "Escrow balance mismatch"
@@ -556,6 +470,18 @@ describe("IBosonOrchestrationHandler", function () {
          * - If calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
          * - Received ERC20 token amount differs from the expected value
          */
+        it("The orchestration region of protocol is paused", async function () {
+          // Pause the orchestration region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Orchestration]);
+
+          // Attempt to raise a dispute, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(buyer)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("The disputes region of protocol is paused", async function () {
           // Pause the disputes region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
@@ -604,7 +530,7 @@ describe("IBosonOrchestrationHandler", function () {
           await setNextBlockTimestamp(newTime);
 
           // Complete exchange
-          await exchangeHandler.connect(operator).completeExchange(exchangeId);
+          await exchangeHandler.connect(assistant).completeExchange(exchangeId);
 
           // Attempt to raise a dispute, expecting revert
           await expect(
@@ -648,7 +574,7 @@ describe("IBosonOrchestrationHandler", function () {
       it("should emit a SellerCreated and OfferCreated events with empty auth token", async function () {
         // Create a seller and an offer, testing for the event
         tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOffer(
             seller,
             offer,
@@ -664,7 +590,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, assistant.address);
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -676,7 +602,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Voucher clone contract
@@ -691,7 +617,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         await expect(tx)
           .to.emit(bosonVoucher, "OwnershipTransferred")
-          .withArgs(ethers.constants.AddressZero, operator.address);
+          .withArgs(ethers.constants.AddressZero, assistant.address);
       });
 
       it("should emit a SellerCreated and OfferCreated events with auth token", async function () {
@@ -700,7 +626,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer, testing for the event
         tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOffer(
             seller,
             offer,
@@ -716,7 +642,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, operator.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, assistant.address);
 
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -729,7 +655,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Voucher clone contract
@@ -744,7 +670,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         await expect(tx)
           .to.emit(bosonVoucher, "OwnershipTransferred")
-          .withArgs(ethers.constants.AddressZero, operator.address);
+          .withArgs(ethers.constants.AddressZero, assistant.address);
       });
 
       it("should update state", async function () {
@@ -753,7 +679,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOffer(
             seller,
             offer,
@@ -811,7 +737,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
-        expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+        expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
@@ -828,7 +754,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOffer(
             seller,
             offer,
@@ -857,7 +783,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
@@ -876,7 +802,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOffer(
             seller,
             offer,
@@ -905,7 +831,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
@@ -922,7 +848,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer, testing for the event
         tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOffer(
             seller,
             offer,
@@ -941,7 +867,7 @@ describe("IBosonOrchestrationHandler", function () {
             sellerStruct,
             calculateContractAddress(orchestrationHandler.address, "1"),
             emptyAuthTokenStruct,
-            operator.address
+            assistant.address
           );
 
         await expect(tx)
@@ -955,7 +881,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // wrong seller id should not exist
@@ -982,7 +908,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer, testing for the event
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndOffer(
               seller,
               offer,
@@ -1004,7 +930,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -1015,7 +941,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer, testing for the event
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndOffer(
               seller,
               offer,
@@ -1037,7 +963,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -1056,7 +982,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer, testing for the event
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndOffer(
               seller,
               offer,
@@ -1078,7 +1004,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -1092,7 +1018,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer, testing for the event
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndOffer(
               seller,
               offer,
@@ -1114,7 +1040,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -1125,7 +1051,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer, testing for the event
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndOffer(
               seller,
               offer,
@@ -1147,7 +1073,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -1155,7 +1081,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer in native currency
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndOffer(
               seller,
               offer,
@@ -1177,7 +1103,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // create another offer, now with bosonToken as exchange token
@@ -1232,7 +1158,8 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, OfferCreated and RangeReserved events with auth token", async function () {
@@ -1241,7 +1168,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Create a seller and a preminted offer, testing for the event
           tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndPremintedOffer(
               seller,
               offer,
@@ -1249,6 +1176,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               authToken,
               voucherInitValues,
               agentId
@@ -1258,7 +1186,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(tx)
             .to.emit(orchestrationHandler, "SellerCreated")
-            .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, operator.address);
+            .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, assistant.address);
 
           await expect(tx)
             .to.emit(orchestrationHandler, "OfferCreated")
@@ -1271,12 +1199,12 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
 
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
           // Voucher clone contract
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
@@ -1292,7 +1220,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(tx)
             .to.emit(bosonVoucher, "OwnershipTransferred")
-            .withArgs(ethers.constants.AddressZero, operator.address);
+            .withArgs(ethers.constants.AddressZero, assistant.address);
         });
 
         it("should update state", async function () {
@@ -1301,7 +1229,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Create a seller and a preminted offer
           await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndPremintedOffer(
               seller,
               offer,
@@ -1309,6 +1237,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               authToken,
               voucherInitValues,
               agentId
@@ -1363,7 +1292,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
           bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
-          expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+          expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
@@ -1384,7 +1313,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to orchestrate, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1405,7 +1334,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a offer expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1426,7 +1355,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a offer expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1448,7 +1377,7 @@ describe("IBosonOrchestrationHandler", function () {
           const reservedRangeLength = offer.quantityAvailable;
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndPremintedOffer(
                 seller,
                 offer,
@@ -1456,6 +1385,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 emptyAuthToken,
                 voucherInitValues,
                 agentId
@@ -1469,7 +1399,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1485,13 +1415,13 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("addresses are not unique to this seller Id", async function () {
           // Create a seller
-          await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
+          await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-          // Attempt to create a seller with non-unique admin, operator and clerk, expecting revert
-          // N.B. operator and admin are tested together, since they must be the same
+          // Attempt to create a seller with non-unique admin, assistant and clerk, expecting revert
+          // N.B. assistant and admin are tested together, since they must be the same
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1506,7 +1436,7 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Caller is not the supplied admin", async function () {
-          seller.operator = rando.address;
+          seller.assistant = rando.address;
           seller.clerk = rando.address;
 
           // Attempt to create a seller and an offer, expecting revert
@@ -1528,7 +1458,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Caller does not own supplied auth token", async function () {
           seller.admin = ethers.constants.AddressZero;
-          seller.operator = rando.address;
+          seller.assistant = rando.address;
           seller.clerk = rando.address;
 
           // Attempt to create a seller and an offer, expecting revert
@@ -1548,7 +1478,7 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
 
-        it("Caller is not the supplied operator", async function () {
+        it("Caller is not the supplied assistant", async function () {
           seller.admin = rando.address;
           seller.clerk = rando.address;
 
@@ -1566,12 +1496,12 @@ describe("IBosonOrchestrationHandler", function () {
                 voucherInitValues,
                 agentId
               )
-          ).to.revertedWith(RevertReasons.NOT_OPERATOR_AND_CLERK);
+          ).to.revertedWith(RevertReasons.NOT_ASSISTANT_AND_CLERK);
         });
 
         it("Caller is not the supplied clerk", async function () {
           seller.admin = rando.address;
-          seller.operator = rando.address;
+          seller.assistant = rando.address;
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -1587,14 +1517,14 @@ describe("IBosonOrchestrationHandler", function () {
                 voucherInitValues,
                 agentId
               )
-          ).to.revertedWith(RevertReasons.NOT_OPERATOR_AND_CLERK);
+          ).to.revertedWith(RevertReasons.NOT_ASSISTANT_AND_CLERK);
         });
 
         it("admin address is NOT zero address and AuthTokenType is NOT None", async function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1614,7 +1544,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1633,12 +1563,12 @@ describe("IBosonOrchestrationHandler", function () {
           seller.admin = ethers.constants.AddressZero;
 
           // Create a seller
-          await accountHandler.connect(operator).createSeller(seller, authToken, voucherInitValues);
+          await accountHandler.connect(assistant).createSeller(seller, authToken, voucherInitValues);
 
           // Attempt to create a seller with non-unique authToken and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1660,7 +1590,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1687,7 +1617,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1708,7 +1638,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1729,7 +1659,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1751,7 +1681,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1773,7 +1703,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1795,7 +1725,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1818,7 +1748,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1839,7 +1769,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1860,7 +1790,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1881,7 +1811,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1902,7 +1832,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1923,7 +1853,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1950,7 +1880,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -1972,7 +1902,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -2003,7 +1933,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -2029,7 +1959,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -2050,7 +1980,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -2071,7 +2001,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndPremintedOffer(
                 seller,
                 offer,
@@ -2079,6 +2009,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 emptyAuthToken,
                 voucherInitValues,
                 agentId
@@ -2093,7 +2024,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndPremintedOffer(
                 seller,
                 offer,
@@ -2101,6 +2032,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 emptyAuthToken,
                 voucherInitValues,
                 agentId
@@ -2110,12 +2042,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Reserved range length is greater than maximum allowed range length", async function () {
           // Set reserved range length to more than maximum allowed range length
-          let reservedRangeLength = ethers.BigNumber.from(2).pow(128).sub(1);
+          let reservedRangeLength = ethers.BigNumber.from(2).pow(64).sub(1);
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndPremintedOffer(
                 seller,
                 offer,
@@ -2123,6 +2055,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 emptyAuthToken,
                 voucherInitValues,
                 agentId
@@ -2157,7 +2090,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("should emit a SellerCreated and OfferCreated events", async function () {
           // Create a seller and an offer, testing for the event
           const tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndOffer(
               seller,
               offer,
@@ -2176,7 +2109,7 @@ describe("IBosonOrchestrationHandler", function () {
               sellerStruct,
               calculateContractAddress(orchestrationHandler.address, "1"),
               emptyAuthTokenStruct,
-              operator.address
+              assistant.address
             );
 
           await expect(tx)
@@ -2190,7 +2123,7 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
         });
 
@@ -2205,7 +2138,7 @@ describe("IBosonOrchestrationHandler", function () {
             // Attempt to Create an offer, expecting revert
             await expect(
               orchestrationHandler
-                .connect(operator)
+                .connect(assistant)
                 .createSellerAndOffer(
                   seller,
                   offer,
@@ -2224,7 +2157,7 @@ describe("IBosonOrchestrationHandler", function () {
             let id = "3"; // argument sent to contract for createAgent will be ignored
 
             // Create a valid agent, then set fields in tests directly
-            agent = mockAgent(operator.address);
+            agent = mockAgent(assistant.address);
             agent.id = id;
             agent.feePercentage = "3000"; // 30%
             expect(agent.isValid()).is.true;
@@ -2233,12 +2166,12 @@ describe("IBosonOrchestrationHandler", function () {
             await accountHandler.connect(rando).createAgent(agent);
 
             //Change protocol fee after creating agent
-            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
+            await configHandler.connect(deployer).setProtocolFeePercentage("1100"); //11%
 
             // Attempt to Create an offer, expecting revert
             await expect(
               orchestrationHandler
-                .connect(operator)
+                .connect(assistant)
                 .createSellerAndOffer(
                   seller,
                   offer,
@@ -2277,13 +2210,13 @@ describe("IBosonOrchestrationHandler", function () {
         groupStruct = group.toStruct();
 
         // create a seller
-        await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
       });
 
       it("should emit an OfferCreated and GroupCreated events", async function () {
         // Create an offer with condition, testing for the events
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId);
 
         // OfferCreated event
@@ -2298,7 +2231,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -2312,14 +2245,14 @@ describe("IBosonOrchestrationHandler", function () {
 
         assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
         assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
-        assert.equal(eventGroupCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
+        assert.equal(eventGroupCreated.executedBy.toString(), assistant.address, "Executed by is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
 
       it("should update state", async function () {
         // Create an offer with condition
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId);
 
         // Get the offer as a struct
@@ -2372,7 +2305,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, testing for the events
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId);
 
         // OfferCreated event
@@ -2387,7 +2320,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -2410,7 +2343,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, testing for the events
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId);
 
         // OfferCreated event
@@ -2425,7 +2358,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -2457,7 +2390,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, testing for the events
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -2470,7 +2403,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -2484,7 +2417,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, testing for the events
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -2497,7 +2430,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -2508,7 +2441,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, testing for the events
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -2521,7 +2454,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -2529,7 +2462,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition in native currency
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -2542,7 +2475,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // create another offer, now with bosonToken as exchange token
@@ -2560,7 +2493,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition in boson token
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -2573,7 +2506,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -2585,7 +2518,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, testing for the events
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
@@ -2611,7 +2544,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("should emit an OfferCreated and GroupCreated events", async function () {
           // Create an offer with condition, testing for the events
           const tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId);
 
           // OfferCreated event
@@ -2626,7 +2559,7 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
 
           // Events with structs that contain arrays must be tested differently
@@ -2640,7 +2573,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
           assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
-          assert.equal(eventGroupCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
+          assert.equal(eventGroupCreated.executedBy.toString(), assistant.address, "Executed by is incorrect");
           assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
         });
       });
@@ -2653,24 +2586,27 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", bosonVoucher.address);
         });
 
         it("should emit an OfferCreated, a GroupCreated and a RangeReserved events", async function () {
           // Create a preminted offer with condition, testing for the events
 
           const tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createPremintedOfferWithCondition(
               offer,
               offerDates,
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              bosonVoucher.address,
               condition,
               agentId
             );
@@ -2687,13 +2623,13 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
 
           // RangeReserved event (on protocol contract)
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, bosonVoucher.address, assistant.address);
 
           // Events with structs that contain arrays must be tested differently
           const txReceipt = await tx.wait();
@@ -2706,7 +2642,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
           assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
-          assert.equal(eventGroupCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
+          assert.equal(eventGroupCreated.executedBy.toString(), assistant.address, "Executed by is incorrect");
           assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
 
           // RangeReserved event (on voucher contract)
@@ -2716,13 +2652,14 @@ describe("IBosonOrchestrationHandler", function () {
         it("should update state", async function () {
           // Create a preminted offer with condition
           await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createPremintedOfferWithCondition(
               offer,
               offerDates,
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              bosonVoucher.address,
               condition,
               agentId
             );
@@ -2790,7 +2727,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create an offer expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOffer(
                 seller,
                 offer,
@@ -2811,7 +2748,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to orchestrate, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -2824,13 +2761,14 @@ describe("IBosonOrchestrationHandler", function () {
           const reservedRangeLength = offer.quantityAvailable;
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createPremintedOfferWithCondition(
                 offer,
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                bosonVoucher.address,
                 condition,
                 agentId
               )
@@ -2844,18 +2782,18 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a group, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
-        it("Caller not operator of any seller", async function () {
+        it("Caller not assistant of any seller", async function () {
           // Attempt to create an offer with condition, expecting revert
           await expect(
             orchestrationHandler
               .connect(rando)
               .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-          ).to.revertedWith(RevertReasons.NOT_OPERATOR);
+          ).to.revertedWith(RevertReasons.NOT_ASSISTANT);
         });
 
         it("Condition 'None' has some values in other fields", async function () {
@@ -2864,7 +2802,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create an offer with condition, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
@@ -2876,7 +2814,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create an offer with condition, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
@@ -2888,7 +2826,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create an offer with condition, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
@@ -2898,7 +2836,7 @@ describe("IBosonOrchestrationHandler", function () {
     context("👉 createOfferAddToGroup()", async function () {
       beforeEach(async function () {
         // create a seller
-        await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // The first group id
         nextGroupId = "1";
@@ -2927,7 +2865,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Create the offer
           await offerHandler
-            .connect(operator)
+            .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
           nextOfferId++;
@@ -2951,7 +2889,7 @@ describe("IBosonOrchestrationHandler", function () {
         expect(group.isValid()).is.true;
 
         // Create a group
-        await groupHandler.connect(operator).createGroup(group, condition);
+        await groupHandler.connect(assistant).createGroup(group, condition);
 
         // after another offer is added
         offer.id = nextOfferId.toString(); // not necessary as input parameter
@@ -2969,7 +2907,7 @@ describe("IBosonOrchestrationHandler", function () {
       it("should emit an OfferCreated and GroupUpdated events", async function () {
         // Create an offer, add it to the group, testing for the events
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId);
 
         // OfferCreated event
@@ -2984,7 +2922,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -3004,7 +2942,7 @@ describe("IBosonOrchestrationHandler", function () {
       it("should update state", async function () {
         // Create an offer, add it to the group
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId);
 
         // Get the offer as a struct
@@ -3057,7 +2995,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, add it to the group, testing for the events
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId);
 
         // OfferCreated event
@@ -3072,7 +3010,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -3095,7 +3033,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, add it to the group, testing for the events
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId);
 
         // OfferCreated event
@@ -3110,7 +3048,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -3142,7 +3080,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, add it to the group, testing for the events
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -3155,7 +3093,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -3169,7 +3107,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, add it to the group, testing for the events
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -3182,7 +3120,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -3193,7 +3131,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, add it to the group, testing for the events
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -3206,7 +3144,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -3214,7 +3152,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer in native currency
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -3227,7 +3165,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // create another offer, now with bosonToken as exchange token
@@ -3245,7 +3183,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer in boson token
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -3258,7 +3196,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -3270,7 +3208,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer in native currency
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
@@ -3296,7 +3234,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("should emit an OfferCreated and GroupUpdated events", async function () {
           // Create an offer, add it to the group, testing for the events
           const tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId);
 
           // OfferCreated event
@@ -3311,7 +3249,7 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
 
           // Events with structs that contain arrays must be tested differently
@@ -3337,7 +3275,8 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
@@ -3347,13 +3286,14 @@ describe("IBosonOrchestrationHandler", function () {
         it("should emit an OfferCreated, a GroupUpdated and a RangeReserved events", async function () {
           // Create a preminted offer, add it to the group, testing for the events
           const tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createPremintedOfferAddToGroup(
               offer,
               offerDates,
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               nextGroupId,
               agentId
             );
@@ -3370,13 +3310,13 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
 
           // RangeReserved event (on protocol contract)
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
           // Events with structs that contain arrays must be tested differently
           const txReceipt = await tx.wait();
@@ -3398,13 +3338,14 @@ describe("IBosonOrchestrationHandler", function () {
         it("should update state", async function () {
           // Create a preminted offer, add it to the group
           await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createPremintedOfferAddToGroup(
               offer,
               offerDates,
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               nextGroupId,
               agentId
             );
@@ -3472,7 +3413,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to orchestrate expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -3484,7 +3425,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a offer expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -3497,13 +3438,14 @@ describe("IBosonOrchestrationHandler", function () {
           const reservedRangeLength = offer.quantityAvailable;
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createPremintedOfferAddToGroup(
                 offer,
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 nextGroupId,
                 agentId
               )
@@ -3517,7 +3459,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a group expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -3529,7 +3471,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, invalidGroupId, agentId)
           ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
 
@@ -3539,7 +3481,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, invalidGroupId, agentId)
           ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
         });
@@ -3550,7 +3492,7 @@ describe("IBosonOrchestrationHandler", function () {
             orchestrationHandler
               .connect(rando)
               .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
-          ).to.revertedWith(RevertReasons.NOT_OPERATOR);
+          ).to.revertedWith(RevertReasons.NOT_ASSISTANT);
         });
       });
     });
@@ -3582,16 +3524,16 @@ describe("IBosonOrchestrationHandler", function () {
         twinStruct = twin.toStruct();
 
         // create a seller
-        await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+        await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
       });
 
       it("should emit an OfferCreated, a TwinCreated and a BundleCreated events", async function () {
         // Create an offer, a twin and a bundle, testing for the events
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId);
 
         // OfferCreated event
@@ -3606,7 +3548,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -3636,7 +3578,7 @@ describe("IBosonOrchestrationHandler", function () {
       it("should update state", async function () {
         // Create an offer, a twin and a bundle
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId);
 
         // Get the offer as a struct
@@ -3693,7 +3635,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, a twin and a bundle, testing for the events
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId);
 
         // OfferCreated event
@@ -3708,7 +3650,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -3746,7 +3688,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, a twin and a bundle, testing for the events
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId);
 
         // OfferCreated event
@@ -3761,7 +3703,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -3807,7 +3749,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -3820,7 +3762,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -3834,7 +3776,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -3847,7 +3789,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -3860,7 +3802,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -3873,7 +3815,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -3881,7 +3823,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer in native currency
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -3894,7 +3836,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // create another offer, now with bosonToken as exchange token
@@ -3912,7 +3854,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer in boson token
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -3925,7 +3867,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -3937,7 +3879,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
@@ -3963,7 +3905,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("should emit an OfferCreated, a TwinCreated and a BundleCreated events", async function () {
           // Create an offer, a twin and a bundle, testing for the events
           const tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId);
 
           // OfferCreated event
@@ -3978,7 +3920,7 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
 
           // Events with structs that contain arrays must be tested differently
@@ -4014,23 +3956,26 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", bosonVoucher.address);
         });
 
         it("should emit an OfferCreated, a TwinCreated, a BundleCreated and a RangeReserved events", async function () {
           // Create a preminted offer, a twin and a bundle, testing for the events
           const tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createPremintedOfferAndTwinWithBundle(
               offer,
               offerDates,
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              bosonVoucher.address,
               twin,
               agentId
             );
@@ -4047,13 +3992,13 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
 
           // RangeReserved event (on protocol contract)
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, bosonVoucher.address, assistant.address);
 
           // Events with structs that contain arrays must be tested differently
           const txReceipt = await tx.wait();
@@ -4085,13 +4030,14 @@ describe("IBosonOrchestrationHandler", function () {
         it("should update state", async function () {
           // Create a preminted offer, a twin and a bundle
           await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createPremintedOfferAndTwinWithBundle(
               offer,
               offerDates,
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              bosonVoucher.address,
               twin,
               agentId
             );
@@ -4162,7 +4108,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to orchestrate expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -4174,7 +4120,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -4186,7 +4132,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a bundle, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -4198,7 +4144,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a twin, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -4211,13 +4157,14 @@ describe("IBosonOrchestrationHandler", function () {
           const reservedRangeLength = offer.quantityAvailable;
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createPremintedOfferAndTwinWithBundle(
                 offer,
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                bosonVoucher.address,
                 twin,
                 agentId
               )
@@ -4226,14 +4173,14 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should revert if protocol is not approved to transfer the ERC20 token", async function () {
           // Approving the twinHandler contract to transfer seller's tokens
-          await bosonToken.connect(operator).approve(twinHandler.address, 0); // approving the twin handler
+          await bosonToken.connect(assistant).approve(twinHandler.address, 0); // approving the twin handler
 
           //ERC20 token address
           twin.tokenAddress = bosonToken.address;
 
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
           ).to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
         });
@@ -4244,7 +4191,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
           ).to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
         });
@@ -4255,7 +4202,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
           ).to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
         });
@@ -4266,7 +4213,7 @@ describe("IBosonOrchestrationHandler", function () {
 
             await expect(
               orchestrationHandler
-                .connect(operator)
+                .connect(assistant)
                 .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
             ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
           });
@@ -4276,7 +4223,7 @@ describe("IBosonOrchestrationHandler", function () {
 
             await expect(
               orchestrationHandler
-                .connect(operator)
+                .connect(assistant)
                 .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
             ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
           });
@@ -4286,7 +4233,7 @@ describe("IBosonOrchestrationHandler", function () {
 
             await expect(
               orchestrationHandler
-                .connect(operator)
+                .connect(assistant)
                 .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
             ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
           });
@@ -4337,16 +4284,16 @@ describe("IBosonOrchestrationHandler", function () {
         twinStruct = twin.toStruct();
 
         // create a seller
-        await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+        await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
       });
 
       it("should emit an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated events", async function () {
         // Create an offer with condition, twin and bundle
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferWithConditionAndTwinAndBundle(
             offer,
             offerDates,
@@ -4369,7 +4316,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -4409,7 +4356,7 @@ describe("IBosonOrchestrationHandler", function () {
       it("should update state", async function () {
         // Create an offer with condition, twin and bundle
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferWithConditionAndTwinAndBundle(
             offer,
             offerDates,
@@ -4493,7 +4440,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, twin and bundle
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferWithConditionAndTwinAndBundle(
             offer,
             offerDates,
@@ -4516,7 +4463,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -4564,7 +4511,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, twin and bundle
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createOfferWithConditionAndTwinAndBundle(
             offer,
             offerDates,
@@ -4587,7 +4534,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -4643,7 +4590,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferWithConditionAndTwinAndBundle(
               offer,
               offerDates,
@@ -4664,7 +4611,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -4678,7 +4625,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferWithConditionAndTwinAndBundle(
               offer,
               offerDates,
@@ -4699,7 +4646,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -4712,7 +4659,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferWithConditionAndTwinAndBundle(
               offer,
               offerDates,
@@ -4733,7 +4680,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -4741,7 +4688,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer in native currency
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferWithConditionAndTwinAndBundle(
               offer,
               offerDates,
@@ -4762,7 +4709,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // create another offer, now with bosonToken as exchange token
@@ -4780,7 +4727,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer in boson token
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferWithConditionAndTwinAndBundle(
               offer,
               offerDates,
@@ -4801,7 +4748,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
       });
 
@@ -4813,7 +4760,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
           orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferWithConditionAndTwinAndBundle(
               offer,
               offerDates,
@@ -4848,7 +4795,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("should emit an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated events", async function () {
           // Create an offer with condition, twin and bundle
           const tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createOfferWithConditionAndTwinAndBundle(
               offer,
               offerDates,
@@ -4871,7 +4818,7 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
 
           // Events with structs that contain arrays must be tested differently
@@ -4917,7 +4864,8 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
@@ -4927,13 +4875,14 @@ describe("IBosonOrchestrationHandler", function () {
         it("should emit an OfferCreated, a GroupCreated, a TwinCreated, a BundleCreated and a RangeReserved events", async function () {
           // Create a preminted offer with condition, twin and bundle
           const tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createPremintedOfferWithConditionAndTwinAndBundle(
               offer,
               offerDates,
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               condition,
               twin,
               agentId
@@ -4951,13 +4900,13 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
 
           // RangeReserved event (on protocol contract)
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
           // Events with structs that contain arrays must be tested differently
           const txReceipt = await tx.wait();
@@ -4999,13 +4948,14 @@ describe("IBosonOrchestrationHandler", function () {
         it("should update state", async function () {
           // Create a preminted offer with condition, twin and bundle
           await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createPremintedOfferWithConditionAndTwinAndBundle(
               offer,
               offerDates,
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               condition,
               twin,
               agentId
@@ -5096,7 +5046,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to orchestrate expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferWithConditionAndTwinAndBundle(
                 offer,
                 offerDates,
@@ -5116,7 +5066,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferWithConditionAndTwinAndBundle(
                 offer,
                 offerDates,
@@ -5136,7 +5086,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a group, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferWithConditionAndTwinAndBundle(
                 offer,
                 offerDates,
@@ -5156,7 +5106,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a bundle, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferWithConditionAndTwinAndBundle(
                 offer,
                 offerDates,
@@ -5176,7 +5126,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a twin, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createOfferWithConditionAndTwinAndBundle(
                 offer,
                 offerDates,
@@ -5197,13 +5147,14 @@ describe("IBosonOrchestrationHandler", function () {
           const reservedRangeLength = offer.quantityAvailable;
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createPremintedOfferWithConditionAndTwinAndBundle(
                 offer,
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 condition,
                 twin,
                 agentId
@@ -5237,7 +5188,7 @@ describe("IBosonOrchestrationHandler", function () {
       it("should emit a SellerCreated, an OfferCreated, and a GroupCreated event", async function () {
         // Create a seller and an offer with condition, testing for the events
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOfferWithCondition(
             seller,
             offer,
@@ -5255,7 +5206,7 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, assistant.address);
 
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -5268,7 +5219,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -5296,13 +5247,13 @@ describe("IBosonOrchestrationHandler", function () {
 
         await expect(tx)
           .to.emit(bosonVoucher, "OwnershipTransferred")
-          .withArgs(ethers.constants.AddressZero, operator.address);
+          .withArgs(ethers.constants.AddressZero, assistant.address);
       });
 
       it("should update state", async function () {
         // Create a seller and an offer with condition
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOfferWithCondition(
             seller,
             offer,
@@ -5380,7 +5331,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
-        expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+        expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
@@ -5395,7 +5346,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer with condition
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOfferWithCondition(
             seller,
             offer,
@@ -5426,7 +5377,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
@@ -5443,7 +5394,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer with condition
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOfferWithCondition(
             seller,
             offer,
@@ -5474,7 +5425,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
@@ -5491,7 +5442,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer with condition, testing for the events
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOfferWithCondition(
             seller,
             offer,
@@ -5512,7 +5463,7 @@ describe("IBosonOrchestrationHandler", function () {
             sellerStruct,
             calculateContractAddress(orchestrationHandler.address, "1"),
             emptyAuthTokenStruct,
-            operator.address
+            assistant.address
           );
 
         await expect(tx)
@@ -5526,7 +5477,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -5570,7 +5521,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("should emit a SellerCreated, an OfferCreated, and a GroupCreated event", async function () {
           // Create a seller and an offer with condition, testing for the events
           const tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndOfferWithCondition(
               seller,
               offer,
@@ -5591,7 +5542,7 @@ describe("IBosonOrchestrationHandler", function () {
               sellerStruct,
               calculateContractAddress(orchestrationHandler.address, "1"),
               emptyAuthTokenStruct,
-              operator.address
+              assistant.address
             );
 
           await expect(tx)
@@ -5605,7 +5556,7 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
 
           // Events with structs that contain arrays must be tested differently
@@ -5631,13 +5582,14 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, an OfferCreated, a GroupCreated and a RangeReserved event", async function () {
           // Create a seller and a preminted offer with condition, testing for the events
           const tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndPremintedOfferWithCondition(
               seller,
               offer,
@@ -5645,6 +5597,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               condition,
               emptyAuthToken,
               voucherInitValues,
@@ -5656,7 +5609,7 @@ describe("IBosonOrchestrationHandler", function () {
           // SellerCreated and OfferCreated RangeReserved events
           await expect(tx)
             .to.emit(orchestrationHandler, "SellerCreated")
-            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, assistant.address);
 
           await expect(tx)
             .to.emit(orchestrationHandler, "OfferCreated")
@@ -5669,12 +5622,12 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
 
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
           // Events with structs that contain arrays must be tested differently
           const txReceipt = await tx.wait();
@@ -5703,13 +5656,13 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(tx)
             .to.emit(bosonVoucher, "OwnershipTransferred")
-            .withArgs(ethers.constants.AddressZero, operator.address);
+            .withArgs(ethers.constants.AddressZero, assistant.address);
         });
 
         it("should update state", async function () {
           // Create a seller and an offer with condition
           await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndPremintedOfferWithCondition(
               seller,
               offer,
@@ -5717,6 +5670,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               condition,
               emptyAuthToken,
               voucherInitValues,
@@ -5791,7 +5745,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
           bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
-          expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+          expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
@@ -5812,7 +5766,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to orchestrate expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOfferWithCondition(
                 seller,
                 offer,
@@ -5834,7 +5788,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOfferWithCondition(
                 seller,
                 offer,
@@ -5856,7 +5810,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOfferWithCondition(
                 seller,
                 offer,
@@ -5878,7 +5832,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create an group, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOfferWithCondition(
                 seller,
                 offer,
@@ -5901,7 +5855,7 @@ describe("IBosonOrchestrationHandler", function () {
           const reservedRangeLength = offer.quantityAvailable;
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndPremintedOfferWithCondition(
                 seller,
                 offer,
@@ -5909,6 +5863,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 condition,
                 emptyAuthToken,
                 voucherInitValues,
@@ -5949,11 +5904,11 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should emit a SellerCreated, an OfferCreated, a TwinCreated and a BundleCreated event", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+        await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOfferAndTwinWithBundle(
             seller,
             offer,
@@ -5971,7 +5926,7 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, assistant.address);
 
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -5984,7 +5939,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -5998,7 +5953,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         assert.equal(eventTwinCreated.twinId.toString(), twin.id, "Twin Id is incorrect");
         assert.equal(eventTwinCreated.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
-        assert.equal(eventTwinCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
+        assert.equal(eventTwinCreated.executedBy.toString(), assistant.address, "Executed by is incorrect");
         assert.equal(twinInstance.toString(), twin.toString(), "Twin struct is incorrect");
 
         // BundleCreated event
@@ -6009,7 +5964,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
         assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
-        assert.equal(eventBundleCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
+        assert.equal(eventBundleCreated.executedBy.toString(), assistant.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
 
         // Voucher clone contract
@@ -6024,16 +5979,16 @@ describe("IBosonOrchestrationHandler", function () {
 
         await expect(tx)
           .to.emit(bosonVoucher, "OwnershipTransferred")
-          .withArgs(ethers.constants.AddressZero, operator.address);
+          .withArgs(ethers.constants.AddressZero, assistant.address);
       });
 
       it("should update state", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+        await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOfferAndTwinWithBundle(
             seller,
             offer,
@@ -6114,7 +6069,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
-        expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+        expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
@@ -6128,11 +6083,11 @@ describe("IBosonOrchestrationHandler", function () {
         expect(voucherInitValues.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+        await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOfferAndTwinWithBundle(
             seller,
             offer,
@@ -6163,7 +6118,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
@@ -6179,11 +6134,11 @@ describe("IBosonOrchestrationHandler", function () {
         expect(voucherInitValues.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+        await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOfferAndTwinWithBundle(
             seller,
             offer,
@@ -6214,7 +6169,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
@@ -6226,7 +6181,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should ignore any provided ids and assign the next available", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+        await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
         const sellerId = seller.id;
         seller.id = "333";
@@ -6235,7 +6190,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOfferAndTwinWithBundle(
             seller,
             offer,
@@ -6256,7 +6211,7 @@ describe("IBosonOrchestrationHandler", function () {
             sellerStruct,
             calculateContractAddress(orchestrationHandler.address, "1"),
             emptyAuthTokenStruct,
-            operator.address
+            assistant.address
           );
 
         await expect(tx)
@@ -6270,7 +6225,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -6328,11 +6283,11 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should emit a SellerCreated, an OfferCreated, a TwinCreated and a BundleCreated event", async function () {
           // Approving the twinHandler contract to transfer seller's tokens
-          await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+          await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
           // Create a seller, an offer with condition and a twin with bundle, testing for the events
           const tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndOfferAndTwinWithBundle(
               seller,
               offer,
@@ -6353,7 +6308,7 @@ describe("IBosonOrchestrationHandler", function () {
               sellerStruct,
               calculateContractAddress(orchestrationHandler.address, "1"),
               emptyAuthTokenStruct,
-              operator.address
+              assistant.address
             );
 
           await expect(tx)
@@ -6367,7 +6322,7 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
 
           // Events with structs that contain arrays must be tested differently
@@ -6381,7 +6336,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           assert.equal(eventTwinCreated.twinId.toString(), twin.id, "Twin Id is incorrect");
           assert.equal(eventTwinCreated.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
-          assert.equal(eventTwinCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
+          assert.equal(eventTwinCreated.executedBy.toString(), assistant.address, "Executed by is incorrect");
           assert.equal(twinInstance.toString(), twin.toString(), "Twin struct is incorrect");
 
           // BundleCreated event
@@ -6392,7 +6347,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
           assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
-          assert.equal(eventBundleCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
+          assert.equal(eventBundleCreated.executedBy.toString(), assistant.address, "Executed by is incorrect");
           assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
         });
       });
@@ -6405,16 +6360,17 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, an OfferCreated, a TwinCreated, a BundleCreated and RangeReserved event", async function () {
           // Approving the twinHandler contract to transfer seller's tokens
-          await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+          await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
           // Create a seller, a preminted offer with condition and a twin with bundle, testing for the events
           const tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndPremintedOfferAndTwinWithBundle(
               seller,
               offer,
@@ -6422,6 +6378,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               twin,
               emptyAuthToken,
               voucherInitValues,
@@ -6433,7 +6390,7 @@ describe("IBosonOrchestrationHandler", function () {
           // SellerCreated, OfferCreated and RangeReserved events
           await expect(tx)
             .to.emit(orchestrationHandler, "SellerCreated")
-            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, assistant.address);
 
           await expect(tx)
             .to.emit(orchestrationHandler, "OfferCreated")
@@ -6446,12 +6403,12 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
 
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
           // Events with structs that contain arrays must be tested differently
           const txReceipt = await tx.wait();
@@ -6464,7 +6421,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           assert.equal(eventTwinCreated.twinId.toString(), twin.id, "Twin Id is incorrect");
           assert.equal(eventTwinCreated.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
-          assert.equal(eventTwinCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
+          assert.equal(eventTwinCreated.executedBy.toString(), assistant.address, "Executed by is incorrect");
           assert.equal(twinInstance.toString(), twin.toString(), "Twin struct is incorrect");
 
           // BundleCreated event
@@ -6475,7 +6432,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
           assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
-          assert.equal(eventBundleCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
+          assert.equal(eventBundleCreated.executedBy.toString(), assistant.address, "Executed by is incorrect");
           assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
 
           // Voucher clone contract
@@ -6492,16 +6449,16 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(tx)
             .to.emit(bosonVoucher, "OwnershipTransferred")
-            .withArgs(ethers.constants.AddressZero, operator.address);
+            .withArgs(ethers.constants.AddressZero, assistant.address);
         });
 
         it("should update state", async function () {
           // Approving the twinHandler contract to transfer seller's tokens
-          await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+          await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
           // Create a seller, a preminted offer with condition and a twin with bundle, testing for the events
           await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndPremintedOfferAndTwinWithBundle(
               seller,
               offer,
@@ -6509,6 +6466,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               twin,
               emptyAuthToken,
               voucherInitValues,
@@ -6586,7 +6544,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
           bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
-          expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+          expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
@@ -6607,7 +6565,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to orchestrate expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOfferAndTwinWithBundle(
                 seller,
                 offer,
@@ -6629,7 +6587,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOfferAndTwinWithBundle(
                 seller,
                 offer,
@@ -6651,7 +6609,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOfferAndTwinWithBundle(
                 seller,
                 offer,
@@ -6673,7 +6631,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a bundle, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOfferAndTwinWithBundle(
                 seller,
                 offer,
@@ -6695,7 +6653,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a twin expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOfferAndTwinWithBundle(
                 seller,
                 offer,
@@ -6715,13 +6673,13 @@ describe("IBosonOrchestrationHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Approve twin transfer
-          await bosonToken.connect(operator).approve(twinHandler.address, 1);
+          await bosonToken.connect(assistant).approve(twinHandler.address, 1);
 
           // Attempt to create a twin expecting revert
           const reservedRangeLength = offer.quantityAvailable;
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndPremintedOfferAndTwinWithBundle(
                 seller,
                 offer,
@@ -6729,6 +6687,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                assistant.address,
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
@@ -6784,11 +6743,11 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should emit a SellerCreated, an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+        await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
         // Create a seller, an offer with condition, twin and bundle
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOfferWithConditionAndTwinAndBundle(
             seller,
             offer,
@@ -6807,7 +6766,7 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, assistant.address);
 
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -6820,7 +6779,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -6868,16 +6827,16 @@ describe("IBosonOrchestrationHandler", function () {
 
         await expect(tx)
           .to.emit(bosonVoucher, "OwnershipTransferred")
-          .withArgs(ethers.constants.AddressZero, operator.address);
+          .withArgs(ethers.constants.AddressZero, assistant.address);
       });
 
       it("should update state", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+        await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
         // Create a seller, an offer with condition, twin and bundle
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOfferWithConditionAndTwinAndBundle(
             seller,
             offer,
@@ -6978,7 +6937,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
-        expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+        expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
@@ -6992,11 +6951,11 @@ describe("IBosonOrchestrationHandler", function () {
         expect(voucherInitValues.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+        await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
         // Create a seller, an offer with condition, twin and bundle
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOfferWithConditionAndTwinAndBundle(
             seller,
             offer,
@@ -7028,7 +6987,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
@@ -7044,11 +7003,11 @@ describe("IBosonOrchestrationHandler", function () {
         expect(voucherInitValues.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+        await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
         // Create a seller, an offer with condition, twin and bundle
         await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOfferWithConditionAndTwinAndBundle(
             seller,
             offer,
@@ -7080,7 +7039,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
@@ -7092,7 +7051,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should ignore any provided ids and assign the next available", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+        await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
         const sellerId = seller.id;
         seller.id = "333";
@@ -7101,7 +7060,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller, an offer with condition, twin and bundle
         const tx = await orchestrationHandler
-          .connect(operator)
+          .connect(assistant)
           .createSellerAndOfferWithConditionAndTwinAndBundle(
             seller,
             offer,
@@ -7123,7 +7082,7 @@ describe("IBosonOrchestrationHandler", function () {
             sellerStruct,
             calculateContractAddress(orchestrationHandler.address, "1"),
             emptyAuthTokenStruct,
-            operator.address
+            assistant.address
           );
 
         await expect(tx)
@@ -7137,7 +7096,7 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
-            operator.address
+            assistant.address
           );
 
         // Events with structs that contain arrays must be tested differently
@@ -7206,13 +7165,13 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should emit a SellerCreated, an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event", async function () {
           // Approving the twinHandler contract to transfer seller's tokens
-          await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+          await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
 
           // Create a seller, an offer with condition, twin and bundle
           const tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndOfferWithConditionAndTwinAndBundle(
               seller,
               offer,
@@ -7229,7 +7188,7 @@ describe("IBosonOrchestrationHandler", function () {
           // SellerCreated and OfferCreated events
           await expect(tx)
             .to.emit(orchestrationHandler, "SellerCreated")
-            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, assistant.address);
 
           await expect(tx)
             .to.emit(orchestrationHandler, "OfferCreated")
@@ -7242,7 +7201,7 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
 
           // Events with structs that contain arrays must be tested differently
@@ -7290,7 +7249,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(tx)
             .to.emit(bosonVoucher, "OwnershipTransferred")
-            .withArgs(ethers.constants.AddressZero, operator.address);
+            .withArgs(ethers.constants.AddressZero, assistant.address);
         });
       });
 
@@ -7302,16 +7261,17 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(nextOfferId.toString(), firstTokenId.toString(), reservedRangeLength.toString(), "0", "0");
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, an OfferCreated, a GroupCreated, a TwinCreated, a BundleCreated and a RangeReserved event", async function () {
           // Approving the twinHandler contract to transfer seller's tokens
-          await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+          await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
           // Create a seller, a preminted offer with condition, twin and bundle
           const tx = await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndPremintedOfferWithConditionAndTwinAndBundle(
               seller,
               offer,
@@ -7319,6 +7279,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               condition,
               twin,
               emptyAuthToken,
@@ -7331,7 +7292,7 @@ describe("IBosonOrchestrationHandler", function () {
           // SellerCreated, OfferCreated and RangeReserved events
           await expect(tx)
             .to.emit(orchestrationHandler, "SellerCreated")
-            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, assistant.address);
 
           await expect(tx)
             .to.emit(orchestrationHandler, "OfferCreated")
@@ -7344,12 +7305,12 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolutionTermsStruct,
               offerFeesStruct,
               agentId,
-              operator.address
+              assistant.address
             );
 
           await expect(tx)
             .to.emit(orchestrationHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, operator.address);
+            .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
           // Events with structs that contain arrays must be tested differently
           const txReceipt = await tx.wait();
@@ -7398,16 +7359,16 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(tx)
             .to.emit(bosonVoucher, "OwnershipTransferred")
-            .withArgs(ethers.constants.AddressZero, operator.address);
+            .withArgs(ethers.constants.AddressZero, assistant.address);
         });
 
         it("should update state", async function () {
           // Approving the twinHandler contract to transfer seller's tokens
-          await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+          await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
 
           // Create a seller, a preminted offer with condition, twin and bundle
           await orchestrationHandler
-            .connect(operator)
+            .connect(assistant)
             .createSellerAndPremintedOfferWithConditionAndTwinAndBundle(
               seller,
               offer,
@@ -7415,6 +7376,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolver.id,
               reservedRangeLength,
+              assistant.address,
               condition,
               twin,
               emptyAuthToken,
@@ -7512,7 +7474,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
           bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
-          expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+          expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
@@ -7533,7 +7495,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to orchestrate expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOfferWithConditionAndTwinAndBundle(
                 seller,
                 offer,
@@ -7556,7 +7518,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOfferWithConditionAndTwinAndBundle(
                 seller,
                 offer,
@@ -7579,7 +7541,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create an offer, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOfferWithConditionAndTwinAndBundle(
                 seller,
                 offer,
@@ -7602,7 +7564,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a group, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOfferWithConditionAndTwinAndBundle(
                 seller,
                 offer,
@@ -7625,7 +7587,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a twin expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOfferWithConditionAndTwinAndBundle(
                 seller,
                 offer,
@@ -7648,7 +7610,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a group, expecting revert
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndOfferWithConditionAndTwinAndBundle(
                 seller,
                 offer,
@@ -7669,13 +7631,13 @@ describe("IBosonOrchestrationHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Approve twin transfer
-          await bosonToken.connect(operator).approve(twinHandler.address, 1);
+          await bosonToken.connect(assistant).approve(twinHandler.address, 1);
 
           // Attempt to create a group, expecting revert
           const reservedRangeLength = offer.quantityAvailable;
           await expect(
             orchestrationHandler
-              .connect(operator)
+              .connect(assistant)
               .createSellerAndPremintedOfferWithConditionAndTwinAndBundle(
                 seller,
                 offer,
@@ -7683,6 +7645,7 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDurations,
                 disputeResolver.id,
                 reservedRangeLength,
+                bosonVoucher.address,
                 condition,
                 twin,
                 emptyAuthToken,

@@ -9,7 +9,7 @@ class Seller {
   /*
         struct Seller {
             uint256 id;
-            address operator;
+            address assistant;
             address admin;
             address clerk;
             address payable treasury;
@@ -17,9 +17,9 @@ class Seller {
         }
     */
 
-  constructor(id, operator, admin, clerk, treasury, active) {
+  constructor(id, assistant, admin, clerk, treasury, active) {
     this.id = id;
-    this.operator = operator;
+    this.assistant = assistant;
     this.admin = admin;
     this.clerk = clerk;
     this.treasury = treasury;
@@ -32,8 +32,8 @@ class Seller {
    * @returns {Seller}
    */
   static fromObject(o) {
-    const { id, operator, admin, clerk, treasury, active } = o;
-    return new Seller(id, operator, admin, clerk, treasury, active);
+    const { id, assistant, admin, clerk, treasury, active } = o;
+    return new Seller(id, assistant, admin, clerk, treasury, active);
   }
 
   /**
@@ -42,14 +42,14 @@ class Seller {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let id, operator, admin, clerk, treasury, active;
+    let id, assistant, admin, clerk, treasury, active;
 
     // destructure struct
-    [id, operator, admin, clerk, treasury, active] = struct;
+    [id, assistant, admin, clerk, treasury, active] = struct;
 
     return Seller.fromObject({
       id: id.toString(),
-      operator,
+      assistant,
       admin,
       clerk,
       treasury,
@@ -78,7 +78,7 @@ class Seller {
    * @returns {string}
    */
   toStruct() {
-    return [this.id, this.operator, this.admin, this.clerk, this.treasury, this.active];
+    return [this.id, this.assistant, this.admin, this.clerk, this.treasury, this.active];
   }
 
   /**
@@ -99,12 +99,12 @@ class Seller {
   }
 
   /**
-   * Is this Seller instance's operator field valid?
+   * Is this Seller instance's assistant field valid?
    * Must be a eip55 compliant Ethereum address
    * @returns {boolean}
    */
-  operatorIsValid() {
-    return addressIsValid(this.operator);
+  assistantIsValid() {
+    return addressIsValid(this.assistant);
   }
 
   /**
@@ -149,7 +149,7 @@ class Seller {
   isValid() {
     return (
       this.idIsValid() &&
-      this.operatorIsValid() &&
+      this.assistantIsValid() &&
       this.adminIsValid() &&
       this.clerkIsValid() &&
       this.treasuryIsValid() &&

@@ -10,7 +10,7 @@ class DisputeResolver {
         struct DisputeResolver {
           uint256 id;
           uint256 escalationResponsePeriod;
-          address operator;
+          address assistant;
           address admin;
           address clerk;
           address payable treasury;
@@ -19,10 +19,10 @@ class DisputeResolver {
      }
     */
 
-  constructor(id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active) {
+  constructor(id, escalationResponsePeriod, assistant, admin, clerk, treasury, metadataUri, active) {
     this.id = id;
     this.escalationResponsePeriod = escalationResponsePeriod;
-    this.operator = operator;
+    this.assistant = assistant;
     this.admin = admin;
     this.clerk = clerk;
     this.treasury = treasury;
@@ -36,8 +36,8 @@ class DisputeResolver {
    * @returns {DisputeResolver}
    */
   static fromObject(o) {
-    const { id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active } = o;
-    return new DisputeResolver(id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active);
+    const { id, escalationResponsePeriod, assistant, admin, clerk, treasury, metadataUri, active } = o;
+    return new DisputeResolver(id, escalationResponsePeriod, assistant, admin, clerk, treasury, metadataUri, active);
   }
 
   /**
@@ -46,15 +46,15 @@ class DisputeResolver {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active;
+    let id, escalationResponsePeriod, assistant, admin, clerk, treasury, metadataUri, active;
 
     // destructure struct
-    [id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active] = struct;
+    [id, escalationResponsePeriod, assistant, admin, clerk, treasury, metadataUri, active] = struct;
 
     return DisputeResolver.fromObject({
       id: id.toString(),
       escalationResponsePeriod: escalationResponsePeriod.toString(),
-      operator,
+      assistant,
       admin,
       clerk,
       treasury,
@@ -87,7 +87,7 @@ class DisputeResolver {
     return [
       this.id,
       this.escalationResponsePeriod,
-      this.operator,
+      this.assistant,
       this.admin,
       this.clerk,
       this.treasury,
@@ -123,12 +123,12 @@ class DisputeResolver {
   }
 
   /**
-   * Is this DisputeResolver instance's operator field valid?
+   * Is this DisputeResolver instance's assistant field valid?
    * Must be a eip55 compliant Ethereum address
    * @returns {boolean}
    */
-  operatorIsValid() {
-    return addressIsValid(this.operator);
+  assistantIsValid() {
+    return addressIsValid(this.assistant);
   }
 
   /**
@@ -184,7 +184,7 @@ class DisputeResolver {
     return (
       this.idIsValid() &&
       this.escalationResponsePeriodIsValid() &&
-      this.operatorIsValid() &&
+      this.assistantIsValid() &&
       this.adminIsValid() &&
       this.clerkIsValid() &&
       this.treasuryIsValid() &&

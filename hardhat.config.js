@@ -63,10 +63,11 @@ task("upgrade-facets", "Upgrade existing facets, add new facets or remove existi
 
 task("upgrade-clients", "Upgrade existing clients")
   .addOptionalParam("env", "The deployment environment")
-  .setAction(async ({ env }) => {
+  .addOptionalParam("clientConfig", "JSON list of arguments by network to send to implementation constructor")
+  .setAction(async ({ env, clientConfig }) => {
     const { upgradeClients } = await lazyImport("./scripts/upgrade-clients.js");
 
-    await upgradeClients(env);
+    await upgradeClients(env, clientConfig);
   });
 
 task("manage-roles", "Grant or revoke access control roles")
@@ -134,16 +135,23 @@ module.exports = {
     },
   },
   solidity: {
-    version: "0.8.9",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
-        details: {
-          yul: true,
+    compilers: [
+      {
+        version: "0.8.9",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+            details: {
+              yul: true,
+            },
+          },
         },
       },
-    },
+      {
+        version: "0.8.17",
+      },
+    ],
   },
   gasReporter: {
     currency: "USD",

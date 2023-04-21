@@ -27,9 +27,10 @@ exports.RevertReasons = {
   VERSION_MUST_BE_SET: "Version cannot be empty",
   ADDRESSES_AND_CALLDATA_MUST_BE_SAME_LENGTH: "Addresses and calldata must be same length",
   WRONG_CURRENT_VERSION: "Wrong current protocol version",
+  DIRECT_INITIALIZATION_NOT_ALLOWED: "Direct initializtion is not allowed",
 
   // Offer related
-  NOT_OPERATOR: "Not seller's operator",
+  NOT_ASSISTANT: "Not seller's assistant",
   NO_SUCH_OFFER: "No such offer",
   OFFER_HAS_BEEN_VOIDED: "Offer has been voided",
   OFFER_PERIOD_INVALID: "Offer period invalid",
@@ -65,14 +66,14 @@ exports.RevertReasons = {
   DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE: "Dispute resolver address cannot be assigned to another dispute resolver Id",
   AGENT_ADDRESS_MUST_BE_UNIQUE: "Agent address cannot be assigned to another agent Id",
   NOT_ADMIN: "Not admin",
-  NOT_OPERATOR_AND_CLERK: "Not operator and clerk",
-  NOT_ADMIN_OPERATOR_AND_CLERK: "Not admin, operator and clerk",
+  NOT_ASSISTANT_AND_CLERK: "Not assistant and clerk",
+  NOT_ADMIN_ASSISTANT_AND_CLERK: "Not admin, assistant and clerk",
   NOT_BUYER_WALLET: "Not buyer's wallet address",
   NOT_AGENT_WALLET: "Not agent's wallet address",
   NO_SUCH_BUYER: "No such buyer",
   NO_SUCH_AGENT: "No such agent",
   WALLET_OWNS_VOUCHERS: "Wallet address owns vouchers",
-  NOT_DISPUTE_RESOLVER_OPERATOR: "Not dispute resolver's operator address",
+  NOT_DISPUTE_RESOLVER_ASSISTANT: "Not dispute resolver's assistant address",
   NO_SUCH_DISPUTE_RESOLVER: "No such dispute resolver",
   INVALID_ESCALATION_PERIOD: "Invalid escalation period",
   INVALID_AMOUNT_DISPUTE_RESOLVER_FEES:
@@ -131,13 +132,16 @@ exports.RevertReasons = {
   EXCHANGE_ID_IN_RESERVED_RANGE: "Exchange id falls within a pre-minted offer's range",
   NO_RESERVED_RANGE_FOR_OFFER: "Offer id not associated with a reserved range",
   OFFER_RANGE_ALREADY_RESERVED: "Offer id already associated with a reserved range",
-  INVALID_RANGE_START: "Range start must be greater than zero",
+  INVALID_RANGE_START: "Range start too low",
   INVALID_AMOUNT_TO_MINT: "Amount to mint is greater than remaining un-minted in range",
   NO_SILENT_MINT_ALLOWED: "Only owner's mappings can be updated without event",
   TOO_MANY_TO_MINT: "Exceeded maximum amount to mint in a single transaction",
   OFFER_EXPIRED_OR_VOIDED: "Offer expired or voided",
   OFFER_STILL_VALID: "Offer still valid",
   NOTHING_TO_BURN: "Nothing to burn",
+  NOT_COMMITTABLE: "Token not committable",
+  INVALID_TO_ADDRESS: "Tokens can only be pre-mined to the contract or contract owner address",
+  EXTERNAL_CALL_FAILED: "External call failed",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",
@@ -163,6 +167,7 @@ exports.RevertReasons = {
   OWNABLE_ZERO_ADDRESS: "Ownable: new owner is the zero address",
   SAFE_ERC20_LOW_LEVEL_CALL: "SafeERC20: low-level call failed",
   SAFE_ERC20_NOT_SUCCEEDED: "SafeERC20: ERC20 operation did not succeed",
+  INITIALIZABLE_ALREADY_INITIALIZED: "Initializable: contract is already initialized",
 
   // Meta-Transactions related
   NONCE_USED_ALREADY: "Nonce used already",

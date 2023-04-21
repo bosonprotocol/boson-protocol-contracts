@@ -14,6 +14,8 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
  *
  */
 contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandler, ProtocolBase {
+    address private immutable thisAddress; // used to prevent invocation of initialize directly on deployed contract. Variable is not used by the protocol.
+
     /**
      * @notice Modifier to protect initializer function from being invoked twice for a given version.
      */
@@ -25,8 +27,27 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
     }
 
     /**
+     * @notice Constructor
+     *
+     * @dev This constructor is used to prevent invocation of initialize directly on deployed contract.
+     */
+    constructor() {
+        thisAddress = address(this);
+    }
+
+    /**
      * @notice Initializes the protocol after the deployment.
      * This function is callable only once for each version
+     *
+     * Reverts if:
+     * - Is invoked directly on the deployed contract (not via proxy)
+     * - Version is not set
+     * - Length of _addresses and _calldata arrays do not match
+     * - Any of delegate calls to _addresses reverts
+     * - For upgrade to v2.2.0:
+     *   - If versions is set already
+     *   - If _initializationData cannot be decoded to uin256
+     *   - If _initializationData is represents value 0
      *
      * @param _version - version of the protocol
      * @param _addresses - array of facet addresses to call initialize methods
@@ -46,6 +67,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         bytes4[] calldata _interfacesToRemove,
         bytes4[] calldata _interfacesToAdd
     ) external onlyUninitializedVersion(_version) {
+        require(address(this) != thisAddress, DIRECT_INITIALIZATION_NOT_ALLOWED);
         require(_version != bytes32(0), VERSION_MUST_BE_SET);
         require(_addresses.length == _calldata.length, ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH);
 

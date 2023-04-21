@@ -163,9 +163,22 @@ async function upgradeClients(tag) {
     shell.exec(`git checkout HEAD contracts`);
   }
 
-  // Upgrade clients
   await hre.run("compile");
-  await hre.run("upgrade-clients", { env: "upgrade-test" });
+  // Mock forwarder to test metatx
+  const MockForwarder = await ethers.getContractFactory("MockForwarder");
+
+  const forwarder = await MockForwarder.deploy();
+
+  const clientConfig = {
+    META_TRANSACTION_FORWARDER: {
+      hardhat: forwarder.address,
+    },
+  };
+
+  // Upgrade clients
+  await hre.run("upgrade-clients", { env: "upgrade-test", clientConfig: JSON.stringify(clientConfig) });
+
+  return forwarder;
 }
 
 // populates protocol with some entities
@@ -243,7 +256,14 @@ async function populateProtocolContract(
     // create entities
     switch (entity) {
       case entityType.DR: {
-        const disputeResolver = mockDisputeResolver(wallet.address, wallet.address, wallet.address, wallet.address);
+        const disputeResolver = mockDisputeResolver(
+          wallet.address,
+          wallet.address,
+          wallet.address,
+          wallet.address,
+          true,
+          true
+        );
         const disputeResolverFees = [
           new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
           new DisputeResolverFee(mockToken.address, "MockToken", "0"),
@@ -259,13 +279,13 @@ async function populateProtocolContract(
           disputeResolverFees,
           sellerAllowList,
         });
-
         //ADMIN role activates Dispute Resolver
         await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+
         break;
       }
       case entityType.SELLER: {
-        const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address);
+        const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address, true);
         const id = seller.id;
         let authToken;
         // randomly decide if auth token is used or not
@@ -977,11 +997,11 @@ async function getProtocolLookupsPrivateContractState(
     #2  [X] // placeholder for bundleIdByTwin
     #3  [ ] // placeholder for groupIdByOffer
     #4  [X] // placeholder for agentIdByOffer
-    #5  [X] // placeholder for sellerIdByOperator
+    #5  [X] // placeholder for sellerIdByAssistant
     #6  [X] // placeholder for sellerIdByAdmin
     #7  [X] // placeholder for sellerIdByClerk
     #8  [ ] // placeholder for buyerIdByWallet
-    #9  [X] // placeholder for disputeResolverIdByOperator
+    #9  [X] // placeholder for disputeResolverIdByAssistant
     #10 [X] // placeholder for disputeResolverIdByAdmin
     #11 [X] // placeholder for disputeResolverIdByClerk
     #12 [ ] // placeholder for disputeResolverFeeTokenIndex
@@ -1379,7 +1399,14 @@ async function populateVoucherContract(
       // create entities
       switch (entity) {
         case entityType.DR: {
-          const disputeResolver = mockDisputeResolver(wallet.address, wallet.address, wallet.address, wallet.address);
+          const disputeResolver = mockDisputeResolver(
+            wallet.address,
+            wallet.address,
+            wallet.address,
+            wallet.address,
+            true,
+            true
+          );
           const disputeResolverFees = [
             new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
             new DisputeResolverFee(mockToken.address, "MockToken", "0"),
@@ -1401,7 +1428,7 @@ async function populateVoucherContract(
           break;
         }
         case entityType.SELLER: {
-          const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address);
+          const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address, true);
           const id = seller.id;
           let authToken = mockAuthToken();
 
@@ -1559,7 +1586,7 @@ async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buye
     );
 
     // balanceOf(address owner)
-    // isApprovedForAll(address owner, address operator)
+    // isApprovedForAll(address owner, address assistant)
     const addresses = [...sellers, ...buyers].map((acc) => acc.wallet.address);
     const balanceOf = await Promise.all(addresses.map((address) => bosonVoucher.balanceOf(address)));
     const isApprovedForAll = await Promise.all(
@@ -1587,6 +1614,12 @@ async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buye
   return bosonVouchersState;
 }
 
+function revertState() {
+  shell.exec(`rm -rf contracts/* scripts/*`);
+  shell.exec(`git checkout HEAD contracts scripts`);
+  shell.exec(`git reset HEAD contracts scripts`);
+}
+
 exports.deploySuite = deploySuite;
 exports.upgradeSuite = upgradeSuite;
 exports.upgradeClients = upgradeClients;
@@ -1596,3 +1629,4 @@ exports.getStorageLayout = getStorageLayout;
 exports.compareStorageLayouts = compareStorageLayouts;
 exports.populateVoucherContract = populateVoucherContract;
 exports.getVoucherContractState = getVoucherContractState;
+exports.revertState = revertState;

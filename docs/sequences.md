@@ -39,6 +39,6 @@
 * This diagram shows the process of pre-minting a range of vouchers for an offer and what happens when a pre-minted voucher is purchased on an exchange.
 * Pre-minting really just reserves a range of exchange / voucher token ids for use with a particular offer. The entire quantity available of the offer doesn't have to be pre-minted.
 * When a pre-minted voucher is purchased on a marketplace, a transfer hook is called, causing the offer to be committed to on behalf of the buyer.
-* The marketplace takes its cut of the sale and sends the remainder to the operator address of the seller (who is the de facto owner of all pre-minted vouchers and thus has the authority to list the items on marketplaces).
+* The marketplace takes its cut of the sale and sends the remainder to the assistant address of the seller (who is the de facto owner of all pre-minted vouchers and thus has the authority to list the items on marketplaces).
 * Meanwhile, the offer price is encumbered from the seller's deposit pool, for buyer assurance.
 * If only part of an offer's quantity available is pre-minted, the balance will be available for commit directly on the protocol.

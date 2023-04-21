@@ -18,7 +18,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * Emits a GroupCreated event if successful.
      *
      * Reverts if:
-     * - Caller is not an operator
+     * - Caller is not an assistant
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
      * - Offer exists in a different group
@@ -35,8 +35,8 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         address sender = msgSender();
 
         // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(sender);
-        require(exists, NOT_OPERATOR);
+        (bool exists, uint256 sellerId) = getSellerIdByAssistant(sender);
+        require(exists, NOT_ASSISTANT);
 
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_group.offerIds.length <= protocolLimits().maxOffersPerGroup, TOO_MANY_OFFERS);
@@ -206,9 +206,9 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         require(exists, NO_SUCH_GROUP);
 
         // Get seller id, we assume seller id exists if group exists
-        (, sellerId) = getSellerIdByOperator(msgSender());
+        (, sellerId) = getSellerIdByAssistant(msgSender());
 
         // Caller's seller id must match group seller id
-        require(sellerId == group.sellerId, NOT_OPERATOR);
+        require(sellerId == group.sellerId, NOT_ASSISTANT);
     }
 }

@@ -1,4 +1,4 @@
-const { bigNumberIsValid } = require("../util/validations.js");
+const { bigNumberIsValid, addressIsValid } = require("../util/validations.js");
 
 /**
  * Boson Client Entity: Range
@@ -8,20 +8,20 @@ const { bigNumberIsValid } = require("../util/validations.js");
 class Range {
   /*
     struct Range {
-      uint256 offerId;
       uint256 start;
       uint256 length;
       uint256 minted;
       uint256 lastBurnedTokenId;
+      address owner;
       }
   */
 
-  constructor(offerId, start, length, minted, lastBurnedTokenId) {
-    this.offerId = offerId;
+  constructor(start, length, minted, lastBurnedTokenId, owner) {
     this.start = start;
     this.length = length;
     this.minted = minted;
     this.lastBurnedTokenId = lastBurnedTokenId;
+    this.owner = owner;
   }
 
   /**
@@ -30,8 +30,8 @@ class Range {
    * @returns {Range}
    */
   static fromObject(o) {
-    const { offerId, start, length, minted, lastBurnedTokenId } = o;
-    return new Range(offerId, start, length, minted, lastBurnedTokenId);
+    const { start, length, minted, lastBurnedTokenId, owner } = o;
+    return new Range(start, length, minted, lastBurnedTokenId, owner);
   }
 
   /**
@@ -40,17 +40,15 @@ class Range {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let offerId, start, length, minted, lastBurnedTokenId;
-
     // destructure struct
-    [offerId, start, length, minted, lastBurnedTokenId] = struct;
+    let [start, length, minted, lastBurnedTokenId, owner] = struct;
 
     return Range.fromObject({
-      offerId: offerId.toString(),
       start: start.toString(),
       length: length.toString(),
       minted: minted.toString(),
       lastBurnedTokenId: lastBurnedTokenId.toString(),
+      owner,
     });
   }
 
@@ -75,7 +73,7 @@ class Range {
    * @returns {string}
    */
   toStruct() {
-    return [this.offerId, this.start, this.length, this.minted, this.lastBurnedTokenId];
+    return [this.start, this.length, this.minted, this.lastBurnedTokenId, this.owner];
   }
 
   /**
@@ -84,15 +82,6 @@ class Range {
    */
   clone() {
     return Range.fromObject(this.toObject());
-  }
-
-  /**
-   * Is this Range instance's offerId field valid?
-   * Must be a string representation of a big number
-   * @returns {boolean}
-   */
-  offerIdIsValid() {
-    return bigNumberIsValid(this.offerId);
   }
 
   /**
@@ -132,17 +121,20 @@ class Range {
   }
 
   /**
+   * Is this Range instance's owner field valid?
+   * Must be a eip55 compliant Ethereum address
+   * @returns {boolean}
+   */
+  ownerIsValid() {
+    return addressIsValid(this.owner);
+  }
+
+  /**
    * Is this Range instance valid?
    * @returns {boolean}
    */
   isValid() {
-    return (
-      this.offerIdIsValid() &&
-      this.startIsValid() &&
-      this.lengthIsValid() &&
-      this.mintedIsValid() &&
-      this.lastBurnedTokenIdIsValid()
-    );
+    return this.startIsValid() && this.lengthIsValid() && this.mintedIsValid() && this.lastBurnedTokenIdIsValid();
   }
 }
 
