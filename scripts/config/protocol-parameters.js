@@ -74,5 +74,6 @@ module.exports = {
     hardhat: 1,
     mumbai: 1, // TODO: adjust for actual deployment
     polygon: 2, // TODO: adjust for actual deployment
+    localhost: 1,
   },
 };
