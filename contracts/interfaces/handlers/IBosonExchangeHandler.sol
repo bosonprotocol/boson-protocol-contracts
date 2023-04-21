@@ -227,7 +227,6 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @param _tokenId - the voucher id
      * @param _to - the receiver address
      * @param _from - the sender address
-     * @param _rangeOwner - the owner of the voucher range
      * @param _sender - the caller address
      * @return committed - true if the voucher was committed
      */
@@ -235,7 +234,6 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
         uint256 _tokenId,
         address payable _to,
         address _from,
-        address _rangeOwner,
         address _sender
     ) external returns (bool committed);
 

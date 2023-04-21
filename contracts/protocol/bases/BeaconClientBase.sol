@@ -74,18 +74,10 @@ abstract contract BeaconClientBase is BosonTypes {
         uint256 _tokenId,
         address payable _to,
         address _from,
-        address _rangeOwner,
         address _sender
     ) internal returns (bool) {
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        return
-            IBosonExchangeHandler(protocolDiamond).onPremintedVoucherTransferred(
-                _tokenId,
-                _to,
-                _from,
-                _rangeOwner,
-                _sender
-            );
+        return IBosonExchangeHandler(protocolDiamond).onPremintedVoucherTransferred(_tokenId, _to, _from, _sender);
     }
 
     /**

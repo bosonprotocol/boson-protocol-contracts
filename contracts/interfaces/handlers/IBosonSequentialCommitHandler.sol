@@ -46,7 +46,7 @@ interface IBosonSequentialCommitHandler is IBosonExchangeEvents, IBosonFundsLibE
      * @param _exchangeId - the id of the exchange to commit to
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
      */
-    function exchangeCostsToOffer(
+    function sequentialCommitToOffer(
         address payable _buyer,
         uint256 _exchangeId,
         BosonTypes.PriceDiscovery calldata _priceDiscovery

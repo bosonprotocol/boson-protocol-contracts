@@ -169,7 +169,7 @@ contract PriceDiscoveryBase is ProtocolBase {
             bosonVoucher.transferFrom(msgSender(), address(this), _tokenId);
 
             // Owner is now protocol
-            address owner = address(this);
+            owner = address(this);
 
             // Approve price discovery contract to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
             bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, _tokenId);
@@ -198,9 +198,6 @@ contract PriceDiscoveryBase is ProtocolBase {
         // Track native balance just in case if seller send some native currency or price discovery contract does
         uint256 protocolNativeBalanceBefore = getBalance(address(0), address(this));
 
-        // Store the information about incoming voucher
-        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-
         {
             actualPrice = callPriceDiscoveryContract(
                 _priceDiscovery,
@@ -209,18 +206,19 @@ contract PriceDiscoveryBase is ProtocolBase {
                 owner,
                 Side.Bid
             );
+            // Get current voucher owner
+            owner = bosonVoucher.ownerOf(_tokenId);
 
+            require(owner == _buyer, NEW_OWNER_AND_BUYER_MUST_MATCH);
             require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
+
+            // Transfer funds to protocol - caller must pay on behalf of the seller
+            FundsLib.validateIncomingPayment(exchangeToken, actualPrice);
 
             if (exchangeToken == address(weth)) {
                 //  Protocol operates with native currency, needs to unwrap it (i.e. withdraw)
                 weth.withdraw(actualPrice);
-                // Set exchange token to address(0) again
-                exchangeToken = address(0);
             }
-
-            // Transfer funds to protocol - caller must pay on behalf of the seller
-            FundsLib.validateIncomingPayment(exchangeToken, actualPrice);
 
             // Check the native balance and return the surplus to caller
             uint256 protocolNativeBalanceAfter = getBalance(address(0), address(this));

@@ -80,6 +80,12 @@ library FundsLib {
         BosonTypes.Offer storage offer = pe.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
 
+        // if offer is non-preminted, validate incoming payment
+        if (!_isPreminted) {
+            validateIncomingPayment(exchangeToken, _price);
+            emit FundsEncumbered(_buyerId, exchangeToken, _price, sender);
+        }
+
         bool isPriceDiscovery = _priceType == BosonTypes.PriceType.Discovery;
 
         // decrease available funds
@@ -109,8 +115,8 @@ library FundsLib {
      */
     function validateIncomingPayment(address _exchangeToken, uint256 _value) internal {
         if (_exchangeToken == address(0)) {
-            // if transfer is in the native currency, msg.value must be at leat the price
-            require(msg.value >= _value, INSUFFICIENT_VALUE_RECEIVED);
+            // if transfer is in the native currency, msg.value must match price
+            require(msg.value == _value, INSUFFICIENT_VALUE_RECEIVED);
         } else {
             // when price is in an erc20 token, transferring the native currency is not allowed
             require(msg.value == 0, NATIVE_NOT_ALLOWED);

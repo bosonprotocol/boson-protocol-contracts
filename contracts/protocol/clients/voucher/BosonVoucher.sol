@@ -734,13 +734,7 @@ contract BosonVoucherBase is
             _isCommittable = false;
 
             // Call protocol onPremintedVoucherTransferred
-            bool committed = onPremintedVoucherTransferred(
-                _tokenId,
-                payable(_to),
-                _from,
-                _rangeByOfferId[_tokenId >> 128].owner,
-                _msgSender()
-            );
+            bool committed = onPremintedVoucherTransferred(_tokenId, payable(_to), _from, _msgSender());
 
             // Set committed status
             _committed[_tokenId] = committed;

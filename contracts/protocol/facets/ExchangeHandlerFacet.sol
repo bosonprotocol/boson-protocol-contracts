@@ -653,7 +653,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * @param _tokenId - the voucher id
      * @param _to - the receiver address
      * @param _from - the sender address
-     * @param _rangeOwner - the owner of the voucher range
      * @param _sender - the caller address
      * @return committed - true if the voucher was committed
      */
@@ -661,7 +660,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         uint256 _tokenId,
         address payable _to,
         address _from,
-        address _rangeOwner,
         address _sender
     ) external override buyersNotPaused returns (bool committed) {
         // Cache protocol status for reference
@@ -688,7 +686,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             address priceDiscoveryContract = lookups.priceDiscoveryContractByVoucher[_tokenId];
             address lastVoucherOwner = lookups.lastVoucherOwner[_tokenId];
 
-            // Transaction has started by calling one of the commit functions (commitToPriceDiscoveryOffer or sequentialCommitToOffer)
+            // Transaction has started by calling one of the commit functions ()
             if (ps.incomingVoucherCloneAddress != address(0)) {
                 // Avoid reentrancy
                 require(ps.incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);

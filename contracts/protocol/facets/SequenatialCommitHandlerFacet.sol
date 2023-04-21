@@ -62,7 +62,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
      * @param _tokenId - the id of the token to commit to
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
      */
-    function exchangeCostsToOffer(
+    function sequentialCommitToOffer(
         address payable _buyer,
         uint256 _tokenId,
         PriceDiscovery calldata _priceDiscovery
