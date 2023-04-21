@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
+import "hardhat/console.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
@@ -148,7 +149,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         (bool exists, Offer storage offer) = fetchOffer(offerId);
 
         if (!exists) {
-            // @TODO check tokens created before EXCHANGE_ID_2_2_0
             offerId = _tokenIdOrOfferId >> 128;
 
             (exists, offer) = fetchOffer(offerId);

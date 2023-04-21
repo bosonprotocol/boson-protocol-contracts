@@ -165,17 +165,17 @@ async function prepareDataSignatureParameters(
   const domainType =
     type == "Protocol"
       ? [
-          { name: "name", type: "string" },
-          { name: "version", type: "string" },
-          { name: "verifyingContract", type: "address" },
-          { name: "salt", type: "bytes32" },
-        ]
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "verifyingContract", type: "address" },
+        { name: "salt", type: "bytes32" },
+      ]
       : [
-          { name: "name", type: "string" },
-          { name: "version", type: "string" },
-          { name: "chainId", type: "uint256" },
-          { name: "verifyingContract", type: "address" },
-        ];
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "chainId", type: "uint256" },
+        { name: "verifyingContract", type: "address" },
+      ];
 
   const domainData = {
     name: domainName ?? "Boson Protocol",
@@ -390,6 +390,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
 
   const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
   facetsToDeploy["SequentialCommitHandlerFacet"].constructorArgs = [wethAddress || ethers.constants.AddressZero];
+  facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [1, wethAddress || ethers.constants.AddressZero];
 
   // Cut the protocol handler facets into the Diamond
   await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);

@@ -1,17 +1,17 @@
 const hre = require("hardhat");
 const { ethers } = hre;
 const { utils, BigNumber, constants } = ethers;
-const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
-const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond");
-const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets");
+const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 
 const {
-  getFacetsWithArgs,
   calculateContractAddress,
   deriveTokenId,
   getCurrentBlockAndSetTimeForward,
+  setupTestEnvironment,
+  revertToSnapshot,
+  getSnapshot,
 } = require("../../util/utils");
-const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants");
+const { oneWeek } = require("../../util/constants");
 const {
   mockSeller,
   mockAuthToken,
@@ -21,110 +21,45 @@ const {
   accountId,
 } = require("../../util/mock");
 const { expect } = require("chai");
-const Role = require("../../../scripts/domain/Role");
-const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const PriceType = require("../../../scripts/domain/PriceType");
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const Side = require("../../../scripts/domain/Side");
 
-describe("[@skip-on-coverage] auction integration", function () {
+const MASK = BigNumber.from(2).pow(128).sub(1);
+
+describe("[@skip-on-coverage] auction integration", function() {
+  accountId.next(true);
   this.timeout(100000000);
-  let bosonVoucher, bosonToken;
-  let deployer, protocol, assistant, buyer, DR;
+  let bosonVoucher;
+  let assistant, buyer, DR, rando;
   let offer, offerDates;
   let exchangeHandler;
   let weth;
   let seller;
+  let snapshotId;
 
-  before(async function () {
-    accountId.next(true);
+  before(async function() {
 
-    let protocolTreasury;
-    [deployer, protocol, assistant, protocolTreasury, buyer, DR] = await ethers.getSigners();
-
-    // Deploy diamond
-    let [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-
-    // Cast Diamond to contract interfaces
-    const offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-    const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-    const fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-
-    // Grant roles
-    await accessController.grantRole(Role.PROTOCOL, protocol.address);
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    const protocolClientArgs = [protocolDiamond.address];
-
-    const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
-
-    [bosonVoucher] = bv;
-    const [beacon] = beacons;
-    const [proxy] = proxies;
-
-    const protocolFeeFlatBoson = utils.parseUnits("0.01", "ether").toString();
-    const buyerEscalationDepositPercentage = "1000"; // 10%
-
-    [bosonToken] = await deployMockTokens();
-
-    // Add config Handler, so ids start at 1, and so voucher address can be found
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 10000,
-      },
-      //Protocol fees
-      {
-        percentage: 200, // 2%
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
-    const facetNames = [
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "SellerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "FundsHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+    // Specify contracts needed for this test
+    const contracts = {
+      accountHandler: "IBosonAccountHandler",
+      offerHandler: "IBosonOfferHandler",
+      fundsHandler: "IBosonFundsHandler",
+      exchangeHandler: "IBosonExchangeHandler"
+    };
 
     const wethFactory = await ethers.getContractFactory("WETH9");
     weth = await wethFactory.deploy();
     await weth.deployed();
 
-    facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [1, weth.address];
+    let accountHandler, offerHandler, fundsHandler;
 
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+    ({
+      signers: [assistant, buyer, DR, rando],
+      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler },
+      extraReturnValues: { bosonVoucher }
+    } = await setupTestEnvironment(contracts, { wethAddress: weth.address }));
 
     seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
 
@@ -134,7 +69,7 @@ describe("[@skip-on-coverage] auction integration", function () {
 
     const disputeResolver = mockDisputeResolver(DR.address, DR.address, DR.address, DR.address, true);
 
-    const disputeResolverFees = [new DisputeResolverFee(weth.address, "WETH", "0")];
+    const disputeResolverFees = [new DisputeResolverFee(constants.AddressZero, "Native Currency", "0"), new DisputeResolverFee(weth.address, "WETH", "0")];
     const sellerAllowList = [seller.id];
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -143,7 +78,7 @@ describe("[@skip-on-coverage] auction integration", function () {
     ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
     offer.quantityAvailable = 10;
     offer.priceType = PriceType.Discovery;
-    offer.exchangeToken = weth.address;
+    // offer.exchangeToken = weth.address;
 
     await offerHandler
       .connect(assistant)
@@ -160,11 +95,20 @@ describe("[@skip-on-coverage] auction integration", function () {
     await fundsHandler
       .connect(assistant)
       .depositFunds(seller.id, constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+
+    // Get snapshot id
+    snapshotId = await getSnapshot();
   });
 
-  it("Works with Zora auction", async function () {
-    let tokenId, zoraAuction;
-    beforeEach(async function () {
+  afterEach(async function() {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
+  });
+
+  context("Zora auction", async function() {
+    let tokenId, zoraAuction, amount, auctionId;
+
+    beforeEach(async function() {
       // 1. Deploy Zora Auction
       const ZoraAuctionFactory = await ethers.getContractFactory("AuctionHouse");
       zoraAuction = await ZoraAuctionFactory.deploy(weth.address);
@@ -184,38 +128,45 @@ describe("[@skip-on-coverage] auction integration", function () {
       await zoraAuction
         .connect(assistant)
         .createAuction(tokenId, tokenContract, duration, reservePrice, curator, curatorFeePercentage, auctionCurrency);
-    });
 
-    it("Auction ends normally if finalise throw Boson Protocol", async function () {
-      // 5. Bid
-      const auctionId = 0;
-      const amount = 10;
-
+      // 4. Bid
+      auctionId = 0;
+      amount = 10;
       await zoraAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
 
-      // 6. Encode endAuction data
+      // 5. Set time forward
       await getCurrentBlockAndSetTimeForward(oneWeek);
 
+      // Zora should be the owner of the token
       expect(await bosonVoucher.ownerOf(tokenId)).to.equal(zoraAuction.address);
-      expect(await weth.balanceOf(assistant.address)).to.equal(amount);
+    });
 
+    // Zora uses safeTransferFrom and WETH doesn't support it
+    it("Should revert when seller is not using wrappers offer is native currency", async function() {
+      // Caller should approve WETH because price discovery bids doesn't work with native currency
+      await weth.connect(assistant).approve(exchangeHandler.address, amount);
+
+      //  Encode calldata for endAuction
       const calldata = zoraAuction.interface.encodeFunctionData("endAuction", [auctionId]);
       const priceDiscovery = new PriceDiscovery(amount, zoraAuction.address, calldata, Side.Bid);
 
+      //  Commit to offer, expecting revert
+      await expect(exchangeHandler.connect(assistant).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)).to.be.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+    });
+
+    // Buyes doesn't get buyer protection
+    it("Auction ends normally if finalise directly into Zora", async function() {
       const protocolBalanceBefore = await ethers.provider.getBalance(exchangeHandler.address);
 
-      // 7. Commit to offer
-      const tx = await exchangeHandler.connect(assistant).commitToOffer(buyer.address, offer.id, priceDiscovery);
-      const { timestamp } = await ethers.provider.getBlock(tx.blockNumber);
+      const tx = await zoraAuction.connect(rando).endAuction(auctionId);
 
       expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
       expect(await ethers.provider.getBalance(exchangeHandler.address)).to.equal(protocolBalanceBefore.add(amount));
 
-      const MASK = BigNumber.from(2).pow(128).sub(1);
       const exchangeId = tokenId.and(MASK);
-      const [, , voucher] = await exchangeHandler.getExchange(exchangeId);
+      const [exist, ,] = await exchangeHandler.getExchange(exchangeId);
 
-      expect(voucher.committedDate).to.equal(timestamp);
+      expect(exist).to.equal(true);
     });
   });
 });

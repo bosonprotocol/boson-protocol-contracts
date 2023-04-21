@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
+import "hardhat/console.sol";
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
@@ -833,6 +834,17 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     function _isApprovedOrOwner(address spender, uint256 tokenId) internal view override returns (bool) {
         address owner = ownerOf(tokenId);
         return (spender == owner || isApprovedForAll(owner, spender) || getApproved(tokenId) == spender);
+    }
+
+    /*
+     **
+     * @dev Reverts if the `_tokenId` has not been minted yet and is not a pre-minted token.
+     */
+    function _requireMinted(uint256 _tokenId) internal view override {
+        // If token is committable, it is a pre-minted token
+        bool committable = isTokenCommittable(_tokenId);
+
+        require(_exists(_tokenId) || committable, "ERC721: invalid token ID");
     }
 }
 

@@ -164,6 +164,7 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // Check if caller is the owner of the voucher
         if (owner == msgSender()) {
+            console.log("owner is caller");
             // Transfer seller's voucher to protocol
             // Don't need to use safe transfer from, since that protocol can handle the voucher
             bosonVoucher.transferFrom(msgSender(), address(this), _tokenId);
@@ -184,8 +185,10 @@ contract PriceDiscoveryBase is ProtocolBase {
                 OWNER_MUST_BE_PRICE_DISCOVERY_CONTRACT
             );
 
+            console.log("owner is price discovery contract", owner);
             // Check the last owner's balance since they are the one who should receive the price via the price discovery contract
             owner = lookups.lastVoucherOwner[_tokenId];
+            console.log("last owner: ", owner);
 
             require(owner != address(0), LAST_OWNER_NOT_FOUND);
         }
@@ -206,10 +209,13 @@ contract PriceDiscoveryBase is ProtocolBase {
                 owner,
                 Side.Bid
             );
+            console.log("owner: ", owner);
+
             // Get current voucher owner
             owner = bosonVoucher.ownerOf(_tokenId);
 
             require(owner == _buyer, NEW_OWNER_AND_BUYER_MUST_MATCH);
+            console.log("actualPrice: ", actualPrice);
             require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
 
             // Transfer funds to protocol - caller must pay on behalf of the seller
@@ -272,6 +278,9 @@ contract PriceDiscoveryBase is ProtocolBase {
     ) internal returns (uint256 actualPrice) {
         // Check balance before the price discovery call
         uint256 balanceBefore = getBalance(_exchangeAddress, _balanceAddress);
+        console.log("exchangeToken: ", _exchangeAddress);
+        console.log("balanceAddress: ", _balanceAddress);
+        console.log("balanceBefore: ", balanceBefore);
 
         // Set incoming voucher clone address
         protocolStatus().incomingVoucherCloneAddress = _voucherAddress;
@@ -285,6 +294,7 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // Check balance after the price discovery call
         uint256 balanceAfter = getBalance(_exchangeAddress, _balanceAddress);
+        console.log("balanceAfter: ", balanceAfter);
 
         actualPrice = _side == Side.Ask ? balanceBefore - balanceAfter : balanceAfter - balanceBefore;
     }
