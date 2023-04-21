@@ -187,6 +187,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                 disputeResolutionTerms.buyerEscalationDeposit =
                     (feeAmount * protocolFees().buyerEscalationDepositPercentage) /
                     10000;
+                disputeResolutionTerms.feeMutualizer = _offer.feeMutualizer;
 
                 protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
             }

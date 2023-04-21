@@ -6,7 +6,7 @@ pragma solidity 0.8.9;
  *
  * @notice This is the interface for the Dispute Resolver fee mutualizers.
  *
- * The ERC-165 identifier for this interface is: 0x47f05774
+ * The ERC-165 identifier for this interface is: 0x41283543
  */
 interface IDRFeeMutualizer {
     event DRFeeRequsted(
@@ -61,13 +61,11 @@ interface IDRFeeMutualizer {
      * @dev Returned amount can be between 0 and _feeAmount that was requested for the given uuid.
      *
      * @param _uuid - unique identifier of the request
-     * @param _token - the token address (use 0x0 for ETH)
      * @param _feeAmount - returned amount
      * @param _context - additional data, describing the context
      */
     function returnDRFee(
         uint256 _uuid,
-        address _token,
         uint256 _feeAmount,
         bytes calldata _context
     ) external payable;

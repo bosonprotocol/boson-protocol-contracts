@@ -253,8 +253,18 @@ library FundsLib {
             payOff.feeMutualizer = disputeResolverFee - payOff.disputeResolver;
         }
 
-        // Store payoffs to availablefunds and notify the external observers
+        // Handle DR fee
         address exchangeToken = offer.exchangeToken;
+        address _feeMutualizer = disputeResolutionTerms.feeMutualizer;
+        if (_feeMutualizer != address(0)) {
+            // always make call to mutualizer, even if the payoff is 0
+            returnFeeToMutualizer(_feeMutualizer, _exchangeId, exchangeToken, payOff.feeMutualizer);
+        } else {
+            // Self mutualization
+            payOff.seller += payOff.feeMutualizer;
+        }
+
+        // Store payoffs to availablefunds and notify the external observers
         address sender = EIP712Lib.msgSender();
         // ToDo: use `increaseAvailableFundsAndEmitEvent` from  https://github.com/bosonprotocol/boson-protocol-contracts/pull/569
         if (payOff.seller > 0) {
@@ -283,9 +293,6 @@ library FundsLib {
             increaseAvailableFunds(disputeResolveId, exchangeToken, payOff.disputeResolver);
             emit FundsReleased(_exchangeId, disputeResolveId, exchangeToken, payOff.disputeResolver, sender);
         }
-
-        // always make call to mutualizer, even if the payoff is 0
-        returnFeeToMutualizer(offer.feeMutualizer, _exchangeId, exchangeToken, payOff.feeMutualizer);
     }
 
     /**
@@ -431,9 +438,7 @@ library FundsLib {
         // Call the mutualizer to return the fee
         // Even if the call fails, the protocol will still be able to continue
         uint256 uuid = ProtocolLib.protocolLookups().mutualizerUUIDByExchange[_exchangeId];
-        try
-            IDRFeeMutualizer(_feeMutualizer).returnDRFee{ value: nativePayoff }(uuid, _exchangeToken, _feeAmount, "")
-        {} catch {}
+        try IDRFeeMutualizer(_feeMutualizer).returnDRFee{ value: nativePayoff }(uuid, _feeAmount, "") {} catch {}
 
         emit DRFeeReturned(_feeMutualizer, uuid, _exchangeId, _exchangeToken, _feeAmount, EIP712Lib.msgSender());
     }
