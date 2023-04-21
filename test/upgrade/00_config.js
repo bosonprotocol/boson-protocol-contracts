@@ -46,6 +46,7 @@ async function getFacets() {
           "DisputeHandlerFacet",
           "DisputeResolverHandlerFacet",
           "ExchangeHandlerFacet",
+          "GroupHandlerFacet",
           "MetaTransactionsHandlerFacet",
           "OfferHandlerFacet",
           "SellerHandlerFacet",
@@ -57,6 +58,8 @@ async function getFacets() {
         remove: ["OrchestrationHandlerFacet"],
         skipSelectors: {},
         facetsToInit: {
+          AccountHandlerFacet: { init: [] },
+          OfferHandlerFacet: { init: [] },
           OrchestrationHandlerFacet1: { init: [] }, // init only OrchestrationHandlerFacet1, OrchestrationHandlerFacet2 is no-op
           MetaTransactionsHandlerFacet: {
             init: [
@@ -137,7 +140,7 @@ async function getFacets() {
               ],
             ],
           },
-          ExchangeHandlerFacet: { constructorArgs: [1] }, // should be overridden in tests to match the exact exchange id
+          ExchangeHandlerFacet: { init: [], constructorArgs: [1] }, // must match nextExchangeId at the time of the upgrade
         },
         initializationData: "0x0000000000000000000000000000000000000000000000000000000000002710", // input for initV2_2_0, representing maxPremintedVoucher (0x2710=10000)
       },
