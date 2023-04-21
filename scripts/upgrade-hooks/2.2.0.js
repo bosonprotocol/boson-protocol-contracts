@@ -9,6 +9,7 @@ const PausableRegion = require("../domain/PausableRegion.js");
 
 async function preUpgrade(protocolAddress, facets) {
   // Pause the exchanges region of the protocol
+  console.log("Pausing the protocol...");
   const pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolAddress);
   await pauseHandler.pause([PausableRegion.Exchanges], await getFees(maxPriorityFeePerGas));
 
@@ -22,6 +23,7 @@ async function preUpgrade(protocolAddress, facets) {
 
 async function postUpgrade(protocolAddress) {
   // Unpause the protocol
+  console.log("Unpausing the protocol...");
   const pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolAddress);
   await pauseHandler.unpause(await getFees(maxPriorityFeePerGas));
 }

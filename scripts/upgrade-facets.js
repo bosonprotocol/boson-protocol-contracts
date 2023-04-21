@@ -199,14 +199,23 @@ async function main(env, facetConfig) {
 
     // Check if selectors that are being added are not registered yet on some other facet
     // If collision is found, user must choose to either (s)kip it or (r)eplace it.
+    let skipAll, replaceAll;
     for (const selectorToAdd of selectorsToAdd) {
       const existingFacetAddress = await diamondLoupe.facetAddress(selectorToAdd);
       if (existingFacetAddress != ethers.constants.AddressZero) {
         // Selector exist on some other facet
         const selectorName = selectors.signatureToNameMapping[selectorToAdd];
-        const prompt = `Selector ${selectorName} is already registered on facet ${existingFacetAddress}. Do you want to (r)eplace or (s)kip it? `;
-        const answer = await getUserResponse(prompt, ["r", "s"]);
-        if (answer == "r") {
+        let answer;
+        if (!(skipAll || replaceAll)) {
+          const prompt = `Selector ${selectorName} is already registered on facet ${existingFacetAddress}. Do you want to (r)eplace or (s)kip it?\nUse "R" os "S" to apply the same choice to all remaining selectors in this facet. `;
+          answer = await getUserResponse(prompt, ["r", "s", "R", "S"]);
+          if (answer == "R") {
+            replaceAll = true;
+          } else if (answer == "S") {
+            skipAll = true;
+          }
+        }
+        if (replaceAll || answer == "r") {
           // User chose to replace
           selectorsToReplace.push(selectorToAdd);
         } else {
