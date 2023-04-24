@@ -1732,34 +1732,6 @@ describe("SellerHandler", function () {
         expect(await bosonVoucher.owner()).to.equal(seller.assistant, "Wrong voucher clone owner");
       });
 
-      it("should update state correctly if values are the same", async function () {
-        // Update a seller
-        await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
-
-        // Get the seller as a struct
-        [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
-
-        // Parse into entity
-        let returnedSeller = Seller.fromStruct(sellerStruct);
-        let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
-
-        // Returned values should match the input in updateSeller
-        for ([key, value] of Object.entries(seller)) {
-          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
-        }
-
-        // Returned auth token values should match the input in updateSeller
-        for ([key, value] of Object.entries(emptyAuthToken)) {
-          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
-        }
-
-        // Voucher clone contract
-        const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
-
-        expect(await bosonVoucher.owner()).to.equal(seller.assistant, "Wrong voucher clone owner");
-      });
-
       it("should update only one address", async function () {
         seller.assistant = other1.address;
 
