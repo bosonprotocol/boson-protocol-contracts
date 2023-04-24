@@ -94,6 +94,7 @@ async function deployProtocolFacets(facetNames, facetsToInit, maxPriorityFeePerG
       name: facetName,
       contract: facetContract,
       cut: [],
+      constructorArguments,
     };
 
     if (facetsToInit[facetName] && facetsToInit[facetName].init && facetName !== "ProtocolInitializationHandlerFacet") {

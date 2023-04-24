@@ -137,7 +137,12 @@
     {
       "name": "ExchangeHandlerFacet",
       "address": "0xFbe0D2F737029Ea1EA860009adEB6b4eC6Da3f5B",
-      "args": [],
+      "args": [
+        {
+          "type": "BigNumber",
+          "hex": "0x1615"
+        }
+      ],
       "interfaceId": "0xe300dfc1"
     },
     {
