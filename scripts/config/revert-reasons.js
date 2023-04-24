@@ -92,6 +92,7 @@ exports.RevertReasons = {
     "Sum of agent fee percentage and protocol fee percentage should be <= max fee percentage limit",
   NO_PENDING_UPDATE_FOR_ACCOUNT: "No pending updates for the given account",
   UNAUTHORIZED_CALLER_UPDATE: "Caller has no permission to approve this update",
+  NO_UPDATE_APPLIED: "No update applied or requested approval",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",

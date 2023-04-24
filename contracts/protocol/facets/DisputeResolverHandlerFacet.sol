@@ -289,6 +289,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 sender
             );
         }
+
+        require(updateApplied || needsApproval, NO_UPDATE_APPLIED);
     }
 
     /**
