@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
-
 import "../../domain/BosonConstants.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { SellerBase } from "../bases/SellerBase.sol";
@@ -70,6 +69,7 @@ contract SellerHandlerFacet is SellerBase {
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - AuthTokenType is Custom
+     * - No field has been updated or requested to be updated
      *
      * @param _seller - the fully populated seller struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -153,15 +153,25 @@ contract SellerHandlerFacet is SellerBase {
             needsApproval = true;
         }
 
-        if (needsApproval) {
-            emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, sender);
-        }
+        bool updateApplied;
 
         if (_seller.treasury != seller.treasury) {
             require(_seller.treasury != address(0), INVALID_ADDRESS);
+
             // Update treasury
             seller.treasury = _seller.treasury;
 
+            updateApplied = true;
+        }
+
+        if (keccak256(bytes(_seller.metadataUri)) != keccak256(bytes(seller.metadataUri))) {
+            // Update metadata URI
+            seller.metadataUri = _seller.metadataUri;
+
+            updateApplied = true;
+        }
+
+        if (updateApplied) {
             // Notify watchers of state change
             emit SellerUpdateApplied(
                 _seller.id,
@@ -172,6 +182,13 @@ contract SellerHandlerFacet is SellerBase {
                 sender
             );
         }
+
+        if (needsApproval) {
+            // Notify watchers of state change
+            emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, sender);
+        }
+
+        require(updateApplied || needsApproval, NO_UPDATE_APPLIED);
     }
 
     /**

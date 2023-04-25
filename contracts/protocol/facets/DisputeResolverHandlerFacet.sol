@@ -180,6 +180,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
      * - EscalationResponsePeriod is invalid
+     * - No field has been updated or requested to be updated
      *
      * @param _disputeResolver - the fully populated dispute resolver struct
      */
@@ -289,6 +290,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 sender
             );
         }
+
+        require(updateApplied || needsApproval, NO_UPDATE_APPLIED);
     }
 
     /**

@@ -102,7 +102,15 @@ describe("SellerHandler", function () {
   context("📋 Seller Methods", async function () {
     beforeEach(async function () {
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+
+      seller = mockSeller(
+        assistant.address,
+        admin.address,
+        clerk.address,
+        treasury.address,
+        true,
+        "https://ipfs.io/ipfs/originalUri"
+      );
       expect(seller.isValid()).is.true;
 
       // How that seller looks as a returned struct
@@ -417,6 +425,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate = seller.clone();
         pendingSellerUpdate.treasury = ethers.constants.AddressZero;
         pendingSellerUpdate.active = false;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdate.id = "0";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
@@ -494,6 +503,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate = seller.clone();
         pendingSellerUpdate.id = "0";
         pendingSellerUpdate.treasury = ethers.constants.AddressZero;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdate.active = false;
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
@@ -1360,6 +1370,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate.admin = ethers.constants.AddressZero;
         pendingSellerUpdate.assistant = ethers.constants.AddressZero;
         pendingSellerUpdate.active = false;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         // Create a seller
@@ -1368,7 +1379,8 @@ describe("SellerHandler", function () {
 
       it("should emit a SellerUpdateApplied and OwnershipTransferred event with correct values if values change", async function () {
         seller.treasury = other4.address;
-        // Treasury is the only values that can be update without address owner authorization
+        seller.metadataUri = "https://ipfs.io/ipfs/updatedUri";
+        // Treasury and metadataURI are only values that can be update without address owner authorization
         sellerStruct = seller.toStruct();
 
         seller.admin = ethers.constants.AddressZero;
@@ -1379,6 +1391,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate = seller.clone();
         pendingSellerUpdate.id = "0";
         pendingSellerUpdate.treasury = ethers.constants.AddressZero;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdate.active = false;
         expect(pendingSellerUpdate.isValid()).is.true;
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
@@ -1476,18 +1489,22 @@ describe("SellerHandler", function () {
           );
       });
 
-      it("should not emit a SellerUpdateApplied and OwnershipTransferred event if values stay the same", async function () {
+      it("should only emit SellerUpdatePending event if no update has been immediately applied", async function () {
+        seller.assistant = other1.address;
         const tx = await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
-        // Nothing should emit because values are the same
+        // SellerUpdateApplied should not be emit because no value has immediately updated
         await expect(tx).to.not.emit(accountHandler, "SellerUpdateApplied");
 
         // Voucher clone contract
         const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
 
-        // Since assistant stayed the same, clone contract ownership should not be transferred
+        // Since assistant stayed the same yet, clone contract ownership should not be transferred immediately
         await expect(tx).to.not.emit(bosonVoucher, "OwnershipTransferred");
+
+        // Only event emitted was SellerUpdatePending
+        await expect(tx).to.emit(accountHandler, "SellerUpdatePending");
       });
 
       it("should update state of all fields except Id and active flag", async function () {
@@ -1707,34 +1724,6 @@ describe("SellerHandler", function () {
 
         [exists] = await accountHandler.connect(rando).getSellerByAddress(seller2.clerk);
         expect(exists).to.be.true;
-
-        // Voucher clone contract
-        const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
-
-        expect(await bosonVoucher.owner()).to.equal(seller.assistant, "Wrong voucher clone owner");
-      });
-
-      it("should update state correctly if values are the same", async function () {
-        // Update a seller
-        await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
-
-        // Get the seller as a struct
-        [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
-
-        // Parse into entity
-        let returnedSeller = Seller.fromStruct(sellerStruct);
-        let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
-
-        // Returned values should match the input in updateSeller
-        for ([key, value] of Object.entries(seller)) {
-          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
-        }
-
-        // Returned auth token values should match the input in updateSeller
-        for ([key, value] of Object.entries(emptyAuthToken)) {
-          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
-        }
 
         // Voucher clone contract
         const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
@@ -1988,6 +1977,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate.active = false;
         pendingSellerUpdate.id = "0";
         pendingSellerUpdate.treasury = ethers.constants.AddressZero;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         // Update seller
@@ -2045,6 +2035,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate.id = "0";
         pendingSellerUpdate.active = false;
         pendingSellerUpdate.treasury = ethers.constants.AddressZero;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         // Testing for the SellerUpdateApplied event
@@ -2340,6 +2331,12 @@ describe("SellerHandler", function () {
             accountHandler.connect(authTokenOwner).createSeller(seller2, authToken2, voucherInitValues)
           ).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
         });
+
+        it("No updates applied or set to pending", async function () {
+          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+            RevertReasons.NO_UPDATE_APPLIED
+          );
+        });
       });
     });
 
@@ -2352,6 +2349,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate.admin = ethers.constants.AddressZero;
         pendingSellerUpdate.assistant = ethers.constants.AddressZero;
         pendingSellerUpdate.active = false;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -2496,6 +2494,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate.clerk = ethers.constants.AddressZero;
         pendingSellerUpdate.admin = ethers.constants.AddressZero;
         pendingSellerUpdate.active = false;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))

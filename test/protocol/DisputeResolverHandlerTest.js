@@ -772,14 +772,6 @@ describe("DisputeResolverHandler", function () {
           );
       });
 
-      it("should not emit a DisputeResolverUpdatePending or DisputeResolverUpdateApplied event if values stay the same", async function () {
-        const tx = await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
-
-        await expect(tx).to.not.emit(accountHandler, "DisputeResolverUpdatePending");
-
-        await expect(tx).to.not.emit(accountHandler, "DisputeResolverUpdateApplied");
-      });
-
       it("should update state of all fields except Id and active flag and fees", async function () {
         disputeResolver.escalationResponsePeriod = Number(
           Number(disputeResolver.escalationResponsePeriod) - oneWeek
@@ -854,33 +846,9 @@ describe("DisputeResolverHandler", function () {
         expect(exists).to.be.true;
       });
 
-      it("state should stay the same if values are the same", async function () {
-        // Update disupte resolver
-        await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
-
-        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
-          .connect(rando)
-          .getDisputeResolver(expectedDisputeResolver.id);
-
-        // Parse into entity
-        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
-        let returnedDisputeResolverFeeList = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct);
-        expect(returnedDisputeResolver.isValid()).is.true;
-        expect(returnedDisputeResolverFeeList.isValid()).is.true;
-
-        // Returned values should match the input in updateDisputeResolver
-        for ([key, value] of Object.entries(expectedDisputeResolver)) {
-          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
-        }
-        assert.equal(
-          returnedDisputeResolverFeeList.toString(),
-          disputeResolverFeeList.toString(),
-          "Dispute Resolver Fee List is incorrect"
-        );
-      });
-
       it("should ignore active flag passed in", async function () {
         disputeResolver.active = true;
+        disputeResolver.assistant = other2.address;
         expect(disputeResolver.isValid()).is.true;
 
         // Update disupte resolver
@@ -1385,6 +1353,11 @@ describe("DisputeResolverHandler", function () {
           // Attempt to update a DisputeResolver, expecting revert
           await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.INVALID_ESCALATION_PERIOD
+          );
+        });
+        it("No updates applied or set to pending", async function () {
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+            RevertReasons.NO_UPDATE_APPLIED
           );
         });
       });
