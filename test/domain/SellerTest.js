@@ -183,7 +183,7 @@ describe("Seller", function () {
       expect(seller.activeIsValid()).is.true;
       expect(seller.isValid()).is.true;
     });
-    it("Always present, metadataUri must be a non-empty string", async function () {
+    it("Always present, metadataUri must be a string", async function () {
       // Invalid field value
       seller.metadataUri = 12;
       expect(seller.metadataUriIsValid()).is.false;
@@ -196,6 +196,11 @@ describe("Seller", function () {
 
       // Valid field value
       seller.metadataUri = "https://ipfs.io/ipfs/QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+      expect(seller.metadataUriIsValid()).is.true;
+      expect(seller.isValid()).is.true;
+
+      // Valid field value
+      seller.tokenName = "";
       expect(seller.metadataUriIsValid()).is.true;
       expect(seller.isValid()).is.true;
     });
