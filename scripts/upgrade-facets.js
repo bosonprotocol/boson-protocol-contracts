@@ -205,7 +205,13 @@ async function main(env, facetConfig) {
     contracts = contracts.filter((i) => i.name !== newFacet.name);
 
     const newFacetInterfaceId = interfaceIdFromFacetName(newFacet.name);
-    deploymentComplete(newFacet.name, newFacet.contract.address, [], newFacetInterfaceId, contracts);
+    deploymentComplete(
+      newFacet.name,
+      newFacet.contract.address,
+      newFacet.constructorArguments,
+      newFacetInterfaceId,
+      contracts
+    );
 
     // Get new selectors from compiled contract
     const selectors = getSelectors(newFacet.contract, true);
