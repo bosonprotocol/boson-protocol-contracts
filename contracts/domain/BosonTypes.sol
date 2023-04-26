@@ -95,6 +95,7 @@ contract BosonTypes {
         address clerk;
         address payable treasury;
         bool active;
+        string metadataUri;
     }
 
     struct Buyer {

@@ -164,11 +164,9 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return exists - whether the seller id exists
      * @return sellerId  - the seller id
      */
-    function getSellerIdByAuthToken(AuthToken calldata _authToken)
-        internal
-        view
-        returns (bool exists, uint256 sellerId)
-    {
+    function getSellerIdByAuthToken(
+        AuthToken calldata _authToken
+    ) internal view returns (bool exists, uint256 sellerId) {
         // Get the seller id
         sellerId = protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId];
 
@@ -213,11 +211,9 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return exists - whether the dispute resolver id exists
      * @return disputeResolverId  - the dispute resolver  id
      */
-    function getDisputeResolverIdByAssistant(address _assistant)
-        internal
-        view
-        returns (bool exists, uint256 disputeResolverId)
-    {
+    function getDisputeResolverIdByAssistant(
+        address _assistant
+    ) internal view returns (bool exists, uint256 disputeResolverId) {
         // Get the dispute resolver id
         disputeResolverId = protocolLookups().disputeResolverIdByAssistant[_assistant];
 
@@ -232,11 +228,9 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return exists - whether the dispute resolver id exists
      * @return disputeResolverId  - the dispute resolver id
      */
-    function getDisputeResolverIdByAdmin(address _admin)
-        internal
-        view
-        returns (bool exists, uint256 disputeResolverId)
-    {
+    function getDisputeResolverIdByAdmin(
+        address _admin
+    ) internal view returns (bool exists, uint256 disputeResolverId) {
         // Get the dispute resolver id
         disputeResolverId = protocolLookups().disputeResolverIdByAdmin[_admin];
 
@@ -251,11 +245,9 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return exists - whether the dispute resolver id exists
      * @return disputeResolverId  - the dispute resolver id
      */
-    function getDisputeResolverIdByClerk(address _clerk)
-        internal
-        view
-        returns (bool exists, uint256 disputeResolverId)
-    {
+    function getDisputeResolverIdByClerk(
+        address _clerk
+    ) internal view returns (bool exists, uint256 disputeResolverId) {
         // Get the dispute resolver id
         disputeResolverId = protocolLookups().disputeResolverIdByClerk[_clerk];
 
@@ -286,15 +278,9 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return seller - the seller details. See {BosonTypes.Seller}
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      */
-    function fetchSeller(uint256 _sellerId)
-        internal
-        view
-        returns (
-            bool exists,
-            Seller storage seller,
-            AuthToken storage authToken
-        )
-    {
+    function fetchSeller(
+        uint256 _sellerId
+    ) internal view returns (bool exists, Seller storage seller, AuthToken storage authToken) {
         // Cache protocol entities for reference
         ProtocolLib.ProtocolEntities storage entities = protocolEntities();
 
@@ -331,7 +317,9 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
-    function fetchDisputeResolver(uint256 _disputeResolverId)
+    function fetchDisputeResolver(
+        uint256 _disputeResolverId
+    )
         internal
         view
         returns (
@@ -400,11 +388,9 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @param _offerId - the id of the offer
      * @return offerDurations - the offer durations details. See {BosonTypes.OfferDurations}
      */
-    function fetchOfferDurations(uint256 _offerId)
-        internal
-        view
-        returns (BosonTypes.OfferDurations storage offerDurations)
-    {
+    function fetchOfferDurations(
+        uint256 _offerId
+    ) internal view returns (BosonTypes.OfferDurations storage offerDurations) {
         // Get the offer's slot
         offerDurations = protocolEntities().offerDurations[_offerId];
     }
@@ -415,11 +401,9 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @param _offerId - the id of the offer
      * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
      */
-    function fetchDisputeResolutionTerms(uint256 _offerId)
-        internal
-        view
-        returns (BosonTypes.DisputeResolutionTerms storage disputeResolutionTerms)
-    {
+    function fetchDisputeResolutionTerms(
+        uint256 _offerId
+    ) internal view returns (BosonTypes.DisputeResolutionTerms storage disputeResolutionTerms) {
         // Get the disputeResolutionTerms slot
         disputeResolutionTerms = protocolEntities().disputeResolutionTerms[_offerId];
     }
@@ -483,15 +467,9 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return exists - whether the dispute exists
      * @return dispute - the dispute details. See {BosonTypes.Dispute}
      */
-    function fetchDispute(uint256 _exchangeId)
-        internal
-        view
-        returns (
-            bool exists,
-            Dispute storage dispute,
-            DisputeDates storage disputeDates
-        )
-    {
+    function fetchDispute(
+        uint256 _exchangeId
+    ) internal view returns (bool exists, Dispute storage dispute, DisputeDates storage disputeDates) {
         // Cache protocol entities for reference
         ProtocolLib.ProtocolEntities storage entities = protocolEntities();
 
@@ -602,11 +580,9 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return exists - whether the exchange Ids exist
      * @return exchangeIds  - the exchange Ids.
      */
-    function getExchangeIdsByOffer(uint256 _offerId)
-        internal
-        view
-        returns (bool exists, uint256[] storage exchangeIds)
-    {
+    function getExchangeIdsByOffer(
+        uint256 _offerId
+    ) internal view returns (bool exists, uint256[] storage exchangeIds) {
         // Get the exchange Ids
         exchangeIds = protocolLookups().exchangeIdsByOffer[_offerId];
 
@@ -642,11 +618,10 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return exchange - the exchange
      * @return voucher - the voucher
      */
-    function getValidExchange(uint256 _exchangeId, ExchangeState _expectedState)
-        internal
-        view
-        returns (Exchange storage exchange, Voucher storage voucher)
-    {
+    function getValidExchange(
+        uint256 _exchangeId,
+        ExchangeState _expectedState
+    ) internal view returns (Exchange storage exchange, Voucher storage voucher) {
         // Get the exchange
         bool exchangeExists;
         (exchangeExists, exchange) = fetchExchange(_exchangeId);
@@ -700,11 +675,9 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return exists - whether one or more twin receipt exists
      * @return twinReceipts - the list of twin receipts. See {BosonTypes.TwinReceipt}
      */
-    function fetchTwinReceipts(uint256 _exchangeId)
-        internal
-        view
-        returns (bool exists, TwinReceipt[] storage twinReceipts)
-    {
+    function fetchTwinReceipts(
+        uint256 _exchangeId
+    ) internal view returns (bool exists, TwinReceipt[] storage twinReceipts) {
         // Get the twin receipts slot
         twinReceipts = protocolLookups().twinReceiptsByExchange[_exchangeId];
 
@@ -719,11 +692,9 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return exists - whether one condition exists for the exchange
      * @return condition - the condition. See {BosonTypes.Condition}
      */
-    function fetchConditionByExchange(uint256 _exchangeId)
-        internal
-        view
-        returns (bool exists, Condition storage condition)
-    {
+    function fetchConditionByExchange(
+        uint256 _exchangeId
+    ) internal view returns (bool exists, Condition storage condition) {
         // Get the condition slot
         condition = protocolLookups().exchangeCondition[_exchangeId];
 

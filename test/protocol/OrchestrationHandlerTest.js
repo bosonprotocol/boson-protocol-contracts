@@ -1,8 +1,6 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
 const { assert, expect } = require("chai");
 
-const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
@@ -21,12 +19,16 @@ const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Range = require("../../scripts/domain/Range");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { getEvent, applyPercentage, calculateContractAddress, getFacetsWithArgs } = require("../util/utils.js");
+const {
+  getEvent,
+  applyPercentage,
+  calculateContractAddress,
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
+} = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL, maxPriorityFeePerGas } = require("../util/constants");
+const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
 const {
   mockTwin,
   mockOffer,
@@ -38,7 +40,7 @@ const {
   mockCondition,
   accountId,
 } = require("../util/mock");
-const { setNextBlockTimestamp } = require("../util/utils");
+const { setNextBlockTimestamp, deriveTokenId } = require("../util/utils");
 const Dispute = require("../../scripts/domain/Dispute");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const DisputeDates = require("../../scripts/domain/DisputeDates");
@@ -62,12 +64,8 @@ describe("IBosonOrchestrationHandler", function () {
     assistantDR,
     adminDR,
     clerkDR,
-    treasuryDR,
-    protocolAdmin,
-    protocolTreasury;
+    treasuryDR;
   let erc165,
-    protocolDiamond,
-    accessController,
     accountHandler,
     offerHandler,
     exchangeHandler,
@@ -111,158 +109,72 @@ describe("IBosonOrchestrationHandler", function () {
   let disputeStruct, disputeDatesStruct;
   let returnedDispute, returnedDisputeDates;
   let newTime, voucherStruct, escalatedDate, response;
+  let protocolDiamondAddress;
+  let snapshotId;
 
   before(async function () {
+    // Reset the accountId iterator
+    accountId.next(true);
+
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
-  });
 
-  beforeEach(async function () {
-    // Make accounts available
-    [
-      deployer,
-      pauser,
-      admin,
-      treasury,
-      buyer,
-      rando,
-      other1,
-      other2,
-      adminDR,
-      treasuryDR,
-      protocolAdmin,
-      protocolTreasury,
-    ] = await ethers.getSigners();
+    // Deploy the mock tokens
+    [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens();
+
+    // Specify contracts needed for this test
+    const contracts = {
+      erc165: "ERC165Facet",
+      accountHandler: "IBosonAccountHandler",
+      groupHandler: "IBosonGroupHandler",
+      twinHandler: "IBosonTwinHandler",
+      bundleHandler: "IBosonBundleHandler",
+      offerHandler: "IBosonOfferHandler",
+      exchangeHandler: "IBosonExchangeHandler",
+      fundsHandler: "IBosonFundsHandler",
+      disputeHandler: "IBosonDisputeHandler",
+      orchestrationHandler: "IBosonOrchestrationHandler",
+      configHandler: "IBosonConfigHandler",
+      pauseHandler: "IBosonPauseHandler",
+    };
+
+    ({
+      signers: [pauser, admin, treasury, buyer, rando, other1, other2, adminDR, treasuryDR],
+      contractInstances: {
+        erc165,
+        accountHandler,
+        groupHandler,
+        twinHandler,
+        bundleHandler,
+        offerHandler,
+        exchangeHandler,
+        fundsHandler,
+        disputeHandler,
+        orchestrationHandler,
+        configHandler,
+        pauseHandler,
+      },
+      protocolConfig: [
+        ,
+        ,
+        { percentage: protocolFeePercentage, flatBoson: protocolFeeFlatBoson, buyerEscalationDepositPercentage },
+      ],
+      diamondAddress: protocolDiamondAddress,
+    } = await setupTestEnvironment(contracts, { bosonTokenAddress: bosonToken.address }));
 
     // make all account the same
     clerk = assistant = admin;
     assistantDR = clerkDR = adminDR;
 
-    // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
+    [deployer] = await ethers.getSigners();
 
-    // Temporarily grant UPGRADER role to deployer account
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
+    // Get snapshot id
+    snapshotId = await getSnapshot();
+  });
 
-    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-
-    //Grant ADMIN role to and address that can call restricted functions.
-    //This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
-    await accessController.grantRole(Role.ADMIN, protocolAdmin.address);
-
-    // Temporarily grant PAUSER role to pauser account
-    await accessController.grantRole(Role.PAUSER, pauser.address);
-
-    // Grant PROTOCOL role to ProtocolDiamond address
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-
-    // Deploy the mock tokens
-    [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens();
-
-    // set protocolFees
-    protocolFeePercentage = "200"; // 2 %
-    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
-    buyerEscalationDepositPercentage = "1000"; // 10%
-
-    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [protocolDiamond.address];
-    const [, [beacon], [proxy]] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
-
-    // Add config Handler, so offer id starts at 1
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 10000,
-      },
-      // Protocol fees
-      {
-        percentage: protocolFeePercentage,
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
-    const facetNames = [
-      "SellerHandlerFacet",
-      "AgentHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "GroupHandlerFacet",
-      "TwinHandlerFacet",
-      "BundleHandlerFacet",
-      "DisputeHandlerFacet",
-      "FundsHandlerFacet",
-      "OrchestrationHandlerFacet1",
-      "OrchestrationHandlerFacet2",
-      "PauseHandlerFacet",
-      "AccountHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
-
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
-
-    // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
-
-    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonExchangeHandler
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonOfferHandler
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonGroupHandler
-    groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonTwinHandler
-    twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonBundleHandler
-    bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonDisputeHandler
-    disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonFundsHandler
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonOrchestrationHandler
-    orchestrationHandler = await ethers.getContractAt("IBosonOrchestrationHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonConfigHandler
-    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonPauseHandler
-    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -374,7 +286,7 @@ describe("IBosonOrchestrationHandler", function () {
 
     context("👉 raiseAndEscalateDispute()", async function () {
       async function createDisputeExchangeWithToken() {
-        // utility function that deploys a mock token, creates a offer with it, creates an exchange and push it into escalated state
+        // utility function that deploys a mock token, creates a offer with it and creates an exchange
         // deploy a mock token
         const [mockToken] = await deployMockTokens(["Foreign20"]);
 
@@ -399,7 +311,7 @@ describe("IBosonOrchestrationHandler", function () {
         // mint tokens to buyer and approve the protocol
         buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
         await mockToken.mint(buyer.address, buyerEscalationDepositToken);
-        await mockToken.connect(buyer).approve(protocolDiamond.address, buyerEscalationDepositToken);
+        await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDepositToken);
 
         // Commit to offer and put exchange all the way to dispute
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
@@ -478,7 +390,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should update state", async function () {
         // Protocol balance before
-        const escrowBalanceBefore = await ethers.provider.getBalance(protocolDiamond.address);
+        const escrowBalanceBefore = await ethers.provider.getBalance(protocolDiamondAddress);
 
         // Raise and escalate the dispute
         tx = await orchestrationHandler
@@ -517,7 +429,7 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(response, DisputeState.Escalated, "Dispute state is incorrect");
 
         // Protocol balance should increase for buyer escalation deposit
-        const escrowBalanceAfter = await ethers.provider.getBalance(protocolDiamond.address);
+        const escrowBalanceAfter = await ethers.provider.getBalance(protocolDiamondAddress);
         expect(escrowBalanceAfter.sub(escrowBalanceBefore)).to.equal(
           buyerEscalationDepositNative,
           "Escrow balance mismatch"
@@ -528,7 +440,7 @@ describe("IBosonOrchestrationHandler", function () {
         const mockToken = await createDisputeExchangeWithToken();
 
         // Protocol balance before
-        const escrowBalanceBefore = await mockToken.balanceOf(protocolDiamond.address);
+        const escrowBalanceBefore = await mockToken.balanceOf(protocolDiamondAddress);
 
         // Escalate the dispute, testing for the event
         await expect(orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId))
@@ -536,7 +448,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(exchangeId, disputeResolverId, buyer.address);
 
         // Protocol balance should increase for buyer escalation deposit
-        const escrowBalanceAfter = await mockToken.balanceOf(protocolDiamond.address);
+        const escrowBalanceAfter = await mockToken.balanceOf(protocolDiamondAddress);
         expect(escrowBalanceAfter.sub(escrowBalanceBefore)).to.equal(
           buyerEscalationDepositToken,
           "Escrow balance mismatch"
@@ -558,6 +470,18 @@ describe("IBosonOrchestrationHandler", function () {
          * - If calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
          * - Received ERC20 token amount differs from the expected value
          */
+        it("The orchestration region of protocol is paused", async function () {
+          // Pause the orchestration region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Orchestration]);
+
+          // Attempt to raise a dispute, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(buyer)
+              .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("The disputes region of protocol is paused", async function () {
           // Pause the disputes region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
@@ -1264,7 +1188,8 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, OfferCreated and RangeReserved events with auth token", async function () {
@@ -2160,7 +2085,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Reserved range length is greater than maximum allowed range length", async function () {
           // Set reserved range length to more than maximum allowed range length
-          let reservedRangeLength = ethers.BigNumber.from(2).pow(128).sub(1);
+          let reservedRangeLength = ethers.BigNumber.from(2).pow(64).sub(1);
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -2305,7 +2230,7 @@ describe("IBosonOrchestrationHandler", function () {
             await accountHandler.connect(rando).createAgent(agent);
 
             //Change protocol fee after creating agent
-            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
+            await configHandler.connect(deployer).setProtocolFeePercentage("1100"); //11%
 
             // Attempt to Create an offer, expecting revert
             await expect(
@@ -2730,7 +2655,8 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", bosonVoucher.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", bosonVoucher.address);
         });
 
         it("should emit an OfferCreated, a GroupCreated and a RangeReserved events", async function () {
@@ -3413,7 +3339,8 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
@@ -4098,7 +4025,8 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", bosonVoucher.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", bosonVoucher.address);
         });
 
         it("should emit an OfferCreated, a TwinCreated, a BundleCreated and a RangeReserved events", async function () {
@@ -5000,7 +4928,8 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
@@ -5747,7 +5676,8 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, an OfferCreated, a GroupCreated and a RangeReserved event", async function () {
@@ -6567,7 +6497,8 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, an OfferCreated, a TwinCreated, a BundleCreated and RangeReserved event", async function () {
@@ -7510,7 +7441,8 @@ describe("IBosonOrchestrationHandler", function () {
           offerStruct = offer.toStruct();
           firstTokenId = 1;
           lastTokenId = firstTokenId + reservedRangeLength - 1;
-          range = new Range(firstTokenId.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
+          const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", assistant.address);
         });
 
         it("should emit a SellerCreated, an OfferCreated, a GroupCreated, a TwinCreated, a BundleCreated and a RangeReserved event", async function () {

@@ -1,4 +1,4 @@
-const { bigNumberIsValid, booleanIsValid, addressIsValid } = require("../util/validations.js");
+const { bigNumberIsValid, stringIsValid, booleanIsValid, addressIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Seller
@@ -14,16 +14,18 @@ class Seller {
             address clerk;
             address payable treasury;
             bool active;
+            string metadataUri;
         }
     */
 
-  constructor(id, assistant, admin, clerk, treasury, active) {
+  constructor(id, assistant, admin, clerk, treasury, active, metadataUri) {
     this.id = id;
     this.assistant = assistant;
     this.admin = admin;
     this.clerk = clerk;
     this.treasury = treasury;
     this.active = active;
+    this.metadataUri = metadataUri;
   }
 
   /**
@@ -32,8 +34,8 @@ class Seller {
    * @returns {Seller}
    */
   static fromObject(o) {
-    const { id, assistant, admin, clerk, treasury, active } = o;
-    return new Seller(id, assistant, admin, clerk, treasury, active);
+    const { id, assistant, admin, clerk, treasury, active, metadataUri } = o;
+    return new Seller(id, assistant, admin, clerk, treasury, active, metadataUri);
   }
 
   /**
@@ -42,10 +44,8 @@ class Seller {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let id, assistant, admin, clerk, treasury, active;
-
     // destructure struct
-    [id, assistant, admin, clerk, treasury, active] = struct;
+    let [id, assistant, admin, clerk, treasury, active, metadataUri] = struct;
 
     return Seller.fromObject({
       id: id.toString(),
@@ -54,6 +54,7 @@ class Seller {
       clerk,
       treasury,
       active,
+      metadataUri,
     });
   }
 
@@ -78,7 +79,7 @@ class Seller {
    * @returns {string}
    */
   toStruct() {
-    return [this.id, this.assistant, this.admin, this.clerk, this.treasury, this.active];
+    return [this.id, this.assistant, this.admin, this.clerk, this.treasury, this.active, this.metadataUri];
   }
 
   /**
@@ -143,6 +144,16 @@ class Seller {
   }
 
   /**
+   * Is this DisputeResolver instance's metadataUri field valid?
+   * Always present, must be a string
+   *
+   * @returns {boolean}
+   */
+  metadataUriIsValid() {
+    return stringIsValid(this.metadataUri);
+  }
+
+  /**
    * Is this Seller instance valid?
    * @returns {boolean}
    */
@@ -153,7 +164,8 @@ class Seller {
       this.adminIsValid() &&
       this.clerkIsValid() &&
       this.treasuryIsValid() &&
-      this.activeIsValid()
+      this.activeIsValid() &&
+      this.metadataUriIsValid()
     );
   }
 }

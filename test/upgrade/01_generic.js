@@ -1,8 +1,9 @@
+const shell = require("shelljs");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { assert, expect } = require("chai");
 const { mockOffer, mockVoucher, mockExchange } = require("../util/mock");
-const { getEvent, calculateVoucherExpiry } = require("../util/utils.js");
+const { getEvent, calculateVoucherExpiry, getSnapshot, revertToSnapshot } = require("../util/utils.js");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const { populateProtocolContract, getProtocolContractState } = require("../util/upgrade");
@@ -15,36 +16,57 @@ function getGenericContext(
   mockContracts,
   protocolContractState,
   preUpgradeEntities,
-  snapshot
+  snapshot,
+  newVersion
 ) {
   let postUpgradeEntities;
-  let exchangeHandler, offerHandler, fundsHandler, disputeHandler;
-  let mockToken;
-
-  ({ exchangeHandler, offerHandler, fundsHandler, disputeHandler } = protocolContracts);
-  ({ mockToken } = mockContracts);
+  let { exchangeHandler, offerHandler, fundsHandler, disputeHandler } = protocolContracts;
+  let { mockToken } = mockContracts;
 
   const genericContextFunction = async function () {
     afterEach(async function () {
       // Revert to state right after the upgrade.
       // This is used so the lengthly setup (deploy+upgrade) is done only once.
-      await ethers.provider.send("evm_revert", [snapshot]);
-      snapshot = await ethers.provider.send("evm_snapshot", []);
+      await revertToSnapshot(snapshot);
+      snapshot = await getSnapshot();
+    });
+
+    after(async function () {
+      // revert to latest state of contracts
+      shell.exec(`rm -rf contracts scripts`);
+      shell.exec(`git checkout HEAD contracts scripts`);
+      shell.exec(`git reset HEAD contracts scripts`);
     });
 
     // Protocol state
     context("📋 Right After upgrade", async function () {
       it("State is not affected directly after the update", async function () {
         // Get protocol state after the upgrade
-        const protocolContractStateAfterUpgrade = await getProtocolContractState(
+        let protocolContractStateAfterUpgrade = await getProtocolContractState(
           protocolDiamondAddress,
           protocolContracts,
           mockContracts,
           preUpgradeEntities
         );
 
-        // State before and after should be equal
-        assert.deepEqual(protocolContractState, protocolContractStateAfterUpgrade, "state mismatch after upgrade");
+        if (newVersion == "v2.2.0") {
+          // Meta transactions private state was changed on v2.2.0 and should be tested separately
+          // We need to remove the old state from the protocol state
+          delete protocolContractStateAfterUpgrade.metaTxPrivateContractState;
+          delete protocolContractState.metaTxPrivateContractState;
+
+          // Operator has changed to assistant so we need to test separately
+          delete protocolContractState.accountContractState.DRsState;
+          delete protocolContractStateAfterUpgrade.accountContractState.DRsState;
+          delete protocolContractState.accountContractState.sellerState;
+          delete protocolContractStateAfterUpgrade.accountContractState.sellerState;
+          delete protocolContractState.accountContractState.sellerByAddressState;
+          delete protocolContractStateAfterUpgrade.accountContractState.sellerByAddressState;
+          delete protocolContractState.accountContractState.sellerByAuthTokenState;
+          delete protocolContractStateAfterUpgrade.accountContractState.sellerByAuthTokenState;
+        }
+
+        assert.deepEqual(protocolContractState, protocolContractStateAfterUpgrade);
       });
     });
 
@@ -55,7 +77,8 @@ function getGenericContext(
           deployer,
           protocolDiamondAddress,
           protocolContracts,
-          mockContracts
+          mockContracts,
+          newVersion
         );
 
         // Get protocol state after the upgrade
@@ -75,36 +98,35 @@ function getGenericContext(
           postUpgradeEntities.DRs.length +
           postUpgradeEntities.agents.length +
           postUpgradeEntities.buyers.length;
+
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.accountContractState.nextAccountId.toNumber(),
-          protocolContractState.accountContractState.nextAccountId.add(accountCount).toNumber(),
+          protocolContractStateAfterUpgradeAndActions.accountContractState.nextAccountId,
+          Number(protocolContractState.accountContractState.nextAccountId) + accountCount,
           "nextAccountId mismatch"
         );
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.exchangeContractState.nextExchangeId.toNumber(),
-          protocolContractState.exchangeContractState.nextExchangeId
-            .add(postUpgradeEntities.exchanges.length)
-            .toNumber(),
+          protocolContractStateAfterUpgradeAndActions.exchangeContractState.nextExchangeId,
+          Number(protocolContractState.exchangeContractState.nextExchangeId) + postUpgradeEntities.exchanges.length,
           "nextExchangeId mismatch"
         );
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.groupContractState.nextGroupId.toNumber(),
-          protocolContractState.groupContractState.nextGroupId.add(postUpgradeEntities.groups.length).toNumber(),
+          protocolContractStateAfterUpgradeAndActions.groupContractState.nextGroupId,
+          Number(protocolContractState.groupContractState.nextGroupId) + postUpgradeEntities.groups.length,
           "nextGroupId mismatch"
         );
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.offerContractState.nextOfferId.toNumber(),
-          protocolContractState.offerContractState.nextOfferId.add(postUpgradeEntities.offers.length).toNumber(),
+          protocolContractStateAfterUpgradeAndActions.offerContractState.nextOfferId,
+          Number(protocolContractState.offerContractState.nextOfferId) + postUpgradeEntities.offers.length,
           "nextOfferId mismatch"
         );
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.twinContractState.nextTwinId.toNumber(),
-          protocolContractState.twinContractState.nextTwinId.add(postUpgradeEntities.twins.length).toNumber(),
+          protocolContractStateAfterUpgradeAndActions.twinContractState.nextTwinId,
+          Number(protocolContractState.twinContractState.nextTwinId) + postUpgradeEntities.twins.length,
           "nextTwinId mismatch"
         );
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.bundleContractState.nextBundleId.toNumber(),
-          protocolContractState.bundleContractState.nextBundleId.add(postUpgradeEntities.bundles.length).toNumber()
+          protocolContractStateAfterUpgradeAndActions.bundleContractState.nextBundleId,
+          Number(protocolContractState.bundleContractState.nextBundleId) + postUpgradeEntities.bundles.length
         );
 
         // State before and after should be equal
@@ -121,6 +143,24 @@ function getGenericContext(
         delete protocolContractState.offerContractState.nextOfferId;
         delete protocolContractState.twinContractState.nextTwinId;
         delete protocolContractState.bundleContractState.nextBundleId;
+
+        if (newVersion == "v2.2.0") {
+          // Meta transactions private state was changed on v2.2.0 and should be tested separately
+          // We need to remove the old state from the protocol state
+          delete protocolContractStateAfterUpgradeAndActions.metaTxPrivateContractState;
+          delete protocolContractState.metaTxPrivateContractState;
+
+          // Operator has changed to assistant so we need to test separately
+          delete protocolContractState.accountContractState.DRsState;
+          delete protocolContractStateAfterUpgradeAndActions.accountContractState.DRsState;
+          delete protocolContractState.accountContractState.sellerState;
+          delete protocolContractStateAfterUpgradeAndActions.accountContractState.sellerState;
+          delete protocolContractState.accountContractState.sellerByAddressState;
+          delete protocolContractStateAfterUpgradeAndActions.accountContractState.sellerByAddressState;
+          delete protocolContractState.accountContractState.sellerByAuthTokenState;
+          delete protocolContractStateAfterUpgradeAndActions.accountContractState.sellerByAuthTokenState;
+        }
+
         assert.deepEqual(
           protocolContractState,
           protocolContractStateAfterUpgradeAndActions,
@@ -215,7 +255,8 @@ function getGenericContext(
       });
 
       it("Escalate old dispute", async function () {
-        const exchange = preUpgradeEntities.exchanges[5]; // exchange for which dispute was raised
+        const exchange = preUpgradeEntities.exchanges[5 - 1]; // exchange for which dispute was raised
+
         const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
         const offer = preUpgradeEntities.offers.find((o) => o.offer.id == exchange.offerId);
         await expect(disputeHandler.connect(buyerWallet).escalateDispute(exchange.exchangeId))

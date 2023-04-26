@@ -364,7 +364,8 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         // Burn the voucher
         (, Offer storage offer) = fetchOffer(_exchange.offerId);
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
-        bosonVoucher.burnVoucher(_exchange.id);
+        uint256 tokenId = _exchange.id + (_exchange.offerId << 128);
+        bosonVoucher.burnVoucher(tokenId);
     }
 
     /**
@@ -378,10 +379,10 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
      * @param _exchange - the exchange for which twins should be transferred
      * @return shouldBurnVoucher - whether or not the voucher should be burned
      */
-    function transferTwins(Exchange storage _exchange, Voucher storage _voucher)
-        internal
-        returns (bool shouldBurnVoucher)
-    {
+    function transferTwins(
+        Exchange storage _exchange,
+        Voucher storage _voucher
+    ) internal returns (bool shouldBurnVoucher) {
         // See if there is an associated bundle
         (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
 

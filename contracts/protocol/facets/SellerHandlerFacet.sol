@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
-
 import "../../domain/BosonConstants.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { SellerBase } from "../bases/SellerBase.sol";
@@ -70,6 +69,7 @@ contract SellerHandlerFacet is SellerBase {
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - AuthTokenType is Custom
+     * - No field has been updated or requested to be updated
      *
      * @param _seller - the fully populated seller struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -153,15 +153,25 @@ contract SellerHandlerFacet is SellerBase {
             needsApproval = true;
         }
 
-        if (needsApproval) {
-            emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, sender);
-        }
+        bool updateApplied;
 
         if (_seller.treasury != seller.treasury) {
             require(_seller.treasury != address(0), INVALID_ADDRESS);
+
             // Update treasury
             seller.treasury = _seller.treasury;
 
+            updateApplied = true;
+        }
+
+        if (keccak256(bytes(_seller.metadataUri)) != keccak256(bytes(seller.metadataUri))) {
+            // Update metadata URI
+            seller.metadataUri = _seller.metadataUri;
+
+            updateApplied = true;
+        }
+
+        if (updateApplied) {
             // Notify watchers of state change
             emit SellerUpdateApplied(
                 _seller.id,
@@ -172,6 +182,13 @@ contract SellerHandlerFacet is SellerBase {
                 sender
             );
         }
+
+        if (needsApproval) {
+            // Notify watchers of state change
+            emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, sender);
+        }
+
+        require(updateApplied || needsApproval, NO_UPDATE_APPLIED);
     }
 
     /**
@@ -190,11 +207,10 @@ contract SellerHandlerFacet is SellerBase {
      * @param _sellerId - seller id
      * @param _fieldsToUpdate - fields to update, see SellerUpdateFields enum
      */
-    function optInToSellerUpdate(uint256 _sellerId, SellerUpdateFields[] calldata _fieldsToUpdate)
-        external
-        sellersNotPaused
-        nonReentrant
-    {
+    function optInToSellerUpdate(
+        uint256 _sellerId,
+        SellerUpdateFields[] calldata _fieldsToUpdate
+    ) external sellersNotPaused nonReentrant {
         Seller storage sellerPendingUpdate;
         AuthToken storage authTokenPendingUpdate;
 
@@ -381,15 +397,9 @@ contract SellerHandlerFacet is SellerBase {
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
-    function getSeller(uint256 _sellerId)
-        external
-        view
-        returns (
-            bool exists,
-            Seller memory seller,
-            AuthToken memory authToken
-        )
-    {
+    function getSeller(
+        uint256 _sellerId
+    ) external view returns (bool exists, Seller memory seller, AuthToken memory authToken) {
         return fetchSeller(_sellerId);
     }
 
@@ -404,15 +414,9 @@ contract SellerHandlerFacet is SellerBase {
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
-    function getSellerByAddress(address _associatedAddress)
-        external
-        view
-        returns (
-            bool exists,
-            Seller memory seller,
-            AuthToken memory authToken
-        )
-    {
+    function getSellerByAddress(
+        address _associatedAddress
+    ) external view returns (bool exists, Seller memory seller, AuthToken memory authToken) {
         uint256 sellerId;
 
         (exists, sellerId) = getSellerIdByAssistant(_associatedAddress);
@@ -443,15 +447,9 @@ contract SellerHandlerFacet is SellerBase {
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
-    function getSellerByAuthToken(AuthToken calldata _associatedAuthToken)
-        external
-        view
-        returns (
-            bool exists,
-            Seller memory seller,
-            AuthToken memory authToken
-        )
-    {
+    function getSellerByAuthToken(
+        AuthToken calldata _associatedAuthToken
+    ) external view returns (bool exists, Seller memory seller, AuthToken memory authToken) {
         uint256 sellerId;
 
         (exists, sellerId) = getSellerIdByAuthToken(_associatedAuthToken);
@@ -467,11 +465,9 @@ contract SellerHandlerFacet is SellerBase {
      * @return defaultVoucherAddress - the address of the default voucher contract for the seller
      * @return additionalCollections - an array of additional collections that the seller has created
      */
-    function getSellersCollections(uint256 _sellerId)
-        external
-        view
-        returns (address defaultVoucherAddress, Collection[] memory additionalCollections)
-    {
+    function getSellersCollections(
+        uint256 _sellerId
+    ) external view returns (address defaultVoucherAddress, Collection[] memory additionalCollections) {
         ProtocolLib.ProtocolLookups storage pl = protocolLookups();
         return (pl.cloneAddress[_sellerId], pl.additionalCollections[_sellerId]);
     }
