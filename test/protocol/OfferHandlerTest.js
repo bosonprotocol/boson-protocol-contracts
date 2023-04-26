@@ -22,7 +22,7 @@ const {
   getSnapshot,
   revertToSnapshot,
   deriveTokenId,
-  compareOfferStructs
+  compareOfferStructs,
 } = require("../util/utils.js");
 const { oneWeek, oneMonth, oneDay } = require("../util/constants");
 const {
@@ -41,7 +41,19 @@ const {
 describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, pauser, rando, assistant, admin, clerk, treasury, assistantDR, adminDR, clerkDR, treasuryDR, other, other2, protocolAdmin;
+  let deployer,
+    pauser,
+    rando,
+    assistant,
+    admin,
+    clerk,
+    treasury,
+    assistantDR,
+    adminDR,
+    clerkDR,
+    treasuryDR,
+    other,
+    other2;
   let erc165,
     accountHandler,
     offerHandler,
@@ -113,7 +125,7 @@ describe("IBosonOfferHandler", function () {
     };
 
     ({
-      signers: [pauser, admin, treasury, rando, adminDR, treasuryDR, other, other2, protocolAdmin],
+      signers: [pauser, admin, treasury, rando, adminDR, treasuryDR, other, other2],
       contractInstances: {
         erc165,
         accountHandler,

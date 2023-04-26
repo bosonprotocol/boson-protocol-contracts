@@ -254,10 +254,10 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @return receiver - the address of the royalty receiver (seller's treasury address)
      * @return royaltyPercentage - the royalty percentage in bps
      */
-    function getExchangeEIP2981Royalties(uint256 _queryId, bool _isPreminted)
-        external
-        view
-        returns (address receiver, uint256 royaltyPercentage);
+    function getExchangeEIP2981Royalties(
+        uint256 _queryId,
+        bool _isPreminted
+    ) external view returns (address receiver, uint256 royaltyPercentage);
 
     /**
      * @notice Gets royalty information for a chosen exchange.
@@ -271,10 +271,10 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @param _isPreminted - indicates if the query is for preminted voucher
      * @return royaltyInfo - list of royalty recipients and corresponding bps
      */
-    function getExchangeRoyalties(uint256 _queryId, bool _isPreminted)
-        external
-        view
-        returns (BosonTypes.RoyaltyInfo memory royaltyInfo);
+    function getExchangeRoyalties(
+        uint256 _queryId,
+        bool _isPreminted
+    ) external view returns (BosonTypes.RoyaltyInfo memory royaltyInfo);
 
     /**
      * @notice Gets exchange receipt.

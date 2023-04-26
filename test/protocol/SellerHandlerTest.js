@@ -7,7 +7,13 @@ const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { calculateContractAddress, setupTestEnvironment, getSnapshot, revertToSnapshot, getEvent } = require("../util/utils.js");
+const {
+  calculateContractAddress,
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
+  getEvent,
+} = require("../util/utils.js");
 const { VOUCHER_NAME, VOUCHER_SYMBOL, DEFAULT_ROYALTY_RECIPIENT } = require("../util/constants");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockSeller, mockAuthToken, mockVoucherInitValues, accountId } = require("../util/mock");

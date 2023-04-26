@@ -78,10 +78,6 @@ contract SellerHandlerFacet is SellerBase {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        bool exists;
-        Seller storage seller;
-        AuthToken storage authToken;
-
         // Admin address or AuthToken data must be present. A seller can have one or the other
         require(
             (_seller.admin == address(0) && _authToken.tokenType != AuthTokenType.None) ||
@@ -92,16 +88,20 @@ contract SellerHandlerFacet is SellerBase {
         require(_authToken.tokenType != AuthTokenType.Custom, INVALID_AUTH_TOKEN_TYPE);
 
         // Check Seller exists in sellers mapping
-        (exists, seller, authToken) = fetchSeller(_seller.id);
+        Seller storage seller;
+        AuthToken storage authToken;
+        {
+            bool exists;
+            (exists, seller, authToken) = fetchSeller(_seller.id);
 
-        // Seller must already exist
-        require(exists, NO_SUCH_SELLER);
-
+            // Seller must already exist
+            require(exists, NO_SUCH_SELLER);
+        }
         // Get message sender
-        address sender = msgSender();
+        // address sender = msgSender(); // temporary disabled due to stack too deep error. Revisit when compiler version is upgraded
 
         // Check that caller is authorized to call this function
-        isCallerAuthorizedCheck(lookups, seller, authToken, sender);
+        isCallerAuthorizedCheck(lookups, seller, authToken, msgSender());
 
         // Clean old seller pending update data if exists
         delete lookups.pendingAddressUpdatesBySeller[_seller.id];
@@ -148,71 +148,72 @@ contract SellerHandlerFacet is SellerBase {
                 needsApproval = true;
             }
 
-        bool updateApplied;
+            bool updateApplied;
 
-        if (_seller.treasury != seller.treasury) {
-            require(_seller.treasury != address(0), INVALID_ADDRESS);
+            if (_seller.treasury != seller.treasury) {
+                require(_seller.treasury != address(0), INVALID_ADDRESS);
 
-            // Delete old treasury index mapping
-            delete lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][seller.treasury];
+                // Delete old treasury index mapping
+                delete lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][seller.treasury];
 
-            uint256 royaltyRecipientId = lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][
-                _seller.treasury
-            ];
-            RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_seller.id];
+                uint256 royaltyRecipientId = lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][
+                    _seller.treasury
+                ];
 
-            if (royaltyRecipientId != 0) {
-                // If the new treasury is already a royalty recipient, remove it
-                // TODO: check if can be refactored to use with removeRoyaltyRecipient
+                if (royaltyRecipientId != 0) {
+                    // If the new treasury is already a royalty recipient, remove it
+                    // TODO: check if can be refactored to use with removeRoyaltyRecipient
+                    RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_seller.id];
 
-                uint256 lastRoyaltyRecipientsId = royaltyRecipients.length - 1;
-                if (royaltyRecipientId != lastRoyaltyRecipientsId) {
-                    royaltyRecipients[royaltyRecipientId] = royaltyRecipients[lastRoyaltyRecipientsId];
-                    lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][
-                        royaltyRecipients[royaltyRecipientId].wallet
-                    ] = royaltyRecipientId;
+                    uint256 lastRoyaltyRecipientsId = royaltyRecipients.length - 1;
+                    if (royaltyRecipientId != lastRoyaltyRecipientsId) {
+                        royaltyRecipients[royaltyRecipientId] = royaltyRecipients[lastRoyaltyRecipientsId];
+                        lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][
+                            royaltyRecipients[royaltyRecipientId].wallet
+                        ] = royaltyRecipientId;
+                    }
+                    delete royaltyRecipients[lastRoyaltyRecipientsId];
                 }
-                delete royaltyRecipients[lastRoyaltyRecipientsId];
+                lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][_seller.treasury] = 1;
+
+                // Update treasury
+                seller.treasury = _seller.treasury;
+
+                // Update default royalty recipient
+                lookups.royaltyRecipientsBySeller[_seller.id][0].wallet = _seller.treasury;
+
+                // Update treasury
+                seller.treasury = _seller.treasury;
+
+                updateApplied = true;
             }
-            lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][_seller.treasury] = 1;
 
-            // Update treasury
-            seller.treasury = _seller.treasury;
+            if (keccak256(bytes(_seller.metadataUri)) != keccak256(bytes(seller.metadataUri))) {
+                // Update metadata URI
+                seller.metadataUri = _seller.metadataUri;
 
-            // Update default royalty recipient
-            lookups.royaltyRecipientsBySeller[_seller.id][0].wallet = _seller.treasury;
+                updateApplied = true;
+            }
 
-            // Update treasury
-            seller.treasury = _seller.treasury;
+            if (updateApplied) {
+                // Notify watchers of state change
+                emit SellerUpdateApplied(
+                    _seller.id,
+                    seller,
+                    sellerPendingUpdate,
+                    authToken,
+                    authTokenPendingUpdate,
+                    msgSender()
+                );
+            }
 
-            updateApplied = true;
+            if (needsApproval) {
+                // Notify watchers of state change
+                emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, msgSender());
+            }
+
+            require(updateApplied || needsApproval, NO_UPDATE_APPLIED);
         }
-
-        if (keccak256(bytes(_seller.metadataUri)) != keccak256(bytes(seller.metadataUri))) {
-            // Update metadata URI
-            seller.metadataUri = _seller.metadataUri;
-
-            updateApplied = true;
-        }
-
-        if (updateApplied) {
-            // Notify watchers of state change
-            emit SellerUpdateApplied(
-                _seller.id,
-                seller,
-                sellerPendingUpdate,
-                authToken,
-                authTokenPendingUpdate,
-                sender
-            );
-        }
-
-        if (needsApproval) {
-            // Notify watchers of state change
-            emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, sender);
-        }
-
-        require(updateApplied || needsApproval, NO_UPDATE_APPLIED);
     }
 
     /**
@@ -387,11 +388,10 @@ contract SellerHandlerFacet is SellerBase {
      * @param _sellerId - seller id
      * @param _royaltyRecipients - list of royalty recipients to add
      */
-    function addRoyaltyRecipients(uint256 _sellerId, RoyaltyRecipient[] calldata _royaltyRecipients)
-        external
-        sellersNotPaused
-        nonReentrant
-    {
+    function addRoyaltyRecipients(
+        uint256 _sellerId,
+        RoyaltyRecipient[] calldata _royaltyRecipients
+    ) external sellersNotPaused nonReentrant {
         // Cache protocol lookups and sender for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
@@ -503,11 +503,10 @@ contract SellerHandlerFacet is SellerBase {
      * @param _sellerId - seller id
      * @param _royaltyRecipientIds - list of royalty recipient ids to remove
      */
-    function removeRoyaltyRecipients(uint256 _sellerId, uint256[] calldata _royaltyRecipientIds)
-        external
-        sellersNotPaused
-        nonReentrant
-    {
+    function removeRoyaltyRecipients(
+        uint256 _sellerId,
+        uint256[] calldata _royaltyRecipientIds
+    ) external sellersNotPaused nonReentrant {
         // Cache protocol lookups and sender for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
@@ -623,11 +622,9 @@ contract SellerHandlerFacet is SellerBase {
      * @param _sellerId - seller id
      * @return royaltyRecipients - list of royalty recipients
      */
-    function getRoyaltyRecipients(uint256 _sellerId)
-        external
-        view
-        returns (RoyaltyRecipient[] memory royaltyRecipients)
-    {
+    function getRoyaltyRecipients(
+        uint256 _sellerId
+    ) external view returns (RoyaltyRecipient[] memory royaltyRecipients) {
         return protocolLookups().royaltyRecipientsBySeller[_sellerId];
     }
 
@@ -672,11 +669,10 @@ contract SellerHandlerFacet is SellerBase {
      * @param _lookups - the lookups struct
      * @param _sellerId - the id of the seller to check
      */
-    function validateAdminStatus(ProtocolLib.ProtocolLookups storage _lookups, uint256 _sellerId)
-        internal
-        view
-        returns (Seller storage seller, address sender)
-    {
+    function validateAdminStatus(
+        ProtocolLib.ProtocolLookups storage _lookups,
+        uint256 _sellerId
+    ) internal view returns (Seller storage seller, address sender) {
         // Get message sender
         sender = msgSender();
 

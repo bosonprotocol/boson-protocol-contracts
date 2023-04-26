@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x2a993fc0
+ * The ERC-165 identifier for this interface is: 0x20237796
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -157,8 +157,10 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _sellerId - seller id
      * @param _royaltyRecipients - list of royalty recipients to add
      */
-    function addRoyaltyRecipients(uint256 _sellerId, BosonTypes.RoyaltyRecipient[] calldata _royaltyRecipients)
-        external;
+    function addRoyaltyRecipients(
+        uint256 _sellerId,
+        BosonTypes.RoyaltyRecipient[] calldata _royaltyRecipients
+    ) external;
 
     /**
      * @notice Updates seller's royalty recipients.
@@ -417,10 +419,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _sellerId - seller id
      * @return royaltyRecipients - list of royalty recipients
      */
-    function getRoyaltyRecipients(uint256 _sellerId)
-        external
-        view
-        returns (BosonTypes.RoyaltyRecipient[] memory royaltyRecipients);
+    function getRoyaltyRecipients(
+        uint256 _sellerId
+    ) external view returns (BosonTypes.RoyaltyRecipient[] memory royaltyRecipients);
 
     /**
      * @notice Gets the details about a buyer.

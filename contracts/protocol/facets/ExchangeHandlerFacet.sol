@@ -631,11 +631,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @return receiver - the address of the royalty receiver (seller's treasury address)
      * @return royaltyPercentage - the royalty percentage in bps
      */
-    function getExchangeEIP2981Royalties(uint256 _queryId, bool _isPreminted)
-        external
-        view
-        returns (address receiver, uint256 royaltyPercentage)
-    {
+    function getExchangeEIP2981Royalties(
+        uint256 _queryId,
+        bool _isPreminted
+    ) external view returns (address receiver, uint256 royaltyPercentage) {
         // EIP2981 returns only 1 recipient. Summ all bps and return treasury address as recipient
         RoyaltyInfo storage royaltyInfo = fetchExchangeRoyalties(_queryId, _isPreminted);
 
@@ -663,11 +662,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _isPreminted - indicates if the query is for preminted voucher
      * @return royaltyInfo - list of royalty recipients and corresponding bps
      */
-    function getExchangeRoyalties(uint256 _queryId, bool _isPreminted)
-        external
-        view
-        returns (RoyaltyInfo memory royaltyInfo)
-    {
+    function getExchangeRoyalties(
+        uint256 _queryId,
+        bool _isPreminted
+    ) external view returns (RoyaltyInfo memory royaltyInfo) {
         return fetchExchangeRoyalties(_queryId, _isPreminted);
     }
 
@@ -1095,11 +1093,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _isPreminted - indicates if the query is for preminted voucher
      * @return royaltyInfo - list of royalty recipients and corresponding bps
      */
-    function fetchExchangeRoyalties(uint256 _queryId, bool _isPreminted)
-        internal
-        view
-        returns (RoyaltyInfo storage royaltyInfo)
-    {
+    function fetchExchangeRoyalties(
+        uint256 _queryId,
+        bool _isPreminted
+    ) internal view returns (RoyaltyInfo storage royaltyInfo) {
         if (!_isPreminted) {
             (bool exists, Exchange storage exchange) = fetchExchange(_queryId);
             require(exists, NO_SUCH_EXCHANGE);
