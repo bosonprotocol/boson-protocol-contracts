@@ -26,13 +26,13 @@ const ItemType = require("./ItemTypeEnum");
 // - Seaport submodule contains a `artifacts` folder inside it. Run `git submodule update --init --recursive` to get it.
 // - Set hardhat config to hardhat-fork.config.js. e.g.:
 //   npx hardhat test test/integration/seaport/seaport-integration.js --config hardhat-fork.config.js
-describe("[@skip-on-coverage] Seaport integration", function() {
+describe("[@skip-on-coverage] Seaport integration", function () {
   let seaport;
   let bosonVoucher;
   let assistant, buyer, DR;
   let calldata, order, orderHash, value;
 
-  before(async function() {
+  before(async function () {
     accountId.next(true);
 
     seaport = await ethers.getContractAt("Seaport", SEAPORT_ADDRESS);
@@ -102,7 +102,7 @@ describe("[@skip-on-coverage] Seaport integration", function() {
     calldata = seaport.interface.encodeFunctionData("validate", [orders]);
   });
 
-  it("Voucher contract can be used to call seaport validate", async function() {
+  it("Voucher contract can be used to call seaport validate", async function () {
     const tx = await bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata);
     const receipt = await tx.wait();
 
@@ -111,7 +111,7 @@ describe("[@skip-on-coverage] Seaport integration", function() {
     assert.deepEqual(orderParameters, objectToArray(order.parameters));
   });
 
-  it("Seaport is allowed to transfer vouchers", async function() {
+  it("Seaport is allowed to transfer vouchers", async function () {
     await bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata);
     await bosonVoucher.connect(assistant).setApprovalForAllToContract(seaport.address, true);
 
@@ -132,8 +132,8 @@ describe("[@skip-on-coverage] Seaport integration", function() {
     assert.equal(orderHash, event[0]);
   });
 
-  context("💔 Revert Reasons", function() {
-    it("Boson voucher callExternalContract reverts if the seaport call reverts", async function() {
+  context("💔 Revert Reasons", function () {
+    it("Boson voucher callExternalContract reverts if the seaport call reverts", async function () {
       order.parameters.totalOriginalConsiderationItems = BigNumber.from(2);
       const orders = [objectToArray(order)];
       calldata = seaport.interface.encodeFunctionData("validate", [orders]);

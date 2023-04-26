@@ -148,12 +148,13 @@ module.exports = {
               yul: true,
             },
           },
-        },
-        outputSelection: {
-          "*": {
-            "*": ["evm.bytecode", "evm.deployedBytecode*"],
+          outputSelection: {
+            "*": {
+              "*": ["evm.bytecode.object", "evm.deployedBytecode*"],
+            },
           },
         },
+        viaIR: true,
       },
       {
         version: "0.5.17", // Mock weth contract

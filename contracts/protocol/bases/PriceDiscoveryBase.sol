@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "hardhat/console.sol";
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
@@ -209,13 +208,11 @@ contract PriceDiscoveryBase is ProtocolBase {
                 owner,
                 Side.Bid
             );
-            console.log("owner: ", owner);
 
             // Get current voucher owner
             owner = bosonVoucher.ownerOf(_tokenId);
 
             require(owner == _buyer, NEW_OWNER_AND_BUYER_MUST_MATCH);
-            console.log("actualPrice: ", actualPrice);
             require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
 
             // Transfer funds to protocol - caller must pay on behalf of the seller

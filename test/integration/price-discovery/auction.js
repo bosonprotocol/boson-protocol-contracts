@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const { ethers } = hre;
-const { utils, BigNumber, constants } = ethers;
+const { BigNumber, constants } = ethers;
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 
 const {
@@ -28,7 +28,7 @@ const Side = require("../../../scripts/domain/Side");
 
 const MASK = BigNumber.from(2).pow(128).sub(1);
 
-describe("[@skip-on-coverage] auction integration", function() {
+describe("[@skip-on-coverage] auction integration", function () {
   accountId.next(true);
   this.timeout(100000000);
   let bosonVoucher;
@@ -39,14 +39,13 @@ describe("[@skip-on-coverage] auction integration", function() {
   let seller;
   let snapshotId;
 
-  before(async function() {
-
+  before(async function () {
     // Specify contracts needed for this test
     const contracts = {
       accountHandler: "IBosonAccountHandler",
       offerHandler: "IBosonOfferHandler",
       fundsHandler: "IBosonFundsHandler",
-      exchangeHandler: "IBosonExchangeHandler"
+      exchangeHandler: "IBosonExchangeHandler",
     };
 
     const wethFactory = await ethers.getContractFactory("WETH9");
@@ -58,7 +57,7 @@ describe("[@skip-on-coverage] auction integration", function() {
     ({
       signers: [assistant, buyer, DR, rando],
       contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler },
-      extraReturnValues: { bosonVoucher }
+      extraReturnValues: { bosonVoucher },
     } = await setupTestEnvironment(contracts, { wethAddress: weth.address }));
 
     seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
@@ -69,7 +68,10 @@ describe("[@skip-on-coverage] auction integration", function() {
 
     const disputeResolver = mockDisputeResolver(DR.address, DR.address, DR.address, DR.address, true);
 
-    const disputeResolverFees = [new DisputeResolverFee(constants.AddressZero, "Native Currency", "0"), new DisputeResolverFee(weth.address, "WETH", "0")];
+    const disputeResolverFees = [
+      new DisputeResolverFee(constants.AddressZero, "Native Currency", "0"),
+      new DisputeResolverFee(weth.address, "WETH", "0"),
+    ];
     const sellerAllowList = [seller.id];
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -100,15 +102,15 @@ describe("[@skip-on-coverage] auction integration", function() {
     snapshotId = await getSnapshot();
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     await revertToSnapshot(snapshotId);
     snapshotId = await getSnapshot();
   });
 
-  context("Zora auction", async function() {
+  context("Zora auction", async function () {
     let tokenId, zoraAuction, amount, auctionId;
 
-    beforeEach(async function() {
+    beforeEach(async function () {
       // 1. Deploy Zora Auction
       const ZoraAuctionFactory = await ethers.getContractFactory("AuctionHouse");
       zoraAuction = await ZoraAuctionFactory.deploy(weth.address);
@@ -142,7 +144,7 @@ describe("[@skip-on-coverage] auction integration", function() {
     });
 
     // Zora uses safeTransferFrom and WETH doesn't support it
-    it("Should revert when seller is not using wrappers offer is native currency", async function() {
+    it("Should revert when seller is not using wrappers offer is native currency", async function () {
       // Caller should approve WETH because price discovery bids doesn't work with native currency
       await weth.connect(assistant).approve(exchangeHandler.address, amount);
 
@@ -151,14 +153,16 @@ describe("[@skip-on-coverage] auction integration", function() {
       const priceDiscovery = new PriceDiscovery(amount, zoraAuction.address, calldata, Side.Bid);
 
       //  Commit to offer, expecting revert
-      await expect(exchangeHandler.connect(assistant).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)).to.be.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+      await expect(
+        exchangeHandler.connect(assistant).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+      ).to.be.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
     });
 
     // Buyes doesn't get buyer protection
-    it("Auction ends normally if finalise directly into Zora", async function() {
+    it("Auction ends normally if finalise directly into Zora", async function () {
       const protocolBalanceBefore = await ethers.provider.getBalance(exchangeHandler.address);
 
-      const tx = await zoraAuction.connect(rando).endAuction(auctionId);
+      await zoraAuction.connect(rando).endAuction(auctionId);
 
       expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
       expect(await ethers.provider.getBalance(exchangeHandler.address)).to.equal(protocolBalanceBefore.add(amount));
