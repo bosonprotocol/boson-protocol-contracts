@@ -52,8 +52,10 @@ let preUpgradeInterfaceIds;
 
 // deploy suite and return deployed contracts
 async function deploySuite(deployer, tag, scriptsTag) {
-  const facets = await getFacets();
   // checkout old version
+  const facets = await getFacets();
+  console.log(`Fetching tags`);
+  shell.exec(`git fetch --force --tags origin`);
   console.log(`Checking out version ${tag}`);
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`git checkout ${tag} contracts`);
