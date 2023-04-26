@@ -3,6 +3,7 @@ pragma solidity 0.8.9;
 
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
+import { IERC721ReceiverUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 
 /**
  * @title IBosonVoucher
@@ -11,11 +12,12 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
  *
  * The ERC-165 identifier for this interface is: 0x35c4bfaf
  */
-interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
+interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable, IERC721ReceiverUpgradeable {
     event ContractURIChanged(string contractURI);
     event RoyaltyPercentageChanged(uint256 royaltyPercentage);
     event VoucherInitialized(uint256 indexed sellerId, string indexed contractURI);
     event RangeReserved(uint256 indexed offerId, Range range);
+    event VouchersPreMinted(uint256 indexed offerId, uint256 startId, uint256 endId);
 
     // Describe a reserved range of token ids
     struct Range {
@@ -32,19 +34,19 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * Minted voucher supply is sent to the buyer.
      * Caller must have PROTOCOL role.
      *
-     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     * @param _tokenId - voucher token id corresponds to <<uint128(offerId)>>.<<uint128(exchangeId)>>
      * @param _buyer - the buyer address
      */
-    function issueVoucher(uint256 _exchangeId, address _buyer) external;
+    function issueVoucher(uint256 _tokenId, address _buyer) external;
 
     /**
      * @notice Burns a voucher.
      *
      * Caller must have PROTOCOL role.
      *
-     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     * @param _tokenId - voucher token id corresponds to <<uint128(offerId)>>.<<uint128(exchangeId)>>
      */
-    function burnVoucher(uint256 _exchangeId) external;
+    function burnVoucher(uint256 _tokenId) external;
 
     /**
      * @notice Gets the seller id.
@@ -86,10 +88,10 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @return receiver - address of who should be sent the royalty payment
      * @return royaltyAmount - the royalty payment amount for the given sale price
      */
-    function royaltyInfo(uint256 _tokenId, uint256 _salePrice)
-        external
-        view
-        returns (address receiver, uint256 royaltyAmount);
+    function royaltyInfo(
+        uint256 _tokenId,
+        uint256 _salePrice
+    ) external view returns (address receiver, uint256 royaltyAmount);
 
     /**
      * @notice Reserves a range of vouchers to be associated with an offer
@@ -110,12 +112,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @param _length - the length of the range
      * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      */
-    function reserveRange(
-        uint256 _offerId,
-        uint256 _start,
-        uint256 _length,
-        address _to
-    ) external;
+    function reserveRange(uint256 _offerId, uint256 _start, uint256 _length, address _to) external;
 
     /**
      * @notice Pre-mints all or part of an offer's reserved vouchers.
@@ -173,30 +170,6 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @param _offerId - the id of the offer
      */
     function burnPremintedVouchers(uint256 _offerId) external;
-
-    /**
-     * @notice Non-standard ERC721 function to transfer a pre-minted token from one address to another.
-     *
-     * Reverts if:
-     * - TokenId was already used to commit
-     * - TokenId already exists (i.e. has an owner)
-     * - TokenId has not been preminted yet
-     * - TokenId was already burned
-     * - From is not the owner of the voucher contract
-     *
-     * @param _from - the address to transfer from
-     * @param _to - the address to transfer to
-     * @param _offerId - the id of the offer
-     * @param _tokenId - the id of the token
-     * @param _data - data to pass if receiver is contract
-     */
-    function transferPremintedFrom(
-        address _from,
-        address _to,
-        uint256 _offerId,
-        uint256 _tokenId,
-        bytes memory _data
-    ) external;
 
     /**
      * @notice Gets the number of vouchers available to be pre-minted for an offer.

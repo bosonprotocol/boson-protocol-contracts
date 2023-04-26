@@ -29,11 +29,10 @@ let DisputeResolver = require("../../scripts/domain/DisputeResolver.js");
 let Seller = require("../../scripts/domain/Seller");
 
 function* incrementer() {
-  let i = 1;
+  let i = 0;
   while (true) {
     const reset = yield (i++).toString();
     if (reset) {
-      // reset to 0 instead of 1 to not count the reset call
       i = 0;
     }
   }
@@ -134,12 +133,28 @@ function mockDisputeResolver(assistantAddress, adminAddress, clerkAddress, treas
   );
 }
 
-function mockSeller(assistantAddress, adminAddress, clerkAddress, treasuryAddress, refreshModule) {
+function mockSeller(
+  assistantAddress,
+  adminAddress,
+  clerkAddress,
+  treasuryAddress,
+  active = true,
+  metadataUri = "",
+  { refreshModule } = {}
+) {
   if (refreshModule) {
     decache("../../scripts/domain/Seller.js");
     Seller = require("../../scripts/domain/Seller.js");
   }
-  return new Seller(accountId.next().value, assistantAddress, adminAddress, clerkAddress, treasuryAddress, true);
+  return new Seller(
+    accountId.next().value,
+    assistantAddress,
+    adminAddress,
+    clerkAddress,
+    treasuryAddress,
+    active,
+    metadataUri
+  );
 }
 
 function mockBuyer(wallet) {

@@ -1,7 +1,9 @@
-const hre = require("hardhat");
-const { utils, provider, BigNumber } = hre.ethers;
+const { ethers } = require("hardhat");
+const { utils, provider, BigNumber } = ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
 const { keccak256, RLP } = utils;
+const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
+const Role = require("../../scripts/domain/Role");
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
 
@@ -116,6 +118,8 @@ function compareOfferStructs(returnedOffer) {
 }
 
 async function setNextBlockTimestamp(timestamp) {
+  if (typeof timestamp == "string" && timestamp.startsWith("0x0") && timestamp.length > 3)
+    timestamp = "0x" + timestamp.substring(3);
   await provider.send("evm_setNextBlockTimestamp", [timestamp]);
   await provider.send("evm_mine", []);
 }
@@ -284,6 +288,133 @@ function objectToArray(input) {
   return result;
 }
 
+async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAddress } = {}) {
+  // Load modules only here to avoid the caching issues in upgrade tests
+  const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
+  const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+  const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
+
+  const facetNames = [
+    "SellerHandlerFacet",
+    "BuyerHandlerFacet",
+    "AgentHandlerFacet",
+    "DisputeResolverHandlerFacet",
+    "ExchangeHandlerFacet",
+    "OfferHandlerFacet",
+    "GroupHandlerFacet",
+    "TwinHandlerFacet",
+    "BundleHandlerFacet",
+    "DisputeHandlerFacet",
+    "FundsHandlerFacet",
+    "OrchestrationHandlerFacet1",
+    "OrchestrationHandlerFacet2",
+    "PauseHandlerFacet",
+    "AccountHandlerFacet",
+    "ProtocolInitializationHandlerFacet",
+    "ConfigHandlerFacet",
+    "MetaTransactionsHandlerFacet",
+  ];
+
+  const signers = await ethers.getSigners();
+  const [deployer, protocolTreasury, bosonToken, pauser] = signers;
+
+  // Deploy the Protocol Diamond
+  const [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
+
+  // Temporarily grant UPGRADER role to deployer account
+  await accessController.grantRole(Role.UPGRADER, deployer.address);
+
+  // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
+  await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
+  // Grant PAUSER role to pauser account
+  await accessController.grantRole(Role.PAUSER, pauser.address);
+
+  // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
+  const protocolClientArgs = [protocolDiamond.address];
+  const [implementations, beacons, proxies, clients] = await deployProtocolClients(
+    protocolClientArgs,
+    maxPriorityFeePerGas,
+    forwarderAddress
+  );
+  const [beacon] = beacons;
+  const [proxy] = proxies;
+  const [bosonVoucher] = clients;
+  const [voucherImplementation] = implementations;
+
+  // set protocolFees
+  const protocolFeePercentage = "200"; // 2 %
+  const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+  const buyerEscalationDepositPercentage = "1000"; // 10%
+
+  // Add config Handler, so ids start at 1, and so voucher address can be found
+  const protocolConfig = [
+    // Protocol addresses
+    {
+      treasury: protocolTreasury.address,
+      token: bosonTokenAddress || bosonToken.address,
+      voucherBeacon: beacon.address,
+      beaconProxy: proxy.address,
+    },
+    // Protocol limits
+    {
+      maxExchangesPerBatch: 100,
+      maxOffersPerGroup: 100,
+      maxTwinsPerBundle: 100,
+      maxOffersPerBundle: 100,
+      maxOffersPerBatch: 100,
+      maxTokensPerWithdrawal: 100,
+      maxFeesPerDisputeResolver: 100,
+      maxEscalationResponsePeriod: oneMonth,
+      maxDisputesPerBatch: 100,
+      maxAllowedSellers: 100,
+      maxTotalOfferFeePercentage: 4000, //40%
+      maxRoyaltyPecentage: 1000, //10%
+      maxResolutionPeriod: oneMonth,
+      minDisputePeriod: oneWeek,
+      maxPremintedVouchers: 10000,
+    },
+    // Protocol fees
+    {
+      percentage: protocolFeePercentage,
+      flatBoson: protocolFeeFlatBoson,
+      buyerEscalationDepositPercentage,
+    },
+  ];
+
+  const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+
+  // Cut the protocol handler facets into the Diamond
+  await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+
+  let contractInstances = {};
+  for (const contract of Object.keys(contracts)) {
+    contractInstances[contract] = await ethers.getContractAt(contracts[contract], protocolDiamond.address);
+  }
+
+  const extraReturnValues = { accessController, bosonVoucher, voucherImplementation, beacon };
+
+  return {
+    signers: signers.slice(3),
+    contractInstances,
+    protocolConfig,
+    diamondAddress: protocolDiamond.address,
+    extraReturnValues,
+  };
+}
+
+async function getSnapshot() {
+  return await ethers.provider.send("evm_snapshot", []);
+}
+
+async function revertToSnapshot(snapshotId) {
+  return await ethers.provider.send("evm_revert", [snapshotId]);
+}
+
+function deriveTokenId(offerId, exchangeId) {
+  return ethers.BigNumber.from(offerId).shl(128).add(exchangeId);
+}
+
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.eventEmittedWithArgs = eventEmittedWithArgs;
@@ -296,3 +427,7 @@ exports.paddingType = paddingType;
 exports.getFacetsWithArgs = getFacetsWithArgs;
 exports.compareOfferStructs = compareOfferStructs;
 exports.objectToArray = objectToArray;
+exports.setupTestEnvironment = setupTestEnvironment;
+exports.getSnapshot = getSnapshot;
+exports.revertToSnapshot = revertToSnapshot;
+exports.deriveTokenId = deriveTokenId;

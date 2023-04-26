@@ -77,18 +77,6 @@ abstract contract BeaconClientBase is BosonTypes {
     }
 
     /**
-     * @notice Gets the exchange associated with a voucher
-     *
-     * @param _exchangeId - the id of the exchange
-     * @return exists - the exchange was found
-     * @return exchange - the exchange associated with the _exchangeId
-     */
-    function getBosonExchange(uint256 _exchangeId) internal view returns (bool exists, Exchange memory exchange) {
-        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        (exists, exchange, ) = IBosonExchangeHandler(protocolDiamond).getExchange(_exchangeId);
-    }
-
-    /**
      * @notice Informs protocol of new buyer associated with an exchange
      *
      * @param _exchangeId - the id of the exchange

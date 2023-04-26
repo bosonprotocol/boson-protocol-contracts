@@ -92,14 +92,9 @@ interface IBosonGroupHandler is IBosonGroupEvents {
      * @return group - the group details. See {BosonTypes.Group}
      * @return condition - the group's condition details. See {BosonTypes.Condition}
      */
-    function getGroup(uint256 _groupId)
-        external
-        view
-        returns (
-            bool exists,
-            BosonTypes.Group memory group,
-            BosonTypes.Condition memory condition
-        );
+    function getGroup(
+        uint256 _groupId
+    ) external view returns (bool exists, BosonTypes.Group memory group, BosonTypes.Condition memory condition);
 
     /**
      * @notice Gets the next group id.

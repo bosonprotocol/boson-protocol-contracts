@@ -3,6 +3,6 @@
 
 find . -name '*.js' -not -path '*/node_modules/*' | xargs git diff --cached --name-only | xargs -r npx eslint --fix
 find . -name '*.js' -not -path '*/node_modules/*' | xargs git diff --cached --name-only | xargs -r npx prettier --write
-git diff --cached --name-only | grep contracts | xargs -r npx solhint --fix 
-git diff --cached --name-only | grep contracts | xargs -r npx prettier --write
+git diff --cached --name-only | grep contracts -e *.txt | xargs -r npx solhint --fix 
+git diff --cached --name-only | grep contracts -e *.txt | xargs -r npx prettier --write
 npm run natspec-interface-id:fix

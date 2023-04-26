@@ -101,6 +101,46 @@ jobs:
       - name: Integration tests
         run: npx hardhat test test/integration/*.js
 
+  coverage:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    env:
+      GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
+    name: code coverage
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3.1.0
+      - name: Setup node
+        uses: actions/setup-node@v3.5.1
+        with:
+          node-version: 16.14.x
+          cache: "npm"
+      - name: Install Dependencies
+        run: npm install
+      - name: Prepare Environment
+        shell: bash
+        run: |
+          cp .env.example .env
+      - name: Compile Contracts
+        run: npm run build
+      - name: Code coverage
+        run: npm run coverage
+      - name: Upload code coverage results
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-report
+          path: coverage/
+      - name: Check Code Coverage
+        shell: bash
+        run: |
+          MAX_SKIPPED=1 # at this moment msgData() in BosonVoucher is not covered
+          { read TOTAL; read COVERED; read COVERAGE; } <<< $(jq '.total.lines.total, .total.lines.covered, .total.lines.pct' coverage/coverage-summary.json)
+          SKIPPED=$(($TOTAL - $COVERED))
+          echo "solidity code coverage is '$COVERAGE'"
+          if (( $(echo "$SKIPPED > $MAX_SKIPPED" | bc -l) )); then echo "Fail: number of skipped statements '$SKIPPED' is higher than configured '$MAX_SKIPPED'" >&2; exit 1; fi
+          echo "Number of skipped statements '$SKIPPED' is within configured '$MAX_SKIPPED'"
+
   deploy-dry-run:
     needs: build
     runs-on: ubuntu-latest
@@ -125,3 +165,37 @@ jobs:
       - name: Cancelling tests in case of failure
         if: failure()
         uses: andymckay/cancel-action@0.2
+  analyze:
+      needs: build
+      runs-on: ubuntu-latest
+      permissions:
+        contents: read
+        security-events: write
+      steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3.1.0
+      - name: Setup node
+        uses: actions/setup-node@v3.5.1
+        with:
+          node-version: 16.14.x
+          cache: 'npm'
+      - name: Install Dependencies
+        run: npm install
+      - name: Prepare Environment
+        shell: bash
+        run: |
+          cp .env.example .env
+      - name: Slither analyzer
+        uses: crytic/slither-action@v0.2.0
+        id: slither
+        with:
+          node-version: 16
+          sarif: results.sarif
+          fail-on: none
+          slither-version: dev-workaround-action-48
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: ${{ steps.slither.outputs.sarif }}
+
+

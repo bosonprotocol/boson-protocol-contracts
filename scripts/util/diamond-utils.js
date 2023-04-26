@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const environments = "../../environments.js";
 const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const FacetCutAction = require("../domain/FacetCutAction");
+const { interfacesWithMultipleArtifacts } = require("./constants");
 const { getFees } = require("./utils");
 const ethers = hre.ethers;
 const keccak256 = ethers.utils.keccak256;
@@ -32,7 +33,7 @@ function getSelectors(contract, returnSignatureToNameMapping = false) {
 }
 
 // get interface id
-async function getInterfaceId(contractName, skipBaseCheck = false) {
+async function getInterfaceId(contractName, skipBaseCheck = false, isFullPath = false) {
   const contract = await ethers.getContractAt(contractName, ethers.constants.AddressZero);
   const signatures = Object.keys(contract.interface.functions);
   const selectors = signatures.reduce((acc, val) => {
@@ -45,15 +46,32 @@ async function getInterfaceId(contractName, skipBaseCheck = false) {
   // If contract inherits other contracts, their interfaces must be xor-ed
   if (!skipBaseCheck) {
     // Get base contracts
+    let buildInfo;
     const { sourceName } = await hre.artifacts.readArtifact(contractName);
-    const buildInfo = await hre.artifacts.getBuildInfo(`${sourceName}:${contractName}`);
+
+    if (!isFullPath) {
+      buildInfo = await hre.artifacts.getBuildInfo(`${sourceName}:${contractName}`);
+    } else {
+      buildInfo = await hre.artifacts.getBuildInfo(contractName);
+    }
 
     const nodes = buildInfo.output?.sources?.[sourceName]?.ast?.nodes;
     const node = nodes.find((n) => n.baseContracts); // node with information about base contracts
 
     for (const baseContract of node.baseContracts) {
       const baseName = baseContract.baseName.name;
-      const baseContractInterfaceId = ethers.BigNumber.from(await getInterfaceId(baseName));
+
+      isFullPath = interfacesWithMultipleArtifacts.includes(baseName);
+
+      const baseContractInterfaceId = ethers.BigNumber.from(
+        await getInterfaceId(
+          interfacesWithMultipleArtifacts.includes(baseName)
+            ? `contracts/interfaces/${baseName}.sol:${baseName}`
+            : baseName,
+          false,
+          isFullPath
+        )
+      );
 
       // Remove interface id of base contracts
       interfaceId = interfaceId.xor(baseContractInterfaceId);
@@ -197,7 +215,7 @@ async function cutDiamond(
   }, []);
 
   const transactionResponse = await diamondCutFacet.diamondCut(
-    [...cut, ...facetsToRemove],
+    [...facetsToRemove, ...cut],
     initializationAddress,
     initializeCalldata,
     await getFees(maxPriorityFeePerGas)

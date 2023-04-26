@@ -21,10 +21,9 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Initializes Facet.
      * This function is callable only once.
      */
-    function initialize(bytes32[] calldata _functionNameHashes)
-        public
-        onlyUninitialized(type(IBosonMetaTransactionsHandler).interfaceId)
-    {
+    function initialize(
+        bytes32[] calldata _functionNameHashes
+    ) public onlyUninitialized(type(IBosonMetaTransactionsHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonMetaTransactionsHandler).interfaceId);
 
         // Set types for special metatxs
@@ -337,11 +336,10 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @param _functionNameHashes - a list of hashed function names (keccak256)
      * @param _isAllowlisted - new allowlist status
      */
-    function setAllowlistedFunctions(bytes32[] calldata _functionNameHashes, bool _isAllowlisted)
-        public
-        override
-        onlyRole(ADMIN)
-    {
+    function setAllowlistedFunctions(
+        bytes32[] calldata _functionNameHashes,
+        bool _isAllowlisted
+    ) public override onlyRole(ADMIN) {
         ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
 
         // set new values

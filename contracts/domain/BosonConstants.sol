@@ -79,6 +79,7 @@ string constant ROYALTY_RECIPIENT_IDS_NOT_SORTED = "Royalty recipient ids must b
 string constant RECIPIENT_NOT_UNIQUE = "Royalty recipient id must be unique";
 string constant INVALID_ROYALTY_RECIPIENT = "Invalid royalty recipient";
 string constant CANNOT_REMOVE_DEFAULT_RECIPIENT = "Cannot remove default royalty recipient";
+string constant NO_UPDATE_APPLIED = "No update applied or requested approval";
 
 // Revert Reasons: Offer related
 string constant NO_SUCH_OFFER = "No such offer";

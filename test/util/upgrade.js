@@ -1,4 +1,5 @@
 const shell = require("shelljs");
+const _ = require("lodash");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
 const ethers = hre.ethers;
@@ -10,6 +11,7 @@ const Bundle = require("../../scripts/domain/Bundle");
 const Group = require("../../scripts/domain/Group");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const TokenType = require("../../scripts/domain/TokenType.js");
+const Exchange = require("../../scripts/domain/Exchange.js");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const {
   mockOffer,
@@ -31,18 +33,32 @@ const { oneMonth, oneDay } = require("./constants");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { readContracts } = require("../../scripts/util/utils");
-const { facets } = require("../upgrade/00_config");
+const { getFacets } = require("../upgrade/00_config");
+const Receipt = require("../../scripts/domain/Receipt");
+const Offer = require("../../scripts/domain/Offer");
+const OfferFees = require("../../scripts/domain/OfferFees");
+const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
+const OfferDurations = require("../../scripts/domain/OfferDurations");
+const OfferDates = require("../../scripts/domain/OfferDates");
+const Seller = require("../../scripts/domain/Seller");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const Agent = require("../../scripts/domain/Agent");
+const Buyer = require("../../scripts/domain/Buyer");
 
 // Common vars
+const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
 let rando;
+let preUpgradeInterfaceIds;
 
 // deploy suite and return deployed contracts
 async function deploySuite(deployer, tag, scriptsTag) {
+  const facets = await getFacets();
   // checkout old version
   console.log(`Checking out version ${tag}`);
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`git checkout ${tag} contracts`);
   if (scriptsTag) {
+    console.log(`Checking out scripts on version ${scriptsTag}`);
     shell.exec(`rm -rf scripts/*`);
     shell.exec(`git checkout ${scriptsTag} scripts`);
   }
@@ -121,10 +137,17 @@ async function deploySuite(deployer, tag, scriptsTag) {
 
 // upgrade the suite to new version and returns handlers with upgraded interfaces
 // upgradedInterfaces is object { handlerName : "interfaceName"}
-async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces) {
+async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scriptsTag, overrideFacetConfig) {
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`rm -rf scripts/*`);
-  shell.exec(`git checkout HEAD scripts`);
+  if (scriptsTag) {
+    console.log(`Checking out scripts on version ${scriptsTag}`);
+    shell.exec(`git checkout ${scriptsTag} scripts`);
+  } else {
+    console.log(`Checking out latest scripts`);
+    shell.exec(`git checkout HEAD scripts`);
+  }
+
   if (tag) {
     // checkout the new tag
     console.log(`Checking out version ${tag}`);
@@ -135,9 +158,18 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces) {
     shell.exec(`git checkout HEAD contracts`);
   }
 
+  const facets = await getFacets();
+  let facetConfig = facets.upgrade[tag] || facets.upgrade["latest"];
+  if (overrideFacetConfig) {
+    facetConfig = _.merge(facetConfig, overrideFacetConfig);
+  }
+
   // compile new contracts
   await hre.run("compile");
-  await hre.run("upgrade-facets", { env: "upgrade-test", facetConfig: JSON.stringify(facets.upgrade[tag]) });
+  await hre.run("upgrade-facets", {
+    env: "upgrade-test",
+    facetConfig: JSON.stringify(facetConfig),
+  });
 
   // Cast to updated interface
   let newHandlers = {};
@@ -205,7 +237,8 @@ async function populateProtocolContract(
     groupHandler,
     twinHandler,
   },
-  { mockToken, mockConditionalToken, mockAuthERC721Contract, mockTwinTokens, mockTwin20, mockTwin1155 }
+  { mockToken, mockConditionalToken, mockAuthERC721Contract, mockTwinTokens, mockTwin20, mockTwin1155 },
+  version
 ) {
   let DRs = [];
   let sellers = [];
@@ -242,6 +275,9 @@ async function populateProtocolContract(
     entityType.BUYER,
   ];
 
+  let nextAccountId = Number(await accountHandler.getNextAccountId());
+  let voucherIndex = 1;
+
   for (const entity of entities) {
     const wallet = ethers.Wallet.createRandom();
     const connectedWallet = wallet.connect(ethers.provider);
@@ -269,6 +305,8 @@ async function populateProtocolContract(
           new DisputeResolverFee(mockToken.address, "MockToken", "0"),
         ];
         const sellerAllowList = [];
+        disputeResolver.id = nextAccountId.toString();
+
         await accountHandler
           .connect(connectedWallet)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -279,15 +317,20 @@ async function populateProtocolContract(
           disputeResolverFees,
           sellerAllowList,
         });
-        //ADMIN role activates Dispute Resolver
-        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
+        if (versionsWithActivateDRFunction.includes(version)) {
+          //ADMIN role activates Dispute Resolver
+          await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+        }
         break;
       }
+
       case entityType.SELLER: {
         const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address, true);
-        const id = seller.id;
+        const id = (seller.id = nextAccountId.toString());
+
         let authToken;
+
         // randomly decide if auth token is used or not
         if (Math.random() > 0.5) {
           // no auth token
@@ -301,7 +344,17 @@ async function populateProtocolContract(
         // set unique new voucherInitValues
         const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
         await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
-        sellers.push({ wallet: connectedWallet, id, seller, authToken, voucherInitValues, offerIds: [] });
+
+        const voucherContractAddress = calculateContractAddress(accountHandler.address, voucherIndex++);
+        sellers.push({
+          wallet: connectedWallet,
+          id,
+          seller,
+          authToken,
+          voucherInitValues,
+          offerIds: [],
+          voucherContractAddress,
+        });
 
         // mint mock token to sellers just in case they need them
         await mockToken.mint(connectedWallet.address, "10000000000");
@@ -310,13 +363,17 @@ async function populateProtocolContract(
       }
       case entityType.AGENT: {
         const agent = mockAgent(wallet.address);
+
         await accountHandler.connect(connectedWallet).createAgent(agent);
+
+        agent.id = nextAccountId.toString();
         agents.push({ wallet: connectedWallet, id: agent.id, agent });
         break;
       }
       case entityType.BUYER: {
         // no need to explicitly create buyer, since it's done automatically during commitToOffer
         const buyer = mockBuyer(wallet.address);
+        buyer.id = nextAccountId.toString();
         buyers.push({ wallet: connectedWallet, id: buyer.id, buyer });
 
         // mint them conditional token in case they need it
@@ -324,6 +381,8 @@ async function populateProtocolContract(
         break;
       }
     }
+
+    nextAccountId++;
   }
 
   // Make explicit allowed sellers list for some DRs
@@ -347,7 +406,7 @@ async function populateProtocolContract(
       offer.price = `${offerId * 1000}`;
       offer.sellerDeposit = `${offerId * 100}`;
       offer.buyerCancelPenalty = `${offerId * 50}`;
-      offer.quantityAvailable = `${(offerId + 1) * 15}`;
+      offer.quantityAvailable = `${(offerId + 1) * 10}`;
 
       // Default offer is in native token. Change every other to mock token
       if (offerId % 2 == 0) {
@@ -418,14 +477,25 @@ async function populateProtocolContract(
     // non fungible token
     await mockTwinTokens[0].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
     await mockTwinTokens[1].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
+
     // create multiple ranges
     const twin721 = mockTwin(ethers.constants.AddressZero, TokenType.NonFungibleToken);
     twin721.amount = "0";
+
+    // min supply available for twin721 is the total amount to cover all offers bundled
+    const minSupplyAvailable = offers
+      .map((o) => o.offer)
+      .filter((o) => seller.offerIds.includes(Number(o.id)))
+      .reduce((acc, o) => acc + Number(o.quantityAvailable), 0);
+
     for (let j = 0; j < 7; j++) {
       twin721.tokenId = `${sellerId * 1000000 + j * 100000}`;
-      twin721.supplyAvailable = `${100 * (sellerId + 1)}`;
+      twin721.supplyAvailable = minSupplyAvailable;
       twin721.tokenAddress = mockTwinTokens[j % 2].address; // oscilate between twins
       twin721.id = twinId;
+
+      // mint tokens to be transferred on redeem
+      await mockTwinTokens[j % 2].connect(seller.wallet).mint(twin721.tokenId, twin721.supplyAvailable);
       await twinHandler.connect(seller.wallet).createTwin(twin721);
 
       twins.push(twin721);
@@ -436,11 +506,17 @@ async function populateProtocolContract(
 
     // fungible
     const twin20 = mockTwin(mockTwin20.address, TokenType.FungibleToken);
-    await mockTwin20.connect(seller.wallet).approve(protocolDiamondAddress, 1);
+
     twin20.id = twinId;
     twin20.amount = sellerId;
     twin20.supplyAvailable = twin20.amount * 100000000;
+
+    await mockTwin20.connect(seller.wallet).approve(protocolDiamondAddress, twin20.supplyAvailable);
+
+    // mint tokens to be transferred on redeem
+    await mockTwin20.connect(seller.wallet).mint(seller.wallet.address, twin20.supplyAvailable * twin20.amount);
     await twinHandler.connect(seller.wallet).createTwin(twin20);
+
     twins.push(twin20);
     twinIds.push(twinId);
     twinId++;
@@ -453,7 +529,11 @@ async function populateProtocolContract(
       twin1155.amount = sellerId + j;
       twin1155.supplyAvailable = `${300000 * (sellerId + 1)}`;
       twin1155.id = twinId;
+
+      // mint tokens to be transferred on redeem
+      await mockTwin1155.connect(seller.wallet).mint(twin1155.tokenId, twin1155.supplyAvailable);
       await twinHandler.connect(seller.wallet).createTwin(twin1155);
+
       twins.push(twin1155);
       twinIds.push(twinId);
       twinId++;
@@ -491,19 +571,19 @@ async function populateProtocolContract(
 
   // redeem some vouchers #4
   for (const id of [2, 5, 11, 8]) {
-    const exchange = exchanges[id];
+    const exchange = exchanges[id - 1];
     await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).redeemVoucher(exchange.exchangeId);
   }
 
   // cancel some vouchers #3
   for (const id of [10, 3, 13]) {
-    const exchange = exchanges[id];
+    const exchange = exchanges[id - 1];
     await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).cancelVoucher(exchange.exchangeId);
   }
 
   // revoke some vouchers #2
   for (const id of [4, 6]) {
-    const exchange = exchanges[id];
+    const exchange = exchanges[id - 1];
     const offer = offers.find((o) => o.offer.id == exchange.offerId);
     const seller = sellers.find((s) => s.seller.id == offer.offer.sellerId);
     await exchangeHandler.connect(seller.wallet).revokeVoucher(exchange.exchangeId);
@@ -511,7 +591,7 @@ async function populateProtocolContract(
 
   // raise dispute on some exchanges #1
   const id = 5; // must be one of redeemed ones
-  const exchange = exchanges[id];
+  const exchange = exchanges[id - 1];
   await disputeHandler.connect(buyers[exchange.buyerIndex].wallet).raiseDispute(exchange.exchangeId);
 
   return { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins };
@@ -604,16 +684,12 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
   // Query even the ids where it's not expected to get the entity
   for (const account of accounts) {
     const id = account.id;
-    const [singleSellerState, singleDRsState, singleBuyersState, singleAgentsState] = await Promise.all([
-      accountHandlerRando.getSeller(id),
-      accountHandlerRando.getDisputeResolver(id),
-      accountHandlerRando.getBuyer(id),
-      accountHandlerRando.getAgent(id),
-    ]);
-    sellerState.push(singleSellerState);
-    DRsState.push(singleDRsState);
-    buyersState.push(singleBuyersState);
-    agentsState.push(singleAgentsState);
+
+    sellerState.push(await getSeller(accountHandlerRando, id, { getBy: "id" }));
+    DRsState.push(await getDisputeResolver(accountHandlerRando, id, { getBy: "id" }));
+    agentsState.push(await getAgent(accountHandlerRando, id));
+    buyersState.push(await getBuyer(accountHandlerRando, id));
+
     for (const account2 of accounts) {
       const id2 = account2.id;
       allowedSellersState.push(await accountHandlerRando.areSellersAllowed(id2, [id]));
@@ -624,14 +700,9 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
     const sellerAddress = seller.wallet.address;
     const sellerAuthToken = seller.authToken;
 
-    const [singleSellerByAddressState, singleSellerByAuthTokenState, singleDRbyAddressState] = await Promise.all([
-      accountHandlerRando.getSellerByAddress(sellerAddress),
-      accountHandlerRando.getSellerByAuthToken(sellerAuthToken),
-      accountHandlerRando.getDisputeResolverByAddress(sellerAddress),
-    ]);
-    sellerByAddressState.push(singleSellerByAddressState);
-    sellerByAuthTokenState.push(singleSellerByAuthTokenState);
-    DRbyAddressState.push(singleDRbyAddressState);
+    sellerByAddressState.push(await getSeller(accountHandlerRando, sellerAddress, { getBy: "address" }));
+    sellerByAddressState.push(await getSeller(accountHandlerRando, sellerAuthToken, { getBy: "authToken" }));
+    DRbyAddressState.push(await getDisputeResolver(accountHandlerRando, sellerAddress, { getBy: "address" }));
   }
 
   const otherAccounts = [...DRs, ...agents, ...buyers];
@@ -639,15 +710,11 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
   for (const account of otherAccounts) {
     const accountAddress = account.wallet.address;
 
-    const [singleSellerByAddressState, singleDRbyAddressState] = await Promise.all([
-      accountHandlerRando.getSellerByAddress(accountAddress),
-      accountHandlerRando.getDisputeResolverByAddress(accountAddress),
-    ]);
-    sellerByAddressState.push(singleSellerByAddressState);
-    DRbyAddressState.push(singleDRbyAddressState);
+    sellerByAddressState.push(await getSeller(accountHandlerRando, accountAddress, { getBy: "address" }));
+    DRbyAddressState.push(await getDisputeResolver(accountHandlerRando, accountAddress, { getBy: "address" }));
   }
 
-  nextAccountId = await accountHandlerRando.getNextAccountId();
+  nextAccountId = (await accountHandlerRando.getNextAccountId()).toString();
 
   return {
     DRsState,
@@ -673,12 +740,20 @@ async function getOfferContractState(offerHandler, offers) {
       offerHandlerRando.isOfferVoided(id),
       offerHandlerRando.getAgentIdByOffer(id),
     ]);
-    offersState.push(singleOffersState);
+
+    let [exist, offerStruct, offerDates, offerDurations, disputeResolutionTerms, offerFees] = singleOffersState;
+    offerStruct = Offer.fromStruct(offerStruct);
+    offerDates = OfferDates.fromStruct(offerDates);
+    offerDurations = OfferDurations.fromStruct(offerDurations);
+    disputeResolutionTerms = DisputeResolutionTerms.fromStruct(disputeResolutionTerms);
+    offerFees = OfferFees.fromStruct(offerFees);
+
+    offersState.push([exist, offerStruct, offerDates, offerDurations, disputeResolutionTerms, offerFees]);
     isOfferVoidedState.push(singleIsOfferVoidedState);
-    agentIdByOfferState.push(singleAgentIdByOfferState);
+    agentIdByOfferState.push(singleAgentIdByOfferState.toString());
   }
 
-  let nextOfferId = await offerHandlerRando.getNextOfferId();
+  let nextOfferId = (await offerHandlerRando.getNextOfferId()).toString();
 
   return { offersState, isOfferVoidedState, agentIdByOfferState, nextOfferId };
 }
@@ -698,17 +773,23 @@ async function getExchangeContractState(exchangeHandler, exchanges) {
       exchangeHandlerRando.getExchangeState(id),
       exchangeHandlerRando.isExchangeFinalized(id),
     ]);
-    exchangesState.push(singleExchangesState);
+
+    let [exists, exchangeState] = singleExchangesState;
+    exchangeState = Exchange.fromStruct(exchangeState);
+
+    exchangesState.push([exists, exchangeState]);
     exchangeStateState.push(singleExchangeStateState);
     isExchangeFinalizedState.push(singleIsExchangeFinalizedState);
+
     try {
-      receiptsState.push(await exchangeHandlerRando.getReceipt(id));
+      const receipt = await exchangeHandlerRando.getReceipt(id);
+      receiptsState.push(Receipt.fromStruct(receipt));
     } catch {
       receiptsState.push(["NOT_FINALIZED"]);
     }
   }
 
-  let nextExchangeId = await exchangeHandlerRando.getNextExchangeId();
+  let nextExchangeId = (await exchangeHandlerRando.getNextExchangeId()).toString();
   return { exchangesState, exchangeStateState, isExchangeFinalizedState, receiptsState, nextExchangeId };
 }
 
@@ -797,27 +878,27 @@ async function getConfigContractState(configHandler) {
     treasuryAddress,
     voucherBeaconAddress,
     beaconProxyAddress,
-    protocolFeePercentage,
-    protocolFeeFlatBoson,
-    maxOffersPerBatch,
-    maxOffersPerGroup,
-    maxTwinsPerBundle,
-    maxOffersPerBundle,
-    maxTokensPerWithdrawal,
-    maxFeesPerDisputeResolver,
-    maxEscalationResponsePeriod,
-    maxDisputesPerBatch,
-    maxTotalOfferFeePercentage,
-    maxAllowedSellers,
-    buyerEscalationDepositPercentage,
+    protocolFeePercentage: protocolFeePercentage.toString(),
+    protocolFeeFlatBoson: protocolFeeFlatBoson.toString(),
+    maxOffersPerBatch: maxOffersPerBatch.toString(),
+    maxOffersPerGroup: maxOffersPerGroup.toString(),
+    maxTwinsPerBundle: maxTwinsPerBundle.toString(),
+    maxOffersPerBundle: maxOffersPerBundle.toString(),
+    maxTokensPerWithdrawal: maxTokensPerWithdrawal.toString(),
+    maxFeesPerDisputeResolver: maxFeesPerDisputeResolver.toString(),
+    maxEscalationResponsePeriod: maxEscalationResponsePeriod.toString(),
+    maxDisputesPerBatch: maxDisputesPerBatch.toString(),
+    maxTotalOfferFeePercentage: maxTotalOfferFeePercentage.toString(),
+    maxAllowedSellers: maxAllowedSellers.toString(),
+    buyerEscalationDepositPercentage: buyerEscalationDepositPercentage.toString(),
     authTokenContractNone,
     authTokenContractCustom,
     authTokenContractLens,
     authTokenContractENS,
-    maxExchangesPerBatch,
-    maxRoyaltyPecentage,
-    maxResolutionPeriod,
-    minDisputePeriod,
+    maxExchangesPerBatch: maxExchangesPerBatch.toString(),
+    maxRoyaltyPecentage: maxRoyaltyPecentage.toString(),
+    maxResolutionPeriod: maxResolutionPeriod.toString(),
+    minDisputePeriod: minDisputePeriod.toString(),
     accessControllerAddress,
   };
 }
@@ -968,10 +1049,13 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
   const reentrancyStatus = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber.add("1"));
 
   // initializedInterfaces
-  const interfaceIds = await getInterfaceIds();
+  if (!preUpgradeInterfaceIds) {
+    // Only interfaces registered before upgrade are relevant for tests, so we load them only once
+    preUpgradeInterfaceIds = await getInterfaceIds();
+  }
 
   const initializedInterfacesState = [];
-  for (const interfaceId of Object.values(interfaceIds)) {
+  for (const interfaceId of Object.values(preUpgradeInterfaceIds)) {
     const storageSlot = getMappingStoragePosition(
       protocolStatusStorageSlotNumber.add("2"),
       interfaceId,
@@ -1349,7 +1433,8 @@ async function populateVoucherContract(
   protocolDiamondAddress,
   { accountHandler, exchangeHandler, offerHandler, fundsHandler },
   { mockToken },
-  existingEntities
+  existingEntities,
+  version
 ) {
   let DR;
   let sellers = [];
@@ -1385,6 +1470,7 @@ async function populateVoucherContract(
       entityType.BUYER,
     ];
 
+    let nextAccountId = await accountHandler.getNextAccountId();
     for (const entity of entities) {
       const wallet = ethers.Wallet.createRandom();
       const connectedWallet = wallet.connect(ethers.provider);
@@ -1412,6 +1498,9 @@ async function populateVoucherContract(
             new DisputeResolverFee(mockToken.address, "MockToken", "0"),
           ];
           const sellerAllowList = [];
+
+          disputeResolver.id = nextAccountId.toString();
+
           await accountHandler
             .connect(connectedWallet)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -1423,13 +1512,15 @@ async function populateVoucherContract(
             sellerAllowList,
           };
 
-          //ADMIN role activates Dispute Resolver
-          await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+          if (versionsWithActivateDRFunction.includes(version)) {
+            //ADMIN role activates Dispute Resolver
+            await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+          }
           break;
         }
         case entityType.SELLER: {
           const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address, true);
-          const id = seller.id;
+          const id = (seller.id = nextAccountId.toString());
           let authToken = mockAuthToken();
 
           // set unique new voucherInitValues
@@ -1459,10 +1550,13 @@ async function populateVoucherContract(
         case entityType.BUYER: {
           // no need to explicitly create buyer, since it's done automatically during commitToOffer
           const buyer = mockBuyer(wallet.address);
+          buyer.id = nextAccountId.toString();
           buyers.push({ wallet: connectedWallet, id: buyer.id, buyer });
           break;
         }
       }
+
+      nextAccountId++;
     }
   }
 
@@ -1618,6 +1712,51 @@ function revertState() {
   shell.exec(`rm -rf contracts/* scripts/*`);
   shell.exec(`git checkout HEAD contracts scripts`);
   shell.exec(`git reset HEAD contracts scripts`);
+}
+
+async function getDisputeResolver(accountHandler, value, { getBy }) {
+  let exist, DR, DRFees, sellerAllowList;
+  if (getBy == "address") {
+    [exist, DR, DRFees, sellerAllowList] = await accountHandler.getDisputeResolverByAddress(value);
+  } else {
+    [exist, DR, DRFees, sellerAllowList] = await accountHandler.getDisputeResolver(value);
+  }
+  DR = DisputeResolver.fromStruct(DR);
+  DRFees = DRFees.map((fee) => DisputeResolverFee.fromStruct(fee));
+  sellerAllowList = sellerAllowList.map((sellerId) => sellerId.toString());
+
+  return { exist, DR, DRFees, sellerAllowList };
+}
+
+async function getSeller(accountHandler, value, { getBy }) {
+  let exist, seller, authToken;
+
+  if (getBy == "address") {
+    [exist, seller, authToken] = await accountHandler.getSellerByAddress(value);
+  } else if (getBy == "authToken") {
+    [exist, seller, authToken] = await accountHandler.getSellerByAuthToken(value);
+  } else {
+    [exist, seller, authToken] = await accountHandler.getSeller(value);
+  }
+
+  seller = Seller.fromStruct(seller);
+  authToken = AuthToken.fromStruct(authToken);
+
+  return { exist, seller, authToken };
+}
+
+async function getAgent(accountHandler, id) {
+  let exist, agent;
+  [exist, agent] = await accountHandler.getAgent(id);
+  agent = Agent.fromStruct(agent);
+  return { exist, agent };
+}
+
+async function getBuyer(accountHandler, id) {
+  let exist, buyer;
+  [exist, buyer] = await accountHandler.getBuyer(id);
+  buyer = Buyer.fromStruct(buyer);
+  return { exist, buyer };
 }
 
 exports.deploySuite = deploySuite;
