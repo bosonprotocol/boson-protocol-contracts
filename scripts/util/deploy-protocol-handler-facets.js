@@ -83,18 +83,15 @@ async function deployProtocolFacets(facetNames, facetsToInit, maxPriorityFeePerG
   // Deploy all handler facets
   for (const facetName of facetNames) {
     let FacetContractFactory = await ethers.getContractFactory(facetName);
-    const constructorArguments = (facetsToInit[facetName] && facetsToInit[facetName].constructorArgs) || [];
-    const facetContract = await FacetContractFactory.deploy(
-      ...constructorArguments,
-      await getFees(maxPriorityFeePerGas)
-    );
+    const constructorArgs = (facetsToInit[facetName] && facetsToInit[facetName].constructorArgs) || [];
+    const facetContract = await FacetContractFactory.deploy(...constructorArgs, await getFees(maxPriorityFeePerGas));
     await facetContract.deployTransaction.wait(confirmations);
 
     const deployedFacet = {
       name: facetName,
       contract: facetContract,
       cut: [],
-      constructorArguments,
+      constructorArgs,
     };
 
     if (facetsToInit[facetName] && facetsToInit[facetName].init && facetName !== "ProtocolInitializationHandlerFacet") {
