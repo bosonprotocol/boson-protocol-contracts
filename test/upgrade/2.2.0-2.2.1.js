@@ -26,7 +26,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let deployer, rando;
   let accountHandler;
   let snapshot;
-  let protocolDiamondAddress, protocolContracts, mockContracts;
+  let protocolDiamondAddress, mockContracts;
 
   // reference protocol state
   let accountContractState;
@@ -37,14 +37,19 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Make accounts available
       [deployer, rando] = await ethers.getSigners();
 
-      ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(deployer, oldVersion));
-      //      ({ twinHandler} = protocolContracts);
+      let contractsBefore;
+      ({
+        protocolDiamondAddress,
+        protocolContracts: contractsBefore,
+        mockContracts,
+      } = await deploySuite(deployer, oldVersion));
+      //      ({ twinHandler} = contractsBefore);
 
       // Populate protocol with data
       preUpgradeEntities = await populateProtocolContract(
         deployer,
         protocolDiamondAddress,
-        protocolContracts,
+        contractsBefore,
         mockContracts,
         oldVersion
       );
@@ -53,7 +58,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // We assume that this state is a true one, relying on our unit and integration tests
       const protocolContractState = await getProtocolContractState(
         protocolDiamondAddress,
-        protocolContracts,
+        contractsBefore,
         mockContracts,
         preUpgradeEntities,
         oldVersion
@@ -65,25 +70,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       await upgradeClients(newVersion);
 
       // Upgrade protocol
-      ({ accountHandler } = await upgradeSuite(
-        newVersion,
-        protocolDiamondAddress,
-        {
-          accountHandler: "IBosonAccountHandler",
-          orchestrationHandler: "IBosonOrchestrationHandler",
-        },
-        undefined
-        //        {
-        //         facetsToInit: {},
-        //      }
-      ));
-
-      protocolContracts = {
-        ...protocolContracts,
-        accountHandler,
-      };
+      ({ accountHandler } = await upgradeSuite(newVersion, protocolDiamondAddress, {
+        accountHandler: "IBosonAccountHandler",
+        orchestrationHandler: "IBosonOrchestrationHandler",
+      }));
 
       snapshot = await ethers.provider.send("evm_snapshot", []);
+
+      // Get new account handler contract
+      const contractsAfter = {
+        ...contractsBefore,
+        accountHandler,
+      };
 
       // This context is placed in an uncommon place due to order of test execution.
       // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
@@ -94,7 +92,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         getGenericContext(
           deployer,
           protocolDiamondAddress,
-          protocolContracts,
+          contractsBefore,
+          contractsAfter,
           mockContracts,
           protocolContractState,
           preUpgradeEntities,
@@ -102,6 +101,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           newVersion
         )
       );
+      //
     } catch (err) {
       // revert to latest version of scripts and contracts
       revertState();
@@ -128,16 +128,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       context("DisputeResolverHandler", async function () {
         it("function updateDisputeResolver reverts if no update field has been updated or requested to be updated", async function () {
           // Get next account id
-          const { DRsState } = accountContractState;
-          const { DR } = DRsState[0];
+          const { DRs } = preUpgradeEntities;
+          const { wallet, id, disputeResolver } = DRs[0];
 
           // Try to update with same values, should revert
-          await expect(accountHandler.updateDisputeResolver(DR)).to.be.revertedWith(RevertReasons.NO_UPDATE_APPLIED);
+          await expect(accountHandler.connect(wallet).updateDisputeResolver(disputeResolver)).to.be.revertedWith(
+            RevertReasons.NO_UPDATE_APPLIED
+          );
 
           // Validate if DR data is still the same
-          let [, DRAfterUpdate] = await accountHandler.getDisputeResolver(DR.id);
-          DRAfterUpdate = DisputeResolver.fromStruct(DRAfterUpdate);
-          expect(DRAfterUpdate).to.deep.equal(DR);
+          let [, disputeResolverAfter] = await accountHandler.getDisputeResolver(id);
+          disputeResolverAfter = DisputeResolver.fromStruct(disputeResolverAfter);
+          expect(disputeResolverAfter).to.deep.equal(disputeResolver);
         });
       });
     });

@@ -144,12 +144,22 @@ async function getFacets() {
         },
         initializationData: "0x0000000000000000000000000000000000000000000000000000000000002710", // input for initV2_2_0, representing maxPremintedVoucher (0x2710=10000)
       },
+      "v2.2.1-rc.1": {
+        addOrUpgrade: ["AccountHandlerFacet", "DisputeResolverHandlerFacet"],
+        remove: [],
+        skipSelectors: {},
+        facetsToInit: {
+          //          AccountHandlerFacet: { init: [] },
+          //        DisputeResolverHandlerFacet: { init: [] },
+        },
+        initializationData: "0x",
+      },
     },
   };
 
   // Versions that have the same deploy config
   facets.deploy["v2.1.0"] = facets.deploy["v2.0.0"];
-  facets.upgrade["latest"] = facets.upgrade["v2.2.0"];
+  facets.upgrade["latest"] = facets.upgrade["v2.2.1-rc.1"];
 
   return facets;
 }

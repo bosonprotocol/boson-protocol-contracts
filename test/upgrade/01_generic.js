@@ -12,7 +12,8 @@ const { populateProtocolContract, getProtocolContractState } = require("../util/
 function getGenericContext(
   deployer,
   protocolDiamondAddress,
-  protocolContracts,
+  contractsBefore,
+  contractsAfter,
   mockContracts,
   protocolContractState,
   preUpgradeEntities,
@@ -20,7 +21,7 @@ function getGenericContext(
   newVersion
 ) {
   let postUpgradeEntities;
-  let { exchangeHandler, offerHandler, fundsHandler, disputeHandler } = protocolContracts;
+  let { exchangeHandler, offerHandler, fundsHandler, disputeHandler } = contractsBefore;
   let { mockToken } = mockContracts;
 
   const genericContextFunction = async function () {
@@ -44,7 +45,7 @@ function getGenericContext(
         // Get protocol state after the upgrade
         let protocolContractStateAfterUpgrade = await getProtocolContractState(
           protocolDiamondAddress,
-          protocolContracts,
+          contractsBefore,
           mockContracts,
           preUpgradeEntities
         );
@@ -76,7 +77,7 @@ function getGenericContext(
         postUpgradeEntities = await populateProtocolContract(
           deployer,
           protocolDiamondAddress,
-          protocolContracts,
+          contractsAfter,
           mockContracts,
           newVersion
         );
@@ -85,7 +86,7 @@ function getGenericContext(
         // First get the data that should be in location of old data
         const protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(
           protocolDiamondAddress,
-          protocolContracts,
+          contractsBefore,
           mockContracts,
           preUpgradeEntities
         );

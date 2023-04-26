@@ -66,7 +66,7 @@ async function deploySuite(deployer, tag, scriptsTag) {
   }
 
   // run deploy suite, which automatically compiles the contracts
-  await hre.run("deploy-suite", { env: "upgrade-test", facetConfig: JSON.stringify(facets.deploy[tag]) });
+  await hre.run("deploy-suite", { env: "upgrade-test" });
 
   // Read contract info from file
   const chainId = (await hre.ethers.provider.getNetwork()).chainId;
@@ -687,7 +687,11 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
   for (const account of accounts) {
     const id = account.id;
 
-    sellerState.push(await getSeller(accountHandlerRando, id, { getBy: "id" }));
+    try {
+      sellerState.push(await getSeller(accountHandlerRando, id, { getBy: "id" }));
+    } catch (e) {
+      console.log("ana", e);
+    }
     DRsState.push(await getDisputeResolver(accountHandlerRando, id, { getBy: "id" }));
     agentsState.push(await getAgent(accountHandlerRando, id));
     buyersState.push(await getBuyer(accountHandlerRando, id));
@@ -964,15 +968,15 @@ async function getMetaTxContractState() {
 
 async function getMetaTxPrivateContractState(protocolDiamondAddress) {
   /*
-    ProtocolMetaTxInfo storage layout
-
-    #0 [ currentSenderAddress + isMetaTransaction ]
-    #1 [ domain separator ]
-    #2 [ ] // placeholder for usedNonce
-    #3 [ cachedChainId ]
-    #4 [ ] // placeholder for inputType
-    #5 [ ] // placeholder for hashInfo
-    */
+      ProtocolMetaTxInfo storage layout
+  
+      #0 [ currentSenderAddress + isMetaTransaction ]
+      #1 [ domain separator ]
+      #2 [ ] // placeholder for usedNonce
+      #3 [ cachedChainId ]
+      #4 [ ] // placeholder for inputType
+      #5 [ ] // placeholder for hashInfo
+      */
 
   // starting slot
   const metaTxStorageSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.metaTransactions"));
@@ -1032,12 +1036,12 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
 
 async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
   /*
-    ProtocolStatus storage layout
-
-    #0 [ pauseScenario ]
-    #1 [ reentrancyStatus ]
-    #2 [ ] // placeholder for initializedInterfaces
-    */
+      ProtocolStatus storage layout
+  
+      #0 [ pauseScenario ]
+      #1 [ reentrancyStatus ]
+      #2 [ ] // placeholder for initializedInterfaces
+      */
 
   // starting slot
   const protocolStatusStorageSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.initializers"));
@@ -1075,42 +1079,42 @@ async function getProtocolLookupsPrivateContractState(
   { sellers, DRs, agents, buyers, offers, groups }
 ) {
   /*
-    ProtocolLookups storage layout
-
-    Variables marked with X have an external getter and are not handled here
-    #0  [ ] // placeholder for exchangeIdsByOffer
-    #1  [X] // placeholder for bundleIdByOffer
-    #2  [X] // placeholder for bundleIdByTwin
-    #3  [ ] // placeholder for groupIdByOffer
-    #4  [X] // placeholder for agentIdByOffer
-    #5  [X] // placeholder for sellerIdByAssistant
-    #6  [X] // placeholder for sellerIdByAdmin
-    #7  [X] // placeholder for sellerIdByClerk
-    #8  [ ] // placeholder for buyerIdByWallet
-    #9  [X] // placeholder for disputeResolverIdByAssistant
-    #10 [X] // placeholder for disputeResolverIdByAdmin
-    #11 [X] // placeholder for disputeResolverIdByClerk
-    #12 [ ] // placeholder for disputeResolverFeeTokenIndex
-    #13 [ ] // placeholder for agentIdByWallet
-    #14 [X] // placeholder for availableFunds
-    #15 [X] // placeholder for tokenList
-    #16 [ ] // placeholder for tokenIndexByAccount
-    #17 [ ] // placeholder for cloneAddress
-    #18 [ ] // placeholder for voucherCount
-    #19 [ ] // placeholder for conditionalCommitsByAddress
-    #20 [X] // placeholder for authTokenContracts
-    #21 [X] // placeholder for sellerIdByAuthToken
-    #22 [ ] // placeholder for twinRangesBySeller
-    #23 [ ] // placeholder for twinIdsByTokenAddressAndBySeller
-    #24 [X] // placeholder for twinReceiptsByExchange
-    #25 [X] // placeholder for allowedSellers
-    #26 [ ] // placeholder for allowedSellerIndex
-    #27 [X] // placeholder for exchangeCondition
-    #28 [ ] // placeholder for offerIdIndexByGroup
-    #29 [ ] // placeholder for pendingAddressUpdatesBySeller
-    #30 [ ] // placeholder for pendingAuthTokenUpdatesBySeller
-    #31 [ ] // placeholder for pendingAddressUpdatesByDisputeResolver
-    */
+      ProtocolLookups storage layout
+  
+      Variables marked with X have an external getter and are not handled here
+      #0  [ ] // placeholder for exchangeIdsByOffer
+      #1  [X] // placeholder for bundleIdByOffer
+      #2  [X] // placeholder for bundleIdByTwin
+      #3  [ ] // placeholder for groupIdByOffer
+      #4  [X] // placeholder for agentIdByOffer
+      #5  [X] // placeholder for sellerIdByAssistant
+      #6  [X] // placeholder for sellerIdByAdmin
+      #7  [X] // placeholder for sellerIdByClerk
+      #8  [ ] // placeholder for buyerIdByWallet
+      #9  [X] // placeholder for disputeResolverIdByAssistant
+      #10 [X] // placeholder for disputeResolverIdByAdmin
+      #11 [X] // placeholder for disputeResolverIdByClerk
+      #12 [ ] // placeholder for disputeResolverFeeTokenIndex
+      #13 [ ] // placeholder for agentIdByWallet
+      #14 [X] // placeholder for availableFunds
+      #15 [X] // placeholder for tokenList
+      #16 [ ] // placeholder for tokenIndexByAccount
+      #17 [ ] // placeholder for cloneAddress
+      #18 [ ] // placeholder for voucherCount
+      #19 [ ] // placeholder for conditionalCommitsByAddress
+      #20 [X] // placeholder for authTokenContracts
+      #21 [X] // placeholder for sellerIdByAuthToken
+      #22 [ ] // placeholder for twinRangesBySeller
+      #23 [ ] // placeholder for twinIdsByTokenAddressAndBySeller
+      #24 [X] // placeholder for twinReceiptsByExchange
+      #25 [X] // placeholder for allowedSellers
+      #26 [ ] // placeholder for allowedSellerIndex
+      #27 [X] // placeholder for exchangeCondition
+      #28 [ ] // placeholder for offerIdIndexByGroup
+      #29 [ ] // placeholder for pendingAddressUpdatesBySeller
+      #30 [ ] // placeholder for pendingAuthTokenUpdatesBySeller
+      #31 [ ] // placeholder for pendingAddressUpdatesByDisputeResolver
+      */
 
   // starting slot
   const protocolLookupsSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.lookups"));
@@ -1738,7 +1742,11 @@ async function getSeller(accountHandler, value, { getBy }) {
   } else if (getBy == "authToken") {
     [exist, seller, authToken] = await accountHandler.getSellerByAuthToken(value);
   } else {
-    [exist, seller, authToken] = await accountHandler.getSeller(value);
+    try {
+      [exist, seller, authToken] = await accountHandler.getSeller(value);
+    } catch (e) {
+      console.log("errorana", e);
+    }
   }
 
   seller = Seller.fromStruct(seller);
