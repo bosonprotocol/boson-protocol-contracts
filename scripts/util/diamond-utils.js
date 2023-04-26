@@ -32,37 +32,26 @@ function getSelectors(contract, returnSignatureToNameMapping = false) {
   return selectors;
 }
 
-const interfacesOZ = ["IERC1155", "IERC721", "IERC2981"];
-
 // get interface id
-async function getInterfaceId(contractName, skipBaseCheck = false) {
-  let contract, sourceName;
-  if (interfacesOZ.includes(contractName)) {
-  }
-
-  try {
-    contract = await ethers.getContractAt(contractName, ethers.constants.AddressZero);
-  } catch (err) {
-    sourceName = `contracts/interfaces/${contractName}.sol`;
-    contract = await ethers.getContractAt(`${sourceName}:${contractName}`, ethers.constants.AddressZero);
-  }
-
+async function getInterfaceId(contractName, skipBaseCheck = false, isFullPath = false) {
+  const contract = await ethers.getContractAt(contractName, ethers.constants.AddressZero);
   const signatures = Object.keys(contract.interface.functions);
   const selectors = signatures.reduce((acc, val) => {
     acc.push(ethers.BigNumber.from(contract.interface.getSighash(val)));
     return acc;
   }, []);
-
   let interfaceId = selectors.reduce((pv, cv) => pv.xor(cv), ethers.BigNumber.from("0x00000000"));
-
   // If contract inherits other contracts, their interfaces must be xor-ed
   if (!skipBaseCheck) {
     // Get base contracts
-    if (!sourceName) {
-      ({ sourceName } = await hre.artifacts.readArtifact(contractName));
-    }
+    let buildInfo;
+    const { sourceName } = await hre.artifacts.readArtifact(contractName);
 
-    const buildInfo = await hre.artifacts.getBuildInfo(`${sourceName}:${contractName}`);
+    if (!isFullPath) {
+      buildInfo = await hre.artifacts.getBuildInfo(`${sourceName}:${contractName}`);
+    } else {
+      buildInfo = await hre.artifacts.getBuildInfo(contractName);
+    }
 
     const nodes = buildInfo.output?.sources?.[sourceName]?.ast?.nodes;
     const node = nodes.find((n) => n.baseContracts); // node with information about base contracts
@@ -70,12 +59,15 @@ async function getInterfaceId(contractName, skipBaseCheck = false) {
     for (const baseContract of node.baseContracts) {
       const baseName = baseContract.baseName.name;
 
+      isFullPath = interfacesWithMultipleArtifacts.includes(baseName);
+
       const baseContractInterfaceId = ethers.BigNumber.from(
         await getInterfaceId(
           interfacesWithMultipleArtifacts.includes(baseName)
             ? `contracts/interfaces/${baseName}.sol:${baseName}`
             : baseName,
-          false
+          false,
+          isFullPath
         )
       );
 
@@ -83,15 +75,7 @@ async function getInterfaceId(contractName, skipBaseCheck = false) {
       interfaceId = interfaceId.xor(baseContractInterfaceId);
     }
   }
-
-  let response = "";
-
-  try {
-    response = interfaceId.isZero() ? "0x00000000" : ethers.utils.hexZeroPad(interfaceId.toHexString(), 4);
-  } catch (e) {
-    console.log(e);
-  }
-  return response;
+  return interfaceId.isZero() ? "0x00000000" : ethers.utils.hexZeroPad(interfaceId.toHexString(), 4);
 }
 
 // get function selector from function signature

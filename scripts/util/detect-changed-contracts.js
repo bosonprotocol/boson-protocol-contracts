@@ -25,7 +25,7 @@ async function detectChangedContract(referenceCommit, targetCommit) {
   // To make comparison clean, we remove the metadata hash from the bytecode.
   for (const compiler of hre.config.solidity.compilers) {
     // This setting is solidity v0.8.9 style
-    // versions >= 0.8.9 use compiler.settings["metadata"] = {appendCBOR: false}
+    // versions >= 0.8.18 use compiler.settings["metadata"] = {appendCBOR: false}
     compiler.settings["metadata"] = { bytecodeHash: "none" };
   }
 

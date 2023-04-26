@@ -61,4 +61,34 @@ contract BuyerBase is ProtocolBase, IBosonAccountEvents {
         //Map the buyer's wallet address to the buyerId.
         protocolLookups().buyerIdByWallet[_buyer.wallet] = _buyer.id;
     }
+
+    /**
+     * @notice Checks if buyer exists for buyer address. If not, account is created for buyer address.
+     *
+     * Reverts if buyer exists but is inactive.
+     *
+     * @param _buyer - the buyer address to check
+     * @return buyerId - the buyer id
+     */
+    function getValidBuyer(address payable _buyer) internal returns (uint256 buyerId) {
+        // Find or create the account associated with the specified buyer address
+        bool exists;
+        (exists, buyerId) = getBuyerIdByWallet(_buyer);
+
+        if (!exists) {
+            // Create the buyer account
+            Buyer memory newBuyer;
+            newBuyer.wallet = _buyer;
+            newBuyer.active = true;
+
+            createBuyerInternal(newBuyer);
+            buyerId = newBuyer.id;
+        } else {
+            // Fetch the existing buyer account
+            (, Buyer storage buyer) = fetchBuyer(buyerId);
+
+            // Make sure buyer account is active
+            require(buyer.active, MUST_BE_ACTIVE);
+        }
+    }
 }
