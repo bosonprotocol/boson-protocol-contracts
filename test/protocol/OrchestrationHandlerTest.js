@@ -26,12 +26,13 @@ const {
   applyPercentage,
   calculateContractAddress,
   compareOfferStructs,
+  compareRoyaltyRecipientLists,
   setupTestEnvironment,
   getSnapshot,
   revertToSnapshot,
 } = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
+const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL, DEFAULT_ROYALTY_RECIPIENT } = require("../util/constants");
 const {
   mockTwin,
   mockOffer,
@@ -608,13 +609,22 @@ describe("IBosonOrchestrationHandler", function () {
             assistant.address
           );
 
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+
+        await expect(tx)
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(
+            seller.id,
+            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            assistant.address
+          );
+
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
 
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
@@ -661,13 +671,22 @@ describe("IBosonOrchestrationHandler", function () {
             assistant.address
           );
 
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+
+        await expect(tx)
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(
+            seller.id,
+            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            assistant.address
+          );
+
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
 
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
@@ -1242,14 +1261,22 @@ describe("IBosonOrchestrationHandler", function () {
             .to.emit(orchestrationHandler, "RangeReserved")
             .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
+          const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          ]);
+
+          await expect(tx)
+            .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+            .withArgs(
+              seller.id,
+              compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+              assistant.address
+            );
+
           // Voucher clone contract
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-          await expect(tx)
-            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-            .withArgs(voucherInitValues.royaltyPercentage);
-
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
 
           bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
@@ -5440,7 +5467,19 @@ describe("IBosonOrchestrationHandler", function () {
             assistant.address
           );
 
-        // Events with structs that contain arrays must be tested differently
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+
+        await expect(tx)
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(
+            seller.id,
+            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            assistant.address
+          );
+
+        // Events with structs that contain arrays must be tested differently //ToDo: use predicates instead
         const txReceipt = await tx.wait();
 
         // GroupCreated event
@@ -5457,9 +5496,6 @@ describe("IBosonOrchestrationHandler", function () {
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
 
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
@@ -5847,7 +5883,19 @@ describe("IBosonOrchestrationHandler", function () {
             .to.emit(orchestrationHandler, "RangeReserved")
             .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
-          // Events with structs that contain arrays must be tested differently
+          const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          ]);
+
+          await expect(tx)
+            .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+            .withArgs(
+              seller.id,
+              compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+              assistant.address
+            );
+
+          // Events with structs that contain arrays must be tested differently //ToDo use predicates
           const txReceipt = await tx.wait();
 
           // GroupCreated event
@@ -5864,10 +5912,6 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-          await expect(tx)
-            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-            .withArgs(voucherInitValues.royaltyPercentage);
-
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
 
           bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
@@ -6160,7 +6204,19 @@ describe("IBosonOrchestrationHandler", function () {
             assistant.address
           );
 
-        // Events with structs that contain arrays must be tested differently
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+
+        await expect(tx)
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(
+            seller.id,
+            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            assistant.address
+          );
+
+        // Events with structs that contain arrays must be tested differently // ToDo: use predicates
         const txReceipt = await tx.wait();
 
         // TwinCreated event
@@ -6189,10 +6245,6 @@ describe("IBosonOrchestrationHandler", function () {
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
-
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         await expect(tx)
@@ -6628,7 +6680,19 @@ describe("IBosonOrchestrationHandler", function () {
             .to.emit(orchestrationHandler, "RangeReserved")
             .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
-          // Events with structs that contain arrays must be tested differently
+          const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          ]);
+
+          await expect(tx)
+            .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+            .withArgs(
+              seller.id,
+              compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+              assistant.address
+            );
+
+          // Events with structs that contain arrays must be tested differently // ToDo use predicates
           const txReceipt = await tx.wait();
 
           // TwinCreated event
@@ -6657,10 +6721,6 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-          await expect(tx)
-            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-            .withArgs(voucherInitValues.royaltyPercentage);
-
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
 
           bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
@@ -7000,7 +7060,19 @@ describe("IBosonOrchestrationHandler", function () {
             assistant.address
           );
 
-        // Events with structs that contain arrays must be tested differently
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+
+        await expect(tx)
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(
+            seller.id,
+            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            assistant.address
+          );
+
+        // Events with structs that contain arrays must be tested differently // ToDo: use predicates
         const txReceipt = await tx.wait();
 
         // GroupCreated event
@@ -7037,9 +7109,6 @@ describe("IBosonOrchestrationHandler", function () {
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
 
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
@@ -7422,7 +7491,19 @@ describe("IBosonOrchestrationHandler", function () {
               assistant.address
             );
 
-          // Events with structs that contain arrays must be tested differently
+          const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          ]);
+
+          await expect(tx)
+            .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+            .withArgs(
+              seller.id,
+              compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+              assistant.address
+            );
+
+          // Events with structs that contain arrays must be tested differently // ToDo use predicates
           const txReceipt = await tx.wait();
 
           // GroupCreated event
@@ -7459,9 +7540,6 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-          await expect(tx)
-            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-            .withArgs(voucherInitValues.royaltyPercentage);
 
           bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
@@ -7530,7 +7608,19 @@ describe("IBosonOrchestrationHandler", function () {
             .to.emit(orchestrationHandler, "RangeReserved")
             .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
-          // Events with structs that contain arrays must be tested differently
+          const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          ]);
+
+          await expect(tx)
+            .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+            .withArgs(
+              seller.id,
+              compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+              assistant.address
+            );
+
+          // Events with structs that contain arrays must be tested differently /todo: use predicates
           const txReceipt = await tx.wait();
 
           // GroupCreated event
@@ -7567,10 +7657,6 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-          await expect(tx)
-            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-            .withArgs(voucherInitValues.royaltyPercentage);
-
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
 
           bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);

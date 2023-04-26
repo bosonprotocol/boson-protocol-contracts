@@ -160,11 +160,10 @@ contract SellerHandlerFacet is SellerBase {
                     _seller.treasury
                 ];
 
+                RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_seller.id];
                 if (royaltyRecipientId != 0) {
                     // If the new treasury is already a royalty recipient, remove it
                     // TODO: check if can be refactored to use with removeRoyaltyRecipient
-                    RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_seller.id];
-
                     uint256 lastRoyaltyRecipientsId = royaltyRecipients.length - 1;
                     if (royaltyRecipientId != lastRoyaltyRecipientsId) {
                         royaltyRecipients[royaltyRecipientId] = royaltyRecipients[lastRoyaltyRecipientsId];
@@ -186,6 +185,8 @@ contract SellerHandlerFacet is SellerBase {
                 seller.treasury = _seller.treasury;
 
                 updateApplied = true;
+
+                emit RoyaltyRecipientsChanged(_seller.id, royaltyRecipients, msgSender());
             }
 
             if (keccak256(bytes(_seller.metadataUri)) != keccak256(bytes(seller.metadataUri))) {

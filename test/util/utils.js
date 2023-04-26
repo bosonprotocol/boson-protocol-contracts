@@ -6,6 +6,7 @@ const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
 const Role = require("../../scripts/domain/Role");
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
+const { RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
 
 function getEvent(receipt, factory, eventName) {
   let found = false;
@@ -114,6 +115,25 @@ function compareArgs(eventArgs, args) {
  */
 function compareOfferStructs(returnedOffer) {
   expect(Offer.fromStruct(returnedOffer).toStruct()).to.deep.equal(this);
+  return true;
+}
+
+// ToDo: make a generic predicate for comparing structs
+/** Predicate to compare RoyaltyRecipientList in emitted events
+ * Bind Royalty Recipient List to this function and pass it to .withArgs() instead of the expected offer struct
+ * If returned and expected Royalty Recipient Lists are equal, the test will pass, otherwise it raises an error
+ * 
+ * Example
+ * 
+ * await expect(tx)
+    .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+    .withArgs(seller.id, compareRoyaltyRecipientList.bind(expectedRoyaltyRecipientList.toStruct()), admin.address);
+ * 
+ * @param {*} returnedRoyaltyRecipientList 
+ * @returns 
+ */
+function compareRoyaltyRecipientLists(returnedRoyaltyRecipientList) {
+  expect(RoyaltyRecipientList.fromStruct(returnedRoyaltyRecipientList).toStruct()).to.deep.equal(this);
   return true;
 }
 
@@ -426,6 +446,7 @@ exports.getMappingStoragePosition = getMappingStoragePosition;
 exports.paddingType = paddingType;
 exports.getFacetsWithArgs = getFacetsWithArgs;
 exports.compareOfferStructs = compareOfferStructs;
+exports.compareRoyaltyRecipientLists = compareRoyaltyRecipientLists;
 exports.objectToArray = objectToArray;
 exports.setupTestEnvironment = setupTestEnvironment;
 exports.getSnapshot = getSnapshot;

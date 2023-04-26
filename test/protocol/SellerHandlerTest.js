@@ -13,6 +13,7 @@ const {
   getSnapshot,
   revertToSnapshot,
   getEvent,
+  compareRoyaltyRecipientLists,
 } = require("../util/utils.js");
 const { VOUCHER_NAME, VOUCHER_SYMBOL, DEFAULT_ROYALTY_RECIPIENT } = require("../util/constants");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -160,13 +161,19 @@ describe("SellerHandler", function () {
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
 
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
 
         await expect(tx)
-          .to.emit(bosonVoucher, "VoucherInitialized")
-          .withArgs(seller.id, voucherInitValues.royaltyPercentage, contractURI);
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(
+            seller.id,
+            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            admin.address
+          );
+
+        await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, contractURI);
 
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
@@ -190,13 +197,19 @@ describe("SellerHandler", function () {
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
 
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
 
         await expect(tx)
-          .to.emit(bosonVoucher, "VoucherInitialized")
-          .withArgs(seller.id, voucherInitValues.royaltyPercentage, contractURI);
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(
+            seller.id,
+            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            admin.address
+          );
+
+        await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, contractURI);
 
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 

@@ -103,7 +103,8 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             _voucherInitValues.royaltyPercentage <= protocolLimits().maxRoyaltyPecentage,
             INVALID_ROYALTY_PERCENTAGE
         );
-        RoyaltyRecipient storage defaultRoyaltyRecipient = lookups.royaltyRecipientsBySeller[sellerId].push();
+        RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[sellerId];
+        RoyaltyRecipient storage defaultRoyaltyRecipient = royaltyRecipients.push();
         defaultRoyaltyRecipient.wallet = _seller.treasury;
         defaultRoyaltyRecipient.minRoyaltyPercentage = _voucherInitValues.royaltyPercentage;
         defaultRoyaltyRecipient.externalId = DEFAULT_ROYALTY_RECIPIENT;
@@ -115,6 +116,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Notify watchers of state change
         emit SellerCreated(sellerId, _seller, voucherCloneAddress, _authToken, sender);
+        emit RoyaltyRecipientsChanged(sellerId, royaltyRecipients, sender);
     }
 
     /**

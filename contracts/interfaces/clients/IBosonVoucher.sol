@@ -14,7 +14,6 @@ import { IERC721ReceiverUpgradeable } from "@openzeppelin/contracts-upgradeable/
  */
 interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable, IERC721ReceiverUpgradeable {
     event ContractURIChanged(string contractURI);
-    event RoyaltyPercentageChanged(uint256 royaltyPercentage);
     event VoucherInitialized(uint256 indexed sellerId, string indexed contractURI);
     event RangeReserved(uint256 indexed offerId, Range range);
     event VouchersPreMinted(uint256 indexed offerId, uint256 startId, uint256 endId);

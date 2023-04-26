@@ -21,6 +21,7 @@ import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchan
 import { IERC20 } from "../../../interfaces/IERC20.sol";
 import { DAIAliases as DAI } from "../../../interfaces/DAIAliases.sol";
 import { IBosonFundsHandler } from "../../../interfaces/handlers/IBosonFundsHandler.sol";
+import "hardhat/console.sol";
 
 /**
  * @title BosonVoucherBase
@@ -614,7 +615,10 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         }
 
         uint256 royaltyPercentage;
-        (receiver, royaltyPercentage) = getExchangeEIP2981Royalties(isPreminted ? offerId : _tokenId, isPreminted);
+        (receiver, royaltyPercentage) = getExchangeEIP2981Royalties(
+            isPreminted ? offerId : (_tokenId & type(uint128).max),
+            isPreminted
+        );
         royaltyAmount = (_salePrice * royaltyPercentage) / 10000;
     }
 

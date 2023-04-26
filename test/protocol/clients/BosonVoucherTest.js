@@ -2061,7 +2061,7 @@ describe("IBosonVoucher", function () {
   });
 
   context("EIP2981 NFT Royalty fee", function () {
-    let voucherRedeemableFrom;
+    let voucherRedeemableFrom, tokenId;
 
     beforeEach(async function () {
       seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
@@ -2113,6 +2113,7 @@ describe("IBosonVoucher", function () {
       await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
 
       exchangeId = "1";
+      tokenId = deriveTokenId(offer.id, exchangeId);
 
       offerPrice = offer.price;
     });
@@ -2123,13 +2124,15 @@ describe("IBosonVoucher", function () {
     });
 
     context("royaltyInfo()", function () {
+      let bosonVoucher;
+
       beforeEach(async function () {
         const voucherAddress = calculateContractAddress(accountHandler.address, "1");
         bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
       });
 
       it("should return a recipient and royalty fee", async function () {
-        let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+        let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offerPrice);
 
         // Expectations
         let expectedRecipient = seller.treasury;
@@ -2151,7 +2154,7 @@ describe("IBosonVoucher", function () {
           .connect(admin)
           .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct());
 
-        let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+        let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offerPrice);
 
         // Expectations
         let expectedRecipient = seller.treasury;
@@ -2189,7 +2192,8 @@ describe("IBosonVoucher", function () {
 
         // Set inexistent exchangeId
         exchangeId = "2";
-        const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+        const tokenId = deriveTokenId(offer.id, exchangeId);
+        const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offerPrice);
 
         // Expectations
         let expectedRecipient = rando.address;
@@ -2217,8 +2221,9 @@ describe("IBosonVoucher", function () {
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
 
         // Set exchangeId
-        exchangeId = "2";
-        const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+        const exchangeId = "2";
+        const tokenId = deriveTokenId(offer.id, exchangeId);
+        const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero;
@@ -2245,8 +2250,9 @@ describe("IBosonVoucher", function () {
         await bosonVoucher.connect(assistant).preMint(offer.id, 20);
 
         // Set exchangeId
-        exchangeId = "2";
-        const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+        const exchangeId = "2";
+        const tokenId = deriveTokenId(offer.id, exchangeId);
+        const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offerPrice);
 
         // Expectations
         let expectedRecipient = seller.treasury;
@@ -2284,10 +2290,6 @@ describe("IBosonVoucher", function () {
       });
 
       it("if exchange doesn't exist it should return 0 values", async function () {
-        // Set royalty fee as 10%
-        royaltyPercentage = "1000"; //10%
-        await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
-
         // Set inexistent exchangeId
         exchangeId = "100000";
         const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);

@@ -15,6 +15,7 @@ const Group = require("../../scripts/domain/Group");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
+const RoyaltyInfo = require("../../scripts/domain/RoyaltyInfo");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -231,8 +232,9 @@ describe("IBosonExchangeHandler", function () {
 
       // VoucherInitValues
       seller1Treasury = seller.treasury;
-      royaltyPercentage1 = "0"; // 0%
+      royaltyPercentage1 = "5"; // 0%
       voucherInitValues = mockVoucherInitValues();
+      voucherInitValues.royaltyPercentage = royaltyPercentage1;
       expect(voucherInitValues.isValid()).is.true;
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -268,6 +270,7 @@ describe("IBosonExchangeHandler", function () {
 
       offer.quantityAvailable = "10";
       disputeResolverId = mo.disputeResolverId;
+      offer.royaltyInfo = new RoyaltyInfo([seller.treasury], [voucherInitValues.royaltyPercentage]);
 
       // Check if domains are valid
       expect(offer.isValid()).is.true;
@@ -451,6 +454,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Create an offer with new seller
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+        offer.royaltyInfo = new RoyaltyInfo([seller.treasury], [voucherInitValues.royaltyPercentage]);
 
         // Create the offer
         await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
@@ -807,14 +811,14 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("ERC2981: issued voucher should have royalty fees", async function () {
-        // set non zero royalty percentage
-        const royaltyPercentage = "10";
-        await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
-
-        // Before voucher is transferred, it should have zero royalty fee
+        // Before voucher is transferred, it should already have royalty fee
         let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offer.price);
-        assert.equal(receiver, ethers.constants.AddressZero, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), "0", "Royalty amount is incorrect");
+        assert.equal(receiver, treasury.address, "Recipient address is incorrect");
+        assert.equal(
+          royaltyAmount.toString(),
+          applyPercentage(offer.price, royaltyPercentage1),
+          "Royalty amount is incorrect"
+        );
 
         // Commit to preminted offer, creating a new exchange
         await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
@@ -824,7 +828,7 @@ describe("IBosonExchangeHandler", function () {
         assert.equal(receiver, treasury.address, "Recipient address is incorrect");
         assert.equal(
           royaltyAmount.toString(),
-          applyPercentage(offer.price, royaltyPercentage),
+          applyPercentage(offer.price, royaltyPercentage1),
           "Royalty amount is incorrect"
         );
       });
