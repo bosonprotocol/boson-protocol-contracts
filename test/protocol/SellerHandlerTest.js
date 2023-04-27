@@ -1,18 +1,13 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
 const { expect, assert } = require("chai");
-const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { calculateContractAddress, getFacetsWithArgs } = require("../util/utils.js");
-const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL, maxPriorityFeePerGas } = require("../util/constants");
+const { calculateContractAddress, setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util/utils.js");
+const { VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockSeller, mockAuthToken, mockVoucherInitValues, accountId } = require("../util/mock");
 
@@ -36,10 +31,8 @@ describe("SellerHandler", function () {
     other6,
     other7,
     other8,
-    authTokenOwner,
-    protocolTreasury,
-    bosonToken;
-  let protocolDiamond, accessController, accountHandler, exchangeHandler, configHandler, pauseHandler;
+    authTokenOwner;
+  let accountHandler, exchangeHandler, configHandler, pauseHandler;
   let seller,
     sellerStruct,
     seller2,
@@ -52,122 +45,35 @@ describe("SellerHandler", function () {
     pendingAuthTokenStruct;
   let authToken, authTokenStruct, emptyAuthToken, emptyAuthTokenStruct, authToken2, authToken3;
   let key, value, exists;
-  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let bosonVoucher;
   let expectedCloneAddress;
   let voucherInitValues, contractURI;
   let mockAuthERC721Contract, mockAuthERC721Contract2;
+  let snapshotId;
 
-  beforeEach(async function () {
-    // Make accounts available
-    [
-      deployer,
-      pauser,
-      admin,
-      treasury,
-      rando,
-      other1,
-      other2,
-      other3,
-      other4,
-      other5,
-      other6,
-      other7,
-      other8,
-      protocolTreasury,
-      bosonToken,
-    ] = await ethers.getSigners();
+  before(async function () {
+    // Reset the accountId iterator
+    accountId.next(true);
+
+    // Specify contracts needed for this test
+    const contracts = {
+      accountHandler: "IBosonAccountHandler",
+      exchangeHandler: "IBosonExchangeHandler",
+      pauseHandler: "IBosonPauseHandler",
+      configHandler: "IBosonConfigHandler",
+    };
+
+    ({
+      signers: [pauser, admin, treasury, rando, other1, other2, other3, other4, other5, other6, other7, other8],
+      contractInstances: { accountHandler, exchangeHandler, pauseHandler, configHandler },
+    } = await setupTestEnvironment(contracts));
 
     // make all account the same
     authTokenOwner = assistant = clerk = admin;
-
-    // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-
-    // Temporarily grant UPGRADER role to deployer account
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-
-    // Temporarily grant PAUSER role to pauser account
-    await accessController.grantRole(Role.PAUSER, pauser.address);
+    [deployer] = await ethers.getSigners();
 
     // Deploy mock ERC721 tokens
     [mockAuthERC721Contract, mockAuthERC721Contract2] = await deployMockTokens(["Foreign721", "Foreign721"]);
-
-    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [protocolDiamond.address];
-    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
-    const [beacon] = beacons;
-    const [proxy] = proxies;
-
-    // set protocolFees
-    protocolFeePercentage = "200"; // 2 %
-    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
-    buyerEscalationDepositPercentage = "1000"; // 10%
-
-    // Add config Handler, so ids start at 1, and so voucher address can be found
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 10000,
-      },
-      // Protocol fees
-      {
-        percentage: protocolFeePercentage,
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
-    const facetNames = [
-      "AccountHandlerFacet",
-      "SellerHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "PauseHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
-
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
-
-    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonExchangeHandler
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-
-    //Cast Diamond to IBosonPauseHandler
-    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
-
-    //Cast Diamond to IBosonConfigHandler
-    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
     await expect(
       configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, mockAuthERC721Contract.address)
@@ -182,13 +88,29 @@ describe("SellerHandler", function () {
       .withArgs(AuthTokenType.ENS, mockAuthERC721Contract2.address, deployer.address);
 
     await mockAuthERC721Contract.connect(authTokenOwner).mint(8400, 1);
+
+    // Get snapshot id
+    snapshotId = await getSnapshot();
+  });
+
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
   // All supported Seller methods
   context("📋 Seller Methods", async function () {
     beforeEach(async function () {
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+
+      seller = mockSeller(
+        assistant.address,
+        admin.address,
+        clerk.address,
+        treasury.address,
+        true,
+        "https://ipfs.io/ipfs/originalUri"
+      );
       expect(seller.isValid()).is.true;
 
       // How that seller looks as a returned struct
@@ -503,6 +425,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate = seller.clone();
         pendingSellerUpdate.treasury = ethers.constants.AddressZero;
         pendingSellerUpdate.active = false;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdate.id = "0";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
@@ -580,6 +503,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate = seller.clone();
         pendingSellerUpdate.id = "0";
         pendingSellerUpdate.treasury = ethers.constants.AddressZero;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdate.active = false;
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
@@ -619,10 +543,10 @@ describe("SellerHandler", function () {
             other1.address
           );
 
-        authTokenOwner = rando;
+        const newAuthTokenOwner = rando;
         seller.id = accountId.next().value;
-        seller.assistant = authTokenOwner.address;
-        seller.clerk = authTokenOwner.address;
+        seller.assistant = newAuthTokenOwner.address;
+        seller.clerk = newAuthTokenOwner.address;
 
         //Create struct again with new addresses
         sellerStruct = seller.toStruct();
@@ -640,7 +564,7 @@ describe("SellerHandler", function () {
         // Create a seller, testing for the event
         await expect(accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, authTokenOwner.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, newAuthTokenOwner.address);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -1446,6 +1370,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate.admin = ethers.constants.AddressZero;
         pendingSellerUpdate.assistant = ethers.constants.AddressZero;
         pendingSellerUpdate.active = false;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         // Create a seller
@@ -1454,7 +1379,8 @@ describe("SellerHandler", function () {
 
       it("should emit a SellerUpdateApplied and OwnershipTransferred event with correct values if values change", async function () {
         seller.treasury = other4.address;
-        // Treasury is the only values that can be update without address owner authorization
+        seller.metadataUri = "https://ipfs.io/ipfs/updatedUri";
+        // Treasury and metadataURI are only values that can be update without address owner authorization
         sellerStruct = seller.toStruct();
 
         seller.admin = ethers.constants.AddressZero;
@@ -1465,6 +1391,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate = seller.clone();
         pendingSellerUpdate.id = "0";
         pendingSellerUpdate.treasury = ethers.constants.AddressZero;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdate.active = false;
         expect(pendingSellerUpdate.isValid()).is.true;
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
@@ -1562,18 +1489,22 @@ describe("SellerHandler", function () {
           );
       });
 
-      it("should not emit a SellerUpdateApplied and OwnershipTransferred event if values stay the same", async function () {
+      it("should only emit SellerUpdatePending event if no update has been immediately applied", async function () {
+        seller.assistant = other1.address;
         const tx = await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
-        // Nothing should emit because values are the same
+        // SellerUpdateApplied should not be emit because no value has immediately updated
         await expect(tx).to.not.emit(accountHandler, "SellerUpdateApplied");
 
         // Voucher clone contract
         const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
 
-        // Since assistant stayed the same, clone contract ownership should not be transferred
+        // Since assistant stayed the same yet, clone contract ownership should not be transferred immediately
         await expect(tx).to.not.emit(bosonVoucher, "OwnershipTransferred");
+
+        // Only event emitted was SellerUpdatePending
+        await expect(tx).to.emit(accountHandler, "SellerUpdatePending");
       });
 
       it("should update state of all fields except Id and active flag", async function () {
@@ -1651,10 +1582,10 @@ describe("SellerHandler", function () {
 
         // msg.sender must be equal to seller's assistant and clerk
         await mockAuthERC721Contract.connect(authTokenOwner).transferFrom(authTokenOwner.address, other1.address, 8400);
-        authTokenOwner = other1;
+        const newAuthTokenOwner = other1;
 
         // Create a seller with auth token
-        await accountHandler.connect(authTokenOwner).createSeller(seller2, authToken, voucherInitValues);
+        await accountHandler.connect(newAuthTokenOwner).createSeller(seller2, authToken, voucherInitValues);
 
         seller2.assistant = other5.address;
         seller2.admin = other6.address;
@@ -1668,7 +1599,7 @@ describe("SellerHandler", function () {
         expect(expectedSeller.isValid()).is.true;
 
         // Update seller
-        await accountHandler.connect(authTokenOwner).updateSeller(seller2, emptyAuthToken);
+        await accountHandler.connect(newAuthTokenOwner).updateSeller(seller2, emptyAuthToken);
 
         // Approve assistant update
         await accountHandler.connect(other5).optInToSellerUpdate(seller2.id, [SellerUpdateFields.Assistant]);
@@ -1729,10 +1660,10 @@ describe("SellerHandler", function () {
 
         // msg.sender must be equal to seller's assistant and clerk
         await mockAuthERC721Contract.connect(authTokenOwner).transferFrom(authTokenOwner.address, other1.address, 8400);
-        authTokenOwner = other1;
+        const newAuthTokenOwner = other1;
 
         // Create a seller with auth token
-        await accountHandler.connect(authTokenOwner).createSeller(seller2, authToken, voucherInitValues);
+        await accountHandler.connect(newAuthTokenOwner).createSeller(seller2, authToken, voucherInitValues);
 
         seller2.assistant = other5.address;
         seller2.admin = ethers.constants.AddressZero;
@@ -1740,7 +1671,7 @@ describe("SellerHandler", function () {
         seller2.treasury = other8.address;
         seller2.active = false;
 
-        await mockAuthERC721Contract2.connect(authTokenOwner).mint(0, 1);
+        await mockAuthERC721Contract2.connect(newAuthTokenOwner).mint(0, 1);
 
         authToken2 = new AuthToken("0", AuthTokenType.ENS);
         expect(authToken2.isValid()).is.true;
@@ -1751,11 +1682,11 @@ describe("SellerHandler", function () {
         expect(expectedSeller.isValid()).is.true;
 
         // Update seller
-        await accountHandler.connect(authTokenOwner).updateSeller(seller2, authToken2);
+        await accountHandler.connect(newAuthTokenOwner).updateSeller(seller2, authToken2);
 
         await accountHandler.connect(other5).optInToSellerUpdate(seller2.id, [SellerUpdateFields.Assistant]);
         await accountHandler.connect(other7).optInToSellerUpdate(seller2.id, [SellerUpdateFields.Clerk]);
-        await accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller2.id, [SellerUpdateFields.AuthToken]);
+        await accountHandler.connect(newAuthTokenOwner).optInToSellerUpdate(seller2.id, [SellerUpdateFields.AuthToken]);
 
         // Get the seller as a struct
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller2.id);
@@ -1801,34 +1732,6 @@ describe("SellerHandler", function () {
         expect(await bosonVoucher.owner()).to.equal(seller.assistant, "Wrong voucher clone owner");
       });
 
-      it("should update state correctly if values are the same", async function () {
-        // Update a seller
-        await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
-
-        // Get the seller as a struct
-        [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
-
-        // Parse into entity
-        let returnedSeller = Seller.fromStruct(sellerStruct);
-        let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
-
-        // Returned values should match the input in updateSeller
-        for ([key, value] of Object.entries(seller)) {
-          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
-        }
-
-        // Returned auth token values should match the input in updateSeller
-        for ([key, value] of Object.entries(emptyAuthToken)) {
-          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
-        }
-
-        // Voucher clone contract
-        const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
-
-        expect(await bosonVoucher.owner()).to.equal(seller.assistant, "Wrong voucher clone owner");
-      });
-
       it("should update only one address", async function () {
         seller.assistant = other1.address;
 
@@ -1866,7 +1769,7 @@ describe("SellerHandler", function () {
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
         // msg.sender must be equal to seller's assistant and clerk
-        authTokenOwner = other1;
+        let authTokenOwner = other1;
         await mockAuthERC721Contract.connect(authTokenOwner).mint(8500, 1);
 
         //Seller2  auth token
@@ -2029,15 +1932,15 @@ describe("SellerHandler", function () {
 
         // Transfer ownership of auth token because owner must be different from old admin
         await mockAuthERC721Contract.connect(authTokenOwner).transferFrom(authTokenOwner.address, other1.address, 8400);
-        authTokenOwner = other1;
+        const newAuthTokenOwner = other1;
 
         // Update seller
-        const tx = await accountHandler.connect(authTokenOwner).updateSeller(seller, authToken);
+        const tx = await accountHandler.connect(newAuthTokenOwner).updateSeller(seller, authToken);
 
         // Testing for the SellerUpdatePending event
         await expect(tx)
           .to.emit(accountHandler, "SellerUpdatePending")
-          .withArgs(seller.id, pendingSellerUpdateStruct, emptyAuthTokenStruct, authTokenOwner.address);
+          .withArgs(seller.id, pendingSellerUpdateStruct, emptyAuthTokenStruct, newAuthTokenOwner.address);
 
         sellerStruct = seller.toStruct();
         pendingSellerUpdate.assistant = ethers.constants.AddressZero;
@@ -2074,6 +1977,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate.active = false;
         pendingSellerUpdate.id = "0";
         pendingSellerUpdate.treasury = ethers.constants.AddressZero;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         // Update seller
@@ -2131,6 +2035,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate.id = "0";
         pendingSellerUpdate.active = false;
         pendingSellerUpdate.treasury = ethers.constants.AddressZero;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         // Testing for the SellerUpdateApplied event
@@ -2387,7 +2292,7 @@ describe("SellerHandler", function () {
         });
 
         it("seller is not owner of auth token currently stored for seller", async function () {
-          authTokenOwner = other1;
+          const authTokenOwner = other1;
           //Create seller 2 with auth token
           seller2 = mockSeller(other1.address, ethers.constants.AddressZero, other1.address, other1.address);
           expect(seller2.isValid()).is.true;
@@ -2411,7 +2316,7 @@ describe("SellerHandler", function () {
         });
 
         it("auth token id does not exist", async function () {
-          authTokenOwner = other1;
+          const authTokenOwner = other1;
 
           //Create seller 2 with auth token
           seller2 = mockSeller(other1.address, ethers.constants.AddressZero, other1.address, other1.address);
@@ -2426,6 +2331,12 @@ describe("SellerHandler", function () {
             accountHandler.connect(authTokenOwner).createSeller(seller2, authToken2, voucherInitValues)
           ).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
         });
+
+        it("No updates applied or set to pending", async function () {
+          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+            RevertReasons.NO_UPDATE_APPLIED
+          );
+        });
       });
     });
 
@@ -2438,6 +2349,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate.admin = ethers.constants.AddressZero;
         pendingSellerUpdate.assistant = ethers.constants.AddressZero;
         pendingSellerUpdate.active = false;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -2582,6 +2494,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate.clerk = ethers.constants.AddressZero;
         pendingSellerUpdate.admin = ethers.constants.AddressZero;
         pendingSellerUpdate.active = false;
+        pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
@@ -2712,21 +2625,21 @@ describe("SellerHandler", function () {
             .connect(authTokenOwner)
             .transferFrom(authTokenOwner.address, rando.address, 8400);
 
-          authTokenOwner = rando;
+          const newAuthTokenOwner = rando;
           seller2 = mockSeller(
-            authTokenOwner.address,
+            newAuthTokenOwner.address,
             ethers.constants.AddressZero,
-            authTokenOwner.address,
-            authTokenOwner.address
+            newAuthTokenOwner.address,
+            newAuthTokenOwner.address
           );
           expect(seller2.isValid()).is.true;
 
-          // Creaet seller 2 with the same auth token
-          await accountHandler.connect(authTokenOwner).createSeller(seller2, authToken, voucherInitValues);
+          // Create seller 2 with the same auth token
+          await accountHandler.connect(newAuthTokenOwner).createSeller(seller2, authToken, voucherInitValues);
 
           // Attempt to update seller1 with non-unique authToken used by seller 2
           await expect(
-            accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken])
+            accountHandler.connect(newAuthTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken])
           ).to.revertedWith(RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE);
         });
 

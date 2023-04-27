@@ -53,7 +53,7 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
         for (uint256 i = 0; i < _regions.length; i++) {
             // Get enum value as power of 2
             enumVal = uint8(_regions[i]);
-            region = 2**uint256(enumVal);
+            region = 2 ** uint256(enumVal);
 
             // Prevent duplicates
             require(used[enumVal] != region, REGION_DUPLICATED);

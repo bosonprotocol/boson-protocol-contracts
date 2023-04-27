@@ -90,12 +90,7 @@ library FundsLib {
      * @param _buyerId - id of the buyer
      * @param _isPreminted - flag indicating if the offer is preminted
      */
-    function encumberFunds(
-        uint256 _offerId,
-        uint256 _exchangeId,
-        uint256 _buyerId,
-        bool _isPreminted
-    ) internal {
+    function encumberFunds(uint256 _offerId, uint256 _exchangeId, uint256 _buyerId, bool _isPreminted) internal {
         // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
 
@@ -450,11 +445,7 @@ library FundsLib {
      * @param _tokenAddress - funds contract address or zero address for native currency
      * @param _amount - amount to be credited
      */
-    function increaseAvailableFunds(
-        uint256 _entityId,
-        address _tokenAddress,
-        uint256 _amount
-    ) internal {
+    function increaseAvailableFunds(uint256 _entityId, address _tokenAddress, uint256 _amount) internal {
         ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
 
         // if the current amount of token is 0, the token address must be added to the token list
@@ -480,11 +471,7 @@ library FundsLib {
      * @param _tokenAddress - funds contract address or zero address for native currency
      * @param _amount - amount to be taken away
      */
-    function decreaseAvailableFunds(
-        uint256 _entityId,
-        address _tokenAddress,
-        uint256 _amount
-    ) internal {
+    function decreaseAvailableFunds(uint256 _entityId, address _tokenAddress, uint256 _amount) internal {
         if (_amount > 0) {
             ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
 

@@ -91,6 +91,7 @@ exports.RevertReasons = {
     "Sum of agent fee percentage and protocol fee percentage should be <= max fee percentage limit",
   NO_PENDING_UPDATE_FOR_ACCOUNT: "No pending updates for the given account",
   UNAUTHORIZED_CALLER_UPDATE: "Caller has no permission to approve this update",
+  NO_UPDATE_APPLIED: "No update applied or requested approval",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",
@@ -166,6 +167,7 @@ exports.RevertReasons = {
   OWNABLE_ZERO_ADDRESS: "Ownable: new owner is the zero address",
   SAFE_ERC20_LOW_LEVEL_CALL: "SafeERC20: low-level call failed",
   SAFE_ERC20_NOT_SUCCEEDED: "SafeERC20: ERC20 operation did not succeed",
+  INITIALIZABLE_ALREADY_INITIALIZED: "Initializable: contract is already initialized",
 
   // Meta-Transactions related
   NONCE_USED_ALREADY: "Nonce used already",

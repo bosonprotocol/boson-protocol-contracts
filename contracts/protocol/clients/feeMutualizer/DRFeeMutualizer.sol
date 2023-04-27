@@ -134,11 +134,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, Ownable {
      * @param _feeAmount - returned amount
      * @param _context - additional data, describing the context
      */
-    function returnDRFee(
-        uint256 _uuid,
-        uint256 _feeAmount,
-        bytes calldata _context
-    ) external payable {
+    function returnDRFee(uint256 _uuid, uint256 _feeAmount, bytes calldata _context) external payable {
         uint256 agreementId = agreementByUuid[_uuid];
         require(agreementId != 0, "Invalid uuid");
         if (_feeAmount > 0) {

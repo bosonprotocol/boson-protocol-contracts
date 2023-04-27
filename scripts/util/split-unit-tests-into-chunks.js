@@ -1,10 +1,10 @@
-// Script to split tests into chunks. Used on `test/util/generate-test-chunks.sh`
+// Script to split tests into chunks. Use with npx hardhat split-unit-tests-into-chunks 4
 const fs = require("fs");
 const { findFiles } = require("./find-test-files");
 const shell = require("shelljs");
 
 /**
-Run unit tests and generates chunks of tests with approximatly the same execution time in order to run them in parallel on GHA
+Run unit tests and generates chunks of tests with approximately the same execution time in order to run them in parallel on GHA
 
 @param {number} chunks - Number of chunks to divide the tests into
 */
@@ -20,8 +20,8 @@ const splitUnitTestsIntoChunks = async (chunks) => {
     return { name: f, time };
   });
 
-  // Sort the list by the time it took to run
-  files = files.sort((a, b) => a.time - b.time);
+  // Sort in descending order the list by the time it took to run
+  files.sort((a, b) => b.time - a.time);
 
   // Sum the total time of all tests
   const timeTotal = files.reduce((acc, result) => {
@@ -35,27 +35,38 @@ const splitUnitTestsIntoChunks = async (chunks) => {
 
   // Create a list of chunks
   const filesByChunk = [...Array(Number(chunks))].map(() => []);
-
-  let currentChunk = 0;
-  let currentChunkTime = 0;
+  const totalTimePerChunk = new Array(Number(chunks)).fill(0);
 
   // Iterate over the list of files and add them to the chunks
   for (const item of files) {
-    // If the sum of the current chunk time + the current file time is greater than the average time per chunk, move to the next chunk and reset currentChunkTime
-    const sum = currentChunkTime + item.time;
-    if (sum > timePerChunk && currentChunk < chunks - 1) {
-      currentChunk++;
+    // Get order of chunks by time
+    // First create an array of indices [0, 1, ... number of chunks]
+    // Then sort the indices by the current total time of each chunk. For example if totalTimePerChunk contains values
+    // [10, 5, 15] the indices will be sorted as [2, 0, 1]
+    let indices = [...Array(Number(chunks)).keys()];
+    indices.sort((a, b) => totalTimePerChunk[b] - totalTimePerChunk[a]);
 
-      currentChunkTime = item.time;
-    } else {
-      // Otherwise add the current file time to the current chunk time
-      currentChunkTime += item.time;
+    // Put item in the most filled chunk where it's still below the average time per chunk
+    let found;
+    for (const index of indices) {
+      if (totalTimePerChunk[index] + item.time <= timePerChunk) {
+        filesByChunk[index].push(item.name);
+        totalTimePerChunk[index] += item.time;
+        found = true;
+        break;
+      }
     }
-    // Add the current file name to the current chunk
-    filesByChunk[currentChunk].push(item.name);
+
+    // If adding item would exceed the average time per chunk in all chunks, add it to the most empty chunk
+    if (!found) {
+      const chunkIndex = indices[indices.length - 1];
+      filesByChunk[chunkIndex].push(item.name);
+      totalTimePerChunk[chunkIndex] += item.time;
+    }
   }
 
   console.log("Chunks", filesByChunk);
+  console.log("Time per chunk", totalTimePerChunk);
 
   // Save output to test-chunks.txt file
   fs.writeFileSync("./test/util/test-chunks.txt", JSON.stringify(filesByChunk, null, 2));

@@ -78,10 +78,10 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
     TransactionDetails private txDetails;
 
     // Address of the Boson Protocol
-    address public protocol;
+    address public immutable protocol;
 
     // Id of the seller operating the snapshot
-    uint256 public sellerId;
+    uint256 public immutable sellerId;
 
     // Is the snapshot frozen
     bool public snapshotFrozen;
@@ -118,6 +118,7 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
         address _protocol,
         uint256 _sellerId
     ) ERC721(_name, _symbol) {
+        require(_protocol != address(0), "Protocol can't be zero address");
         protocol = _protocol;
         sellerId = _sellerId;
         txStatus = TransactionStatus.NotInTransaction;

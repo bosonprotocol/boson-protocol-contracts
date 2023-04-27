@@ -175,14 +175,13 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
      * - EscalationResponsePeriod is invalid
+     * - No field has been updated or requested to be updated
      *
      * @param _disputeResolver - the fully populated dispute resolver struct
      */
-    function updateDisputeResolver(DisputeResolver memory _disputeResolver)
-        external
-        disputeResolversNotPaused
-        nonReentrant
-    {
+    function updateDisputeResolver(
+        DisputeResolver memory _disputeResolver
+    ) external disputeResolversNotPaused nonReentrant {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
@@ -286,6 +285,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 sender
             );
         }
+
+        require(updateApplied || needsApproval, NO_UPDATE_APPLIED);
     }
 
     /**
@@ -414,11 +415,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @param _disputeResolverId - id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
-    function addFeesToDisputeResolver(uint256 _disputeResolverId, DisputeResolverFee[] calldata _disputeResolverFees)
-        external
-        disputeResolversNotPaused
-        nonReentrant
-    {
+    function addFeesToDisputeResolver(
+        uint256 _disputeResolverId,
+        DisputeResolverFee[] calldata _disputeResolverFees
+    ) external disputeResolversNotPaused nonReentrant {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
@@ -477,11 +477,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @param _disputeResolverId - id of the dispute resolver
      * @param _feeTokenAddresses - list of addresses of dispute resolver fee tokens to remove
      */
-    function removeFeesFromDisputeResolver(uint256 _disputeResolverId, address[] calldata _feeTokenAddresses)
-        external
-        disputeResolversNotPaused
-        nonReentrant
-    {
+    function removeFeesFromDisputeResolver(
+        uint256 _disputeResolverId,
+        address[] calldata _feeTokenAddresses
+    ) external disputeResolversNotPaused nonReentrant {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
@@ -551,11 +550,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @param _disputeResolverId - id of the dispute resolver
      * @param _sellerAllowList - list of seller ids to add to allowed list
      */
-    function addSellersToAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList)
-        external
-        disputeResolversNotPaused
-        nonReentrant
-    {
+    function addSellersToAllowList(
+        uint256 _disputeResolverId,
+        uint256[] calldata _sellerAllowList
+    ) external disputeResolversNotPaused nonReentrant {
         // At least one seller id must be specified and the number of ids cannot exceed the maximum number of seller ids to avoid running into block gas limit in a loop
         require(
             _sellerAllowList.length > 0 && _sellerAllowList.length <= protocolLimits().maxAllowedSellers,
@@ -597,11 +595,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @param _disputeResolverId - id of the dispute resolver
      * @param _sellerAllowList - list of seller ids to remove from allowed list
      */
-    function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList)
-        external
-        disputeResolversNotPaused
-        nonReentrant
-    {
+    function removeSellersFromAllowList(
+        uint256 _disputeResolverId,
+        uint256[] calldata _sellerAllowList
+    ) external disputeResolversNotPaused nonReentrant {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
@@ -661,7 +658,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      * @return sellerAllowList - list of sellers that are allowed to choose this dispute resolver
      */
-    function getDisputeResolver(uint256 _disputeResolverId)
+    function getDisputeResolver(
+        uint256 _disputeResolverId
+    )
         public
         view
         returns (
@@ -686,7 +685,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      * @return sellerAllowList - list of sellers that are allowed to chose this dispute resolver
      */
-    function getDisputeResolverByAddress(address _associatedAddress)
+    function getDisputeResolverByAddress(
+        address _associatedAddress
+    )
         external
         view
         returns (
@@ -723,11 +724,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @param _sellerIds - list of seller ids to check
      * @return sellerAllowed - array with indicator (true/false) if seller is allowed to choose the dispute resolver. Index in this array corresponds to indices of the incoming _sellerIds
      */
-    function areSellersAllowed(uint256 _disputeResolverId, uint256[] calldata _sellerIds)
-        external
-        view
-        returns (bool[] memory sellerAllowed)
-    {
+    function areSellersAllowed(
+        uint256 _disputeResolverId,
+        uint256[] calldata _sellerIds
+    ) external view returns (bool[] memory sellerAllowed) {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
@@ -849,11 +849,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @return exists - whether the dispute resolver pending update exists
      * @return disputeResolverPendingUpdate - the dispute resolver pending update details. See {BosonTypes.DisputeResolver}
      */
-    function fetchDisputeResolverPendingUpdate(uint256 _disputeResolverId)
-        internal
-        view
-        returns (bool exists, DisputeResolver storage disputeResolverPendingUpdate)
-    {
+    function fetchDisputeResolverPendingUpdate(
+        uint256 _disputeResolverId
+    ) internal view returns (bool exists, DisputeResolver storage disputeResolverPendingUpdate) {
         // Cache protocol entities for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 

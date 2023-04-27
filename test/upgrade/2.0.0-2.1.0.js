@@ -1,6 +1,4 @@
-const shell = require("shelljs");
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
 const { assert, expect } = require("chai");
 const Seller = require("../../scripts/domain/Seller");
 const AuthToken = require("../../scripts/domain/AuthToken");
@@ -9,11 +7,19 @@ const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolve
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolverFee");
 const { mockAuthToken } = require("../util/mock");
-const { deploySuite, upgradeSuite, populateProtocolContract, getProtocolContractState } = require("../util/upgrade");
+const {
+  deploySuite,
+  upgradeSuite,
+  populateProtocolContract,
+  getProtocolContractState,
+  revertState,
+} = require("../util/upgrade");
 const { getGenericContext } = require("./01_generic");
+const { getSnapshot, revertToSnapshot } = require("../util/utils");
 
 const oldVersion = "v2.0.0";
 const newVersion = "v2.1.0";
+const v2_1_0_scripts = "v2.1.0-scripts";
 
 /**
  *  Upgrade test case - After upgrade from 2.0.0 to 2.1.0 everything is still operational
@@ -31,72 +37,85 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let preUpgradeEntities;
 
   before(async function () {
-    // Make accounts available
-    [deployer, rando, admin, assistant, clerk, treasury] = await ethers.getSigners();
+    try {
+      // Make accounts available
+      [deployer, rando, admin, assistant, clerk, treasury] = await ethers.getSigners();
 
-    ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(deployer, oldVersion));
+      ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(
+        deployer,
+        oldVersion,
+        v2_1_0_scripts
+      ));
 
-    ({ accountHandler, ERC165Facet } = protocolContracts);
+      ({ accountHandler, ERC165Facet } = protocolContracts);
 
-    // Populate protocol with data
-    preUpgradeEntities = await populateProtocolContract(
-      deployer,
-      protocolDiamondAddress,
-      protocolContracts,
-      mockContracts
-    );
-
-    // Get current protocol state, which serves as the reference
-    // We assume that this state is a true one, relying on our unit and integration tests
-    protocolContractState = await getProtocolContractState(
-      protocolDiamondAddress,
-      protocolContracts,
-      mockContracts,
-      preUpgradeEntities
-    );
-
-    // Upgrade protocol
-    oldHandlers = { accountHandler: accountHandler }; // store old handler to test old events
-    ({ accountHandler, ERC165Facet } = await upgradeSuite(newVersion, protocolDiamondAddress, {
-      accountHandler: "IBosonAccountHandler",
-      ERC165Facet: "ERC165Facet",
-    }));
-    protocolContracts.accountHandler = accountHandler;
-
-    snapshot = await ethers.provider.send("evm_snapshot", []);
-
-    // This context is placed in an uncommon place due to order of test execution.
-    // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
-    // and those values are undefined if this is placed outside "before".
-    // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
-    context(
-      "Generic tests",
-      getGenericContext(
+      // Populate protocol with data
+      preUpgradeEntities = await populateProtocolContract(
         deployer,
         protocolDiamondAddress,
         protocolContracts,
         mockContracts,
-        protocolContractState,
-        preUpgradeEntities,
-        snapshot
-      )
-    );
+        oldVersion
+      );
+
+      // Get current protocol state, which serves as the reference
+      // We assume that this state is a true one, relying on our unit and integration tests
+      protocolContractState = await getProtocolContractState(
+        protocolDiamondAddress,
+        protocolContracts,
+        mockContracts,
+        preUpgradeEntities
+      );
+
+      // Upgrade protocol
+      oldHandlers = { accountHandler: accountHandler }; // store old handler to test old events
+      ({ accountHandler, ERC165Facet } = await upgradeSuite(
+        newVersion,
+        protocolDiamondAddress,
+        {
+          accountHandler: "IBosonAccountHandler",
+          ERC165Facet: "ERC165Facet",
+        },
+        v2_1_0_scripts
+      ));
+      protocolContracts.accountHandler = accountHandler;
+
+      snapshot = await getSnapshot();
+
+      // This context is placed in an uncommon place due to order of test execution.
+      // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
+      // and those values are undefined if this is placed outside "before".
+      // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
+      context(
+        "Generic tests",
+        getGenericContext(
+          deployer,
+          protocolDiamondAddress,
+          protocolContracts,
+          mockContracts,
+          protocolContractState,
+          preUpgradeEntities,
+          snapshot,
+          newVersion
+        )
+      );
+    } catch (err) {
+      // revert to latest version of scripts and contracts
+      revertState();
+      // stop execution
+      assert(false, `Before all reverts with: ${err}`);
+    }
   });
 
   afterEach(async function () {
     // Revert to state right after the upgrade.
-    // This is used so the lengthly setup (deploy+upgrade) is done only once.
-    await ethers.provider.send("evm_revert", [snapshot]);
-    snapshot = await ethers.provider.send("evm_snapshot", []);
-  });
-
-  after(async function () {
-    // Revert to latest state of contracts
-    shell.exec(`git checkout HEAD contracts`);
+    // This is used so the lengthy setup (deploy+upgrade) is done only once.
+    await revertToSnapshot(snapshot);
+    snapshot = await getSnapshot();
   });
 
   // Test actions that worked in previous version, but should not work anymore, or work differently
-  // Test methods that were added to see that upgrade was succesful
+  // Test methods that were added to see that upgrade was successful
   context("📋 Breaking changes and new methods", async function () {
     context("Breaking changes", async function () {
       it("Seller addresses are not updated in one step, except for the treasury", async function () {

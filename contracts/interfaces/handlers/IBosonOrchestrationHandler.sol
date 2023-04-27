@@ -13,7 +13,7 @@ import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  *
- * The ERC-165 identifier for this interface is: 0xa8cb0ef7
+ * The ERC-165 identifier for this interface is: 0x9b9e9d9c
  */
 interface IBosonOrchestrationHandler is
     IBosonAccountEvents,

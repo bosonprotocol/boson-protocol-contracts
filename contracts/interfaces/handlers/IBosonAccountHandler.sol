@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x1f891681
+ * The ERC-165 identifier for this interface is: 0x15335ed7
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -114,6 +114,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - AuthTokenType is Custom
+     * - No field has been updated or requested to be updated
      *
      * @param _seller - the fully populated seller struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -178,6 +179,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
      * - EscalationResponsePeriod is invalid
+     * - No field has been updated or requested to be updated
      *
      * @param _disputeResolver - the fully populated dispute resolver struct
      */
@@ -306,14 +308,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
-    function getSeller(uint256 _sellerId)
-        external
-        view
-        returns (
-            bool exists,
-            BosonTypes.Seller memory seller,
-            BosonTypes.AuthToken memory authToken
-        );
+    function getSeller(
+        uint256 _sellerId
+    ) external view returns (bool exists, BosonTypes.Seller memory seller, BosonTypes.AuthToken memory authToken);
 
     /**
      * @notice Gets the details about a seller by an address associated with that seller: assistant, admin, or clerk address.
@@ -326,14 +323,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
-    function getSellerByAddress(address _associatedAddress)
-        external
-        view
-        returns (
-            bool exists,
-            BosonTypes.Seller memory seller,
-            BosonTypes.AuthToken memory authToken
-        );
+    function getSellerByAddress(
+        address _associatedAddress
+    ) external view returns (bool exists, BosonTypes.Seller memory seller, BosonTypes.AuthToken memory authToken);
 
     /**
      * @notice Gets the details about a seller by an auth token associated with that seller.
@@ -347,14 +339,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
-    function getSellerByAuthToken(BosonTypes.AuthToken calldata _associatedAuthToken)
-        external
-        view
-        returns (
-            bool exists,
-            BosonTypes.Seller memory seller,
-            BosonTypes.AuthToken memory authToken
-        );
+    function getSellerByAuthToken(
+        BosonTypes.AuthToken calldata _associatedAuthToken
+    ) external view returns (bool exists, BosonTypes.Seller memory seller, BosonTypes.AuthToken memory authToken);
 
     /**
      * @notice Gets the details about a buyer.
@@ -374,7 +361,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      * @return sellerAllowList - list of sellers that are allowed to choose this dispute resolver
      */
-    function getDisputeResolver(uint256 _disputeResolverId)
+    function getDisputeResolver(
+        uint256 _disputeResolverId
+    )
         external
         view
         returns (
@@ -393,7 +382,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      * @return sellerAllowList - list of sellers that are allowed to chose this dispute resolver
      */
-    function getDisputeResolverByAddress(address _associatedAddress)
+    function getDisputeResolverByAddress(
+        address _associatedAddress
+    )
         external
         view
         returns (
@@ -419,10 +410,10 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _sellerIds - list of seller ids to check
      * @return sellerAllowed - array with indicator (true/false) if seller is allowed to choose the dispute resolver. Index in this array corresponds to indices of the incoming _sellerIds
      */
-    function areSellersAllowed(uint256 _disputeResolverId, uint256[] calldata _sellerIds)
-        external
-        view
-        returns (bool[] memory sellerAllowed);
+    function areSellersAllowed(
+        uint256 _disputeResolverId,
+        uint256[] calldata _sellerIds
+    ) external view returns (bool[] memory sellerAllowed);
 
     /**
      * @notice Gets the next account id that can be assigned to an account.

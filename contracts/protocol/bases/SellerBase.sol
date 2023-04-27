@@ -128,6 +128,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         seller.clerk = _seller.clerk;
         seller.treasury = _seller.treasury;
         seller.active = _seller.active;
+        seller.metadataUri = _seller.metadataUri;
 
         // Auth token passed in
         if (_authToken.tokenType != AuthTokenType.None) {
@@ -189,14 +190,12 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      * @return sellerPendingUpdate - the seller pending update details. See {BosonTypes.Seller}
      * @return authTokenPendingUpdate - auth token pending update details
      */
-    function fetchSellerPendingUpdate(uint256 _sellerId)
+    function fetchSellerPendingUpdate(
+        uint256 _sellerId
+    )
         internal
         view
-        returns (
-            bool exists,
-            Seller storage sellerPendingUpdate,
-            AuthToken storage authTokenPendingUpdate
-        )
+        returns (bool exists, Seller storage sellerPendingUpdate, AuthToken storage authTokenPendingUpdate)
     {
         // Cache protocol entities for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();

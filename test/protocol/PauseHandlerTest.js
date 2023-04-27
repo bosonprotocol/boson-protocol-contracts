@@ -1,15 +1,9 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
 const { expect } = require("chai");
 
-const Role = require("../../scripts/domain/Role.js");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
-const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
-const { maxPriorityFeePerGas } = require("../util/constants");
-const { getFacetsWithArgs } = require("../util/utils.js");
+const { setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util/utils.js");
 
 /**
  *  Test the Boson Pause Handler interface
@@ -22,39 +16,32 @@ const { getFacetsWithArgs } = require("../util/utils.js");
 describe("IBosonPauseHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, pauser, rando;
-  let erc165, protocolDiamond, accessController, pauseHandler, support, regions;
+  let pauser, rando;
+  let erc165, pauseHandler, support, regions;
+  let snapshotId;
 
   before(async function () {
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
+
+    // Specify contracts needed for this test
+    const contracts = {
+      erc165: "ERC165Facet",
+      pauseHandler: "IBosonPauseHandler",
+    };
+
+    ({
+      signers: [pauser, rando],
+      contractInstances: { erc165, pauseHandler },
+    } = await setupTestEnvironment(contracts));
+
+    // Get snapshot id
+    snapshotId = await getSnapshot();
   });
 
-  beforeEach(async function () {
-    // Make accounts available
-    [deployer, pauser, rando] = await ethers.getSigners();
-
-    // Deploy the Protocol Diamond
-    [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-
-    // Temporarily grant UPGRADER role to deployer account
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    // Temporarily grant PAUSER role to pauser account
-    await accessController.grantRole(Role.PAUSER, pauser.address);
-
-    const facetNames = ["PauseHandlerFacet", "ProtocolInitializationHandlerFacet"];
-
-    const facetsToDeploy = await getFacetsWithArgs(facetNames);
-
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
-
-    // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
-
-    // Cast Diamond to IBosonPauseHandler
-    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -77,7 +64,7 @@ describe("IBosonPauseHandler", function () {
         // Regions to pause
         regions = [PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles];
 
-        // Pause the protocal, testing for the event
+        // Pause the protocol, testing for the event
         await expect(pauseHandler.connect(pauser).pause(regions))
           .to.emit(pauseHandler, "ProtocolPaused")
           .withArgs(regions, pauser.address);
@@ -119,7 +106,7 @@ describe("IBosonPauseHandler", function () {
         // Pause protocol
         await pauseHandler.connect(pauser).pause([PausableRegion.Sellers, PausableRegion.DisputeResolvers]);
 
-        // Unpause the protocal, testing for the event
+        // Unpause the protocol, testing for the event
         await expect(pauseHandler.connect(pauser).unpause())
           .to.emit(pauseHandler, "ProtocolUnpaused")
           .withArgs(pauser.address);
@@ -129,10 +116,10 @@ describe("IBosonPauseHandler", function () {
         // Pause protocol
         await pauseHandler.connect(pauser).pause([PausableRegion.Sellers, PausableRegion.DisputeResolvers]);
 
-        // Unpause the protocal, testing for the event
+        // Unpause the protocol, testing for the event
         await pauseHandler.connect(pauser).unpause();
 
-        // Pause the protocal, testing for the event
+        // Pause the protocol, testing for the event
         regions = [PausableRegion.Funds];
         await expect(pauseHandler.connect(pauser).pause(regions))
           .to.emit(pauseHandler, "ProtocolPaused")
@@ -145,7 +132,7 @@ describe("IBosonPauseHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to unpause without PAUSER role, expecting revert
-          await expect(pauseHandler.connect(rando).pause([])).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          await expect(pauseHandler.connect(rando).unpause([])).to.revertedWith(RevertReasons.ACCESS_DENIED);
         });
 
         it("Protocol is not currently paused", async function () {
