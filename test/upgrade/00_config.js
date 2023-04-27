@@ -4,7 +4,6 @@ Immutable facet configs for deployment and upgrade, used in upgrade test.
 This file contains deployment and upgrade configs for each tag. Format of config must adhere to format specified in
 - scripts/config/facet-deploy.js
 - scripts/config/facet-upgrade.js
-
 */
 
 const facets = {
