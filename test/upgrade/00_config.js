@@ -145,7 +145,7 @@ async function getFacets() {
         initializationData: "0x0000000000000000000000000000000000000000000000000000000000002710", // input for initV2_2_0, representing maxPremintedVoucher (0x2710=10000)
       },
       "v2.2.1-rc.1": {
-        addOrUpgrade: ["AccountHandlerFacet", "DisputeResolverHandlerFacet"],
+        addOrUpgrade: ["SellerHandlerFacet", "AccountHandlerFacet", "DisputeResolverHandlerFacet"],
         remove: [],
         skipSelectors: {},
         facetsToInit: {

@@ -23,7 +23,7 @@ const newVersion = "v2.2.1-rc.1";
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   this.timeout(1000000);
   // Common vars
-  let deployer, rando;
+  let deployer;
   let accountHandler;
   let snapshot;
   let protocolDiamondAddress, mockContracts;

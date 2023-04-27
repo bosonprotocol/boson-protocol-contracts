@@ -345,7 +345,18 @@ async function populateProtocolContract(
         }
         // set unique new voucherInitValues
         const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
-        await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
+
+        try {
+          await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
+        } catch (e) {
+          const encodedFunction = await accountHandler.getSighash("createSeller", [
+            seller,
+            authToken,
+            voucherInitValues,
+          ]);
+          console.log(encodedFunction);
+          console.log(e);
+        }
 
         const voucherContractAddress = calculateContractAddress(accountHandler.address, voucherIndex++);
         sellers.push({
@@ -687,12 +698,8 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
   for (const account of accounts) {
     const id = account.id;
 
-    try {
-      sellerState.push(await getSeller(accountHandlerRando, id, { getBy: "id" }));
-    } catch (e) {
-      console.log("ana", e);
-    }
     DRsState.push(await getDisputeResolver(accountHandlerRando, id, { getBy: "id" }));
+    sellerState.push(await getSeller(accountHandlerRando, id, { getBy: "id" }));
     agentsState.push(await getAgent(accountHandlerRando, id));
     buyersState.push(await getBuyer(accountHandlerRando, id));
 
@@ -1742,11 +1749,7 @@ async function getSeller(accountHandler, value, { getBy }) {
   } else if (getBy == "authToken") {
     [exist, seller, authToken] = await accountHandler.getSellerByAuthToken(value);
   } else {
-    try {
-      [exist, seller, authToken] = await accountHandler.getSeller(value);
-    } catch (e) {
-      console.log("errorana", e);
-    }
+    [exist, seller, authToken] = await accountHandler.getSeller(value);
   }
 
   seller = Seller.fromStruct(seller);

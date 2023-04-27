@@ -299,7 +299,7 @@ async function main(env, facetConfig) {
         });
       }
 
-      const erc165 = await ethers.getContractAt("IERC165", protocolAddress);
+      const erc165 = await ethers.getContractAt("contracts/interfaces/IERC165.sol:IERC165", protocolAddress);
       const support = await erc165.supportsInterface(newFacetInterfaceId);
       if (!support) {
         interfacesToAdd[oldFacet.name] = newFacetInterfaceId;
