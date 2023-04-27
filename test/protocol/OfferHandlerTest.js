@@ -185,8 +185,8 @@ describe("IBosonOfferHandler", function () {
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      DRFeeNative = "0";
-      DRFeeToken = "0";
+      DRFeeNative = "100";
+      DRFeeToken = "50";
       disputeResolverFees = [
         new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative),
         new DisputeResolverFee(bosonToken.address, "Boson", DRFeeToken),
@@ -1275,7 +1275,7 @@ describe("IBosonOfferHandler", function () {
 
       it("it's possible to reserve range even if somebody already committed to", async function () {
         // Deposit seller funds so the commit will succeed
-        const sellerPool = ethers.BigNumber.from(offer.sellerDeposit).mul(2);
+        const sellerPool = ethers.BigNumber.from(offer.sellerDeposit).add(DRFeeNative).mul(2);
         await fundsHandler
           .connect(assistant)
           .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });

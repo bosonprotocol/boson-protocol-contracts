@@ -156,6 +156,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, Ownable {
     }
 
     function newAgreement(Agreement calldata _agreement) external onlyOwner {
+        require(!_agreement.voided, "Agreement voided");
         agreements.push(_agreement);
         uint256 agreementId = agreements.length - 1;
 
@@ -190,6 +191,19 @@ contract DRFeeMutualizer is IDRFeeMutualizer, Ownable {
         if (agreement.refundOnCancel) {
             // calculate unused premium
             // what with the outstanding requests?
+        }
+    }
+
+    function deposit(address _tokenAddress, uint256 _amount) external payable {
+        transferFundsToMutualizer(_tokenAddress, _amount);
+    }
+
+    function withdraw(address _tokenAddress, uint256 _amount) external onlyOwner {
+        if (_tokenAddress == address(0)) {
+            payable(owner()).transfer(_amount);
+        } else {
+            IERC20 token = IERC20(_tokenAddress);
+            token.safeTransfer(owner(), _amount);
         }
     }
 

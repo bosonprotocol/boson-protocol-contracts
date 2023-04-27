@@ -1,6 +1,8 @@
 const { ethers } = require("hardhat");
+const BN = ethers.BigNumber.from;
 const { expect, assert } = require("chai");
 const Role = require("../../scripts/domain/Role");
+const Agreement = require("../../scripts/domain/Agreement");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
@@ -29,6 +31,8 @@ const {
   mockBuyer,
   accountId,
 } = require("../util/mock");
+// const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
+const { oneMonth } = require("../util/constants");
 
 /**
  *  Test the Boson Funds Handler interface
@@ -93,7 +97,7 @@ describe("IBosonFundsHandler", function () {
     agentOfferProtocolFee,
     expectedAgentAvailableFunds,
     agentAvailableFunds;
-  let DRFee, buyerEscalationDeposit;
+  let DRFeeToken, DRFeeNative, buyerEscalationDeposit;
   let protocolDiamondAddress;
   let snapshotId;
 
@@ -459,10 +463,10 @@ describe("IBosonFundsHandler", function () {
 
           // expected payoffs - they are the same for token and native currency
           // buyer: price - buyerCancelPenalty
-          buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
+          buyerPayoff = BN(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
 
           // seller: sellerDeposit + buyerCancelPenalty
-          sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit).add(offerToken.buyerCancelPenalty).toString();
+          sellerPayoff = BN(offerToken.sellerDeposit).add(offerToken.buyerCancelPenalty).toString();
         });
 
         it("should emit a FundsWithdrawn event", async function () {
@@ -472,8 +476,8 @@ describe("IBosonFundsHandler", function () {
           tokenListBuyer = [ethers.constants.AddressZero, mockToken.address];
 
           // Withdraw amounts
-          tokenAmountsSeller = [sellerPayoff, ethers.BigNumber.from(sellerPayoff).div("2").toString()];
-          tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("5").toString()];
+          tokenAmountsSeller = [sellerPayoff, BN(sellerPayoff).div("2").toString()];
+          tokenAmountsBuyer = [buyerPayoff, BN(buyerPayoff).div("5").toString()];
 
           // seller withdrawal
           const tx = await fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
@@ -483,25 +487,13 @@ describe("IBosonFundsHandler", function () {
 
           await expect(tx)
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(
-              seller.id,
-              treasury.address,
-              ethers.constants.Zero,
-              ethers.BigNumber.from(sellerPayoff).div("2"),
-              clerk.address
-            );
+            .withArgs(seller.id, treasury.address, ethers.constants.Zero, BN(sellerPayoff).div("2"), clerk.address);
 
           // buyer withdrawal
           const tx2 = await fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer);
           await expect(tx2)
             .to.emit(fundsHandler, "FundsWithdrawn", buyer.address)
-            .withArgs(
-              buyerId,
-              buyer.address,
-              mockToken.address,
-              ethers.BigNumber.from(buyerPayoff).div("5"),
-              buyer.address
-            );
+            .withArgs(buyerId, buyer.address, mockToken.address, BN(buyerPayoff).div("5"), buyer.address);
 
           await expect(tx2)
             .to.emit(fundsHandler, "FundsWithdrawn")
@@ -526,9 +518,7 @@ describe("IBosonFundsHandler", function () {
           );
 
           // withdraw funds
-          const withdrawAmount = ethers.BigNumber.from(sellerPayoff)
-            .sub(ethers.utils.parseUnits("0.1", "ether"))
-            .toString();
+          const withdrawAmount = BN(sellerPayoff).sub(ethers.utils.parseUnits("0.1", "ether")).toString();
           await fundsHandler.connect(clerk).withdrawFunds(seller.id, [ethers.constants.AddressZero], [withdrawAmount]);
 
           // Read on chain state
@@ -540,7 +530,7 @@ describe("IBosonFundsHandler", function () {
           expectedSellerAvailableFunds.funds[1] = new Funds(
             ethers.constants.AddressZero,
             "Native currency",
-            ethers.BigNumber.from(sellerPayoff).sub(withdrawAmount).toString()
+            BN(sellerPayoff).sub(withdrawAmount).toString()
           );
           expect(sellersAvailableFunds).to.eql(
             expectedSellerAvailableFunds,
@@ -701,7 +691,7 @@ describe("IBosonFundsHandler", function () {
           let reduction = ethers.utils.parseUnits("0.1", "ether").toString();
           // Withdraw token
           tokenListSeller = [mockToken.address, mockToken.address];
-          tokenAmountsSeller = [ethers.BigNumber.from(sellerPayoff).sub(reduction).toString(), reduction];
+          tokenAmountsSeller = [BN(sellerPayoff).sub(reduction).toString(), reduction];
 
           // seller withdrawal
           const tx = await fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
@@ -711,7 +701,7 @@ describe("IBosonFundsHandler", function () {
               seller.id,
               treasury.address,
               mockToken.address,
-              ethers.BigNumber.from(sellerPayoff).sub(reduction).toString(),
+              BN(sellerPayoff).sub(reduction).toString(),
               clerk.address
             );
 
@@ -786,9 +776,7 @@ describe("IBosonFundsHandler", function () {
             const feeCollectorNativeBalanceAfter = await mockToken.balanceOf(agent.wallet);
 
             // Expected balance
-            const expectedFeeCollectorNativeBalanceAfter = ethers.BigNumber.from(feeCollectorNativeBalanceBefore).add(
-              agentPayoff
-            );
+            const expectedFeeCollectorNativeBalanceAfter = BN(feeCollectorNativeBalanceBefore).add(agentPayoff);
 
             // Check agent wallet balance and verify the transfer really happened.
             expect(feeCollectorNativeBalanceAfter).to.eql(
@@ -804,7 +792,7 @@ describe("IBosonFundsHandler", function () {
             // retract from the dispute
             await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
-            agentPayoff = ethers.BigNumber.from(agentOffer.price).mul(agent.feePercentage).div("10000").toString();
+            agentPayoff = BN(agentOffer.price).mul(agent.feePercentage).div("10000").toString();
 
             // Check the balance BEFORE withdrawFunds()
             const feeCollectorNativeBalanceBefore = await mockToken.balanceOf(agent.wallet);
@@ -817,9 +805,7 @@ describe("IBosonFundsHandler", function () {
             const feeCollectorNativeBalanceAfter = await mockToken.balanceOf(agent.wallet);
 
             // Expected balance
-            const expectedFeeCollectorNativeBalanceAfter = ethers.BigNumber.from(feeCollectorNativeBalanceBefore).add(
-              agentPayoff
-            );
+            const expectedFeeCollectorNativeBalanceAfter = BN(feeCollectorNativeBalanceBefore).add(agentPayoff);
 
             // Check agent wallet balance and verify the transfer really happened.
             expect(feeCollectorNativeBalanceAfter).to.eql(
@@ -835,7 +821,7 @@ describe("IBosonFundsHandler", function () {
             tokenListBuyer = [ethers.constants.AddressZero, mockToken.address];
 
             // Withdraw amounts
-            tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("5").toString()];
+            tokenAmountsBuyer = [buyerPayoff, BN(buyerPayoff).div("5").toString()];
 
             // Pause the funds region of the protocol
             await pauseHandler.connect(pauser).pause([PausableRegion.Funds]);
@@ -887,7 +873,7 @@ describe("IBosonFundsHandler", function () {
           it("Caller tries to withdraw more than they have in the available funds", async function () {
             // Withdraw token
             tokenList = [mockToken.address];
-            tokenAmounts = [ethers.BigNumber.from(sellerPayoff).mul("2")];
+            tokenAmounts = [BN(sellerPayoff).mul("2")];
 
             // Attempt to withdraw the funds, expecting revert
             await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenList, tokenAmounts)).to.revertedWith(
@@ -1028,7 +1014,7 @@ describe("IBosonFundsHandler", function () {
           buyerPayoff = 0;
 
           // seller: sellerDeposit + offerToken.price
-          sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit).add(offerToken.price).toString();
+          sellerPayoff = BN(offerToken.sellerDeposit).add(offerToken.price).toString();
 
           // protocol: protocolFee
           protocolPayoff = offerTokenProtocolFee;
@@ -1079,9 +1065,7 @@ describe("IBosonFundsHandler", function () {
           );
 
           // withdraw funds
-          const partialFeeWithdrawAmount = ethers.BigNumber.from(protocolPayoff)
-            .sub(ethers.utils.parseUnits("0.01", "ether"))
-            .toString();
+          const partialFeeWithdrawAmount = BN(protocolPayoff).sub(ethers.utils.parseUnits("0.01", "ether")).toString();
 
           tx = await fundsHandler
             .connect(feeCollector)
@@ -1106,7 +1090,7 @@ describe("IBosonFundsHandler", function () {
             new Funds(
               ethers.constants.AddressZero,
               "Native currency",
-              ethers.BigNumber.from(protocolPayoff).sub(partialFeeWithdrawAmount).toString()
+              BN(protocolPayoff).sub(partialFeeWithdrawAmount).toString()
             ),
           ]);
 
@@ -1252,7 +1236,7 @@ describe("IBosonFundsHandler", function () {
           let reduction = ethers.utils.parseUnits("0.01", "ether").toString();
           // Withdraw token
           tokenList = [mockToken.address, mockToken.address];
-          tokenAmounts = [ethers.BigNumber.from(protocolPayoff).sub(reduction).toString(), reduction];
+          tokenAmounts = [BN(protocolPayoff).sub(reduction).toString(), reduction];
 
           // protocol fee withdrawal
           const tx = await fundsHandler.connect(feeCollector).withdrawProtocolFees(tokenList, tokenAmounts);
@@ -1262,7 +1246,7 @@ describe("IBosonFundsHandler", function () {
               protocolId,
               protocolTreasury.address,
               mockToken.address,
-              ethers.BigNumber.from(protocolPayoff).sub(reduction).toString(),
+              BN(protocolPayoff).sub(reduction).toString(),
               feeCollector.address
             );
 
@@ -1317,7 +1301,7 @@ describe("IBosonFundsHandler", function () {
           it("Caller tries to withdraw more than they have in the available funds", async function () {
             // Withdraw token
             tokenList = [mockToken.address];
-            tokenAmounts = [ethers.BigNumber.from(offerTokenProtocolFee).mul("2")];
+            tokenAmounts = [BN(offerTokenProtocolFee).mul("2")];
 
             // Attempt to withdraw the funds, expecting revert
             await expect(
@@ -1464,15 +1448,16 @@ describe("IBosonFundsHandler", function () {
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      DRFee = ethers.utils.parseUnits("0", "ether").toString();
+      DRFeeToken = ethers.utils.parseUnits("0.1", "ether").toString();
+      DRFeeNative = ethers.utils.parseUnits("0.2", "ether").toString();
       disputeResolverFees = [
-        new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
-        new DisputeResolverFee(mockToken.address, "mockToken", DRFee),
+        new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative),
+        new DisputeResolverFee(mockToken.address, "mockToken", DRFeeToken),
       ];
 
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
-      buyerEscalationDeposit = applyPercentage(DRFee, buyerEscalationDepositPercentage);
+      buyerEscalationDeposit = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
 
       // Register the dispute resolver
       await accountHandler
@@ -1497,13 +1482,6 @@ describe("IBosonFundsHandler", function () {
       disputeResolverId = mo.disputeResolverId;
 
       agentId = "0"; // agent id is optional while creating an offer
-      // Create both offers
-      await Promise.all([
-        offerHandler
-          .connect(assistant)
-          .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId),
-        offerHandler.connect(assistant).createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId),
-      ]);
 
       // Set used variables
       price = offerToken.price;
@@ -1552,437 +1530,278 @@ describe("IBosonFundsHandler", function () {
     });
 
     context("👉 encumberFunds()", async function () {
-      it("should emit a FundsEncumbered event", async function () {
-        let buyerId = "4"; // 1: seller, 2: disputeResolver, 3: agent, 4: buyer
+      context("Self mutualization", async function () {
+        beforeEach(async function () {
+          // Create both offers
+          await Promise.all([
+            offerHandler
+              .connect(assistant)
+              .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId),
+            offerHandler
+              .connect(assistant)
+              .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId),
+          ]);
 
-        // Commit to an offer with erc20 token, test for FundsEncumbered event
-        const tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
-        await expect(tx)
-          .to.emit(exchangeHandler, "FundsEncumbered")
-          .withArgs(buyerId, mockToken.address, price, buyer.address);
-
-        await expect(tx)
-          .to.emit(exchangeHandler, "FundsEncumbered")
-          .withArgs(seller.id, mockToken.address, sellerDeposit, buyer.address);
-
-        // Commit to an offer with native currency, test for FundsEncumbered event
-        const tx2 = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
-        await expect(tx2)
-          .to.emit(exchangeHandler, "FundsEncumbered")
-          .withArgs(buyerId, ethers.constants.AddressZero, price, buyer.address);
-
-        await expect(tx2)
-          .to.emit(exchangeHandler, "FundsEncumbered")
-          .withArgs(seller.id, ethers.constants.AddressZero, sellerDeposit, buyer.address);
-      });
-
-      it("should update state", async function () {
-        // contract token value
-        const contractTokenBalanceBefore = await mockToken.balanceOf(protocolDiamondAddress);
-        // contract native token balance
-        const contractNativeBalanceBefore = await ethers.provider.getBalance(protocolDiamondAddress);
-        // seller's available funds
-        const sellersAvailableFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-
-        // Commit to an offer with erc20 token
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
-
-        // Check that token balance increased
-        const contractTokenBalanceAfter = await mockToken.balanceOf(protocolDiamondAddress);
-        // contract token balance should increase for the incoming price
-        // seller's deposit was already held in the contract's pool before
-        expect(contractTokenBalanceAfter.sub(contractTokenBalanceBefore).toString()).to.eql(
-          price,
-          "Token wrong balance increase"
-        );
-
-        // Check that seller's pool balance was reduced
-        let sellersAvailableFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-        // token is the first on the list of the available funds and the amount should be decreased for the sellerDeposit
-        expect(
-          ethers.BigNumber.from(sellersAvailableFundsBefore.funds[0].availableAmount)
-            .sub(ethers.BigNumber.from(sellersAvailableFundsAfter.funds[0].availableAmount))
-            .toString()
-        ).to.eql(sellerDeposit, "Token seller available funds mismatch");
-
-        // Commit to an offer with native currency
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
-
-        // check that native currency balance increased
-        const contractNativeBalanceAfter = await ethers.provider.getBalance(protocolDiamondAddress);
-        // contract token balance should increase for the incoming price
-        // seller's deposit was already held in the contract's pool before
-        expect(contractNativeBalanceAfter.sub(contractNativeBalanceBefore).toString()).to.eql(
-          price,
-          "Native currency wrong balance increase"
-        );
-
-        // Check that seller's pool balance was reduced
-        sellersAvailableFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-        // native currency is the second on the list of the available funds and the amount should be decreased for the sellerDeposit
-        expect(
-          ethers.BigNumber.from(sellersAvailableFundsBefore.funds[1].availableAmount)
-            .sub(ethers.BigNumber.from(sellersAvailableFundsAfter.funds[1].availableAmount))
-            .toString()
-        ).to.eql(sellerDeposit, "Native currency seller available funds mismatch");
-      });
-
-      context("seller's available funds drop to 0", async function () {
-        it("token should be removed from the tokenList", async function () {
-          // seller's available funds
-          let sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-          expect(sellersAvailableFunds.funds.length).to.eql(2, "Funds length mismatch");
-          expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
-            mockToken.address,
-            "Token contract address mismatch"
-          );
-          expect(sellersAvailableFunds.funds[1].tokenAddress).to.eql(
-            ethers.constants.AddressZero,
-            "Native currency address mismatch"
-          );
-
-          // Commit to offer with token twice to empty the seller's pool
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
-
-          // Token address should be removed and have only native currency in the list
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-          expect(sellersAvailableFunds.funds.length).to.eql(1, "Funds length mismatch");
-          expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
-            ethers.constants.AddressZero,
-            "Native currency address mismatch"
-          );
-
-          // Commit to offer with token twice to empty the seller's pool
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
-
-          // Seller available funds must be empty
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-          expect(sellersAvailableFunds.funds.length).to.eql(0, "Funds length mismatch");
-        });
-
-        it("token should be removed from the token list even when list length - 1 is different from index", async function () {
-          // length - 1 is different from index when index isn't the first or last element in the list
-          // Deploy a new mock token
-          let TokenContractFactory = await ethers.getContractFactory("Foreign20");
-          const otherToken = await TokenContractFactory.deploy();
-          await otherToken.deployed();
-
-          // Add otherToken to DR fees
-          await accountHandler
-            .connect(adminDR)
-            .addFeesToDisputeResolver(disputeResolver.id, [
-              new DisputeResolverFee(otherToken.address, "Other Token", "0"),
-            ]);
-
-          // top up seller's and buyer's account
-          await otherToken.mint(assistant.address, sellerDeposit);
+          // Seller must deposit enough to cover DR fees
+          const sellerPoolToken = BN(DRFeeToken).mul(2);
+          const sellerPoolNative = BN(DRFeeNative).mul(2);
+          await mockToken.mint(assistant.address, sellerPoolToken);
 
           // approve protocol to transfer the tokens
-          await otherToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
+          await mockToken.connect(assistant).approve(protocolDiamondAddress, sellerPoolToken);
 
           // deposit to seller's pool
-          await fundsHandler.connect(assistant).depositFunds(seller.id, otherToken.address, sellerDeposit);
+          await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerPoolToken);
+          await fundsHandler
+            .connect(assistant)
+            .depositFunds(seller.id, ethers.constants.AddressZero, sellerPoolNative, {
+              value: sellerPoolNative,
+            });
+        });
 
+        it("should emit a FundsEncumbered event", async function () {
+          let buyerId = "4"; // 1: seller, 2: disputeResolver, 3: agent, 4: buyer
+
+          // Commit to an offer with erc20 token, test for FundsEncumbered event
+          const tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+          await expect(tx)
+            .to.emit(exchangeHandler, "FundsEncumbered")
+            .withArgs(buyerId, mockToken.address, price, buyer.address);
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "FundsEncumbered")
+            .withArgs(seller.id, mockToken.address, BN(sellerDeposit).add(DRFeeToken), buyer.address);
+
+          // Commit to an offer with native currency, test for FundsEncumbered event
+          const tx2 = await exchangeHandler
+            .connect(buyer)
+            .commitToOffer(buyer.address, offerNative.id, { value: price });
+          await expect(tx2)
+            .to.emit(exchangeHandler, "FundsEncumbered")
+            .withArgs(buyerId, ethers.constants.AddressZero, price, buyer.address);
+
+          await expect(tx2)
+            .to.emit(exchangeHandler, "FundsEncumbered")
+            .withArgs(seller.id, ethers.constants.AddressZero, BN(sellerDeposit).add(DRFeeNative), buyer.address);
+        });
+
+        it("should update state", async function () {
+          // contract token value
+          const contractTokenBalanceBefore = await mockToken.balanceOf(protocolDiamondAddress);
+          // contract native token balance
+          const contractNativeBalanceBefore = await ethers.provider.getBalance(protocolDiamondAddress);
           // seller's available funds
-          let sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-          expect(sellersAvailableFunds.funds.length).to.eql(3, "Funds length mismatch");
-          expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
-            mockToken.address,
-            "Token contract address mismatch"
-          );
-          expect(sellersAvailableFunds.funds[1].tokenAddress).to.eql(
-            ethers.constants.AddressZero,
-            "Native currency address mismatch"
-          );
-          expect(sellersAvailableFunds.funds[2].tokenAddress).to.eql(
-            otherToken.address,
-            "Boson token address mismatch"
+          const sellersAvailableFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+
+          // Commit to an offer with erc20 token
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+
+          // Check that token balance increased
+          const contractTokenBalanceAfter = await mockToken.balanceOf(protocolDiamondAddress);
+          // contract token balance should increase for the incoming price
+          // seller's deposit was already held in the contract's pool before
+          expect(contractTokenBalanceAfter.sub(contractTokenBalanceBefore).toString()).to.eql(
+            price,
+            "Token wrong balance increase"
           );
 
-          // Commit to offer with token twice to empty the seller's pool
+          // Check that seller's pool balance was reduced
+          let sellersAvailableFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+          // token is the first on the list of the available funds and the amount should be decreased for the sellerDeposit and DRFee
+          expect(
+            BN(sellersAvailableFundsBefore.funds[0].availableAmount)
+              .sub(BN(sellersAvailableFundsAfter.funds[0].availableAmount))
+              .toString()
+          ).to.eql(BN(sellerDeposit).add(DRFeeToken).toString(), "Token seller available funds mismatch");
+
+          // Commit to an offer with native currency
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
 
-          // Native currency address should be removed and have only mock token and other token in the list
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-          expect(sellersAvailableFunds.funds.length).to.eql(2, "Funds length mismatch");
-          expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
-            mockToken.address,
-            "Token contract address mismatch"
-          );
-          expect(sellersAvailableFunds.funds[1].tokenAddress).to.eql(
-            otherToken.address,
-            "Other token address mismatch"
-          );
-        });
-      });
-
-      it("when someone else deposits on buyer's behalf, callers funds are transferred", async function () {
-        // buyer will commit to an offer on rando's behalf
-        // get token balance before the commit
-        const buyerTokenBalanceBefore = await mockToken.balanceOf(buyer.address);
-        const randoTokenBalanceBefore = await mockToken.balanceOf(rando.address);
-
-        // commit to an offer with token on rando's behalf
-        await exchangeHandler.connect(buyer).commitToOffer(rando.address, offerToken.id);
-
-        // get token balance after the commit
-        const buyerTokenBalanceAfter = await mockToken.balanceOf(buyer.address);
-        const randoTokenBalanceAfter = await mockToken.balanceOf(rando.address);
-
-        // buyer's balance should decrease, rando's should remain
-        expect(buyerTokenBalanceBefore.sub(buyerTokenBalanceAfter).toString()).to.eql(
-          price,
-          "Buyer's token balance should decrease for a price"
-        );
-        expect(randoTokenBalanceAfter.toString()).to.eql(
-          randoTokenBalanceBefore.toString(),
-          "Rando's token balance should remain the same"
-        );
-        // make sure that rando is actually the buyer of the exchange
-        let exchange;
-        [, exchange] = await exchangeHandler.getExchange("1");
-        expect(exchange.buyerId.toString()).to.eql(randoBuyerId, "Wrong buyer id");
-
-        // get native currency balance before the commit
-        const buyerNativeBalanceBefore = await ethers.provider.getBalance(buyer.address);
-        const randoNativeBalanceBefore = await ethers.provider.getBalance(rando.address);
-
-        // commit to an offer with native currency on rando's behalf
-        tx = await exchangeHandler.connect(buyer).commitToOffer(rando.address, offerNative.id, { value: price });
-        txReceipt = await tx.wait();
-        txCost = tx.gasPrice.mul(txReceipt.gasUsed);
-
-        // get token balance after the commit
-        const buyerNativeBalanceAfter = await ethers.provider.getBalance(buyer.address);
-        const randoNativeBalanceAfter = await ethers.provider.getBalance(rando.address);
-
-        // buyer's balance should decrease, rando's should remain
-        expect(buyerNativeBalanceBefore.sub(buyerNativeBalanceAfter).sub(txCost).toString()).to.eql(
-          price,
-          "Buyer's native balance should decrease for a price"
-        );
-        expect(randoNativeBalanceAfter.toString()).to.eql(
-          randoNativeBalanceBefore.toString(),
-          "Rando's native balance should remain the same"
-        );
-        // make sure that rando is actually the buyer of the exchange
-        [, exchange] = await exchangeHandler.getExchange("2");
-        expect(exchange.buyerId.toString()).to.eql(randoBuyerId, "Wrong buyer id");
-
-        // make sure that randoBuyerId actually belongs to rando address
-        let [, buyerStruct] = await accountHandler.getBuyer(randoBuyerId);
-        expect(buyerStruct.wallet).to.eql(rando.address, "Wrong buyer address");
-      });
-
-      it("if offer is preminted, only sellers funds are encumbered", async function () {
-        // deposit to seller's pool to cover for the price
-        const buyerId = mockBuyer().id;
-        await mockToken.mint(assistant.address, `${2 * price}`);
-        await mockToken.connect(assistant).approve(protocolDiamondAddress, `${2 * price}`);
-        await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, `${2 * price}`);
-        await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, `${2 * price}`, {
-          value: `${2 * price}`,
-        });
-
-        // get token balance before the commit
-        const buyerTokenBalanceBefore = await mockToken.balanceOf(buyer.address);
-
-        const sellersAvailableFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-
-        // reserve a range and premint vouchers
-        await offerHandler
-          .connect(assistant)
-          .reserveRange(offerToken.id, offerToken.quantityAvailable, assistant.address);
-        const voucherCloneAddress = calculateContractAddress(accountHandler.address, "1");
-        const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
-        await bosonVoucher.connect(assistant).preMint(offerToken.id, offerToken.quantityAvailable);
-
-        // commit to an offer via preminted voucher
-        let exchangeId = "1";
-        let tokenId = deriveTokenId(offerToken.id, exchangeId);
-        tx = await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
-
-        // it should emit FundsEncumbered event with amount equal to sellerDeposit + price
-        let encumberedFunds = ethers.BigNumber.from(sellerDeposit).add(price);
-        await expect(tx)
-          .to.emit(exchangeHandler, "FundsEncumbered")
-          .withArgs(seller.id, mockToken.address, encumberedFunds, bosonVoucher.address);
-
-        // Check that seller's pool balance was reduced
-        let sellersAvailableFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-        // token is the first on the list of the available funds and the amount should be decreased for the sellerDeposit and price
-        expect(
-          ethers.BigNumber.from(sellersAvailableFundsBefore.funds[0].availableAmount)
-            .sub(ethers.BigNumber.from(sellersAvailableFundsAfter.funds[0].availableAmount))
-            .toString()
-        ).to.eql(encumberedFunds.toString(), "Token seller available funds mismatch");
-
-        // buyer's token balance should stay the same
-        const buyerTokenBalanceAfter = await mockToken.balanceOf(buyer.address);
-        expect(buyerTokenBalanceBefore.toString()).to.eql(
-          buyerTokenBalanceAfter.toString(),
-          "Buyer's token balance should remain the same"
-        );
-
-        // make sure that buyer is actually the buyer of the exchange
-        let exchange;
-        [, exchange] = await exchangeHandler.getExchange(exchangeId);
-        expect(exchange.buyerId.toString()).to.eql(buyerId, "Wrong buyer id");
-
-        // get native currency balance before the commit
-        const buyerNativeBalanceBefore = await ethers.provider.getBalance(buyer.address);
-
-        // reserve a range and premint vouchers
-        exchangeId = await exchangeHandler.getNextExchangeId();
-        tokenId = deriveTokenId(offerNative.id, exchangeId);
-        await offerHandler
-          .connect(assistant)
-          .reserveRange(offerNative.id, offerNative.quantityAvailable, assistant.address);
-        await bosonVoucher.connect(assistant).preMint(offerNative.id, offerNative.quantityAvailable);
-
-        // commit to an offer via preminted voucher
-        tx = await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
-
-        // it should emit FundsEncumbered event with amount equal to sellerDeposit + price
-        encumberedFunds = ethers.BigNumber.from(sellerDeposit).add(price);
-        await expect(tx)
-          .to.emit(exchangeHandler, "FundsEncumbered")
-          .withArgs(seller.id, ethers.constants.AddressZero, encumberedFunds, bosonVoucher.address);
-
-        // buyer's balance should remain the same
-        const buyerNativeBalanceAfter = await ethers.provider.getBalance(buyer.address);
-        expect(buyerNativeBalanceBefore.toString()).to.eql(
-          buyerNativeBalanceAfter.toString(),
-          "Buyer's native balance should remain the same"
-        );
-
-        // Check that seller's pool balance was reduced
-        sellersAvailableFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-        // native currency the second on the list of the available funds and the amount should be decreased for the sellerDeposit and price
-        expect(
-          ethers.BigNumber.from(sellersAvailableFundsBefore.funds[1].availableAmount)
-            .sub(ethers.BigNumber.from(sellersAvailableFundsAfter.funds[1].availableAmount))
-            .toString()
-        ).to.eql(encumberedFunds.toString(), "Native currency seller available funds mismatch");
-
-        // make sure that buyer is actually the buyer of the exchange
-        [, exchange] = await exchangeHandler.getExchange(exchangeId);
-        expect(exchange.buyerId.toString()).to.eql(buyerId, "Wrong buyer id");
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("Insufficient native currency sent", async function () {
-          // Attempt to commit to an offer, expecting revert
-          await expect(
-            exchangeHandler
-              .connect(buyer)
-              .commitToOffer(buyer.address, offerNative.id, { value: ethers.BigNumber.from(price).sub("1").toString() })
-          ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
-        });
-
-        it("Native currency sent together with ERC20 token transfer", async function () {
-          // Attempt to commit to an offer, expecting revert
-          await expect(
-            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id, { value: price })
-          ).to.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
-        });
-
-        it("Token address contract does not support transferFrom", async function () {
-          // Deploy a contract without the transferFrom
-          [bosonToken] = await deployMockTokens(["BosonToken"]);
-
-          // create an offer with a bad token contrat
-          offerToken.exchangeToken = bosonToken.address;
-          offerToken.id = "3";
-
-          // add to DR fees
-          await accountHandler
-            .connect(adminDR)
-            .addFeesToDisputeResolver(disputeResolver.id, [
-              new DisputeResolverFee(offerToken.exchangeToken, "BadContract", "0"),
-            ]);
-          await offerHandler
-            .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
-
-          // Attempt to commit to an offer, expecting revert
-          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
-            RevertReasons.SAFE_ERC20_LOW_LEVEL_CALL
-          );
-        });
-
-        it("Token address is not a contract", async function () {
-          // create an offer with a bad token contrat
-          offerToken.exchangeToken = admin.address;
-          offerToken.id = "3";
-
-          // add to DR fees
-          await accountHandler
-            .connect(adminDR)
-            .addFeesToDisputeResolver(disputeResolver.id, [
-              new DisputeResolverFee(offerToken.exchangeToken, "NotAContract", "0"),
-            ]);
-
-          await offerHandler
-            .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
-
-          // Attempt to commit to an offer, expecting revert
-          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
-            RevertReasons.EOA_FUNCTION_CALL
-          );
-        });
-
-        it("Token contract revert for another reason", async function () {
-          // insufficient funds
-          // approve more than account actually have
-          await mockToken.connect(rando).approve(protocolDiamondAddress, price);
-          // Attempt to commit to an offer, expecting revert
-          await expect(exchangeHandler.connect(rando).commitToOffer(rando.address, offerToken.id)).to.revertedWith(
-            RevertReasons.ERC20_EXCEEDS_BALANCE
+          // check that native currency balance increased
+          const contractNativeBalanceAfter = await ethers.provider.getBalance(protocolDiamondAddress);
+          // contract token balance should increase for the incoming price
+          // seller's deposit was already held in the contract's pool before
+          expect(contractNativeBalanceAfter.sub(contractNativeBalanceBefore).toString()).to.eql(
+            price,
+            "Native currency wrong balance increase"
           );
 
-          // not approved
-          await mockToken
-            .connect(rando)
-            .approve(protocolDiamondAddress, ethers.BigNumber.from(price).sub("1").toString());
-          // Attempt to commit to an offer, expecting revert
-          await expect(exchangeHandler.connect(rando).commitToOffer(rando.address, offerToken.id)).to.revertedWith(
-            RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE
-          );
+          // Check that seller's pool balance was reduced
+          sellersAvailableFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+          // native currency is the second on the list of the available funds and the amount should be decreased for the sellerDeposit
+          expect(
+            BN(sellersAvailableFundsBefore.funds[1].availableAmount)
+              .sub(BN(sellersAvailableFundsAfter.funds[1].availableAmount))
+              .toString()
+          ).to.eql(BN(sellerDeposit).add(DRFeeNative).toString(), "Native currency seller available funds mismatch");
         });
 
-        it("Seller'a availableFunds is less than the required sellerDeposit", async function () {
-          // create an offer with token with higher seller deposit
-          offerToken.sellerDeposit = ethers.BigNumber.from(offerToken.sellerDeposit).mul("4");
-          offerToken.id = "3";
-          await offerHandler
-            .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
+        context("seller's available funds drop to 0", async function () {
+          it("token should be removed from the tokenList", async function () {
+            // seller's available funds
+            let sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+            expect(sellersAvailableFunds.funds.length).to.eql(2, "Funds length mismatch");
+            expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
+              mockToken.address,
+              "Token contract address mismatch"
+            );
+            expect(sellersAvailableFunds.funds[1].tokenAddress).to.eql(
+              ethers.constants.AddressZero,
+              "Native currency address mismatch"
+            );
 
-          // Attempt to commit to an offer, expecting revert
-          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
-            RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS
-          );
+            // Commit to offer with token twice to empty the seller's pool
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
 
-          // create an offer with native currency with higher seller deposit
-          offerNative.sellerDeposit = ethers.BigNumber.from(offerNative.sellerDeposit).mul("4");
-          offerNative.id = "4";
-          await offerHandler
-            .connect(assistant)
-            .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId);
+            // Token address should be removed and have only native currency in the list
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+            expect(sellersAvailableFunds.funds.length).to.eql(1, "Funds length mismatch");
+            expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
+              ethers.constants.AddressZero,
+              "Native currency address mismatch"
+            );
 
-          // Attempt to commit to an offer, expecting revert
-          await expect(
-            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price })
-          ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+            // Commit to offer with token twice to empty the seller's pool
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
+
+            // Seller available funds must be empty
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+            expect(sellersAvailableFunds.funds.length).to.eql(0, "Funds length mismatch");
+          });
+
+          it("token should be removed from the token list even when list length - 1 is different from index", async function () {
+            // length - 1 is different from index when index isn't the first or last element in the list
+            // Deploy a new mock token
+            let TokenContractFactory = await ethers.getContractFactory("Foreign20");
+            const otherToken = await TokenContractFactory.deploy();
+            await otherToken.deployed();
+
+            // Add otherToken to DR fees
+            await accountHandler
+              .connect(adminDR)
+              .addFeesToDisputeResolver(disputeResolver.id, [
+                new DisputeResolverFee(otherToken.address, "Other Token", "0"),
+              ]);
+
+            // top up seller's and buyer's account
+            await otherToken.mint(assistant.address, sellerDeposit);
+
+            // approve protocol to transfer the tokens
+            await otherToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
+
+            // deposit to seller's pool
+            await fundsHandler.connect(assistant).depositFunds(seller.id, otherToken.address, sellerDeposit);
+
+            // seller's available funds
+            let sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+            expect(sellersAvailableFunds.funds.length).to.eql(3, "Funds length mismatch");
+            expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
+              mockToken.address,
+              "Token contract address mismatch"
+            );
+            expect(sellersAvailableFunds.funds[1].tokenAddress).to.eql(
+              ethers.constants.AddressZero,
+              "Native currency address mismatch"
+            );
+            expect(sellersAvailableFunds.funds[2].tokenAddress).to.eql(
+              otherToken.address,
+              "Boson token address mismatch"
+            );
+
+            // Commit to offer with token twice to empty the seller's pool
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
+
+            // Native currency address should be removed and have only mock token and other token in the list
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+            expect(sellersAvailableFunds.funds.length).to.eql(2, "Funds length mismatch");
+            expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
+              mockToken.address,
+              "Token contract address mismatch"
+            );
+            expect(sellersAvailableFunds.funds[1].tokenAddress).to.eql(
+              otherToken.address,
+              "Other token address mismatch"
+            );
+          });
         });
 
-        it("Seller'a availableFunds is less than the required sellerDeposit + price for preminted offer", async function () {
-          // reserve a range and premint vouchers for offer in tokens
+        it("when someone else deposits on buyer's behalf, callers funds are transferred", async function () {
+          // buyer will commit to an offer on rando's behalf
+          // get token balance before the commit
+          const buyerTokenBalanceBefore = await mockToken.balanceOf(buyer.address);
+          const randoTokenBalanceBefore = await mockToken.balanceOf(rando.address);
+
+          // commit to an offer with token on rando's behalf
+          await exchangeHandler.connect(buyer).commitToOffer(rando.address, offerToken.id);
+
+          // get token balance after the commit
+          const buyerTokenBalanceAfter = await mockToken.balanceOf(buyer.address);
+          const randoTokenBalanceAfter = await mockToken.balanceOf(rando.address);
+
+          // buyer's balance should decrease, rando's should remain
+          expect(buyerTokenBalanceBefore.sub(buyerTokenBalanceAfter).toString()).to.eql(
+            price,
+            "Buyer's token balance should decrease for a price"
+          );
+          expect(randoTokenBalanceAfter.toString()).to.eql(
+            randoTokenBalanceBefore.toString(),
+            "Rando's token balance should remain the same"
+          );
+          // make sure that rando is actually the buyer of the exchange
+          let exchange;
+          [, exchange] = await exchangeHandler.getExchange("1");
+          expect(exchange.buyerId.toString()).to.eql(randoBuyerId, "Wrong buyer id");
+
+          // get native currency balance before the commit
+          const buyerNativeBalanceBefore = await ethers.provider.getBalance(buyer.address);
+          const randoNativeBalanceBefore = await ethers.provider.getBalance(rando.address);
+
+          // commit to an offer with native currency on rando's behalf
+          tx = await exchangeHandler.connect(buyer).commitToOffer(rando.address, offerNative.id, { value: price });
+          txReceipt = await tx.wait();
+          txCost = tx.gasPrice.mul(txReceipt.gasUsed);
+
+          // get token balance after the commit
+          const buyerNativeBalanceAfter = await ethers.provider.getBalance(buyer.address);
+          const randoNativeBalanceAfter = await ethers.provider.getBalance(rando.address);
+
+          // buyer's balance should decrease, rando's should remain
+          expect(buyerNativeBalanceBefore.sub(buyerNativeBalanceAfter).sub(txCost).toString()).to.eql(
+            price,
+            "Buyer's native balance should decrease for a price"
+          );
+          expect(randoNativeBalanceAfter.toString()).to.eql(
+            randoNativeBalanceBefore.toString(),
+            "Rando's native balance should remain the same"
+          );
+          // make sure that rando is actually the buyer of the exchange
+          [, exchange] = await exchangeHandler.getExchange("2");
+          expect(exchange.buyerId.toString()).to.eql(randoBuyerId, "Wrong buyer id");
+
+          // make sure that randoBuyerId actually belongs to rando address
+          let [, buyerStruct] = await accountHandler.getBuyer(randoBuyerId);
+          expect(buyerStruct.wallet).to.eql(rando.address, "Wrong buyer address");
+        });
+
+        it("if offer is preminted, only sellers funds are encumbered", async function () {
+          // deposit to seller's pool to cover for the price
+          const buyerId = mockBuyer().id;
+          await mockToken.mint(assistant.address, `${2 * price}`);
+          await mockToken.connect(assistant).approve(protocolDiamondAddress, `${2 * price}`);
+          await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, `${2 * price}`);
+          await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, `${2 * price}`, {
+            value: `${2 * price}`,
+          });
+
+          // get token balance before the commit
+          const buyerTokenBalanceBefore = await mockToken.balanceOf(buyer.address);
+
+          const sellersAvailableFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+
+          // reserve a range and premint vouchers
           await offerHandler
             .connect(assistant)
             .reserveRange(offerToken.id, offerToken.quantityAvailable, assistant.address);
@@ -1990,16 +1809,42 @@ describe("IBosonFundsHandler", function () {
           const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
           await bosonVoucher.connect(assistant).preMint(offerToken.id, offerToken.quantityAvailable);
 
-          // Seller's availableFunds is 2*sellerDeposit which is less than sellerDeposit + price.
-          // Add the check in case if the sellerDeposit is changed in the future
-          assert.isBelow(Number(sellerDeposit), Number(price), "Seller's availableFunds is not less than price");
-          // Attempt to commit to an offer via preminted voucher, expecting revert
-          let tokenId = deriveTokenId(offerToken.id, "1");
-          await expect(
-            bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
-          ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+          // commit to an offer via preminted voucher
+          let exchangeId = "1";
+          let tokenId = deriveTokenId(offerToken.id, exchangeId);
+          tx = await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
 
-          // reserve a range and premint vouchers for offer in native currency
+          // it should emit FundsEncumbered event with amount equal to sellerDeposit + price + DRfee
+          let encumberedFunds = BN(sellerDeposit).add(price).add(DRFeeToken);
+          await expect(tx)
+            .to.emit(exchangeHandler, "FundsEncumbered")
+            .withArgs(seller.id, mockToken.address, encumberedFunds, bosonVoucher.address);
+
+          // Check that seller's pool balance was reduced
+          let sellersAvailableFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+          // token is the first on the list of the available funds and the amount should be decreased for the sellerDeposit and price
+          expect(
+            BN(sellersAvailableFundsBefore.funds[0].availableAmount)
+              .sub(BN(sellersAvailableFundsAfter.funds[0].availableAmount))
+              .toString()
+          ).to.eql(encumberedFunds.toString(), "Token seller available funds mismatch");
+
+          // buyer's token balance should stay the same
+          const buyerTokenBalanceAfter = await mockToken.balanceOf(buyer.address);
+          expect(buyerTokenBalanceBefore.toString()).to.eql(
+            buyerTokenBalanceAfter.toString(),
+            "Buyer's token balance should remain the same"
+          );
+
+          // make sure that buyer is actually the buyer of the exchange
+          let exchange;
+          [, exchange] = await exchangeHandler.getExchange(exchangeId);
+          expect(exchange.buyerId.toString()).to.eql(buyerId, "Wrong buyer id");
+
+          // get native currency balance before the commit
+          const buyerNativeBalanceBefore = await ethers.provider.getBalance(buyer.address);
+
+          // reserve a range and premint vouchers
           exchangeId = await exchangeHandler.getNextExchangeId();
           tokenId = deriveTokenId(offerNative.id, exchangeId);
           await offerHandler
@@ -2007,43 +1852,390 @@ describe("IBosonFundsHandler", function () {
             .reserveRange(offerNative.id, offerNative.quantityAvailable, assistant.address);
           await bosonVoucher.connect(assistant).preMint(offerNative.id, offerNative.quantityAvailable);
 
-          // Attempt to commit to an offer, expecting revert
-          await expect(
-            bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
-          ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+          // commit to an offer via preminted voucher
+          tx = await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
+
+          // it should emit FundsEncumbered event with amount equal to sellerDeposit + price + DRfee
+          encumberedFunds = BN(sellerDeposit).add(price).add(DRFeeNative);
+          await expect(tx)
+            .to.emit(exchangeHandler, "FundsEncumbered")
+            .withArgs(seller.id, ethers.constants.AddressZero, encumberedFunds, bosonVoucher.address);
+
+          // buyer's balance should remain the same
+          const buyerNativeBalanceAfter = await ethers.provider.getBalance(buyer.address);
+          expect(buyerNativeBalanceBefore.toString()).to.eql(
+            buyerNativeBalanceAfter.toString(),
+            "Buyer's native balance should remain the same"
+          );
+
+          // Check that seller's pool balance was reduced
+          sellersAvailableFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+          // native currency the second on the list of the available funds and the amount should be decreased for the sellerDeposit and price
+          expect(
+            BN(sellersAvailableFundsBefore.funds[1].availableAmount)
+              .sub(BN(sellersAvailableFundsAfter.funds[1].availableAmount))
+              .toString()
+          ).to.eql(encumberedFunds.toString(), "Native currency seller available funds mismatch");
+
+          // make sure that buyer is actually the buyer of the exchange
+          [, exchange] = await exchangeHandler.getExchange(exchangeId);
+          expect(exchange.buyerId.toString()).to.eql(buyerId, "Wrong buyer id");
         });
 
-        it("Received ERC20 token amount differs from the expected value", async function () {
-          // Deploy ERC20 with fees
-          const [Foreign20WithFee] = await deployMockTokens(["Foreign20WithFee"]);
+        context("💔 Revert Reasons", async function () {
+          it("Insufficient native currency sent", async function () {
+            // Attempt to commit to an offer, expecting revert
+            await expect(
+              exchangeHandler
+                .connect(buyer)
+                .commitToOffer(buyer.address, offerNative.id, { value: BN(price).sub("1").toString() })
+            ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+          });
 
-          // add to DR fees
-          DRFee = ethers.utils.parseUnits("0", "ether").toString();
-          await accountHandler
-            .connect(adminDR)
-            .addFeesToDisputeResolver(disputeResolverId, [
-              new DisputeResolverFee(Foreign20WithFee.address, "Foreign20WithFee", DRFee),
-            ]);
+          it("Native currency sent together with ERC20 token transfer", async function () {
+            // Attempt to commit to an offer, expecting revert
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id, { value: price })
+            ).to.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
+          });
 
-          // Create an offer with ERC20 with fees
-          // Prepare an absolute zero offer
-          offerToken.exchangeToken = Foreign20WithFee.address;
-          offerToken.sellerDeposit = "0";
-          offerToken.id++;
+          it("Token address contract does not support transferFrom", async function () {
+            // Deploy a contract without the transferFrom
+            [bosonToken] = await deployMockTokens(["BosonToken"]);
 
-          // Create a new offer
-          await offerHandler
-            .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
+            // create an offer with a bad token contrat
+            offerToken.exchangeToken = bosonToken.address;
+            offerToken.id = "3";
 
-          // mint tokens and approve
-          await Foreign20WithFee.mint(buyer.address, offerToken.price);
-          await Foreign20WithFee.connect(buyer).approve(protocolDiamondAddress, offerToken.price);
+            // add to DR fees
+            await accountHandler
+              .connect(adminDR)
+              .addFeesToDisputeResolver(disputeResolver.id, [
+                new DisputeResolverFee(offerToken.exchangeToken, "BadContract", "0"),
+              ]);
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
 
-          // Attempt to commit to offer, expecting revert
-          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
-            RevertReasons.INSUFFICIENT_VALUE_RECEIVED
+            // Attempt to commit to an offer, expecting revert
+            await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
+              RevertReasons.SAFE_ERC20_LOW_LEVEL_CALL
+            );
+          });
+
+          it("Token address is not a contract", async function () {
+            // create an offer with a bad token contrat
+            offerToken.exchangeToken = admin.address;
+            offerToken.id = "3";
+
+            // add to DR fees
+            await accountHandler
+              .connect(adminDR)
+              .addFeesToDisputeResolver(disputeResolver.id, [
+                new DisputeResolverFee(offerToken.exchangeToken, "NotAContract", "0"),
+              ]);
+
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
+
+            // Attempt to commit to an offer, expecting revert
+            await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
+              RevertReasons.EOA_FUNCTION_CALL
+            );
+          });
+
+          it("Token contract revert for another reason", async function () {
+            // insufficient funds
+            // approve more than account actually have
+            await mockToken.connect(rando).approve(protocolDiamondAddress, price);
+            // Attempt to commit to an offer, expecting revert
+            await expect(exchangeHandler.connect(rando).commitToOffer(rando.address, offerToken.id)).to.revertedWith(
+              RevertReasons.ERC20_EXCEEDS_BALANCE
+            );
+
+            // not approved
+            await mockToken.connect(rando).approve(protocolDiamondAddress, BN(price).sub("1").toString());
+            // Attempt to commit to an offer, expecting revert
+            await expect(exchangeHandler.connect(rando).commitToOffer(rando.address, offerToken.id)).to.revertedWith(
+              RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE
+            );
+          });
+
+          it("Seller'a availableFunds is less than the required sellerDeposit", async function () {
+            // create an offer with token with higher seller deposit
+            offerToken.sellerDeposit = BN(offerToken.sellerDeposit).mul("4");
+            offerToken.id = "3";
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
+
+            // Attempt to commit to an offer, expecting revert
+            await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
+              RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS
+            );
+
+            // create an offer with native currency with higher seller deposit
+            offerNative.sellerDeposit = BN(offerNative.sellerDeposit).mul("4");
+            offerNative.id = "4";
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId);
+
+            // Attempt to commit to an offer, expecting revert
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price })
+            ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+          });
+
+          it("Seller'a availableFunds is less than the required sellerDeposit + price for preminted offer", async function () {
+            // reserve a range and premint vouchers for offer in tokens
+            await offerHandler
+              .connect(assistant)
+              .reserveRange(offerToken.id, offerToken.quantityAvailable, assistant.address);
+            const voucherCloneAddress = calculateContractAddress(accountHandler.address, "1");
+            const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
+            await bosonVoucher.connect(assistant).preMint(offerToken.id, offerToken.quantityAvailable);
+
+            // Seller's availableFunds is 2*sellerDeposit which is less than sellerDeposit + price.
+            // Add the check in case if the sellerDeposit is changed in the future
+            assert.isBelow(Number(sellerDeposit), Number(price), "Seller's availableFunds is not less than price");
+            // Attempt to commit to an offer via preminted voucher, expecting revert
+            let tokenId = deriveTokenId(offerToken.id, "1");
+            await expect(
+              bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
+            ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+
+            // reserve a range and premint vouchers for offer in native currency
+            exchangeId = await exchangeHandler.getNextExchangeId();
+            tokenId = deriveTokenId(offerNative.id, exchangeId);
+            await offerHandler
+              .connect(assistant)
+              .reserveRange(offerNative.id, offerNative.quantityAvailable, assistant.address);
+            await bosonVoucher.connect(assistant).preMint(offerNative.id, offerNative.quantityAvailable);
+
+            // Attempt to commit to an offer, expecting revert
+            await expect(
+              bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
+            ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+          });
+
+          it("Received ERC20 token amount differs from the expected value", async function () {
+            // Deploy ERC20 with fees
+            const [Foreign20WithFee] = await deployMockTokens(["Foreign20WithFee"]);
+
+            // add to DR fees
+            DRFeeToken = ethers.utils.parseUnits("0", "ether").toString();
+            await accountHandler
+              .connect(adminDR)
+              .addFeesToDisputeResolver(disputeResolverId, [
+                new DisputeResolverFee(Foreign20WithFee.address, "Foreign20WithFee", DRFeeToken),
+              ]);
+
+            // Create an offer with ERC20 with fees
+            // Prepare an absolute zero offer
+            offerToken.exchangeToken = Foreign20WithFee.address;
+            offerToken.sellerDeposit = "0";
+            offerToken.id++;
+
+            // Create a new offer
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
+
+            // mint tokens and approve
+            await Foreign20WithFee.mint(buyer.address, offerToken.price);
+            await Foreign20WithFee.connect(buyer).approve(protocolDiamondAddress, offerToken.price);
+
+            // Attempt to commit to offer, expecting revert
+            await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
+              RevertReasons.INSUFFICIENT_VALUE_RECEIVED
+            );
+          });
+        });
+      });
+
+      context("External mutualizer", async function () {
+        let mutualizer;
+
+        beforeEach(async function () {
+          // Deploy mutualizer
+          const poolOwner = rando;
+          const mutualizerFactory = await ethers.getContractFactory("DRFeeMutualizer");
+          mutualizer = await mutualizerFactory.connect(poolOwner).deploy(fundsHandler.address);
+
+          offerNative.feeMutualizer = offerToken.feeMutualizer = mutualizer.address;
+
+          // Create both offers
+          await Promise.all([
+            offerHandler
+              .connect(assistant)
+              .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId),
+            offerHandler
+              .connect(assistant)
+              .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId),
+          ]);
+
+          // Seller must deposit enough to cover DR fees
+          const poolToken = BN(DRFeeToken).mul(2);
+          const poolNative = BN(DRFeeNative).mul(2);
+          await mockToken.mint(poolOwner.address, poolToken);
+
+          // approve protocol to transfer the tokens
+          await mockToken.connect(poolOwner).approve(mutualizer.address, poolToken);
+
+          // deposit to mutualizer
+          await mutualizer.connect(poolOwner).deposit(mockToken.address, poolToken);
+          await mutualizer.connect(poolOwner).deposit(ethers.constants.AddressZero, poolNative, {
+            value: poolNative,
+          });
+
+          // Create new agreements
+          const startTimestamp = BN(Date.now()).div(1000); // valid from now
+          const endTimestamp = startTimestamp.add(oneMonth); // valid for 30 days
+          const agreementToken = new Agreement(
+            assistant.address,
+            mockToken.address,
+            ethers.utils.parseUnits("1", "ether"),
+            ethers.utils.parseUnits("1", "ether"),
+            "0",
+            startTimestamp.toString(),
+            endTimestamp.toString(),
+            false,
+            false
           );
+          const agreementNative = agreementToken.clone();
+          agreementNative.token = ethers.constants.AddressZero;
+          await Promise.all([
+            mutualizer.connect(poolOwner).newAgreement(agreementToken),
+            mutualizer.connect(poolOwner).newAgreement(agreementNative),
+          ]);
+
+          // Confirm agreements
+          const agreementIdToken = "1";
+          const agreementIdNative = "2";
+
+          await Promise.all([
+            mutualizer.connect(assistant).payPremium(agreementIdToken),
+            mutualizer.connect(assistant).payPremium(agreementIdNative),
+          ]);
+        });
+
+        it("should emit a FundsEncumbered event", async function () {
+          let buyerId = "4"; // 1: seller, 2: disputeResolver, 3: agent, 4: buyer
+
+          // Commit to an offer with erc20 token, test for FundsEncumbered event
+          const tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+          await expect(tx)
+            .to.emit(exchangeHandler, "FundsEncumbered")
+            .withArgs(buyerId, mockToken.address, price, buyer.address);
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "FundsEncumbered")
+            .withArgs(seller.id, mockToken.address, sellerDeposit, buyer.address);
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "DRFeeEncumbered")
+            .withArgs(mutualizer.address, "1", "1", mockToken.address, DRFeeToken, buyer.address); // ToDo: upgrade hardhat, and use anyValue predicate for UUID field
+
+          // Commit to an offer with native currency, test for FundsEncumbered event
+          const tx2 = await exchangeHandler
+            .connect(buyer)
+            .commitToOffer(buyer.address, offerNative.id, { value: price });
+          await expect(tx2)
+            .to.emit(exchangeHandler, "FundsEncumbered")
+            .withArgs(buyerId, ethers.constants.AddressZero, price, buyer.address);
+
+          await expect(tx2)
+            .to.emit(exchangeHandler, "FundsEncumbered")
+            .withArgs(seller.id, ethers.constants.AddressZero, sellerDeposit, buyer.address);
+
+          await expect(tx2)
+            .to.emit(exchangeHandler, "DRFeeEncumbered")
+            .withArgs(mutualizer.address, "2", "2", ethers.constants.AddressZero, DRFeeNative, buyer.address); // ToDo: upgrade hardhat, and use anyValue predicate for UUID field
+        });
+
+        it("should update state", async function () {
+          // balances before
+          const [
+            protocolTokenBalanceBefore,
+            protocolNativeBalanceBefore,
+            sellersAvailableFundsBefore,
+            mutualizerTokenBalanceBefore,
+            mutualizerNativeBalanceBefore,
+          ] = await Promise.all([
+            mockToken.balanceOf(protocolDiamondAddress),
+            ethers.provider.getBalance(protocolDiamondAddress),
+            FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id)),
+            mockToken.balanceOf(mutualizer.address),
+            ethers.provider.getBalance(mutualizer.address),
+          ]);
+
+          // Commit to an offer with erc20 token
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+
+          // Check that token balance increased
+          const [protocolTokenBalanceAfter, mutualizerTokenBalanceAfter] = await Promise.all([
+            mockToken.balanceOf(protocolDiamondAddress),
+            mockToken.balanceOf(mutualizer.address),
+          ]);
+          // contract token balance should increase for the incoming price and DRFee
+          // seller's deposit was already held in the contract's pool before
+          expect(protocolTokenBalanceAfter.sub(protocolTokenBalanceBefore).toString()).to.eql(
+            BN(price).add(DRFeeToken).toString(),
+            "Token wrong balance increase"
+          );
+          expect(mutualizerTokenBalanceBefore.sub(mutualizerTokenBalanceAfter).toString()).to.eql(
+            DRFeeToken,
+            "Token wrong balance decrease"
+          );
+
+          // Check that seller's pool balance was reduced
+          let sellersAvailableFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+          // token is the first on the list of the available funds and the amount should be decreased for the sellerDeposit and DRFee
+          expect(
+            BN(sellersAvailableFundsBefore.funds[0].availableAmount)
+              .sub(BN(sellersAvailableFundsAfter.funds[0].availableAmount))
+              .toString()
+          ).to.eql(sellerDeposit, "Token seller available funds mismatch");
+
+          // Commit to an offer with native currency
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
+
+          // check that native currency balance increased
+          const [protocolNativeBalanceAfter, mutualizerNativeBalanceAfter] = await Promise.all([
+            ethers.provider.getBalance(protocolDiamondAddress),
+            ethers.provider.getBalance(mutualizer.address),
+          ]);
+          // contract token balance should increase for the incoming price and DRFee
+          // seller's deposit was already held in the contract's pool before
+          expect(protocolNativeBalanceAfter.sub(protocolNativeBalanceBefore).toString()).to.eql(
+            BN(price).add(DRFeeNative).toString(),
+            "Native currency wrong balance increase"
+          );
+          expect(mutualizerNativeBalanceBefore.sub(mutualizerNativeBalanceAfter).toString()).to.eql(
+            DRFeeNative,
+            "Native currency wrong balance decrease"
+          );
+
+          // Check that seller's pool balance was reduced
+          sellersAvailableFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+          // native currency is the second on the list of the available funds and the amount should be decreased for the sellerDeposit
+          expect(
+            BN(sellersAvailableFundsBefore.funds[1].availableAmount)
+              .sub(BN(sellersAvailableFundsAfter.funds[1].availableAmount))
+              .toString()
+          ).to.eql(sellerDeposit, "Native currency seller available funds mismatch");
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it.skip("Mutualizer contract declines the request", async function () {
+            // ToDo: implement when mutualizer can be updated in the protocol, since it will be easier to mock this behavior
+          });
+
+          it.skip("Mutualizer contract sends less than requested", async function () {
+            // ToDo: implement when mutualizer can be updated in the protocol, since it will be easier to mock this behavior
+          });
         });
       });
     });
@@ -2072,10 +2264,7 @@ describe("IBosonFundsHandler", function () {
           buyerPayoff = 0;
 
           // seller: sellerDeposit + price - protocolFee
-          sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit)
-            .add(offerToken.price)
-            .sub(offerTokenProtocolFee)
-            .toString();
+          sellerPayoff = BN(offerToken.sellerDeposit).add(offerToken.price).sub(offerTokenProtocolFee).toString();
 
           // protocol: protocolFee
           protocolPayoff = offerTokenProtocolFee;
@@ -2146,12 +2335,12 @@ describe("IBosonFundsHandler", function () {
           expectedSellerAvailableFunds.funds[1] = new Funds(
             mockToken.address,
             "Foreign20",
-            ethers.BigNumber.from(sellerPayoff).mul(2).toString()
+            BN(sellerPayoff).mul(2).toString()
           );
           expectedProtocolAvailableFunds.funds[0] = new Funds(
             mockToken.address,
             "Foreign20",
-            ethers.BigNumber.from(protocolPayoff).mul(2).toString()
+            BN(protocolPayoff).mul(2).toString()
           );
           expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
           expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
@@ -2178,11 +2367,11 @@ describe("IBosonFundsHandler", function () {
             buyerPayoff = 0;
 
             // agentPayoff: agentFee
-            agentFee = ethers.BigNumber.from(agentOffer.price).mul(agentFeePercentage).div("10000").toString();
+            agentFee = BN(agentOffer.price).mul(agentFeePercentage).div("10000").toString();
             agentPayoff = agentFee;
 
             // seller: sellerDeposit + price - protocolFee - agentFee
-            sellerPayoff = ethers.BigNumber.from(agentOffer.sellerDeposit)
+            sellerPayoff = BN(agentOffer.sellerDeposit)
               .add(agentOffer.price)
               .sub(agentOfferProtocolFee)
               .sub(agentFee)
@@ -2256,7 +2445,7 @@ describe("IBosonFundsHandler", function () {
         beforeEach(async function () {
           // expected payoffs
           // buyer: sellerDeposit + price
-          buyerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit).add(offerToken.price).toString();
+          buyerPayoff = BN(offerToken.sellerDeposit).add(offerToken.price).toString();
 
           // seller: 0
           sellerPayoff = 0;
@@ -2325,7 +2514,7 @@ describe("IBosonFundsHandler", function () {
           expectedBuyerAvailableFunds.funds[0] = new Funds(
             mockToken.address,
             "Foreign20",
-            ethers.BigNumber.from(buyerPayoff).mul(2).toString()
+            BN(buyerPayoff).mul(2).toString()
           );
           expectedSellerAvailableFunds = new FundsList([
             new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
@@ -2363,7 +2552,7 @@ describe("IBosonFundsHandler", function () {
 
             // expected payoffs
             // buyer: sellerDeposit + price
-            buyerPayoff = ethers.BigNumber.from(agentOffer.sellerDeposit).add(agentOffer.price).toString();
+            buyerPayoff = BN(agentOffer.sellerDeposit).add(agentOffer.price).toString();
 
             // seller: 0
             sellerPayoff = 0;
@@ -2430,7 +2619,7 @@ describe("IBosonFundsHandler", function () {
             expectedBuyerAvailableFunds.funds[0] = new Funds(
               mockToken.address,
               "Foreign20",
-              ethers.BigNumber.from(buyerPayoff).mul(2).toString()
+              BN(buyerPayoff).mul(2).toString()
             );
             expectedSellerAvailableFunds = new FundsList([
               new Funds(mockToken.address, "Foreign20", `${sellerDeposit}`),
@@ -2452,10 +2641,10 @@ describe("IBosonFundsHandler", function () {
         beforeEach(async function () {
           // expected payoffs
           // buyer: price - buyerCancelPenalty
-          buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
+          buyerPayoff = BN(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
 
           // seller: sellerDeposit + buyerCancelPenalty
-          sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit).add(offerToken.buyerCancelPenalty).toString();
+          sellerPayoff = BN(offerToken.sellerDeposit).add(offerToken.buyerCancelPenalty).toString();
 
           // protocol: 0
           protocolPayoff = 0;
@@ -2506,7 +2695,7 @@ describe("IBosonFundsHandler", function () {
           expectedSellerAvailableFunds.funds[0] = new Funds(
             mockToken.address,
             "Foreign20",
-            ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
+            BN(sellerDeposit).add(sellerPayoff).toString()
           );
           expectedBuyerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", buyerPayoff));
           sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -2542,12 +2731,10 @@ describe("IBosonFundsHandler", function () {
 
             // expected payoffs
             // buyer: price - buyerCancelPenalty
-            buyerPayoff = ethers.BigNumber.from(agentOffer.price).sub(agentOffer.buyerCancelPenalty).toString();
+            buyerPayoff = BN(agentOffer.price).sub(agentOffer.buyerCancelPenalty).toString();
 
             // seller: sellerDeposit + buyerCancelPenalty
-            sellerPayoff = ethers.BigNumber.from(agentOffer.sellerDeposit)
-              .add(agentOffer.buyerCancelPenalty)
-              .toString();
+            sellerPayoff = BN(agentOffer.sellerDeposit).add(agentOffer.buyerCancelPenalty).toString();
 
             // protocol: 0
             protocolPayoff = 0;
@@ -2589,7 +2776,7 @@ describe("IBosonFundsHandler", function () {
             expectedSellerAvailableFunds.funds[0] = new Funds(
               mockToken.address,
               "Foreign20",
-              ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
+              BN(sellerDeposit).add(sellerPayoff).toString()
             );
             expectedBuyerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", buyerPayoff));
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -2619,7 +2806,7 @@ describe("IBosonFundsHandler", function () {
           blockNumber = tx.blockNumber;
           block = await ethers.provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+          timeout = BN(disputedDate).add(resolutionPeriod).toString();
         });
 
         context("Final state DISPUTED - RETRACTED", async function () {
@@ -2629,10 +2816,7 @@ describe("IBosonFundsHandler", function () {
             buyerPayoff = 0;
 
             // seller: sellerDeposit + price - protocolFee
-            sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit)
-              .add(offerToken.price)
-              .sub(offerTokenProtocolFee)
-              .toString();
+            sellerPayoff = BN(offerToken.sellerDeposit).add(offerToken.price).sub(offerTokenProtocolFee).toString();
 
             // protocol: 0
             protocolPayoff = offerTokenProtocolFee;
@@ -2693,7 +2877,7 @@ describe("IBosonFundsHandler", function () {
             expectedSellerAvailableFunds.funds[0] = new Funds(
               mockToken.address,
               "Foreign20",
-              ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
+              BN(sellerDeposit).add(sellerPayoff).toString()
             );
             expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -2713,11 +2897,11 @@ describe("IBosonFundsHandler", function () {
               buyerPayoff = 0;
 
               // agentPayoff: agentFee
-              agentFee = ethers.BigNumber.from(agentOffer.price).mul(agentFeePercentage).div("10000").toString();
+              agentFee = BN(agentOffer.price).mul(agentFeePercentage).div("10000").toString();
               agentPayoff = agentFee;
 
               // seller: sellerDeposit + price - protocolFee - agentFee
-              sellerPayoff = ethers.BigNumber.from(agentOffer.sellerDeposit)
+              sellerPayoff = BN(agentOffer.sellerDeposit)
                 .add(agentOffer.price)
                 .sub(agentOfferProtocolFee)
                 .sub(agentFee)
@@ -2785,7 +2969,7 @@ describe("IBosonFundsHandler", function () {
               // protocol: protocolFee
               // agent: agentFee
               expectedSellerAvailableFunds.funds.push(
-                new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
+                new Funds(mockToken.address, "Foreign20", BN(sellerPayoff).toString())
               );
               expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
               expectedAgentAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", agentPayoff));
@@ -2808,10 +2992,7 @@ describe("IBosonFundsHandler", function () {
             buyerPayoff = 0;
 
             // seller: sellerDeposit + price - protocolFee
-            sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit)
-              .add(offerToken.price)
-              .sub(offerTokenProtocolFee)
-              .toString();
+            sellerPayoff = BN(offerToken.sellerDeposit).add(offerToken.price).sub(offerTokenProtocolFee).toString();
 
             // protocol: protocolFee
             protocolPayoff = offerTokenProtocolFee;
@@ -2873,7 +3054,7 @@ describe("IBosonFundsHandler", function () {
             expectedSellerAvailableFunds.funds[0] = new Funds(
               mockToken.address,
               "Foreign20",
-              ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
+              BN(sellerDeposit).add(sellerPayoff).toString()
             );
             expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -2901,11 +3082,11 @@ describe("IBosonFundsHandler", function () {
               buyerPayoff = 0;
 
               // agentPayoff: agentFee
-              agentFee = ethers.BigNumber.from(agentOffer.price).mul(agentFeePercentage).div("10000").toString();
+              agentFee = BN(agentOffer.price).mul(agentFeePercentage).div("10000").toString();
               agentPayoff = agentFee;
 
               // seller: sellerDeposit + price - protocolFee - agent fee
-              sellerPayoff = ethers.BigNumber.from(agentOffer.sellerDeposit)
+              sellerPayoff = BN(agentOffer.sellerDeposit)
                 .add(agentOffer.price)
                 .sub(agentOfferProtocolFee)
                 .sub(agentFee)
@@ -2927,7 +3108,7 @@ describe("IBosonFundsHandler", function () {
               blockNumber = tx.blockNumber;
               block = await ethers.provider.getBlock(blockNumber);
               disputedDate = block.timestamp.toString();
-              timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+              timeout = BN(disputedDate).add(resolutionPeriod).toString();
 
               await setNextBlockTimestamp(Number(timeout));
             });
@@ -3002,17 +3183,14 @@ describe("IBosonFundsHandler", function () {
 
             // expected payoffs
             // buyer: (price + sellerDeposit)*buyerPercentage
-            buyerPayoff = ethers.BigNumber.from(offerToken.price)
+            buyerPayoff = BN(offerToken.price)
               .add(offerToken.sellerDeposit)
               .mul(buyerPercentBasisPoints)
               .div("10000")
               .toString();
 
             // seller: (price + sellerDeposit)*(1-buyerPercentage)
-            sellerPayoff = ethers.BigNumber.from(offerToken.price)
-              .add(offerToken.sellerDeposit)
-              .sub(buyerPayoff)
-              .toString();
+            sellerPayoff = BN(offerToken.price).add(offerToken.sellerDeposit).sub(buyerPayoff).toString();
 
             // protocol: 0
             protocolPayoff = 0;
@@ -3089,7 +3267,7 @@ describe("IBosonFundsHandler", function () {
             expectedSellerAvailableFunds.funds[0] = new Funds(
               mockToken.address,
               "Foreign20",
-              ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
+              BN(sellerDeposit).add(sellerPayoff).toString()
             );
             expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -3125,17 +3303,14 @@ describe("IBosonFundsHandler", function () {
 
               // expected payoffs
               // buyer: (price + sellerDeposit)*buyerPercentage
-              buyerPayoff = ethers.BigNumber.from(agentOffer.price)
+              buyerPayoff = BN(agentOffer.price)
                 .add(agentOffer.sellerDeposit)
                 .mul(buyerPercentBasisPoints)
                 .div("10000")
                 .toString();
 
               // seller: (price + sellerDeposit)*(1-buyerPercentage)
-              sellerPayoff = ethers.BigNumber.from(agentOffer.price)
-                .add(agentOffer.sellerDeposit)
-                .sub(buyerPayoff)
-                .toString();
+              sellerPayoff = BN(agentOffer.price).add(agentOffer.sellerDeposit).sub(buyerPayoff).toString();
 
               // protocol: 0
               protocolPayoff = 0;
@@ -3193,7 +3368,7 @@ describe("IBosonFundsHandler", function () {
               // protocol: 0
               // agent: 0
               expectedSellerAvailableFunds.funds.push(
-                new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
+                new Funds(mockToken.address, "Foreign20", BN(sellerPayoff).toString())
               );
               expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -3216,7 +3391,7 @@ describe("IBosonFundsHandler", function () {
             buyerPayoff = 0;
 
             // seller: sellerDeposit + price - protocolFee + buyerEscalationDeposit
-            sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit)
+            sellerPayoff = BN(offerToken.sellerDeposit)
               .add(offerToken.price)
               .sub(offerTokenProtocolFee)
               .add(buyerEscalationDeposit)
@@ -3284,7 +3459,7 @@ describe("IBosonFundsHandler", function () {
             expectedSellerAvailableFunds.funds[0] = new Funds(
               mockToken.address,
               "Foreign20",
-              ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
+              BN(sellerDeposit).add(sellerPayoff).toString()
             );
             expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -3304,11 +3479,11 @@ describe("IBosonFundsHandler", function () {
               buyerPayoff = 0;
 
               // agentPayoff: agentFee
-              agentFee = ethers.BigNumber.from(agentOffer.price).mul(agentFeePercentage).div("10000").toString();
+              agentFee = BN(agentOffer.price).mul(agentFeePercentage).div("10000").toString();
               agentPayoff = agentFee;
 
               // seller: sellerDeposit + price - protocolFee - agentFee + buyerEscalationDeposit
-              sellerPayoff = ethers.BigNumber.from(agentOffer.sellerDeposit)
+              sellerPayoff = BN(agentOffer.sellerDeposit)
                 .add(agentOffer.price)
                 .sub(agentOfferProtocolFee)
                 .sub(agentFee)
@@ -3369,7 +3544,7 @@ describe("IBosonFundsHandler", function () {
               // protocol: protocolFee
               // agent: agentFee
               expectedSellerAvailableFunds.funds.push(
-                new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
+                new Funds(mockToken.address, "Foreign20", BN(sellerPayoff).toString())
               );
               expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
               expectedAgentAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", agentPayoff));
@@ -3391,7 +3566,7 @@ describe("IBosonFundsHandler", function () {
 
             // expected payoffs
             // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-            buyerPayoff = ethers.BigNumber.from(offerToken.price)
+            buyerPayoff = BN(offerToken.price)
               .add(offerToken.sellerDeposit)
               .add(buyerEscalationDeposit)
               .mul(buyerPercentBasisPoints)
@@ -3399,7 +3574,7 @@ describe("IBosonFundsHandler", function () {
               .toString();
 
             // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
-            sellerPayoff = ethers.BigNumber.from(offerToken.price)
+            sellerPayoff = BN(offerToken.price)
               .add(offerToken.sellerDeposit)
               .add(buyerEscalationDeposit)
               .sub(buyerPayoff)
@@ -3484,7 +3659,7 @@ describe("IBosonFundsHandler", function () {
             expectedSellerAvailableFunds.funds[0] = new Funds(
               mockToken.address,
               "Foreign20",
-              ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
+              BN(sellerDeposit).add(sellerPayoff).toString()
             );
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
@@ -3522,7 +3697,7 @@ describe("IBosonFundsHandler", function () {
 
               // expected payoffs
               // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-              buyerPayoff = ethers.BigNumber.from(agentOffer.price)
+              buyerPayoff = BN(agentOffer.price)
                 .add(agentOffer.sellerDeposit)
                 .add(buyerEscalationDeposit)
                 .mul(buyerPercentBasisPoints)
@@ -3530,7 +3705,7 @@ describe("IBosonFundsHandler", function () {
                 .toString();
 
               // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
-              sellerPayoff = ethers.BigNumber.from(agentOffer.price)
+              sellerPayoff = BN(agentOffer.price)
                 .add(agentOffer.sellerDeposit)
                 .add(buyerEscalationDeposit)
                 .sub(buyerPayoff)
@@ -3597,7 +3772,7 @@ describe("IBosonFundsHandler", function () {
               // protocol: 0
               // agent: 0
               expectedSellerAvailableFunds.funds.push(
-                new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
+                new Funds(mockToken.address, "Foreign20", BN(sellerPayoff).toString())
               );
               expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -3619,7 +3794,7 @@ describe("IBosonFundsHandler", function () {
 
             // expected payoffs
             // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-            buyerPayoff = ethers.BigNumber.from(offerToken.price)
+            buyerPayoff = BN(offerToken.price)
               .add(offerToken.sellerDeposit)
               .add(buyerEscalationDeposit)
               .mul(buyerPercentBasisPoints)
@@ -3627,7 +3802,7 @@ describe("IBosonFundsHandler", function () {
               .toString();
 
             // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
-            sellerPayoff = ethers.BigNumber.from(offerToken.price)
+            sellerPayoff = BN(offerToken.price)
               .add(offerToken.sellerDeposit)
               .add(buyerEscalationDeposit)
               .sub(buyerPayoff)
@@ -3686,7 +3861,7 @@ describe("IBosonFundsHandler", function () {
             expectedSellerAvailableFunds.funds[0] = new Funds(
               mockToken.address,
               "Foreign20",
-              ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
+              BN(sellerDeposit).add(sellerPayoff).toString()
             );
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
@@ -3724,13 +3899,13 @@ describe("IBosonFundsHandler", function () {
               blockNumber = tx.blockNumber;
               block = await ethers.provider.getBlock(blockNumber);
               disputedDate = block.timestamp.toString();
-              timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+              timeout = BN(disputedDate).add(resolutionPeriod).toString();
 
               buyerPercentBasisPoints = "5566"; // 55.66%
 
               // expected payoffs
               // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-              buyerPayoff = ethers.BigNumber.from(agentOffer.price)
+              buyerPayoff = BN(agentOffer.price)
                 .add(agentOffer.sellerDeposit)
                 .add(buyerEscalationDeposit)
                 .mul(buyerPercentBasisPoints)
@@ -3738,7 +3913,7 @@ describe("IBosonFundsHandler", function () {
                 .toString();
 
               // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
-              sellerPayoff = ethers.BigNumber.from(agentOffer.price)
+              sellerPayoff = BN(agentOffer.price)
                 .add(agentOffer.sellerDeposit)
                 .add(buyerEscalationDeposit)
                 .sub(buyerPayoff)
@@ -3781,7 +3956,7 @@ describe("IBosonFundsHandler", function () {
               // protocol: 0
               // agent: 0
               expectedSellerAvailableFunds.funds.push(
-                new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
+                new Funds(mockToken.address, "Foreign20", BN(sellerPayoff).toString())
               );
               expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -3802,7 +3977,7 @@ describe("IBosonFundsHandler", function () {
             beforeEach(async function () {
               // expected payoffs
               // buyer: price + buyerEscalationDeposit
-              buyerPayoff = ethers.BigNumber.from(offerToken.price).add(buyerEscalationDeposit).toString();
+              buyerPayoff = BN(offerToken.price).add(buyerEscalationDeposit).toString();
 
               // seller: sellerDeposit
               sellerPayoff = offerToken.sellerDeposit;
@@ -3866,7 +4041,7 @@ describe("IBosonFundsHandler", function () {
               expectedSellerAvailableFunds.funds[0] = new Funds(
                 mockToken.address,
                 "Foreign20",
-                ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
+                BN(sellerDeposit).add(sellerPayoff).toString()
               );
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
@@ -3902,7 +4077,7 @@ describe("IBosonFundsHandler", function () {
 
                 // expected payoffs
                 // buyer: price + buyerEscalationDeposit
-                buyerPayoff = ethers.BigNumber.from(offerToken.price).add(buyerEscalationDeposit).toString();
+                buyerPayoff = BN(offerToken.price).add(buyerEscalationDeposit).toString();
 
                 // seller: sellerDeposit
                 sellerPayoff = offerToken.sellerDeposit;
@@ -3952,7 +4127,7 @@ describe("IBosonFundsHandler", function () {
                 // agent: 0
                 expectedBuyerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", buyerPayoff);
                 expectedSellerAvailableFunds.funds.push(
-                  new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
+                  new Funds(mockToken.address, "Foreign20", BN(sellerPayoff).toString())
                 );
                 sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
                 buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
@@ -3973,7 +4148,7 @@ describe("IBosonFundsHandler", function () {
             beforeEach(async function () {
               // expected payoffs
               // buyer: price + buyerEscalationDeposit
-              buyerPayoff = ethers.BigNumber.from(offerToken.price).add(buyerEscalationDeposit).toString();
+              buyerPayoff = BN(offerToken.price).add(buyerEscalationDeposit).toString();
 
               // seller: sellerDeposit
               sellerPayoff = offerToken.sellerDeposit;
@@ -4043,7 +4218,7 @@ describe("IBosonFundsHandler", function () {
               expectedSellerAvailableFunds.funds[0] = new Funds(
                 mockToken.address,
                 "Foreign20",
-                ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
+                BN(sellerDeposit).add(sellerPayoff).toString()
               );
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
@@ -4079,7 +4254,7 @@ describe("IBosonFundsHandler", function () {
 
                 // expected payoffs
                 // buyer: price + buyerEscalationDeposit
-                buyerPayoff = ethers.BigNumber.from(offerToken.price).add(buyerEscalationDeposit).toString();
+                buyerPayoff = BN(offerToken.price).add(buyerEscalationDeposit).toString();
 
                 // seller: sellerDeposit
                 sellerPayoff = offerToken.sellerDeposit;
@@ -4122,7 +4297,7 @@ describe("IBosonFundsHandler", function () {
                 // agent: 0
                 expectedBuyerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", buyerPayoff);
                 expectedSellerAvailableFunds.funds.push(
-                  new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
+                  new Funds(mockToken.address, "Foreign20", BN(sellerPayoff).toString())
                 );
                 sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
                 buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
@@ -4148,10 +4323,7 @@ describe("IBosonFundsHandler", function () {
           buyerPayoff = 0;
 
           // seller: sellerDeposit + price - protocolFee
-          sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit)
-            .add(offerToken.price)
-            .sub(offerTokenProtocolFee)
-            .toString();
+          sellerPayoff = BN(offerToken.sellerDeposit).add(offerToken.price).sub(offerTokenProtocolFee).toString();
         });
 
         it("Protocol fee for existing exchanges should be the same as at the offer creation", async function () {
@@ -4218,11 +4390,11 @@ describe("IBosonFundsHandler", function () {
             buyerPayoff = 0;
 
             // agentPayoff: agentFee
-            agentFee = ethers.BigNumber.from(agentOffer.price).mul(agentFeePercentage).div("10000").toString();
+            agentFee = BN(agentOffer.price).mul(agentFeePercentage).div("10000").toString();
             agentPayoff = agentFee;
 
             // seller: sellerDeposit + price - protocolFee - agentFee
-            sellerPayoff = ethers.BigNumber.from(agentOffer.sellerDeposit)
+            sellerPayoff = BN(agentOffer.sellerDeposit)
               .add(agentOffer.price)
               .sub(agentOfferProtocolFee)
               .sub(agentFee)
