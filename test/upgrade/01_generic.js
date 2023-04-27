@@ -67,8 +67,6 @@ function getGenericContext(
           delete protocolContractState.accountContractState.sellerByAuthTokenState;
           delete protocolContractStateAfterUpgrade.accountContractState.sellerByAuthTokenState;
         }
-        console.log(protocolContractState.accountContractState.sellerState);
-        console.log(protocolContractStateAfterUpgrade.accountContractState.sellerState);
 
         assert.deepEqual(protocolContractState, protocolContractStateAfterUpgrade);
       });
@@ -76,6 +74,7 @@ function getGenericContext(
 
     // Create new protocol entities. Existing data should not be affected
     context("📋 New data after the upgrade do not corrupt the data from before the upgrade", async function () {
+      this.timeout(10000000);
       it("State is not affected", async function () {
         postUpgradeEntities = await populateProtocolContract(
           deployer,
@@ -89,7 +88,7 @@ function getGenericContext(
         // First get the data that should be in location of old data
         const protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(
           protocolDiamondAddress,
-          contractsBefore,
+          contractsAfter,
           mockContracts,
           preUpgradeEntities
         );
@@ -176,6 +175,7 @@ function getGenericContext(
     // Test that offers and exchanges from before the upgrade can normally be used
     // Check that correct events are emitted. State is not checked since units and integration test should make sure that event and state are consistent
     context("📋 Interactions after the upgrade still work", async function () {
+      this.timeout(10000000);
       it("Commit to old offers", async function () {
         const { offer, offerDates, offerDurations } = preUpgradeEntities.offers[1]; // pick some random offer
         const offerPrice = offer.price;

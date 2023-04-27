@@ -66,7 +66,7 @@ async function deploySuite(deployer, tag, scriptsTag) {
   }
 
   // run deploy suite, which automatically compiles the contracts
-  await hre.run("deploy-suite", { env: "upgrade-test" });
+  await hre.run("deploy-suite", { env: "upgrade-test", facetConfig: JSON.stringify(facets.deploy[tag]) });
 
   // Read contract info from file
   const chainId = (await hre.ethers.provider.getNetwork()).chainId;

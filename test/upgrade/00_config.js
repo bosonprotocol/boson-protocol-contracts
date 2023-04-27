@@ -1,3 +1,4 @@
+const { getFacets: getDefaultFacets } = require("../../scripts/config/facet-deploy.js");
 /*
 Immutable facet configs for deployment and upgrade, used in upgrade test.
 
@@ -145,7 +146,7 @@ async function getFacets() {
         initializationData: "0x0000000000000000000000000000000000000000000000000000000000002710", // input for initV2_2_0, representing maxPremintedVoucher (0x2710=10000)
       },
       "v2.2.1-rc.1": {
-        addOrUpgrade: ["SellerHandlerFacet", "AccountHandlerFacet", "DisputeResolverHandlerFacet"],
+        addOrUpgrade: ["AccountHandlerFacet", "SellerHandlerFacet", "DisputeResolverHandlerFacet"],
         remove: [],
         skipSelectors: {},
         facetsToInit: {
@@ -159,6 +160,7 @@ async function getFacets() {
 
   // Versions that have the same deploy config
   facets.deploy["v2.1.0"] = facets.deploy["v2.0.0"];
+  facets.deploy["v2.2.0"] = await getDefaultFacets();
   facets.upgrade["latest"] = facets.upgrade["v2.2.1-rc.1"];
 
   return facets;

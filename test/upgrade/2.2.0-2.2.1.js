@@ -3,6 +3,10 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const ethers = hre.ethers;
 const { assert, expect } = require("chai");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const Seller = require("../../scripts/domain/Seller");
+const { calculateContractAddress } = require("../util/utils.js");
+const { mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
+
 const {
   deploySuite,
   upgradeSuite,
@@ -23,7 +27,7 @@ const newVersion = "v2.2.1-rc.1";
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   this.timeout(10000000);
   // Common vars
-  let deployer;
+  let deployer, rando;
   let accountHandler;
   let snapshot;
   let protocolDiamondAddress, mockContracts;
@@ -126,8 +130,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   context("📋 Breaking changes, new methods and bug fixes", async function () {
     context("Breaking changes", async function () {
       context("DisputeResolverHandler", async function () {
-        it("function updateDisputeResolver reverts if no update field has been updated or requested to be updated", async function () {
-          // Get next account id
+        it("updateDisputeResolver reverts if no update field has been updated or requested to be updated", async function () {
           const { DRs } = preUpgradeEntities;
           const { wallet, id, disputeResolver } = DRs[0];
 
@@ -140,6 +143,56 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           let [, disputeResolverAfter] = await accountHandler.getDisputeResolver(id);
           disputeResolverAfter = DisputeResolver.fromStruct(disputeResolverAfter);
           expect(disputeResolverAfter).to.deep.equal(disputeResolver);
+        });
+      });
+
+      context("SellerHandler", async function () {
+        it("updateSeller reverts if no update field has been updated or requested to be updated", async function () {
+          const { sellers } = preUpgradeEntities;
+          const { wallet, id, seller, authToken } = sellers[0];
+
+          // Try to update with same values, should revert
+          await expect(accountHandler.connect(wallet).updateSeller(seller, authToken)).to.be.revertedWith(
+            RevertReasons.NO_UPDATE_APPLIED
+          );
+
+          // Validate if seller data is still the same
+          let [, sellerAfter] = await accountHandler.getSeller(id);
+          sellerAfter = Seller.fromStruct(sellerAfter);
+          expect(sellerAfter).to.deep.equal(seller);
+        });
+
+        it("Old seller can update and add metadataUri field", async function () {
+          const { sellers } = preUpgradeEntities;
+          const { wallet, id, seller, authToken } = sellers[0];
+
+          seller.metadataUri = "metadata";
+
+          const tx = await accountHandler.connect(wallet).updateSeller(seller, authToken);
+          expect(tx).to.emit("SellerUpdateApplied");
+
+          // Validate if seller now has metadataUri
+          let [, sellerAfter] = await accountHandler.getSeller(id);
+          sellerAfter = DisputeResolver.fromStruct(sellerAfter);
+          expect(sellerAfter.metadataUri).to.equal(seller.metadataUri);
+        });
+
+        it("New seller has metadataUri field", async function () {
+          const { nextAccountId } = accountContractState;
+          const seller = mockSeller(rando.address, rando.address, rando.address, rando.address, true, "metadata");
+          const authToken = mockAuthToken();
+          const voucherInitValues = mockVoucherInitValues();
+
+          const tx = await accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues);
+          expect(tx)
+            .to.emit("SellerCreated")
+            .withArgs(
+              nextAccountId,
+              seller,
+              calculateContractAddress(accountHandler.address, nextAccountId),
+              authToken,
+              rando.address
+            );
         });
       });
     });
