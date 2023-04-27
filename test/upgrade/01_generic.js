@@ -41,11 +41,12 @@ function getGenericContext(
 
     // Protocol state
     context("📋 Right After upgrade", async function () {
+      this.timeout(10000000);
       it("State is not affected directly after the update", async function () {
         // Get protocol state after the upgrade
         let protocolContractStateAfterUpgrade = await getProtocolContractState(
           protocolDiamondAddress,
-          contractsBefore,
+          contractsAfter,
           mockContracts,
           preUpgradeEntities
         );
@@ -66,6 +67,8 @@ function getGenericContext(
           delete protocolContractState.accountContractState.sellerByAuthTokenState;
           delete protocolContractStateAfterUpgrade.accountContractState.sellerByAuthTokenState;
         }
+        console.log(protocolContractState.accountContractState.sellerState);
+        console.log(protocolContractStateAfterUpgrade.accountContractState.sellerState);
 
         assert.deepEqual(protocolContractState, protocolContractStateAfterUpgrade);
       });

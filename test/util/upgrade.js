@@ -346,17 +346,7 @@ async function populateProtocolContract(
         // set unique new voucherInitValues
         const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
 
-        try {
-          await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
-        } catch (e) {
-          const encodedFunction = await accountHandler.getSighash("createSeller", [
-            seller,
-            authToken,
-            voucherInitValues,
-          ]);
-          console.log(encodedFunction);
-          console.log(e);
-        }
+        await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
 
         const voucherContractAddress = calculateContractAddress(accountHandler.address, voucherIndex++);
         sellers.push({

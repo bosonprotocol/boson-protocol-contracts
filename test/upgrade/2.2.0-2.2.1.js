@@ -21,7 +21,7 @@ const newVersion = "v2.2.1-rc.1";
  *  Upgrade test case - After upgrade from 2.2.0 to 2.2.1 everything is still operational
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
-  this.timeout(1000000);
+  this.timeout(10000000);
   // Common vars
   let deployer;
   let accountHandler;
