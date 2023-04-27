@@ -18,12 +18,6 @@ import { Address } from "../../ext_libs/Address.sol";
 contract PriceDiscoveryBase is ProtocolBase {
     using Address for address;
 
-    IWETH9Like public immutable weth;
-
-    constructor(address _weth) {
-        weth = IWETH9Like(_weth);
-    }
-
     /**
      * @notice @notice Fulfils an order on an external contract. Helper function passes data to either ask or bid orders.
      *
@@ -191,8 +185,11 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         address exchangeToken = _offer.exchangeToken;
 
+        ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
+        address weth = pa.weth;
+
         // Native token is not safe, as its value can be intercepted in the receive function.
-        if (exchangeToken == address(0)) exchangeToken = address(weth);
+        if (exchangeToken == address(0)) exchangeToken = weth;
 
         // Track native balance just in case if seller send some native currency or price discovery contract does
         uint256 protocolNativeBalanceBefore = getBalance(address(0), address(this));
@@ -215,9 +212,9 @@ contract PriceDiscoveryBase is ProtocolBase {
             // Transfer funds to protocol - caller must pay on behalf of the seller
             FundsLib.validateIncomingPayment(exchangeToken, actualPrice);
 
-            if (exchangeToken == address(weth)) {
+            if (exchangeToken == weth) {
                 //  Protocol operates with native currency, needs to unwrap it (i.e. withdraw)
-                weth.withdraw(actualPrice);
+                IWETH9Like(weth).withdraw(actualPrice);
             }
 
             // Check the native balance and return the surplus to caller

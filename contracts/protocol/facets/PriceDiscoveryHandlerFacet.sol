@@ -19,16 +19,18 @@ import { IERC721Receiver } from "../../interfaces/IERC721Receiver.sol";
 import { PriceDiscoveryBase } from "../bases/PriceDiscoveryBase.sol";
 
 /**
- * @title PriceDiscoverHandlerFacet
+ * @title PriceDiscoveryHandlerFacet
  *
  * @notice Handles exchanges associated with offers within the protocol.
  */
-contract PriceDiscoverHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscoveryBase, BuyerBase {
+contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscoveryBase, BuyerBase {
     /**
-     * @notice Creates a new PriceDiscoverHandlerFacet contract.
-     * @param _weth - the address of the WETH contract
+     * @notice Facet Initializer
+     * This function is callable only once.
      */
-    constructor(address _weth) PriceDiscoveryBase(_weth) {}
+    function initialize() public onlyUninitialized(type(IBosonPriceDiscoveryHandler).interfaceId) {
+        DiamondLib.addSupportedInterface(type(IBosonPriceDiscoveryHandler).interfaceId);
+    }
 
     /**
      * @notice Commits to a price discovery offer (first step of an exchange).

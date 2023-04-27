@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
+import { IWETH9Like } from "../../interfaces/IWETH9Like.sol";
 import { IBosonSequentialCommitHandler } from "../../interfaces/handlers/IBosonSequentialCommitHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
@@ -18,8 +19,6 @@ import { Math } from "../../ext_libs/Math.sol";
  */
 contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDiscoveryBase {
     using Address for address;
-
-    constructor(address _weth) PriceDiscoveryBase(_weth) {}
 
     /**
      * @notice Initializes facet.
@@ -139,6 +138,9 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 );
             }
 
+            ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
+            address weth = pa.weth;
+
             // Make sure enough get escrowed
             if (_priceDiscovery.side == Side.Ask) {
                 if (escrowAmount > 0) {
@@ -147,9 +149,9 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                     if (tokenAddress == address(0)) {
                         // If exchange is native currency, seller cannot directly approve protocol to transfer funds
                         // They need to approve wrapper contract, so protocol can pull funds from wrapper
-                        FundsLib.transferFundsToProtocol(address(weth), seller, escrowAmount);
+                        FundsLib.transferFundsToProtocol(weth, seller, escrowAmount);
                         // But since protocol otherwise normally operates with native currency, needs to unwrap it (i.e. withdraw)
-                        weth.withdraw(escrowAmount);
+                        IWETH9Like(weth).withdraw(escrowAmount);
                     } else {
                         FundsLib.transferFundsToProtocol(tokenAddress, seller, escrowAmount);
                     }
@@ -157,8 +159,8 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             } else {
                 // when bid side, we have full proceeds in escrow. Keep minimal in, return the difference
                 if (tokenAddress == address(0)) {
-                    tokenAddress = address(weth);
-                    if (escrowAmount > 0) weth.withdraw(escrowAmount);
+                    tokenAddress = weth;
+                    if (escrowAmount > 0) IWETH9Like(weth).withdraw(escrowAmount);
                 }
 
                 uint256 payout = actualPrice - escrowAmount;

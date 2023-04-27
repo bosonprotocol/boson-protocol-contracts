@@ -319,6 +319,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
     "ConfigHandlerFacet",
     "MetaTransactionsHandlerFacet",
     "SequentialCommitHandlerFacet",
+    "PriceDiscoveryHandlerFacet",
   ];
 
   const signers = await ethers.getSigners();
@@ -361,6 +362,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
       token: bosonTokenAddress || bosonToken.address,
       voucherBeacon: beacon.address,
       beaconProxy: proxy.address,
+      weth: wethAddress || ethers.constants.AddressZero,
     },
     // Protocol limits
     {
@@ -389,8 +391,9 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
   ];
 
   const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
-  facetsToDeploy["SequentialCommitHandlerFacet"].constructorArgs = [wethAddress || ethers.constants.AddressZero];
-  facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [1, wethAddress || ethers.constants.AddressZero];
+  //facetsToDeploy["SequentialCommitHandlerFacet"].constructorArgs = [wethAddress || ethers.constants.AddressZero];
+  //  facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [1];
+  //facetsToDeploy["PriceDiscoveryHandlerFacet"].constructorArgs = [wethAddress || ethers.constants.AddressZero];
 
   // Cut the protocol handler facets into the Diamond
   await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);

@@ -500,4 +500,17 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @return the access controller address
      */
     function getAccessControllerAddress() external view returns (address);
+
+    /**
+     * @notice Sets WETH address.
+     *
+     * Emits a WETHAddressChanged event if successful.
+     *
+     * Reverts if _weth is the zero address
+     *
+     * @dev Caller must have ADMIN role.
+     *
+     * @param _weth - the WETH contract address
+     */
+    function setWeth(address payable _weth) external;
 }

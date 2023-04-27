@@ -28,6 +28,7 @@ library ProtocolLib {
         address voucherBeacon;
         // Address of the Boson Beacon proxy implementation
         address beaconProxy;
+        address weth;
     }
 
     // Protocol limits storage

@@ -5,9 +5,10 @@ const protocolConfig = require("./protocol-parameters");
 
 /**
  * Get the configuration data to be passed to the ConfigHandlerFacet initializer
+ * @param wethAddress - address of the WETH token
  * @returns { addresses, limits, fees }
  */
-function getConfig() {
+function getConfig(wethAddress) {
   return [
     {
       token: protocolConfig.TOKEN[network],
@@ -17,6 +18,7 @@ function getConfig() {
     },
     protocolConfig.limits,
     protocolConfig.fees,
+    wethAddress,
   ];
 }
 
@@ -55,6 +57,7 @@ const noArgFacetNames = [
   "PauseHandlerFacet",
   "ProtocolInitializationHandlerFacet", // args are generated on cutDiamond function
   "SequentialCommitHandlerFacet",
+  "PriceDiscoveryHandlerFacet",
 ];
 
 async function getFacets(config) {

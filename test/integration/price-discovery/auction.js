@@ -29,23 +29,24 @@ const Side = require("../../../scripts/domain/Side");
 const MASK = BigNumber.from(2).pow(128).sub(1);
 
 describe("[@skip-on-coverage] auction integration", function () {
-  accountId.next(true);
   this.timeout(100000000);
   let bosonVoucher;
   let assistant, buyer, DR, rando;
   let offer, offerDates;
-  let exchangeHandler;
+  let exchangeHandler, priceDiscoveryHandler;
   let weth;
   let seller;
   let snapshotId;
 
   before(async function () {
+    accountId.next(true);
     // Specify contracts needed for this test
     const contracts = {
       accountHandler: "IBosonAccountHandler",
       offerHandler: "IBosonOfferHandler",
       fundsHandler: "IBosonFundsHandler",
       exchangeHandler: "IBosonExchangeHandler",
+      priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
     };
 
     const wethFactory = await ethers.getContractFactory("WETH9");
@@ -56,7 +57,7 @@ describe("[@skip-on-coverage] auction integration", function () {
 
     ({
       signers: [assistant, buyer, DR, rando],
-      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler },
+      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler, priceDiscoveryHandler },
       extraReturnValues: { bosonVoucher },
     } = await setupTestEnvironment(contracts, { wethAddress: weth.address }));
 
@@ -135,6 +136,7 @@ describe("[@skip-on-coverage] auction integration", function () {
       auctionId = 0;
       amount = 10;
       await zoraAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
+      console.log("buyer", buyer.address);
 
       // 5. Set time forward
       await getCurrentBlockAndSetTimeForward(oneWeek);
@@ -144,7 +146,7 @@ describe("[@skip-on-coverage] auction integration", function () {
     });
 
     // Zora uses safeTransferFrom and WETH doesn't support it
-    it("Should revert when seller is not using wrappers offer is native currency", async function () {
+    it("commitToPriceDiscoveryOffer should revert when seller is not using wrappers and offer is native currency", async function () {
       // Caller should approve WETH because price discovery bids doesn't work with native currency
       await weth.connect(assistant).approve(exchangeHandler.address, amount);
 
@@ -154,23 +156,22 @@ describe("[@skip-on-coverage] auction integration", function () {
 
       //  Commit to offer, expecting revert
       await expect(
-        exchangeHandler.connect(assistant).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+        priceDiscoveryHandler.connect(assistant).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
       ).to.be.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
     });
 
-    // Buyes doesn't get buyer protection
-    it("Auction ends normally if finalise directly into Zora", async function () {
-      const protocolBalanceBefore = await ethers.provider.getBalance(exchangeHandler.address);
+    it("Auction is canceled if ended directly into Zora", async function () {
+      // safe transfer from will fail on onPremintedTransferredHook and auction should be canceled
+      await expect(zoraAuction.connect(rando).endAuction(auctionId)).to.emit(zoraAuction, "AuctionCanceled");
 
-      await zoraAuction.connect(rando).endAuction(auctionId);
+      // Token is returned to the seller
+      expect(await bosonVoucher.ownerOf(tokenId)).to.equal(assistant.address);
 
-      expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
-      expect(await ethers.provider.getBalance(exchangeHandler.address)).to.equal(protocolBalanceBefore.add(amount));
-
+      // Exchange doesn't exist
       const exchangeId = tokenId.and(MASK);
       const [exist, ,] = await exchangeHandler.getExchange(exchangeId);
 
-      expect(exist).to.equal(true);
+      expect(exist).to.equal(false);
     });
   });
 });
