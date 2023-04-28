@@ -3,7 +3,7 @@ const _ = require("lodash");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { keccak256 } = ethers.utils;
+const { keccak256, formatBytes32String } = ethers.utils;
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Role = require("../../scripts/domain/Role");
@@ -44,16 +44,46 @@ const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Agent = require("../../scripts/domain/Agent");
 const Buyer = require("../../scripts/domain/Buyer");
+const { tagsByVersion } = require("../upgrade/00_config");
 
 // Common vars
 const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
 let rando;
-let preUpgradeInterfaceIds;
+let preUpgradeInterfaceIds, preUpgradeVersions;
+let facets, versionTags;
+//      "v2.1.0": {
+//        addOrUpgrade: ["ERC165Facet", "AccountHandlerFacet", "SellerHandlerFacet", "DisputeResolverHandlerFacet"],
+//        remove: [],
+//        skipSelectors: {},
+//        initArgs: {},
+//        skipInit: ["ERC165Facet"],
+//      },
+
+function getVersionsBeforeTarget(versions, targetVersion) {
+  const versionsBefore = versions.filter((v, index, arr) => {
+    if (v === "v2.1.0" || v === "latest") return false;
+    if (v === targetVersion) {
+      arr.splice(index + 1); // Truncate array after the target version
+      return false; //
+    }
+    return true;
+  });
+
+  return versionsBefore.map((version) => {
+    // Remove "v" prefix and "-rc.${number}" suffix
+    return formatBytes32String(version.replace(/^v/, "").replace(/-rc\.\d+$/, ""));
+  });
+}
 
 // deploy suite and return deployed contracts
-async function deploySuite(deployer, tag, scriptsTag) {
+async function deploySuite(deployer, newVersion) {
+  // Cache config data
+  versionTags = tagsByVersion[newVersion];
+  facets = await getFacets();
+
   // checkout old version
-  const facets = await getFacets();
+  const { oldVersion: tag, scripts: scriptsTag } = versionTags;
+
   console.log(`Fetching tags`);
   shell.exec(`git fetch --force --tags origin`);
   console.log(`Checking out version ${tag}`);
@@ -65,8 +95,14 @@ async function deploySuite(deployer, tag, scriptsTag) {
     shell.exec(`git checkout ${scriptsTag} scripts`);
   }
 
+  const deployConfig = facets.deploy[tag];
+
+  if (!deployConfig) {
+    throw new Error(`No deploy config found for tag ${tag}`);
+  }
+
   // run deploy suite, which automatically compiles the contracts
-  await hre.run("deploy-suite", { env: "upgrade-test", facetConfig: JSON.stringify(facets.deploy[tag]) });
+  await hre.run("deploy-suite", { env: "upgrade-test", facetConfig: JSON.stringify(deployConfig) });
 
   // Read contract info from file
   const chainId = (await hre.ethers.provider.getNetwork()).chainId;
@@ -139,9 +175,15 @@ async function deploySuite(deployer, tag, scriptsTag) {
 
 // upgrade the suite to new version and returns handlers with upgraded interfaces
 // upgradedInterfaces is object { handlerName : "interfaceName"}
-async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scriptsTag, overrideFacetConfig) {
+async function upgradeSuite(protocolDiamondAddress, upgradedInterfaces, overrideFacetConfig) {
+  if (!versionTags) {
+    throw new Error("Version tags not cached");
+  }
+  const { newVersion: tag, scripts: scriptsTag } = versionTags;
+
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`rm -rf scripts/*`);
+
   if (scriptsTag) {
     console.log(`Checking out scripts on version ${scriptsTag}`);
     shell.exec(`git checkout ${scriptsTag} scripts`);
@@ -160,7 +202,8 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scr
     shell.exec(`git checkout HEAD contracts`);
   }
 
-  const facets = await getFacets();
+  if (!facets) facets = await getFacets();
+
   let facetConfig = facets.upgrade[tag] || facets.upgrade["latest"];
   if (overrideFacetConfig) {
     facetConfig = _.merge(facetConfig, overrideFacetConfig);
@@ -183,19 +226,15 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scr
 }
 
 // upgrade the clients to new version
-async function upgradeClients(tag) {
+async function upgradeClients() {
   // Upgrade Clients
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`git checkout HEAD scripts`);
-  if (tag) {
-    // checkout the new tag
-    console.log(`Checking out version ${tag}`);
-    shell.exec(`git checkout ${tag} contracts`);
-  } else {
-    // if tag was not created yet, use the latest code
-    console.log(`Checking out latest code`);
-    shell.exec(`git checkout HEAD contracts`);
-  }
+  const tag = versionTags.newVersion;
+
+  // checkout the new tag
+  console.log(`Checking out version ${tag}`);
+  shell.exec(`git checkout ${tag} contracts`);
 
   await hre.run("compile");
   // Mock forwarder to test metatx
@@ -240,7 +279,7 @@ async function populateProtocolContract(
     twinHandler,
   },
   { mockToken, mockConditionalToken, mockAuthERC721Contract, mockTwinTokens, mockTwin20, mockTwin1155 },
-  version
+  isBefore = false
 ) {
   let DRs = [];
   let sellers = [];
@@ -320,7 +359,7 @@ async function populateProtocolContract(
           sellerAllowList,
         });
 
-        if (versionsWithActivateDRFunction.includes(version)) {
+        if (versionsWithActivateDRFunction.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
           //ADMIN role activates Dispute Resolver
           await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
         }
@@ -1038,6 +1077,8 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
       #0 [ pauseScenario ]
       #1 [ reentrancyStatus ]
       #2 [ ] // placeholder for initializedInterfaces
+      #3 [ ] // placeholder for initializedVersions
+      #4 [ version ]
       */
 
   // starting slot
@@ -1048,7 +1089,7 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
   const pauseScenario = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber.add("0"));
 
   // reentrancy status
-  // defualt: NOT_ENTERED = 1
+  // default: NOT_ENTERED = 1
   const reentrancyStatus = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber.add("1"));
 
   // initializedInterfaces
@@ -1067,7 +1108,20 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
     initializedInterfacesState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
   }
 
-  return { pauseScenario, reentrancyStatus, initializedInterfacesState };
+  if (!preUpgradeVersions) {
+    preUpgradeVersions = getVersionsBeforeTarget(Object.keys(facets.upgrade), versionTags.newVersion);
+  }
+
+  const initializedVersionsState = [];
+  for (const version of preUpgradeVersions) {
+    console.log("version of preUpgradeVersions", version);
+    const storageSlot = getMappingStoragePosition(protocolStatusStorageSlotNumber.add("3"), version, paddingType.END);
+    initializedVersionsState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
+  }
+
+  console.log("newVersion", versionTags.newVersion);
+  console.log("initializedVersionState", initializedVersionsState);
+  return { pauseScenario, reentrancyStatus, initializedInterfacesState, initializedVersionsState };
 }
 
 async function getProtocolLookupsPrivateContractState(
@@ -1437,7 +1491,7 @@ async function populateVoucherContract(
   { accountHandler, exchangeHandler, offerHandler, fundsHandler },
   { mockToken },
   existingEntities,
-  version
+  isBefore = false
 ) {
   let DR;
   let sellers = [];
@@ -1515,7 +1569,7 @@ async function populateVoucherContract(
             sellerAllowList,
           };
 
-          if (versionsWithActivateDRFunction.includes(version)) {
+          if (versionsWithActivateDRFunction.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
             //ADMIN role activates Dispute Resolver
             await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
           }

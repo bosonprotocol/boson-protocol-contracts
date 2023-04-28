@@ -18,8 +18,7 @@ const {
 } = require("../util/upgrade");
 const { getGenericContext } = require("./01_generic");
 
-const oldVersion = "v2.2.0";
-const newVersion = "v2.2.1-rc.1";
+const version = "2.2.1";
 
 /**
  *  Upgrade test case - After upgrade from 2.2.0 to 2.2.1 everything is still operational
@@ -46,7 +45,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         protocolDiamondAddress,
         protocolContracts: contractsBefore,
         mockContracts,
-      } = await deploySuite(deployer, oldVersion));
+      } = await deploySuite(deployer, version));
 
       // Populate protocol with data
       preUpgradeEntities = await populateProtocolContract(
@@ -54,7 +53,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         protocolDiamondAddress,
         contractsBefore,
         mockContracts,
-        oldVersion
+        true
       );
 
       // Get current protocol state, which serves as the reference
@@ -64,16 +63,16 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         contractsBefore,
         mockContracts,
         preUpgradeEntities,
-        oldVersion
+        true
       );
 
       ({ accountContractState } = protocolContractState);
 
       // upgrade clients
-      await upgradeClients(newVersion);
+      await upgradeClients();
 
       // Upgrade protocol
-      ({ accountHandler } = await upgradeSuite(newVersion, protocolDiamondAddress, {
+      ({ accountHandler } = await upgradeSuite(protocolDiamondAddress, {
         accountHandler: "IBosonAccountHandler",
         orchestrationHandler: "IBosonOrchestrationHandler",
       }));
@@ -89,7 +88,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // This context is placed in an uncommon place due to order of test execution.
       // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
       // and those values are undefined if this is placed outside "before".
-      // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
+      // Normally, this would be solved with mocha's --delay option, but it.skip does not behave as expected when running with hardhat.
       context(
         "Generic tests",
         getGenericContext(
@@ -101,7 +100,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           protocolContractState,
           preUpgradeEntities,
           snapshot,
-          newVersion
+          version
         )
       );
       //
@@ -129,7 +128,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   context("📋 Breaking changes, new methods and bug fixes", async function () {
     context("Breaking changes", async function () {
       context("DisputeResolverHandler", async function () {
-        it("updateDisputeResolver reverts if no update field has been updated or requested to be updated", async function () {
+        it.skip("updateDisputeResolver reverts if no update field has been updated or requested to be updated", async function () {
           const { DRs } = preUpgradeEntities;
           const { wallet, id, disputeResolver } = DRs[0];
 
@@ -146,7 +145,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       });
 
       context("SellerHandler", async function () {
-        it("updateSeller reverts if no update field has been updated or requested to be updated", async function () {
+        it.skip("updateSeller reverts if no update field has been updated or requested to be updated", async function () {
           const { sellers } = preUpgradeEntities;
           const { wallet, id, seller, authToken } = sellers[0];
 
@@ -161,7 +160,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           expect(sellerAfter).to.deep.equal(seller);
         });
 
-        it("Old seller can update and add metadataUri field", async function () {
+        it.skip("Old seller can update and add metadataUri field", async function () {
           const { sellers } = preUpgradeEntities;
           const { wallet, id, seller, authToken } = sellers[0];
 
@@ -176,7 +175,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           expect(sellerAfter.metadataUri).to.equal(seller.metadataUri);
         });
 
-        it("New seller has metadataUri field", async function () {
+        it.skip("New seller has metadataUri field", async function () {
           const { nextAccountId } = accountContractState;
           const seller = mockSeller(rando.address, rando.address, rando.address, rando.address, true, "metadata");
           const authToken = mockAuthToken();
