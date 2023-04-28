@@ -118,7 +118,7 @@ async function main(env, facetConfig) {
     deploymentComplete(
       deployedFacet.name,
       deployedFacet.contract.address,
-      [],
+      deployedFacet.constructorArgs,
       interfaceIdFromFacetName(deployedFacet.name),
       contracts
     );
