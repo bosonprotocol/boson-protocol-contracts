@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
+import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { SafeERC20 } from "../../ext_libs/SafeERC20.sol";
@@ -38,7 +39,7 @@ import { IERC165 } from "../../interfaces/IERC165.sol";
  *   - `unwrap` can be executed by the owner of the wrapped voucher.
  *
  * N.B. Although Zora Auction House can send ethers, it's preffered to receive
- * WETH instead. For that reason `recieve` is not implemented, so it automatically sends WETH.
+ * WETH instead. For that reason `receive` is not implemented, so it automatically sends WETH.
  */
 contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
     // Add safeTransferFrom to IERC20
@@ -78,7 +79,6 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
 
         // Approve Zora Auction House to transfer wrapped vouchers
         _setApprovalForAll(address(this), _zoraAuctionHouseAddress, true);
-        _setApprovalForAll(address(this), msg.sender, true); // msg.sender is the owner of this contract and must be approved to transfer wrapped vouchers to Auction House
     }
 
     /**
@@ -92,25 +92,22 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
     }
 
     /**
-     * @notice Wraps the voucher, transfer true voucher to itself and funds to the protocol.
+     * @notice Wraps the voucher, transfer true voucher to itself and approves the contract owner to operate on it.
      *
      * Reverts if:
      *  - caller is not the contract owner
      *
      * @param _tokenId The token id.
      */
-    function wrap(uint256 _tokenId) external onlyOwner {
-        // should wrapping be limited to onlyOwner?
-
+    function wrap(uint256 _tokenId) external {
         // Transfer voucher to this contract
-        // Instead of msg.sender it could be voucherAddress, if vouchers were preminted to contract itself
         IERC721(voucherAddress).transferFrom(msg.sender, address(this), _tokenId);
 
         // Mint to itself, so it can be used with Zora Auction House
         _mint(address(this), _tokenId);
 
-        // Approves contract owner to operate on wrapped token
-        _approve(owner(), _tokenId);
+        // Approves original token owner to operate on wrapped token
+        _approve(msg.sender, _tokenId);
     }
 
     /**
@@ -128,7 +125,7 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
         // Either contract owner or protocol can unwrap
         // If contract owner is unwrapping, this is equivalent to canceled auction
         require(
-            msg.sender == protocolAddress || (owner() == msg.sender && wrappedVoucherOwner == msg.sender),
+            msg.sender == protocolAddress || wrappedVoucherOwner == msg.sender,
             "ZoraWrapper: Only owner or protocol can unwrap"
         );
 
@@ -142,7 +139,7 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
         delete pendingTokenId;
 
         // transfer voucher to voucher owner
-        IERC721(voucherAddress).safeTransferFrom(address(this), ownerOf(_tokenId), _tokenId);
+        IERC721(voucherAddress).safeTransferFrom(address(this), wrappedVoucherOwner, _tokenId);
 
         // Transfer token to protocol
         if (priceToPay > 0) {
@@ -201,6 +198,14 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
         if (exchangeToken == address(0)) {
             uint256 offerId = _tokenId >> 128; // OfferId is the first 128 bits of the token ID.
 
+            if (offerId == 0) {
+                // pre v2.2.0. Token does not have offerId, so we need to get it from the protocol.
+                // Get Boson exchange. Don't explicitly check if the exchange exists, since existance of the token implies it does.
+                uint256 exchangeId = _tokenId & type(uint128).max; // ExchangeId is the last 128 bits of the token ID.
+                (, BosonTypes.Exchange memory exchange, ) = IBosonExchangeHandler(protocolAddress).getExchange(exchangeId);
+                offerId = exchange.offerId;
+            }
+                
             // Get Boson offer. Don't explicitly check if the offer exists, since existance of the token implies it does.
             (, BosonTypes.Offer memory offer, , , , ) = IBosonOfferHandler(protocolAddress).getOffer(offerId);
             exchangeToken = offer.exchangeToken;
