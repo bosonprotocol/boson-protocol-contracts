@@ -14,6 +14,7 @@ This file contains deployment and upgrade configs for each tag. Format of config
 - scripts/config/facet-upgrade.js
 */
 
+// Scripts must run on tag v2.1.0-scripts
 async function getV2_0_0DeployConfig() {
   return {
     noArgFacets: [
@@ -54,7 +55,7 @@ async function getV2_2_0DeployConfig() {
     TwinHandlerFacet: { init: [] },
     PauseHandlerFacet: { init: [] },
     ProtocolInitializationHandlerFacet: { init: [] },
-    ConfigHandlerFacet: { init: [], constructorArgs: [getConfigHandlerInitArgs()] },
+    ConfigHandlerFacet: { init: getConfigHandlerInitArgs(), constructorArgs: [] },
     ExchangeHandlerFacet: { init: [], constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network]] },
   };
 
@@ -199,8 +200,8 @@ async function getFacets() {
         remove: [],
         skipSelectors: {},
         facetsToInit: {
-          //          AccountHandlerFacet: { init: [] },
-          //        DisputeResolverHandlerFacet: { init: [] },
+          AccountHandlerFacet: { init: [] },
+          OrchestrationHandlerFacet1: { init: [] },
         },
         initializationData: "0x",
       },

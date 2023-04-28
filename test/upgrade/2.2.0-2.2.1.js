@@ -1,6 +1,7 @@
 const hre = require("hardhat");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const ethers = hre.ethers;
+const { getSnapshot, revertToSnapshot } = require("../util/utils");
 const { assert, expect } = require("chai");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Seller = require("../../scripts/domain/Seller");
@@ -19,7 +20,6 @@ const { getGenericContext } = require("./01_generic");
 
 const oldVersion = "v2.2.0";
 const newVersion = "v2.2.1-rc.1";
-//const v2_1_0_scripts = "v2.1.0-scripts";
 
 /**
  *  Upgrade test case - After upgrade from 2.2.0 to 2.2.1 everything is still operational
@@ -47,7 +47,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         protocolContracts: contractsBefore,
         mockContracts,
       } = await deploySuite(deployer, oldVersion));
-      //      ({ twinHandler} = contractsBefore);
 
       // Populate protocol with data
       preUpgradeEntities = await populateProtocolContract(
@@ -79,7 +78,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         orchestrationHandler: "IBosonOrchestrationHandler",
       }));
 
-      snapshot = await ethers.provider.send("evm_snapshot", []);
+      snapshot = await getSnapshot();
 
       // Get new account handler contract
       const contractsAfter = {
@@ -116,9 +115,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   afterEach(async function () {
     // Revert to state right after the upgrade.
-    // This is used so the lengthly setup (deploy+upgrade) is done only once.
-    await ethers.provider.send("evm_revert", [snapshot]);
-    snapshot = await ethers.provider.send("evm_snapshot", []);
+    // This is used so the lengthy setup (deploy+upgrade) is done only once.
+    await revertToSnapshot(snapshot);
+    snapshot = await getSnapshot();
   });
 
   after(async function () {
