@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { SafeERC20 } from "../../ext_libs/SafeERC20.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
@@ -41,7 +40,7 @@ import { IERC165 } from "../../interfaces/IERC165.sol";
  * N.B. Although Zora Auction House can send ethers, it's preffered to receive
  * WETH instead. For that reason `receive` is not implemented, so it automatically sends WETH.
  */
-contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
+contract ZoraWrapper is BosonTypes, ERC721 {
     // Add safeTransferFrom to IERC20
     using SafeERC20 for IERC20;
 
