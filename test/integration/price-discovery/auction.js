@@ -40,6 +40,7 @@ describe("[@skip-on-coverage] auction integration", function () {
 
   before(async function () {
     accountId.next(true);
+
     // Specify contracts needed for this test
     const contracts = {
       accountHandler: "IBosonAccountHandler",
