@@ -9,7 +9,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xea09657d
+ * The ERC-165 identifier for this interface is: 0xebc1b5a3
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
     /**
@@ -189,6 +189,39 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *  @param _validUntilDate - new valid until date
      */
     function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external;
+
+    /**
+     * @notice Changes the mutualizer for a given offer.
+     * Existing exchanges are not affected.
+     *
+     * Emits an OfferMutualizerChanged event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Offer id is invalid
+     * - Caller is not the assistant of the offer
+     *
+     * @param _offerId - the id of the offer to void
+     * @param _feeMutualizer - the new mutualizer address
+     */
+    function changeOfferMutualizer(uint256 _offerId, address _feeMutualizer) external;
+
+    /**
+     * @notice  Changes the mutualizers for a batch of offers.
+     * Existing exchanges are not affected.
+     *
+     * Emits an OfferMutualizerChanged event for every offer if successful.
+     *
+     * Reverts if, for any offer:
+     * - The offers region of protocol is paused
+     * - Number of offers exceeds maximum allowed number per batch
+     * - Offer id is invalid
+     * - Caller is not the assistant of the offer
+     *
+     * @param _offerIds - list of ids of offers to change the mutualizer for
+     * @param _feeMutualizer - the new mutualizers address
+     */
+    function changeOfferMutualizerBatch(uint256[] calldata _offerIds, address _feeMutualizer) external;
 
     /**
      * @notice Gets the details about a given offer.

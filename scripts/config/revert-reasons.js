@@ -154,6 +154,8 @@ exports.RevertReasons = {
   TOKEN_AMOUNT_MISMATCH: "Number of amounts should match number of tokens",
   NOTHING_TO_WITHDRAW: "Nothing to withdraw",
   NOT_AUTHORIZED: "Not authorized to withdraw",
+  DR_FEE_NOT_RECEIVED: "DR fee not received",
+  SELLER_NOT_COVERED: "Seller not covered",
 
   // Outside the protocol revert reasons
   ERC20_EXCEEDS_BALANCE: "ERC20: transfer amount exceeds balance",
@@ -168,6 +170,7 @@ exports.RevertReasons = {
   SAFE_ERC20_LOW_LEVEL_CALL: "SafeERC20: low-level call failed",
   SAFE_ERC20_NOT_SUCCEEDED: "SafeERC20: ERC20 operation did not succeed",
   INITIALIZABLE_ALREADY_INITIALIZED: "Initializable: contract is already initialized",
+  MUTUALIZER_REVERT: "MockDRFeeMutualizer: revert",
 
   // Meta-Transactions related
   NONCE_USED_ALREADY: "Nonce used already",

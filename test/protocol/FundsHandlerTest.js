@@ -2229,12 +2229,53 @@ describe("IBosonFundsHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
-          it.skip("Mutualizer contract declines the request", async function () {
-            // ToDo: implement when mutualizer can be updated in the protocol, since it will be easier to mock this behavior
+          const Mode = { Revert: 0, Decline: 1, SendLess: 2 };
+          let mockMutualizer;
+          beforeEach(async function () {
+            // Deploy mock mutualizer and set it to the offer
+            const mockMutualizerFactory = await ethers.getContractFactory("MockDRFeeMutualizer");
+            mockMutualizer = await mockMutualizerFactory.deploy();
+
+            await offerHandler.connect(assistant).changeOfferMutualizer(offerToken.id, mockMutualizer.address);
           });
 
-          it.skip("Mutualizer contract sends less than requested", async function () {
-            // ToDo: implement when mutualizer can be updated in the protocol, since it will be easier to mock this behavior
+          it("Mutualizer contract reverts on the call", async function () {
+            await mockMutualizer.setMode(Mode.Revert);
+
+            // Attempt to commit to offer, expecting revert
+            await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
+              RevertReasons.MUTUALIZER_REVERT
+            );
+          });
+
+          it("Mutualizer contract declines the request", async function () {
+            await mockMutualizer.setMode(Mode.Decline);
+
+            // Attempt to commit to offer, expecting revert
+            await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
+              RevertReasons.SELLER_NOT_COVERED
+            );
+          });
+
+          it("Mutualizer contract sends less than requested - ERC20", async function () {
+            await mockMutualizer.setMode(Mode.SendLess);
+            await mockToken.mint(mockMutualizer.address, DRFeeToken);
+
+            // Attempt to commit to offer, expecting revert
+            await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
+              RevertReasons.DR_FEE_NOT_RECEIVED
+            );
+          });
+
+          it("Mutualizer contract sends less than requested - native", async function () {
+            await offerHandler.connect(assistant).changeOfferMutualizer(offerNative.id, mockMutualizer.address);
+            await mockMutualizer.setMode(Mode.SendLess);
+            await rando.sendTransaction({ to: mockMutualizer.address, value: DRFeeNative });
+
+            // Attempt to commit to offer, expecting revert
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price })
+            ).to.revertedWith(RevertReasons.DR_FEE_NOT_RECEIVED);
           });
         });
       });

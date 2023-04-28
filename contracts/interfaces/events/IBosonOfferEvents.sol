@@ -35,4 +35,10 @@ interface IBosonOfferEvents {
         address owner,
         address indexed executedBy
     );
+    event OfferMutualizerChanged(
+        uint256 indexed offerId,
+        uint256 indexed sellerId,
+        address indexed feeMutualizer,
+        address executedBy
+    );
 }
