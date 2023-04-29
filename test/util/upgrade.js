@@ -135,6 +135,10 @@ async function deploySuite(deployer, newVersion) {
   const metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamondAddress);
   const configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamondAddress);
   const ERC165Facet = await ethers.getContractAt("ERC165Facet", protocolDiamondAddress);
+  const protocolInitializationHandler = await ethers.getContractAt(
+    "IBosonProtocolInitializationHandler",
+    protocolDiamondAddress
+  );
 
   // create mock token for auth
   const [mockAuthERC721Contract] = await deployMockTokens(["Foreign721"]);
@@ -161,6 +165,7 @@ async function deploySuite(deployer, newVersion) {
       pauseHandler,
       metaTransactionsHandler,
       ERC165Facet,
+      protocolInitializationHandler,
     },
     mockContracts: {
       mockAuthERC721Contract,
@@ -1078,7 +1083,7 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
       #1 [ reentrancyStatus ]
       #2 [ ] // placeholder for initializedInterfaces
       #3 [ ] // placeholder for initializedVersions
-      #4 [ version ]
+      #4 [ version ] - not here as should be updated one very upgrade
       */
 
   // starting slot
@@ -1114,14 +1119,20 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
 
   const initializedVersionsState = [];
   for (const version of preUpgradeVersions) {
-    console.log("version of preUpgradeVersions", version);
     const storageSlot = getMappingStoragePosition(protocolStatusStorageSlotNumber.add("3"), version, paddingType.END);
     initializedVersionsState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
   }
 
-  console.log("newVersion", versionTags.newVersion);
-  console.log("initializedVersionState", initializedVersionsState);
   return { pauseScenario, reentrancyStatus, initializedInterfacesState, initializedVersionsState };
+}
+
+async function getCurrentVersion(protocolDiamondAddress) {
+  // starting slot
+  const protocolStatusStorageSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.initializers"));
+  const protocolStatusStorageSlotNumber = ethers.BigNumber.from(protocolStatusStorageSlot);
+
+  // current version
+  return getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber.add("4"));
 }
 
 async function getProtocolLookupsPrivateContractState(
@@ -1826,3 +1837,4 @@ exports.compareStorageLayouts = compareStorageLayouts;
 exports.populateVoucherContract = populateVoucherContract;
 exports.getVoucherContractState = getVoucherContractState;
 exports.revertState = revertState;
+exports.getCurrentVersion = getCurrentVersion;

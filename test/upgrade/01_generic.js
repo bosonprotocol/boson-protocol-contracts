@@ -6,7 +6,7 @@ const { mockOffer, mockVoucher, mockExchange } = require("../util/mock");
 const { getEvent, calculateVoucherExpiry, getSnapshot, revertToSnapshot } = require("../util/utils.js");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
-const { populateProtocolContract, getProtocolContractState } = require("../util/upgrade");
+const { populateProtocolContract, getProtocolContractState, getCurrentVersion } = require("../util/upgrade");
 
 // Returns function with test that can be reused in every upgrade
 function getGenericContext(
@@ -39,9 +39,19 @@ function getGenericContext(
       shell.exec(`git reset HEAD contracts scripts`);
     });
 
+    // Version was introduced to protocol status on v2.2.0
+    if (newVersion != "v2.1.0") {
+      // To this test pass package.json version must be set
+      it(`Protocol status version is updated to ${newVersion}`, async function () {
+        const version = await contractsAfter.protocolInitializationHandler.getVersion();
+
+        // Slice because of unicode escape notation
+        expect(version.slice(0, 5)).to.equal(newVersion);
+      });
+    }
+
     // Protocol state
     context("📋 Right After upgrade", async function () {
-      this.timeout(10000000);
       it("State is not affected directly after the update", async function () {
         // Get protocol state after the upgrade
         let protocolContractStateAfterUpgrade = await getProtocolContractState(
@@ -74,7 +84,6 @@ function getGenericContext(
 
     // Create new protocol entities. Existing data should not be affected
     context("📋 New data after the upgrade do not corrupt the data from before the upgrade", async function () {
-      this.timeout(10000000);
       it.skip("State is not affected", async function () {
         postUpgradeEntities = await populateProtocolContract(
           deployer,

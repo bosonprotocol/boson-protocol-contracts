@@ -183,7 +183,6 @@ function getInitializeCalldata(
   interfacesToRemove = [],
   interfacesToAdd = []
 ) {
-  console.log("initialize version", version);
   version = ethers.utils.formatBytes32String(version);
   const addresses = facetsToInitialize.map((f) => f.contract.address);
   const calldata = facetsToInitialize.map((f) => f.initialize);

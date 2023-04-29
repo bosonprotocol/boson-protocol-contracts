@@ -41,6 +41,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       [deployer, rando] = await ethers.getSigners();
 
       let contractsBefore;
+
       ({
         protocolDiamondAddress,
         protocolContracts: contractsBefore,
@@ -103,7 +104,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           version
         )
       );
-      //
     } catch (err) {
       // revert to latest version of scripts and contracts
       revertState();
@@ -127,7 +127,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   // Test methods that were added to see that upgrade was succesful
   context("📋 Breaking changes, new methods and bug fixes", async function () {
     context("Breaking changes", async function () {
-      context("DisputeResolverHandler", async function () {
+      context("DisputeResolverHandlerFacet", async function () {
         it.skip("updateDisputeResolver reverts if no update field has been updated or requested to be updated", async function () {
           const { DRs } = preUpgradeEntities;
           const { wallet, id, disputeResolver } = DRs[0];
@@ -144,7 +144,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
       });
 
-      context("SellerHandler", async function () {
+      context("SellerHandlerFacet", async function () {
         it.skip("updateSeller reverts if no update field has been updated or requested to be updated", async function () {
           const { sellers } = preUpgradeEntities;
           const { wallet, id, seller, authToken } = sellers[0];
