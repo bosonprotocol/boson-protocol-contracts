@@ -5,6 +5,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { keccak256, formatBytes32String } = ethers.utils;
 const AuthToken = require("../../scripts/domain/AuthToken");
+const { getMetaTransactionsHandlerFacetInitArgs } = require("../../scripts/config/facet-deploy.js");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Role = require("../../scripts/domain/Role");
 const Bundle = require("../../scripts/domain/Bundle");
@@ -1017,6 +1018,7 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
       #3 [ cachedChainId ]
       #4 [ ] // placeholder for inputType
       #5 [ ] // placeholder for hashInfo
+      #6 [ ] // placeholder for isAllowlisted
       */
 
   // starting slot
@@ -1071,8 +1073,34 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
       functionPointer: await getStorageAt(protocolDiamondAddress, ethers.BigNumber.from(storageSlot).add(1)),
     });
   }
+  const isAllowlistedState = [];
+  const facets = [
+    "AccountHandlerFacet",
+    "SellerHandlerFacet",
+    "BuyerHandlerFacet",
+    "DisputeResolverHandlerFacet",
+    "AgentHandlerFacet",
+    "BundleHandlerFacet",
+    "DisputeHandlerFacet",
+    "ExchangeHandlerFacet",
+    "FundsHandlerFacet",
+    "GroupHandlerFacet",
+    "OfferHandlerFacet",
+    "TwinHandlerFacet",
+    "PauseHandlerFacet",
+    "MetaTransactionsHandlerFacet",
+    "OrchestrationHandlerFacet1",
+    "OrchestrationHandlerFacet2",
+  ];
 
-  return { inTransactionInfo, domainSeparator, cachedChainId, inputTypesState, hashInfoState };
+  const selectors = await getMetaTransactionsHandlerFacetInitArgs(facets);
+
+  for (const selector of Object.values(selectors)) {
+    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber.add("6"), selector, paddingType.START);
+    isAllowlistedState.push({ selector, isAllowlisted: await getStorageAt(protocolDiamondAddress, storageSlot) });
+  }
+
+  return { inTransactionInfo, domainSeparator, cachedChainId, inputTypesState, hashInfoState, isAllowlistedState };
 }
 
 async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {

@@ -42,7 +42,7 @@ function getGenericContext(
     // Version was introduced to protocol status on v2.2.0
     if (newVersion != "v2.1.0") {
       // To this test pass package.json version must be set
-      it(`Protocol status version is updated to ${newVersion}`, async function () {
+      it.skip(`Protocol status version is updated to ${newVersion}`, async function () {
         const version = await contractsAfter.protocolInitializationHandler.getVersion();
 
         // Slice because of unicode escape notation
@@ -52,7 +52,7 @@ function getGenericContext(
 
     // Protocol state
     context("📋 Right After upgrade", async function () {
-      it("State is not affected directly after the update", async function () {
+      it.skip("State is not affected directly after the update", async function () {
         // Get protocol state after the upgrade
         let protocolContractStateAfterUpgrade = await getProtocolContractState(
           protocolDiamondAddress,

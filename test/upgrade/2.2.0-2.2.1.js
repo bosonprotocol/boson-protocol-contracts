@@ -7,10 +7,10 @@ const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Seller = require("../../scripts/domain/Seller");
 const { calculateContractAddress } = require("../util/utils.js");
 const { mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
+const { migrate } = require("../../scripts/migrations/migrate_2_2_0_to_2_2_1.js");
 
 const {
   deploySuite,
-  upgradeSuite,
   upgradeClients,
   populateProtocolContract,
   getProtocolContractState,
@@ -30,6 +30,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let accountHandler;
   let snapshot;
   let protocolDiamondAddress, mockContracts;
+  let contractsAfter;
 
   // reference protocol state
   let accountContractState;
@@ -72,19 +73,21 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // upgrade clients
       await upgradeClients();
 
-      // Upgrade protocol
-      ({ accountHandler } = await upgradeSuite(protocolDiamondAddress, {
+      await migrate("upgrade-test");
+
+      // Cast to updated interface
+      let newHandlers = {
         accountHandler: "IBosonAccountHandler",
         orchestrationHandler: "IBosonOrchestrationHandler",
-      }));
+      };
+
+      contractsAfter = contractsBefore;
+
+      for (const [handlerName, interfaceName] of Object.entries(newHandlers)) {
+        contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
+      }
 
       snapshot = await getSnapshot();
-
-      // Get new account handler contract
-      const contractsAfter = {
-        ...contractsBefore,
-        accountHandler,
-      };
 
       // This context is placed in an uncommon place due to order of test execution.
       // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
@@ -191,6 +194,22 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               authToken,
               rando.address
             );
+        });
+
+        it("Old create seller function selector should be removed from metaTx allowed functions", async function () {
+          const [isAllowed] = await contractsAfter.metaTransactionsHandler.functions["isFunctionAllowlisted(bytes32)"](
+            "0xaaea2fdc2fe9e42a5c77e98666352fc2dbf7b32b9cbf91944089d3602b1a941d"
+          );
+
+          expect(isAllowed).to.be.false;
+        });
+
+        it("New create seller function selector should be added to metaTx allowed functions", async function () {
+          const [isAllowed] = await contractsAfter.metaTransactionsHandler.functions["isFunctionAllowlisted(bytes32)"](
+            "0x59b3774271ad2ce7cc4a964dd442fdde6a809e8dfd3eb4ac5f6e579fa898cf69"
+          );
+
+          expect(isAllowed).to.be.true;
         });
       });
     });
