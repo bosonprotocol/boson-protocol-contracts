@@ -2,6 +2,8 @@ const hre = require("hardhat");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const ethers = hre.ethers;
 const { getSnapshot, revertToSnapshot } = require("../util/utils");
+
+const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const { assert, expect } = require("chai");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Seller = require("../../scripts/domain/Seller");
@@ -31,6 +33,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let snapshot;
   let protocolDiamondAddress, mockContracts;
   let contractsAfter;
+  let protocolContractStateBefore, protocolContractStateAfter;
+  let removedFunctionHashes, addedFunctionHashes;
 
   // reference protocol state
   let accountContractState;
@@ -60,7 +64,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       // Get current protocol state, which serves as the reference
       // We assume that this state is a true one, relying on our unit and integration tests
-      const protocolContractState = await getProtocolContractState(
+      protocolContractStateBefore = await getProtocolContractState(
         protocolDiamondAddress,
         contractsBefore,
         mockContracts,
@@ -68,7 +72,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         true
       );
 
-      ({ accountContractState } = protocolContractState);
+      ({ accountContractState } = protocolContractStateBefore);
+
+      const getFunctionHashsClosure = getStateModifyingFunctionsHashes(
+        ["SellerHandlerFacet", "OrchestrationHandlerFacet1", "OrchestrationHandlerFacet2"],
+        undefined,
+        ["createSeller", "updateSeller"]
+      );
+
+      removedFunctionHashes = await getFunctionHashsClosure();
 
       // upgrade clients
       await upgradeClients();
@@ -87,7 +99,31 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
       }
 
+      addedFunctionHashes = await getFunctionHashsClosure();
+
       snapshot = await getSnapshot();
+
+      const includeTests = {
+        accountContractState: true,
+        offerContractState: true,
+        exchangeContractState: true,
+        bundleContractState: true,
+        configContractState: true,
+        disputeContractState: true,
+        fundsContractState: true,
+        groupContractState: true,
+        twinContractState: true,
+        protocolStatusPrivateContractState: true,
+        protocolLookupsPrivateContractState: true,
+      };
+
+      // Get protocol state after the upgrade
+      protocolContractStateAfter = await getProtocolContractState(
+        protocolDiamondAddress,
+        contractsAfter,
+        mockContracts,
+        preUpgradeEntities
+      );
 
       // This context is placed in an uncommon place due to order of test execution.
       // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
@@ -101,10 +137,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           contractsBefore,
           contractsAfter,
           mockContracts,
-          protocolContractState,
+          protocolContractStateBefore,
+          protocolContractStateAfter,
           preUpgradeEntities,
           snapshot,
-          version
+          version,
+          includeTests
         )
       );
     } catch (err) {
@@ -195,21 +233,47 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               rando.address
             );
         });
+      });
 
-        it("Old create seller function selector should be removed from metaTx allowed functions", async function () {
-          const [isAllowed] = await contractsAfter.metaTransactionsHandler.functions["isFunctionAllowlisted(bytes32)"](
-            "0xaaea2fdc2fe9e42a5c77e98666352fc2dbf7b32b9cbf91944089d3602b1a941d"
-          );
-
-          expect(isAllowed).to.be.false;
+      context("MetaTransactionHandlerfacet", async function () {
+        it("Function hashes from removedFunctionsHashes list should not be allowlisted", async function () {
+          for (const hash of removedFunctionHashes) {
+            const [isAllowed] = await contractsAfter.metaTransactionsHandler.functions[
+              "isFunctionAllowlisted(bytes32)"
+            ](hash);
+            expect(isAllowed).to.be.false;
+          }
         });
 
-        it("New create seller function selector should be added to metaTx allowed functions", async function () {
-          const [isAllowed] = await contractsAfter.metaTransactionsHandler.functions["isFunctionAllowlisted(bytes32)"](
-            "0x59b3774271ad2ce7cc4a964dd442fdde6a809e8dfd3eb4ac5f6e579fa898cf69"
-          );
+        it("Function hashes from from addedFunctionsHashes list should be allowlisted", async function () {
+          for (const hash of addedFunctionHashes) {
+            const [isAllowed] = await contractsAfter.metaTransactionsHandler.functions[
+              "isFunctionAllowlisted(bytes32)"
+            ](hash);
+            expect(isAllowed).to.be.true;
+          }
+        });
 
-          expect(isAllowed).to.be.true;
+        it("State of metaTxPrivateContractState is not affected besides isAllowlistedState mapping", async function () {
+          const { metaTxPrivateContractState: metaTxPrivateContractStateBefore } = protocolContractStateBefore;
+          const { metaTxPrivateContractState: metaTxPrivateContractStateAfter } = protocolContractStateAfter;
+          const { isAllowlistedState: isAllowlistedStateBefore } = metaTxPrivateContractStateBefore;
+          removedFunctionHashes.forEach((hash) => {
+            delete isAllowlistedStateBefore[hash];
+          });
+
+          const { isAllowlistedState: isAllowlistedStateAfter } = metaTxPrivateContractStateAfter;
+          addedFunctionHashes.forEach((hash) => {
+            delete isAllowlistedStateAfter[hash];
+          });
+
+          delete metaTxPrivateContractStateBefore.isAllowlistedState;
+          delete metaTxPrivateContractStateAfter.isAllowlistedState;
+
+          expect(isAllowlistedStateAfter).to.deep.equal(isAllowlistedStateBefore);
+          expect(protocolContractStateAfter.metaTxPrivateContractState).to.deep.equal(
+            protocolContractStateBefore.metaTxPrivateContractState
+          );
         });
       });
     });

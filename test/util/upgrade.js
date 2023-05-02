@@ -1073,7 +1073,8 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
       functionPointer: await getStorageAt(protocolDiamondAddress, ethers.BigNumber.from(storageSlot).add(1)),
     });
   }
-  const isAllowlistedState = [];
+  const isAllowlistedState = {};
+
   const facets = [
     "AccountHandlerFacet",
     "SellerHandlerFacet",
@@ -1097,7 +1098,7 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
 
   for (const selector of Object.values(selectors)) {
     const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber.add("6"), selector, paddingType.START);
-    isAllowlistedState.push({ selector, isAllowlisted: await getStorageAt(protocolDiamondAddress, storageSlot) });
+    isAllowlistedState[selector] = await getStorageAt(protocolDiamondAddress, storageSlot);
   }
 
   return { inTransactionInfo, domainSeparator, cachedChainId, inputTypesState, hashInfoState, isAllowlistedState };
@@ -1152,15 +1153,6 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
   }
 
   return { pauseScenario, reentrancyStatus, initializedInterfacesState, initializedVersionsState };
-}
-
-async function getCurrentVersion(protocolDiamondAddress) {
-  // starting slot
-  const protocolStatusStorageSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.initializers"));
-  const protocolStatusStorageSlotNumber = ethers.BigNumber.from(protocolStatusStorageSlot);
-
-  // current version
-  return getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber.add("4"));
 }
 
 async function getProtocolLookupsPrivateContractState(
@@ -1865,4 +1857,3 @@ exports.compareStorageLayouts = compareStorageLayouts;
 exports.populateVoucherContract = populateVoucherContract;
 exports.getVoucherContractState = getVoucherContractState;
 exports.revertState = revertState;
-exports.getCurrentVersion = getCurrentVersion;

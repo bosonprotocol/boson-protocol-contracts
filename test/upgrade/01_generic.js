@@ -6,7 +6,7 @@ const { mockOffer, mockVoucher, mockExchange } = require("../util/mock");
 const { getEvent, calculateVoucherExpiry, getSnapshot, revertToSnapshot } = require("../util/utils.js");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
-const { populateProtocolContract, getProtocolContractState, getCurrentVersion } = require("../util/upgrade");
+const { populateProtocolContract, getProtocolContractState } = require("../util/upgrade");
 
 // Returns function with test that can be reused in every upgrade
 function getGenericContext(
@@ -16,9 +16,24 @@ function getGenericContext(
   contractsAfter,
   mockContracts,
   protocolContractState,
+  protocolContractStateAfterUpgrade,
   preUpgradeEntities,
   snapshot,
-  newVersion
+  newVersion,
+  includeTests = {
+    accountContractState: true,
+    offerContractState: true,
+    exchangeContractState: true,
+    bundleContractState: true,
+    configContractState: true,
+    disputeContractState: true,
+    fundsContractState: true,
+    groupContractState: true,
+    twinContractState: true,
+    metaTxPrivateContractState: true,
+    protocolStatusPrivateContractState: true,
+    protocolLookupsPrivateContractState: true,
+  }
 ) {
   let postUpgradeEntities;
   let { exchangeHandler, offerHandler, fundsHandler, disputeHandler } = contractsBefore;
@@ -52,15 +67,13 @@ function getGenericContext(
 
     // Protocol state
     context("📋 Right After upgrade", async function () {
-      it.skip("State is not affected directly after the update", async function () {
-        // Get protocol state after the upgrade
-        let protocolContractStateAfterUpgrade = await getProtocolContractState(
-          protocolDiamondAddress,
-          contractsAfter,
-          mockContracts,
-          preUpgradeEntities
-        );
+      for (const test in includeTests) {
+        it(`State of ${test} is not affected`, async function () {
+          assert.deepEqual(protocolContractState[test], protocolContractStateAfterUpgrade[test]);
+        });
+      }
 
+      it.skip("State is not affected directly after the update", async function () {
         if (newVersion == "2.2.0") {
           // Meta transactions private state was changed on v2.2.0 and should be tested separately
           // We need to remove the old state from the protocol state
@@ -170,6 +183,9 @@ function getGenericContext(
           delete protocolContractStateAfterUpgradeAndActions.accountContractState.sellerByAddressState;
           delete protocolContractState.accountContractState.sellerByAuthTokenState;
           delete protocolContractStateAfterUpgradeAndActions.accountContractState.sellerByAuthTokenState;
+        }
+
+        if (newVersion == "v2.2.1-rc.1") {
         }
 
         assert.deepEqual(
@@ -349,6 +365,7 @@ function getGenericContext(
       });
     });
   };
+
   return genericContextFunction;
 }
 

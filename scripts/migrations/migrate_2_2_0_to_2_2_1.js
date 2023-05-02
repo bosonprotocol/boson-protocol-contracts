@@ -2,6 +2,8 @@ const shell = require("shelljs");
 const { readContracts } = require("../util/utils.js");
 const hre = require("hardhat");
 const network = hre.network.name;
+
+const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const ethers = hre.ethers;
 const tag = "v2.2.1-rc.1";
 const { keccak256, toUtf8Bytes } = require("ethers/lib/utils");
@@ -32,12 +34,13 @@ async function migrate(env) {
     // Get addresses of currently deployed contracts
     const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
 
-    const selectorsToRemove = [
-      keccak256(
-        toUtf8Bytes("createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint256))")
-      ),
-      keccak256(toUtf8Bytes("updateSeller((uint256,address,address,address,address,bool),(uint256,uint8))")),
-    ];
+    const getFunctionHashsClosure = getStateModifyingFunctionsHashes(
+      ["SellerHandlerFacet", "OrchestrationHandlerFacet1", "OrchestrationHandlerFacet2"],
+      undefined,
+      ["createSeller", "updateSeller"]
+    );
+
+    const selectorsToRemove = await getFunctionHashsClosure();
 
     shell.exec(`rm -rf contracts/*`);
 
@@ -50,14 +53,7 @@ async function migrate(env) {
       facetConfig: JSON.stringify(config),
     });
 
-    const selectorsToAdd = [
-      keccak256(
-        toUtf8Bytes(
-          "createSeller((uint256,address,address,address,address,bool,string),(uint256,uint8),(string,uint256))"
-        )
-      ),
-      keccak256(toUtf8Bytes("updateSeller((uint256,address,address,address,address,bool,string),(uint256,uint8))")),
-    ];
+    const selectorsToAdd = await getFunctionHashsClosure();
 
     const metaTransactionHandlerFacet = await ethers.getContractAt("MetaTransactionsHandlerFacet", protocolAddress);
 

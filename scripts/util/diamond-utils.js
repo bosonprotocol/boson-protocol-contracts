@@ -152,25 +152,42 @@ function getFacetRemoveCut(facet, omitFunctions = []) {
   return [facet.address, FacetCutAction.Remove, selectors];
 }
 
-async function getStateModifyingFunctions(facetNames) {
+async function getStateModifyingFunctions(facetNames, omitFunctions = [], onlyFunctions = []) {
   let stateModifyingFunctions = [];
   for (const facetName of facetNames) {
     let FacetContractFactory = await ethers.getContractFactory(facetName);
     const functions = FacetContractFactory.interface.functions;
     const functionNames = Object.keys(functions);
-    const facetStateModifyingFunctions = functionNames.filter(
-      (fn) => fn != "initialize()" && functions[fn].stateMutability != "view"
-    );
-    stateModifyingFunctions.push(...facetStateModifyingFunctions);
+    const facetStateModifyingFunctions = functionNames.filter((fn) => {
+      if (functions[fn].stateMutability !== "view" && !omitFunctions.includes(fn)) {
+        if (onlyFunctions.length === 0) {
+          return true;
+        }
+        for (const func of onlyFunctions) {
+          if (fn.includes(func)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    });
+
+    stateModifyingFunctions = stateModifyingFunctions.concat(facetStateModifyingFunctions);
   }
+
   return stateModifyingFunctions;
 }
 
-async function getStateModifyingFunctionsHashes(facetNames, omitFunctions = []) {
-  //  Allowlist contract methods
-  const stateModifyingFunctions = await getStateModifyingFunctions(facetNames);
-  const smf = stateModifyingFunctions.filter((fn) => !omitFunctions.includes(fn));
-  return smf.map((smf) => keccak256(toUtf8Bytes(smf)));
+function getStateModifyingFunctionsHashes(facetNames, omitFunctions = [], onlyFunctions = []) {
+  return async function getFunctionsHashes() {
+    //  Allowlist contract methods
+    const stateModifyingFunctions = await getStateModifyingFunctions(
+      facetNames,
+      [...omitFunctions, "initialize()"],
+      onlyFunctions
+    );
+    return stateModifyingFunctions.map((smf) => keccak256(toUtf8Bytes(smf)));
+  };
 }
 
 // Get ProtocolInitializationHandlerFacet initialize calldata to be called on diamondCut
