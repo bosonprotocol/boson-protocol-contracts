@@ -208,9 +208,6 @@ async function getFacets() {
     },
   };
 
-  // Versions that have the same deploy config
-  facets.upgrade["latest"] = facets.upgrade["v2.2.1-rc.1"];
-
   return facets;
 }
 

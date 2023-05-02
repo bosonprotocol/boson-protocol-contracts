@@ -57,7 +57,7 @@ function getGenericContext(
     // Version was introduced to protocol status on v2.2.0
     if (newVersion != "v2.1.0") {
       // To this test pass package.json version must be set
-      it.skip(`Protocol status version is updated to ${newVersion}`, async function () {
+      it(`Protocol status version is updated to ${newVersion}`, async function () {
         const version = await contractsAfter.protocolInitializationHandler.getVersion();
 
         // Slice because of unicode escape notation
@@ -72,32 +72,13 @@ function getGenericContext(
           assert.deepEqual(protocolContractState[test], protocolContractStateAfterUpgrade[test]);
         });
       }
-
-      it.skip("State is not affected directly after the update", async function () {
-        if (newVersion == "2.2.0") {
-          // Meta transactions private state was changed on v2.2.0 and should be tested separately
-          // We need to remove the old state from the protocol state
-          delete protocolContractStateAfterUpgrade.metaTxPrivateContractState;
-          delete protocolContractState.metaTxPrivateContractState;
-
-          // Operator has changed to assistant so we need to test separately
-          delete protocolContractState.accountContractState.DRsState;
-          delete protocolContractStateAfterUpgrade.accountContractState.DRsState;
-          delete protocolContractState.accountContractState.sellerState;
-          delete protocolContractStateAfterUpgrade.accountContractState.sellerState;
-          delete protocolContractState.accountContractState.sellerByAddressState;
-          delete protocolContractStateAfterUpgrade.accountContractState.sellerByAddressState;
-          delete protocolContractState.accountContractState.sellerByAuthTokenState;
-          delete protocolContractStateAfterUpgrade.accountContractState.sellerByAuthTokenState;
-        }
-
-        assert.deepEqual(protocolContractState, protocolContractStateAfterUpgrade);
-      });
     });
 
     // Create new protocol entities. Existing data should not be affected
     context("📋 New data after the upgrade do not corrupt the data from before the upgrade", async function () {
-      it.skip("State is not affected", async function () {
+      let protocolContractStateAfterUpgradeAndActions;
+
+      before(async function () {
         postUpgradeEntities = await populateProtocolContract(
           deployer,
           protocolDiamondAddress,
@@ -107,7 +88,7 @@ function getGenericContext(
 
         // Get protocol state after the upgrade
         // First get the data that should be in location of old data
-        const protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(
+        protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(
           protocolDiamondAddress,
           contractsAfter,
           mockContracts,
@@ -167,40 +148,20 @@ function getGenericContext(
         delete protocolContractState.offerContractState.nextOfferId;
         delete protocolContractState.twinContractState.nextTwinId;
         delete protocolContractState.bundleContractState.nextBundleId;
-
-        if (newVersion == "v2.2.0") {
-          // Meta transactions private state was changed on v2.2.0 and should be tested separately
-          // We need to remove the old state from the protocol state
-          delete protocolContractStateAfterUpgradeAndActions.metaTxPrivateContractState;
-          delete protocolContractState.metaTxPrivateContractState;
-
-          // Operator has changed to assistant so we need to test separately
-          delete protocolContractState.accountContractState.DRsState;
-          delete protocolContractStateAfterUpgradeAndActions.accountContractState.DRsState;
-          delete protocolContractState.accountContractState.sellerState;
-          delete protocolContractStateAfterUpgradeAndActions.accountContractState.sellerState;
-          delete protocolContractState.accountContractState.sellerByAddressState;
-          delete protocolContractStateAfterUpgradeAndActions.accountContractState.sellerByAddressState;
-          delete protocolContractState.accountContractState.sellerByAuthTokenState;
-          delete protocolContractStateAfterUpgradeAndActions.accountContractState.sellerByAuthTokenState;
-        }
-
-        if (newVersion == "v2.2.1-rc.1") {
-        }
-
-        assert.deepEqual(
-          protocolContractState,
-          protocolContractStateAfterUpgradeAndActions,
-          "state mismatch after upgrade"
-        );
       });
+
+      for (const test of includeTests) {
+        it(`State of ${test} is not affected`, async function () {
+          assert.deepEqual(protocolContractState[test], protocolContractStateAfterUpgradeAndActions[test]);
+        });
+      }
     });
 
     // Test that offers and exchanges from before the upgrade can normally be used
     // Check that correct events are emitted. State is not checked since units and integration test should make sure that event and state are consistent
     context("📋 Interactions after the upgrade still work", async function () {
       this.timeout(10000000);
-      it.skip("Commit to old offers", async function () {
+      it("Commit to old offers", async function () {
         const { offer, offerDates, offerDurations } = preUpgradeEntities.offers[1]; // pick some random offer
         const offerPrice = offer.price;
         const buyer = preUpgradeEntities.buyers[1];
@@ -257,7 +218,7 @@ function getGenericContext(
         assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
       });
 
-      it.skip("Redeem old voucher", async function () {
+      it("Redeem old voucher", async function () {
         const exchange = preUpgradeEntities.exchanges[0]; // some exchange that wasn't redeemed/revoked/canceled yet
         const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
         await expect(exchangeHandler.connect(buyerWallet).redeemVoucher(exchange.exchangeId))
@@ -265,7 +226,7 @@ function getGenericContext(
           .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
       });
 
-      it.skip("Cancel old voucher", async function () {
+      it("Cancel old voucher", async function () {
         const exchange = preUpgradeEntities.exchanges[0]; // some exchange that wasn't redeemed/revoked/canceled yet
         const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
         await expect(exchangeHandler.connect(buyerWallet).cancelVoucher(exchange.exchangeId))
@@ -273,7 +234,7 @@ function getGenericContext(
           .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
       });
 
-      it.skip("Revoke old voucher", async function () {
+      it("Revoke old voucher", async function () {
         const exchange = preUpgradeEntities.exchanges[0]; // some exchange that wasn't redeemed/revoked/canceled yet
         const offer = preUpgradeEntities.offers.find((o) => o.offer.id == exchange.offerId);
         const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.sellerId);
@@ -282,7 +243,7 @@ function getGenericContext(
           .withArgs(exchange.offerId, exchange.exchangeId, seller.wallet.address);
       });
 
-      it.skip("Escalate old dispute", async function () {
+      it("Escalate old dispute", async function () {
         const exchange = preUpgradeEntities.exchanges[5 - 1]; // exchange for which dispute was raised
 
         const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
@@ -292,7 +253,7 @@ function getGenericContext(
           .withArgs(exchange.exchangeId, offer.disputeResolverId, buyerWallet.address);
       });
 
-      it.skip("Old buyer commits to new offer", async function () {
+      it("Old buyer commits to new offer", async function () {
         const buyer = preUpgradeEntities.buyers[2];
         const offerId = await offerHandler.getNextOfferId();
         const exchangeId = await exchangeHandler.getNextExchangeId();
@@ -355,7 +316,7 @@ function getGenericContext(
         assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
       });
 
-      it.skip("Void old offer", async function () {
+      it("Void old offer", async function () {
         const seller = preUpgradeEntities.sellers[0];
         const offerId = seller.offerIds[0];
 

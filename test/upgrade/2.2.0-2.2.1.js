@@ -99,6 +99,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
       }
 
+      ({ accountHandler } = contractsAfter);
+
       addedFunctionHashes = await getFunctionHashsClosure();
 
       snapshot = await getSnapshot();
@@ -128,7 +130,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // This context is placed in an uncommon place due to order of test execution.
       // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
       // and those values are undefined if this is placed outside "before".
-      // Normally, this would be solved with mocha's --delay option, but it.skip does not behave as expected when running with hardhat.
+      // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
       context(
         "Generic tests",
         getGenericContext(
@@ -169,7 +171,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   context("📋 Breaking changes, new methods and bug fixes", async function () {
     context("Breaking changes", async function () {
       context("DisputeResolverHandlerFacet", async function () {
-        it.skip("updateDisputeResolver reverts if no update field has been updated or requested to be updated", async function () {
+        it("updateDisputeResolver reverts if no update field has been updated or requested to be updated", async function () {
           const { DRs } = preUpgradeEntities;
           const { wallet, id, disputeResolver } = DRs[0];
 
@@ -186,7 +188,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       });
 
       context("SellerHandlerFacet", async function () {
-        it.skip("updateSeller reverts if no update field has been updated or requested to be updated", async function () {
+        it("updateSeller reverts if no update field has been updated or requested to be updated", async function () {
           const { sellers } = preUpgradeEntities;
           const { wallet, id, seller, authToken } = sellers[0];
 
@@ -201,7 +203,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           expect(sellerAfter).to.deep.equal(seller);
         });
 
-        it.skip("Old seller can update and add metadataUri field", async function () {
+        it("Old seller can update and add metadataUri field", async function () {
           const { sellers } = preUpgradeEntities;
           const { wallet, id, seller, authToken } = sellers[0];
 
@@ -216,7 +218,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           expect(sellerAfter.metadataUri).to.equal(seller.metadataUri);
         });
 
-        it.skip("New seller has metadataUri field", async function () {
+        it("New seller has metadataUri field", async function () {
           const { nextAccountId } = accountContractState;
           const seller = mockSeller(rando.address, rando.address, rando.address, rando.address, true, "metadata");
           const authToken = mockAuthToken();
@@ -255,8 +257,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
 
         it("State of metaTxPrivateContractState is not affected besides isAllowlistedState mapping", async function () {
-          const { metaTxPrivateContractState: metaTxPrivateContractStateBefore } = protocolContractStateBefore;
-          const { metaTxPrivateContractState: metaTxPrivateContractStateAfter } = protocolContractStateAfter;
+          // make a shallow copy to not modify original protocolContractState as it's used on getGenericContext
+          const metaTxPrivateContractStateBefore = { ...protocolContractStateBefore.metaTxPrivateContractState };
+          const metaTxPrivateContractStateAfter = { ...protocolContractStateAfter.metaTxPrivateContractState };
+
           const { isAllowlistedState: isAllowlistedStateBefore } = metaTxPrivateContractStateBefore;
           removedFunctionHashes.forEach((hash) => {
             delete isAllowlistedStateBefore[hash];
