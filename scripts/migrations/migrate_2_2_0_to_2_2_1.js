@@ -6,7 +6,6 @@ const network = hre.network.name;
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const ethers = hre.ethers;
 const tag = "v2.2.1-rc.1";
-const { keccak256, toUtf8Bytes } = require("ethers/lib/utils");
 
 const config = {
   addOrUpgrade: [

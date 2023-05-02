@@ -19,7 +19,6 @@ function getGenericContext(
   protocolContractStateAfterUpgrade,
   preUpgradeEntities,
   snapshot,
-  newVersion,
   includeTests = {
     accountContractState: true,
     offerContractState: true,
@@ -53,17 +52,6 @@ function getGenericContext(
       shell.exec(`git checkout HEAD contracts scripts`);
       shell.exec(`git reset HEAD contracts scripts`);
     });
-
-    // Version was introduced to protocol status on v2.2.0
-    if (newVersion != "v2.1.0") {
-      // To this test pass package.json version must be set
-      it(`Protocol status version is updated to ${newVersion}`, async function () {
-        const version = await contractsAfter.protocolInitializationHandler.getVersion();
-
-        // Slice because of unicode escape notation
-        expect(version.slice(0, 5)).to.equal(newVersion);
-      });
-    }
 
     // Protocol state
     context("📋 Right After upgrade", async function () {

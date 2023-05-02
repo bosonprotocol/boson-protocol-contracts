@@ -26,7 +26,6 @@ const version = "2.2.1";
  *  Upgrade test case - After upgrade from 2.2.0 to 2.2.1 everything is still operational
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
-  this.timeout(10000000);
   // Common vars
   let deployer, rando;
   let accountHandler;
@@ -143,7 +142,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           protocolContractStateAfter,
           preUpgradeEntities,
           snapshot,
-          version,
           includeTests
         )
       );
@@ -164,6 +162,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   after(async function () {
     revertState();
+  });
+
+  // To this test pass package.json version must be set
+  it(`Protocol status version is updated to ${version}`, async function () {
+    const version = await contractsAfter.protocolInitializationHandler.getVersion();
+
+    // Slice because of unicode escape notation
+    expect(version.slice(0, 5)).to.equal(version);
   });
 
   // Test actions that worked in previous version, but should not work anymore, or work differently
