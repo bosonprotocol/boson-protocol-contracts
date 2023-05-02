@@ -32,9 +32,12 @@ async function migrate(env) {
     // Get addresses of currently deployed contracts
     const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
 
-    const selectorToRemove = keccak256(
-      toUtf8Bytes("createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint256))")
-    );
+    const selectorsToRemove = [
+      keccak256(
+        toUtf8Bytes("createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint256))")
+      ),
+      keccak256(toUtf8Bytes("updateSeller((uint256,address,address,address,address,bool),(uint256,uint8))")),
+    ];
 
     shell.exec(`rm -rf contracts/*`);
 
@@ -47,18 +50,21 @@ async function migrate(env) {
       facetConfig: JSON.stringify(config),
     });
 
-    const selectorToAdd = keccak256(
-      toUtf8Bytes(
-        "createSeller((uint256,address,address,address,address,bool,string),(uint256,uint8),(string,uint256))"
-      )
-    );
+    const selectorsToAdd = [
+      keccak256(
+        toUtf8Bytes(
+          "createSeller((uint256,address,address,address,address,bool,string),(uint256,uint8),(string,uint256))"
+        )
+      ),
+      keccak256(toUtf8Bytes("updateSeller((uint256,address,address,address,address,bool,string),(uint256,uint8))")),
+    ];
 
     const metaTransactionHandlerFacet = await ethers.getContractAt("MetaTransactionsHandlerFacet", protocolAddress);
 
-    console.log("Removing selectors", selectorToRemove);
-    await metaTransactionHandlerFacet.setAllowlistedFunctions([ethers.utils.hexZeroPad(selectorToRemove, 32)], false);
-    console.log("Adding selectors", selectorToAdd);
-    await metaTransactionHandlerFacet.setAllowlistedFunctions([ethers.utils.hexZeroPad(selectorToAdd, 32)], true);
+    console.log("Removing selectors", selectorsToRemove.join(","));
+    await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToRemove, false);
+    console.log("Adding selectors", selectorsToAdd.join(","));
+    await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToAdd, true);
 
     console.log(`Migration ${tag} completed`);
   } catch (e) {
