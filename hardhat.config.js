@@ -98,6 +98,15 @@ task("split-unit-tests-into-chunks", "Splits unit tests into chunks")
     await splitUnitTestsIntoChunks(chunks);
   });
 
+task("migrate", "Migrates the protocol to a new version")
+  .addPositionalParam("newVersion", "The version to migrate to")
+  .addParam("env", "The deployment environment")
+  .setAction(async ({ newVersion, env }) => {
+    const { migrate } = await lazyImport(`./scripts/migrations/migrate_${newVersion}.js`);
+
+    await migrate(env);
+  });
+
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {

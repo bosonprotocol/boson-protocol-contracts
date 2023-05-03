@@ -9,7 +9,7 @@ const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Seller = require("../../scripts/domain/Seller");
 const { calculateContractAddress } = require("../util/utils.js");
 const { mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
-const { migrate } = require("../../scripts/migrations/migrate_2_2_0_to_2_2_1.js");
+const { migrate } = require("../../scripts/migrations/migrate_2_2_1.js");
 
 const {
   deploySuite,

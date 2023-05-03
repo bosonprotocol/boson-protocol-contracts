@@ -458,7 +458,6 @@ describe("IBosonMetaTransactionsHandler", function () {
         ]);
 
         for (const func of stateModifyingFunctions) {
-          console.log(func);
           expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.true;
         }
       });

@@ -26,6 +26,7 @@ const config = {
 async function migrate(env) {
   console.log(`Migration ${tag} started`);
   try {
+    shell.exec(`npm install`);
     const { chainId } = await ethers.provider.getNetwork();
     const contractsFile = readContracts(chainId, network, env);
     let contracts = contractsFile.contracts;
@@ -34,7 +35,7 @@ async function migrate(env) {
     const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
 
     const getFunctionHashsClosure = getStateModifyingFunctionsHashes(
-      ["SellerHandlerFacet", "OrchestrationHandlerFacet1", "OrchestrationHandlerFacet2"],
+      ["SellerHandlerFacet", "OrchestrationHandlerFacet1"],
       undefined,
       ["createSeller", "updateSeller"]
     );
@@ -44,9 +45,10 @@ async function migrate(env) {
     shell.exec(`rm -rf contracts/*`);
 
     console.log(`Checking out contracts on version ${tag}`);
-    shell.exec(`git checkout HEAD scripts`);
+    shell.exec(`git checkout ${tag} contracts`);
 
-    await hre.run("compile");
+    console.log("Executing upgrade facets script");
+    //    await hre.run("compile");
     await hre.run("upgrade-facets", {
       env,
       facetConfig: JSON.stringify(config),
@@ -61,6 +63,7 @@ async function migrate(env) {
     console.log("Adding selectors", selectorsToAdd.join(","));
     await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToAdd, true);
 
+    shell.exec(`git checkout HEAD`);
     console.log(`Migration ${tag} completed`);
   } catch (e) {
     console.error(e);
