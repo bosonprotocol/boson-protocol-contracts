@@ -1,10 +1,9 @@
 const shell = require("shelljs");
 const { readContracts } = require("../util/utils.js");
 const hre = require("hardhat");
-const network = hre.network.name;
-
-const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const ethers = hre.ethers;
+const network = hre.network.name;
+const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const tag = "v2.2.1-rc.1";
 
 const config = {
@@ -55,6 +54,10 @@ async function migrate(env) {
     console.log("Compiling contracts");
     await hre.run("clean");
     await hre.run("compile");
+
+    // @TODO save logs
+    console.log("Granting roles");
+    await hre.run("manage-roles");
 
     console.log("Executing upgrade facets script");
     await hre.run("upgrade-facets", {
