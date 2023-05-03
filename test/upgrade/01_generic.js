@@ -148,7 +148,6 @@ function getGenericContext(
     // Test that offers and exchanges from before the upgrade can normally be used
     // Check that correct events are emitted. State is not checked since units and integration test should make sure that event and state are consistent
     context("📋 Interactions after the upgrade still work", async function () {
-      this.timeout(10000000);
       it("Commit to old offers", async function () {
         const { offer, offerDates, offerDurations } = preUpgradeEntities.offers[1]; // pick some random offer
         const offerPrice = offer.price;

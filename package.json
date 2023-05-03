@@ -66,8 +66,7 @@
     "manage-roles:test": "npx hardhat manage-roles --network test --env test >> logs/test.manage.roles.txt",
     "natspec-interface-id": "npx hardhat compile && node scripts/util/natspec-interfaceid.js",
     "natspec-interface-id:fix": "npx hardhat compile && node scripts/util/natspec-interfaceid.js --fix",
-    "estimate-limits": "npx hardhat clean && npx hardhat compile && npx hardhat estimate-limits",
-    "migrate:2.2.1": "node scripts/migrations/2.2.1.js"
+    "estimate-limits": "npx hardhat clean && npx hardhat compile && npx hardhat estimate-limits"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.8.1",
