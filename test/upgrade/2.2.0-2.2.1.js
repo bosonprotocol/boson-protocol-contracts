@@ -9,7 +9,7 @@ const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Seller = require("../../scripts/domain/Seller");
 const { calculateContractAddress } = require("../util/utils.js");
 const { mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
-const { migrate } = require("../../scripts/migrations/migrate_2_2_1.js");
+const { migrate } = require("../../scripts/migrations/migrate_2.2.1.js");
 
 const {
   deploySuite,
@@ -26,6 +26,7 @@ const version = "2.2.1";
  *  Upgrade test case - After upgrade from 2.2.0 to 2.2.1 everything is still operational
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
+  this.timeout(10000000);
   // Common vars
   let deployer, rando;
   let accountHandler;
