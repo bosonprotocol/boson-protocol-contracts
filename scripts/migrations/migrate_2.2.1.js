@@ -15,10 +15,7 @@ const config = {
   ],
   remove: [],
   skipSelectors: {},
-  facetsToInit: {
-    AccountHandlerFacet: { init: [] },
-    OrchestrationHandlerFacet1: { init: [] },
-  },
+  facetsToInit: {},
   initializationData: "0x",
 };
 
