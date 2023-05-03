@@ -167,10 +167,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   // To this test pass package.json version must be set
   it(`Protocol status version is updated to ${version}`, async function () {
-    const version = await contractsAfter.protocolInitializationHandler.getVersion();
-
     // Slice because of unicode escape notation
-    expect(version.slice(0, 5)).to.equal(version);
+    expect((await contractsAfter.protocolInitializationHandler.getVersion()).replace(/\0/g, "")).to.equal(version);
   });
 
   // Test actions that worked in previous version, but should not work anymore, or work differently
