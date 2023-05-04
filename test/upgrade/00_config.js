@@ -15,7 +15,7 @@ This file contains deployment and upgrade configs for each tag. Format of config
 */
 
 // Scripts must run on tag v2.1.0-scripts
-async function getV2_0_0DeployConfig() {
+function getV2_0_0DeployConfig() {
   return {
     noArgFacets: [
       "AccountHandlerFacet",
@@ -215,12 +215,13 @@ const tagsByVersion = {
   "2.1.0": {
     oldVersion: "v2.0.0",
     newVersion: "v2.1.0",
-    scripts: "v2.1.0-scripts",
+    deployScript: "v2.1.0-scripts",
+    upgradeScript: "v2.1.0-scripts",
   },
   "2.2.0": {
     oldVersion: "v2.1.0",
     newVersion: "v2.2.0",
-    scripts: "v2.1.0-scripts",
+    deployScript: "v2.1.0-scripts",
   },
   "2.2.1": {
     oldVersion: "v2.2.0",

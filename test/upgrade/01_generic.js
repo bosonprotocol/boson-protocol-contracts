@@ -19,20 +19,20 @@ function getGenericContext(
   protocolContractStateAfterUpgrade,
   preUpgradeEntities,
   snapshot,
-  includeTests = {
-    accountContractState: true,
-    offerContractState: true,
-    exchangeContractState: true,
-    bundleContractState: true,
-    configContractState: true,
-    disputeContractState: true,
-    fundsContractState: true,
-    groupContractState: true,
-    twinContractState: true,
-    metaTxPrivateContractState: true,
-    protocolStatusPrivateContractState: true,
-    protocolLookupsPrivateContractState: true,
-  }
+  includeTests = [
+    "accountContractState",
+    "offerContractState",
+    "exchangeContractState",
+    "bundleContractState",
+    "configContractState",
+    "disputeContractState",
+    "fundsContractState",
+    "groupContractState",
+    "twinContractState",
+    "metaTxPrivateContractState",
+    "protocolStatusPrivateContractState",
+    "protocolLookupsPrivateContractState",
+  ]
 ) {
   let postUpgradeEntities;
   let { exchangeHandler, offerHandler, fundsHandler, disputeHandler } = contractsBefore;
