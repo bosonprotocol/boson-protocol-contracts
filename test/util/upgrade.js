@@ -96,7 +96,11 @@ async function deploySuite(deployer, newVersion) {
   }
 
   // run deploy suite, which automatically compiles the contracts
-  await hre.run("deploy-suite", { env: "upgrade-test", facetConfig: JSON.stringify(deployConfig) });
+  await hre.run("deploy-suite", {
+    env: "upgrade-test",
+    facetConfig: JSON.stringify(deployConfig),
+    version: tag.replace(/^v/, ""),
+  });
 
   // Read contract info from file
   const chainId = (await hre.ethers.provider.getNetwork()).chainId;
@@ -248,7 +252,11 @@ async function upgradeClients() {
   };
 
   // Upgrade clients
-  await hre.run("upgrade-clients", { env: "upgrade-test", clientConfig: JSON.stringify(clientConfig) });
+  await hre.run("upgrade-clients", {
+    env: "upgrade-test",
+    clientConfig: JSON.stringify(clientConfig),
+    newVersion: tag.replace("v", ""),
+  });
 
   return forwarder;
 }

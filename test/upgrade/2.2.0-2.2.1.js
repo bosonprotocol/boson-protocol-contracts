@@ -11,13 +11,7 @@ const { calculateContractAddress } = require("../util/utils.js");
 const { mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
 const { migrate } = require("../../scripts/migrations/migrate_2.2.1.js");
 
-const {
-  deploySuite,
-  upgradeClients,
-  populateProtocolContract,
-  getProtocolContractState,
-  revertState,
-} = require("../util/upgrade");
+const { deploySuite, populateProtocolContract, getProtocolContractState, revertState } = require("../util/upgrade");
 const { getGenericContext } = require("./01_generic");
 
 const version = "2.2.1";
@@ -81,9 +75,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       );
 
       removedFunctionHashes = await getFunctionHashesClosure();
-
-      // upgrade clients
-      await upgradeClients();
 
       await migrate("upgrade-test");
 

@@ -68,7 +68,7 @@ async function migrate(env) {
     await hre.run("upgrade-facets", {
       env,
       facetConfig: JSON.stringify(config),
-      version,
+      newVersion: version,
     });
 
     const selectorsToAdd = await getFunctionHashesClosure();

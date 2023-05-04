@@ -53,21 +53,23 @@ task(
   });
 
 task("upgrade-facets", "Upgrade existing facets, add new facets or remove existing facets")
-  .addOptionalParam("env", "The deployment environment")
+  .addParam("newVersion", "The version of the protocol to upgrade to")
+  .addParam("env", "The deployment environment")
   .addOptionalParam("facetConfig", "JSON list of facets to upgrade")
-  .setAction(async ({ env, facetConfig }) => {
+  .setAction(async ({ env, facetConfig, newVersion }) => {
     const { upgradeFacets } = await lazyImport("./scripts/upgrade-facets.js");
 
-    await upgradeFacets(env, facetConfig);
+    await upgradeFacets(env, facetConfig, newVersion);
   });
 
 task("upgrade-clients", "Upgrade existing clients")
-  .addOptionalParam("env", "The deployment environment")
+  .addParam("newVersion", "The version of the protocol to upgrade to")
+  .addParam("env", "The deployment environment")
   .addOptionalParam("clientConfig", "JSON list of arguments by network to send to implementation constructor")
-  .setAction(async ({ env, clientConfig }) => {
+  .setAction(async ({ env, clientConfig, newVersion }) => {
     const { upgradeClients } = await lazyImport("./scripts/upgrade-clients.js");
 
-    await upgradeClients(env, clientConfig);
+    await upgradeClients(env, clientConfig, newVersion);
   });
 
 task("manage-roles", "Grant or revoke access control roles")
