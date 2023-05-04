@@ -102,18 +102,21 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
      * Reverts if:
      *  - caller is not the contract owner
      *
-     * @param _tokenId The token id.
+     * @param _tokenIds The token ids.
      */
-    function wrap(uint256 _tokenId) external onlyOwner {
-        // Transfer voucher to this contract
-        // Instead of msg.sender it could be voucherAddress, if vouchers were preminted to contract itself
-        IERC721(voucherAddress).transferFrom(msg.sender, address(this), _tokenId);
+    function wrap(uint256[] memory _tokenIds) external onlyOwner {
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            uint256 tokenId = _tokenIds[i];
+            // Transfer voucher to this contract
+            // Instead of msg.sender it could be voucherAddress, if vouchers were preminted to contract itself
+            IERC721(voucherAddress).transferFrom(msg.sender, address(this), tokenId);
 
-        // Mint to itself, so it can be used with Sudoswap
-        _mint(address(this), _tokenId);
+            // Mint to itself, so it can be used with Sudoswap
+            _mint(address(this), tokenId);
 
-        // Approves contract owner to operate on wrapped token
-        _approve(owner(), _tokenId);
+            // Approves contract owner to operate on wrapped token
+            _approve(owner(), tokenId);
+        }
     }
 
     /**
@@ -194,11 +197,7 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
      * @param _to The address of the recipient.
      * @param _tokenId The token id.
      */
-    function _beforeTokenTransfer(
-        address _from,
-        address _to,
-        uint256 _tokenId
-    ) internal virtual override(ERC721) {
+    function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId) internal virtual override(ERC721) {
         if (_from == poolAddress && _to != address(this)) {
             // Someone is making a swap and wrapped voucher is being transferred to buyer
             // @TODO: check this If recipient is address(this), it means the seller is withdrawing and price updating can be skipped

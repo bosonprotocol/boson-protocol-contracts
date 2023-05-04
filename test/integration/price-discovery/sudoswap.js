@@ -140,37 +140,53 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
     const spotPrice = offer.price;
     const nftIds = [];
 
-    const wrappedBosonVoucherFactory = await ethers.getContractFactory("SudoswapWrapper");
-    const wrappedBosonVoucher = await wrappedBosonVoucherFactory
-      .connect(assistant)
-      .deploy(bosonVoucher.address, lssvmPairFactory.address, exchangeHandler.address, weth.address);
+    for (let i = 1; i <= offer.quantityAvailable; i++) {
+      const tokenId = deriveTokenId(offer.id, i);
+      nftIds.push(tokenId);
+    }
 
-    let tx = await lssvmPairFactory
-      .connect(assistant)
-      .createPairETH(
-        wrappedBosonVoucher.address,
-        linearCurve.address,
-        constants.AddressZero,
-        poolType,
-        delta,
-        fee,
-        spotPrice,
-        nftIds
-      );
+    const initialPoolBalance = ethers.utils.parseUnits("10", "ether").toString();
+    await weth.connect(assistant).deposit({ value: initialPoolBalance });
+    await weth.connect(assistant).approve(lssvmPairFactory.address, ethers.constants.MaxUint256);
 
-    const receipt = await tx.wait();
-
-    const [poolAddress] = receipt.events[1].args;
+    const WrappedBosonVoucherFactory = await ethers.getContractFactory("SudoswapWrapper");
+    const wrappedBosonVoucher = await WrappedBosonVoucherFactory.connect(assistant).deploy(
+      bosonVoucher.address,
+      lssvmPairFactory.address,
+      exchangeHandler.address,
+      weth.address
+    );
 
     // need to deposit NFTs
     await bosonVoucher.connect(assistant).setApprovalForAll(wrappedBosonVoucher.address, true);
 
     const tokenId = deriveTokenId(offer.id, 1);
-    await wrappedBosonVoucher.connect(assistant).wrap(tokenId);
+    await wrappedBosonVoucher.connect(assistant).wrap(nftIds);
 
-    tx = await wrappedBosonVoucher.connect(assistant).depositNFTs(poolAddress, [tokenId]);
+    const createPairERC20Parameters = {
+      token: weth.address,
+      nft: wrappedBosonVoucher.address,
+      bondingCurve: linearCurve.address,
+      assetRecipient: wrappedBosonVoucher.address,
+      poolType,
+      delta,
+      fee,
+      spotPrice,
+      initialNFTIDs: nftIds,
+      initialTokenBalance: initialPoolBalance,
+    };
 
-    const pool = await ethers.getContractAt("LSSVMPairMissingEnumerableETH", poolAddress);
+    await wrappedBosonVoucher.connect(assistant).setApprovalForAll(lssvmPairFactory.address, true);
+
+    let tx = await lssvmPairFactory.connect(assistant).createPairERC20(createPairERC20Parameters);
+
+    const receipt = await tx.wait();
+
+    const [poolAddress] = receipt.events[1].args;
+
+    //  tx = await wrappedBosonVoucher.connect(assistant).depositNFTs(poolAddress, [tokenId]);
+
+    const pool = await ethers.getContractAt("LSSVMPairMissingEnumerable", poolAddress);
 
     const [, , , inputAmount] = await pool.getBuyNFTQuote(1);
 
