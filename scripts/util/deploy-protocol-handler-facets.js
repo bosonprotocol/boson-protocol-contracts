@@ -23,7 +23,7 @@ async function deployAndCutFacets(
   diamond,
   facetData,
   maxPriorityFeePerGas,
-  version,
+  version = "2.2.0",
   initializationFacet,
   interfacesToAdd = []
 ) {

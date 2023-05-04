@@ -68,7 +68,7 @@ async function getV2_2_0DeployConfig() {
 }
 
 async function getFacets() {
-  const v2_0_0 = await getV2_0_0DeployConfig();
+  const v2_0_0 = getV2_0_0DeployConfig();
   const v2_2_0 = await getV2_2_0DeployConfig();
   const facets = {
     deploy: {
@@ -190,21 +190,6 @@ async function getFacets() {
         },
         initializationData: "0x0000000000000000000000000000000000000000000000000000000000002710", // input for initV2_2_0, representing maxPremintedVoucher (0x2710=10000)
       },
-      "v2.2.1-rc.1": {
-        addOrUpgrade: [
-          "AccountHandlerFacet",
-          "SellerHandlerFacet",
-          "DisputeResolverHandlerFacet",
-          "OrchestrationHandlerFacet1",
-        ],
-        remove: [],
-        skipSelectors: {},
-        facetsToInit: {
-          AccountHandlerFacet: { init: [] },
-          OrchestrationHandlerFacet1: { init: [] },
-        },
-        initializationData: "0x",
-      },
     },
   };
 
@@ -231,3 +216,4 @@ const tagsByVersion = {
 
 exports.getFacets = getFacets;
 exports.tagsByVersion = tagsByVersion;
+exports.getV2_2_0DeployConfig = getV2_2_0DeployConfig;
