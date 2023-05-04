@@ -113,6 +113,7 @@ async function main(env, facetConfig) {
   }
 
   const { version } = packageFile;
+  console.log("deploying facets with version", version);
   let { deployedFacets } = await deployAndCutFacets(protocolDiamond.address, facetData, maxPriorityFeePerGas, version);
 
   for (const deployedFacet of deployedFacets) {
