@@ -7,6 +7,7 @@ const tipMultiplier = ethers.BigNumber.from(environments.tipMultiplier);
 const tipSuggestion = "1500000000"; // ethers.js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = ethers.BigNumber.from(tipSuggestion).mul(tipMultiplier);
 
+const packageFile = require("../package.json");
 const authTokenAddresses = require("./config/auth-token-addresses");
 const { getFacets } = require("./config/facet-deploy");
 
@@ -18,7 +19,6 @@ const { verifyOnTestEnv } = require("./util/report-verify-deployments");
 const { getInterfaceIds, interfaceImplementers } = require("./config/supported-interfaces.js");
 const { deploymentComplete, getFees, writeContracts } = require("./util/utils");
 const AuthTokenType = require("../scripts/domain/AuthTokenType");
-
 const clientConfig = require("./config/client-upgrade");
 
 /**
@@ -112,7 +112,8 @@ async function main(env, facetConfig) {
     facetData = await getFacets();
   }
 
-  let { deployedFacets } = await deployAndCutFacets(protocolDiamond.address, facetData, maxPriorityFeePerGas);
+  const { version } = packageFile;
+  let { deployedFacets } = await deployAndCutFacets(protocolDiamond.address, facetData, maxPriorityFeePerGas, version);
 
   for (const deployedFacet of deployedFacets) {
     deploymentComplete(
@@ -217,7 +218,7 @@ async function main(env, facetConfig) {
 
   console.log(`✅ Granted roles to appropriate contract and addresses.`);
 
-  const contractsPath = await writeContracts(contracts, env);
+  const contractsPath = await writeContracts(contracts, env, version);
   console.log(`✅ Contracts written to ${contractsPath}`);
 
   // Verify on test node if test env

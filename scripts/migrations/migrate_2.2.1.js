@@ -5,6 +5,7 @@ const ethers = hre.ethers;
 const network = hre.network.name;
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const tag = "v2.2.1-rc.1";
+const version = "2.2.1";
 
 const config = {
   addOrUpgrade: [
@@ -34,7 +35,7 @@ async function migrate(env) {
     const contractsFile = readContracts(chainId, network, env);
 
     if (contractsFile?.protocolVersion != "2.2.0") {
-      throw new Error("Current contracts version is not 2.2.0");
+      throw new Error("Current contract version must be 2.2.0");
     }
 
     let contracts = contractsFile?.contracts;
@@ -47,13 +48,13 @@ async function migrate(env) {
     shell.exec(`rm -rf contracts/*`);
     shell.exec(`git checkout v2.2.0 contracts`);
 
-    const getFunctionHashsClosure = getStateModifyingFunctionsHashes(
+    const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
       ["SellerHandlerFacet", "OrchestrationHandlerFacet1"],
       undefined,
       ["createSeller", "updateSeller"]
     );
 
-    const selectorsToRemove = await getFunctionHashsClosure();
+    const selectorsToRemove = await getFunctionHashesClosure();
 
     console.log(`Checking out contracts on version ${tag}`);
     shell.exec(`rm -rf contracts/*`);
@@ -67,9 +68,10 @@ async function migrate(env) {
     await hre.run("upgrade-facets", {
       env,
       facetConfig: JSON.stringify(config),
+      version,
     });
 
-    const selectorsToAdd = await getFunctionHashsClosure();
+    const selectorsToAdd = await getFunctionHashesClosure();
 
     const metaTransactionHandlerFacet = await ethers.getContractAt("MetaTransactionsHandlerFacet", protocolAddress);
 

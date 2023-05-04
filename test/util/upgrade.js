@@ -383,11 +383,7 @@ async function populateProtocolContract(
         }
         // set unique new voucherInitValues
         const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
-        try {
-          await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
-        } catch (e) {
-          console.log(e);
-        }
+        await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
 
         const voucherContractAddress = calculateContractAddress(accountHandler.address, voucherIndex++);
         sellers.push({
@@ -730,7 +726,11 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
     const id = account.id;
 
     DRsState.push(await getDisputeResolver(accountHandlerRando, id, { getBy: "id" }));
-    sellerState.push(await getSeller(accountHandlerRando, id, { getBy: "id" }));
+    try {
+      sellerState.push(await getSeller(accountHandlerRando, id, { getBy: "id" }));
+    } catch (e) {
+      console.log(e);
+    }
     agentsState.push(await getAgent(accountHandlerRando, id));
     buyersState.push(await getBuyer(accountHandlerRando, id));
 

@@ -74,13 +74,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       ({ accountContractState } = protocolContractStateBefore);
 
-      const getFunctionHashsClosure = getStateModifyingFunctionsHashes(
+      const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
         ["SellerHandlerFacet", "OrchestrationHandlerFacet1"],
         undefined,
         ["createSeller", "updateSeller"]
       );
 
-      removedFunctionHashes = await getFunctionHashsClosure();
+      removedFunctionHashes = await getFunctionHashesClosure();
 
       // upgrade clients
       await upgradeClients();
@@ -101,7 +101,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       ({ accountHandler } = contractsAfter);
 
-      addedFunctionHashes = await getFunctionHashsClosure();
+      addedFunctionHashes = await getFunctionHashesClosure();
 
       snapshot = await getSnapshot();
 
