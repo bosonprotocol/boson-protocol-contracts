@@ -76,7 +76,7 @@ async function deploySuite(deployer, newVersion) {
   facets = await getFacets();
 
   // checkout old version
-  const { oldVersion: tag, scripts: scriptsTag } = versionTags;
+  const { oldVersion: tag, deployScript: scriptsTag } = versionTags;
 
   console.log(`Fetching tags`);
   shell.exec(`git fetch --force --tags origin`);
@@ -178,7 +178,7 @@ async function upgradeSuite(protocolDiamondAddress, upgradedInterfaces, override
   if (!versionTags) {
     throw new Error("Version tags not cached");
   }
-  const { newVersion: tag, scripts: scriptsTag } = versionTags;
+  const { newVersion: tag, upgradeScript: scriptsTag } = versionTags;
 
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`rm -rf scripts/*`);

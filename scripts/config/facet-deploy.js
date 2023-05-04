@@ -30,7 +30,7 @@ async function getMetaTransactionsHandlerFacetInitArgs(facets) {
     "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)",
   ]);
 
-  return getFunctionHashsClosure();
+  return await getFunctionHashsClosure();
 }
 
 /**

@@ -90,7 +90,6 @@ async function main(env, facetConfig) {
 
   console.log(`\n💎 Granting UPGRADER role...`);
 
-  console.log("🔱 Deployer account: ", deployer ? deployer.address : "not found" && process.exit());
   // Temporarily grant UPGRADER role to deployer account
   transactionResponse = await accessController.grantRole(
     Role.UPGRADER,

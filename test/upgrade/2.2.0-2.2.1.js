@@ -75,7 +75,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       ({ accountContractState } = protocolContractStateBefore);
 
       const getFunctionHashsClosure = getStateModifyingFunctionsHashes(
-        ["SellerHandlerFacet", "OrchestrationHandlerFacet1", "OrchestrationHandlerFacet2"],
+        ["SellerHandlerFacet", "OrchestrationHandlerFacet1"],
         undefined,
         ["createSeller", "updateSeller"]
       );
@@ -93,7 +93,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         orchestrationHandler: "IBosonOrchestrationHandler",
       };
 
-      contractsAfter = contractsBefore;
+      contractsAfter = { ...contractsBefore };
 
       for (const [handlerName, interfaceName] of Object.entries(newHandlers)) {
         contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
@@ -105,19 +105,19 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       snapshot = await getSnapshot();
 
-      const includeTests = {
-        accountContractState: true,
-        offerContractState: true,
-        exchangeContractState: true,
-        bundleContractState: true,
-        configContractState: true,
-        disputeContractState: true,
-        fundsContractState: true,
-        groupContractState: true,
-        twinContractState: true,
-        protocolStatusPrivateContractState: true,
-        protocolLookupsPrivateContractState: true,
-      };
+      const includeTests = [
+        "accountContractState",
+        "offerContractState",
+        "exchangeContractState",
+        "bundleContractState",
+        "configContractState",
+        "disputeContractState",
+        "fundsContractState",
+        "groupContractState",
+        "twinContractState",
+        "protocolStatusPrivateContractState",
+        "protocolLookupsPrivateContractState",
+      ];
 
       // Get protocol state after the upgrade
       protocolContractStateAfter = await getProtocolContractState(
