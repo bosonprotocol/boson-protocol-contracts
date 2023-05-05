@@ -101,6 +101,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         addInterfaces(_interfacesToAdd);
 
         status.version = _version;
+
         emit ProtocolInitialized(string(abi.encodePacked(_version)));
     }
 
@@ -127,7 +128,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      */
     function initV2_2_1() internal view {
         // Current version must be 2.2.0
-        require(protocolStatus().version == "2.2.0", WRONG_CURRENT_VERSION);
+        require(protocolStatus().version == bytes32("2.2.0"), WRONG_CURRENT_VERSION);
     }
 
     /**

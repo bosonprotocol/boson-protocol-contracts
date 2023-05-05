@@ -8,9 +8,10 @@ const { deployAndCutFacets, deployProtocolFacets } = require("../../scripts/util
 const { getInterfaceIds, interfaceImplementers } = require("../../scripts/config/supported-interfaces");
 const { maxPriorityFeePerGas } = require("../util/constants");
 const { getFees } = require("../../scripts/util/utils");
-const { getFacetAddCut } = require("../../scripts/util/diamond-utils");
+const { getFacetAddCut, getFacetReplaceCut } = require("../../scripts/util/diamond-utils");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { getFacetsWithArgs } = require("../util/utils.js");
+const { getV2_2_0DeployConfig } = require("../upgrade/00_config.js");
 
 describe("ProtocolInitializationHandler", async function () {
   // Common vars
@@ -524,6 +525,94 @@ describe("ProtocolInitializationHandler", async function () {
         version = ethers.utils.formatBytes32String("2.2.0");
 
         // make diamond cut, expect revert
+        await expect(
+          diamondCutFacet.diamondCut(
+            [facetCut],
+            deployedProtocolInitializationHandlerFacet.address,
+            calldataProtocolInitialization,
+            await getFees(maxPriorityFeePerGas)
+          )
+        ).to.be.revertedWith(RevertReasons.WRONG_CURRENT_VERSION);
+      });
+    });
+  });
+  describe("initV2_2_1", async function () {
+    let deployedProtocolInitializationHandlerFacet;
+    let facetCut;
+    let calldataProtocolInitialization;
+
+    beforeEach(async function () {
+      version = "2.2.0";
+
+      const facetsToDeploy = await getV2_2_0DeployConfig();
+
+      // Make initial deployment (simulate v2.2.0)
+      await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas, version);
+
+      version = "2.2.1";
+
+      // Deploy v2.2.0 facets
+      [{ contract: deployedProtocolInitializationHandlerFacet }] = await deployProtocolFacets(
+        ["ProtocolInitializationHandlerFacet", "AccountHandlerFacet"],
+        {},
+        await getFees(maxPriorityFeePerGas)
+      );
+
+      // Prepare cut data
+      facetCut = getFacetReplaceCut(deployedProtocolInitializationHandlerFacet, ["initialize"]);
+
+      // Prepare calldata
+      calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+        "initialize",
+        [ethers.utils.formatBytes32String(version), [], [], true, [], [], []]
+      );
+    });
+
+    it("Should initialize version 2.2.1 and emit ProtocolInitialized", async function () {
+      // Make the cut, check the event
+      const tx = await diamondCutFacet.diamondCut(
+        [facetCut],
+        deployedProtocolInitializationHandlerFacet.address,
+        calldataProtocolInitialization,
+        await getFees(maxPriorityFeePerGas)
+      );
+      expect(tx).to.emit(deployedProtocolInitializationHandlerFacet, "ProtocolInitialized");
+    });
+
+    context("💔 Revert Reasons", async function () {
+      it("Current version is not 2.2.0", async () => {
+        // Deploy higher version
+        const wrongVersion = "2.3.0";
+
+        // Prepare calldata
+        const calldataProtocolInitializationWrong =
+          deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData("initialize", [
+            ethers.utils.formatBytes32String(wrongVersion),
+            [],
+            [],
+            true,
+            [],
+            [],
+            [],
+          ]);
+
+        await diamondCutFacet.diamondCut(
+          [facetCut],
+          deployedProtocolInitializationHandlerFacet.address,
+          calldataProtocolInitializationWrong,
+          await getFees(maxPriorityFeePerGas)
+        );
+
+        const [{ contract: accountHandler }] = await deployProtocolFacets(
+          ["AccountHandlerFacet"],
+          {},
+          await getFees(maxPriorityFeePerGas)
+        );
+
+        // Prepare cut data
+        facetCut = getFacetReplaceCut(accountHandler, ["initialize"]);
+
+        // Make diamond cut, expect revert
         await expect(
           diamondCutFacet.diamondCut(
             [facetCut],
