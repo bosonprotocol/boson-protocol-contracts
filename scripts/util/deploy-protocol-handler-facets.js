@@ -23,7 +23,7 @@ async function deployAndCutFacets(
   diamond,
   facetData,
   maxPriorityFeePerGas,
-  version,
+  version = "2.2.0",
   initializationFacet,
   interfacesToAdd = []
 ) {
@@ -37,7 +37,7 @@ async function deployAndCutFacets(
 
   const initializeCalldata = getInitializeCalldata(
     facetsToInit,
-    version ?? "2.0.0",
+    version,
     false,
     "0x", // no initialization data
     initializationFacet,
