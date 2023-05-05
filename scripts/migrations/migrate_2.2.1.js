@@ -4,7 +4,8 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const network = hre.network.name;
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
-const tag = "v2.2.1-rc.1";
+// @TODO change this to v2.1.1 when it's released
+const tag = "upgrade-tests-2.2.1";
 const version = "2.2.1";
 
 const config = {
@@ -24,7 +25,12 @@ async function migrate(env) {
   console.log(`Migration ${tag} started`);
   try {
     console.log("Removing any local changes before upgrading");
-    shell.exec(`git checkout HEAD`);
+    shell.exec(`git reset @{u}`);
+    const statusOutput = shell.exec("git status -s -uno scripts");
+
+    if (statusOutput.stdout) {
+      throw new Error("Local changes found. Please stash them before upgrading");
+    }
 
     if (env != "upgrade-test") {
       console.log("Installing dependencies");
@@ -43,10 +49,14 @@ async function migrate(env) {
     // Get addresses of currently deployed contracts
     const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
 
-    // Checking current version contracts to get selectors to remove
+    // Checking old version contracts to get selectors to remove
     console.log("Checking out contracts on version 2.2.0");
     shell.exec(`rm -rf contracts/*`);
     shell.exec(`git checkout v2.2.0 contracts`);
+
+    console.log("Compiling old contracts");
+    await hre.run("clean");
+    await hre.run("compile");
 
     const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
       ["SellerHandlerFacet", "OrchestrationHandlerFacet1"],
