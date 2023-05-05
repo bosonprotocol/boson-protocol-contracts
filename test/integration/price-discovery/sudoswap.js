@@ -133,7 +133,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
   //        "_poolType": "TOKEN, NFT, or TRADE",
   //        "_spotPrice": "The initial selling spot price"
 
-  it("Works with wrapper vouchers ", async function () {
+  it("Works with wrapper vouchers", async function () {
     const poolType = 1; // NFT
     const delta = ethers.utils.parseUnits("0.25", "ether").toString();
     const fee = "0";
@@ -180,9 +180,9 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     let tx = await lssvmPairFactory.connect(assistant).createPairERC20(createPairERC20Parameters);
 
-    const receipt = await tx.wait();
+    const { events } = await tx.wait();
 
-    const [poolAddress] = receipt.events[1].args;
+    const [poolAddress] = events.find((e) => e.event == "NewPair").args;
 
     //  tx = await wrappedBosonVoucher.connect(assistant).depositNFTs(poolAddress, [tokenId]);
 

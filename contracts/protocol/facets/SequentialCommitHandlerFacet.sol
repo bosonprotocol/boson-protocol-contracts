@@ -138,8 +138,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 );
             }
 
-            ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
-            address weth = pa.weth;
+            address weth = protocolAddresses().weth;
 
             // Make sure enough get escrowed
             if (_priceDiscovery.side == Side.Ask) {

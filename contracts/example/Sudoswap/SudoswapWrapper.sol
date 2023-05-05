@@ -62,6 +62,9 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
     // Mapping to cache exchange token address, so costly call to the protocol is not needed every time.
     mapping(uint256 => address) private cachedExchangeToken;
 
+    // Mapping from token ID to wrapped by address
+    mapping(uint256 => address) private wrappedBy;
+
     /**
      * @notice Constructor
      *
@@ -111,11 +114,10 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
             // Instead of msg.sender it could be voucherAddress, if vouchers were preminted to contract itself
             IERC721(voucherAddress).transferFrom(msg.sender, address(this), tokenId);
 
-            // Mint to itself, so it can be used with Sudoswap
-            _mint(address(this), tokenId);
+            // Mint wrapper to sender, so it can be used with Sudoswap
+            _mint(msg.sender, tokenId);
 
-            // Approves contract owner to operate on wrapped token
-            _approve(owner(), tokenId);
+            wrappedBy[tokenId] = msg.sender;
         }
     }
 
@@ -130,11 +132,12 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
      */
     function unwrap(uint256 _tokenId) external {
         address wrappedVoucherOwner = ownerOf(_tokenId);
+        address wrappedByAddress = wrappedBy[_tokenId];
 
         // Either contract owner or protocol can unwrap
         // If contract owner is unwrapping, this is equivalent to canceled auction
         require(
-            msg.sender == protocolAddress || (owner() == msg.sender && wrappedVoucherOwner == msg.sender),
+            msg.sender == protocolAddress || (wrappedByAddress == msg.sender && wrappedVoucherOwner == msg.sender),
             "SudoswapWrapper: Only owner or protocol can unwrap"
         );
 
@@ -152,7 +155,7 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
 
         // Transfer token to protocol
         if (priceToPay > 0) {
-            // No need to handle native separately, since Sudoswap always sends WETH
+            // @TODO check this No need to handle native separately, since Sudoswap always sends WETH
             IERC20(cachedExchangeToken[_tokenId]).safeTransfer(protocolAddress, priceToPay);
         }
 
@@ -160,34 +163,6 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
 
         // Burn wrapped voucher
         _burn(_tokenId);
-    }
-
-    /** @notice Make a call to an external contract.
-     *
-     * Reverts if:
-     * - tokenIds array is empty
-     * - call to Sudoswap depositNFTs fails
-     *
-     * @param _tokenIds - array of wrapper token ids
-     */
-    function depositNFTs(address pool, uint256[] memory _tokenIds) external payable onlyOwner {
-        require(_tokenIds.length > 0, "SudoswapWrapper: No token ids provided");
-        //        require(_to != address(0), "SudoswapWrapper: Address zero not allowed");
-        //
-        //        // Prevent invocation of functions that would allow transfer of tokens from this contract
-        //        bytes4 selector = bytes4(_data[:4]);
-        //        require(
-        //            selector != IERC20.transfer.selector &&
-        //                selector != IERC20.approve.selector &&
-        //                selector != IERC20.transferFrom.selector &&
-        //                selector != DAI.push.selector &&
-        //                selector != DAI.move.selector,
-        //            "SudoswapWrapper: Function not allowed"
-        //        );
-        //
-        //        _to.functionCallWithValue(_data, msg.value, "SudoswapWrapper: External call failed");
-        poolAddress = pool;
-        LSSVMPairFactory(payable(factoryAddress)).depositNFTs(IERC721(address(this)), _tokenIds, pool);
     }
 
     /**
@@ -198,16 +173,15 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
      * @param _tokenId The token id.
      */
     function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId) internal virtual override(ERC721) {
-        if (_from == poolAddress && _to != address(this)) {
+        if (_from == poolAddress) {
             // Someone is making a swap and wrapped voucher is being transferred to buyer
-            // @TODO: check this If recipient is address(this), it means the seller is withdrawing and price updating can be skipped
 
             // If some token price is not know yet, update it now
             if (pendingTokenId != 0) updatePendingTokenPrice(pendingTokenId);
 
             // Store current balance and set the pending token id
-            price[pendingTokenId] = getCurrentBalance(_tokenId);
             pendingTokenId = _tokenId;
+            price[pendingTokenId] = getCurrentBalance(_tokenId);
         }
 
         super._beforeTokenTransfer(_from, _to, _tokenId);

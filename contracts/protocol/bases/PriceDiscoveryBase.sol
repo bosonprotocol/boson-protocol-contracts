@@ -121,7 +121,7 @@ contract PriceDiscoveryBase is ProtocolBase {
     }
 
     /**
-     * @notice Fulfils a bid order on external contract when caller is not voucher owner.
+     * @notice Fulfils a bid order on external contract.
      *
      * Reverts if:
      * - Offer price is in native token and caller does not approve WETH
@@ -258,6 +258,7 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @param _exchangeAddress - the address of the exchange token
      * @param _voucherAddress - the address of the voucher contract
      * @param _balanceAddress - the address of the entity to check the balance for
+     * @param _side - the side of the order
      * @return actualPrice - the actual price paid for the voucher
      */
     function callPriceDiscoveryContract(

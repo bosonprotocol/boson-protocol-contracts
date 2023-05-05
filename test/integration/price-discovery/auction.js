@@ -137,7 +137,6 @@ describe("[@skip-on-coverage] auction integration", function () {
       auctionId = 0;
       amount = 10;
       await zoraAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
-      console.log("buyer", buyer.address);
 
       // 5. Set time forward
       await getCurrentBlockAndSetTimeForward(oneWeek);
