@@ -224,7 +224,7 @@ describe("[@skip-on-coverage] auctionProtocol integration", function () {
     expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
   });
 
-  it.only("Works with Zora auction", async function () {
+  it("Works with Zora auction", async function () {
     let tokenId;
     beforeEach(async function () {
       // 1. Deploy Zora Auction

@@ -129,7 +129,7 @@ contract ZoraWrapper is BosonTypes, ERC721 {
         );
 
         // If some token price is not know yet, update it now
-        if (pendingTokenId != 0) updatePendingTokenPrice(pendingTokenId);
+        if (pendingTokenId != 0) updatePendingTokenPrice();
 
         uint256 priceToPay = price[_tokenId];
 
@@ -169,18 +169,19 @@ contract ZoraWrapper is BosonTypes, ERC721 {
             // If recipient is address(this), it means the auction was canceled and price updating can be skipped
 
             // If some token price is not know yet, update it now
-            if (pendingTokenId != 0) updatePendingTokenPrice(pendingTokenId);
+            if (pendingTokenId != 0) updatePendingTokenPrice();
 
             // Store current balance and set the pending token id
-            price[pendingTokenId] = getCurrentBalance(_tokenId);
+            price[_tokenId] = getCurrentBalance(_tokenId);
             pendingTokenId = _tokenId;
         }
 
         super._beforeTokenTransfer(_from, _to, _tokenId);
     }
 
-    function updatePendingTokenPrice(uint256 _tokenId) internal {
-        price[pendingTokenId] = getCurrentBalance(_tokenId) - price[pendingTokenId];
+    function updatePendingTokenPrice() internal {
+        uint256 tokenId = pendingTokenId;
+        price[tokenId] = getCurrentBalance(tokenId) - price[tokenId];
     }
 
     /**
@@ -201,10 +202,12 @@ contract ZoraWrapper is BosonTypes, ERC721 {
                 // pre v2.2.0. Token does not have offerId, so we need to get it from the protocol.
                 // Get Boson exchange. Don't explicitly check if the exchange exists, since existance of the token implies it does.
                 uint256 exchangeId = _tokenId & type(uint128).max; // ExchangeId is the last 128 bits of the token ID.
-                (, BosonTypes.Exchange memory exchange, ) = IBosonExchangeHandler(protocolAddress).getExchange(exchangeId);
+                (, BosonTypes.Exchange memory exchange, ) = IBosonExchangeHandler(protocolAddress).getExchange(
+                    exchangeId
+                );
                 offerId = exchange.offerId;
             }
-                
+
             // Get Boson offer. Don't explicitly check if the offer exists, since existance of the token implies it does.
             (, BosonTypes.Offer memory offer, , , , ) = IBosonOfferHandler(protocolAddress).getOffer(offerId);
             exchangeToken = offer.exchangeToken;
