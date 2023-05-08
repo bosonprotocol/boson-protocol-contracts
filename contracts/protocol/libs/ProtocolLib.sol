@@ -187,8 +187,6 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.DisputeResolver) pendingAddressUpdatesByDisputeResolver;
         // token id => price discovery contract
         mapping(uint256 => address) priceDiscoveryContractByVoucher;
-        // token id => last owner of the voucher (used for price discovery)
-        mapping(uint256 => address) lastVoucherOwner;
     }
 
     // Incrementing id counters

@@ -17,6 +17,7 @@ const Side = require("../../../scripts/domain/Side");
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const { constants } = require("ethers");
 const PriceType = require("../../../scripts/domain/PriceType");
+const MASK = ethers.BigNumber.from(2).pow(128).sub(1);
 
 describe("[@skip-on-coverage] sudoswap integration", function () {
   this.timeout(100000000);
@@ -97,13 +98,14 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     const disputeResolver = mockDisputeResolver(DR.address, DR.address, DR.address, DR.address, true);
 
-    const disputeResolverFees = [new DisputeResolverFee(constants.AddressZero, "Native", "0")];
+    const disputeResolverFees = [new DisputeResolverFee(weth.address, "WETH", "0")];
     const sellerAllowList = [seller.id];
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
     let offerDates, offerDurations, disputeResolverId;
     ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+    offer.exchangeToken = weth.address;
     offer.quantityAvailable = 10;
     offer.priceType = PriceType.Discovery;
 
@@ -111,27 +113,26 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
       .connect(assistant)
       .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
 
+    const pool = ethers.BigNumber.from(offer.sellerDeposit).mul(offer.quantityAvailable);
+
+    await weth.connect(assistant).deposit({ value: pool });
+
+    // Approves protocol to transfer sellers weth
+    await weth.connect(assistant).approve(fundsHandler.address, pool);
+
+    // Deposit funds
+    await fundsHandler.connect(assistant).depositFunds(seller.id, weth.address, pool);
+
+    // Reverse range
+    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
+
+    // Gets boson voucher contract
     const voucherAddress = calculateContractAddress(accountHandler.address, seller.id);
     bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
 
-    // Pool needs to cover both seller deposit and price
-    const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
-    await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, pool, {
-      value: pool,
-    });
-
     // Pre mint range
-    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
     await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
   });
-  // "_assetRecipient": "The address that will receive the assets traders give during trades. If set to address(0), assets will be sent to the pool address. Not available to TRADE pools. ",
-  //        "_bondingCurve": "The bonding curve for the pair to price NFTs, must be whitelisted",
-  //        "_delta": "The delta value used by the bonding curve. The meaning of delta depends on the specific curve.",
-  //        "_fee": "The fee taken by the LP in each trade. Can only be non-zero if _poolType is Trade.",
-  //        "_initialNFTIDs": "The list of IDs of NFTs to transfer from the sender to the pair",
-  //        "_nft": "The NFT contract of the collection the pair trades",
-  //        "_poolType": "TOKEN, NFT, or TRADE",
-  //        "_spotPrice": "The initial selling spot price"
 
   it("Works with wrapper vouchers", async function () {
     const poolType = 1; // NFT
@@ -157,10 +158,8 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
       weth.address
     );
 
-    // need to deposit NFTs
     await bosonVoucher.connect(assistant).setApprovalForAll(wrappedBosonVoucher.address, true);
 
-    const tokenId = deriveTokenId(offer.id, 1);
     await wrappedBosonVoucher.connect(assistant).wrap(nftIds);
 
     const createPairERC20Parameters = {
@@ -184,41 +183,47 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     const [poolAddress] = events.find((e) => e.event == "NewPair").args;
 
-    //  tx = await wrappedBosonVoucher.connect(assistant).depositNFTs(poolAddress, [tokenId]);
+    await wrappedBosonVoucher.connect(assistant).setPoolAddress(poolAddress);
 
     const pool = await ethers.getContractAt("LSSVMPairMissingEnumerable", poolAddress);
 
     const [, , , inputAmount] = await pool.getBuyNFTQuote(1);
 
-    const swapTokenTx = await pool.swapTokenForAnyNFTs(1, inputAmount, buyer.address, false, constants.AddressZero);
+    await weth.connect(buyer).deposit({ value: inputAmount.mul(2) });
+    await weth.connect(buyer).approve(pool.address, inputAmount.mul(2));
+
+    const tokenId = deriveTokenId(offer.id, 1);
+
+    const swapTokenTx = await pool
+      .connect(buyer)
+      .swapTokenForSpecificNFTs([tokenId], inputAmount, buyer.address, false, constants.AddressZero);
 
     expect(swapTokenTx).to.emit(pool, "SwapTokenForAnyNFTs");
 
     const calldata = wrappedBosonVoucher.interface.encodeFunctionData("unwrap", [tokenId]);
 
-    const priceDiscovery = new PriceDiscovery(inputAmount, pool.address, calldata, Side.Ask);
+    const priceDiscovery = new PriceDiscovery(inputAmount, wrappedBosonVoucher.address, calldata, Side.Ask);
 
-    // see this
-    //    await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, inputAmount, {
-    //      value: inputAmount,
-    //    });
+    const protocolBalanceBefore = await weth.balanceOf(exchangeHandler.address);
 
-    // Seller needs to deposit weth in order to fill the escrow at the last step
-    // Price is theoretically the highest amount needed
-    //    await weth.connect(buyer).deposit({ value: inputAmount });
-    //   await weth.connect(buyer).approve(exchangeHandler.address, inputAmount);
+    tx = await priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery);
 
-    // Approve transfers
-    // Buyer does not approve, since its in ETH.
-    // Seller approves price discovery to transfer the voucher
-    // await bosonVoucher.connect(assistant).setApprovalForAll(pool.address, true);
-    tx = await priceDiscoveryHandler
-      .connect(buyer)
-      .commitToPriceDiscoveryOffer(buyer.address, offer.id, priceDiscovery, {
-        value: inputAmount,
-      });
+    await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
 
-    await expect(tx).to.not.emit(exchangeHandler, "BuyerCommitted");
-    //    await expect(tx).to.emit(pool, "SwapNFTOutPair");
+    console.log(inputAmount.toString());
+    console.log("protocolBalanceBefore", protocolBalanceBefore.toString());
+    const { timestamp } = await ethers.provider.getBlock(tx.blockNumber);
+    console.log("protocolBalanceBefore.add(inputAmount)", protocolBalanceBefore.add(inputAmount).toString());
+    expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
+
+    const protocolBalanceAfter = await weth.balanceOf(exchangeHandler.address);
+
+    console.log("protocolBalanceAfter", protocolBalanceAfter.toString());
+    expect(protocolBalanceAfter).to.equal(protocolBalanceBefore.add(inputAmount));
+
+    const exchangeId = tokenId.and(MASK);
+    const [, , voucher] = await exchangeHandler.getExchange(exchangeId);
+
+    expect(voucher.committedDate).to.equal(timestamp);
   });
 });

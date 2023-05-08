@@ -87,6 +87,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
             offerId = _tokenIdOrOfferId >> 128;
 
             (exists, offer) = fetchOffer(offerId);
+            require(exists, NO_SUCH_OFFER);
         } else {
             isOfferId = true;
         }
@@ -142,6 +143,6 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
             })
         );
 
-        clearStorage(tokenId);
+        clearStorage();
     }
 }

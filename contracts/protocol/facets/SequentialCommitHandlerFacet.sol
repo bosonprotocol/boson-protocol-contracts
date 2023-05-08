@@ -167,7 +167,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             }
         }
 
-        clearStorage(_tokenId);
+        clearStorage();
 
         // Since exchange and voucher are passed by reference, they are updated
         emit BuyerCommitted(exchange.offerId, exchange.buyerId, exchangeId, exchange, voucher, msgSender());

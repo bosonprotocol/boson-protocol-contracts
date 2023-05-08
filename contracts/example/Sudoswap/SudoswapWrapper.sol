@@ -62,9 +62,6 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
     // Mapping to cache exchange token address, so costly call to the protocol is not needed every time.
     mapping(uint256 => address) private cachedExchangeToken;
 
-    // Mapping from token ID to wrapped by address
-    mapping(uint256 => address) private wrappedBy;
-
     /**
      * @notice Constructor
      *
@@ -86,7 +83,6 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
 
         // Approve pool to transfer wrapped vouchers
         _setApprovalForAll(address(this), _factoryAddress, true);
-        //_setApprovalForAll(address(this), msg.sender, true); // msg.sender is the owner of this contract and must be approved to transfer wrapped vouchers to pool pair
     }
 
     /**
@@ -100,7 +96,7 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
     }
 
     /**
-     * @notice Wraps the voucher, transfer true voucher to itself and funds to the protocol.
+     * @notice Wraps the vouchers, transfer true vouchers to this contract and mint wrapped vouchers
      *
      * Reverts if:
      *  - caller is not the contract owner
@@ -110,14 +106,13 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
     function wrap(uint256[] memory _tokenIds) external onlyOwner {
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 tokenId = _tokenIds[i];
-            // Transfer voucher to this contract
+
+            // Transfer vouchers to this contract
             // Instead of msg.sender it could be voucherAddress, if vouchers were preminted to contract itself
             IERC721(voucherAddress).transferFrom(msg.sender, address(this), tokenId);
 
-            // Mint wrapper to sender, so it can be used with Sudoswap
+            // Mint to caller, so it can be used with Sudoswap
             _mint(msg.sender, tokenId);
-
-            wrappedBy[tokenId] = msg.sender;
         }
     }
 
@@ -132,17 +127,16 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
      */
     function unwrap(uint256 _tokenId) external {
         address wrappedVoucherOwner = ownerOf(_tokenId);
-        address wrappedByAddress = wrappedBy[_tokenId];
 
         // Either contract owner or protocol can unwrap
-        // If contract owner is unwrapping, this is equivalent to canceled auction
+        // If contract owner is unwrapping, this is equivalent to removing the voucher from the pool
         require(
-            msg.sender == protocolAddress || (wrappedByAddress == msg.sender && wrappedVoucherOwner == msg.sender),
+            msg.sender == protocolAddress || wrappedVoucherOwner == msg.sender,
             "SudoswapWrapper: Only owner or protocol can unwrap"
         );
 
         // If some token price is not know yet, update it now
-        if (pendingTokenId != 0) updatePendingTokenPrice(pendingTokenId);
+        if (pendingTokenId != 0) updatePendingTokenPrice();
 
         uint256 priceToPay = price[_tokenId];
 
@@ -150,8 +144,8 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
         delete price[_tokenId];
         delete pendingTokenId;
 
-        // transfer voucher to voucher owner
-        IERC721(voucherAddress).safeTransferFrom(address(this), ownerOf(_tokenId), _tokenId);
+        // transfer Boson Voucher to voucher owner
+        IERC721(voucherAddress).safeTransferFrom(address(this), wrappedVoucherOwner, _tokenId);
 
         // Transfer token to protocol
         if (priceToPay > 0) {
@@ -165,6 +159,10 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
         _burn(_tokenId);
     }
 
+    function setPoolAddress(address _poolAddress) external onlyOwner {
+        poolAddress = _poolAddress;
+    }
+
     /**
      * @notice Handle transfers out of Sudoswap.
      *
@@ -172,23 +170,28 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
      * @param _to The address of the recipient.
      * @param _tokenId The token id.
      */
-    function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId) internal virtual override(ERC721) {
-        if (_from == poolAddress) {
+    function _beforeTokenTransfer(
+        address _from,
+        address _to,
+        uint256 _tokenId
+    ) internal virtual override(ERC721) {
+        if (_from != address(0) && _from == poolAddress) {
             // Someone is making a swap and wrapped voucher is being transferred to buyer
 
             // If some token price is not know yet, update it now
-            if (pendingTokenId != 0) updatePendingTokenPrice(pendingTokenId);
+            if (pendingTokenId != 0) updatePendingTokenPrice();
 
             // Store current balance and set the pending token id
+            price[_tokenId] = getCurrentBalance(_tokenId);
             pendingTokenId = _tokenId;
-            price[pendingTokenId] = getCurrentBalance(_tokenId);
         }
 
         super._beforeTokenTransfer(_from, _to, _tokenId);
     }
 
-    function updatePendingTokenPrice(uint256 _tokenId) internal {
-        price[pendingTokenId] = getCurrentBalance(_tokenId) - price[pendingTokenId];
+    function updatePendingTokenPrice() internal {
+        uint256 tokenId = pendingTokenId;
+        price[tokenId] = getCurrentBalance(tokenId) - price[tokenId];
     }
 
     /**

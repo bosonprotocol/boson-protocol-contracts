@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
-import "hardhat/console.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
@@ -74,13 +73,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
      */
-    function commitToOffer(address payable _buyer, uint256 _offerId)
-        external
-        payable
-        override
-        exchangesNotPaused
-        buyersNotPaused
-    {
+    function commitToOffer(
+        address payable _buyer,
+        uint256 _offerId
+    ) external payable override exchangesNotPaused buyersNotPaused {
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
 
@@ -564,37 +560,18 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Get the offer
         (, Offer storage offer) = fetchOffer(offerId);
 
-        // Cache protocol entities for reference
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        // Should commit to offer. Transaction has started by calling one of the commit functions
+        if (offer.priceType == PriceType.Discovery && ps.incomingVoucherCloneAddress != address(0)) {
+            // Avoid reentrancy
+            require(ps.incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);
 
-        if (offer.priceType == PriceType.Discovery) {
-            address priceDiscoveryContract = lookups.priceDiscoveryContractByVoucher[_tokenId];
-            address lastVoucherOwner = lookups.lastVoucherOwner[_tokenId];
+            // Store the information about incoming voucher
+            ps.incomingVoucherId = _tokenId;
 
-            // Transaction has started by calling one of the commit functions ()
-            if (ps.incomingVoucherCloneAddress != address(0)) {
-                // Avoid reentrancy
-                require(ps.incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);
-
-                // Store the information about incoming voucher
-                ps.incomingVoucherId = _tokenId;
-
-                commitToOfferInternal(_to, offer, exchangeId, true);
-
-                committed = true;
-            } else if (_from == priceDiscoveryContract && _from == _sender && _to == lastVoucherOwner) {
-                // Price discovery is returning voucher to last voucher owner, e.g withdrawn from price discovery contract
-                delete lookups.priceDiscoveryContractByVoucher[_tokenId];
-            } else if (_sender == _to) {
-                // Voucher owner is depositing voucher to price discovery contract, e.g depositing into a pool
-                lookups.priceDiscoveryContractByVoucher[_tokenId] = _sender;
-                lookups.lastVoucherOwner[_tokenId] = _from;
-            } else {
-                revert(TRANSFER_NOT_ALLOWED);
-            }
-        } else {
             commitToOfferInternal(_to, offer, exchangeId, true);
-
+            committed = true;
+        } else if (offer.priceType == PriceType.Static) {
+            commitToOfferInternal(_to, offer, exchangeId, true);
             committed = true;
         }
     }
@@ -646,16 +623,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      * @return voucher - the voucher details. See {BosonTypes.Voucher}
      */
-    function getExchange(uint256 _exchangeId)
-        external
-        view
-        override
-        returns (
-            bool exists,
-            Exchange memory exchange,
-            Voucher memory voucher
-        )
-    {
+    function getExchange(
+        uint256 _exchangeId
+    ) external view override returns (bool exists, Exchange memory exchange, Voucher memory voucher) {
         (exists, exchange) = fetchExchange(_exchangeId);
         voucher = fetchVoucher(_exchangeId);
     }
@@ -767,10 +737,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * @param _exchange - the exchange for which twins should be transferred
      * @return shouldBurnVoucher - whether or not the voucher should be burned
      */
-    function transferTwins(Exchange storage _exchange, Voucher storage _voucher)
-        internal
-        returns (bool shouldBurnVoucher)
-    {
+    function transferTwins(
+        Exchange storage _exchange,
+        Voucher storage _voucher
+    ) internal returns (bool shouldBurnVoucher) {
         // See if there is an associated bundle
         (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
 
@@ -914,11 +884,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      *
      * @return bool - true if buyer is authorized to commit
      */
-    function authorizeCommit(
-        address _buyer,
-        Offer storage _offer,
-        uint256 exchangeId
-    ) internal returns (bool) {
+    function authorizeCommit(address _buyer, Offer storage _offer, uint256 exchangeId) internal returns (bool) {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 

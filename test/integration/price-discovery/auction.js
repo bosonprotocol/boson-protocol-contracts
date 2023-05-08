@@ -29,7 +29,6 @@ const Side = require("../../../scripts/domain/Side");
 const MASK = BigNumber.from(2).pow(128).sub(1);
 
 describe("[@skip-on-coverage] auction integration", function () {
-  this.timeout(100000000);
   let bosonVoucher;
   let assistant, buyer, DR, rando;
   let offer, offerDates;
