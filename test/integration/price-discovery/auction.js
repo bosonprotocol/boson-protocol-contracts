@@ -1,17 +1,17 @@
 const hre = require("hardhat");
 const { ethers } = hre;
-const { utils, BigNumber, constants } = ethers;
-const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
-const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond");
-const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets");
+const { BigNumber, constants } = ethers;
+const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 
 const {
-  getFacetsWithArgs,
   calculateContractAddress,
   deriveTokenId,
   getCurrentBlockAndSetTimeForward,
+  setupTestEnvironment,
+  revertToSnapshot,
+  getSnapshot,
 } = require("../../util/utils");
-const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants");
+const { oneWeek } = require("../../util/constants");
 const {
   mockSeller,
   mockAuthToken,
@@ -20,113 +20,47 @@ const {
   mockDisputeResolver,
   accountId,
 } = require("../../util/mock");
-const { expect, assert } = require("chai");
-const Role = require("../../../scripts/domain/Role");
-const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
+const { expect } = require("chai");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
-const OfferPrice = require("../../../scripts/domain/OfferPrice");
+const PriceType = require("../../../scripts/domain/PriceType");
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const Side = require("../../../scripts/domain/Side");
 
-const BID_BASE_UNIT = utils.parseUnits("1000", 9);
+const MASK = BigNumber.from(2).pow(128).sub(1);
 
-describe("[@skip-on-coverage] auctionProtocol integration", function () {
+describe("[@skip-on-coverage] auction integration", function () {
   this.timeout(100000000);
-  let bosonVoucher, bosonToken;
-  let deployer, protocol, assistant, buyer, DR;
+  let bosonVoucher;
+  let assistant, buyer, DR, rando;
   let offer, offerDates;
-  let exchangeHandler;
+  let exchangeHandler, priceDiscoveryHandler;
   let weth;
   let seller;
+  let snapshotId;
 
   before(async function () {
     accountId.next(true);
 
-    let protocolTreasury;
-    [deployer, protocol, assistant, protocolTreasury, buyer, DR] = await ethers.getSigners();
-
-    // Deploy diamond
-    let [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-
-    // Cast Diamond to contract interfaces
-    const offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-    const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-
-    // Grant roles
-    await accessController.grantRole(Role.PROTOCOL, protocol.address);
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    const protocolClientArgs = [protocolDiamond.address];
-
-    const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
-
-    [bosonVoucher] = bv;
-    const [beacon] = beacons;
-    const [proxy] = proxies;
-
-    const protocolFeeFlatBoson = utils.parseUnits("0.01", "ether").toString();
-    const buyerEscalationDepositPercentage = "1000"; // 10%
-
-    [bosonToken] = await deployMockTokens();
-
-    // Add config Handler, so ids start at 1, and so voucher address can be found
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 10000,
-      },
-      //Protocol fees
-      {
-        percentage: 200, // 2%
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
-    const facetNames = [
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "SellerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "FundsHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+    // Specify contracts needed for this test
+    const contracts = {
+      accountHandler: "IBosonAccountHandler",
+      offerHandler: "IBosonOfferHandler",
+      fundsHandler: "IBosonFundsHandler",
+      exchangeHandler: "IBosonExchangeHandler",
+      priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
+    };
 
     const wethFactory = await ethers.getContractFactory("WETH9");
     weth = await wethFactory.deploy();
     await weth.deployed();
 
-    facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [1, weth.address];
+    let accountHandler, offerHandler, fundsHandler;
 
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+    ({
+      signers: [assistant, buyer, DR, rando],
+      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler, priceDiscoveryHandler },
+      extraReturnValues: { bosonVoucher },
+    } = await setupTestEnvironment(contracts, { wethAddress: weth.address }));
 
     seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
 
@@ -136,7 +70,10 @@ describe("[@skip-on-coverage] auctionProtocol integration", function () {
 
     const disputeResolver = mockDisputeResolver(DR.address, DR.address, DR.address, DR.address, true);
 
-    const disputeResolverFees = [new DisputeResolverFee(constants.AddressZero, "Native", "0")];
+    const disputeResolverFees = [
+      new DisputeResolverFee(constants.AddressZero, "Native Currency", "0"),
+      new DisputeResolverFee(weth.address, "WETH", "0"),
+    ];
     const sellerAllowList = [seller.id];
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -144,7 +81,8 @@ describe("[@skip-on-coverage] auctionProtocol integration", function () {
     let offerDurations, disputeResolverId;
     ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
     offer.quantityAvailable = 10;
-    offer.priceType = OfferPrice.Discovery;
+    offer.priceType = PriceType.Discovery;
+    // offer.exchangeToken = weth.address;
 
     await offerHandler
       .connect(assistant)
@@ -161,191 +99,206 @@ describe("[@skip-on-coverage] auctionProtocol integration", function () {
     await fundsHandler
       .connect(assistant)
       .depositFunds(seller.id, constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+
+    // Get snapshot id
+    snapshotId = await getSnapshot();
   });
 
-  it("Works wiht Sneaky auction", async function () {
-    const SneakyAuctionFactory = await ethers.getContractFactory("SneakyAuction");
-    const sneakyAuction = await SneakyAuctionFactory.deploy();
-    await sneakyAuction.deployed();
-
-    await bosonVoucher.connect(assistant).setPriceDiscoveryContract(sneakyAuction.address);
-    await bosonVoucher.connect(assistant).setApprovalForAll(sneakyAuction.address, true);
-
-    // Create auctionProtocol offer which tokenId 1
-    const tokenId = deriveTokenId(offer.id, 2);
-
-    // Convert the value in Ether to Wei
-    const priceInWei = utils.formatUnits(offer.price, "wei");
-
-    // Divide the value in Wei by the BID_BASE_UNIT
-    const reservedPrice = BigNumber.from(priceInWei).div(BID_BASE_UNIT);
-
-    await expect(sneakyAuction
-      .connect(assistant)
-      .createAuction(bosonVoucher.address, tokenId, oneWeek, oneWeek, reservedPrice)).to.emit(sneakyAuction, "AuctionCreated");
-
-    const bidPrice = reservedPrice.add(1);
-    const bidPriceInWei = utils.formatUnits(bidPrice.mul(BID_BASE_UNIT), "wei");
-
-    const salt = utils.formatBytes32String("123");
-
-    // get vault address
-    const vault = await sneakyAuction.getVaultAddress(bosonVoucher.address, tokenId, 1, buyer.address, bidPrice, salt);
-
-    // deposit bid price into vault
-    await buyer.sendTransaction({ to: vault, value: bidPriceInWei });
-
-    await getCurrentBlockAndSetTimeForward(oneWeek)
-
-    // first proof has to be empty
-    const proof = {
-      // array of bytes 
-      accountMerkleProof: [constants.HashZero],
-      blockHeaderRLP: constants.HashZero,
-    }
-
-    const bid = await sneakyAuction.connect(buyer).revealBid(bosonVoucher.address, tokenId, bidPrice, salt, proof);
-    await getCurrentBlockAndSetTimeForward(oneWeek);
-
-    const calldata = sneakyAuction.interface.encodeFunctionData("endAuction", [bosonVoucher.address, tokenId, buyer.address, bidPrice, salt]);
-    await bosonVoucher.connect(assistant).callExternalContract(sneakyAuction.address, calldata);
-    await bosonVoucher.connect(assistant).setApprovalForAllToContract(sneakyAuction.address, true);
-
-    const priceDiscovery = new PriceDiscovery(offer.price, sneakyAuction.address, calldata, Side.Bid);
-
-    // Seller needs to deposit weth in order to fill the escrow at the last step
-    // await weth.connect(buyer).deposit({ value });
-    // await weth.connect(buyer).approve(exchangeHandler.address, offer.sellerDepos);
-    //
-    tx = await exchangeHandler.connect(assistant).commitToOffer(buyer.address, offer.id, priceDiscovery, {
-      value: offer.sellerDeposit
-    });
-
-    expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
-  it("Works with Zora auction", async function () {
-    let tokenId;
+  context("Zora auction", async function () {
+    let tokenId, zoraAuction, amount, auctionId;
+
     beforeEach(async function () {
       // 1. Deploy Zora Auction
       const ZoraAuctionFactory = await ethers.getContractFactory("AuctionHouse");
-      const zoraAuction = await ZoraAuctionFactory.deploy(weth.address);
+      zoraAuction = await ZoraAuctionFactory.deploy(weth.address);
 
-      // 2. Create wrapped voucher
-      const wrappedBosonVoucherFactory = await ethers.getContractFactory("ZoraWrapper");
-      const wrappedBosonVoucher = await wrappedBosonVoucherFactory.connect(assistant).deploy(bosonVoucher.address, zoraAuction.address, exchangeHandler.address, weth.address);
-
-      // 3. Wrap voucher
+      // 2. Set approval for all
       tokenId = deriveTokenId(offer.id, 2);
-      await bosonVoucher.connect(assistant).setApprovalForAll(wrappedBosonVoucher.address, true);
-      await wrappedBosonVoucher.connect(assistant).wrap(tokenId)
+      await bosonVoucher.connect(assistant).setApprovalForAll(zoraAuction.address, true);
 
-      // 4. Create an auction
-      const tokenContract = wrappedBosonVoucher.address;
+      // 3. Create an auction
+      const tokenContract = bosonVoucher.address;
       const duration = oneWeek;
       const reservePrice = 1;
       const curator = ethers.constants.AddressZero;
       const curatorFeePercentage = 0;
       const auctionCurrency = offer.exchangeToken;
 
-      await zoraAuction.connect(assistant).createAuction(
-        tokenId,
-        tokenContract,
-        duration,
-        reservePrice,
-        curator,
-        curatorFeePercentage,
-        auctionCurrency
-      );
-    });
+      await zoraAuction
+        .connect(assistant)
+        .createAuction(tokenId, tokenContract, duration, reservePrice, curator, curatorFeePercentage, auctionCurrency);
 
-    it("Auction ends normally", async function () {
-      // 5. Bid
-      const auctionId = 0;
-      const amount = 10;
-
+      // 4. Bid
+      auctionId = 0;
+      amount = 10;
       await zoraAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
 
-      // 6. End auction
+      // 5. Set time forward
       await getCurrentBlockAndSetTimeForward(oneWeek);
-      await zoraAuction.connect(assistant).endAuction(auctionId);
 
-      expect(await wrappedBosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
-      expect(await weth.balanceOf(wrappedBosonVoucher.address)).to.equal(amount);
-
-      // 7. Commit to offer
-      const calldata = wrappedBosonVoucher.interface.encodeFunctionData("unwrap", [tokenId]);
-      const priceDiscovery = new PriceDiscovery(amount, wrappedBosonVoucher.address, calldata, Side.Bid);
-
-      const protocolBalanceBefore = await ethers.provider.getBalance(exchangeHandler.address);
-
-      tx = await exchangeHandler.connect(assistant).commitToOffer(buyer.address, offer.id, priceDiscovery);
-      const { timestamp } = await ethers.provider.getBlock(tx.blockNumber);
-
-      expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
-      expect(await ethers.provider.getBalance(exchangeHandler.address)).to.equal(protocolBalanceBefore.add(amount));
-
-      MASK = ethers.BigNumber.from(2).pow(128).sub(1);
-      const exchangeId = tokenId.and(MASK);
-      [, , voucher] = await exchangeHandler.getExchange(exchangeId);
-
-      expect(voucher.committedDate).to.equal(timestamp);
+      // Zora should be the owner of the token
+      expect(await bosonVoucher.ownerOf(tokenId)).to.equal(zoraAuction.address);
     });
 
-    it("Cancel auction", async function () {
-      // 5. Bid
-      const auctionId = 0;
-      const amount = 10;
+    // Zora uses safeTransferFrom and WETH doesn't support it
+    it("commitToPriceDiscoveryOffer should revert when seller is not using wrappers and offer is native currency", async function () {
+      // Caller should approve WETH because price discovery bids doesn't work with native currency
+      await weth.connect(assistant).approve(exchangeHandler.address, amount);
 
-      await zoraAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
+      //  Encode calldata for endAuction
+      const calldata = zoraAuction.interface.encodeFunctionData("endAuction", [auctionId]);
+      const priceDiscovery = new PriceDiscovery(amount, zoraAuction.address, calldata, Side.Bid);
 
-      // 6. Cancel auction
-      await zoraAuction.connect(assistant).cancelAuction(auctionId);
-
-      // 7. Unwrap token
-      const protocolBalanceBefore = await ethers.provider.getBalance(exchangeHandler.address);
-      await wrappedBosonVoucher.connect(assistant).unwrap(tokenId);
-
-      expect(await bosonVoucher.ownerOf(tokenId)).to.equal(assistant.address);
-      expect(await ethers.provider.getBalance(exchangeHandler.address)).to.equal(protocolBalanceBefore);
-
-      MASK = ethers.BigNumber.from(2).pow(128).sub(1);
-      const exchangeId = tokenId.and(MASK);
-      const [exists, , voucher] = await exchangeHandler.getExchange(exchangeId);
-
-      expect(exists).to.equal(false);
-      expect(voucher.committedDate).to.equal(0);
+      //  Commit to offer, expecting revert
+      await expect(
+        priceDiscoveryHandler.connect(assistant).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+      ).to.be.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
     });
 
-    it("Cancel auction and unwrap via commitToOffer", async function () {
-      // How sensible is this scenario? Should it be prevented?
+    it("Auction is canceled if ended directly into Zora", async function () {
+      // safe transfer from will fail on onPremintedTransferredHook and auction should be canceled
+      await expect(zoraAuction.connect(rando).endAuction(auctionId)).to.emit(zoraAuction, "AuctionCanceled");
 
-      // 5. Bid
-      const auctionId = 0;
-      const amount = 10;
-
-      await zoraAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
-
-      // 6. Cancel auction
-      await zoraAuction.connect(assistant).cancelAuction(auctionId);
-
-      // 7. Unwrap token via commitToOffer
-      const protocolBalanceBefore = await ethers.provider.getBalance(exchangeHandler.address);
-      
-      const calldata = wrappedBosonVoucher.interface.encodeFunctionData("unwrap", [tokenId]);
-      const priceDiscovery = new PriceDiscovery(0, wrappedBosonVoucher.address, calldata, Side.Bid);
-      tx = await exchangeHandler.connect(assistant).commitToOffer(assistant.address, offer.id, priceDiscovery);
-      const { timestamp } = await ethers.provider.getBlock(tx.blockNumber);
-
+      // Token is returned to the seller
       expect(await bosonVoucher.ownerOf(tokenId)).to.equal(assistant.address);
-      expect(await ethers.provider.getBalance(exchangeHandler.address)).to.equal(protocolBalanceBefore);
 
-      MASK = ethers.BigNumber.from(2).pow(128).sub(1);
+      // Exchange doesn't exist
       const exchangeId = tokenId.and(MASK);
-      const [exists, , voucher] = await exchangeHandler.getExchange(exchangeId);
+      const [exist, ,] = await exchangeHandler.getExchange(exchangeId);
 
-      expect(exists).to.equal(true);
-      expect(voucher.committedDate).to.equal(timestamp);
+      expect(exist).to.equal(false);
+    });
+
+    it("Works with Zora auction wrapper", async function () {
+      let wrappedBosonVoucher;
+
+      beforeEach(async function () {
+        // 1. Deploy Zora Auction
+        // const ZoraAuctionFactory = await ethers.getContractFactory("AuctionHouse");
+        // const zoraAuction = await ZoraAuctionFactory.deploy(weth.address);
+
+        // 2. Create wrapped voucher
+        const wrappedBosonVoucherFactory = await ethers.getContractFactory("ZoraWrapper");
+        const wrappedBosonVoucher = await wrappedBosonVoucherFactory
+          .connect(assistant)
+          .deploy(bosonVoucher.address, zoraAuction.address, exchangeHandler.address, weth.address);
+
+        // 3. Wrap voucher
+        tokenId = deriveTokenId(offer.id, 2);
+        await bosonVoucher.connect(assistant).setApprovalForAll(wrappedBosonVoucher.address, true);
+        await wrappedBosonVoucher.connect(assistant).wrap(tokenId);
+
+        // 4. Create an auction
+        const tokenContract = wrappedBosonVoucher.address;
+        const duration = oneWeek;
+        const reservePrice = 1;
+        const curator = ethers.constants.AddressZero;
+        const curatorFeePercentage = 0;
+        const auctionCurrency = offer.exchangeToken;
+
+        await zoraAuction
+          .connect(assistant)
+          .createAuction(
+            tokenId,
+            tokenContract,
+            duration,
+            reservePrice,
+            curator,
+            curatorFeePercentage,
+            auctionCurrency
+          );
+      });
+
+      it("Auction ends normally", async function () {
+        // 5. Bid
+        const auctionId = 0;
+        const amount = 10;
+
+        await zoraAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
+
+        // 6. End auction
+        await getCurrentBlockAndSetTimeForward(oneWeek);
+        await zoraAuction.connect(assistant).endAuction(auctionId);
+
+        expect(await wrappedBosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
+        expect(await weth.balanceOf(wrappedBosonVoucher.address)).to.equal(amount);
+
+        // 7. Commit to offer
+        const calldata = wrappedBosonVoucher.interface.encodeFunctionData("unwrap", [tokenId]);
+        const priceDiscovery = new PriceDiscovery(amount, wrappedBosonVoucher.address, calldata, Side.Bid);
+
+        const protocolBalanceBefore = await ethers.provider.getBalance(exchangeHandler.address);
+
+        const tx = await exchangeHandler.connect(assistant).commitToOffer(buyer.address, offer.id, priceDiscovery);
+        const { timestamp } = await ethers.provider.getBlock(tx.blockNumber);
+
+        expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
+        expect(await ethers.provider.getBalance(exchangeHandler.address)).to.equal(protocolBalanceBefore.add(amount));
+
+        const exchangeId = tokenId.and(MASK);
+        const [, , voucher] = await exchangeHandler.getExchange(exchangeId);
+
+        expect(voucher.committedDate).to.equal(timestamp);
+      });
+
+      it("Cancel auction", async function () {
+        // 5. Bid
+        const auctionId = 0;
+        const amount = 10;
+
+        await zoraAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
+
+        // 6. Cancel auction
+        await zoraAuction.connect(assistant).cancelAuction(auctionId);
+
+        // 7. Unwrap token
+        const protocolBalanceBefore = await ethers.provider.getBalance(exchangeHandler.address);
+        await wrappedBosonVoucher.connect(assistant).unwrap(tokenId);
+
+        expect(await bosonVoucher.ownerOf(tokenId)).to.equal(assistant.address);
+        expect(await ethers.provider.getBalance(exchangeHandler.address)).to.equal(protocolBalanceBefore);
+
+        const exchangeId = tokenId.and(MASK);
+        const [exists, , voucher] = await exchangeHandler.getExchange(exchangeId);
+
+        expect(exists).to.equal(false);
+        expect(voucher.committedDate).to.equal(0);
+      });
+
+      it("Cancel auction and unwrap via commitToOffer", async function () {
+        // How sensible is this scenario? Should it be prevented?
+
+        // 5. Bid
+        const auctionId = 0;
+        const amount = 10;
+
+        await zoraAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
+
+        // 6. Cancel auction
+        await zoraAuction.connect(assistant).cancelAuction(auctionId);
+
+        // 7. Unwrap token via commitToOffer
+        const protocolBalanceBefore = await ethers.provider.getBalance(exchangeHandler.address);
+
+        const calldata = wrappedBosonVoucher.interface.encodeFunctionData("unwrap", [tokenId]);
+        const priceDiscovery = new PriceDiscovery(0, wrappedBosonVoucher.address, calldata, Side.Bid);
+        const tx = await exchangeHandler.connect(assistant).commitToOffer(assistant.address, offer.id, priceDiscovery);
+        const { timestamp } = await ethers.provider.getBlock(tx.blockNumber);
+
+        expect(await bosonVoucher.ownerOf(tokenId)).to.equal(assistant.address);
+        expect(await ethers.provider.getBalance(exchangeHandler.address)).to.equal(protocolBalanceBefore);
+
+        const exchangeId = tokenId.and(MASK);
+        const [exists, , voucher] = await exchangeHandler.getExchange(exchangeId);
+
+        expect(exists).to.equal(true);
+        expect(voucher.committedDate).to.equal(timestamp);
+      });
     });
   });
 });

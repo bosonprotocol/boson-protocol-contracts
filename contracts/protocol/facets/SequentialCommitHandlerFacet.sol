@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
+import { IWETH9Like } from "../../interfaces/IWETH9Like.sol";
 import { IBosonSequentialCommitHandler } from "../../interfaces/handlers/IBosonSequentialCommitHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
@@ -18,8 +19,6 @@ import { Math } from "../../ext_libs/Math.sol";
  */
 contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDiscoveryBase {
     using Address for address;
-
-    constructor(address _weth) PriceDiscoveryBase(_weth) {}
 
     /**
      * @notice Initializes facet.
@@ -93,24 +92,24 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         }
 
         if (_priceDiscovery.side == Side.Bid) {
+            // @TODO why don't allow third party to call?
             require(seller == msgSender(), NOT_VOUCHER_HOLDER);
         }
 
         // First call price discovery and get actual price
         // It might be lower tha submitted for buy orders and higher for sell orders
-        uint256 actualPrice = fulfilOrder(offer.id, _priceDiscovery, _buyer, offer.sellerId, _tokenId);
+        uint256 actualPrice = fulfilOrder(_tokenId, offer, _priceDiscovery, _buyer);
 
         // Calculate the amount to be kept in escrow
         uint256 escrowAmount;
+
         {
             // Get sequential commits for this exchange
-            SequentialCommit[] storage sequentialCommits = protocolEntities().sequentialCommits[exchangeId];
+            ExchangeCosts[] storage exchangeCosts = protocolEntities().exchangeCosts[exchangeId];
 
             {
                 // Calculate fees
-                uint256 protocolFeeAmount = tokenAddress == protocolAddresses().token
-                    ? protocolFees().flatBoson
-                    : (protocolFees().percentage * actualPrice) / 10000;
+                uint256 protocolFeeAmount = getProtocolFee(tokenAddress, actualPrice);
 
                 // Calculate royalties
                 (, uint256 royaltyAmount) = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]).royaltyInfo(
@@ -122,15 +121,15 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 require((protocolFeeAmount + royaltyAmount) <= actualPrice, FEE_AMOUNT_TOO_HIGH);
 
                 // Get price paid by current buyer
-                uint256 len = sequentialCommits.length;
-                uint256 currentPrice = len == 0 ? offer.price : sequentialCommits[len - 1].price;
+                uint256 len = exchangeCosts.length;
+                uint256 currentPrice = len == 0 ? offer.price : exchangeCosts[len - 1].price;
 
                 // Calculate the minimal amount to be kept in the escrow
                 escrowAmount = Math.max(actualPrice, protocolFeeAmount + royaltyAmount + currentPrice) - currentPrice;
 
                 // Update sequential commit
-                sequentialCommits.push(
-                    SequentialCommit({
+                exchangeCosts.push(
+                    ExchangeCosts({
                         resellerId: buyerId,
                         price: actualPrice,
                         protocolFeeAmount: protocolFeeAmount,
@@ -138,6 +137,8 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                     })
                 );
             }
+
+            address weth = protocolAddresses().weth;
 
             // Make sure enough get escrowed
             if (_priceDiscovery.side == Side.Ask) {
@@ -147,9 +148,9 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                     if (tokenAddress == address(0)) {
                         // If exchange is native currency, seller cannot directly approve protocol to transfer funds
                         // They need to approve wrapper contract, so protocol can pull funds from wrapper
+                        FundsLib.transferFundsToProtocol(weth, seller, escrowAmount);
                         // But since protocol otherwise normally operates with native currency, needs to unwrap it (i.e. withdraw)
-                        FundsLib.transferFundsToProtocol(address(weth), seller, escrowAmount);
-                        weth.withdraw(escrowAmount);
+                        IWETH9Like(weth).withdraw(escrowAmount);
                     } else {
                         FundsLib.transferFundsToProtocol(tokenAddress, seller, escrowAmount);
                     }
@@ -157,14 +158,16 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             } else {
                 // when bid side, we have full proceeds in escrow. Keep minimal in, return the difference
                 if (tokenAddress == address(0)) {
-                    tokenAddress = address(weth);
-                    if (escrowAmount > 0) weth.withdraw(escrowAmount);
+                    tokenAddress = weth;
+                    if (escrowAmount > 0) IWETH9Like(weth).withdraw(escrowAmount);
                 }
 
                 uint256 payout = actualPrice - escrowAmount;
                 if (payout > 0) FundsLib.transferFundsFromProtocol(tokenAddress, payable(seller), payout);
             }
         }
+
+        clearStorage(_tokenId);
 
         // Since exchange and voucher are passed by reference, they are updated
         emit BuyerCommitted(exchange.offerId, exchange.buyerId, exchangeId, exchange, voucher, msgSender());

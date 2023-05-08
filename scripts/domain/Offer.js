@@ -5,7 +5,7 @@ const {
   stringIsValid,
   enumIsValid,
 } = require("../util/validations.js");
-const OfferPrice = require("./OfferPrice.js");
+const PriceType = require("./PriceType.js");
 
 /**
  * Boson Protocol Domain Entity: Offer
@@ -25,7 +25,7 @@ class Offer {
             string metadataUri;
             string metadataHash;
             bool voided;
-            OfferPrice priceType;
+            PriceType priceType;
         }
     */
 
@@ -276,7 +276,7 @@ class Offer {
   }
 
   priceTypeIsValid() {
-    return enumIsValid(this.priceType, OfferPrice);
+    return enumIsValid(this.priceType, PriceType);
   }
 
   /**

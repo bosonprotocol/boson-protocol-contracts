@@ -62,29 +62,22 @@ abstract contract BeaconClientBase is BosonTypes {
     /**
      * @notice Informs protocol of new buyer associated with an exchange
      *
-     * @param _exchangeId - the id of the exchange
+     * @param _tokenId - the voucher id
      * @param _newBuyer - the address of the new buyer
      */
-    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) internal {
+    function onVoucherTransferred(uint256 _tokenId, address payable _newBuyer) internal {
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        IBosonExchangeHandler(protocolDiamond).onVoucherTransferred(_exchangeId, _newBuyer);
+        IBosonExchangeHandler(protocolDiamond).onVoucherTransferred(_tokenId, _newBuyer);
     }
 
     function onPremintedVoucherTransferred(
         uint256 _tokenId,
         address payable _to,
         address _from,
-        address _rangeOwner,
         address _sender
-    ) internal {
+    ) internal returns (bool) {
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        IBosonExchangeHandler(protocolDiamond).onPremintedVoucherTransferred(
-            _tokenId,
-            _to,
-            _from,
-            _rangeOwner,
-            _sender
-        );
+        return IBosonExchangeHandler(protocolDiamond).onPremintedVoucherTransferred(_tokenId, _to, _from, _sender);
     }
 
     /**

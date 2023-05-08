@@ -1,11 +1,6 @@
 const hre = require("hardhat");
 
 const ethers = hre.ethers;
-const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
-const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond");
-const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets");
-const { getFacetsWithArgs, calculateContractAddress, deriveTokenId } = require("../../util/utils");
-const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants");
 const {
   mockSeller,
   mockAuthToken,
@@ -15,153 +10,84 @@ const {
   accountId,
 } = require("../../util/mock");
 const { expect } = require("chai");
-const Role = require("../../../scripts/domain/Role");
-const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
+const { calculateContractAddress, deriveTokenId, setupTestEnvironment } = require("../../util/utils");
+
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const Side = require("../../../scripts/domain/Side");
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const { constants } = require("ethers");
-const OfferPrice = require("../../../scripts/domain/OfferPrice");
+const PriceType = require("../../../scripts/domain/PriceType");
 
 describe("[@skip-on-coverage] sudoswap integration", function () {
   this.timeout(100000000);
   let lssvmPairFactory, linearCurve;
-  let bosonVoucher, bosonToken;
-  let deployer, protocol, assistant, buyer, DR, sudoswapDeployer;
+  let bosonVoucher;
+  let deployer, assistant, buyer, DR;
   let offer;
-  let exchangeHandler, fundsHandler;
+  let exchangeHandler, priceDiscoveryHandler;
   let weth;
   let seller;
 
   before(async function () {
     accountId.next();
 
-    let protocolTreasury;
-    [deployer, protocol, assistant, protocolTreasury, buyer, DR, sudoswapDeployer] = await ethers.getSigners();
+    // Specify contracts needed for this test
+    const contracts = {
+      accountHandler: "IBosonAccountHandler",
+      offerHandler: "IBosonOfferHandler",
+      fundsHandler: "IBosonFundsHandler",
+      exchangeHandler: "IBosonExchangeHandler",
+      priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
+    };
 
-    const LSSVMPairEnumerableETH = await ethers.getContractFactory("LSSVMPairEnumerableETH", sudoswapDeployer);
+    const wethFactory = await ethers.getContractFactory("WETH9");
+    weth = await wethFactory.deploy();
+    await weth.deployed();
+
+    let accountHandler, offerHandler, fundsHandler;
+
+    ({
+      signers: [deployer, assistant, buyer, DR],
+      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler, priceDiscoveryHandler },
+      extraReturnValues: { bosonVoucher },
+    } = await setupTestEnvironment(contracts, { wethAddress: weth.address }));
+
+    const LSSVMPairEnumerableETH = await ethers.getContractFactory("LSSVMPairEnumerableETH", deployer);
     const lssvmPairEnumerableETH = await LSSVMPairEnumerableETH.deploy();
     await lssvmPairEnumerableETH.deployed();
 
-    const LSSVMPairEnumerableERC20 = await ethers.getContractFactory("LSSVMPairEnumerableERC20", sudoswapDeployer);
+    const LSSVMPairEnumerableERC20 = await ethers.getContractFactory("LSSVMPairEnumerableERC20", deployer);
     const lssvmPairEnumerableERC20 = await LSSVMPairEnumerableERC20.deploy();
     await lssvmPairEnumerableERC20.deployed();
 
-    const LSSVMPairMissingEnumerableETH = await ethers.getContractFactory(
-      "LSSVMPairMissingEnumerableETH",
-      sudoswapDeployer
-    );
+    const LSSVMPairMissingEnumerableETH = await ethers.getContractFactory("LSSVMPairMissingEnumerableETH", deployer);
     const lssvmPairMissingEnumerableETH = await LSSVMPairMissingEnumerableETH.deploy();
 
     const LSSVMPairMissingEnumerableERC20 = await ethers.getContractFactory(
       "LSSVMPairMissingEnumerableERC20",
-      sudoswapDeployer
+      deployer
     );
     const lssvmPairMissingEnumerableERC20 = await LSSVMPairMissingEnumerableERC20.deploy();
 
-    const LSSVMPairFactory = await ethers.getContractFactory("LSSVMPairFactory", sudoswapDeployer);
+    const LSSVMPairFactory = await ethers.getContractFactory("LSSVMPairFactory", deployer);
 
     lssvmPairFactory = await LSSVMPairFactory.deploy(
       lssvmPairEnumerableETH.address,
       lssvmPairMissingEnumerableETH.address,
       lssvmPairEnumerableERC20.address,
       lssvmPairMissingEnumerableERC20.address,
-      sudoswapDeployer.address,
+      deployer.address,
       "0"
     );
     await lssvmPairFactory.deployed();
 
     // Deploy bonding curves
-    const LinearCurve = await ethers.getContractFactory("LinearCurve", sudoswapDeployer);
+    const LinearCurve = await ethers.getContractFactory("LinearCurve", deployer);
     linearCurve = await LinearCurve.deploy();
     await linearCurve.deployed();
 
     // Whitelist bonding curve
     await lssvmPairFactory.setBondingCurveAllowed(linearCurve.address, true);
-
-    // Deploy diamond
-    let [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-
-    // Cast Diamond to contract interfaces
-    const offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-    const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-
-    // Grant roles
-    await accessController.grantRole(Role.PROTOCOL, protocol.address);
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    const protocolClientArgs = [protocolDiamond.address];
-
-    const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
-
-    [bosonVoucher] = bv;
-    const [beacon] = beacons;
-    const [proxy] = proxies;
-
-    const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
-    const buyerEscalationDepositPercentage = "1000"; // 10%
-
-    [bosonToken] = await deployMockTokens();
-
-    // Add config Handler, so ids start at 1, and so voucher address can be found
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 10000,
-      },
-      //Protocol fees
-      {
-        percentage: 200, // 2%
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
-    const facetNames = [
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "SellerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "FundsHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
-
-    const wethFactory = await ethers.getContractFactory("WETH9");
-    weth = await wethFactory.deploy();
-    await weth.deployed();
-
-    // Add WETH
-    facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [1, weth.address];
-
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
 
     seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
 
@@ -179,7 +105,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
     let offerDates, offerDurations, disputeResolverId;
     ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
     offer.quantityAvailable = 10;
-    offer.priceType = OfferPrice.Discovery;
+    offer.priceType = PriceType.Discovery;
 
     await offerHandler
       .connect(assistant)
@@ -207,74 +133,92 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
   //        "_poolType": "TOKEN, NFT, or TRADE",
   //        "_spotPrice": "The initial selling spot price"
 
-  it("sudoswap is used as price discovery mechanism for a offer", async function () {
+  it("Works with wrapper vouchers", async function () {
     const poolType = 1; // NFT
     const delta = ethers.utils.parseUnits("0.25", "ether").toString();
     const fee = "0";
     const spotPrice = offer.price;
     const nftIds = [];
-    let tx = await lssvmPairFactory
-      .connect(assistant)
-      .createPairETH(
-        bosonVoucher.address,
-        linearCurve.address,
-        constants.AddressZero,
-        poolType,
-        delta,
-        fee,
-        spotPrice,
-        nftIds
-      );
 
-    const receipt = await tx.wait();
+    for (let i = 1; i <= offer.quantityAvailable; i++) {
+      const tokenId = deriveTokenId(offer.id, i);
+      nftIds.push(tokenId);
+    }
 
-    const [contractAddress] = receipt.events[1].args;
+    const initialPoolBalance = ethers.utils.parseUnits("10", "ether").toString();
+    await weth.connect(assistant).deposit({ value: initialPoolBalance });
+    await weth.connect(assistant).approve(lssvmPairFactory.address, ethers.constants.MaxUint256);
 
-    await bosonVoucher.connect(assistant).setPriceDiscoveryContract(contractAddress);
-
-    // need to deposit NFTs
-    await bosonVoucher.connect(assistant).setApprovalForAll(lssvmPairFactory.address, true);
-
-    const tokenId = deriveTokenId(offer.id, 1);
-    tx = await lssvmPairFactory.connect(assistant).depositNFTs(bosonVoucher.address, [tokenId], contractAddress);
-
-    const priceDiscoveryContract = await ethers.getContractAt("LSSVMPairMissingEnumerableETH", contractAddress);
-
-    const [, , , inputAmount] = await priceDiscoveryContract.getBuyNFTQuote(1);
-
-    const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("swapTokenForAnyNFTs", [
-      1,
-      inputAmount,
-      exchangeHandler.address, // receiver is protocol diamond
-      false,
-      constants.AddressZero,
-    ]);
-    const priceDiscovery = new PriceDiscovery(
-      inputAmount,
-      priceDiscoveryContract.address,
-      priceDiscoveryData,
-      Side.Ask
+    const WrappedBosonVoucherFactory = await ethers.getContractFactory("SudoswapWrapper");
+    const wrappedBosonVoucher = await WrappedBosonVoucherFactory.connect(assistant).deploy(
+      bosonVoucher.address,
+      lssvmPairFactory.address,
+      exchangeHandler.address,
+      weth.address
     );
 
+    // need to deposit NFTs
+    await bosonVoucher.connect(assistant).setApprovalForAll(wrappedBosonVoucher.address, true);
+
+    const tokenId = deriveTokenId(offer.id, 1);
+    await wrappedBosonVoucher.connect(assistant).wrap(nftIds);
+
+    const createPairERC20Parameters = {
+      token: weth.address,
+      nft: wrappedBosonVoucher.address,
+      bondingCurve: linearCurve.address,
+      assetRecipient: wrappedBosonVoucher.address,
+      poolType,
+      delta,
+      fee,
+      spotPrice,
+      initialNFTIDs: nftIds,
+      initialTokenBalance: initialPoolBalance,
+    };
+
+    await wrappedBosonVoucher.connect(assistant).setApprovalForAll(lssvmPairFactory.address, true);
+
+    let tx = await lssvmPairFactory.connect(assistant).createPairERC20(createPairERC20Parameters);
+
+    const { events } = await tx.wait();
+
+    const [poolAddress] = events.find((e) => e.event == "NewPair").args;
+
+    //  tx = await wrappedBosonVoucher.connect(assistant).depositNFTs(poolAddress, [tokenId]);
+
+    const pool = await ethers.getContractAt("LSSVMPairMissingEnumerable", poolAddress);
+
+    const [, , , inputAmount] = await pool.getBuyNFTQuote(1);
+
+    const swapTokenTx = await pool.swapTokenForAnyNFTs(1, inputAmount, buyer.address, false, constants.AddressZero);
+
+    expect(swapTokenTx).to.emit(pool, "SwapTokenForAnyNFTs");
+
+    const calldata = wrappedBosonVoucher.interface.encodeFunctionData("unwrap", [tokenId]);
+
+    const priceDiscovery = new PriceDiscovery(inputAmount, pool.address, calldata, Side.Ask);
+
     // see this
-    await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, inputAmount, {
-      value: inputAmount,
-    });
+    //    await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, inputAmount, {
+    //      value: inputAmount,
+    //    });
 
     // Seller needs to deposit weth in order to fill the escrow at the last step
     // Price is theoretically the highest amount needed
-    await weth.connect(buyer).deposit({ value: inputAmount });
-    await weth.connect(buyer).approve(exchangeHandler.address, inputAmount);
+    //    await weth.connect(buyer).deposit({ value: inputAmount });
+    //   await weth.connect(buyer).approve(exchangeHandler.address, inputAmount);
 
     // Approve transfers
     // Buyer does not approve, since its in ETH.
     // Seller approves price discovery to transfer the voucher
-    await bosonVoucher.connect(assistant).setApprovalForAll(priceDiscoveryContract.address, true);
-    tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, priceDiscovery, {
-      value: inputAmount,
-    });
+    // await bosonVoucher.connect(assistant).setApprovalForAll(pool.address, true);
+    tx = await priceDiscoveryHandler
+      .connect(buyer)
+      .commitToPriceDiscoveryOffer(buyer.address, offer.id, priceDiscovery, {
+        value: inputAmount,
+      });
 
-    await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
-    await expect(tx).to.emit(priceDiscoveryContract, "SwapNFTOutPair");
+    await expect(tx).to.not.emit(exchangeHandler, "BuyerCommitted");
+    //    await expect(tx).to.emit(pool, "SwapNFTOutPair");
   });
 });

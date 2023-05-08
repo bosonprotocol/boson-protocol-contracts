@@ -11,11 +11,11 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x3a35a271
+ * The ERC-165 identifier for this interface is: 0x1e5578f0
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
-     * @notice Commits to an offer (first step of an exchange).
+     * @notice Commits to a static offer (first step of an exchange).
      *
      * Emits a BuyerCommitted event if successful.
      * Issues a voucher to the buyer address.
@@ -40,40 +40,8 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
-     * @param _priceDiscovery - price discovery data (if applicable). See BosonTypes.PriceDiscovery
      */
-    function commitToOffer(
-        address payable _buyer,
-        uint256 _offerId,
-        BosonTypes.PriceDiscovery calldata _priceDiscovery
-    ) external payable;
-
-    /**
-     * @notice Commits to a preminted offer (first step of an exchange).
-     *
-     * Emits a BuyerCommitted event if successful.
-     *
-     * Reverts if:
-     * - The exchanges region of protocol is paused
-     * - The buyers region of protocol is paused
-     * - Caller is not the voucher contract, owned by the seller
-     * - Exchange exists already
-     * - Offer has been voided
-     * - Offer has expired
-     * - Offer is not yet available for commits
-     * - Buyer account is inactive
-     * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Seller has less funds available than sellerDeposit and price
-     *
-     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _offerId - the id of the offer to commit to
-     * @param _exchangeId - the id of the exchange
-     */
-    function commitToPreMintedOffer(
-        address payable _buyer,
-        uint256 _offerId,
-        uint256 _exchangeId
-    ) external;
+    function commitToOffer(address payable _buyer, uint256 _offerId) external payable;
 
     /**
      * @notice Completes an exchange.
@@ -199,18 +167,39 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - Voucher has expired
      * - New buyer's existing account is deactivated
      *
-     * @param _exchangeId - the id of the exchange
+     * @param _tokenId - the voucher id
      * @param _newBuyer - the address of the new buyer
      */
-    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) external;
+    function onVoucherTransferred(uint256 _tokenId, address payable _newBuyer) external;
 
+    /**
+     * @notice Handle pre-minted voucher transfer
+     *
+     * Reverts if
+     * - The exchanges region of protocol is paused
+     * - The buyers region of protocol is paused
+     * - Caller is not the voucher contract, owned by the seller
+     * - Exchange exists already
+     * - Offer has been voided
+     * - Offer has expired
+     * - Offer is not yet available for commits
+     * - Buyer account is inactive
+     * - Buyer is token-gated (conditional commit requirements not met or already used)
+     * - Seller has less funds available than sellerDeposit and price
+     *
+     *
+     * @param _tokenId - the voucher id
+     * @param _to - the receiver address
+     * @param _from - the sender address
+     * @param _sender - the caller address
+     * @return committed - true if the voucher was committed
+     */
     function onPremintedVoucherTransferred(
         uint256 _tokenId,
         address payable _to,
         address _from,
-        address _rangeOwner,
         address _sender
-    ) external;
+    ) external returns (bool committed);
 
     /**
      * @notice Checks if the given exchange in a finalized state.

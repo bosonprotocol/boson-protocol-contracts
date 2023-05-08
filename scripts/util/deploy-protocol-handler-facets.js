@@ -96,9 +96,11 @@ async function deployProtocolFacets(facetNames, facetsToInit, maxPriorityFeePerG
       cut: [],
     };
 
-
-    if (facetsToInit[facetName] && facetName !== "ProtocolInitializationHandlerFacet") {
-      const calldata = facetContract.interface.encodeFunctionData("initialize", facetsToInit[facetName].init || []);
+    if (facetsToInit[facetName] && facetsToInit[facetName].init && facetName !== "ProtocolInitializationHandlerFacet") {
+      const calldata = facetContract.interface.encodeFunctionData(
+        "initialize",
+        (facetsToInit[facetName].init.length && facetsToInit[facetName].init) || []
+      );
 
       deployedFacet.initialize = calldata;
     }

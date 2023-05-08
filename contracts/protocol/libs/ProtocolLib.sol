@@ -28,6 +28,7 @@ library ProtocolLib {
         address voucherBeacon;
         // Address of the Boson Beacon proxy implementation
         address beaconProxy;
+        address weth;
     }
 
     // Protocol limits storage
@@ -115,7 +116,7 @@ library ProtocolLib {
         //entity id => auth token
         mapping(uint256 => BosonTypes.AuthToken) authTokens;
         // exchange id => sequential commit info
-        mapping(uint256 => BosonTypes.SequentialCommit[]) sequentialCommits;
+        mapping(uint256 => BosonTypes.ExchangeCosts[]) exchangeCosts;
     }
 
     // Protocol lookups storage
@@ -184,8 +185,10 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.AuthToken) pendingAuthTokenUpdatesBySeller;
         // dispute resolver id => DisputeResolver
         mapping(uint256 => BosonTypes.DisputeResolver) pendingAddressUpdatesByDisputeResolver;
-        // exchange id => price discovery contract
-        mapping(uint256 => address) priceDiscoveryContractByExchange;
+        // token id => price discovery contract
+        mapping(uint256 => address) priceDiscoveryContractByVoucher;
+        // token id => last owner of the voucher (used for price discovery)
+        mapping(uint256 => address) lastVoucherOwner;
     }
 
     // Incrementing id counters

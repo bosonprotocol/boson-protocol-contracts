@@ -9,7 +9,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xe393ad01
+ * The ERC-165 identifier for this interface is: 0x5b42e82e
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
     /**
@@ -500,4 +500,17 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @return the access controller address
      */
     function getAccessControllerAddress() external view returns (address);
+
+    /**
+     * @notice Sets WETH address.
+     *
+     * Emits a WETHAddressChanged event if successful.
+     *
+     * Reverts if _weth is the zero address
+     *
+     * @dev Caller must have ADMIN role.
+     *
+     * @param _weth - the WETH contract address
+     */
+    function setWeth(address payable _weth) external;
 }

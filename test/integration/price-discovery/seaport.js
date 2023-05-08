@@ -1,16 +1,15 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
-const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond");
-const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets");
 const {
-  getFacetsWithArgs,
   calculateContractAddress,
-  objectToArray,
-  getEvent,
   deriveTokenId,
+  getEvent,
+  setupTestEnvironment,
+  revertToSnapshot,
+  getSnapshot,
+  objectToArray,
 } = require("../../util/utils");
-const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../../util/constants");
+
 const {
   mockSeller,
   mockAuthToken,
@@ -20,117 +19,50 @@ const {
   accountId,
 } = require("../../util/mock");
 const { assert } = require("chai");
-const Role = require("../../../scripts/domain/Role");
-const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const SeaportSide = require("../seaport/SideEnum");
 const Side = require("../../../scripts/domain/Side");
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const { constants } = require("ethers");
-const OfferPrice = require("../../../scripts/domain/OfferPrice");
+const PriceType = require("../../../scripts/domain/PriceType");
 const { seaportFixtures } = require("../seaport/fixtures");
 const { SEAPORT_ADDRESS } = require("../../util/constants");
 const ItemType = require("../seaport/ItemTypeEnum");
 
 describe("[@skip-on-coverage] seaport integration", function () {
   this.timeout(100000000);
-  let bosonVoucher, bosonToken;
-  let deployer, protocol, assistant, buyer, DR;
+  let bosonVoucher;
+  let assistant, buyer, DR;
   let fixtures;
   let offer, offerDates;
-  let exchangeHandler;
+  let exchangeHandler, priceDiscoveryHandler;
   let weth;
   let seller;
   let seaport;
+  let snapshotId;
 
   before(async function () {
     accountId.next();
-
-    let protocolTreasury;
-    [deployer, protocol, assistant, protocolTreasury, buyer, DR] = await ethers.getSigners();
-
-    // Deploy diamond
-    let [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
-
-    // Cast Diamond to contract interfaces
-    const offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-    const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-    const fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-
-    // Grant roles
-    await accessController.grantRole(Role.PROTOCOL, protocol.address);
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    const protocolClientArgs = [protocolDiamond.address];
-
-    const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
-
-    [bosonVoucher] = bv;
-    const [beacon] = beacons;
-    const [proxy] = proxies;
-
-    const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
-    const buyerEscalationDepositPercentage = "1000"; // 10%
-
-    [bosonToken] = await deployMockTokens();
-
-    // Add config Handler, so ids start at 1, and so voucher address can be found
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 10000,
-      },
-      //Protocol fees
-      {
-        percentage: 200, // 2%
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
-    const facetNames = [
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "SellerHandlerFacet",
-      "DisputeResolverHandlerFacet",
-      "FundsHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+    // Specify contracts needed for this test
+    const contracts = {
+      accountHandler: "IBosonAccountHandler",
+      offerHandler: "IBosonOfferHandler",
+      fundsHandler: "IBosonFundsHandler",
+      exchangeHandler: "IBosonExchangeHandler",
+      priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
+    };
 
     const wethFactory = await ethers.getContractFactory("WETH9");
     weth = await wethFactory.deploy();
     await weth.deployed();
 
-    facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [1, weth.address];
+    let accountHandler, offerHandler, fundsHandler;
 
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+    ({
+      signers: [, assistant, buyer, DR],
+      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler, priceDiscoveryHandler },
+      extraReturnValues: { bosonVoucher },
+    } = await setupTestEnvironment(contracts, { wethAddress: weth.address }));
 
     seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
 
@@ -148,7 +80,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
     let offerDurations, disputeResolverId;
     ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
     offer.quantityAvailable = 10;
-    offer.priceType = OfferPrice.Discovery;
+    offer.priceType = PriceType.Discovery;
 
     await offerHandler
       .connect(assistant)
@@ -159,7 +91,6 @@ describe("[@skip-on-coverage] seaport integration", function () {
 
     seaport = await ethers.getContractAt("Seaport", SEAPORT_ADDRESS);
 
-    await bosonVoucher.connect(assistant).setPriceDiscoveryContract(seaport.address);
     await bosonVoucher.connect(assistant).setApprovalForAllToContract(seaport.address, true);
 
     fixtures = await seaportFixtures(seaport);
@@ -172,6 +103,14 @@ describe("[@skip-on-coverage] seaport integration", function () {
     await fundsHandler
       .connect(assistant)
       .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+
+    // Get snapshot id
+    snapshotId = await getSnapshot();
+  });
+
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
   });
 
   it("Seaport criteria-based order is used as price discovery mechanism for a BP offer", async function () {
@@ -229,9 +168,11 @@ describe("[@skip-on-coverage] seaport integration", function () {
     await weth.connect(buyer).deposit({ value });
     await weth.connect(buyer).approve(exchangeHandler.address, value);
 
-    const tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, priceDiscovery, {
-      value,
-    });
+    const tx = await priceDiscoveryHandler
+      .connect(buyer)
+      .commitToPriceDiscoveryOffer(buyer.address, offer.id, priceDiscovery, {
+        value,
+      });
 
     const receipt = await tx.wait();
 

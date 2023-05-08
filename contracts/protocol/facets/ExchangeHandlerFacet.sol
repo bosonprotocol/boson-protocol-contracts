@@ -16,14 +16,13 @@ import { IERC1155 } from "../../interfaces/IERC1155.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
 import { IERC721Receiver } from "../../interfaces/IERC721Receiver.sol";
-import { PriceDiscoveryBase } from "../bases/PriceDiscoveryBase.sol";
 
 /**
  * @title ExchangeHandlerFacet
  *
  * @notice Handles exchanges associated with offers within the protocol.
  */
-contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, PriceDiscoveryBase, IERC721Receiver {
+contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, IERC721Receiver {
     using Address for address;
 
     uint256 private immutable EXCHANGE_ID_2_2_0;
@@ -34,9 +33,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * Set EXCHANGE_ID_2_2_0 in the constructor.
      *
      * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
-     * @param _weth - the address of the WETH contract
      */
-    constructor(uint256 _firstExchangeId2_2_0, address _weth) PriceDiscoveryBase(_weth) {
+    constructor(uint256 _firstExchangeId2_2_0) {
         EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
     }
 
@@ -49,7 +47,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
     }
 
     /**
-     * @notice Commits to an offer (first step of an exchange).
+     * @notice Commits to a price static offer (first step of an exchange).
      *
      * Emits a BuyerCommitted event if successful.
      * Issues a voucher to the buyer address.
@@ -58,6 +56,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * - The exchanges region of protocol is paused
      * - The buyers region of protocol is paused
      * - OfferId is invalid
+     * - Offer price type is not static
      * - Offer has been voided
      * - Offer has expired
      * - Offer is not yet available for commits
@@ -74,89 +73,26 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
-     * @param _priceDiscovery - price discovery data (if applicable). See BosonTypes.PriceDiscovery
      */
-    function commitToOffer(
-        address payable _buyer,
-        uint256 _offerId,
-        PriceDiscovery calldata _priceDiscovery
-    ) external payable override exchangesNotPaused buyersNotPaused {
+    function commitToOffer(address payable _buyer, uint256 _offerId)
+        external
+        payable
+        override
+        exchangesNotPaused
+        buyersNotPaused
+    {
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
 
         // Get the offer
-        bool exists;
-        Offer storage offer;
-        (exists, offer) = fetchOffer(_offerId);
+        (bool exists, Offer storage offer) = fetchOffer(_offerId);
 
         // Make sure offer exists, is available, and isn't void, expired, or sold out
         require(exists, NO_SUCH_OFFER);
 
-        if (offer.priceType == OfferPrice.Discovery) {
-            fulfillPriceDiscoveryOrder(_buyer, _offerId, offer.sellerId, _priceDiscovery);
-        } else {
-            commitToOfferInternal(_buyer, offer, 0, false);
-        }
-    }
+        require(offer.priceType == PriceType.Static, INVALID_PRICE_TYPE);
 
-    function fulfillPriceDiscoveryOrder(
-        address payable _buyer,
-        uint256 _offerId,
-        uint256 _sellerId,
-        PriceDiscovery calldata _priceDiscovery
-    ) internal exchangesNotPaused buyersNotPaused nonReentrant {
-        // Make sure  caller provided price discovery data if offer price type is discovery
-        require(
-            _priceDiscovery.price > 0 &&
-                _priceDiscovery.priceDiscoveryContract != address(0) &&
-                _priceDiscovery.priceDiscoveryData.length > 0,
-            "INVALID_PRICE_DISCOVERY"
-        );
-
-        fulfilOrder(_offerId, _priceDiscovery, _buyer, _sellerId, 0);
-    }
-
-    /**
-     * @notice Commits to a preminted offer (first step of an exchange).
-     *
-     * Emits a BuyerCommitted event if successful.
-     *
-     * Reverts if:
-     * - The exchanges region of protocol is paused
-     * - The buyers region of protocol is paused
-     * - Caller is not the voucher contract, owned by the seller
-     * - Exchange exists already
-     * - Offer has been voided
-     * - Offer has expired
-     * - Offer is not yet available for commits
-     * - Buyer account is inactive
-     * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Seller has less funds available than sellerDeposit and price
-     *
-     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _offerId - the id of the offer to commit to
-     * @param _exchangeId - the id of the exchange
-     */
-    function commitToPreMintedOffer(
-        address payable _buyer,
-        uint256 _offerId,
-        uint256 _exchangeId
-    ) external exchangesNotPaused buyersNotPaused {
-        // Fetch the offer info
-        (, Offer storage offer) = fetchOffer(_offerId);
-
-        // Make sure that the voucher was issued on the clone that is making a call
-        // @TODO Why not use _msgSender here?
-        require(
-            msg.sender == protocolLookups().cloneAddress[offer.sellerId] || msg.sender == address(this),
-            ACCESS_DENIED
-        );
-
-        // Exchange must not exist already
-        (bool exists, ) = fetchExchange(_exchangeId);
-        require(!exists, EXCHANGE_ALREADY_EXISTS);
-
-        commitToOfferInternal(_buyer, offer, _exchangeId, true);
+        commitToOfferInternal(_buyer, offer, 0, false);
     }
 
     /**
@@ -192,6 +128,27 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         uint256 _exchangeId,
         bool _isPreminted
     ) internal {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        if (!_isPreminted) {
+            // For non-preminted offers, quantityAvailable must be greater than zero, since it gets decremented
+            require(_offer.quantityAvailable > 0, OFFER_SOLD_OUT);
+
+            // Get next exchange id for non-preminted offers
+            _exchangeId = protocolCounters().nextExchangeId++;
+        } else {
+            IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
+
+            // Make sure that the voucher was issued on the clone that is making a call
+            require(msg.sender == address(bosonVoucher), ACCESS_DENIED);
+
+            // Exchange must not exist already
+            (bool exists, ) = fetchExchange(_exchangeId);
+
+            require(!exists, EXCHANGE_ALREADY_EXISTS);
+        }
+
         uint256 _offerId = _offer.id;
         // Make sure offer is available, and isn't void, expired, or sold out
         OfferDates storage offerDates = fetchOfferDates(_offerId);
@@ -199,27 +156,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         require(!_offer.voided, OFFER_HAS_BEEN_VOIDED);
         require(block.timestamp < offerDates.validUntil, OFFER_HAS_EXPIRED);
 
-        if (!_isPreminted) {
-            // For non-preminted offers, quantityAvailable must be greater than zero, since it gets decremented
-            require(_offer.quantityAvailable > 0, OFFER_SOLD_OUT);
-
-            // Get next exchange id for preminted offers
-            _exchangeId = protocolCounters().nextExchangeId++;
-        } else {
-            require(_exchangeId > 0, EXCHANGE_ID_NOT_FOUND);
-        }
-
         // Authorize the buyer to commit if offer is in a conditional group
         require(authorizeCommit(_buyer, _offer, _exchangeId), CANNOT_COMMIT);
 
         // Fetch or create buyer
         uint256 buyerId = getValidBuyer(_buyer);
 
-        // Price discovery offers have the funds encumbered in PriceDiscoveryBase
-        if (_offer.priceType != OfferPrice.Discovery) {
-            // Encumber funds before creating the exchange.
-            FundsLib.encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
-        }
+        // Encumber funds
+        FundsLib.encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
 
         // Create and store a new exchange
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];
@@ -234,9 +178,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
         // Operate in a block to avoid "stack too deep" error
         {
-            // Cache protocol lookups for reference
-            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
             // Determine the time after which the voucher can be redeemed
             uint256 startDate = (block.timestamp >= offerDates.voucherRedeemableFrom)
                 ? block.timestamp
@@ -260,7 +201,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             lookups.voucherCount[buyerId]++;
             if (!_isPreminted) {
                 IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
-                uint256 tokenId = _exchangeId + (_offerId << 128);
+                uint256 tokenId = _exchangeId | (_offerId << 128);
                 bosonVoucher.issueVoucher(tokenId, _buyer);
             }
         }
@@ -535,15 +476,18 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * - Voucher has expired
      * - New buyer's existing account is deactivated
      *
-     * @param _exchangeId - the id of the exchange
+     * @param _tokenId - the voucher id
      * @param _newBuyer - the address of the new buyer
      */
-    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) external override buyersNotPaused {
+    function onVoucherTransferred(uint256 _tokenId, address payable _newBuyer) external override buyersNotPaused {
+        // Derive the exchange id
+        uint256 exchangeId = _tokenId & type(uint128).max;
+
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Get the exchange, should be in committed state
-        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
+        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(exchangeId, ExchangeState.Committed);
 
         // Make sure that the voucher is still valid
         require(block.timestamp <= voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
@@ -565,47 +509,93 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Increase voucher counter for new buyer
         lookups.voucherCount[buyerId]++;
 
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+
+        // Set incoming voucher id if we are in the middle of a price discovery call
+        if (ps.incomingVoucherCloneAddress != address(0)) {
+            ps.incomingVoucherId = _tokenId;
+        }
+
         // Notify watchers of state change
-        emit VoucherTransferred(exchange.offerId, _exchangeId, buyerId, msgSender());
+        emit VoucherTransferred(exchange.offerId, exchangeId, buyerId, msgSender());
     }
 
+    /**
+     * @notice Handle pre-minted voucher transfer
+     *
+     * Reverts if:
+     * - The exchanges region of protocol is paused
+     * - The buyers region of protocol is paused
+     * - Caller is not the voucher contract, owned by the seller
+     * - Exchange exists already
+     * - Offer has been voided
+     * - Offer has expired
+     * - Offer is not yet available for commits
+     * - Buyer account is inactive
+     * - Buyer is token-gated (conditional commit requirements not met or already used)
+     * - Seller has less funds available than sellerDeposit and price
+     *
+     * @param _tokenId - the voucher id
+     * @param _to - the receiver address
+     * @param _from - the sender address
+     * @param _sender - the caller address
+     * @return committed - true if the voucher was committed
+     */
     function onPremintedVoucherTransferred(
         uint256 _tokenId,
         address payable _to,
         address _from,
-        address _rangeOwner,
         address _sender
-    ) external override buyersNotPaused {
+    ) external override buyersNotPaused returns (bool committed) {
+        // Cache protocol status for reference
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+
+        // Make sure that protocol is not reentered
+        // Cannot use modifier `nonReentrant` since it also changes reentrancyStatus to `ENTERED`
+        // This would break the flow since the protocol should be allowed to re-enter in this case.
+        require(ps.reentrancyStatus != ENTERED, REENTRANCY_GUARD);
+
         // Derive the offer id
         uint256 offerId = _tokenId >> 128;
+
+        // Derive the exchange id
+        uint256 exchangeId = _tokenId & type(uint128).max;
 
         // Get the offer
         (, Offer storage offer) = fetchOffer(offerId);
 
-        if (offer.priceType == OfferPrice.Discovery) {
-            // Store the information about incoming voucher
-            ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+        // Cache protocol entities for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-            uint256 exchangeId = _tokenId & type(uint128).max;
+        if (offer.priceType == PriceType.Discovery) {
+            address priceDiscoveryContract = lookups.priceDiscoveryContractByVoucher[_tokenId];
+            address lastVoucherOwner = lookups.lastVoucherOwner[_tokenId];
 
-            // Cache protocol entities for reference
-            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
-            address priceDiscoveryContract = lookups.priceDiscoveryContractByExchange[exchangeId];
-
+            // Transaction has started by calling one of the commit functions ()
             if (ps.incomingVoucherCloneAddress != address(0)) {
+                // Avoid reentrancy
+                require(ps.incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);
+
+                // Store the information about incoming voucher
                 ps.incomingVoucherId = _tokenId;
 
                 commitToOfferInternal(_to, offer, exchangeId, true);
 
-                IBosonVoucher(ps.incomingVoucherCloneAddress).setCommitted(_tokenId, true);
-            } else if (_from == _rangeOwner) {
-                lookups.priceDiscoveryContractByExchange[exchangeId] = _sender;
-            } else if (_from == priceDiscoveryContract && _to == _rangeOwner) {
-                delete lookups.priceDiscoveryContractByExchange[exchangeId];
+                committed = true;
+            } else if (_from == priceDiscoveryContract && _from == _sender && _to == lastVoucherOwner) {
+                // Price discovery is returning voucher to last voucher owner, e.g withdrawn from price discovery contract
+                delete lookups.priceDiscoveryContractByVoucher[_tokenId];
+            } else if (_sender == _to) {
+                // Voucher owner is depositing voucher to price discovery contract, e.g depositing into a pool
+                lookups.priceDiscoveryContractByVoucher[_tokenId] = _sender;
+                lookups.lastVoucherOwner[_tokenId] = _from;
             } else {
-                revert("Invalid voucher transfer");
+                revert(TRANSFER_NOT_ALLOWED);
             }
+        } else {
+            commitToOfferInternal(_to, offer, exchangeId, true);
+
+            committed = true;
         }
     }
 
@@ -762,7 +752,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[offer.sellerId]);
 
         uint256 tokenId = _exchange.id;
-        if (tokenId >= EXCHANGE_ID_2_2_0) tokenId += (offerId << 128);
+        if (tokenId >= EXCHANGE_ID_2_2_0) tokenId |= (offerId << 128);
         bosonVoucher.burnVoucher(tokenId);
     }
 
@@ -897,36 +887,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
                     shouldBurnVoucher = false;
                 }
             }
-        }
-    }
-
-    /**
-     * @notice Checks if buyer exists for buyer address. If not, account is created for buyer address.
-     *
-     * Reverts if buyer exists but is inactive.
-     *
-     * @param _buyer - the buyer address to check
-     * @return buyerId - the buyer id
-     */
-    function getValidBuyer(address payable _buyer) internal returns (uint256 buyerId) {
-        // Find or create the account associated with the specified buyer address
-        bool exists;
-        (exists, buyerId) = getBuyerIdByWallet(_buyer);
-
-        if (!exists) {
-            // Create the buyer account
-            Buyer memory newBuyer;
-            newBuyer.wallet = _buyer;
-            newBuyer.active = true;
-
-            createBuyerInternal(newBuyer);
-            buyerId = newBuyer.id;
-        } else {
-            // Fetch the existing buyer account
-            (, Buyer storage buyer) = fetchBuyer(buyerId);
-
-            // Make sure buyer account is active
-            require(buyer.active, MUST_BE_ACTIVE);
         }
     }
 
@@ -1131,10 +1091,5 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             UNEXPECTED_ERC721_RECEIVED
         );
         return this.onERC721Received.selector;
-    }
-
-    function setIncomingVoucherId(uint256 _incomingVoucherId, uint256 sellerId) external {
-        require(msg.sender == protocolLookups().cloneAddress[sellerId]);
-        protocolStatus().incomingVoucherId = _incomingVoucherId;
     }
 }

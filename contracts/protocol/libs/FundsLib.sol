@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "hardhat/console.sol";
 import "../../domain/BosonConstants.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
@@ -68,7 +67,7 @@ library FundsLib {
         uint256 _buyerId,
         uint256 _price,
         bool _isPreminted,
-        BosonTypes.OfferPrice _priceType
+        BosonTypes.PriceType _priceType
     ) internal {
         // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
@@ -81,16 +80,17 @@ library FundsLib {
         BosonTypes.Offer storage offer = pe.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
 
-        bool isPriceDiscovery = _priceType == BosonTypes.OfferPrice.Discovery;
-        // if offer is non-preminted or is preMinted but price type is discovery the transaction is starting from protocol and caller must provide the payment
-        if (!_isPreminted || isPriceDiscovery) {
+        // if offer is non-preminted, validate incoming payment
+        if (!_isPreminted) {
             validateIncomingPayment(exchangeToken, _price);
             emit FundsEncumbered(_buyerId, exchangeToken, _price, sender);
         }
 
+        bool isPriceDiscovery = _priceType == BosonTypes.PriceType.Discovery;
+
         // decrease available funds
         uint256 sellerId = offer.sellerId;
-        uint256 sellerFundsEncumbered = offer.sellerDeposit + (_isPreminted && !isPriceDiscovery ? _price : 0); // for preminted offer and price type is fixed, encumber also price from seller's available funds
+        uint256 sellerFundsEncumbered = offer.sellerDeposit + (_isPreminted && !isPriceDiscovery ? _price : 0); // for preminted offer and price type is static, encumber also price from seller's available funds
         decreaseAvailableFunds(sellerId, exchangeToken, sellerFundsEncumbered);
 
         // notify external observers
@@ -115,8 +115,8 @@ library FundsLib {
      */
     function validateIncomingPayment(address _exchangeToken, uint256 _value) internal {
         if (_exchangeToken == address(0)) {
-            // if transfer is in the native currency, msg.value must be at leat the price
-            require(msg.value >= _value, INSUFFICIENT_VALUE_RECEIVED);
+            // if transfer is in the native currency, msg.value must match price
+            require(msg.value == _value, INSUFFICIENT_VALUE_RECEIVED);
         } else {
             // when price is in an erc20 token, transferring the native currency is not allowed
             require(msg.value == 0, NATIVE_NOT_ALLOWED);
@@ -241,8 +241,8 @@ library FundsLib {
     }
 
     /**
-     * @notice Takes in the exchange id and releases the funds to all intermediate reseller, depending on the state of the exchange.
-     * It is called only from releaseFunds. Protocol fee and royalties are calculated and returned to releaseFunds, where are added to the total.
+     * @notice Takes the exchange id and releases the funds to all intermediate resellers, depending on the state of the exchange.
+     * It is called only from releaseFunds. Protocol fee and royalties are calculated and returned to releaseFunds, where they are added to the total.
      *
      * Emits FundsReleased events for non zero payoffs.
      *
@@ -259,17 +259,17 @@ library FundsLib {
         uint256 _initialPrice,
         address _exchangeToken
     ) internal returns (uint256 protocolFee, uint256 royalties) {
-        BosonTypes.SequentialCommit[] storage sequentialCommits;
+        BosonTypes.ExchangeCosts[] storage exchangeCosts;
 
         // calculate effective price multiplier
         uint256 effectivePriceMultiplier;
         {
             ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
 
-            sequentialCommits = pe.sequentialCommits[_exchangeId];
+            exchangeCosts = pe.exchangeCosts[_exchangeId];
 
             // if no sequential commit happened, just return
-            if (sequentialCommits.length == 0) {
+            if (exchangeCosts.length == 0) {
                 return (0, 0);
             }
 
@@ -305,9 +305,9 @@ library FundsLib {
 
         uint256 resellerBuyPrice = _initialPrice; // the price that reseller paid for the voucher
         address msgSender = EIP712Lib.msgSender();
-        uint256 len = sequentialCommits.length;
+        uint256 len = exchangeCosts.length;
         for (uint256 i = 0; i < len; i++) {
-            BosonTypes.SequentialCommit storage sc = sequentialCommits[i];
+            BosonTypes.ExchangeCosts storage sc = exchangeCosts[i];
 
             // amount to be released
             uint256 currentResellerAmount;
