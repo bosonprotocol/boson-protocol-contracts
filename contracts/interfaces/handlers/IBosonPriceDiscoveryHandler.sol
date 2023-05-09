@@ -41,8 +41,8 @@ interface IBosonPriceDiscoveryHandler is IBosonExchangeEvents, IBosonFundsLibEve
      * - Call to price discovery contract fails
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _tokenIdOrOfferId - the id of the offer to commit to or the id of the voucher (if pre-minted)
-     * @param _priceDiscovery - price discovery data (if applicable). See BosonTypes.PriceDiscovery
+     * @param _tokenIdOrOfferId - the id of the offer to commit to or the id of the voucher when voucher is known
+     * @param _priceDiscovery - price discovery data. See BosonTypes.PriceDiscovery
      */
     function commitToPriceDiscoveryOffer(
         address payable _buyer,

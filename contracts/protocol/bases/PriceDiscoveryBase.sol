@@ -19,9 +19,12 @@ contract PriceDiscoveryBase is ProtocolBase {
     using Address for address;
 
     /**
-     * @notice @notice Fulfils an order on an external contract. Helper function passes data to either ask or bid orders.
+     * @notice Fulfils an order on an external contract.
      *
-     * See descriptions of `fulfilAskOrder` and `fulfilBidOrder` for more details.
+     * If the owner is price discovery contract, the protocol cannot act as an intermediary in the exchange,
+     * and sellers must use Wrapped's contract. Wrappers handle ask and bid orders in the same manner.
+     *
+     * See descriptions of `fulfilAskOrder`, `fulfilBidOrder` and handleWrapper for more details.
      *
      * @param _tokenId - the id of the token. Accepts whatever token is sent by price discovery contract when this value is zero.
      * @param _offer - the fully populated BosonTypes.Offer struct
@@ -70,11 +73,28 @@ contract PriceDiscoveryBase is ProtocolBase {
         require(owner == _buyer, NEW_OWNER_AND_BUYER_MUST_MATCH);
     }
 
+    /*
+     * @notice Call `unwrap` (or equivalent) function on the price discovery contract.
+     *
+     * Reverts if:
+     * - Token id not set by the caller
+     * - Protocol balance doesn't increase by the expected amount.
+     *   Balance change must be equal or greater than the price set by the caller when side is Bid
+     *   Balance change must be equal or less than the price set by the caller when side is Ask
+     * - Token id sent to buyer and token id set by the caller don't match
+     *
+     * @param _tokenId - the id of the token
+     * @param _exchangeToken - the address of the exchange contract
+     * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
+     * @return actualPrice - the actual price of the order
+     */
     function handleWrapper(
         uint256 _tokenId,
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery
     ) internal returns (uint256 actualPrice) {
+        require(_tokenId != 0, TOKEN_ID_MANDATORY);
+
         address balanceToCheck = address(this);
 
         // Check balance before calling wrapper
@@ -86,17 +106,17 @@ contract PriceDiscoveryBase is ProtocolBase {
         // Check balance after the price discovery call
         uint256 balanceAfter = getBalance(_exchangeToken, balanceToCheck);
 
+        // Calculate actual price
         actualPrice = balanceAfter - balanceBefore;
 
+        // Verify that actual price is within the expected range
         if (_priceDiscovery.side == Side.Ask) {
-            require(
-                actualPrice <= _priceDiscovery.price,
-                "PriceDiscoveryBase: price discovery returned too high price"
-            );
+            require(actualPrice <= _priceDiscovery.price, PRICE_TOO_HIGH);
         } else {
-            require(actualPrice >= _priceDiscovery.price, "PriceDiscoveryBase: price discovery returned too low price");
+            require(actualPrice >= _priceDiscovery.price, PRICE_TOO_LOW);
         }
 
+        // Verify that token id provided by caller matches the token id that the price discovery contract has sent to buyer
         getAndVerifyTokenId(_tokenId);
     }
 
@@ -107,11 +127,12 @@ contract PriceDiscoveryBase is ProtocolBase {
      * - Offer price is in native token and caller does not send enough
      * - Offer price is in some ERC20 token and caller also sends native currency
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - Received amount differs from the expected value set in price discovery
-     * - Protocol does not receive the voucher
-     * - Transfer of voucher to the buyer fails for some reasong (e.g. buyer is contract that doesn't accept voucher)
      * - Call to price discovery contract fails
+     * - Received amount is greater from price set in price discovery
+     * - Protocol does not receive the voucher
+     * - Transfer of voucher to the buyer fails for some reason (e.g. buyer is contract that doesn't accept voucher)
      * - New voucher owner is not buyer wallet
+     * - Token id sent to buyer and token id set by the caller don't match (if caller has provided token id)
      *
      * @param _tokenId - the id of the token
      * @param _exchangeToken - the address of the exchange contract
@@ -175,19 +196,15 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @notice Fulfils a bid order on external contract.
      *
      * Reverts if:
-     * - Offer price is in native token and caller does not approve WETH
-     * - Offer price is in some ERC20 token and caller also sends native currency
+     * - Token id not set by the caller
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - Received ERC20 token amount differs from the expected value
      * - Transfer of voucher to the buyer fails for some reason (e.g. buyer is contract that doesn't accept voucher)
-     * - Current owner is not price discovery contract
-     * - Last voucher owner not found
+     * - Received ERC20 token amount differs from the expected value
      * - Call to price discovery contract fails
-     * - Exchange doesn't exist after the call to price discovery contract
-     * - Exchange is not in the committed state
-     * - Price received from price discovery is lower than the expected price
+     * - Protocol balance change after price discovery call is lower than the expected price
      * - Reseller did not approve protocol to transfer exchange token in escrow
      * - New voucher owner is not buyer wallet
+     * - Token id sent to buyer and token id set by the caller don't match
      *
      * @param _tokenId - the id of the token
      * @param _exchangeToken - the address of the exchange token
@@ -200,7 +217,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         PriceDiscovery calldata _priceDiscovery,
         IBosonVoucher _bosonVoucher
     ) internal returns (uint256 actualPrice) {
-        require(_tokenId != 0, "PriceDiscoveryBase: token id not set");
+        require(_tokenId != 0, TOKEN_ID_MANDATORY);
 
         // Transfer seller's voucher to protocol
         // Don't need to use safe transfer from, since that protocol can handle the voucher
@@ -209,16 +226,22 @@ contract PriceDiscoveryBase is ProtocolBase {
         // Approve price discovery contract to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
         _bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, _tokenId);
 
+        // Get protocol balance before calling price discovery contract
         uint256 balanceBefore = getBalance(_exchangeToken, address(this));
 
+        // Call the price discovery contract
         _priceDiscovery.priceDiscoveryContract.functionCall(_priceDiscovery.priceDiscoveryData);
 
+        // Get protocol balance after calling price discovery contract
         uint256 balanceAfter = getBalance(_exchangeToken, address(this));
 
+        // Calculate actual price
         actualPrice = balanceAfter - balanceBefore;
 
+        // Make sure that balance change is at least the expected price
         require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
 
+        // Verify that token id provided by caller matches the token id that the price discovery contract has sent to buyer
         getAndVerifyTokenId(_tokenId);
     }
 
@@ -238,6 +261,15 @@ contract PriceDiscoveryBase is ProtocolBase {
         return _tokenAddress == address(0) ? entity.balance : IERC20(_tokenAddress).balanceOf(entity);
     }
 
+    /*
+     * @notice Returns the token id that the price discovery contract has sent to the protocol or buyer
+     *
+     * Reverts if:
+     * - Caller has provided token id, but it does not match the token id that the price discovery contract has sent to the protocol
+     *
+     * @param _tokenId - the token id that the caller has provided
+     * @return tokenId - the token id that the price discovery contract has sent to the protocol
+     */
     function getAndVerifyTokenId(uint256 _tokenId) internal view returns (uint256) {
         // Store the information about incoming voucher
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();

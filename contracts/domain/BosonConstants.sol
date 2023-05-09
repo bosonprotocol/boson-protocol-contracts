@@ -249,3 +249,8 @@ string constant RETRACT_DISPUTE = "retractDispute(uint256)";
 string constant RAISE_DISPUTE = "raiseDispute(uint256)";
 string constant ESCALATE_DISPUTE = "escalateDispute(uint256)";
 string constant RESOLVE_DISPUTE = "resolveDispute(uint256,uint256,bytes32,bytes32,uint8)";
+
+// Price discovery related
+string constant PRICE_TOO_HIGH = "Price discovery returned a price that is too high";
+string constant PRICE_TOO_LOW = "Price discovery returned a price that is too low";
+string constant TOKEN_ID_MANDATORY = "Token id is mandatory for bid orders";

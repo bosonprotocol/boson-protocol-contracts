@@ -11,7 +11,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x1e5578f0
+ * The ERC-165 identifier for this interface is: 0x2b210ff8
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 
+import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IWETH9Like as IWETH9 } from "../../interfaces/IWETH9Like.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -199,6 +200,16 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
         // If exchange token is not known, get it from the protocol.
         if (exchangeToken == address(0)) {
             uint256 offerId = _tokenId >> 128; // OfferId is the first 128 bits of the token ID.
+
+            if (offerId == 0) {
+                // pre v2.2.0. Token does not have offerId, so we need to get it from the protocol.
+                // Get Boson exchange. Don't explicitly check if the exchange exists, since existance of the token implies it does.
+                uint256 exchangeId = _tokenId & type(uint128).max; // ExchangeId is the last 128 bits of the token ID.
+                (, BosonTypes.Exchange memory exchange, ) = IBosonExchangeHandler(protocolAddress).getExchange(
+                    exchangeId
+                );
+                offerId = exchange.offerId;
+            }
 
             // Get Boson offer. Don't explicitly check if the offer exists, since existance of the token implies it does.
             (, BosonTypes.Offer memory offer, , , , ) = IBosonOfferHandler(protocolAddress).getOffer(offerId);

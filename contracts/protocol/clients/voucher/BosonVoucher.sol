@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
-import "hardhat/console.sol";
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
@@ -755,6 +754,13 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         }
     }
 
+    /**
+     * @notice Verify if token is committable.
+     *
+     * @param _tokenId - the tokenId of the voucher that is being transferred
+     *
+     * @return committable - true if the voucher is committable
+     */
     function isTokenCommittable(uint256 _tokenId) public view returns (bool committable) {
         if (_committed[_tokenId]) {
             return false;

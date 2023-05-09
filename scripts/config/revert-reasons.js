@@ -215,4 +215,8 @@ exports.RevertReasons = {
   INIT_ZERO_ADDRESS_NON_EMPTY_CALLDATA: "LibDiamondCut: _init is address(0) but _calldata is not empty",
   INIT_EMPTY_CALLDATA_NON_ZERO_ADDRESS: "LibDiamondCut: _calldata is empty but _init is not address(0)",
   INIT_ADDRESS_WITH_NO_CODE: "LibDiamondCut: _init address has no code",
+
+  // Price discovery related
+  PRICE_TOO_HIGH: "Price discovery returned a price that is too high",
+  PRICE_TOO_LOW: "Price discovery returned a price that is too low",
 };
