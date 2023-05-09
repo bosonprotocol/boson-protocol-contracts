@@ -134,10 +134,11 @@ contract AuctionHouse is IAuctionHouse, ReentrancyGuard {
         _approveAuction(auctionId, approved);
     }
 
-    function setAuctionReservePrice(
-        uint256 auctionId,
-        uint256 reservePrice
-    ) external override auctionExists(auctionId) {
+    function setAuctionReservePrice(uint256 auctionId, uint256 reservePrice)
+        external
+        override
+        auctionExists(auctionId)
+    {
         require(
             msg.sender == auctions[auctionId].curator || msg.sender == auctions[auctionId].tokenOwner,
             "Must be auction curator or token owner"
@@ -160,10 +161,13 @@ contract AuctionHouse is IAuctionHouse, ReentrancyGuard {
      * If the auction is run in native ETH, the ETH is wrapped so it can be identically to other
      * auction currencies in this contract.
      */
-    function createBid(
-        uint256 auctionId,
-        uint256 amount
-    ) external payable override auctionExists(auctionId) nonReentrant {
+    function createBid(uint256 auctionId, uint256 amount)
+        external
+        payable
+        override
+        auctionExists(auctionId)
+        nonReentrant
+    {
         address lastBidder = auctions[auctionId].bidder;
         require(auctions[auctionId].approved, "Auction must be approved by curator");
         require(
@@ -319,7 +323,11 @@ contract AuctionHouse is IAuctionHouse, ReentrancyGuard {
         }
     }
 
-    function _handleOutgoingBid(address to, uint256 amount, address currency) internal {
+    function _handleOutgoingBid(
+        address to,
+        uint256 amount,
+        address currency
+    ) internal {
         // If the auction is in ETH, unwrap it from its underlying WETH and try to send it to the recipient.
         if (currency == address(0)) {
             IWETH(wethAddress).withdraw(amount);

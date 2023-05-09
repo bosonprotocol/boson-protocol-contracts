@@ -73,10 +73,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
      */
-    function commitToOffer(
-        address payable _buyer,
-        uint256 _offerId
-    ) external payable override exchangesNotPaused buyersNotPaused {
+    function commitToOffer(address payable _buyer, uint256 _offerId)
+        external
+        payable
+        override
+        exchangesNotPaused
+        buyersNotPaused
+    {
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
 
@@ -533,16 +536,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      *
      * @param _tokenId - the voucher id
      * @param _to - the receiver address
-     * @param _from - the sender address
-     * @param _sender - the caller address
      * @return committed - true if the voucher was committed
      */
-    function onPremintedVoucherTransferred(
-        uint256 _tokenId,
-        address payable _to,
-        address _from,
-        address _sender
-    ) external override buyersNotPaused returns (bool committed) {
+    function onPremintedVoucherTransferred(uint256 _tokenId, address payable _to)
+        external
+        override
+        buyersNotPaused
+        returns (bool committed)
+    {
         // Cache protocol status for reference
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
 
@@ -623,9 +624,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      * @return voucher - the voucher details. See {BosonTypes.Voucher}
      */
-    function getExchange(
-        uint256 _exchangeId
-    ) external view override returns (bool exists, Exchange memory exchange, Voucher memory voucher) {
+    function getExchange(uint256 _exchangeId)
+        external
+        view
+        override
+        returns (
+            bool exists,
+            Exchange memory exchange,
+            Voucher memory voucher
+        )
+    {
         (exists, exchange) = fetchExchange(_exchangeId);
         voucher = fetchVoucher(_exchangeId);
     }
@@ -737,10 +745,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * @param _exchange - the exchange for which twins should be transferred
      * @return shouldBurnVoucher - whether or not the voucher should be burned
      */
-    function transferTwins(
-        Exchange storage _exchange,
-        Voucher storage _voucher
-    ) internal returns (bool shouldBurnVoucher) {
+    function transferTwins(Exchange storage _exchange, Voucher storage _voucher)
+        internal
+        returns (bool shouldBurnVoucher)
+    {
         // See if there is an associated bundle
         (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
 
@@ -884,7 +892,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      *
      * @return bool - true if buyer is authorized to commit
      */
-    function authorizeCommit(address _buyer, Offer storage _offer, uint256 exchangeId) internal returns (bool) {
+    function authorizeCommit(
+        address _buyer,
+        Offer storage _offer,
+        uint256 exchangeId
+    ) internal returns (bool) {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 

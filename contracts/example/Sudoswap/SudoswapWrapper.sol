@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 
+import { IWETH9Like as IWETH9 } from "../../interfaces/IWETH9Like.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { DAIAliases as DAI } from "../../interfaces/DAIAliases.sol";
@@ -12,6 +13,16 @@ import { ERC721 } from "./../support/ERC721.sol";
 import { IERC721Metadata } from "./../support/IERC721Metadata.sol";
 import { IERC165 } from "../../interfaces/IERC165.sol";
 import { LSSVMPairFactory } from "@sudoswap/LSSVMPairFactory.sol";
+
+interface IPool {
+    function swapTokenForSpecificNFTs(
+        uint256[] calldata nftIds,
+        uint256 maxExpectedTokenInput,
+        address nftRecipient,
+        bool isRouter,
+        address routerCaller
+    ) external payable returns (uint256 inputAmount);
+}
 
 /**
  * @title SudoswapWrapper
@@ -52,9 +63,6 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
     address private immutable factoryAddress;
     address private immutable protocolAddress;
     address private immutable wethAddress;
-
-    // Token ID for which the price is not yet known
-    uint256 private pendingTokenId;
 
     // Mapping from token ID to price. If pendingTokenId == tokenId, this is not the final price.
     mapping(uint256 => uint256) private price;
@@ -135,14 +143,10 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
             "SudoswapWrapper: Only owner or protocol can unwrap"
         );
 
-        // If some token price is not know yet, update it now
-        if (pendingTokenId != 0) updatePendingTokenPrice();
-
         uint256 priceToPay = price[_tokenId];
 
         // Delete price and pendingTokenId to prevent reentrancy
         delete price[_tokenId];
-        delete pendingTokenId;
 
         // transfer Boson Voucher to voucher owner
         IERC721(voucherAddress).safeTransferFrom(address(this), wrappedVoucherOwner, _tokenId);
@@ -163,35 +167,23 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
         poolAddress = _poolAddress;
     }
 
-    /**
-     * @notice Handle transfers out of Sudoswap.
-     *
-     * @param _from The address of the sender.
-     * @param _to The address of the recipient.
-     * @param _tokenId The token id.
-     */
-    function _beforeTokenTransfer(
-        address _from,
-        address _to,
-        uint256 _tokenId
-    ) internal virtual override(ERC721) {
-        if (_from != address(0) && _from == poolAddress) {
-            // Someone is making a swap and wrapped voucher is being transferred to buyer
+    function swapTokenForSpecificNFT(uint256 _tokenId, uint256 _maxPrice) external {
+        uint256 balanceBefore = getCurrentBalance(_tokenId);
 
-            // If some token price is not know yet, update it now
-            if (pendingTokenId != 0) updatePendingTokenPrice();
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = _tokenId;
 
-            // Store current balance and set the pending token id
-            price[_tokenId] = getCurrentBalance(_tokenId);
-            pendingTokenId = _tokenId;
-        }
+        IWETH9(wethAddress).transferFrom(msg.sender, address(this), _maxPrice);
+        IWETH9(wethAddress).approve(poolAddress, _maxPrice);
 
-        super._beforeTokenTransfer(_from, _to, _tokenId);
-    }
+        IPool(poolAddress).swapTokenForSpecificNFTs(tokenIds, _maxPrice, msg.sender, false, address(0));
 
-    function updatePendingTokenPrice() internal {
-        uint256 tokenId = pendingTokenId;
-        price[tokenId] = getCurrentBalance(tokenId) - price[tokenId];
+        uint256 balanceAfter = getCurrentBalance(_tokenId);
+
+        uint256 actualPrice = balanceAfter - balanceBefore;
+        require(actualPrice <= _maxPrice, "SudoswapWrapper: Price too high");
+
+        price[_tokenId] = actualPrice;
     }
 
     /**

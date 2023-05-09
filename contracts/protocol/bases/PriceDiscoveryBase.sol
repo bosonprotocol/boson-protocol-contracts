@@ -50,10 +50,9 @@ contract PriceDiscoveryBase is ProtocolBase {
         address priceDiscoveryContract = _priceDiscovery.priceDiscoveryContract;
 
         address owner;
-        console.log("fulfilOrder: _tokenId: %s", _tokenId);
+
         if (_tokenId != 0) {
             owner = bosonVoucher.ownerOf(_tokenId);
-            console.log("fulfilOrder: owner: %s", owner);
         }
 
         // Handle wrapper voucher, there is no difference between ask and bid

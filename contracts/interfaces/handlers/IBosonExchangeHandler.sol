@@ -190,16 +190,9 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      *
      * @param _tokenId - the voucher id
      * @param _to - the receiver address
-     * @param _from - the sender address
-     * @param _sender - the caller address
      * @return committed - true if the voucher was committed
      */
-    function onPremintedVoucherTransferred(
-        uint256 _tokenId,
-        address payable _to,
-        address _from,
-        address _sender
-    ) external returns (bool committed);
+    function onPremintedVoucherTransferred(uint256 _tokenId, address payable _to) external returns (bool committed);
 
     /**
      * @notice Checks if the given exchange in a finalized state.

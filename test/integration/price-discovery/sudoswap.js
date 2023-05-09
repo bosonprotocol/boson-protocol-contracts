@@ -15,7 +15,6 @@ const { calculateContractAddress, deriveTokenId, setupTestEnvironment } = requir
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const Side = require("../../../scripts/domain/Side");
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
-const { constants } = require("ethers");
 const PriceType = require("../../../scripts/domain/PriceType");
 const MASK = ethers.BigNumber.from(2).pow(128).sub(1);
 
@@ -190,13 +189,11 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
     const [, , , inputAmount] = await pool.getBuyNFTQuote(1);
 
     await weth.connect(buyer).deposit({ value: inputAmount.mul(2) });
-    await weth.connect(buyer).approve(pool.address, inputAmount.mul(2));
+    await weth.connect(buyer).approve(wrappedBosonVoucher.address, inputAmount.mul(2));
 
     const tokenId = deriveTokenId(offer.id, 1);
 
-    const swapTokenTx = await pool
-      .connect(buyer)
-      .swapTokenForSpecificNFTs([tokenId], inputAmount, buyer.address, false, constants.AddressZero);
+    const swapTokenTx = await wrappedBosonVoucher.connect(buyer).swapTokenForSpecificNFT(tokenId, inputAmount);
 
     expect(swapTokenTx).to.emit(pool, "SwapTokenForAnyNFTs");
 
@@ -210,15 +207,11 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
 
-    console.log(inputAmount.toString());
-    console.log("protocolBalanceBefore", protocolBalanceBefore.toString());
     const { timestamp } = await ethers.provider.getBlock(tx.blockNumber);
-    console.log("protocolBalanceBefore.add(inputAmount)", protocolBalanceBefore.add(inputAmount).toString());
     expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
 
     const protocolBalanceAfter = await weth.balanceOf(exchangeHandler.address);
 
-    console.log("protocolBalanceAfter", protocolBalanceAfter.toString());
     expect(protocolBalanceAfter).to.equal(protocolBalanceBefore.add(inputAmount));
 
     const exchangeId = tokenId.and(MASK);

@@ -18,4 +18,6 @@ interface IWETH9Like {
         address,
         uint256
     ) external returns (bool);
+
+    function approve(address, uint256) external returns (bool);
 }
