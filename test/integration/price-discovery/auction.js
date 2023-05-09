@@ -23,8 +23,6 @@ const {
 const { expect } = require("chai");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const PriceType = require("../../../scripts/domain/PriceType");
-const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
-const Side = require("../../../scripts/domain/Side");
 
 const MASK = BigNumber.from(2).pow(128).sub(1);
 
@@ -32,7 +30,7 @@ describe("[@skip-on-coverage] auction integration", function () {
   let bosonVoucher;
   let assistant, buyer, DR, rando;
   let offer, offerDates;
-  let exchangeHandler, priceDiscoveryHandler;
+  let exchangeHandler;
   let weth;
   let seller;
   let snapshotId;
@@ -57,7 +55,7 @@ describe("[@skip-on-coverage] auction integration", function () {
 
     ({
       signers: [assistant, buyer, DR, rando],
-      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler, priceDiscoveryHandler },
+      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler },
       extraReturnValues: { bosonVoucher },
     } = await setupTestEnvironment(contracts, { wethAddress: weth.address }));
 
@@ -144,27 +142,9 @@ describe("[@skip-on-coverage] auction integration", function () {
       expect(await bosonVoucher.ownerOf(tokenId)).to.equal(zoraAuction.address);
     });
 
-    // Zora uses safeTransferFrom and WETH doesn't support it
-    it("commitToPriceDiscoveryOffer should revert when seller is not using wrappers and offer is native currency", async function () {
-      // Caller should approve WETH because price discovery bids doesn't work with native currency
-      await weth.connect(assistant).approve(exchangeHandler.address, amount);
-
-      //  Encode calldata for endAuction
-      const calldata = zoraAuction.interface.encodeFunctionData("endAuction", [auctionId]);
-      const priceDiscovery = new PriceDiscovery(amount, zoraAuction.address, calldata, Side.Bid);
-
-      //  Commit to offer, expecting revert
-      await expect(
-        priceDiscoveryHandler.connect(assistant).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-      ).to.be.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
-    });
-
-    it("Auction is canceled if ended directly into Zora", async function () {
-      // safe transfer from will fail on onPremintedTransferredHook and auction should be canceled
-      await expect(zoraAuction.connect(rando).endAuction(auctionId)).to.emit(zoraAuction, "AuctionCanceled");
-
-      // Token is returned to the seller
-      expect(await bosonVoucher.ownerOf(tokenId)).to.equal(assistant.address);
+    it("Transfer can't happens outside protocol", async function () {
+      // safe transfer from will fail on onPremintedTransferredHook and transaction should fail
+      await expect(zoraAuction.connect(rando).endAuction(auctionId)).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
 
       // Exchange doesn't exist
       const exchangeId = tokenId.and(MASK);

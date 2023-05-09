@@ -531,19 +531,19 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * - The buyers region of protocol is paused
      * - Caller is not a clone address associated with the seller
      * - Incoming voucher clone address is not the caller
+     * - Offer price is discovery, transaction is not starting from protocol nor seller is _from address
      * - Any reason that ExchangeHandler commitToOfferInternal reverts. See ExchangeHandler.commitToOfferInternal
      *
      * @param _tokenId - the voucher id
      * @param _to - the receiver address
+     * @param _from - the address of current owner
      * @return committed - true if the voucher was committed
      */
-    function onPremintedVoucherTransferred(uint256 _tokenId, address payable _to)
-        external
-        override
-        buyersNotPaused
-        exchangesNotPaused
-        returns (bool committed)
-    {
+    function onPremintedVoucherTransferred(
+        uint256 _tokenId,
+        address payable _to,
+        address _from
+    ) external override buyersNotPaused exchangesNotPaused returns (bool committed) {
         // Cache protocol status for reference
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
 
@@ -561,17 +561,25 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Get the offer
         (, Offer storage offer) = fetchOffer(offerId);
 
-        if (offer.priceType == PriceType.Discovery && ps.incomingVoucherCloneAddress == msg.sender) {
-            // If price type is discovery, transaction must start from `commitToPriceDiscoveryOffer`
+        (, Seller storage seller, ) = fetchSeller(offer.sellerId);
 
-            // Avoid reentrancy
-            require(ps.incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);
+        address bosonVoucher = protocolLookups().cloneAddress[offer.sellerId];
 
-            // Store the information about incoming voucher
-            ps.incomingVoucherId = _tokenId;
+        if (offer.priceType == PriceType.Discovery) {
+            //  transaction start from `commitToPriceDiscoveryOffer`, should commit
+            if (ps.incomingVoucherCloneAddress != address(0)) {
+                // Avoid reentrancy
+                require(ps.incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);
 
-            commitToOfferInternal(_to, offer, exchangeId, true);
-            committed = true;
+                // Store the information about incoming voucher
+                ps.incomingVoucherId = _tokenId;
+
+                commitToOfferInternal(_to, offer, exchangeId, true);
+                committed = true;
+                // Only seller can transfer voucher without calling commitToOfferInternal, this is necessary to deposit voucher into wrapper contracts
+            } else if (_from != seller.assistant && _from != bosonVoucher) {
+                revert(ACCESS_DENIED);
+            }
         } else if (offer.priceType == PriceType.Static) {
             // If price type is static, transaction can start from anywhere
             commitToOfferInternal(_to, offer, exchangeId, true);

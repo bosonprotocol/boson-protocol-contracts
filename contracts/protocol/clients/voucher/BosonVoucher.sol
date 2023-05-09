@@ -743,7 +743,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             _isCommittable = false;
 
             // Call protocol onPremintedVoucherTransferred
-            bool committed = onPremintedVoucherTransferred(_tokenId, payable(_to));
+            bool committed = onPremintedVoucherTransferred(_tokenId, payable(_to), _from);
 
             // Set committed status
             _committed[_tokenId] = committed;
@@ -837,6 +837,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         getERC721UpgradeableStorage()._owners[_tokenId] = _from;
     }
 
+    /*
+     * Override ERC721Upgradeable._isApprovedOrOwner to check for pre-minted tokens
+     */
     function _isApprovedOrOwner(address spender, uint256 tokenId) internal view override returns (bool) {
         address owner = ownerOf(tokenId);
         return (spender == owner || isApprovedForAll(owner, spender) || getApproved(tokenId) == spender);

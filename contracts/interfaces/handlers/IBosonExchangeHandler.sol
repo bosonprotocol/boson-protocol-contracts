@@ -11,7 +11,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x2b210ff8
+ * The ERC-165 identifier for this interface is: 0x9e254fff
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
@@ -181,13 +181,19 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - The buyers region of protocol is paused
      * - Caller is not a clone address associated with the seller
      * - Incoming voucher clone address is not the caller
+     * - Offer price is discovery, transaction is not starting from protocol nor seller is _from address
      * - Any reason that ExchangeHandler commitToOfferInternal reverts. See ExchangeHandler.commitToOfferInternal
      *
      * @param _tokenId - the voucher id
      * @param _to - the receiver address
+     * @param _from - the address of current owner
      * @return committed - true if the voucher was committed
      */
-    function onPremintedVoucherTransferred(uint256 _tokenId, address payable _to) external returns (bool committed);
+    function onPremintedVoucherTransferred(
+        uint256 _tokenId,
+        address payable _to,
+        address _from
+    ) external returns (bool committed);
 
     /**
      * @notice Checks if the given exchange in a finalized state.
