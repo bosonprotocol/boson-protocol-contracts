@@ -160,6 +160,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * Emits a VoucherTransferred event if successful.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - The buyers region of protocol is paused
      * - Caller is not a clone address associated with the seller
      * - Exchange does not exist
@@ -175,18 +176,12 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
     /**
      * @notice Handle pre-minted voucher transfer
      *
-     * Reverts if
+     * Reverts if:
      * - The exchanges region of protocol is paused
      * - The buyers region of protocol is paused
-     * - Caller is not the voucher contract, owned by the seller
-     * - Exchange exists already
-     * - Offer has been voided
-     * - Offer has expired
-     * - Offer is not yet available for commits
-     * - Buyer account is inactive
-     * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Seller has less funds available than sellerDeposit and price
-     *
+     * - Caller is not a clone address associated with the seller
+     * - Incoming voucher clone address is not the caller
+     * - Any reason that ExchangeHandler commitToOfferInternal reverts. See ExchangeHandler.commitToOfferInternal
      *
      * @param _tokenId - the voucher id
      * @param _to - the receiver address

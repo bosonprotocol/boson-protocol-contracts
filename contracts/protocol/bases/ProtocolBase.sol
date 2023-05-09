@@ -731,6 +731,13 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         exists = (_exchangeId > 0 && condition.method != EvaluationMethod.None);
     }
 
+    /**
+     * @notice calculate the protocol fee for a given exchange
+     *
+     * @param _exchangeToken - the token used for the exchange
+     * @param _price - the price of the exchange
+     * @return protocolFee - the protocol fee
+     */
     function getProtocolFee(address _exchangeToken, uint256 _price) internal view returns (uint256 protocolFee) {
         // Calculate and set the protocol fee
         protocolFee = _exchangeToken == protocolAddresses().token

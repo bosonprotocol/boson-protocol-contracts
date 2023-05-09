@@ -1,6 +1,7 @@
 const defaultConfig = require("./hardhat.config.js");
 require("hardhat-preprocessor");
 const environments = require("./environments");
+const fs = require("fs");
 const { subtask } = require("hardhat/config");
 const path = require("node:path");
 const { glob } = require("glob");
@@ -32,6 +33,14 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS, async (_, { config }, runSuper) 
   return [...files, ...submodules, ...submodulesWithLib].map(path.normalize);
 });
 
+function getRemappings() {
+  return fs
+    .readFileSync("remappings.txt", "utf8")
+    .split("\n")
+    .filter(Boolean) // remove empty lines
+    .map((line) => line.trim().split("="));
+}
+
 module.exports = {
   ...defaultConfig,
   networks: {
@@ -43,5 +52,20 @@ module.exports = {
       accounts: { mnemonic: environments.hardhat.mnemonic },
       allowUnlimitedContractSize: true,
     },
+  },
+  preprocess: {
+    eachLine: () => ({
+      transform: (line) => {
+        if (line.match(/^\s*import /i)) {
+          for (const [from, to] of getRemappings()) {
+            if (line.includes(from)) {
+              line = line.replace(from, to);
+              break;
+            }
+          }
+        }
+        return line;
+      },
+    }),
   },
 };

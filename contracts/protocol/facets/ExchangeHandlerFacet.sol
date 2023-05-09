@@ -114,7 +114,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      *   - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      *   - Received ERC20 token amount differs from the expected value
      *   - Seller has less funds available than sellerDeposit
-     * - Seller has less funds available than sellerDeposit and price for preminted offers
+     * - For preminted offers:
+     *   - Exchange aldready exists
+     *   - Seller has less funds available than sellerDeposit and price for preminted offers that price type is static
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offer - storage pointer to the offer
@@ -137,11 +139,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             // Get next exchange id for non-preminted offers
             _exchangeId = protocolCounters().nextExchangeId++;
         } else {
-            IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
-
-            // Make sure that the voucher was issued on the clone that is making a call
-            require(msg.sender == address(bosonVoucher), ACCESS_DENIED);
-
             // Exchange must not exist already
             (bool exists, ) = fetchExchange(_exchangeId);
 
@@ -149,6 +146,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         }
 
         uint256 _offerId = _offer.id;
+
         // Make sure offer is available, and isn't void, expired, or sold out
         OfferDates storage offerDates = fetchOfferDates(_offerId);
         require(block.timestamp >= offerDates.validFrom, OFFER_NOT_AVAILABLE);
@@ -468,6 +466,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * Emits a VoucherTransferred event if successful.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - The buyers region of protocol is paused
      * - Caller is not a clone address associated with the seller
      * - Exchange does not exist
@@ -478,7 +477,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * @param _tokenId - the voucher id
      * @param _newBuyer - the address of the new buyer
      */
-    function onVoucherTransferred(uint256 _tokenId, address payable _newBuyer) external override buyersNotPaused {
+    function onVoucherTransferred(uint256 _tokenId, address payable _newBuyer)
+        external
+        override
+        buyersNotPaused
+        exchangesNotPaused
+    {
         // Derive the exchange id
         uint256 exchangeId = _tokenId & type(uint128).max;
 
@@ -525,14 +529,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * Reverts if:
      * - The exchanges region of protocol is paused
      * - The buyers region of protocol is paused
-     * - Caller is not the voucher contract, owned by the seller
-     * - Exchange exists already
-     * - Offer has been voided
-     * - Offer has expired
-     * - Offer is not yet available for commits
-     * - Buyer account is inactive
-     * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Seller has less funds available than sellerDeposit and price
+     * - Caller is not a clone address associated with the seller
+     * - Incoming voucher clone address is not the caller
+     * - Any reason that ExchangeHandler commitToOfferInternal reverts. See ExchangeHandler.commitToOfferInternal
      *
      * @param _tokenId - the voucher id
      * @param _to - the receiver address
@@ -542,6 +541,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         external
         override
         buyersNotPaused
+        exchangesNotPaused
         returns (bool committed)
     {
         // Cache protocol status for reference
@@ -561,8 +561,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Get the offer
         (, Offer storage offer) = fetchOffer(offerId);
 
-        // Should commit to offer. Transaction has started by calling one of the commit functions
-        if (offer.priceType == PriceType.Discovery && ps.incomingVoucherCloneAddress != address(0)) {
+        if (offer.priceType == PriceType.Discovery && ps.incomingVoucherCloneAddress == msg.sender) {
+            // If price type is discovery, transaction must start from `commitToPriceDiscoveryOffer`
+
             // Avoid reentrancy
             require(ps.incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);
 
@@ -572,6 +573,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             commitToOfferInternal(_to, offer, exchangeId, true);
             committed = true;
         } else if (offer.priceType == PriceType.Static) {
+            // If price type is static, transaction can start from anywhere
             commitToOfferInternal(_to, offer, exchangeId, true);
             committed = true;
         }

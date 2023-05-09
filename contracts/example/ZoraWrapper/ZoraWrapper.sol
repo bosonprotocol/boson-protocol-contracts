@@ -117,8 +117,7 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
      * @notice Unwraps the voucher, transfer true voucher to owner and funds to the protocol.
      *
      * Reverts if:
-     *  - wrapped voucher is not owned by the seller and the caller is not the protocol
-     *  - wrapped voucher is owned by the seller and the caller is not the owner of this contract or protcol
+     *  - caller is neither protocol nor voucher owner
      *
      * @param _tokenId The token id.
      */
@@ -128,7 +127,7 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
         // Either contract owner or protocol can unwrap
         // If contract owner is unwrapping, this is equivalent to canceled auction
         require(
-            msg.sender == protocolAddress || (owner() == msg.sender && wrappedVoucherOwner == msg.sender),
+            msg.sender == protocolAddress || wrappedVoucherOwner == msg.sender,
             "ZoraWrapper: Only owner or protocol can unwrap"
         );
 

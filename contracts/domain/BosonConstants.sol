@@ -111,15 +111,6 @@ string constant TOO_MANY_EXCHANGES = "Exceeded maximum exchanges in a single tra
 string constant EXCHANGE_IS_NOT_IN_A_FINAL_STATE = "Exchange is not in a final state";
 string constant EXCHANGE_ALREADY_EXISTS = "Exchange already exists";
 string constant INVALID_RANGE_LENGTH = "Range length is too large or zero";
-string constant TOKEN_ID_MISMATCH = "Token id mismatch";
-string constant OWNER_MUST_BE_PRICE_DISCOVERY_CONTRACT = "Owner must be price discovery contract";
-string constant LAST_OWNER_NOT_FOUND = "Last owner not found";
-string constant NEW_VOUCHER_OWNER_BUYER_MUST_MATCH = "New voucher owner must be the buyer";
-string constant INVALID_PRICE_TYPE = "Invalid price type";
-string constant INVALID_PRICE_DISCOVERY = "Invalid price discovery argument";
-string constant INCOMING_VOUCHER_ALREADY_SET = "Incoming voucher already set";
-string constant NEW_OWNER_AND_BUYER_MUST_MATCH = "New owner and buyer must match";
-string constant TOKEN_ID_CANNOT_BE_ZERO = "Token id cannot be zero";
 
 // Revert Reasons: Sequential commit related
 string constant UNEXPECTED_ERC721_RECEIVED = "Unexpected ERC721 received";
@@ -210,7 +201,6 @@ string constant ROYALTY_FEE_INVALID = "ERC2981: royalty fee exceeds protocol lim
 string constant NOT_COMMITTABLE = "Token not committable";
 string constant INVALID_TO_ADDRESS = "Tokens can only be pre-mined to the contract or contract owner address";
 string constant EXTERNAL_CALL_FAILED = "External call failed";
-string constant TRANSFER_NOT_ALLOWED = "Transfer not allowed";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(
@@ -254,3 +244,8 @@ string constant RESOLVE_DISPUTE = "resolveDispute(uint256,uint256,bytes32,bytes3
 string constant PRICE_TOO_HIGH = "Price discovery returned a price that is too high";
 string constant PRICE_TOO_LOW = "Price discovery returned a price that is too low";
 string constant TOKEN_ID_MANDATORY = "Token id is mandatory for bid orders";
+string constant TOKEN_ID_MISMATCH = "Token id mismatch";
+string constant INVALID_PRICE_TYPE = "Invalid price type";
+string constant INVALID_PRICE_DISCOVERY = "Invalid price discovery argument";
+string constant INCOMING_VOUCHER_ALREADY_SET = "Incoming voucher already set";
+string constant NEW_OWNER_AND_BUYER_MUST_MATCH = "New owner and buyer must match";

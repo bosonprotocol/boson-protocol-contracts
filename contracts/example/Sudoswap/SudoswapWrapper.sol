@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
-
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IWETH9Like as IWETH9 } from "../../interfaces/IWETH9Like.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
@@ -13,7 +12,6 @@ import { IERC20 } from "../../interfaces/IERC20.sol";
 import { ERC721 } from "./../support/ERC721.sol";
 import { IERC721Metadata } from "./../support/IERC721Metadata.sol";
 import { IERC165 } from "../../interfaces/IERC165.sol";
-import { LSSVMPairFactory } from "@sudoswap/LSSVMPairFactory.sol";
 
 interface IPool {
     function swapTokenForSpecificNFTs(
@@ -129,8 +127,7 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
      * @notice Unwraps the voucher, transfer true voucher to owner and funds to the protocol.
      *
      * Reverts if:
-     *  - wrapped voucher is not owned by the seller and the caller is not the protocol
-     *  - wrapped voucher is owned by the seller and the caller is not the owner of this contract or protcol
+     *  - caller is neither protocol nor voucher owner
      *
      * @param _tokenId The token id.
      */
@@ -154,7 +151,7 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
 
         // Transfer token to protocol
         if (priceToPay > 0) {
-            // @TODO check this No need to handle native separately, since Sudoswap always sends WETH
+            // This example only supports WETH
             IERC20(cachedExchangeToken[_tokenId]).safeTransfer(protocolAddress, priceToPay);
         }
 
@@ -164,10 +161,21 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
         _burn(_tokenId);
     }
 
+    /**
+     * @notice Set the pool address
+     *
+     * @param _poolAddress The pool address
+     */
     function setPoolAddress(address _poolAddress) external onlyOwner {
         poolAddress = _poolAddress;
     }
 
+    /**
+     * @notice swap token for specific NFT
+     *
+     * @param _tokenId - the token id
+     * @param _maxPrice - the max price
+     */
     function swapTokenForSpecificNFT(uint256 _tokenId, uint256 _maxPrice) external {
         uint256 balanceBefore = getCurrentBalance(_tokenId);
 

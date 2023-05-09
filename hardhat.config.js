@@ -1,6 +1,6 @@
 const dotEnvConfig = require("dotenv");
 dotEnvConfig.config();
-const fs = require("fs");
+
 const environments = require("./environments");
 const { task } = require("hardhat/config");
 require("@nomiclabs/hardhat-etherscan");
@@ -98,14 +98,6 @@ task("split-unit-tests-into-chunks", "Splits unit tests into chunks")
     await splitUnitTestsIntoChunks(chunks);
   });
 
-function getRemappings() {
-  return fs
-    .readFileSync("remappings.txt", "utf8")
-    .split("\n")
-    .filter(Boolean) // remove empty lines
-    .map((line) => line.trim().split("="));
-}
-
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {
@@ -188,21 +180,5 @@ module.exports = {
   },
   mocha: {
     timeout: 100000,
-  },
-  preprocess: {
-    eachLine: () => ({
-      transform: (line) => {
-        if (line.match(/^\s*import /i)) {
-          for (const [from, to] of getRemappings()) {
-            if (line.includes(from)) {
-              console.log(from, to);
-              line = line.replace(from, to);
-              break;
-            }
-          }
-        }
-        return line;
-      },
-    }),
   },
 };
