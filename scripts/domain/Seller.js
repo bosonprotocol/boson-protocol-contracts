@@ -54,7 +54,7 @@ class Seller {
       clerk,
       treasury,
       active,
-      metadataUri,
+      metadataUri: metadataUri || "",
     });
   }
 

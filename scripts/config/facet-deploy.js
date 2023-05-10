@@ -7,7 +7,7 @@ const protocolConfig = require("./protocol-parameters");
  * Get the configuration data to be passed to the ConfigHandlerFacet initializer
  * @returns { addresses, limits, fees }
  */
-function getConfig() {
+function getConfigHandlerInitArgs() {
   return [
     {
       token: protocolConfig.TOKEN[network],
@@ -18,6 +18,19 @@ function getConfig() {
     protocolConfig.limits,
     protocolConfig.fees,
   ];
+}
+
+/**
+ * Get the configuration data to be passed to the MetaTransactionsHandlerFacet initializer
+ * @param facets - array of facet names
+ * @returns {Object} - array of function hashes
+ */
+async function getMetaTransactionsHandlerFacetInitArgs(facets) {
+  const getFunctionHashesClosure = getStateModifyingFunctionsHashes(facets, [
+    "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)",
+  ]);
+
+  return await getFunctionHashesClosure();
 }
 
 /**
@@ -45,7 +58,6 @@ const noArgFacetNames = [
   "AgentHandlerFacet",
   "BundleHandlerFacet",
   "DisputeHandlerFacet",
-  "ExchangeHandlerFacet",
   "FundsHandlerFacet",
   "GroupHandlerFacet",
   "OfferHandlerFacet",
@@ -57,13 +69,7 @@ const noArgFacetNames = [
 ];
 
 async function getFacets(config) {
-  const ConfigHandlerFacetInitArgs = config ?? getConfig();
-
-  // metaTransactionsHandlerFacet initializer arguments.
-  const MetaTransactionsHandlerFacetInitArgs = await getStateModifyingFunctionsHashes(
-    [...noArgFacetNames, "MetaTransactionsHandlerFacet"],
-    ["executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"]
-  );
+  const ConfigHandlerFacetInitArgs = config ?? getConfigHandlerInitArgs();
 
   const facetArgs = noArgFacetNames.reduce((acc, facetName) => {
     acc[facetName] = { init: [] };
@@ -71,10 +77,18 @@ async function getFacets(config) {
   }, {});
 
   facetArgs["ConfigHandlerFacet"] = { init: ConfigHandlerFacetInitArgs };
-  facetArgs["MetaTransactionsHandlerFacet"] = { init: [MetaTransactionsHandlerFacetInitArgs] };
   facetArgs["ExchangeHandlerFacet"] = { init: [], constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network]] };
+
+  // metaTransactionsHandlerFacet initializer arguments.
+  const MetaTransactionsHandlerFacetInitArgs = await getMetaTransactionsHandlerFacetInitArgs(
+    Object.keys(facetArgs).concat(["MetaTransactionsHandlerFacet"])
+  );
+
+  facetArgs["MetaTransactionsHandlerFacet"] = { init: [MetaTransactionsHandlerFacetInitArgs] };
 
   return facetArgs;
 }
 
 exports.getFacets = getFacets;
+exports.getConfigHandlerInitArgs = getConfigHandlerInitArgs;
+exports.getMetaTransactionsHandlerFacetInitArgs = getMetaTransactionsHandlerFacetInitArgs;

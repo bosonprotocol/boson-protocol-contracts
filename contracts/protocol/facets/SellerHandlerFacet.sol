@@ -253,8 +253,12 @@ contract SellerHandlerFacet is SellerBase {
 
                 // Delete pending update admin
                 delete sellerPendingUpdate.admin;
+
                 // Delete auth token for seller id if it exists
-                delete protocolEntities().authTokens[_sellerId];
+                if (authToken.tokenType != AuthTokenType.None) {
+                    delete lookups.sellerIdByAuthToken[authToken.tokenType][authToken.tokenId];
+                    delete protocolEntities().authTokens[_sellerId];
+                }
 
                 updateApplied = true;
             } else if (role == SellerUpdateFields.Assistant && sellerPendingUpdate.assistant != address(0)) {
