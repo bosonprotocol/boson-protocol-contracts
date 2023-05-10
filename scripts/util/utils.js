@@ -1,7 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const fs = require("fs");
-const packageFile = require("../../package.json");
 const addressesDirPath = __dirname + `/../../addresses`;
 
 function getAddressesFilePath(chainId, network, env) {
@@ -17,7 +16,7 @@ function deploymentComplete(name, address, args, interfaceId, contracts) {
   console.log(`✅ ${name} deployed to: ${address}`);
 }
 
-async function writeContracts(contracts, env) {
+async function writeContracts(contracts, env, version) {
   if (!fs.existsSync(addressesDirPath)) {
     fs.mkdirSync(addressesDirPath);
   }
@@ -32,7 +31,7 @@ async function writeContracts(contracts, env) {
         chainId: chainId,
         network: network || "",
         env: env || "",
-        protocolVersion: packageFile.version,
+        protocolVersion: version,
         contracts,
       },
       null,

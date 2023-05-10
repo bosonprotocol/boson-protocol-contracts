@@ -2512,6 +2512,35 @@ describe("SellerHandler", function () {
           );
       });
 
+      it("Auth token can be used again if it was previously removed", async function () {
+        // Update a seller to use auth token
+        seller.admin = ethers.constants.AddressZero;
+        await accountHandler.connect(admin).updateSeller(seller, authToken);
+        await accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken]);
+
+        // Update seller to not use auth token anymore
+        seller.admin = other1.address;
+        await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+        await accountHandler.connect(other1).optInToSellerUpdate(seller.id, [SellerUpdateFields.Admin]);
+
+        // Update back to auth token
+        seller.admin = ethers.constants.AddressZero;
+        sellerStruct = seller.toStruct();
+        await accountHandler.connect(other1).updateSeller(seller, authToken);
+        await expect(
+          accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken])
+        )
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            pendingSellerUpdateStruct,
+            authTokenStruct,
+            emptyAuthTokenStruct,
+            authTokenOwner.address
+          );
+      });
+
       it("If updateSeller is called twice with no optIn in between, pendingSellerUpdate is populated with the data from second call", async function () {
         seller.assistant = other1.address;
 
