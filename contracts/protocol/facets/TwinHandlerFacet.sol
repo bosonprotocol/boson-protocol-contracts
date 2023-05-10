@@ -82,23 +82,16 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         // Also remove from twinRangesBySeller mapping
         if (twin.tokenType == TokenType.NonFungibleToken) {
             TokenRange[] storage twinRanges = lookups.twinRangesBySeller[sellerId][twin.tokenAddress];
-            uint256[] storage twinIdsByTokenAddressAndBySeller = lookups.twinIdsByTokenAddressAndBySeller[sellerId][
-                twin.tokenAddress
-            ];
             uint256 lastIndex = twinRanges.length - 1;
             for (uint256 index = 0; index <= lastIndex; index++) {
                 if (twinRanges[index].start == twin.tokenId) {
-                    // Update twin ranges and twinIdsByTokenAddressAndBySeller
-
                     // If not removing last element, move the last to the removed index
                     if (index != lastIndex) {
                         twinRanges[index] = twinRanges[lastIndex];
-                        twinIdsByTokenAddressAndBySeller[index] = twinIdsByTokenAddressAndBySeller[lastIndex];
                     }
 
                     // Remove last element
                     twinRanges.pop();
-                    twinIdsByTokenAddressAndBySeller.pop();
                     break;
                 }
             }
