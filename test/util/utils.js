@@ -48,33 +48,29 @@ function eventEmittedWithArgs(receipt, factory, eventName, args) {
   const eventFragment = factory.interface.fragments.filter((e) => e.name == eventName);
   const iface = new utils.Interface(eventFragment);
 
-  for (const log in receipt.logs) {
-    const topics = receipt.logs[log].topics;
+  for (const log of receipt.logs) {
+    const {
+      topics: [eventTopic],
+    } = log;
 
-    for (const index in topics) {
-      const encodedTopic = topics[index];
+    try {
+      // CHECK IF TOPIC CORRESPONDS TO THE EVENT GIVEN TO FN
+      const event = iface.getEvent(eventTopic);
 
-      try {
-        // CHECK IF TOPIC CORRESPONDS TO THE EVENT GIVEN TO FN
-        const event = iface.getEvent(encodedTopic);
-
-        if (event.name == eventName) {
-          found = true;
-          const eventArgs = iface.parseLog(receipt.logs[log]).args;
-          match = compareArgs(eventArgs, args);
-          return match;
-        }
-      } catch (e) {
-        if (e.message.includes("no matching event")) continue;
-        console.log("event error: ", e);
-        throw new Error(e);
+      if (event.name == eventName) {
+        found = true;
+        const { args: eventArgs } = iface.parseLog(log);
+        match = compareArgs(eventArgs, args);
+        if (match) return match;
       }
+    } catch (e) {
+      if (e.message.includes("no matching event")) continue;
+      console.log("event error: ", e);
+      throw new Error(e);
     }
   }
 
-  if (!found) {
-    throw new Error(`Event with name ${eventName} was not emitted!`);
-  }
+  return found && match;
 }
 
 function compareArgs(eventArgs, args) {

@@ -2291,6 +2291,7 @@ describe("IBosonFundsHandler", function () {
     });
 
     let DRFeeToSeller, DRFeeToMutualizer;
+    let tests;
 
     ["self-mutualized", "external-mutualizer"].forEach((mutualizationType) => {
       context(`👉 releaseFunds() [${mutualizationType}]`, async function () {
@@ -2299,12 +2300,13 @@ describe("IBosonFundsHandler", function () {
           protocolId = "0";
           buyerId = "4";
           exchangeId = "1";
+          agentOffer.id = "2";
 
           // Amounts that are returned if DR is not involved
           if (mutualizationType === "self-mutualized") {
             DRFeeToSeller = DRFeeToken;
-            DRFeeToMutualizer = 0;
-            offerToken.feeMutualizer = ethers.constants.AddressZero;
+            DRFeeToMutualizer = "0";
+            offerToken.feeMutualizer = agentOffer.feeMutualizer = ethers.constants.AddressZero;
 
             // Seller must deposit enough to cover DR fees
             const sellerPoolToken = BN(DRFeeToken).mul(2);
@@ -2316,9 +2318,9 @@ describe("IBosonFundsHandler", function () {
             // deposit to seller's pool
             await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerPoolToken);
           } else {
-            DRFeeToSeller = 0;
+            DRFeeToSeller = "0";
             DRFeeToMutualizer = DRFeeToken;
-            offerToken.feeMutualizer = mutualizer.address;
+            offerToken.feeMutualizer = agentOffer.feeMutualizer = mutualizer.address;
 
             // Seller must deposit enough to cover DR fees
             const poolToken = BN(DRFeeToken).mul(2);
@@ -2356,6 +2358,345 @@ describe("IBosonFundsHandler", function () {
             .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId),
             // commit to offer
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+
+          buyerPercentBasisPoints = "5566"; // 55.66%
+          const buyerPayoffSplit = BN(offerToken.price)
+            .add(offerToken.sellerDeposit)
+            .add(buyerEscalationDeposit)
+            .mul(buyerPercentBasisPoints)
+            .div("10000")
+            .toString();
+
+          // TODO: move
+          resolutionType = [
+            { name: "exchangeId", type: "uint256" },
+            { name: "buyerPercentBasisPoints", type: "uint256" },
+          ];
+
+          customSignatureType = {
+            Resolution: resolutionType,
+          };
+
+          message = {
+            exchangeId: exchangeId,
+            buyerPercentBasisPoints,
+          };
+
+          // Collect the signature components
+          ({ r, s, v } = await prepareDataSignatureParameters(
+            buyer, // Assistant is the caller, seller should be the signer.
+            customSignatureType,
+            "Resolution",
+            message,
+            disputeHandler.address
+          ));
+
+          // probably switch case can be used
+          tests = {
+            COMPLETED: {
+              payoffs: {
+                buyer: "0",
+                seller: BN(offerToken.sellerDeposit)
+                  .add(offerToken.price)
+                  .sub(offerTokenProtocolFee)
+                  .add(DRFeeToSeller)
+                  .toString(),
+                protocol: offerTokenProtocolFee,
+                mutualizer: DRFeeToMutualizer,
+                disputeResolver: "0",
+                agent: "0",
+              },
+              finalAction: {
+                handler: exchangeHandler,
+                method: "completeExchange",
+                caller: buyer,
+              },
+            },
+            REVOKED: {
+              payoffs: {
+                buyer: BN(offerToken.sellerDeposit).add(offerToken.price).toString(),
+                seller: DRFeeToSeller,
+                protocol: "0",
+                mutualizer: DRFeeToMutualizer,
+                disputeResolver: "0",
+                agent: "0",
+              },
+              finalAction: {
+                handler: exchangeHandler,
+                method: "revokeVoucher",
+                caller: assistant,
+              },
+            },
+            CANCELED: {
+              payoffs: {
+                buyer: BN(offerToken.price).sub(offerToken.buyerCancelPenalty).toString(),
+                seller: BN(offerToken.sellerDeposit).add(offerToken.buyerCancelPenalty).add(DRFeeToSeller).toString(),
+                protocol: "0",
+                mutualizer: DRFeeToMutualizer,
+                disputeResolver: "0",
+                agent: "0",
+              },
+              finalAction: {
+                handler: exchangeHandler,
+                method: "cancelVoucher",
+                caller: buyer,
+              },
+            },
+            "DISPUTED - RETRACTED": {
+              finalAction: {
+                handler: disputeHandler,
+                method: "retractDispute",
+                caller: buyer,
+              },
+            },
+            "DISPUTED - ESCALATED - RETRACTED": {
+              payoffs: {
+                buyer: "0",
+                seller: BN(offerToken.sellerDeposit)
+                  .add(offerToken.price)
+                  .sub(offerTokenProtocolFee)
+                  .add(buyerEscalationDeposit)
+                  .toString(),
+                protocol: offerTokenProtocolFee,
+                mutualizer: "0",
+                disputeResolver: DRFeeToken,
+                agent: "0",
+              },
+              finalAction: {
+                handler: disputeHandler,
+                method: "retractDispute",
+                caller: buyer,
+              },
+            },
+            "DISPUTED - ESCALATED - RESOLVED": {
+              payoffs: {
+                buyer: buyerPayoffSplit,
+                seller: BN(offerToken.price)
+                  .add(offerToken.sellerDeposit)
+                  .add(buyerEscalationDeposit)
+                  .sub(buyerPayoffSplit)
+                  .toString(),
+                protocol: "0",
+                mutualizer: "0",
+                disputeResolver: DRFeeToken,
+                agent: "0",
+              },
+              finalAction: {
+                handler: disputeHandler,
+                method: "resolveDispute",
+                caller: assistant,
+                additionalArgs: [buyerPercentBasisPoints, r, s, v],
+              },
+            },
+            "DISPUTED - ESCALATED - DECIDED": {
+              finalAction: {
+                handler: disputeHandler,
+                method: "decideDispute",
+                caller: assistantDR,
+                additionalArgs: [buyerPercentBasisPoints],
+              },
+            },
+            "Final state DISPUTED - ESCALATED - REFUSED via expireEscalatedDispute (fail to resolve)": {
+              payoffs: {
+                buyer: BN(offerToken.price).add(buyerEscalationDeposit).toString(),
+                seller: BN(offerToken.sellerDeposit).add(DRFeeToSeller).toString(),
+                protocol: "0",
+                mutualizer: DRFeeToMutualizer,
+                disputeResolver: "0",
+                agent: "0",
+              },
+              finalAction: {
+                handler: disputeHandler,
+                method: "expireEscalatedDispute",
+                caller: rando,
+              },
+            },
+            "Final state DISPUTED - ESCALATED - REFUSED via refuseEscalatedDispute (explicit refusal)": {
+              finalAction: {
+                handler: disputeHandler,
+                method: "refuseEscalatedDispute",
+                caller: assistantDR,
+              },
+            },
+          };
+
+          // Duplicates
+          tests["DISPUTED - RETRACTED"].payoffs = tests["COMPLETED"].payoffs;
+          tests["DISPUTED - RETRACTED via expireDispute"] = tests["DISPUTED - RETRACTED"];
+          tests["DISPUTED - ESCALATED - DECIDED"].payoffs = tests["DISPUTED - ESCALATED - RESOLVED"].payoffs;
+          tests["Final state DISPUTED - ESCALATED - REFUSED via refuseEscalatedDispute (explicit refusal)"].payoffs =
+            tests["Final state DISPUTED - ESCALATED - REFUSED via expireEscalatedDispute (fail to resolve)"].payoffs;
+        });
+
+        let finalStates = [
+          "COMPLETED",
+          "REVOKED",
+          "CANCELED",
+          "DISPUTED - RETRACTED",
+          "DISPUTED - RETRACTED via expireDispute",
+          "DISPUTED - ESCALATED - RETRACTED",
+          "DISPUTED - ESCALATED - RESOLVED",
+          "DISPUTED - ESCALATED - DECIDED",
+          "Final state DISPUTED - ESCALATED - REFUSED via expireEscalatedDispute (fail to resolve)",
+          "Final state DISPUTED - ESCALATED - REFUSED via refuseEscalatedDispute (explicit refusal)",
+        ];
+
+        // only for states that need some setup before calling the final action
+        let stateSetup = {
+          COMPLETED: async function () {
+            // Set time forward to the offer's voucherRedeemableFrom
+            await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+            // successfully redeem exchange
+            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+          },
+          DISPUTED: async function () {
+            // Set time forward to the offer's voucherRedeemableFrom
+            await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+            // successfully redeem exchange
+            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+            // raise the dispute
+            await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+          },
+          "DISPUTED - RETRACTED via expireDispute": async function () {
+            // Set time forward to the offer's voucherRedeemableFrom
+            await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+            // successfully redeem exchange
+            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+            // raise the dispute
+            tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+
+            // Get the block timestamp of the confirmed tx and set disputedDate
+            blockNumber = tx.blockNumber;
+            block = await ethers.provider.getBlock(blockNumber);
+            disputedDate = block.timestamp.toString();
+            timeout = BN(disputedDate).add(resolutionPeriod).toString();
+
+            await setNextBlockTimestamp(Number(timeout));
+          },
+          "DISPUTED - ESCALATED": async function () {
+            // Set time forward to the offer's voucherRedeemableFrom
+            await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+            // successfully redeem exchange
+            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+            // raise the dispute
+            await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+
+            // Escalate the dispute
+            await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+          },
+          "Final state DISPUTED - ESCALATED - REFUSED via expireEscalatedDispute (fail to resolve)": async function () {
+            // Set time forward to the offer's voucherRedeemableFrom
+            await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+            // successfully redeem exchange
+            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+            // raise the dispute
+            await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+
+            // Escalate the dispute
+            tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+
+            // Get the block timestamp of the confirmed tx and set escalatedDate
+            blockNumber = tx.blockNumber;
+            block = await ethers.provider.getBlock(blockNumber);
+            escalatedDate = block.timestamp.toString();
+
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(disputeResolver.escalationResponsePeriod));
+          },
+        };
+
+        stateSetup["DISPUTED - RETRACTED"] = stateSetup["DISPUTED"];
+        stateSetup["DISPUTED - ESCALATED - RETRACTED"] = stateSetup["DISPUTED - ESCALATED"];
+        stateSetup["DISPUTED - ESCALATED - RESOLVED"] = stateSetup["DISPUTED - ESCALATED"];
+        stateSetup["DISPUTED - ESCALATED - DECIDED"] = stateSetup["DISPUTED - ESCALATED"];
+        stateSetup["Final state DISPUTED - ESCALATED - REFUSED via refuseEscalatedDispute (explicit refusal)"] =
+          stateSetup["DISPUTED - ESCALATED"];
+
+        finalStates.forEach((finalState) => {
+          context(`Final state ${finalState}`, async function () {
+            beforeEach(stateSetup[finalState] || (async () => {}));
+
+            it("should emit a FundsReleased event", async function () {
+              const test = tests[finalState];
+              const { finalAction, payoffs } = test;
+              const { handler, caller, method, additionalArgs } = finalAction;
+              const tx = await handler.connect(caller)[method](exchangeId, ...(additionalArgs || []));
+              const txReceipt = await tx.wait();
+
+              // Buyer
+              let match = eventEmittedWithArgs(txReceipt, fundsHandler, "FundsReleased", [
+                exchangeId,
+                buyerId,
+                offerToken.exchangeToken,
+                payoffs.buyer,
+                caller.address,
+              ]);
+              expect(match).to.equal(payoffs.buyer !== "0");
+
+              // Seller
+              match = eventEmittedWithArgs(txReceipt, fundsHandler, "FundsReleased", [
+                exchangeId,
+                seller.id,
+                offerToken.exchangeToken,
+                payoffs.seller,
+                caller.address,
+              ]);
+              expect(match).to.equal(payoffs.seller !== "0");
+
+              // Agent
+              match = eventEmittedWithArgs(txReceipt, fundsHandler, "FundsReleased", [
+                exchangeId,
+                agent.id,
+                offerToken.exchangeToken,
+                payoffs.buyer,
+                caller.address,
+              ]);
+              expect(match).to.equal(payoffs.agent !== "0");
+
+              // Dispute resolver
+              match = eventEmittedWithArgs(txReceipt, fundsHandler, "FundsReleased", [
+                exchangeId,
+                disputeResolver.id,
+                offerToken.exchangeToken,
+                payoffs.disputeResolver,
+                caller.address,
+              ]);
+              expect(match).to.equal(payoffs.disputeResolver !== "0");
+
+              // Protocol fee
+              match = eventEmittedWithArgs(txReceipt, fundsHandler, "ProtocolFeeCollected", [
+                exchangeId,
+                offerToken.exchangeToken,
+                payoffs.protocol,
+                caller.address,
+              ]);
+              expect(match).to.equal(payoffs.protocol !== "0");
+
+              // Mutualizer
+              if (mutualizationType === "self-mutualized") {
+                await expect(tx).to.not.emit(exchangeHandler, "DRFeeReturned");
+              } else {
+                await expect(tx)
+                  .to.emit(exchangeHandler, "DRFeeReturned")
+                  .withArgs(
+                    mutualizer.address,
+                    "1",
+                    exchangeId,
+                    offerToken.exchangeToken,
+                    payoffs.mutualizer,
+                    caller.address
+                  ); // ToDo: upgrade hardhat, and use anyValue predicate for UUID field
+              }
+            });
+          });
         });
 
         context("Final state COMPLETED", async function () {
@@ -2517,6 +2858,7 @@ describe("IBosonFundsHandler", function () {
                 .add(agentOffer.price)
                 .sub(agentOfferProtocolFee)
                 .sub(agentFee)
+                .add(DRFeeToSeller)
                 .toString();
 
               // protocol: protocolFee
@@ -2538,7 +2880,7 @@ describe("IBosonFundsHandler", function () {
 
               await expect(tx)
                 .to.emit(exchangeHandler, "FundsReleased")
-                .withArgs(exchangeId, agent.Id, agentOffer.exchangeToken, agentPayoff, buyer.address);
+                .withArgs(exchangeId, agent.id, agentOffer.exchangeToken, agentPayoff, buyer.address);
             });
 
             it("should update state", async function () {
