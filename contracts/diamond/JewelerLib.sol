@@ -284,7 +284,7 @@ library JewelerLib {
             if (!success) {
                 if (error.length > 0) {
                     // bubble up the error
-                     assembly {
+                    assembly {
                         revert(add(32, error), mload(error))
                     }
                 } else {
