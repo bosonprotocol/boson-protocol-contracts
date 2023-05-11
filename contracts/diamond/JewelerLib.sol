@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import { DiamondLib } from "./DiamondLib.sol";
 import { IDiamondCut } from "../interfaces/diamond/IDiamondCut.sol";
@@ -284,7 +284,9 @@ library JewelerLib {
             if (!success) {
                 if (error.length > 0) {
                     // bubble up the error
-                    revert(string(error));
+                     assembly {
+                        revert(add(32, error), mload(error))
+                    }
                 } else {
                     revert("LibDiamondCut: _init function reverted");
                 }
