@@ -2291,7 +2291,6 @@ describe("IBosonFundsHandler", function () {
     });
 
     let DRFeeToSeller, DRFeeToMutualizer;
-    let tests;
 
     ["self-mutualized", "external-mutualizer"].forEach((mutualizationType) => {
       context(`👉 releaseFunds() [${mutualizationType}]`, async function () {
@@ -2358,174 +2357,6 @@ describe("IBosonFundsHandler", function () {
             .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId),
             // commit to offer
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
-
-          buyerPercentBasisPoints = "5566"; // 55.66%
-          const buyerPayoffSplit = BN(offerToken.price)
-            .add(offerToken.sellerDeposit)
-            .add(buyerEscalationDeposit)
-            .mul(buyerPercentBasisPoints)
-            .div("10000")
-            .toString();
-
-          // TODO: move
-          resolutionType = [
-            { name: "exchangeId", type: "uint256" },
-            { name: "buyerPercentBasisPoints", type: "uint256" },
-          ];
-
-          customSignatureType = {
-            Resolution: resolutionType,
-          };
-
-          message = {
-            exchangeId: exchangeId,
-            buyerPercentBasisPoints,
-          };
-
-          // Collect the signature components
-          ({ r, s, v } = await prepareDataSignatureParameters(
-            buyer, // Assistant is the caller, seller should be the signer.
-            customSignatureType,
-            "Resolution",
-            message,
-            disputeHandler.address
-          ));
-
-          // probably switch case can be used
-          tests = {
-            COMPLETED: {
-              payoffs: {
-                buyer: "0",
-                seller: BN(offerToken.sellerDeposit)
-                  .add(offerToken.price)
-                  .sub(offerTokenProtocolFee)
-                  .add(DRFeeToSeller)
-                  .toString(),
-                protocol: offerTokenProtocolFee,
-                mutualizer: DRFeeToMutualizer,
-                disputeResolver: "0",
-                agent: "0",
-              },
-              finalAction: {
-                handler: exchangeHandler,
-                method: "completeExchange",
-                caller: buyer,
-              },
-            },
-            REVOKED: {
-              payoffs: {
-                buyer: BN(offerToken.sellerDeposit).add(offerToken.price).toString(),
-                seller: DRFeeToSeller,
-                protocol: "0",
-                mutualizer: DRFeeToMutualizer,
-                disputeResolver: "0",
-                agent: "0",
-              },
-              finalAction: {
-                handler: exchangeHandler,
-                method: "revokeVoucher",
-                caller: assistant,
-              },
-            },
-            CANCELED: {
-              payoffs: {
-                buyer: BN(offerToken.price).sub(offerToken.buyerCancelPenalty).toString(),
-                seller: BN(offerToken.sellerDeposit).add(offerToken.buyerCancelPenalty).add(DRFeeToSeller).toString(),
-                protocol: "0",
-                mutualizer: DRFeeToMutualizer,
-                disputeResolver: "0",
-                agent: "0",
-              },
-              finalAction: {
-                handler: exchangeHandler,
-                method: "cancelVoucher",
-                caller: buyer,
-              },
-            },
-            "DISPUTED - RETRACTED": {
-              finalAction: {
-                handler: disputeHandler,
-                method: "retractDispute",
-                caller: buyer,
-              },
-            },
-            "DISPUTED - ESCALATED - RETRACTED": {
-              payoffs: {
-                buyer: "0",
-                seller: BN(offerToken.sellerDeposit)
-                  .add(offerToken.price)
-                  .sub(offerTokenProtocolFee)
-                  .add(buyerEscalationDeposit)
-                  .toString(),
-                protocol: offerTokenProtocolFee,
-                mutualizer: "0",
-                disputeResolver: DRFeeToken,
-                agent: "0",
-              },
-              finalAction: {
-                handler: disputeHandler,
-                method: "retractDispute",
-                caller: buyer,
-              },
-            },
-            "DISPUTED - ESCALATED - RESOLVED": {
-              payoffs: {
-                buyer: buyerPayoffSplit,
-                seller: BN(offerToken.price)
-                  .add(offerToken.sellerDeposit)
-                  .add(buyerEscalationDeposit)
-                  .sub(buyerPayoffSplit)
-                  .toString(),
-                protocol: "0",
-                mutualizer: "0",
-                disputeResolver: DRFeeToken,
-                agent: "0",
-              },
-              finalAction: {
-                handler: disputeHandler,
-                method: "resolveDispute",
-                caller: assistant,
-                additionalArgs: [buyerPercentBasisPoints, r, s, v],
-              },
-            },
-            "DISPUTED - ESCALATED - DECIDED": {
-              finalAction: {
-                handler: disputeHandler,
-                method: "decideDispute",
-                caller: assistantDR,
-                additionalArgs: [buyerPercentBasisPoints],
-              },
-            },
-            "Final state DISPUTED - ESCALATED - REFUSED via expireEscalatedDispute (fail to resolve)": {
-              payoffs: {
-                buyer: BN(offerToken.price).add(buyerEscalationDeposit).toString(),
-                seller: BN(offerToken.sellerDeposit).add(DRFeeToSeller).toString(),
-                protocol: "0",
-                mutualizer: DRFeeToMutualizer,
-                disputeResolver: "0",
-                agent: "0",
-              },
-              finalAction: {
-                handler: disputeHandler,
-                method: "expireEscalatedDispute",
-                caller: rando,
-              },
-            },
-            "Final state DISPUTED - ESCALATED - REFUSED via refuseEscalatedDispute (explicit refusal)": {
-              finalAction: {
-                handler: disputeHandler,
-                method: "refuseEscalatedDispute",
-                caller: assistantDR,
-              },
-            },
-          };
-
-          // Duplicates
-          tests["DISPUTED - RETRACTED"].payoffs = tests["COMPLETED"].payoffs;
-          tests["DISPUTED - RETRACTED via expireDispute"] = tests["DISPUTED - RETRACTED"];
-          tests["DISPUTED - ESCALATED - DECIDED"].payoffs = tests["DISPUTED - ESCALATED - RESOLVED"].payoffs;
-          tests["Final state DISPUTED - ESCALATED - REFUSED via refuseEscalatedDispute (explicit refusal)"].payoffs =
-            tests["Final state DISPUTED - ESCALATED - REFUSED via expireEscalatedDispute (fail to resolve)"].payoffs;
         });
 
         let finalStates = [
@@ -2614,19 +2445,212 @@ describe("IBosonFundsHandler", function () {
         };
 
         stateSetup["DISPUTED - RETRACTED"] = stateSetup["DISPUTED"];
-        stateSetup["DISPUTED - ESCALATED - RETRACTED"] = stateSetup["DISPUTED - ESCALATED"];
-        stateSetup["DISPUTED - ESCALATED - RESOLVED"] = stateSetup["DISPUTED - ESCALATED"];
-        stateSetup["DISPUTED - ESCALATED - DECIDED"] = stateSetup["DISPUTED - ESCALATED"];
-        stateSetup["Final state DISPUTED - ESCALATED - REFUSED via refuseEscalatedDispute (explicit refusal)"] =
-          stateSetup["DISPUTED - ESCALATED"];
+        stateSetup["DISPUTED - ESCALATED - RETRACTED"] =
+          stateSetup["DISPUTED - ESCALATED - RESOLVED"] =
+          stateSetup["DISPUTED - ESCALATED - DECIDED"] =
+          stateSetup["Final state DISPUTED - ESCALATED - REFUSED via refuseEscalatedDispute (explicit refusal)"] =
+            stateSetup["DISPUTED - ESCALATED"];
 
         finalStates.forEach((finalState) => {
           context(`Final state ${finalState}`, async function () {
-            beforeEach(stateSetup[finalState] || (async () => {}));
+            let payoffs, finalAction;
+
+            beforeEach(async function () {
+              await (stateSetup[finalState] || (() => {}))();
+
+              // Set the payoffs
+              switch (finalState) {
+                case "COMPLETED":
+                case "DISPUTED - RETRACTED":
+                case "DISPUTED - RETRACTED via expireDispute":
+                  payoffs = {
+                    buyer: "0",
+                    seller: BN(offerToken.sellerDeposit)
+                      .add(offerToken.price)
+                      .sub(offerTokenProtocolFee)
+                      .add(DRFeeToSeller)
+                      .toString(),
+                    protocol: offerTokenProtocolFee,
+                    mutualizer: DRFeeToMutualizer,
+                    disputeResolver: "0",
+                    agent: "0",
+                  };
+                  break;
+                case "REVOKED":
+                  payoffs = {
+                    buyer: BN(offerToken.sellerDeposit).add(offerToken.price).toString(),
+                    seller: DRFeeToSeller,
+                    protocol: "0",
+                    mutualizer: DRFeeToMutualizer,
+                    disputeResolver: "0",
+                    agent: "0",
+                  };
+                  break;
+                case "CANCELED":
+                  payoffs = {
+                    buyer: BN(offerToken.price).sub(offerToken.buyerCancelPenalty).toString(),
+                    seller: BN(offerToken.sellerDeposit)
+                      .add(offerToken.buyerCancelPenalty)
+                      .add(DRFeeToSeller)
+                      .toString(),
+                    protocol: "0",
+                    mutualizer: DRFeeToMutualizer,
+                    disputeResolver: "0",
+                    agent: "0",
+                  };
+                  break;
+                case "DISPUTED - ESCALATED - RETRACTED":
+                  payoffs = {
+                    buyer: "0",
+                    seller: BN(offerToken.sellerDeposit)
+                      .add(offerToken.price)
+                      .sub(offerTokenProtocolFee)
+                      .add(buyerEscalationDeposit)
+                      .toString(),
+                    protocol: offerTokenProtocolFee,
+                    mutualizer: "0",
+                    disputeResolver: DRFeeToken,
+                    agent: "0",
+                  };
+                  break;
+                case "DISPUTED - ESCALATED - RESOLVED":
+                case "DISPUTED - ESCALATED - DECIDED": {
+                  buyerPercentBasisPoints = "5566"; // 55.66%
+                  const buyerPayoffSplit = BN(offerToken.price)
+                    .add(offerToken.sellerDeposit)
+                    .add(buyerEscalationDeposit)
+                    .mul(buyerPercentBasisPoints)
+                    .div("10000")
+                    .toString();
+
+                  payoffs = {
+                    buyer: buyerPayoffSplit,
+                    seller: BN(offerToken.price)
+                      .add(offerToken.sellerDeposit)
+                      .add(buyerEscalationDeposit)
+                      .sub(buyerPayoffSplit)
+                      .toString(),
+                    protocol: "0",
+                    mutualizer: "0",
+                    disputeResolver: DRFeeToken,
+                    agent: "0",
+                  };
+                  break;
+                }
+                case "Final state DISPUTED - ESCALATED - REFUSED via expireEscalatedDispute (fail to resolve)":
+                case "Final state DISPUTED - ESCALATED - REFUSED via refuseEscalatedDispute (explicit refusal)":
+                  payoffs = {
+                    buyer: BN(offerToken.price).add(buyerEscalationDeposit).toString(),
+                    seller: BN(offerToken.sellerDeposit).add(DRFeeToSeller).toString(),
+                    protocol: "0",
+                    mutualizer: DRFeeToMutualizer,
+                    disputeResolver: "0",
+                    agent: "0",
+                  };
+                  break;
+              }
+
+              // Set the final actions
+              switch (finalState) {
+                case "COMPLETED":
+                  finalAction = {
+                    handler: exchangeHandler,
+                    method: "completeExchange",
+                    caller: buyer,
+                  };
+                  break;
+                case "REVOKED":
+                  finalAction = {
+                    handler: exchangeHandler,
+                    method: "revokeVoucher",
+                    caller: assistant,
+                  };
+                  break;
+                case "CANCELED":
+                  finalAction = {
+                    handler: exchangeHandler,
+                    method: "cancelVoucher",
+                    caller: buyer,
+                  };
+                  break;
+                case "DISPUTED - RETRACTED":
+                  finalAction = {
+                    handler: disputeHandler,
+                    method: "retractDispute",
+                    caller: buyer,
+                  };
+                  break;
+                case "DISPUTED - RETRACTED via expireDispute":
+                  finalAction = {
+                    handler: disputeHandler,
+                    method: "expireDispute",
+                    caller: rando,
+                  };
+                  break;
+                case "DISPUTED - ESCALATED - RETRACTED":
+                  finalAction = {
+                    handler: disputeHandler,
+                    method: "retractDispute",
+                    caller: buyer,
+                  };
+                  break;
+                case "DISPUTED - ESCALATED - RESOLVED":
+                  resolutionType = [
+                    { name: "exchangeId", type: "uint256" },
+                    { name: "buyerPercentBasisPoints", type: "uint256" },
+                  ];
+
+                  customSignatureType = {
+                    Resolution: resolutionType,
+                  };
+
+                  message = {
+                    exchangeId: exchangeId,
+                    buyerPercentBasisPoints,
+                  };
+
+                  // Collect the signature components
+                  ({ r, s, v } = await prepareDataSignatureParameters(
+                    buyer, // Assistant is the caller, seller should be the signer.
+                    customSignatureType,
+                    "Resolution",
+                    message,
+                    disputeHandler.address
+                  ));
+
+                  finalAction = {
+                    handler: disputeHandler,
+                    method: "resolveDispute",
+                    caller: assistant,
+                    additionalArgs: [buyerPercentBasisPoints, r, s, v],
+                  };
+                  break;
+                case "DISPUTED - ESCALATED - DECIDED":
+                  finalAction = {
+                    handler: disputeHandler,
+                    method: "decideDispute",
+                    caller: assistantDR,
+                    additionalArgs: [buyerPercentBasisPoints],
+                  };
+                  break;
+                case "Final state DISPUTED - ESCALATED - REFUSED via expireEscalatedDispute (fail to resolve)":
+                  finalAction = {
+                    handler: disputeHandler,
+                    method: "expireEscalatedDispute",
+                    caller: rando,
+                  };
+                  break;
+                case "Final state DISPUTED - ESCALATED - REFUSED via refuseEscalatedDispute (explicit refusal)":
+                  finalAction = {
+                    handler: disputeHandler,
+                    method: "refuseEscalatedDispute",
+                    caller: assistantDR,
+                  };
+                  break;
+              }
+            });
 
             it("should emit a FundsReleased event", async function () {
-              const test = tests[finalState];
-              const { finalAction, payoffs } = test;
               const { handler, caller, method, additionalArgs } = finalAction;
               const tx = await handler.connect(caller)[method](exchangeId, ...(additionalArgs || []));
               const txReceipt = await tx.wait();
@@ -2696,7 +2720,110 @@ describe("IBosonFundsHandler", function () {
                   ); // ToDo: upgrade hardhat, and use anyValue predicate for UUID field
               }
             });
+
+            async function getAllAvailableFunds() {
+              const availableFunds = {};
+              let mutualizerTokenBalance;
+              [
+                ...{
+                  0: availableFunds.seller,
+                  1: availableFunds.buyer,
+                  2: availableFunds.protocol,
+                  3: availableFunds.agent,
+                  4: availableFunds.disputeResolver,
+                  5: mutualizerTokenBalance,
+                }
+              ] = await Promise.all([
+                fundsHandler.getAvailableFunds(seller.id),
+                fundsHandler.getAvailableFunds(buyerId),
+                fundsHandler.getAvailableFunds(protocolId),
+                fundsHandler.getAvailableFunds(agent.id),
+                fundsHandler.getAvailableFunds(disputeResolver.id),
+                mockToken.balanceOf(mutualizer.address),
+              ]);
+
+              return { availableFunds, mutualizerTokenBalance };
+            }
+
+            it("should update state", async function () {
+              // Read on chain state
+              let { availableFunds, mutualizerTokenBalance: mutualizerTokenBalanceBefore } =
+                await getAllAvailableFunds();
+
+              // Chain state should match the expected available funds
+              let expectedAvailableFunds = {};
+              expectedAvailableFunds.seller = new FundsList([
+                new Funds(mockToken.address, "Foreign20", BN(sellerDeposit).add(DRFeeToSeller).toString()),
+                new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
+              ]);
+              expectedAvailableFunds.buyer = new FundsList([]);
+              expectedAvailableFunds.protocol = new FundsList([]);
+              expectedAvailableFunds.agent = new FundsList([]);
+              expectedAvailableFunds.disputeResolver = new FundsList([]);
+
+              for (let [key, value] of Object.entries(expectedAvailableFunds)) {
+                expect(FundsList.fromStruct(availableFunds[key])).to.eql(value, `${key} mismatch`);
+              }
+
+              // Execute the final action so the funds are released
+              const { handler, caller, method, additionalArgs } = finalAction;
+              await handler.connect(caller)[method](exchangeId, ...(additionalArgs || []));
+
+              // Increase available funds
+              for (let [key, value] of Object.entries(expectedAvailableFunds)) {
+                if (payoffs[key] !== "0") {
+                  if (value.funds[0]) {
+                    // If funds are non empty, mockToken is the first entry
+                    value.funds[0].availableAmount = BN(value.funds[0].availableAmount).add(payoffs[key]).toString();
+                  } else {
+                    value.funds.push(new Funds(mockToken.address, "Foreign20", payoffs[key]));
+                  }
+                }
+              }
+
+              // Read on chain state
+              let mutualizerTokenBalanceAfter;
+              ({ availableFunds, mutualizerTokenBalance: mutualizerTokenBalanceAfter } = await getAllAvailableFunds());
+
+              for (let [key, value] of Object.entries(expectedAvailableFunds)) {
+                expect(FundsList.fromStruct(availableFunds[key])).to.eql(value, `${key} mismatch`);
+              }
+              expect(mutualizerTokenBalanceAfter).to.eql(mutualizerTokenBalanceBefore.add(payoffs.mutualizer));
+            });
           });
+        });
+
+        it.skip("no new entry is created when multiple exchanges are finalizer", async function () {
+          // ToDo: implement
+          // complete another exchange so we test funds are only updated, no new entry is created
+          //  await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+          //  await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
+          //  await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+          //  ({ availableFunds } = await getAllAvailableFunds());
+          //  availableFunds.seller.funds[0].availableAmount = BN(value.funds[0].availableAmount).add(payoffs[key]).toString();
+          //  for (let [key, value] of Object.entries(expectedAvailableFunds)) {
+          //    expect(FundsList.fromStruct(availableFunds[key])).to.eql(value, `${key} mismatch`);
+          //  }
+          // sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+          // buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
+          // protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
+          // agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agent.id));
+          // DRAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(disputeResolver.id));
+          // expectedSellerAvailableFunds.funds[1] = new Funds(
+          //   mockToken.address,
+          //   "Foreign20",
+          //   BN(sellerPayoff).mul(2).toString()
+          // );
+          // expectedProtocolAvailableFunds.funds[0] = new Funds(
+          //   mockToken.address,
+          //   "Foreign20",
+          //   BN(protocolPayoff).mul(2).toString()
+          // );
+          // expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+          // expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+          // expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+          // expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+          // expect(DRAvailableFunds).to.eql(expectedDRAvailableFunds);
         });
 
         context("Final state COMPLETED", async function () {
