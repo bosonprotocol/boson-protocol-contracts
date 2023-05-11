@@ -11,7 +11,6 @@ import { DisputeBase } from "../bases/DisputeBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
-import { Address } from "../../ext_libs/Address.sol";
 import { IERC1155 } from "../../interfaces/IERC1155.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
@@ -22,8 +21,6 @@ import { IERC20 } from "../../interfaces/IERC20.sol";
  * @notice Handles exchanges associated with offers within the protocol.
  */
 contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
-    using Address for address;
-
     uint256 private immutable EXCHANGE_ID_2_2_0;
 
     /**
@@ -474,14 +471,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Set the exchange state to the Redeemed
         exchange.state = ExchangeState.Redeemed;
 
-        // Transfer any bundled twins to buyer
-        // N.B.: If voucher was revoked because transfer twin failed, then voucher was already burned
-        bool shouldBurnVoucher = transferTwins(exchange, voucher);
+        // Burn the voucher
+        burnVoucher(exchange);
 
-        if (shouldBurnVoucher) {
-            // Burn the voucher
-            burnVoucher(exchange);
-        }
+        // Transfer any bundled twins to buyer
+        transferTwins(exchange, voucher);
 
         // Notify watchers of state change
         emit VoucherRedeemed(offerId, _exchangeId, msgSender());
@@ -691,22 +685,17 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @notice Transfers bundled twins associated with an exchange to the buyer.
      *
      * Emits ERC20 Transfer, ERC721 Transfer, or ERC1155 TransferSingle events in call stack if successful.
+     * Emits TwinTransferred if twin transfer was successfull
+     * Emits TwinTransferFailed if twin transfer failed
      *
-     * Reverts if
-     * - A twin transfer fails
+     * If one of the twin transfers fails, the function will continue to transfer the remaining twins and
+     * autmaticaly raises a dispute for the exchange.
      *
      * @param _exchange - the exchange for which twins should be transferred
-     * @return shouldBurnVoucher - whether or not the voucher should be burned
      */
-    function transferTwins(
-        Exchange storage _exchange,
-        Voucher storage _voucher
-    ) internal returns (bool shouldBurnVoucher) {
+    function transferTwins(Exchange storage _exchange, Voucher storage _voucher) internal {
         // See if there is an associated bundle
         (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
-
-        // Voucher should be burned in the happy path
-        shouldBurnVoucher = true;
 
         // Transfer the twins
         if (exists) {
@@ -807,17 +796,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 }
             }
 
-            if (transferFailed) {
-                // Raise a dispute if caller is a contract
-                if (sender.isContract()) {
-                    raiseDisputeInternal(_exchange, _voucher, seller.id);
-                } else {
-                    // Revoke voucher if caller is an EOA
-                    revokeVoucherInternal(_exchange);
-                    // N.B.: If voucher was revoked because transfer twin failed, then voucher was already burned
-                    shouldBurnVoucher = false;
-                }
-            }
+            if (transferFailed) raiseDisputeInternal(_exchange, _voucher, seller.id);
         }
     }
 
