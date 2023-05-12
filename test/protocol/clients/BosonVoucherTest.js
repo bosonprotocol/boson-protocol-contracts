@@ -488,7 +488,7 @@ describe("IBosonVoucher", function () {
 
         // Token that is inside a range, but wasn't preminted yet should not have an owner
         await expect(bosonVoucher.ownerOf(start.add(amount).add(1))).to.be.revertedWith(
-          RevertReasons.ERC721_NON_EXISTENT
+          RevertReasons.ERC721_INVALID_TOKEN_ID
         );
 
         // Contract's balance should be updated for the total mint amount
@@ -517,7 +517,7 @@ describe("IBosonVoucher", function () {
 
       // Token that is inside a range, but wasn't preminted yet should not have an owner
       await expect(bosonVoucher.ownerOf(start.add(amount).add(1))).to.be.revertedWith(
-        RevertReasons.ERC721_NON_EXISTENT
+        RevertReasons.ERC721_INVALID_TOKEN_ID
       );
 
       // Seller's balance should be updated for the total mint amount
@@ -704,7 +704,7 @@ describe("IBosonVoucher", function () {
       const startId = deriveTokenId(offerId, start);
       for (let i = 0; i < Number(amount); i++) {
         let tokenId = startId.add(i);
-        await expect(bosonVoucher.ownerOf(tokenId)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        await expect(bosonVoucher.ownerOf(tokenId)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
       }
 
       // Seller's balance should be decreased for the total burn amount
@@ -860,7 +860,7 @@ describe("IBosonVoucher", function () {
       // All burned tokens should not have an owner
       for (let i = 0; i < Number(amount); i++) {
         let tokenId = tokenIdStart.add(i);
-        await expect(bosonVoucher.ownerOf(tokenId)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        await expect(bosonVoucher.ownerOf(tokenId)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
       }
 
       // Second call should revert since there's nothing to burn
@@ -903,7 +903,7 @@ describe("IBosonVoucher", function () {
           await expect(tx)
             .to.emit(bosonVoucher, "Transfer")
             .withArgs(assistant.address, ethers.constants.AddressZero, tokenId);
-          await expect(bosonVoucher.ownerOf(tokenId)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+          await expect(bosonVoucher.ownerOf(tokenId)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
         }
       }
 
@@ -1152,7 +1152,7 @@ describe("IBosonVoucher", function () {
         it("Token does not exist", async function () {
           let tokenId = "10";
           await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
-            RevertReasons.ERC721_NON_EXISTENT
+            RevertReasons.ERC721_INVALID_TOKEN_ID
           );
         });
       });
@@ -1264,7 +1264,7 @@ describe("IBosonVoucher", function () {
           if (i < currentRange.start) {
             // tokenId not in range
             await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
-              RevertReasons.ERC721_NON_EXISTENT
+              RevertReasons.ERC721_INVALID_TOKEN_ID
             );
           } else if (i <= currentRangeMintEndId) {
             // tokenId in range and minted. Seller should be the owner
@@ -1273,7 +1273,7 @@ describe("IBosonVoucher", function () {
           } else if (i <= currentRangeEndId) {
             // tokenId still in range, but not minted yet
             await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
-              RevertReasons.ERC721_NON_EXISTENT
+              RevertReasons.ERC721_INVALID_TOKEN_ID
             );
           } else {
             // tokenId outside the current range
@@ -1287,7 +1287,7 @@ describe("IBosonVoucher", function () {
             // Technically, next range could be consecutive and next call should return seller's address
             // But range construction in this test ensures gaps between ranges
             await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
-              RevertReasons.ERC721_NON_EXISTENT
+              RevertReasons.ERC721_INVALID_TOKEN_ID
             );
           }
         }
@@ -1319,7 +1319,9 @@ describe("IBosonVoucher", function () {
         let endExchangeId = Number(start) + Number(length);
         endTokenId = deriveTokenId(offerId, endExchangeId);
         for (let i = startTokenId; i.lt(endTokenId); i = i.add(1)) {
-          await expect(bosonVoucher.connect(rando).ownerOf(i)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+          await expect(bosonVoucher.connect(rando).ownerOf(i)).to.be.revertedWith(
+            RevertReasons.ERC721_INVALID_TOKEN_ID
+          );
         }
 
         // Second range - preminted tokens
@@ -1335,7 +1337,9 @@ describe("IBosonVoucher", function () {
         endExchangeId += Number(nextLength);
         endTokenId = deriveTokenId(nextOfferId, endExchangeId);
         for (let i = startTokenId; i.lt(endTokenId); i = i.add(1)) {
-          await expect(bosonVoucher.connect(rando).ownerOf(i)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+          await expect(bosonVoucher.connect(rando).ownerOf(i)).to.be.revertedWith(
+            RevertReasons.ERC721_INVALID_TOKEN_ID
+          );
         }
       });
 
@@ -1343,7 +1347,7 @@ describe("IBosonVoucher", function () {
         it("Token is outside any range and not minted", async function () {
           let tokenId = "200000";
           await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
-            RevertReasons.ERC721_NON_EXISTENT
+            RevertReasons.ERC721_INVALID_TOKEN_ID
           );
         });
 
@@ -1353,7 +1357,9 @@ describe("IBosonVoucher", function () {
 
           // None of reserved but not preminted tokens should have an owner
           for (let i = startTokenId; i.lt(endTokenId); i = i.add(1)) {
-            await expect(bosonVoucher.connect(rando).ownerOf(i)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+            await expect(bosonVoucher.connect(rando).ownerOf(i)).to.be.revertedWith(
+              RevertReasons.ERC721_INVALID_TOKEN_ID
+            );
           }
         });
 
@@ -1383,7 +1389,7 @@ describe("IBosonVoucher", function () {
 
           // Token should have no owner
           await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
-            RevertReasons.ERC721_NON_EXISTENT
+            RevertReasons.ERC721_INVALID_TOKEN_ID
           );
         });
 
@@ -1411,7 +1417,7 @@ describe("IBosonVoucher", function () {
 
           // Token should have no owner
           await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
-            RevertReasons.ERC721_NON_EXISTENT
+            RevertReasons.ERC721_INVALID_TOKEN_ID
           );
         });
       });
@@ -1720,7 +1726,7 @@ describe("IBosonVoucher", function () {
               // Transfer should fail, since voucher has been burned
               await expect(
                 bosonVoucher.connect(assistant)[selector](assistant.address, rando.address, tokenId, ...additionalArgs)
-              ).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+              ).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
             });
 
             it("Transfer preminted voucher, which was not committed but burned already", async function () {
@@ -1733,7 +1739,7 @@ describe("IBosonVoucher", function () {
               // None of reserved but not preminted tokens should have an owner
               await expect(
                 bosonVoucher.connect(assistant)[selector](assistant.address, rando.address, tokenId, ...additionalArgs)
-              ).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+              ).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
             });
 
             it("Transfer preminted voucher, where offer was voided", async function () {
@@ -1938,9 +1944,10 @@ describe("IBosonVoucher", function () {
       expect(tokenURI).eq(metadataUri);
     });
 
-    it("should return empty tokenURI if token does not exist", async function () {
-      const tokenURI = await bosonVoucher.tokenURI(10);
-      expect(tokenURI).eq("");
+    context("💔 Revert Reasons", async function () {
+      it("should revert if caller does not have PROTOCOL role", async function () {
+        await expect(bosonVoucher.tokenURI(10)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
+      });
     });
 
     context("pre-minted", async function () {

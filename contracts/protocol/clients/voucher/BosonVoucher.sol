@@ -377,7 +377,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             if (committable) return owner;
 
             // Otherwise revert
-            revert("ERC721: invalid token ID");
+            revert(INVALID_TOKEN_ID);
         }
     }
 
@@ -449,6 +449,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * replaceable baseURI template, since the latter is not compatible
      * with IPFS hashes.
      *
+     * Reverts if token id is not associated with any exchange or pre-minted offer.
+     *
      * @param _tokenId - id of the voucher's associated exchange or pre-minted token id
      * @return the uri for the associated offer's off-chain metadata (blank if not found)
      */
@@ -466,7 +468,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
                 (offer, ) = getBosonOffer(offerId);
             }
         }
-        return exists ? offer.metadataUri : "";
+
+        require(exists, INVALID_TOKEN_ID);
+        return offer.metadataUri;
     }
 
     /**
