@@ -363,7 +363,8 @@ async function main(env, facetConfig, version) {
 
   // Cast diamond to ProtocolInitializationHandlerFacet
   protocolInitializationFacet = await ethers.getContractAt("ProtocolInitializationHandlerFacet", protocolAddress);
-  const newVersion = await protocolInitializationFacet.getVersion();
+  const newVersion = (await protocolInitializationFacet.getVersion()).replace(/\0/g, "");
+
   console.log(`\n📋 New version: ${newVersion}`);
 
   const contractsPath = await writeContracts(contracts, env, newVersion);
