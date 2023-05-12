@@ -337,3 +337,131 @@ Unpausing the protocol...
 📋 Diamond upgraded.
 
 
+Migration v2.2.1 started
+Installing dependencies
+
+up to date, audited 2477 packages in 5s
+
+234 packages are looking for funding
+  run `npm fund` for details
+
+91 vulnerabilities (33 moderate, 31 high, 27 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+Checking out contracts on version 2.2.0
+Compiling old contracts
+Compiled 154 Solidity files successfully
+Checking out contracts on version v2.2.1
+Compiling contracts
+Compiled 154 Solidity files successfully
+Executing upgrade facets script
+--------------------------------------------------------------------------------
+Boson Protocol Contract Suite Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Fri May 12 2023 10:36:32 GMT+0200 (Srednjeevropski poletni čas)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+✅ AccountHandlerFacet deployed to: 0x6E166Bc7Aa46b4822730e393042458C21C7f2330
+✅ SellerHandlerFacet deployed to: 0x3b4c8e7D75CaebF620Cb9Bf0C373dcc08a35385D
+✅ DisputeResolverHandlerFacet deployed to: 0x36c9B020f2BE0822d5b3b924AC15e402F82a269C
+✅ OrchestrationHandlerFacet1 deployed to: 0x78364F7D1E2233976af0fAD6Cd3C5929d92cc42d
+✅ ProtocolInitializationHandlerFacet deployed to: 0x2fF40bf45776B7e41d2d28bE2a05c97B6C69824f
+
+📋 Facet: AccountHandlerFacet
+💎 Replace selectors:
+	getNextAccountId(): 0xab00c0da
+
+📋 Facet: SellerHandlerFacet
+💎 Add selectors:
+	createSeller((uint256,address,address,address,address,bool,string),(uint256,uint8),(string,uint256)): 0x59b37742
+	updateSeller((uint256,address,address,address,address,bool,string),(uint256,uint8)): 0x695ac7c9
+💎 Replace selectors:
+	getSeller(uint256): 0xd6a9de51
+	getSellerByAddress(address): 0x2e1528ae
+	getSellerByAuthToken((uint256,uint8)): 0x135bdebd
+	optInToSellerUpdate(uint256,uint8[]): 0xf7e469fd
+💎 Remove selectors:
+	undefined: 0xaaea2fdc
+	undefined: 0x90b9d701
+
+📋 Facet: DisputeResolverHandlerFacet
+💎 Replace selectors:
+	addFeesToDisputeResolver(uint256,(address,string,uint256)[]): 0xa880fd89
+	addSellersToAllowList(uint256,uint256[]): 0x1227dbbb
+	areSellersAllowed(uint256,uint256[]): 0x8236d3c0
+	createDisputeResolver((uint256,uint256,address,address,address,address,string,bool),(address,string,uint256)[],uint256[]): 0x1843b3a9
+	getDisputeResolver(uint256): 0x9b646e88
+	getDisputeResolverByAddress(address): 0x6f4fbc16
+	removeFeesFromDisputeResolver(uint256,address[]): 0x4e534c96
+	removeSellersFromAllowList(uint256,uint256[]): 0xfa92792a
+	updateDisputeResolver((uint256,uint256,address,address,address,address,string,bool)): 0x125e35ec
+	optInToDisputeResolverUpdate(uint256,uint8[]): 0x2230dd12
+
+📋 Facet: OrchestrationHandlerFacet1
+💎 Add selectors:
+	createSellerAndOffer((uint256,address,address,address,address,bool,string),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint256,uint8),(string,uint256),uint256): 0xfbf346df
+	createSellerAndOfferAndTwinWithBundle((uint256,address,address,address,address,bool,string),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint256,uint256,uint256,uint256,uint256,address,uint8),(uint256,uint8),(string,uint256),uint256): 0x2220dd97
+	createSellerAndOfferWithCondition((uint256,address,address,address,address,bool,string),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint8),(string,uint256),uint256): 0xcd6047e8
+	createSellerAndOfferWithConditionAndTwinAndBundle((uint256,address,address,address,address,bool,string),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint256,uint256,uint256,uint256,address,uint8),(uint256,uint8),(string,uint256),uint256): 0xbe5a64d2
+	createSellerAndPremintedOffer((uint256,address,address,address,address,bool,string),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,(uint256,uint8),(string,uint256),uint256): 0x33e9eeeb
+	createSellerAndPremintedOfferAndTwinWithBundle((uint256,address,address,address,address,bool,string),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,(uint256,uint256,uint256,uint256,uint256,address,uint8),(uint256,uint8),(string,uint256),uint256): 0xcfad2304
+	createSellerAndPremintedOfferWithCondition((uint256,address,address,address,address,bool,string),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint8),(string,uint256),uint256): 0x30b668e5
+	createSellerAndPremintedOfferWithConditionAndTwinAndBundle((uint256,address,address,address,address,bool,string),(uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint256,uint256,uint256,uint256,address,uint8),(uint256,uint8),(string,uint256),uint256): 0xe272d776
+💎 Replace selectors:
+	createOfferAddToGroup((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,uint256): 0x34fa96a6
+	createOfferAndTwinWithBundle((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint256,uint256,uint256,uint256,uint256,address,uint8),uint256): 0x36358824
+	createOfferWithCondition((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint8,uint8,address,uint256,uint256,uint256),uint256): 0x1b002277
+	createOfferWithConditionAndTwinAndBundle((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint256,uint256,uint256,uint256,address,uint8),uint256): 0x3e03b0f6
+	createPremintedOfferAddToGroup((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,uint256,uint256): 0x6c943896
+	createPremintedOfferAndTwinWithBundle((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,(uint256,uint256,uint256,uint256,uint256,address,uint8),uint256): 0x34e80651
+	createPremintedOfferWithCondition((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,(uint8,uint8,address,uint256,uint256,uint256),uint256): 0xf69c9a40
+	createPremintedOfferWithConditionAndTwinAndBundle((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,address,(uint8,uint8,address,uint256,uint256,uint256),(uint256,uint256,uint256,uint256,uint256,address,uint8),uint256): 0xf9384c29
+💎 Remove selectors:
+	undefined: 0x088177c8
+	undefined: 0x05686244
+	undefined: 0x0b1bb608
+	undefined: 0x97a6f155
+	undefined: 0xde3ad0a9
+	undefined: 0x3eafa1e2
+	undefined: 0xc136a32e
+	undefined: 0x9b7750be
+
+📋 Facet: ProtocolInitializationHandlerFacet
+💎 Replace selectors:
+	getVersion(): 0x0d8e6e2c
+
+💀 Removed facets:
+	
+📋 Added interfaces:
+	0x15335ed7 (SellerHandlerFacet)
+	0x0c62d8e3 (OrchestrationHandlerFacet1)
+💀 Removed interfaces:
+	0x1f891681 (SellerHandlerFacet)
+	0xa38bc2e7 (OrchestrationHandlerFacet1)
+--------------------------------------------------------------------------------
+
+📋 New version: 2.2.1
+--------------------------------------------------------------------------------
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/80001-mumbai-staging.json
+--------------------------------------------------------------------------------
+
+📋 Diamond upgraded.
+
+
+Removing selectors 0xaaea2fdc2fe9e42a5c77e98666352fc2dbf7b32b9cbf91944089d3602b1a941d,0x90b9d701120ba03749f7021324e5fc97438c847380b773bb897ffa9fabab647c,0x088177c89f07128f658d1605a229e33d6cea2f974744e08c17a7a400db6cb91d,0x0568624426a2ae4a64888e7e5938460834a3ed753a7f3726360d325908d47399,0x0b1bb60854d611e75ddd006cf363e547eec8e9b3f43d0bcc4979ab78d09eb6b8,0x97a6f155d7dafa8b1117ef2d0236f849f55cddfec075df22bbe28961298faae7,0xde3ad0a969885156cdcd2ee76d2e1f1dcc458ed63e9b76e46633f44dc79b82e2,0x3eafa1e2b1ffa79840dc6a27fab1a0d834ba8d348231d4c06592f89f8467b23f,0xc136a32e4db32b58a9fd84a2cd293e4ed151efad7bb81ce021fcca75a6c93b8c,0x9b7750be5160a114f5c2e22bdf27c67e9b43e70135ac5f6e473d86d63b4ba80a
+Adding selectors 0x59b3774271ad2ce7cc4a964dd442fdde6a809e8dfd3eb4ac5f6e579fa898cf69,0x695ac7c9eb6f7d89e6bf0dd7799049908d2c07e3178d254632f239a807c51cd3,0xfbf346df886f09306aa58642ed3d51dac939d9530e9a964a6709df6c1fe095ce,0x2220dd970bc6c8a043ce33fac30e3fadfd1566d3883da9e23d8503fd472fc6f6,0xcd6047e82d2d8d14fdf1bf3de4097f00bc6f1d342e8cb1ac72e13df6e75465fa,0xbe5a64d26f6fb5e8d6c406b1920da649830283ce454c2f66f1450d3aeaa5951f,0x33e9eeeb875164148e64881660776c51e37b91bf88d121dd594559158a6826b0,0xcfad23046ca3f5712a8d3a12867efe841d9d9092978cb8cddd0ff11ec302e493,0x30b668e56aef5dae1f32985f6da701092fe97a1cd9c650d401c51cfc4507b6b1,0xe272d77605996cc5fb44fed0b5a9e9bc916eba4cb81f14fe6baae7a11bd8a852
+M	addresses/80001-mumbai-staging.json
+M	logs/mumbai-staging.upgrade.contracts.txt
+Your branch is ahead of 'origin/release-2_2_1' by 1 commit.
+  (use "git push" to publish your local commits)
+Migration v2.2.1 completed
