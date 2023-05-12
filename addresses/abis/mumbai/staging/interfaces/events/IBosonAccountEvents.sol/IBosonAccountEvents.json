@@ -254,74 +254,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "admin",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "clerk",
-              "type": "address"
-            },
-            {
-              "internalType": "address payable",
-              "name": "treasury",
-              "type": "address"
-            },
-            {
-              "internalType": "string",
-              "name": "metadataUri",
-              "type": "string"
-            },
-            {
-              "internalType": "bool",
-              "name": "active",
-              "type": "bool"
-            }
-          ],
-          "indexed": false,
-          "internalType": "struct BosonTypes.DisputeResolver",
-          "name": "disputeResolver",
-          "type": "tuple"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "DisputeResolverActivated",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "disputeResolverId",
-          "type": "uint256"
-        },
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "id",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "escalationResponsePeriod",
-              "type": "uint256"
-            },
-            {
-              "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -484,7 +417,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -532,7 +465,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -599,7 +532,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -661,7 +594,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -742,7 +675,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -780,7 +713,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -873,7 +806,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
