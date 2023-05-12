@@ -13,10 +13,14 @@ const config = {
     "SellerHandlerFacet",
     "DisputeResolverHandlerFacet",
     "OrchestrationHandlerFacet1",
+    "ProtocolInitializationHandlerFacet",
   ],
   remove: [],
   skipSelectors: {},
-  facetsToInit: {},
+  facetsToInit: {
+    AccountHandlerFacet: { init: [] },
+    OrchestrationHandlerFacet1: { init: [] },
+  },
   initializationData: "0x",
 };
 
