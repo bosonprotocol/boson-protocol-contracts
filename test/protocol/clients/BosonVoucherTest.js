@@ -2332,6 +2332,16 @@ describe("IBosonVoucher", function () {
       assert.equal(event._value.toString(), "1");
     });
 
+    it("Should return the external contract return value", async function () {
+      const calldata = mockSimpleContract.interface.encodeFunctionData("testReturn");
+      const returnedValueRaw = await bosonVoucher
+        .connect(assistant)
+        .callStatic.callExternalContract(mockSimpleContract.address, calldata);
+      const abiCoder = new ethers.utils.AbiCoder();
+      const [returnedValue] = abiCoder.decode(["string"], returnedValueRaw);
+      expect(returnedValue).to.equal("TestValue");
+    });
+
     context("💔 Revert Reasons", async function () {
       it("_to is the zero address", async function () {
         await expect(

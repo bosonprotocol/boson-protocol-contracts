@@ -535,8 +535,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      *
      * @param _to - address of the contract to call
      * @param _data - data to pass to the external contract
+     * @return result - result of the call
      */
-    function callExternalContract(address _to, bytes calldata _data) external payable onlyOwner {
+    function callExternalContract(address _to, bytes calldata _data) external payable onlyOwner returns (bytes memory) {
         require(_to != address(0), INVALID_ADDRESS);
 
         // Prevent invocation of functions that would allow transfer of tokens from this contract
@@ -550,7 +551,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             FUNCTION_NOT_ALLOWLISTED
         );
 
-        _to.functionCallWithValue(_data, msg.value, FUNCTION_CALL_NOT_SUCCESSFUL);
+        return _to.functionCallWithValue(_data, msg.value, FUNCTION_CALL_NOT_SUCCESSFUL);
     }
 
     /** @notice Set approval for all to the vouchers owned by this contract

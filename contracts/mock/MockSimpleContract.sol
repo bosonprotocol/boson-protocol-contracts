@@ -11,4 +11,8 @@ contract MockSimpleContract {
     function testRevert() external pure {
         revert("Reverted");
     }
+
+    function testReturn() external pure returns (string memory) {
+        return "TestValue";
+    }
 }
