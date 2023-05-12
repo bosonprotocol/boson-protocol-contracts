@@ -693,7 +693,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @param _to - the address to which the voucher is being transferred
      * @param _tokenId - the tokenId of the voucher that is being transferred
      */
-    function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId) internal override {
+    function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId, uint256) internal override {
         // Derive the exchange id
         uint256 exchangeId = _tokenId & type(uint128).max;
         if (_isCommitable) {
