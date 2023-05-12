@@ -94,15 +94,16 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         condition.tokenId = _condition.tokenId;
         condition.threshold = _condition.threshold;
         condition.maxCommits = _condition.maxCommits;
+        condition.length = _condition.length;
     }
 
     /**
      * @notice Validates that condition parameters make sense.
      *
-     * Reverts if:
+     * A invalid condition is one that:
      * - EvaluationMethod.None and has fields different from 0
      * - EvaluationMethod.Threshold and token address or maxCommits is zero
-     * - EvaluationMethod.SpecificToken and token address or maxCommits is zero
+     * - EvaluationMethod.SpecificToken and token address or maxCommits is zero or tokenId it's present and length is zero
      *
      * @param _condition - fully populated condition struct
      * @return valid - validity of condition
@@ -117,7 +118,10 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         } else if (_condition.method == EvaluationMethod.Threshold) {
             valid = (_condition.tokenAddress != address(0) && _condition.maxCommits > 0 && _condition.threshold > 0);
         } else if (_condition.method == EvaluationMethod.SpecificToken) {
-            valid = (_condition.tokenAddress != address(0) && _condition.threshold == 0 && _condition.maxCommits > 0);
+            valid = (_condition.tokenAddress != address(0) &&
+                _condition.threshold == 0 &&
+                _condition.maxCommits > 0 &&
+                (_condition.tokenId != 0 ? _condition.length > 0 : _condition.length == 0));
         }
     }
 
@@ -191,10 +195,11 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * @return sellerId  - the seller id
      * @return group - the group details
      */
-    function preUpdateChecks(
-        uint256 _groupId,
-        uint256[] memory _offerIds
-    ) internal view returns (uint256 sellerId, Group storage group) {
+    function preUpdateChecks(uint256 _groupId, uint256[] memory _offerIds)
+        internal
+        view
+        returns (uint256 sellerId, Group storage group)
+    {
         // make sure that at least something will be updated
         require(_offerIds.length != 0, NOTHING_UPDATED);
 

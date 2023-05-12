@@ -72,10 +72,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
      */
-    function commitToOffer(
-        address payable _buyer,
-        uint256 _offerId
-    ) external payable override exchangesNotPaused buyersNotPaused nonReentrant {
+    function commitToOffer(address payable _buyer, uint256 _offerId)
+        external
+        payable
+        override
+        exchangesNotPaused
+        buyersNotPaused
+        nonReentrant
+    {
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
 
@@ -86,6 +90,44 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         // Make sure offer exists, is available, and isn't void, expired, or sold out
         require(exists, NO_SUCH_OFFER);
+
+        // For there to be a condition, there must be a group.
+        (exists, ) = getGroupIdByOffer(offer.id);
+
+        // Make sure offer doesn't have a condition. If it does, use commitToConditionalOffer instead.
+        require(!exists, "Offer has a condition. Use commitToConditionalOffer instead.");
+
+        commitToOfferInternal(_buyer, offer, 0, false);
+    }
+
+    function commitToConditionalOffer(
+        address payable _buyer,
+        uint256 _offerId,
+        uint256 _tokenId
+    ) external payable {
+        // Make sure buyer address is not zero address
+        require(_buyer != address(0), INVALID_ADDRESS);
+
+        // Get the offer
+        bool exists;
+        Offer storage offer;
+        (exists, offer) = fetchOffer(_offerId);
+
+        // Make sure offer exists, is available, and isn't void, expired, or sold out
+        require(exists, NO_SUCH_OFFER);
+
+        uint256 groupId;
+
+        // For there to be a condition, there must be a group.
+        (exists, groupId) = getGroupIdByOffer(offer.id);
+
+        // Make sure the group exists
+        require(exists, NO_SUCH_GROUP);
+
+        // Get the condition
+        Condition storage condition = fetchCondition(groupId);
+
+        require(authorizeCommit(_buyer, condition, groupId, _tokenId), CANNOT_COMMIT);
 
         commitToOfferInternal(_buyer, offer, 0, false);
     }
@@ -125,6 +167,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Exchange must not exist already
         (bool exists, ) = fetchExchange(_exchangeId);
         require(!exists, EXCHANGE_ALREADY_EXISTS);
+
+        (exists, ) = getGroupIdByOffer(offer.id);
+
+        require(!exists, "Offer has a condition. Use commitToConditionalOffer instead.");
 
         commitToOfferInternal(_buyer, offer, _exchangeId, true);
     }
@@ -176,9 +222,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // Get next exchange id for non-preminted offers
             _exchangeId = protocolCounters().nextExchangeId++;
         }
-
-        // Authorize the buyer to commit if offer is in a conditional group
-        require(authorizeCommit(_buyer, _offer, _exchangeId), CANNOT_COMMIT);
 
         // Fetch or create buyer
         uint256 buyerId = getValidBuyer(_buyer);
@@ -503,10 +546,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeId - the id of the exchange
      * @param _newBuyer - the address of the new buyer
      */
-    function onVoucherTransferred(
-        uint256 _exchangeId,
-        address payable _newBuyer
-    ) external override buyersNotPaused nonReentrant {
+    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer)
+        external
+        override
+        buyersNotPaused
+        nonReentrant
+    {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
@@ -584,9 +629,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      * @return voucher - the voucher details. See {BosonTypes.Voucher}
      */
-    function getExchange(
-        uint256 _exchangeId
-    ) external view override returns (bool exists, Exchange memory exchange, Voucher memory voucher) {
+    function getExchange(uint256 _exchangeId)
+        external
+        view
+        override
+        returns (
+            bool exists,
+            Exchange memory exchange,
+            Voucher memory voucher
+        )
+    {
         (exists, exchange) = fetchExchange(_exchangeId);
         voucher = fetchVoucher(_exchangeId);
     }
@@ -698,10 +750,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchange - the exchange for which twins should be transferred
      * @return shouldBurnVoucher - whether or not the voucher should be burned
      */
-    function transferTwins(
-        Exchange storage _exchange,
-        Voucher storage _voucher
-    ) internal returns (bool shouldBurnVoucher) {
+    function transferTwins(Exchange storage _exchange, Voucher storage _voucher)
+        internal
+        returns (bool shouldBurnVoucher)
+    {
         // See if there is an associated bundle
         (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
 
@@ -861,68 +913,72 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *   - increment the count of commits to the group made by the buyer address
      *
      * Conditions are associated with offers via groups. One or more offers can be
-     * placed in a group and a single condition applied to the entire group. Thus:
-     *   - If a buyer commits to one offer in a group with a condition, it counts
+     * placed in a group and a single _condition applied to the entire group. Thus:
+     *   - If a buyer commits to one offer in a group with a _condition, it counts
      *     against the buyer's allowable commits for the whole group.
      *   - If the buyer has already committed the maximum number of times for the
      *     group, the buyer can't commit again to any of its offers.
      *
-     * The buyer is allowed to commit if no group or condition is set for this offer.
+     * The buyer is allowed to commit if no group or _condition is set for this offer.
      *
      * @param _buyer buyer address
-     * @param _offer the offer
-     * @param exchangeId - the exchange id
+     * @param _condition - the _condition to check
+     * @param _groupId - the group id
+     * @param _tokenId - the token id. Valid only for SpecificToken evaluation method
      *
-     * @return bool - true if buyer is authorized to commit
+     * @return allow - true if buyer is authorized to commit
      */
-    function authorizeCommit(address _buyer, Offer storage _offer, uint256 exchangeId) internal returns (bool) {
+    function authorizeCommit(
+        address _buyer,
+        Condition storage _condition,
+        uint256 _groupId,
+        uint256 _tokenId
+    ) internal returns (bool allow) {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        // Allow by default
-        bool allow = true;
+        if (_condition.method == EvaluationMethod.SpecificToken) {
+            // How many times has this address committed to offers in the group?
+            uint256 commitCount = lookups.conditionalCommitsByTokenId[_groupId][_tokenId];
 
-        // For there to be a condition, there must be a group.
-        (bool exists, uint256 groupId) = getGroupIdByOffer(_offer.id);
-        if (exists) {
-            // Get the condition
-            Condition storage condition = fetchCondition(groupId);
+            require(commitCount < _condition.maxCommits, "Max commits per token id reached");
 
-            // If a condition is set, investigate, otherwise all buyers are allowed
-            if (condition.method != EvaluationMethod.None) {
-                // How many times has this address committed to offers in the group?
-                uint256 commitCount = lookups.conditionalCommitsByAddress[_buyer][groupId];
+            // If _condition has a token id, check that the token id is in range, otherwise accept any token id
+            if (_condition.tokenId > 0) {
+                require(
+                    _tokenId >= _condition.tokenId && _tokenId < _condition.tokenId + _condition.length,
+                    "Token id not in range"
+                );
+            }
 
-                // Evaluate condition if buyer hasn't exhausted their allowable commits, otherwise disallow
-                if (commitCount < condition.maxCommits) {
-                    // Buyer is allowed if they meet the group's condition
-                    allow = (condition.method == EvaluationMethod.Threshold)
-                        ? holdsThreshold(_buyer, condition)
-                        : holdsSpecificToken(_buyer, condition);
+            allow = IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer;
 
-                    if (allow) {
-                        // Increment number of commits to the group for this address if they are allowed to commit
-                        lookups.conditionalCommitsByAddress[_buyer][groupId] = ++commitCount;
-                        // Store the condition to be returned afterward on getReceipt function
-                        lookups.exchangeCondition[exchangeId] = condition;
-                    }
-                } else {
-                    // Buyer has exhausted their allowable commits
-                    allow = false;
-                }
+            if (allow) {
+                // Increment number of commits to the group for this token id if they are allowed to commit
+                lookups.conditionalCommitsByTokenId[_groupId][_tokenId] = ++commitCount;
+            }
+        } else if (_condition.method == EvaluationMethod.Threshold) {
+            // How many times has this address committed to offers in the group?
+            uint256 commitCount = lookups.conditionalCommitsByAddress[_buyer][_groupId];
+
+            require(commitCount < _condition.maxCommits, "Max commits per address reached");
+
+            allow = holdsThreshold(_buyer, _condition);
+
+            if (allow) {
+                // Increment number of commits to the group for this address if they are allowed to commit
+                lookups.conditionalCommitsByAddress[_buyer][_groupId] = ++commitCount;
             }
         }
-
-        return allow;
     }
 
     /**
      * @notice Checks if the buyer has the required balance of the conditional token.
      *
      * @param _buyer - address of potential buyer
-     * @param _condition - the condition to be evaluated
+     * @param _condition - the _condition to be evaluated
      *
-     * @return bool - true if buyer meets the condition
+     * @return bool - true if buyer meets the _condition
      */
     function holdsThreshold(address _buyer, Condition storage _condition) internal view returns (bool) {
         uint256 balance;
@@ -941,12 +997,17 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @notice Checks if the buyer own a specific non-fungible token id.
      *
      * @param _buyer - address of potential buyer
-     * @param _condition - the condition to be evaluated
+     * @param _tokenAddress - the address of the non-fungible token
+     * @param _tokenId - the id of the non-fungible token
      *
-     * @return bool - true if buyer meets the condition
+     * @return bool - true if buyer meets the _condition
      */
-    function holdsSpecificToken(address _buyer, Condition storage _condition) internal view returns (bool) {
-        return (IERC721(_condition.tokenAddress).ownerOf(_condition.tokenId) == _buyer);
+    function holdsSpecificToken(
+        address _buyer,
+        address _tokenAddress,
+        uint256 _tokenId
+    ) internal view returns (bool) {
+        return (IERC721(_tokenAddress).ownerOf(_tokenId) == _buyer);
     }
 
     /**
@@ -1021,7 +1082,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             receipt.twinReceipts = twinReceipts;
         }
 
-        // Fetch condition
+        // Fetch _condition
         (bool conditionExists, Condition storage condition) = fetchConditionByExchange(exchange.id);
 
         // Add condition to receipt if exists

@@ -16,16 +16,18 @@ class Condition {
             uint256 tokenId;
             uint256 threshold;
             uint256 maxCommits;
+            uint256 length;
         }
     */
 
-  constructor(method, tokenType, tokenAddress, tokenId, threshold, maxCommits) {
+  constructor(method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length) {
     this.method = method;
     this.tokenType = tokenType;
     this.tokenAddress = tokenAddress;
     this.tokenId = tokenId;
     this.threshold = threshold;
     this.maxCommits = maxCommits;
+    this.length = length;
   }
 
   /**
@@ -34,8 +36,8 @@ class Condition {
    * @returns {Condition}
    */
   static fromObject(o) {
-    const { method, tokenType, tokenAddress, tokenId, threshold, maxCommits } = o;
-    return new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+    const { method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length } = o;
+    return new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length);
   }
 
   /**
@@ -44,10 +46,10 @@ class Condition {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
+    let method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length;
 
     // destructure struct
-    [method, tokenType, tokenAddress, tokenId, threshold, maxCommits] = struct;
+    [method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length] = struct;
 
     return Condition.fromObject({
       method: parseInt(method),
@@ -56,6 +58,7 @@ class Condition {
       tokenId: tokenId.toString(),
       threshold: threshold.toString(),
       maxCommits: maxCommits.toString(),
+      length: length.toString(),
     });
   }
 
@@ -76,6 +79,7 @@ class Condition {
     tmp.tokenId = tmp.tokenId.toString();
     tmp.threshold = tmp.threshold.toString();
     tmp.maxCommits = tmp.maxCommits.toString();
+    tmp.length = tmp.length.toString();
     return JSON.stringify(tmp);
   }
 
@@ -147,6 +151,14 @@ class Condition {
   }
 
   /**
+   * Is this Condition instance's length field valid?
+   * @returns {boolean}
+   */
+  lengthIsValid() {
+    return bigNumberIsValid(this.length);
+  }
+
+  /**
    * Is this Condition instance valid?
    * @returns {boolean}
    */
@@ -157,7 +169,8 @@ class Condition {
       this.tokenAddressIsValid() &&
       this.tokenIdIsValid() &&
       this.thresholdIsValid() &&
-      this.maxCommitsIsValid()
+      this.maxCommitsIsValid() &&
+      this.lengthIsValid()
     );
   }
 }

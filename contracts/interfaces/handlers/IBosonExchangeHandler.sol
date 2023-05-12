@@ -43,6 +43,12 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      */
     function commitToOffer(address payable _buyer, uint256 _offerId) external payable;
 
+    function commitToConditionalOffer(
+        address payable _buyer,
+        uint256 _offerId,
+        uint256 _tokenId
+    ) external payable;
+
     /**
      * @notice Commits to a preminted offer (first step of an exchange).
      *
@@ -64,7 +70,11 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @param _offerId - the id of the offer to commit to
      * @param _exchangeId - the id of the exchange
      */
-    function commitToPreMintedOffer(address payable _buyer, uint256 _offerId, uint256 _exchangeId) external;
+    function commitToPreMintedOffer(
+        address payable _buyer,
+        uint256 _offerId,
+        uint256 _exchangeId
+    ) external;
 
     /**
      * @notice Completes an exchange.
@@ -216,9 +226,14 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      * @return voucher - the voucher details. See {BosonTypes.Voucher}
      */
-    function getExchange(
-        uint256 _exchangeId
-    ) external view returns (bool exists, BosonTypes.Exchange memory exchange, BosonTypes.Voucher memory voucher);
+    function getExchange(uint256 _exchangeId)
+        external
+        view
+        returns (
+            bool exists,
+            BosonTypes.Exchange memory exchange,
+            BosonTypes.Voucher memory voucher
+        );
 
     /**
      * @notice Gets the state of a given exchange.

@@ -57,6 +57,8 @@ exports.RevertReasons = {
   TOO_MANY_OFFERS: "Exceeded maximum offers in a single transaction",
   NOTHING_UPDATED: "Nothing updated",
   INVALID_CONDITION_PARAMETERS: "Invalid condition parameters",
+  MAX_COMMITS_ADDRESS_REACHED: "Max commits per address reached",
+  MAX_COMMITS_TOKEN_REACHED: "Max commits per token reached",
 
   // Account-related
   MUST_BE_ACTIVE: "Account must be active",

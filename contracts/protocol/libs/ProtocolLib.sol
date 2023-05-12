@@ -182,6 +182,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.AuthToken) pendingAuthTokenUpdatesBySeller;
         // dispute resolver id => DisputeResolver
         mapping(uint256 => BosonTypes.DisputeResolver) pendingAddressUpdatesByDisputeResolver;
+        // groupId => tokenId => commit count (count how many times a token has been used as gate for this group)
+        mapping(uint256 => mapping(uint256 => uint256)) conditionalCommitsByTokenId;
     }
 
     // Incrementing id counters

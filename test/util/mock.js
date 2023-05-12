@@ -247,14 +247,15 @@ async function mockReceipt() {
   );
 }
 
-function mockCondition({ method, tokenType, tokenAddress, tokenId, threshold, maxCommits }) {
+function mockCondition({ method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length }) {
   return new Condition(
     method ?? EvaluationMethod.Threshold,
     tokenType ?? TokenType.FungibleToken,
     tokenAddress ?? ethers.constants.AddressZero,
     tokenId ?? "0",
     threshold ?? "1",
-    maxCommits ?? "1"
+    maxCommits ?? "1",
+    length ?? "0"
   );
 }
 
