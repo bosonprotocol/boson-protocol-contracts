@@ -58,7 +58,8 @@ exports.RevertReasons = {
   NOTHING_UPDATED: "Nothing updated",
   INVALID_CONDITION_PARAMETERS: "Invalid condition parameters",
   MAX_COMMITS_ADDRESS_REACHED: "Max commits per address reached",
-  MAX_COMMITS_TOKEN_REACHED: "Max commits per token reached",
+  MAX_COMMITS_TOKEN_REACHED: "Max commits per token id reached",
+  GROUP_HAS_NO_CONDITION: "Group has no condition. Use commitToOffer instead",
 
   // Account-related
   MUST_BE_ACTIVE: "Account must be active",

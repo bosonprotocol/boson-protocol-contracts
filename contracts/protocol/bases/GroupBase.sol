@@ -195,11 +195,10 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * @return sellerId  - the seller id
      * @return group - the group details
      */
-    function preUpdateChecks(uint256 _groupId, uint256[] memory _offerIds)
-        internal
-        view
-        returns (uint256 sellerId, Group storage group)
-    {
+    function preUpdateChecks(
+        uint256 _groupId,
+        uint256[] memory _offerIds
+    ) internal view returns (uint256 sellerId, Group storage group) {
         // make sure that at least something will be updated
         require(_offerIds.length != 0, NOTHING_UPDATED);
 

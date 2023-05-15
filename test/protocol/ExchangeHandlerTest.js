@@ -985,7 +985,7 @@ describe("IBosonExchangeHandler", function () {
       });
     });
 
-    context.only("👉 commitToOffer() with condition", async function () {
+    context("👉 commitToConditionalOffer()", async function () {
       context("✋ Threshold ERC20", async function () {
         beforeEach(async function () {
           // Required constructor params for Group
@@ -1198,7 +1198,7 @@ describe("IBosonExchangeHandler", function () {
         });
       });
 
-      context.only("✋ SpecificToken ERC721", async function () {
+      context("✋ SpecificToken ERC721", async function () {
         let tokenId;
         beforeEach(async function () {
           // Required constructor params for Group
@@ -1246,8 +1246,8 @@ describe("IBosonExchangeHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
-          // @TODO
           it("token id does not exist", async function () {
+            tokenId = "13";
             // Attempt to commit, expecting revert
             await expect(
               exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
@@ -1255,13 +1255,16 @@ describe("IBosonExchangeHandler", function () {
           });
 
           it("buyer does not meet condition for commit", async function () {
+            // Send token to another user
+            await foreign721.connect(buyer).transferFrom(buyer.address, rando.address, tokenId);
+
             // Attempt to commit, expecting revert
             await expect(
               exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
             ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
           });
 
-          it("buyer has exhausted allowable commits", async function () {
+          it("max commits per token id reached", async function () {
             // Commit to offer the maximum number of times
             for (let i = 0; i < Number(condition.maxCommits); i++) {
               await exchangeHandler
@@ -1271,8 +1274,8 @@ describe("IBosonExchangeHandler", function () {
 
             // Attempt to commit again after maximum commits has been reached
             await expect(
-              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
-            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+              exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
+            ).to.revertedWith(RevertReasons.MAX_COMMITS_TOKEN_REACHED);
           });
         });
       });
@@ -1293,13 +1296,10 @@ describe("IBosonExchangeHandler", function () {
           await groupHandler.connect(assistant).createGroup(group, condition);
         });
 
-        it("should emit a BuyerCommitted event", async function () {
-          // Commit to offer.
-          // We're only concerned that the event is emitted, indicating the condition was met
-          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })).to.emit(
-            exchangeHandler,
-            "BuyerCommitted"
-          );
+        it("should revert when using this method", async function () {
+          await expect(
+            exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, 0, { value: price })
+          ).to.revertedWith(RevertReasons.GROUP_HAS_NO_CONDITION);
         });
       });
     });
