@@ -4268,7 +4268,9 @@ describe("IBosonExchangeHandler", function () {
         await foreign20.connect(buyer).mint(buyer.address, condition.threshold);
 
         // Commit to offer
-        let tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        let tx = await exchangeHandler
+          .connect(buyer)
+          .commitToConditionalOffer(buyer.address, offerId, 0, { value: price });
 
         // Decrease offer quantityAvailable
         offer.quantityAvailable = "9";

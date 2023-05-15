@@ -121,9 +121,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         require(condition.method != EvaluationMethod.None, "Group has no condition. Use commitToOffer instead");
 
-        require(authorizeCommit(_buyer, condition, groupId, _tokenId), CANNOT_COMMIT);
+        bool allow = authorizeCommit(_buyer, condition, groupId, _tokenId);
+        require(allow, CANNOT_COMMIT);
 
-        commitToOfferInternal(_buyer, offer, 0, false);
+        uint256 exchangeId = commitToOfferInternal(_buyer, offer, 0, false);
+
+        if (allow) {
+            protocolLookups().exchangeCondition[exchangeId] = condition;
+        }
     }
 
     /**
@@ -195,13 +200,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _offer - storage pointer to the offer
      * @param _exchangeId - the id of the exchange
      * @param _isPreminted - whether the offer is preminted
+     * @return _exchangeId - the id of the exchange
      */
     function commitToOfferInternal(
         address payable _buyer,
         Offer storage _offer,
         uint256 _exchangeId,
         bool _isPreminted
-    ) internal {
+    ) internal returns (uint256) {
         uint256 _offerId = _offer.id;
         // Make sure offer is available, and isn't void, expired, or sold out
         OfferDates storage offerDates = fetchOfferDates(_offerId);
@@ -236,9 +242,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         // Operate in a block to avoid "stack too deep" error
         {
-            // Cache protocol lookups for reference
-            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
             // Determine the time after which the voucher can be redeemed
             uint256 startDate = (block.timestamp >= offerDates.voucherRedeemableFrom)
                 ? block.timestamp
@@ -248,27 +251,35 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             voucher.validUntilDate = (offerDates.voucherRedeemableUntil > 0)
                 ? offerDates.voucherRedeemableUntil
                 : startDate + fetchOfferDurations(_offerId).voucherValid;
+        }
 
+        // Operate in a block to avoid "stack too deep" error
+        {
+            // Cache protocol lookups for reference
+            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
             // Map the offerId to the exchangeId as one-to-many
             lookups.exchangeIdsByOffer[_offerId].push(_exchangeId);
 
             // Shouldn't decrement if offer is preminted or unlimited
-            if (!_isPreminted && _offer.quantityAvailable != type(uint256).max) {
-                // Decrement offer's quantity available
-                _offer.quantityAvailable--;
-            }
-
-            // Issue voucher, unless it already exist (for preminted offers)
-            lookups.voucherCount[buyerId]++;
             if (!_isPreminted) {
+                if (_offer.quantityAvailable != type(uint256).max) {
+                    // Decrement offer's quantity available
+                    _offer.quantityAvailable--;
+                }
+
+                // Issue voucher, unless it already exist (for preminted offers)
                 IBosonVoucher bosonVoucher = IBosonVoucher(lookups.cloneAddress[_offer.sellerId]);
                 uint256 tokenId = _exchangeId | (_offerId << 128);
                 bosonVoucher.issueVoucher(tokenId, _buyer);
             }
+
+            lookups.voucherCount[buyerId]++;
         }
 
         // Notify watchers of state change
         emit BuyerCommitted(_offerId, buyerId, _exchangeId, exchange, voucher, msgSender());
+
+        return _exchangeId;
     }
 
     /**
