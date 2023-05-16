@@ -73,14 +73,14 @@ contract BosonTypes {
     enum SellerUpdateFields {
         Admin,
         Assistant,
-        Clerk,
+        Clerk, // Deprecated.
         AuthToken
     }
 
     enum DisputeResolverUpdateFields {
         Admin,
         Assistant,
-        Clerk
+        Clerk // Deprecated.
     }
 
     struct AuthToken {
@@ -92,7 +92,7 @@ contract BosonTypes {
         uint256 id;
         address assistant;
         address admin;
-        address clerk;
+        address clerk; // Deprecated. Kept for backwards compatibility.
         address payable treasury;
         bool active;
         string metadataUri;
@@ -109,7 +109,7 @@ contract BosonTypes {
         uint256 escalationResponsePeriod;
         address assistant;
         address admin;
-        address clerk;
+        address clerk; // Deprecated. Kept for backwards compatibility.
         address payable treasury;
         string metadataUri;
         bool active;

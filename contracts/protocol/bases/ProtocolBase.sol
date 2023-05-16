@@ -143,21 +143,6 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @notice Gets a seller id from storage by clerk address
-     *
-     * @param _clerk - the clerk address of the seller
-     * @return exists - whether the seller id exists
-     * @return sellerId  - the seller id
-     */
-    function getSellerIdByClerk(address _clerk) internal view returns (bool exists, uint256 sellerId) {
-        // Get the seller id
-        sellerId = protocolLookups().sellerIdByClerk[_clerk];
-
-        // Determine existence
-        exists = (sellerId > 0);
-    }
-
-    /**
      * @notice Gets a seller id from storage by auth token.  A seller will have either an admin address or an auth token
      *
      * @param _authToken - the potential _authToken of the seller.
@@ -233,23 +218,6 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     ) internal view returns (bool exists, uint256 disputeResolverId) {
         // Get the dispute resolver id
         disputeResolverId = protocolLookups().disputeResolverIdByAdmin[_admin];
-
-        // Determine existence
-        exists = (disputeResolverId > 0);
-    }
-
-    /**
-     * @notice Gets a dispute resolver id from storage by clerk address
-     *
-     * @param _clerk - the clerk address of the dispute resolver
-     * @return exists - whether the dispute resolver id exists
-     * @return disputeResolverId  - the dispute resolver id
-     */
-    function getDisputeResolverIdByClerk(
-        address _clerk
-    ) internal view returns (bool exists, uint256 disputeResolverId) {
-        // Get the dispute resolver id
-        disputeResolverId = protocolLookups().disputeResolverIdByClerk[_clerk];
 
         // Determine existence
         exists = (disputeResolverId > 0);

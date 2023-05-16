@@ -28,7 +28,8 @@ contract SellerHandlerFacet is SellerBase {
      *
      * Reverts if:
      * - Caller is not the supplied admin or does not own supplied auth token
-     * - Caller is not the supplied assistant and clerk revert reason
+     * - Caller is not the supplied assistant
+     * - Supplied clerk is not a zero address
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
@@ -51,18 +52,19 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
-     * @notice Updates treasury address, if changed. Puts admin, assistant, clerk and AuthToken in pending queue, if changed.
+     * @notice Updates treasury address, if changed. Puts admin, assistant and AuthToken in pending queue, if changed.
      *         Pending updates can be completed by calling the optInToSellerUpdate function.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a SellerUpdateApplied event if the seller has changed the treasury.
-     * Emits a SellerUpdatePending event if the seller has requested an update for admin, clerk, assistant, or auth token.
-     * Holder of new auth token and/or owner(s) of new addresses for admin, clerk, assistant must opt-in to the update.
+     * Emits a SellerUpdatePending event if the seller has requested an update for admin, assistant, or auth token.
+     * Holder of new auth token and/or owner(s) of new addresses for admin, assistant must opt-in to the update.
      *
      * Reverts if:
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
+     * - Supplied clerk is not a zero address
      * - Caller address is not the admin address of the stored seller with no AuthToken
      * - Caller is not the owner of the seller's stored AuthToken
      * - Seller does not exist
@@ -88,6 +90,7 @@ contract SellerHandlerFacet is SellerBase {
                 (_seller.admin != address(0) && _authToken.tokenType == AuthTokenType.None),
             ADMIN_OR_AUTH_TOKEN
         );
+        require(_seller.clerk == address(0), CLERK_DEPRECATED);
 
         require(_authToken.tokenType != AuthTokenType.Custom, INVALID_AUTH_TOKEN_TYPE);
 
@@ -145,14 +148,6 @@ contract SellerHandlerFacet is SellerBase {
             needsApproval = true;
         }
 
-        if (_seller.clerk != seller.clerk) {
-            preUpdateSellerCheck(_seller.id, _seller.clerk, lookups);
-            require(_seller.clerk != address(0), INVALID_ADDRESS);
-            // Clerk address owner must approve the update to prevent front-running
-            sellerPendingUpdate.clerk = _seller.clerk;
-            needsApproval = true;
-        }
-
         bool updateApplied;
 
         if (_seller.treasury != seller.treasury) {
@@ -203,6 +198,7 @@ contract SellerHandlerFacet is SellerBase {
      * - Caller is not the owner of the pending AuthToken being updated
      * - No pending update exists for this seller
      * - AuthTokenType is not unique to this seller
+     * - Seller tries to update clerk
      *
      * @param _sellerId - seller id
      * @param _fieldsToUpdate - fields to update, see SellerUpdateFields enum
@@ -283,25 +279,6 @@ contract SellerHandlerFacet is SellerBase {
                 delete sellerPendingUpdate.assistant;
 
                 updateApplied = true;
-            } else if (role == SellerUpdateFields.Clerk && sellerPendingUpdate.clerk != address(0)) {
-                // Aprove clerk update
-                require(sellerPendingUpdate.clerk == sender, UNAUTHORIZED_CALLER_UPDATE);
-
-                preUpdateSellerCheck(_sellerId, sender, lookups);
-
-                // Delete old seller id by clerk mapping
-                delete lookups.sellerIdByClerk[seller.clerk];
-
-                // Update clerk
-                seller.clerk = sender;
-
-                // Store new seller id by clerk mapping
-                lookups.sellerIdByClerk[sender] = _sellerId;
-
-                // Delete pending update clerk
-                delete sellerPendingUpdate.clerk;
-
-                updateApplied = true;
             } else if (role == SellerUpdateFields.AuthToken && authTokenPendingUpdate.tokenType != AuthTokenType.None) {
                 // Approve auth token update
                 address authTokenContract = lookups.authTokenContracts[authTokenPendingUpdate.tokenType];
@@ -335,6 +312,8 @@ contract SellerHandlerFacet is SellerBase {
                 delete authTokenPendingUpdate.tokenId;
 
                 updateApplied = true;
+            } else if (role == SellerUpdateFields.Clerk) {
+                revert(CLERK_DEPRECATED);
             }
         }
 
@@ -367,11 +346,11 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
-     * @notice Gets the details about a seller by an address associated with that seller: assistant, admin, or clerk address.
+     * @notice Gets the details about a seller by an address associated with that seller: assistant or admin address.
      * A seller will have either an admin address or an auth token.
      * If seller's admin uses NFT Auth the seller should call `getSellerByAuthToken` instead.
      *
-     * @param _associatedAddress - the address associated with the seller. Must be an assistant, admin, or clerk address.
+     * @param _associatedAddress - the address associated with the seller. Must be an assistant or admin address.
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -388,11 +367,6 @@ contract SellerHandlerFacet is SellerBase {
         }
 
         (exists, sellerId) = getSellerIdByAdmin(_associatedAddress);
-        if (exists) {
-            return fetchSeller(sellerId);
-        }
-
-        (exists, sellerId) = getSellerIdByClerk(_associatedAddress);
         if (exists) {
             return fetchSeller(sellerId);
         }
@@ -425,7 +399,7 @@ contract SellerHandlerFacet is SellerBase {
      * @notice Pre update Seller checks
      *
      * Reverts if:
-     *   - Address has already been used by another seller as assistant, admin, or clerk
+     *   - Address has already been used by another seller as assistant or admin
      *
      * @param _sellerId - the id of the seller to check
      * @param _role - the address to check
@@ -439,15 +413,27 @@ contract SellerHandlerFacet is SellerBase {
         // Check that the role is unique to one seller id across all roles -- not used or is used by this seller id.
         if (_role != address(0)) {
             uint256 check1 = _lookups.sellerIdByAssistant[_role];
-            uint256 check2 = _lookups.sellerIdByClerk[_role];
-            uint256 check3 = _lookups.sellerIdByAdmin[_role];
+            uint256 check2 = _lookups.sellerIdByAdmin[_role];
 
             require(
-                (check1 == 0 || check1 == _sellerId) &&
-                    (check2 == 0 || check2 == _sellerId) &&
-                    (check3 == 0 || check3 == _sellerId),
+                (check1 == 0 || check1 == _sellerId) && (check2 == 0 || check2 == _sellerId),
                 SELLER_ADDRESS_MUST_BE_UNIQUE
             );
         }
+    }
+
+    /**
+     * @notice Fetches a given seller from storage by id and overrides the clerk address with 0x0.
+     *
+     * @param _sellerId - the id of the seller
+     * @return exists - whether the seller exists
+     * @return seller - the seller details. See {BosonTypes.Seller}
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     */
+    function fetchSellerWithoutClerk(
+        uint256 _sellerId
+    ) internal view returns (bool exists, Seller memory seller, AuthToken memory authToken) {
+        (exists, seller, authToken) = fetchSeller(_sellerId);
+        seller.clerk = address(0);
     }
 }
