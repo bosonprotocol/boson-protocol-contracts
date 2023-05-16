@@ -730,6 +730,25 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
           ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
         });
+
+        it("Offer belongs to a group with condition", async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          // Create Condition
+          condition = mockCondition({ tokenAddress: foreign20.address, threshold: "50", maxCommits: "3" });
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.GROUP_HAS_CONDITION);
+        });
       });
     });
 
@@ -1280,26 +1299,141 @@ describe("IBosonExchangeHandler", function () {
         });
       });
 
-      context("✋ Group without condition", async function () {
-        beforeEach(async function () {
+      context("💔 Revert Reasons", async function () {
+        it("The exchanges region of protocol is paused", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
+
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("The buyers region of protocol is paused", async function () {
+          // Pause the buyers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
+
+          // Attempt to create a buyer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("buyer address is the zero address", async function () {
+          // Attempt to commit, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(ethers.constants.AddressZero, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+        });
+
+        it("offer id is invalid", async function () {
+          // An invalid offer id
+          offerId = "666";
+
+          // Attempt to commit, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+        });
+
+        it("offer is voided", async function () {
+          // Void the offer first
+          await offerHandler.connect(assistant).voidOffer(offerId);
+
+          // Attempt to commit to the voided offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+        });
+
+        it("offer is not yet available for commits", async function () {
+          // Create an offer with staring date in the future
+          // get current block timestamp
+          const block = await ethers.provider.getBlock("latest");
+          const now = block.timestamp.toString();
+
+          // set validFrom date in the past
+          offerDates.validFrom = ethers.BigNumber.from(now)
+            .add(oneMonth * 6)
+            .toString(); // 6 months in the future
+          offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom).add(10).toString(); // just after the valid from so it succeeds.
+
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+          // Attempt to commit to the not availabe offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, ++offerId, { value: price })
+          ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
+        });
+
+        it("offer has expired", async function () {
+          // Go past offer expiration date
+          await setNextBlockTimestamp(Number(offerDates.validUntil));
+
+          // Attempt to commit to the expired offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+        });
+
+        it("offer sold", async function () {
+          // Create an offer with only 1 item
+          offer.quantityAvailable = "1";
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          // Commit to offer, so it's not availble anymore
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, ++offerId, { value: price });
+
+          // Attempt to commit to the sold out offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
+        });
+
+        it("Offer belongs to a group with condition", async function () {
           // Required constructor params for Group
           groupId = "1";
           offerIds = [offerId];
 
           // Create Condition
-          condition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
+          condition = mockCondition({ tokenAddress: foreign20.address, threshold: "50", maxCommits: "3" });
           expect(condition.isValid()).to.be.true;
 
           // Create Group
           group = new Group(groupId, seller.id, offerIds);
           expect(group.isValid()).is.true;
           await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.GROUP_HAS_CONDITION);
         });
 
-        it("should revert when using this method", async function () {
-          await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, 0, { value: price })
-          ).to.revertedWith(RevertReasons.GROUP_HAS_NO_CONDITION);
+        context("✋ Group without condition", async function () {
+          beforeEach(async function () {
+            // Required constructor params for Group
+            groupId = "1";
+            offerIds = [offerId];
+
+            // Create Condition
+            condition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
+            expect(condition.isValid()).to.be.true;
+
+            // Create Group
+            group = new Group(groupId, seller.id, offerIds);
+            expect(group.isValid()).is.true;
+            await groupHandler.connect(assistant).createGroup(group, condition);
+          });
+
+          it("Should revert when using this method", async function () {
+            await expect(
+              exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, 0, { value: price })
+            ).to.revertedWith(RevertReasons.GROUP_HAS_NO_CONDITION);
+          });
         });
       });
     });
