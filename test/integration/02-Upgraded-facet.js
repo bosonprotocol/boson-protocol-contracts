@@ -70,8 +70,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ethers.constants.AddressZero };
     [deployer] = await ethers.getSigners();
 
     // Initial ids for all the things
@@ -777,10 +778,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             const tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("5").toString()];
 
             // seller withdrawal
-            const tx = await fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
+            const tx = await fundsHandler
+              .connect(assistant)
+              .withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
             await expect(tx)
               .to.emit(fundsHandler, "FundsWithdrawn")
-              .withArgs(seller.id, treasury.address, mockToken.address, sellerPayoff, clerk.address);
+              .withArgs(seller.id, treasury.address, mockToken.address, sellerPayoff, assistant.address);
 
             await expect(tx)
               .to.emit(fundsHandler, "FundsWithdrawn")
@@ -839,7 +842,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             // seller withdrawal
             // Attempt to withdraw the funds, expecting revert
             await expect(
-              fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller)
+              fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller)
             ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
 
             // buyer withdrawal

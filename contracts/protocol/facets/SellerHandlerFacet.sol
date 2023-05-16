@@ -198,7 +198,7 @@ contract SellerHandlerFacet is SellerBase {
      * - Caller is not the owner of the pending AuthToken being updated
      * - No pending update exists for this seller
      * - AuthTokenType is not unique to this seller
-     * - Seller tries to update clerk
+     * - Seller tries to update the clerk
      *
      * @param _sellerId - seller id
      * @param _fieldsToUpdate - fields to update, see SellerUpdateFields enum

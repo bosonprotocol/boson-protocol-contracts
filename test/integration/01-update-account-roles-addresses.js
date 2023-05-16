@@ -54,8 +54,9 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ethers.constants.AddressZero };
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -257,20 +258,20 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
           .withArgs(buyerAccount.id, rando.address, ethers.constants.AddressZero, buyerPayoff, rando.address);
       });
 
-      it("Seller should be able to withdraw funds after updating clerk address", async function () {
-        seller.clerk = rando.address;
+      it("Seller should be able to withdraw funds after updating assistant address", async function () {
+        seller.assistant = rando.address;
         expect(seller.isValid()).is.true;
-        sellerPendingUpdate.clerk = rando.address;
+        sellerPendingUpdate.assistant = rando.address;
 
         // Update the seller wallet, testing for the event
         await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
           .to.emit(accountHandler, "SellerUpdatePending")
           .withArgs(seller.id, sellerPendingUpdate.toStruct(), emptyAuthToken.toStruct(), admin.address);
 
-        sellerPendingUpdate.clerk = ethers.constants.AddressZero;
+        sellerPendingUpdate.assistant = ethers.constants.AddressZero;
 
         // Approve the update
-        await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Clerk]))
+        await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]))
           .to.emit(accountHandler, "SellerUpdateApplied")
           .withArgs(
             seller.id,
@@ -281,14 +282,14 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
             rando.address
           );
 
-        // Attempt to withdraw funds with old seller clerk, should fail
+        // Attempt to withdraw funds with old seller assistant, should fail
         await expect(
-          fundsHandler.connect(clerk).withdrawFunds(seller.id, [ethers.constants.AddressZero], [sellerPayoff])
+          fundsHandler.connect(assistant).withdrawFunds(seller.id, [ethers.constants.AddressZero], [sellerPayoff])
         ).to.revertedWith(RevertReasons.NOT_AUTHORIZED);
 
-        // Attempt to withdraw funds with new seller clerk, should succeed
+        // Attempt to withdraw funds with new seller assistant, should succeed
         await expect(
-          fundsHandler.connect(rando).withdrawFunds(seller.id, [ethers.constants.AddressZero], [sellerPayoff])
+          fundsHandler.connect(assistant).withdrawFunds(seller.id, [ethers.constants.AddressZero], [sellerPayoff])
         )
           .to.emit(fundsHandler, "FundsWithdrawn")
           .withArgs(seller.id, treasury.address, ethers.constants.AddressZero, sellerPayoff, rando.address);

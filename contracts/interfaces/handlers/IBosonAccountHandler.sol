@@ -138,7 +138,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Caller is not the owner of the pending AuthToken being updated
      * - No pending update exists for this seller
      * - AuthTokenType is not unique to this seller
-     * - Seller tries to update clerk
+     * - Seller tries to update the clerk
      *
      * @param _sellerId - seller id
      * @param _fieldsToUpdate - fields to update, see SellerUpdateFields enum
@@ -202,7 +202,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Addresses are not unique to this dispute resolver
      * - Caller address is not pending update for the field being updated
      * - No pending update exists for this dispute resolver
-     * - Dispute resolver tries to update clerk
+     * - Dispute resolver tries to update the clerk
      *
      * @param _disputeResolverId - disputeResolver id
      * @param _fieldsToUpdate - fields to update, see DisputeResolverUpdateFields enum
