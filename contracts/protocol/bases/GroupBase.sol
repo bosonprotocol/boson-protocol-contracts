@@ -109,19 +109,30 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * @return valid - validity of condition
      *
      */
-    function validateCondition(Condition memory _condition) internal pure returns (bool valid) {
+    function validateCondition(Condition memory _condition) internal view returns (bool valid) {
         if (_condition.method == EvaluationMethod.None) {
             valid = (_condition.tokenAddress == address(0) &&
                 _condition.tokenId == 0 &&
                 _condition.threshold == 0 &&
-                _condition.maxCommits == 0);
+                _condition.maxCommits == 0 &&
+                _condition.length == 0);
         } else if (_condition.method == EvaluationMethod.Threshold) {
-            valid = (_condition.tokenAddress != address(0) && _condition.maxCommits > 0 && _condition.threshold > 0);
+            valid = (_condition.tokenAddress != address(0) &&
+                _condition.maxCommits > 0 &&
+                _condition.threshold > 0 &&
+                _condition.length == 0);
         } else if (_condition.method == EvaluationMethod.SpecificToken) {
             valid = (_condition.tokenAddress != address(0) &&
                 _condition.threshold == 0 &&
                 _condition.maxCommits > 0 &&
-                (_condition.tokenId != 0 ? _condition.length > 0 : _condition.length == 0));
+                _condition.tokenId != 0 && // tokenId must be present
+                (
+                    _condition.tokenType == TokenType.NonFungibleToken
+                        ? _condition.length > 0 // length must be > 0 for NFT
+                        : _condition.tokenType == TokenType.MultiToken
+                        ? _condition.length == 0 // length must be zero for MultiToken
+                        : false // TokenType.FungibleToken is not supported
+                ));
         }
     }
 

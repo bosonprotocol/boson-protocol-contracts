@@ -171,6 +171,7 @@ describe("IBosonGroupHandler", function () {
         tokenType: TokenType.MultiToken,
         tokenAddress: accounts[0].address,
         tokenId: "5150",
+        length: "0",
       });
       expect(condition.isValid()).to.be.true;
 
