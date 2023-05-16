@@ -936,7 +936,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             if (_condition.tokenId > 0) {
                 require(
                     _tokenId >= _condition.tokenId && _tokenId < _condition.tokenId + _condition.length,
-                    "Token id not in range"
+                    TOKEN_ID_NOT_IN_CONDITION_RANGE
                 );
             }
 
