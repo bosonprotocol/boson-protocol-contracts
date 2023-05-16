@@ -100,6 +100,10 @@ string constant OFFER_NOT_IN_GROUP = "Offer not part of the group";
 string constant TOO_MANY_OFFERS = "Exceeded maximum offers in a single transaction";
 string constant NOTHING_UPDATED = "Nothing updated";
 string constant INVALID_CONDITION_PARAMETERS = "Invalid condition parameters";
+string constant GROUP_HAS_NO_CONDITION = "Offer belongs to a group without a condition. Use commitToOffer instead";
+string constant GROUP_HAS_CONDITION = "Offer belongs to a group with a condition. Use commitToConditionalOffer instead";
+string constant MAX_COMMITS_ADDRESS_REACHED = "Max commits per address reached";
+string constant MAX_COMMITS_TOKEN_REACHED = "Max commits per token id reached";
 
 // Revert Reasons: Exchange related
 string constant NO_SUCH_EXCHANGE = "No such exchange";

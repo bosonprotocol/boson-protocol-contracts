@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
+import "hardhat/console.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
@@ -76,42 +77,26 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         address payable _buyer,
         uint256 _offerId
     ) external payable override exchangesNotPaused buyersNotPaused nonReentrant {
-        // Make sure buyer address is not zero address
-        require(_buyer != address(0), INVALID_ADDRESS);
-
-        // Get the offer
-        bool exists;
-        Offer storage offer;
-        (exists, offer) = fetchOffer(_offerId);
-
-        // Make sure offer exists, is available, and isn't void, expired, or sold out
-        require(exists, NO_SUCH_OFFER);
+        Offer storage offer = validateOffer(_buyer, _offerId);
 
         // For there to be a condition, there must be a group.
-        (exists, ) = getGroupIdByOffer(offer.id);
+        (bool exists, ) = getGroupIdByOffer(offer.id);
 
         // Make sure offer doesn't have a condition. If it does, use commitToConditionalOffer instead.
-        require(!exists, "Offer has a condition. Use commitToConditionalOffer instead.");
+        require(!exists, GROUP_HAS_CONDITION);
 
         commitToOfferInternal(_buyer, offer, 0, false);
     }
 
-    function commitToConditionalOffer(address payable _buyer, uint256 _offerId, uint256 _tokenId) external payable {
-        // Make sure buyer address is not zero address
-        require(_buyer != address(0), INVALID_ADDRESS);
-
-        // Get the offer
-        bool exists;
-        Offer storage offer;
-        (exists, offer) = fetchOffer(_offerId);
-
-        // Make sure offer exists, is available, and isn't void, expired, or sold out
-        require(exists, NO_SUCH_OFFER);
-
-        uint256 groupId;
+    function commitToConditionalOffer(
+        address payable _buyer,
+        uint256 _offerId,
+        uint256 _tokenId
+    ) external payable override exchangesNotPaused buyersNotPaused nonReentrant {
+        Offer storage offer = validateOffer(_buyer, _offerId);
 
         // For there to be a condition, there must be a group.
-        (exists, groupId) = getGroupIdByOffer(offer.id);
+        (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
 
         // Make sure the group exists
         require(exists, NO_SUCH_GROUP);
@@ -119,16 +104,24 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Get the condition
         Condition storage condition = fetchCondition(groupId);
 
-        require(condition.method != EvaluationMethod.None, "Group has no condition. Use commitToOffer instead");
-
         bool allow = authorizeCommit(_buyer, condition, groupId, _tokenId);
         require(allow, CANNOT_COMMIT);
 
         uint256 exchangeId = commitToOfferInternal(_buyer, offer, 0, false);
 
-        if (allow) {
-            protocolLookups().exchangeCondition[exchangeId] = condition;
-        }
+        protocolLookups().exchangeCondition[exchangeId] = condition;
+    }
+
+    function validateOffer(address _buyer, uint256 _offerId) internal view returns (Offer storage offer) {
+        // Make sure buyer address is not zero address
+        require(_buyer != address(0), INVALID_ADDRESS);
+
+        // Get the offer
+        bool exists;
+        (exists, offer) = fetchOffer(_offerId);
+
+        // Make sure offer exists, is available, and isn't void, expired, or sold out
+        require(exists, NO_SUCH_OFFER);
     }
 
     /**
@@ -169,7 +162,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         (exists, ) = getGroupIdByOffer(offer.id);
 
-        require(!exists, "Offer has a condition. Use commitToConditionalOffer instead.");
+        require(!exists, GROUP_HAS_CONDITION);
 
         commitToOfferInternal(_buyer, offer, _exchangeId, true);
     }
@@ -937,7 +930,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // How many times has this address committed to offers in the group?
             uint256 commitCount = lookups.conditionalCommitsByTokenId[_groupId][_tokenId];
 
-            require(commitCount < _condition.maxCommits, "Max commits per token id reached");
+            require(commitCount < _condition.maxCommits, MAX_COMMITS_TOKEN_REACHED);
 
             // If condition has a token id, check that the token id is in range, otherwise accept any token id
             if (_condition.tokenId > 0) {
@@ -957,7 +950,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // How many times has this address committed to offers in the group?
             uint256 commitCount = lookups.conditionalCommitsByAddress[_buyer][_groupId];
 
-            require(commitCount < _condition.maxCommits, "Max commits per address reached");
+            require(commitCount < _condition.maxCommits, MAX_COMMITS_ADDRESS_REACHED);
 
             allow = holdsThreshold(_buyer, _condition);
 
@@ -965,6 +958,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 // Increment number of commits to the group for this address if they are allowed to commit
                 lookups.conditionalCommitsByAddress[_buyer][_groupId] = ++commitCount;
             }
+        } else {
+            revert(GROUP_HAS_NO_CONDITION);
         }
     }
 
@@ -987,19 +982,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             balance = IERC20(_condition.tokenAddress).balanceOf(_buyer);
         }
         return balance >= _condition.threshold;
-    }
-
-    /**
-     * @notice Checks if the buyer own a specific non-fungible token id.
-     *
-     * @param _buyer - address of potential buyer
-     * @param _tokenAddress - the address of the non-fungible token
-     * @param _tokenId - the id of the non-fungible token
-     *
-     * @return bool - true if buyer meets the condition
-     */
-    function holdsSpecificToken(address _buyer, address _tokenAddress, uint256 _tokenId) internal view returns (bool) {
-        return (IERC721(_tokenAddress).ownerOf(_tokenId) == _buyer);
     }
 
     /**
