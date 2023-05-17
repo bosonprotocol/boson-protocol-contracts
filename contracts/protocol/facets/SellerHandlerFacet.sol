@@ -342,7 +342,7 @@ contract SellerHandlerFacet is SellerBase {
     function getSeller(
         uint256 _sellerId
     ) external view returns (bool exists, Seller memory seller, AuthToken memory authToken) {
-        return fetchSeller(_sellerId);
+        return fetchSellerWithoutClerk(_sellerId);
     }
 
     /**
@@ -363,12 +363,12 @@ contract SellerHandlerFacet is SellerBase {
 
         (exists, sellerId) = getSellerIdByAssistant(_associatedAddress);
         if (exists) {
-            return fetchSeller(sellerId);
+            return fetchSellerWithoutClerk(sellerId);
         }
 
         (exists, sellerId) = getSellerIdByAdmin(_associatedAddress);
         if (exists) {
-            return fetchSeller(sellerId);
+            return fetchSellerWithoutClerk(sellerId);
         }
     }
 

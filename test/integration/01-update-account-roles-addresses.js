@@ -289,7 +289,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
         // Attempt to withdraw funds with new seller assistant, should succeed
         await expect(
-          fundsHandler.connect(assistant).withdrawFunds(seller.id, [ethers.constants.AddressZero], [sellerPayoff])
+          fundsHandler.connect(rando).withdrawFunds(seller.id, [ethers.constants.AddressZero], [sellerPayoff])
         )
           .to.emit(fundsHandler, "FundsWithdrawn")
           .withArgs(seller.id, treasury.address, ethers.constants.AddressZero, sellerPayoff, rando.address);

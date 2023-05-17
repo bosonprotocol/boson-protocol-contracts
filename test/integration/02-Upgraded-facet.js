@@ -792,7 +792,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 treasury.address,
                 ethers.constants.Zero,
                 ethers.BigNumber.from(sellerPayoff).div("2"),
-                clerk.address
+                assistant.address
               );
 
             // buyer withdrawal
