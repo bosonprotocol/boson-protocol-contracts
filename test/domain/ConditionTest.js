@@ -11,7 +11,7 @@ const TokenType = require("../../scripts/domain/TokenType");
 describe("Condition", function () {
   // Suite-wide scope
   let condition, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let accounts, method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
+  let accounts, method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length;
 
   context("📋 Constructor", async function () {
     beforeEach(async function () {
@@ -20,22 +20,24 @@ describe("Condition", function () {
       tokenAddress = accounts[1].address;
 
       // Required constructor params
-      method = EvaluationMethod.None;
+      method = EvaluationMethod.SpecificToken;
       tokenType = TokenType.MultiToken;
       tokenId = "1";
       threshold = "1";
       maxCommits = "3";
+      length = "0";
     });
 
     it("Should allow creation of valid, fully populated Condition instance", async function () {
       // Create a valid condition
-      condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+      condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length);
       expect(condition.methodIsValid()).is.true;
       expect(condition.tokenTypeIsValid()).is.true;
       expect(condition.tokenAddressIsValid()).is.true;
       expect(condition.tokenIdIsValid()).is.true;
       expect(condition.thresholdIsValid()).is.true;
       expect(condition.maxCommitsIsValid()).is.true;
+      expect(condition.lengthIsValid()).is.true;
       expect(condition.isValid()).is.true;
     });
   });
@@ -46,7 +48,7 @@ describe("Condition", function () {
       method = EvaluationMethod.SpecificToken;
 
       // Create a valid condition, then set fields in tests directly
-      condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+      condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length);
       expect(condition.isValid()).is.true;
     });
 
@@ -179,6 +181,33 @@ describe("Condition", function () {
       expect(condition.maxCommitsIsValid()).is.true;
       expect(condition.isValid()).is.true;
     });
+
+    it("If present, length must be the string representation of a BigNumber", async function () {
+      // Invalid field value
+      condition.length = "zedzdeadbaby";
+      expect(condition.lengthIsValid()).is.false;
+      expect(condition.isValid()).is.false;
+
+      // Invalid field value
+      condition.length = new Date();
+      expect(condition.lengthIsValid()).is.false;
+      expect(condition.isValid()).is.false;
+
+      // Invalid field value
+      condition.length = 12;
+      expect(condition.lengthIsValid()).is.false;
+      expect(condition.isValid()).is.false;
+
+      // Valid field value
+      condition.length = "0";
+      expect(condition.lengthIsValid()).is.true;
+      expect(condition.isValid()).is.true;
+
+      // Valid field value
+      condition.length = "126";
+      expect(condition.lengthIsValid()).is.true;
+      expect(condition.isValid()).is.true;
+    });
   });
 
   context("📋 Utility functions", async function () {
@@ -187,7 +216,7 @@ describe("Condition", function () {
       method = EvaluationMethod.Threshold;
 
       // Create a valid condition, then set fields in tests directly
-      condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+      condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length);
       expect(condition.isValid()).is.true;
 
       // Get plain object
@@ -198,10 +227,11 @@ describe("Condition", function () {
         tokenId,
         threshold,
         maxCommits,
+        length,
       };
 
       // Struct representation
-      struct = [method, tokenType, tokenAddress, tokenId, threshold, maxCommits];
+      struct = [method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length];
     });
 
     context("👉 Static", async function () {

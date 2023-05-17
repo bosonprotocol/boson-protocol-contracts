@@ -247,7 +247,7 @@ async function mockReceipt() {
   );
 }
 
-function mockCondition({ method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length }) {
+function mockCondition({ method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length } = {}) {
   return new Condition(
     method ?? EvaluationMethod.Threshold,
     tokenType ?? TokenType.FungibleToken,
