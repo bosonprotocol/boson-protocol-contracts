@@ -62,13 +62,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - Offer's quantity available is zero
      * - Buyer address is zero
      * - Buyer account is inactive
-     * - Buyer is token-gated (conditional commit requirements not met or already used)
      * - Offer price is in native token and caller does not send enough
      * - Offer price is in some ERC20 token and caller also sends native currency
      * - Contract at token address does not support ERC20 function transferFrom
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - Received ERC20 token amount differs from the expected value
      * - Seller has less funds available than sellerDeposit
+     * - Offer belongs to a group with a condition
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
@@ -77,7 +77,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         address payable _buyer,
         uint256 _offerId
     ) external payable override exchangesNotPaused buyersNotPaused nonReentrant {
-        Offer storage offer = validateOffer(_buyer, _offerId);
+        // Make sure buyer address is not zero address
+        require(_buyer != address(0), INVALID_ADDRESS);
+
+        Offer storage offer = getValidOffer(_offerId);
 
         // For there to be a condition, there must be a group.
         (bool exists, ) = getGroupIdByOffer(offer.id);
@@ -88,12 +91,42 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         commitToOfferInternal(_buyer, offer, 0, false);
     }
 
+    /**
+     * @notice Commits to an conditional offer (first step of an exchange).
+     *
+     * Emits a BuyerCommitted event if successful.
+     * Issues a voucher to the buyer address.
+     *
+     * Reverts if:
+     * - The exchanges region of protocol is paused
+     * - The buyers region of protocol is paused
+     * - OfferId is invalid
+     * - Offer has been voided
+     * - Offer has expired
+     * - Offer is not yet available for commits
+     * - Offer's quantity available is zero
+     * - Buyer address is zero
+     * - Buyer account is inactive
+     * - Conditional commit requirements not met or already used
+     * - Offer price is in native token and caller does not send enough
+     * - Offer price is in some ERC20 token and caller also sends native currency
+     * - Contract at token address does not support ERC20 function transferFrom
+     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Received ERC20 token amount differs from the expected value
+     * - Seller has less funds available than sellerDeposit
+     *
+     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
+     * @param _offerId - the id of the offer to commit to
+     */
     function commitToConditionalOffer(
         address payable _buyer,
         uint256 _offerId,
         uint256 _tokenId
     ) external payable override exchangesNotPaused buyersNotPaused nonReentrant {
-        Offer storage offer = validateOffer(_buyer, _offerId);
+        // Make sure buyer address is not zero address
+        require(_buyer != address(0), INVALID_ADDRESS);
+
+        Offer storage offer = getValidOffer(_offerId);
 
         // For there to be a condition, there must be a group.
         (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
@@ -112,18 +145,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         protocolLookups().exchangeCondition[exchangeId] = condition;
     }
 
-    function validateOffer(address _buyer, uint256 _offerId) internal view returns (Offer storage offer) {
-        // Make sure buyer address is not zero address
-        require(_buyer != address(0), INVALID_ADDRESS);
-
-        // Get the offer
-        bool exists;
-        (exists, offer) = fetchOffer(_offerId);
-
-        // Make sure offer exists, is available, and isn't void, expired, or sold out
-        require(exists, NO_SUCH_OFFER);
-    }
-
     /**
      * @notice Commits to a preminted offer (first step of an exchange).
      *
@@ -139,6 +160,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - Offer is not yet available for commits
      * - Buyer account is inactive
      * - Buyer is token-gated (conditional commit requirements not met or already used)
+     * - Buyer is token-gated and evaluation method is SpecificToken
      * - Seller has less funds available than sellerDeposit and price
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
@@ -150,8 +172,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 _offerId,
         uint256 _exchangeId
     ) external exchangesNotPaused buyersNotPaused nonReentrant {
-        // Fetch the offer info
-        (, Offer storage offer) = fetchOffer(_offerId);
+        Offer storage offer = getValidOffer(_offerId);
 
         // Make sure that the voucher was issued on the clone that is making a call
         require(msg.sender == protocolLookups().cloneAddress[offer.sellerId], ACCESS_DENIED);
@@ -160,9 +181,19 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         (bool exists, ) = fetchExchange(_exchangeId);
         require(!exists, EXCHANGE_ALREADY_EXISTS);
 
-        (exists, ) = getGroupIdByOffer(offer.id);
+        uint256 groupId;
+        (exists, groupId) = getGroupIdByOffer(offer.id);
 
-        require(!exists, GROUP_HAS_CONDITION);
+        if (exists) {
+            // Get the condition
+            Condition storage condition = fetchCondition(groupId);
+
+            // Make sure condition is not SpecificToken as it is not supported for preminted offers
+            require(condition.method != EvaluationMethod.SpecificToken, CANNOT_COMMIT);
+
+            bool allow = authorizeCommit(_buyer, condition, groupId, 0);
+            require(allow, CANNOT_COMMIT);
+        }
 
         commitToOfferInternal(_buyer, offer, _exchangeId, true);
     }
@@ -193,7 +224,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _offer - storage pointer to the offer
      * @param _exchangeId - the id of the exchange
      * @param _isPreminted - whether the offer is preminted
-     * @return _exchangeId - the id of the exchange
      */
     function commitToOfferInternal(
         address payable _buyer,
@@ -205,7 +235,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Make sure offer is available, and isn't void, expired, or sold out
         OfferDates storage offerDates = fetchOfferDates(_offerId);
         require(block.timestamp >= offerDates.validFrom, OFFER_NOT_AVAILABLE);
-        require(!_offer.voided, OFFER_HAS_BEEN_VOIDED);
         require(block.timestamp < offerDates.validUntil, OFFER_HAS_EXPIRED);
 
         if (!_isPreminted) {
@@ -927,7 +956,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         if (_condition.method == EvaluationMethod.SpecificToken) {
-            // How many times has this address committed to offers in the group?
+            // How many times has this token id been used to commit to offers in the group?
             uint256 commitCount = lookups.conditionalCommitsByTokenId[_groupId][_tokenId];
 
             require(commitCount < _condition.maxCommits, MAX_COMMITS_TOKEN_REACHED);
@@ -940,7 +969,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 );
             }
 
-            allow = IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer;
+            allow = holdsSpecificToken(_buyer, _condition, _tokenId);
 
             if (allow) {
                 // Increment number of commits to the group for this token id if they are allowed to commit
@@ -959,7 +988,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 lookups.conditionalCommitsByAddress[_buyer][_groupId] = ++commitCount;
             }
         } else {
-            revert(GROUP_HAS_NO_CONDITION);
+            // No condition set, so allow the commit
+            allow = true;
         }
     }
 
@@ -982,6 +1012,28 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             balance = IERC20(_condition.tokenAddress).balanceOf(_buyer);
         }
         return balance >= _condition.threshold;
+    }
+
+    /**
+     * @notice If token is ERC721, checks if the buyer owns the token. If token is ERC1155, checks if the buyer has the required balance, i.e at least the threshold.
+     *
+     * @param _buyer - address of potential buyer
+     * @param _condition - the condition to be evaluated
+     * @param _tokenId - the token id that buyer is supposed to own
+     *
+     * @return bool - true if buyer meets the condition
+     */
+    function holdsSpecificToken(
+        address _buyer,
+        Condition storage _condition,
+        uint256 _tokenId
+    ) internal view returns (bool) {
+        if (_condition.tokenType == TokenType.MultiToken) {
+            return IERC1155(_condition.tokenAddress).balanceOf(_buyer, _tokenId) > _condition.threshold;
+        } else {
+            // no need to check if is NonFungible token there is no way to create a SpecifiedToken condition with a Fungible token
+            return (IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer);
+        }
     }
 
     /**

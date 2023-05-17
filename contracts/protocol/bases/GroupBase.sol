@@ -49,7 +49,13 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
         for (uint256 i = 0; i < _group.offerIds.length; i++) {
             // make sure offer exists and belongs to the seller
-            getValidOffer(_group.offerIds[i]);
+            Offer storage offer = getValidOffer(_group.offerIds[i]);
+
+            // Get seller, we assume seller exists if offer exists
+            (, Seller storage seller, ) = fetchSeller(offer.sellerId);
+
+            // Caller must be seller's assistant address
+            require(seller.assistant == msgSender(), NOT_ASSISTANT);
 
             // Offer should not belong to another group already
             (bool exist, ) = getGroupIdByOffer(_group.offerIds[i]);
@@ -100,10 +106,14 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
     /**
      * @notice Validates that condition parameters make sense.
      *
-     * A invalid condition is one that:
-     * - EvaluationMethod.None and has fields different from 0
-     * - EvaluationMethod.Threshold and token address or maxCommits is zero
-     * - EvaluationMethod.SpecificToken and token address or maxCommits is zero or tokenId it's present and length is zero
+     * A invalid condition is one that fits any of the following criteria:
+     * - EvaluationMethod.None: any fields different from 0
+     * - EvaluationMethod.Threshold: token address, maxCommits or threshold is zero and length is not zero
+     * - EvaluationMethod.SpecificToken:
+         - tokenType is FungibleToken
+         - tokenType is NonFungibleToken and threshold is not zero
+         - maxCommits is zero
+         - token address is zero
      *
      * @param _condition - fully populated condition struct
      * @return valid - validity of condition
@@ -121,12 +131,16 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
                 _condition.maxCommits > 0 &&
                 _condition.threshold > 0 &&
                 _condition.length == 0);
-        } else if (_condition.method == EvaluationMethod.SpecificToken) {
+        } else {
+            // SpecificToken
             valid = (_condition.tokenAddress != address(0) &&
-                _condition.threshold == 0 &&
                 _condition.maxCommits > 0 &&
-                _condition.tokenType != TokenType.FungibleToken && // FungibleToken not allowed for SpecificToken
-                (_condition.tokenType == TokenType.MultiToken ? _condition.length == 0 : true)); // length must be zero for MultiToken
+                _condition.tokenType != TokenType.FungibleToken); // FungibleToken not allowed for SpecificToken
+
+            // SpecificToken with NonFungibleToken should not have threshold
+            if (_condition.tokenType == TokenType.NonFungibleToken) {
+                valid = valid && _condition.threshold == 0;
+            }
         }
     }
 
@@ -162,7 +176,13 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         for (uint256 i = 0; i < _offerIds.length; i++) {
             uint256 offerId = _offerIds[i];
             // make sure offer exist and belong to the seller
-            getValidOffer(offerId);
+            Offer storage offer = getValidOffer(offerId);
+
+            // Get seller, we assume seller exists if offer exists
+            (, Seller storage seller, ) = fetchSeller(offer.sellerId);
+
+            // Caller must be seller's assistant address
+            require(seller.assistant == msgSender(), NOT_ASSISTANT);
 
             // Offer should not belong to another group already
             (bool exist, ) = getGroupIdByOffer(offerId);

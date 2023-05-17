@@ -166,6 +166,12 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         // Get offer, make sure the caller is the assistant
         Offer storage offer = getValidOffer(_offerId);
 
+        // Get seller, we assume seller exists if offer exists
+        (, Seller storage seller, ) = fetchSeller(offer.sellerId);
+
+        // Caller must be seller's assistant address
+        require(seller.assistant == msgSender(), NOT_ASSISTANT);
+
         // Void the offer
         offer.voided = true;
 
@@ -215,6 +221,12 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     function extendOffer(uint256 _offerId, uint256 _validUntilDate) public override offersNotPaused nonReentrant {
         // Make sure the caller is the assistant, offer exists and is not voided
         Offer storage offer = getValidOffer(_offerId);
+
+        // Get seller, we assume seller exists if offer exists
+        (, Seller storage seller, ) = fetchSeller(offer.sellerId);
+
+        // Caller must be seller's assistant address
+        require(seller.assistant == msgSender(), NOT_ASSISTANT);
 
         // Fetch the offer dates
         OfferDates storage offerDates = fetchOfferDates(_offerId);

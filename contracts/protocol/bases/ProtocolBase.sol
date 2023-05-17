@@ -519,13 +519,11 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * Reverts if:
      * - Offer does not exist
      * - Offer already voided
-     * - Caller is not the seller
      *
      *  @param _offerId - the id of the offer to check
      */
     function getValidOffer(uint256 _offerId) internal view returns (Offer storage offer) {
         bool exists;
-        Seller storage seller;
 
         // Get offer
         (exists, offer) = fetchOffer(_offerId);
@@ -535,12 +533,6 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
 
         // Offer must not already be voided
         require(!offer.voided, OFFER_HAS_BEEN_VOIDED);
-
-        // Get seller, we assume seller exists if offer exists
-        (, seller, ) = fetchSeller(offer.sellerId);
-
-        // Caller must be seller's assistant address
-        require(seller.assistant == msgSender(), NOT_ASSISTANT);
     }
 
     /**
