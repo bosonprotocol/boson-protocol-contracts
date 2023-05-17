@@ -276,7 +276,7 @@ contract SellerHandlerFacet is SellerBase {
                 // Transfer ownership of voucher contract to new assistant
                 IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender); // default voucher contract
                 Collection[] storage sellersAdditionalCollections = lookups.additionalCollections[_sellerId];
-                uint256 collectionCount;
+                uint256 collectionCount = sellersAdditionalCollections.length;
                 for (i = 0; i < collectionCount; i++) {
                     // Additional collections (if they exist)
                     IBosonVoucher(sellersAdditionalCollections[i].collectionAddress).transferOwnership(sender);

@@ -2636,6 +2636,56 @@ describe("SellerHandler", function () {
         ).to.not.emit(accountHandler, "SellerUpdateApplied");
       });
 
+      it("Transfers the ownerships of the default boson voucher.", async function () {
+        const expectedDefaultAddress = calculateContractAddress(accountHandler.address, "1"); // default
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedDefaultAddress);
+
+        // original voucher contract owner
+        expect(await bosonVoucher.owner()).to.equal(assistant.address);
+
+        seller.assistant = other1.address;
+        sellerStruct = seller.toStruct();
+
+        await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+        await accountHandler.connect(other1).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]);
+
+        // new voucher contract owner
+        expect(await bosonVoucher.owner()).to.equal(other1.address);
+      });
+
+      it("Transfers ownerships of all additional collections", async function () {
+        const expectedDefaultAddress = calculateContractAddress(accountHandler.address, "1"); // default
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedDefaultAddress);
+
+        const additionalCollections = [];
+        // create 3 additional collections
+        for (let i = 0; i < 3; i++) {
+          const externalId = `Brand${i}`;
+          const contractURI = `https://brand${i}.com`;
+          const expectedCollectionAddress = calculateContractAddress(accountHandler.address, i + 2);
+          await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+          additionalCollections.push(await ethers.getContractAt("OwnableUpgradeable", expectedCollectionAddress));
+        }
+
+        // original voucher and collections contract owner
+        expect(await bosonVoucher.owner()).to.equal(assistant.address);
+        for (const collection of additionalCollections) {
+          expect(await collection.owner()).to.equal(assistant.address);
+        }
+
+        seller.assistant = other1.address;
+        sellerStruct = seller.toStruct();
+
+        await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+        await accountHandler.connect(other1).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]);
+
+        // new voucher and collections contract owner
+        expect(await bosonVoucher.owner()).to.equal(other1.address);
+        for (const collection of additionalCollections) {
+          expect(await collection.owner()).to.equal(other1.address);
+        }
+      });
+
       context("💔 Revert Reasons", async function () {
         it("There are no pending updates", async function () {
           seller.clerk = other1.address;
