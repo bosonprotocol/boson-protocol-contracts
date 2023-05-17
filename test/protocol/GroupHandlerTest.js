@@ -409,6 +409,15 @@ describe("IBosonGroupHandler", function () {
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
+
+          it("Length is not zero", async function () {
+            condition.length = "5";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
         });
 
         context("Condition 'Threshold' has invalid fields", async function () {
@@ -441,6 +450,15 @@ describe("IBosonGroupHandler", function () {
 
           it("Condition 'Threshold' has zero threshold", async function () {
             condition.threshold = "0";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'Threshold' has non zero length", async function () {
+            condition.length = "5";
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(

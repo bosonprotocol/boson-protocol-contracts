@@ -19,7 +19,6 @@ class Condition {
             uint256 length;
         }
     */
-
   constructor(method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length) {
     this.method = method;
     this.tokenType = tokenType;
