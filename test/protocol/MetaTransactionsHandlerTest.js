@@ -3058,7 +3058,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.from = assistant.address;
           message.contractAddress = offerHandler.address;
           message.functionName =
-            "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256)";
+            "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool,uint256),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256)";
           message.functionSignature = functionSignature;
         });
 

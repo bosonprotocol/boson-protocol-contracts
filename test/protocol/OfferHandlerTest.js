@@ -570,15 +570,14 @@ describe("IBosonOfferHandler", function () {
             .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
-          // id of the current offer and increment nextOfferId
-          id = nextOfferId++;
-
           // expected address of the first clone
           const bosonVoucher = await ethers.getContractAt("BosonVoucher", expectedCollectionAddress);
 
           const length = 100;
-          const firstTokenId = 1;
-          const lastTokenId = firstTokenId + length - 1;
+          const exchangeId = "1";
+          const lastExchangeId = ethers.BigNumber.from(exchangeId).add(length - 1);
+          const firstTokenId = deriveTokenId(nextOfferId, exchangeId);
+
           const range = new Range(firstTokenId.toString(), length.toString(), "0", "0", assistant.address);
 
           // Reserve a range, testing for the event
@@ -586,9 +585,9 @@ describe("IBosonOfferHandler", function () {
 
           await expect(tx)
             .to.emit(offerHandler, "RangeReserved")
-            .withArgs(id, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
+            .withArgs(nextOfferId, offer.sellerId, exchangeId, lastExchangeId, assistant.address, assistant.address);
 
-          await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(id, range.toStruct());
+          await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
         });
       });
 

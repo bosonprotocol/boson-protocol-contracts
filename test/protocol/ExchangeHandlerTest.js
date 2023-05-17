@@ -645,7 +645,8 @@ describe("IBosonExchangeHandler", function () {
 
         offer.collectionIndex = 1;
         offer.id = await offerHandler.getNextOfferId();
-        const tokenId = await exchangeHandler.getNextExchangeId();
+        exchangeId = await exchangeHandler.getNextExchangeId();
+        const tokenId = deriveTokenId(offer.id, exchangeId);
 
         // Create the offer
         await offerHandler
@@ -921,9 +922,10 @@ describe("IBosonExchangeHandler", function () {
 
         offer.collectionIndex = 1;
         offer.id = await offerHandler.getNextOfferId();
-        tokenId = exchangeId = await exchangeHandler.getNextExchangeId();
+        exchangeId = await exchangeHandler.getNextExchangeId();
         exchange.offerId = offer.id.toString();
         exchange.id = exchangeId.toString();
+        const tokenId = deriveTokenId(offer.id, exchangeId);
 
         // Create the offer
         await offerHandler
@@ -1828,7 +1830,8 @@ describe("IBosonExchangeHandler", function () {
 
         offer.collectionIndex = 1;
         offer.id = await offerHandler.getNextOfferId();
-        const tokenId = (exchange.id = await exchangeHandler.getNextExchangeId());
+        exchange.id = await exchangeHandler.getNextExchangeId();
+        const tokenId = deriveTokenId(offer.id, exchange.id);
 
         // Create the offer
         await offerHandler
@@ -1934,7 +1937,8 @@ describe("IBosonExchangeHandler", function () {
 
         offer.collectionIndex = 1;
         offer.id = await offerHandler.getNextOfferId();
-        const tokenId = (exchange.id = await exchangeHandler.getNextExchangeId());
+        exchange.id = await exchangeHandler.getNextExchangeId();
+        const tokenId = deriveTokenId(offer.id, exchange.id);
 
         // Create the offer
         await offerHandler
@@ -2176,7 +2180,8 @@ describe("IBosonExchangeHandler", function () {
 
         offer.collectionIndex = 1;
         offer.id = await offerHandler.getNextOfferId();
-        const tokenId = (exchange.id = await exchangeHandler.getNextExchangeId());
+        exchange.id = await exchangeHandler.getNextExchangeId();
+        const tokenId = deriveTokenId(offer.id, exchange.id);
 
         // Create the offer
         await offerHandler
@@ -3514,9 +3519,10 @@ describe("IBosonExchangeHandler", function () {
 
         offer.collectionIndex = 1;
         offer.id = await offerHandler.getNextOfferId();
-        const tokenId = (exchange.id = await exchangeHandler.getNextExchangeId());
+        exchange.id = await exchangeHandler.getNextExchangeId();
         bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "2");
         bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
+        const tokenId = deriveTokenId(offer.id, exchange.id);
 
         // Create the offer
         await offerHandler
