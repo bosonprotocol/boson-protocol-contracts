@@ -29,7 +29,7 @@ contract MockDRFeeMutualizer is IDRFeeMutualizer {
      *
      */
     function isSellerCovered(address, address, uint256, address, bytes calldata) external pure returns (bool) {
-        true;
+        return true;
     }
 
     /**

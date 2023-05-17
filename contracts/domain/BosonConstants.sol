@@ -150,6 +150,7 @@ string constant INSUFFICIENT_AVAILABLE_FUNDS = "Insufficient available funds";
 string constant NATIVE_NOT_ALLOWED = "Transfer of native currency not allowed";
 string constant DR_FEE_NOT_RECEIVED = "DR fee not received";
 string constant SELLER_NOT_COVERED = "Seller not covered";
+string constant INVALID_ENTITY_ID = "Invalid entity id";
 
 // Revert Reasons: Meta-Transactions related
 string constant NONCE_USED_ALREADY = "Nonce used already";
