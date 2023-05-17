@@ -109,7 +109,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * @return valid - validity of condition
      *
      */
-    function validateCondition(Condition memory _condition) internal view returns (bool valid) {
+    function validateCondition(Condition memory _condition) internal pure returns (bool valid) {
         if (_condition.method == EvaluationMethod.None) {
             valid = (_condition.tokenAddress == address(0) &&
                 _condition.tokenId == 0 &&
@@ -125,14 +125,8 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
             valid = (_condition.tokenAddress != address(0) &&
                 _condition.threshold == 0 &&
                 _condition.maxCommits > 0 &&
-                _condition.tokenId != 0 && // tokenId must be present
-                (
-                    _condition.tokenType == TokenType.NonFungibleToken
-                        ? _condition.length > 0 // length must be > 0 for NFT
-                        : _condition.tokenType == TokenType.MultiToken
-                        ? _condition.length == 0 // length must be zero for MultiToken
-                        : false // TokenType.FungibleToken is not supported
-                ));
+                _condition.tokenType != TokenType.FungibleToken && // FungibleToken not allowed for SpecificToken
+                (_condition.tokenType == TokenType.MultiToken ? _condition.length == 0 : true)); // length must be zero for MultiToken
         }
     }
 

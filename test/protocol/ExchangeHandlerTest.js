@@ -1284,6 +1284,26 @@ describe("IBosonExchangeHandler", function () {
           }
         });
 
+        it("If tokenId is not specified, should allow any token from collection", async function () {
+          condition.tokenId = "0";
+          condition.length = "0";
+
+          // remove offer from old group
+          await groupHandler.connect(assistant).removeOffersFromGroup(groupId, offerIds);
+
+          // create new group with new condition
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          // mint any token for buyer
+          tokenId = "123";
+          await foreign721.connect(buyer).mint(tokenId, "1");
+
+          // buyer can commit
+          await expect(
+            exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
+          ).to.not.reverted;
+        });
+
         context("💔 Revert Reasons", async function () {
           it("token id does not exist", async function () {
             tokenId = "13";
@@ -1315,6 +1335,14 @@ describe("IBosonExchangeHandler", function () {
             await expect(
               exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
             ).to.revertedWith(RevertReasons.MAX_COMMITS_TOKEN_REACHED);
+          });
+
+          it("token id not in condition range", async function () {
+            tokenId = "666";
+            // Attempt to commit, expecting revert
+            await expect(
+              exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
+            ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
           });
         });
       });

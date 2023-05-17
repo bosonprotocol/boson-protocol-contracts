@@ -61,6 +61,7 @@ exports.RevertReasons = {
   MAX_COMMITS_TOKEN_REACHED: "Max commits per token id reached",
   GROUP_HAS_NO_CONDITION: "Offer belongs to a group without a condition. Use commitToOffer instead",
   GROUP_HAS_CONDITION: "Offer belongs to a group with a condition. Use commitToConditionalOffer instead",
+  TOKEN_ID_NOT_IN_CONDITION_RANGE: "Token id not in condition range",
 
   // Account-related
   MUST_BE_ACTIVE: "Account must be active",
