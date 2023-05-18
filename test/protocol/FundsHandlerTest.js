@@ -2435,6 +2435,30 @@ describe("IBosonFundsHandler", function () {
               stateSetup["Final state DISPUTED - ESCALATED - REFUSED via refuseEscalatedDispute (explicit refusal)"] =
                 stateSetup["DISPUTED - ESCALATED"];
 
+                async function getAllAvailableFunds() {
+                  const availableFunds = {};
+                  let mutualizerTokenBalance;
+                  [
+                    ...{
+                      0: availableFunds.seller,
+                      1: availableFunds.buyer,
+                      2: availableFunds.protocol,
+                      3: availableFunds.agent,
+                      4: availableFunds.disputeResolver,
+                      5: mutualizerTokenBalance,
+                    }
+                  ] = await Promise.all([
+                    fundsHandler.getAvailableFunds(seller.id),
+                    fundsHandler.getAvailableFunds(buyerId),
+                    fundsHandler.getAvailableFunds(protocolId),
+                    fundsHandler.getAvailableFunds(agent.id),
+                    fundsHandler.getAvailableFunds(disputeResolver.id),
+                    mockToken.balanceOf(mutualizer.address),
+                  ]);
+
+                  return { availableFunds, mutualizerTokenBalance };
+                }
+
             finalStates.forEach((finalState) => {
               context(`Final state ${finalState}`, async function () {
                 let payoffs, finalAction;
@@ -2450,7 +2474,7 @@ describe("IBosonFundsHandler", function () {
                       agentFee =
                         agentType === "no-agent"
                           ? "0"
-                          : BN(offerToken.price).mul(agentFeePercentage).div("10000").toString();
+                          : applyPercentage(offerToken.price,agentFeePercentage);
 
                       payoffs = {
                         buyer: "0",
@@ -2493,7 +2517,7 @@ describe("IBosonFundsHandler", function () {
                       agentFee =
                         agentType === "no-agent"
                           ? "0"
-                          : BN(offerToken.price).mul(agentFeePercentage).div("10000").toString();
+                          : applyPercentage(offerToken.price,agentFeePercentage);
 
                       payoffs = {
                         buyer: "0",
@@ -2717,30 +2741,6 @@ describe("IBosonFundsHandler", function () {
                   }
                 });
 
-                async function getAllAvailableFunds() {
-                  const availableFunds = {};
-                  let mutualizerTokenBalance;
-                  [
-                    ...{
-                      0: availableFunds.seller,
-                      1: availableFunds.buyer,
-                      2: availableFunds.protocol,
-                      3: availableFunds.agent,
-                      4: availableFunds.disputeResolver,
-                      5: mutualizerTokenBalance,
-                    }
-                  ] = await Promise.all([
-                    fundsHandler.getAvailableFunds(seller.id),
-                    fundsHandler.getAvailableFunds(buyerId),
-                    fundsHandler.getAvailableFunds(protocolId),
-                    fundsHandler.getAvailableFunds(agent.id),
-                    fundsHandler.getAvailableFunds(disputeResolver.id),
-                    mockToken.balanceOf(mutualizer.address),
-                  ]);
-
-                  return { availableFunds, mutualizerTokenBalance };
-                }
-
                 it("should update state", async function () {
                   // Read on chain state
                   let { availableFunds, mutualizerTokenBalance: mutualizerTokenBalanceBefore } =
@@ -2792,54 +2792,135 @@ describe("IBosonFundsHandler", function () {
               });
             });
 
-            it.skip("no new entry is created when multiple exchanges are finalizer", async function () {
-              // ToDo: implement
+
+            it("no new entry is created when multiple exchanges are finalized", async function () {
+              // expected payoffs
+              agentFee =
+              agentType === "no-agent"
+                ? "0"
+                : applyPercentage(offerToken.price,agentFeePercentage);
+
+            payoffs = {
+              buyer: "0",
+              seller: BN(offerToken.sellerDeposit)
+                .add(offerToken.price)
+                .sub(offerTokenProtocolFee)
+                .sub(agentFee)
+                .add(DRFeeToSeller)
+                .toString(),
+              protocol: offerTokenProtocolFee,
+              mutualizer: DRFeeToMutualizer,
+              disputeResolver: "0",
+              agent: agentFee,
+            };  
+              
+              // Read on chain state
+                let { availableFunds, mutualizerTokenBalance: mutualizerTokenBalanceBefore } =
+                await getAllAvailableFunds();
+
+              // Chain state should match the expected available funds
+              let expectedAvailableFunds = {};
+              expectedAvailableFunds.seller = new FundsList([
+                new Funds(mockToken.address, "Foreign20", BN(sellerDeposit).add(DRFeeToSeller).toString()),
+                new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
+              ]);
+              expectedAvailableFunds.buyer = new FundsList([]);
+              expectedAvailableFunds.protocol = new FundsList([]);
+              expectedAvailableFunds.agent = new FundsList([]);
+              expectedAvailableFunds.disputeResolver = new FundsList([]);
+
+              for (let [key, value] of Object.entries(expectedAvailableFunds)) {
+                expect(FundsList.fromStruct(availableFunds[key])).to.eql(value, `${key} mismatch`);
+              }
+
+              // successfully redeem exchange
+              await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+              await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+              
+              // Increase available funds
+              for (let [key, value] of Object.entries(expectedAvailableFunds)) {
+                if (payoffs[key] !== "0") {
+                  if (value.funds[0]) {
+                    // If funds are non empty, mockToken is the first entry
+                    value.funds[0].availableAmount = BN(value.funds[0].availableAmount)
+                      .add(payoffs[key])
+                      .toString();
+                  } else {
+                    value.funds.push(new Funds(mockToken.address, "Foreign20", payoffs[key]));
+                  }
+                }
+              }
+              
+              // Read on chain state
+              let mutualizerTokenBalanceAfter;
+              ({ availableFunds, mutualizerTokenBalance: mutualizerTokenBalanceAfter } =
+                await getAllAvailableFunds());
+
+              for (let [key, value] of Object.entries(expectedAvailableFunds)) {
+                expect(FundsList.fromStruct(availableFunds[key])).to.eql(value, `${key} mismatch`);
+              }
+              expect(mutualizerTokenBalanceAfter).to.eql(mutualizerTokenBalanceBefore.add(payoffs.mutualizer));
+              
               // complete another exchange so we test funds are only updated, no new entry is created
-              //  await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
-              //  await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
-              //  await exchangeHandler.connect(buyer).completeExchange(exchangeId);
-              //  ({ availableFunds } = await getAllAvailableFunds());
-              //  availableFunds.seller.funds[0].availableAmount = BN(value.funds[0].availableAmount).add(payoffs[key]).toString();
-              //  for (let [key, value] of Object.entries(expectedAvailableFunds)) {
-              //    expect(FundsList.fromStruct(availableFunds[key])).to.eql(value, `${key} mismatch`);
-              //  }
-              // sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-              // buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-              // protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-              // agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agent.id));
-              // DRAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(disputeResolver.id));
-              // expectedSellerAvailableFunds.funds[1] = new Funds(
-              //   mockToken.address,
-              //   "Foreign20",
-              //   BN(sellerPayoff).mul(2).toString()
-              // );
-              // expectedProtocolAvailableFunds.funds[0] = new Funds(
-              //   mockToken.address,
-              //   "Foreign20",
-              //   BN(protocolPayoff).mul(2).toString()
-              // );
-              // expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-              // expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-              // expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-              // expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-              // expect(DRAvailableFunds).to.eql(expectedDRAvailableFunds);
+               await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+               mutualizerTokenBalanceBefore = await mockToken.balanceOf(mutualizer.address);
+               await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
+               await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+              // Increase available funds
+              for (let [key, value] of Object.entries(expectedAvailableFunds)) {
+                if (payoffs[key] !== "0") {
+                  if (value.funds[0]) {
+                    // If funds are non empty, mockToken is the first entry
+                    value.funds[0].availableAmount = BN(value.funds[0].availableAmount)
+                      .add(payoffs[key])
+                      .toString();
+                  } else {
+                    value.funds.push(new Funds(mockToken.address, "Foreign20", payoffs[key]));
+                  }
+                }
+              }
+              // sellers available funds should be decreased by the seller deposit and DR fee, because commitToOffer reduced it
+              expectedAvailableFunds.seller.funds[0].availableAmount = BN(expectedAvailableFunds.seller.funds[0].availableAmount).sub(sellerDeposit).sub(DRFeeToSeller).toString();
+
+              // Read on chain state 
+              ({ availableFunds, mutualizerTokenBalance: mutualizerTokenBalanceAfter } =
+                await getAllAvailableFunds());
+
+              for (let [key, value] of Object.entries(expectedAvailableFunds)) {
+                expect(FundsList.fromStruct(availableFunds[key])).to.eql(value, `${key} mismatch`);
+              }
+              expect(mutualizerTokenBalanceAfter).to.eql(mutualizerTokenBalanceBefore.add(payoffs.mutualizer));
             });
 
             context("Changing the protocol fee", async function () {
-              beforeEach(async function () {
-                // Cast Diamond to IBosonConfigHandler
-                configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamondAddress);
+              let payoffs;
 
+              beforeEach(async function () {               
                 // expected payoffs
-                // buyer: 0
-                buyerPayoff = 0;
+                agentFee =
+                        agentType === "no-agent"
+                          ? "0"
+                          : applyPercentage(offerToken.price,agentFeePercentage);
 
-                // seller: sellerDeposit + price - protocolFee
-                sellerPayoff = BN(offerToken.sellerDeposit).add(offerToken.price).sub(offerTokenProtocolFee).toString();
+                      payoffs = {
+                        buyer: "0",
+                        seller: BN(offerToken.sellerDeposit)
+                          .add(offerToken.price)
+                          .sub(offerTokenProtocolFee)
+                          .sub(agentFee)
+                          .add(DRFeeToSeller)
+                          .toString(),
+                        protocol: offerTokenProtocolFee,
+                        mutualizer: DRFeeToMutualizer,
+                        disputeResolver: "0",
+                        agent: agentFee,
+                      };
               });
 
               it("Protocol fee for existing exchanges should be the same as at the offer creation", async function () {
-                // set the new procol fee
+                // set the new protocol fee
                 protocolFeePercentage = "300"; // 3%
                 await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
 
@@ -2853,19 +2934,30 @@ describe("IBosonFundsHandler", function () {
                 const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
                 await expect(tx)
                   .to.emit(exchangeHandler, "FundsReleased")
-                  .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
+                  .withArgs(exchangeId, seller.id, offerToken.exchangeToken, payoffs.seller, buyer.address);
 
                 await expect(tx)
                   .to.emit(exchangeHandler, "ProtocolFeeCollected")
-                  .withArgs(exchangeId, offerToken.exchangeToken, offerTokenProtocolFee, buyer.address);
+                  .withArgs(exchangeId, offerToken.exchangeToken, payoffs.protocol, buyer.address);
+
+                   // Agent
+                   txReceipt = await tx.wait();
+                   match = eventEmittedWithArgs(txReceipt, fundsHandler, "FundsReleased", [
+                    exchangeId,
+                    agent.id,
+                    offerToken.exchangeToken,
+                    payoffs.agent,
+                    buyer.address,
+                  ]);
+                  expect(match).to.equal(payoffs.agent !== "0");
               });
 
               it("Protocol fee for new exchanges should be the same as at the offer creation", async function () {
-                // set the new procol fee
+                // set the new protocol fee
                 protocolFeePercentage = "300"; // 3%
                 await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
 
-                // similar as teste before, excpet the commit to offer is done after the procol fee change
+                // similar as test before, except the commit to offer is done after the protocol fee change
 
                 // commit to offer and get the correct exchangeId
                 tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
@@ -2883,116 +2975,22 @@ describe("IBosonFundsHandler", function () {
                 tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
                 await expect(tx)
                   .to.emit(exchangeHandler, "FundsReleased")
-                  .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
+                  .withArgs(exchangeId, seller.id, offerToken.exchangeToken, payoffs.seller, buyer.address);
 
                 await expect(tx)
                   .to.emit(exchangeHandler, "ProtocolFeeCollected")
-                  .withArgs(exchangeId, offerToken.exchangeToken, offerTokenProtocolFee, buyer.address);
-              });
+                  .withArgs(exchangeId, offerToken.exchangeToken, payoffs.protocol, buyer.address);
 
-              context("Offer has an agent", async function () {
-                beforeEach(async function () {
-                  exchangeId = "2";
-
-                  // Cast Diamond to IBosonConfigHandler
-                  configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamondAddress);
-
-                  // expected payoffs
-                  // buyer: 0
-                  buyerPayoff = 0;
-
-                  // agentPayoff: agentFee
-                  agentFee = BN(agentOffer.price).mul(agentFeePercentage).div("10000").toString();
-                  agentPayoff = agentFee;
-
-                  // seller: sellerDeposit + price - protocolFee - agentFee
-                  sellerPayoff = BN(agentOffer.sellerDeposit)
-                    .add(agentOffer.price)
-                    .sub(agentOfferProtocolFee)
-                    .sub(agentFee)
-                    .toString();
-
-                  // protocol: protocolFee
-                  protocolPayoff = agentOfferProtocolFee;
-
-                  // Create Agent Offer before setting new protocol fee as 3%
-                  await offerHandler
-                    .connect(assistant)
-                    .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
-
-                  // Commit to Agent Offer
-                  await exchangeHandler.connect(buyer).commitToOffer(buyer.address, agentOffer.id);
-
-                  // set the new procol fee
-                  protocolFeePercentage = "300"; // 3%
-                  await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
-                });
-
-                it("Protocol fee for existing exchanges should be the same as at the agent offer creation", async function () {
-                  // Set time forward to the offer's voucherRedeemableFrom
-                  await setNextBlockTimestamp(Number(voucherRedeemableFrom));
-
-                  // successfully redeem exchange
-                  await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
-                  // Complete the exchange, expecting event
-                  const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
-
-                  await expect(tx)
-                    .to.emit(exchangeHandler, "FundsReleased")
-                    .withArgs(exchangeId, seller.id, agentOffer.exchangeToken, sellerPayoff, buyer.address);
-
-                  await expect(tx)
-                    .to.emit(exchangeHandler, "ProtocolFeeCollected")
-                    .withArgs(exchangeId, agentOffer.exchangeToken, protocolPayoff, buyer.address);
-
-                  await expect(tx)
-                    .to.emit(exchangeHandler, "FundsReleased")
-                    .withArgs(exchangeId, agentId, agentOffer.exchangeToken, agentPayoff, buyer.address);
-                });
-
-                it("Protocol fee for new exchanges should be the same as at the agent offer creation", async function () {
-                  // similar as tests before, excpet the commit to offer is done after the protocol fee change
-
-                  // top up seller's and buyer's account
-                  await mockToken.mint(assistant.address, sellerDeposit);
-                  await mockToken.mint(buyer.address, price);
-
-                  // approve protocol to transfer the tokens
-                  await mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
-                  await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
-
-                  // deposit to seller's pool
-                  await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerDeposit);
-
-                  // commit to offer and get the correct exchangeId
-                  tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, agentOffer.id);
-                  txReceipt = await tx.wait();
-                  event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
-                  exchangeId = event.exchangeId.toString();
-
-                  // Set time forward to the offer's voucherRedeemableFrom
-                  await setNextBlockTimestamp(Number(voucherRedeemableFrom));
-
-                  // successfully redeem exchange
-                  await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
-                  // Complete the exchange, expecting event
-                  tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
-
-                  // Complete the exchange, expecting event
-                  await expect(tx)
-                    .to.emit(exchangeHandler, "FundsReleased")
-                    .withArgs(exchangeId, seller.id, agentOffer.exchangeToken, sellerPayoff, buyer.address);
-
-                  await expect(tx)
-                    .to.emit(exchangeHandler, "ProtocolFeeCollected")
-                    .withArgs(exchangeId, agentOffer.exchangeToken, protocolPayoff, buyer.address);
-
-                  await expect(tx)
-                    .to.emit(exchangeHandler, "FundsReleased")
-                    .withArgs(exchangeId, agentId, agentOffer.exchangeToken, agentPayoff, buyer.address);
-                });
+                                    // Agent
+                                    txReceipt = await tx.wait();
+                                    match = eventEmittedWithArgs(txReceipt, fundsHandler, "FundsReleased", [
+                                      exchangeId,
+                                      agent.id,
+                                      offerToken.exchangeToken,
+                                      payoffs.agent,
+                                      buyer.address,
+                                    ]);
+                                    expect(match).to.equal(payoffs.agent !== "0");
               });
             });
           });
