@@ -1499,6 +1499,97 @@ describe("IBosonOfferHandler", function () {
       });
     });
 
+    context("👉 changeOfferMutualizer()", async function () {
+      let newMutualizer;
+
+      beforeEach(async function () {
+        // Create an offer
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
+        // id of the current offer and increment nextOfferId
+        id = nextOfferId++;
+
+        newMutualizer = rando.address;
+      });
+
+      it("should emit an OfferMutualizerChanged event", async function () {
+        // call getOffer with offerId to check the seller id in the event
+        [, offerStruct] = await offerHandler.getOffer(id);
+
+        // Change the mutualizer, testing for the event
+        await expect(offerHandler.connect(assistant).changeOfferMutualizer(id, newMutualizer))
+          .to.emit(offerHandler, "OfferMutualizerChanged")
+          .withArgs(id, offerStruct.sellerId, newMutualizer, assistant.address);
+      });
+
+      it("should update state", async function () {
+        // Original mutualizer should be the 0 address
+        [, offerStruct] = await offerHandler.getOffer(id);
+        expect(offerStruct.feeMutualizer).eql(ethers.constants.AddressZero);
+
+        // Void the offer
+        await offerHandler.connect(assistant).changeOfferMutualizer(id, newMutualizer);
+
+        // Mutualizer field should be updated
+        [, offerStruct] = await offerHandler.getOffer(id);
+        expect(offerStruct.feeMutualizer).eql(newMutualizer);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("The offers region of protocol is paused", async function () {
+          // Pause the offers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
+
+          // Attempt to change the mutualizer, expecting revert
+          await expect(offerHandler.connect(assistant).changeOfferMutualizer(id, newMutualizer)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
+        it("Offer does not exist", async function () {
+          // Set invalid id
+          id = "444";
+
+          // Attempt to change the mutualizer, expecting revert
+          await expect(offerHandler.connect(assistant).changeOfferMutualizer(id, newMutualizer)).to.revertedWith(
+            RevertReasons.NO_SUCH_OFFER
+          );
+
+          // Set invalid id
+          id = "0";
+
+          // Attempt to change the mutualizer, expecting revert
+          await expect(offerHandler.connect(assistant).changeOfferMutualizer(id, newMutualizer)).to.revertedWith(
+            RevertReasons.NO_SUCH_OFFER
+          );
+        });
+
+        it("Caller is not seller", async function () {
+          // caller is not the assistant of any seller
+          // Attempt to change the mutualizer, expecting revert
+          await expect(offerHandler.connect(rando).changeOfferMutualizer(id, newMutualizer)).to.revertedWith(
+            RevertReasons.NOT_ASSISTANT
+          );
+
+          // caller is an assistant of another seller
+          // Create a valid seller, then set fields in tests directly
+          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+
+          // AuthToken
+          emptyAuthToken = mockAuthToken();
+          expect(emptyAuthToken.isValid()).is.true;
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          // Attempt to change the mutualizer, expecting revert
+          await expect(offerHandler.connect(rando).changeOfferMutualizer(id, newMutualizer)).to.revertedWith(
+            RevertReasons.NOT_ASSISTANT
+          );
+        });
+      });
+    });
+
     context("👉 getOffer()", async function () {
       beforeEach(async function () {
         // Create an offer
@@ -2972,6 +3063,119 @@ describe("IBosonOfferHandler", function () {
           // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate)
+          ).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
+        });
+      });
+    });
+
+    context("👉 changeOfferMutualizerBatch()", async function () {
+      let offersToUpdate, newMutualizer;
+      beforeEach(async function () {
+        sellerId = "1";
+
+        // Create an offer
+        await offerHandler
+          .connect(assistant)
+          .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds);
+
+        offersToUpdate = ["1", "3", "5"];
+        newMutualizer = rando.address;
+      });
+
+      it("should emit OfferMutualizerChanged events", async function () {
+        // call getOffer with offerId to check the seller id in the event
+        [, offerStruct] = await offerHandler.getOffer(offersToUpdate[0]);
+
+        // Change mutualizers, testing for the event
+        const tx = await offerHandler.connect(assistant).changeOfferMutualizerBatch(offersToUpdate, newMutualizer);
+        await expect(tx)
+          .to.emit(offerHandler, "OfferMutualizerChanged")
+          .withArgs(offersToUpdate[0], offerStruct.sellerId, newMutualizer, assistant.address);
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferMutualizerChanged")
+          .withArgs(offersToUpdate[1], offerStruct.sellerId, newMutualizer, assistant.address);
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferMutualizerChanged")
+          .withArgs(offersToUpdate[2], offerStruct.sellerId, newMutualizer, assistant.address);
+      });
+
+      it("should update state", async function () {
+        // Original mutualizer should be the 0 address
+        for (const id of offersToUpdate) {
+          [, offerStruct] = await offerHandler.getOffer(id);
+          expect(offerStruct.feeMutualizer).eql(ethers.constants.AddressZero);
+        }
+
+        // Change the mutualizers
+        await offerHandler.connect(assistant).changeOfferMutualizerBatch(offersToUpdate, newMutualizer);
+
+        for (const id of offersToUpdate) {
+          // Mutualizer field should be updated
+          [, offerStruct] = await offerHandler.getOffer(id);
+          expect(offerStruct.feeMutualizer).eql(newMutualizer);
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("The offers region of protocol is paused", async function () {
+          // Pause the offers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
+
+          // Attempt to change the mutualizers, expecting revert
+          await expect(
+            offerHandler.connect(assistant).changeOfferMutualizerBatch(offersToUpdate, newMutualizer)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("Offer does not exist", async function () {
+          // Set invalid id
+          offersToUpdate = ["1", "432", "2"];
+
+          // Attempt to change the mutualizers, expecting revert
+          await expect(
+            offerHandler.connect(assistant).changeOfferMutualizerBatch(offersToUpdate, newMutualizer)
+          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+
+          // Set invalid id
+          offersToUpdate = ["1", "2", "0"];
+
+          // Attempt to change the mutualizers, expecting revert
+          await expect(
+            offerHandler.connect(assistant).changeOfferMutualizerBatch(offersToUpdate, newMutualizer)
+          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+        });
+
+        it("Caller is not seller", async function () {
+          // caller is not the assistant of any seller
+          // Attempt to change the mutualizers, expecting revert
+          await expect(
+            offerHandler.connect(rando).changeOfferMutualizerBatch(offersToUpdate, newMutualizer)
+          ).to.revertedWith(RevertReasons.NOT_ASSISTANT);
+
+          // caller is an assistant of another seller
+          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+
+          // AuthToken
+          emptyAuthToken = mockAuthToken();
+          expect(emptyAuthToken.isValid()).is.true;
+
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          // Attempt to change the mutualizers, expecting revert
+          await expect(
+            offerHandler.connect(rando).changeOfferMutualizerBatch(offersToUpdate, newMutualizer)
+          ).to.revertedWith(RevertReasons.NOT_ASSISTANT);
+        });
+
+        it("Changing too many offers", async function () {
+          // Try to void the more than 100 offers
+          offersToUpdate = [...Array(101).keys()];
+
+          // Attempt to void the offers, expecting revert
+          await expect(
+            offerHandler.connect(assistant).changeOfferMutualizerBatch(offersToUpdate, newMutualizer)
           ).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
         });
       });
