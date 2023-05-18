@@ -1,3 +1,4 @@
+const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const { oneMonth } = require("../util/constants");
@@ -8,14 +9,19 @@ const { oneMonth } = require("../util/constants");
 describe("DisputeResolutionTerms", function () {
   // Suite-wide scope
   let disputeResolutionTerms, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit;
+  let disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit, feeMutualizer;
+  let accounts;
 
   beforeEach(async function () {
+    // Get a list of accounts
+    accounts = await ethers.getSigners();
+
     // Required constructor params
     disputeResolverId = "2";
     escalationResponsePeriod = oneMonth.toString();
     feeAmount = "50";
     buyerEscalationDeposit = "12345";
+    feeMutualizer = ethers.constants.AddressZero.toString();
   });
 
   context("📋 Constructor", async function () {
@@ -24,12 +30,14 @@ describe("DisputeResolutionTerms", function () {
         disputeResolverId,
         escalationResponsePeriod,
         feeAmount,
-        buyerEscalationDeposit
+        buyerEscalationDeposit,
+        feeMutualizer
       );
       expect(disputeResolutionTerms.disputeResolverIdIsValid()).is.true;
       expect(disputeResolutionTerms.escalationResponsePeriodIsValid()).is.true;
       expect(disputeResolutionTerms.feeAmountIsValid()).is.true;
       expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.true;
+      expect(disputeResolutionTerms.feeMutualizerIsValid()).is.true;
       expect(disputeResolutionTerms.isValid()).is.true;
     });
   });
@@ -41,7 +49,8 @@ describe("DisputeResolutionTerms", function () {
         disputeResolverId,
         escalationResponsePeriod,
         feeAmount,
-        buyerEscalationDeposit
+        buyerEscalationDeposit,
+        feeMutualizer
       );
       expect(disputeResolutionTerms.isValid()).is.true;
     });
@@ -158,6 +167,28 @@ describe("DisputeResolutionTerms", function () {
       expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.true;
       expect(disputeResolutionTerms.isValid()).is.true;
     });
+
+    it("Always present, feeMutualizer must be a string representation of an EIP-55 compliant address", async function () {
+      // Invalid field value
+      disputeResolutionTerms.feeMutualizer = "0xASFADF";
+      expect(disputeResolutionTerms.feeMutualizerIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
+
+      // Invalid field value
+      disputeResolutionTerms.feeMutualizer = "zedzdeadbaby";
+      expect(disputeResolutionTerms.feeMutualizerIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
+
+      // Valid field value
+      disputeResolutionTerms.feeMutualizer = accounts[0].address;
+      expect(disputeResolutionTerms.feeMutualizerIsValid()).is.true;
+      expect(disputeResolutionTerms.isValid()).is.true;
+
+      // Valid field value
+      disputeResolutionTerms.feeMutualizer = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
+      expect(disputeResolutionTerms.feeMutualizerIsValid()).is.true;
+      expect(disputeResolutionTerms.isValid()).is.true;
+    });
   });
 
   context("📋 Utility functions", async function () {
@@ -167,7 +198,8 @@ describe("DisputeResolutionTerms", function () {
         disputeResolverId,
         escalationResponsePeriod,
         feeAmount,
-        buyerEscalationDeposit
+        buyerEscalationDeposit,
+        feeMutualizer
       );
       expect(disputeResolutionTerms.isValid()).is.true;
 
@@ -177,10 +209,11 @@ describe("DisputeResolutionTerms", function () {
         escalationResponsePeriod,
         feeAmount,
         buyerEscalationDeposit,
+        feeMutualizer,
       };
 
       // Struct representation
-      struct = [disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit];
+      struct = [disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit, feeMutualizer];
     });
 
     context("👉 Static", async function () {

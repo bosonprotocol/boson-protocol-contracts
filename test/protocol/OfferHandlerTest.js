@@ -228,7 +228,8 @@ describe("IBosonOfferHandler", function () {
         disputeResolver.id,
         disputeResolver.escalationResponsePeriod,
         DRFeeNative,
-        applyPercentage(DRFeeNative, buyerEscalationDepositPercentage)
+        applyPercentage(DRFeeNative, buyerEscalationDepositPercentage),
+        ethers.constants.AddressZero
       );
       disputeResolutionTermsStruct = disputeResolutionTerms.toStruct();
 
@@ -385,7 +386,8 @@ describe("IBosonOfferHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ethers.constants.AddressZero
         );
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -412,7 +414,13 @@ describe("IBosonOfferHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = offerFees.agentFee = "0";
         disputeResolver.id = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          "0",
+          "0",
+          "0",
+          "0",
+          ethers.constants.AddressZero
+        ).toStruct();
         offerFeesStruct = offerFees.toStruct();
 
         // Create a new offer
@@ -480,7 +488,8 @@ describe("IBosonOfferHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ethers.constants.AddressZero
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -1858,7 +1867,8 @@ describe("IBosonOfferHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeNative,
-          applyPercentage(DRFeeNative, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeNative, buyerEscalationDepositPercentage),
+          ethers.constants.AddressZero
         );
         disputeResolutionTermsList.push(disputeResolutionTerms);
         disputeResolutionTermsStructs.push(disputeResolutionTerms.toStruct());
@@ -1878,7 +1888,8 @@ describe("IBosonOfferHandler", function () {
         disputeResolver.id,
         disputeResolver.escalationResponsePeriod,
         DRFeeToken,
-        applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+        applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+        ethers.constants.AddressZero
       );
       disputeResolutionTermsStructs[2] = disputeResolutionTermsList[2].toStruct();
 
@@ -1891,7 +1902,7 @@ describe("IBosonOfferHandler", function () {
           "0";
       offerStructs[4] = offers[4].toStruct();
       disputeResolverIds[4] = "0";
-      disputeResolutionTermsList[4] = new DisputeResolutionTerms("0", "0", "0", "0");
+      disputeResolutionTermsList[4] = new DisputeResolutionTerms("0", "0", "0", "0", ethers.constants.AddressZero);
       disputeResolutionTermsStructs[4] = disputeResolutionTermsList[4].toStruct();
       offerFeesStructs[4] = offerFeesList[4].toStruct();
     });

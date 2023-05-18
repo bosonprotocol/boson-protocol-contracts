@@ -268,7 +268,8 @@ describe("IBosonOrchestrationHandler", function () {
         disputeResolver.id,
         disputeResolver.escalationResponsePeriod,
         DRFeeNative,
-        applyPercentage(DRFeeNative, buyerEscalationDepositPercentage)
+        applyPercentage(DRFeeNative, buyerEscalationDepositPercentage),
+        ethers.constants.AddressZero
       );
       disputeResolutionTermsStruct = disputeResolutionTerms.toStruct();
 
@@ -974,7 +975,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ethers.constants.AddressZero
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -1012,7 +1014,13 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
         disputeResolver.id = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          "0",
+          "0",
+          "0",
+          "0",
+          ethers.constants.AddressZero
+        ).toStruct();
         offerFeesStruct = offerFees.toStruct();
 
         // Create a seller and an offer, testing for the event
@@ -1116,7 +1124,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ethers.constants.AddressZero
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -2382,7 +2391,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ethers.constants.AddressZero
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -2411,7 +2421,13 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
         disputeResolver.id = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          "0",
+          "0",
+          "0",
+          "0",
+          ethers.constants.AddressZero
+        ).toStruct();
         offerFeesStruct = offerFees.toStruct();
 
         // Create an offer with condition, testing for the events
@@ -2485,7 +2501,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ethers.constants.AddressZero
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -3072,7 +3089,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ethers.constants.AddressZero
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -3101,7 +3119,13 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
         disputeResolver.id = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          "0",
+          "0",
+          "0",
+          "0",
+          ethers.constants.AddressZero
+        ).toStruct();
         offerFeesStruct = offerFees.toStruct();
 
         // Create an offer, add it to the group, testing for the events
@@ -3175,7 +3199,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ethers.constants.AddressZero
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -3741,7 +3766,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ethers.constants.AddressZero
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -3770,7 +3796,13 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
         disputeResolver.id = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          "0",
+          "0",
+          "0",
+          "0",
+          ethers.constants.AddressZero
+        ).toStruct();
         offerFeesStruct = offerFees.toStruct();
 
         // Create an offer, a twin and a bundle, testing for the events
@@ -3846,7 +3878,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ethers.constants.AddressZero
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -4582,7 +4615,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ethers.constants.AddressZero
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -4619,7 +4653,13 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
         disputeResolver.id = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          "0",
+          "0",
+          "0",
+          "0",
+          ethers.constants.AddressZero
+        ).toStruct();
         offerFeesStruct = offerFees.toStruct();
 
         // Create an offer with condition, twin and bundle testing for the events
@@ -4719,7 +4759,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ethers.constants.AddressZero
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
