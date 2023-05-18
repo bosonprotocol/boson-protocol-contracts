@@ -140,6 +140,11 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
             // SpecificToken with NonFungibleToken should not have threshold
             if (_condition.tokenType == TokenType.NonFungibleToken) {
                 valid = valid && _condition.threshold == 0;
+
+                if (_condition.tokenId != 0) {
+                    // SpecificToken with NonFungibleToken and tokenId should have length
+                    valid = valid && _condition.length > 0;
+                }
             }
         }
     }

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
-import "hardhat/console.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
@@ -83,10 +82,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         Offer storage offer = getValidOffer(_offerId);
 
         // For there to be a condition, there must be a group.
-        (bool exists, ) = getGroupIdByOffer(offer.id);
+        (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
+        if (exists) {
+            // Get the condition
+            Condition storage condition = fetchCondition(groupId);
 
-        // Make sure offer doesn't have a condition. If it does, use commitToConditionalOffer instead.
-        require(!exists, GROUP_HAS_CONDITION);
+            // Make sure group doesn't have a condition. If it does, use commitToConditionalOffer instead.
+            require(condition.method == EvaluationMethod.None, GROUP_HAS_CONDITION);
+        }
 
         commitToOfferInternal(_buyer, offer, 0, false);
     }
@@ -224,6 +227,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _offer - storage pointer to the offer
      * @param _exchangeId - the id of the exchange
      * @param _isPreminted - whether the offer is preminted
+     * @return exchangeId - the id of the exchange
      */
     function commitToOfferInternal(
         address payable _buyer,
@@ -1011,6 +1015,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         } else {
             balance = IERC20(_condition.tokenAddress).balanceOf(_buyer);
         }
+
         return balance >= _condition.threshold;
     }
 

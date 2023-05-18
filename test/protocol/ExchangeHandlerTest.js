@@ -891,6 +891,30 @@ describe("IBosonExchangeHandler", function () {
         ).to.emit(exchangeHandler, "BuyerCommitted");
       });
 
+      it("Offer belongs to a group with condition and is not type EvaluationMethod.SpecificToken", async function () {
+        // Required constructor params for Group
+        groupId = "1";
+        offerIds = [offerId];
+
+        // Create Condition
+        condition = mockCondition({ tokenAddress: foreign20.address, threshold: "50", maxCommits: "3" });
+        expect(condition.isValid()).to.be.true;
+
+        // Create Group
+        group = new Group(groupId, seller.id, offerIds);
+        expect(group.isValid()).is.true;
+
+        await groupHandler.connect(assistant).createGroup(group, condition);
+
+        // mint enough tokens for the buyer
+        await foreign20.connect(buyer).mint(buyer.address, condition.threshold);
+
+        await expect(bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)).to.emit(
+          exchangeHandler,
+          "BuyerCommitted"
+        );
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
@@ -1002,24 +1026,35 @@ describe("IBosonExchangeHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
         });
 
-        it("Offer belongs to a group with condition", async function () {
+        it("Offer belongs to a group with condition and is type EvaluationMethod.SpecificToken", async function () {
           // Required constructor params for Group
           groupId = "1";
           offerIds = [offerId];
 
-          // Create Condition
-          condition = mockCondition({ tokenAddress: foreign20.address, threshold: "50", maxCommits: "3" });
+          condition = mockCondition({
+            tokenAddress: foreign721.address,
+            threshold: "0",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken,
+            tokenId: "1",
+            method: EvaluationMethod.SpecificToken,
+            length: "10",
+          });
+
           expect(condition.isValid()).to.be.true;
 
           // Create Group
           group = new Group(groupId, seller.id, offerIds);
           expect(group.isValid()).is.true;
+
           await groupHandler.connect(assistant).createGroup(group, condition);
 
-          // Attempt to commit to the offer with, expecting revert
+          // mint enough tokens for the buyer
+          await foreign721.connect(buyer).mint(condition.tokenId, 1);
+
           await expect(
             bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
-          ).to.revertedWith(RevertReasons.GROUP_HAS_CONDITION);
+          ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
         });
       });
     });
@@ -1347,6 +1382,36 @@ describe("IBosonExchangeHandler", function () {
         });
       });
 
+      context("✋ Group without condition", async function () {
+        let tokenId = "0";
+        beforeEach(async function () {
+          // Create a new offer
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [(++offerId).toString()];
+
+          // Create Condition
+          condition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(assistant).createGroup(group, condition);
+        });
+
+        it("should emit a BuyerCommitted event", async function () {
+          // Commit to offer.
+          await expect(
+            exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
+          ).to.emit(exchangeHandler, "BuyerCommitted");
+        });
+      });
+
       context("💔 Revert Reasons", async function () {
         let tokenId;
 
@@ -1480,34 +1545,6 @@ describe("IBosonExchangeHandler", function () {
           await expect(
             exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
           ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
-        });
-
-        context("✋ Group without condition", async function () {
-          beforeEach(async function () {
-            // Create a new offer
-            await offerHandler
-              .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-
-            // Required constructor params for Group
-            groupId = "1";
-            offerIds = [(++offerId).toString()];
-
-            // Create Condition
-            condition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
-            expect(condition.isValid()).to.be.true;
-
-            // Create Group
-            group = new Group(groupId, seller.id, offerIds);
-            expect(group.isValid()).is.true;
-            await groupHandler.connect(assistant).createGroup(group, condition);
-          });
-
-          it("Should revert when using this method", async function () {
-            await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, 0, { value: price })
-            ).to.revertedWith(RevertReasons.GROUP_HAS_NO_CONDITION);
-          });
         });
       });
     });
