@@ -63,7 +63,8 @@ describe("IBosonFundsHandler", function () {
     offerHandler,
     configHandler,
     disputeHandler,
-    pauseHandler;
+    pauseHandler,
+    orchestrationHandler;
   let support;
   let seller;
   let buyer, offerToken, offerNative;
@@ -74,14 +75,21 @@ describe("IBosonFundsHandler", function () {
   let resolutionPeriod, offerDurations;
   let protocolFeePercentage, buyerEscalationDepositPercentage;
   let block, blockNumber;
-  let protocolId, exchangeId, buyerId, randoBuyerId, sellerPayoff, buyerPayoff, protocolPayoff;
+  let protocolId, exchangeId, buyerId, randoBuyerId, sellerPayoff, buyerPayoff, protocolPayoff, disputeResolverPayoff;
   let sellersAvailableFunds,
     buyerAvailableFunds,
     protocolAvailableFunds,
     expectedSellerAvailableFunds,
     expectedBuyerAvailableFunds,
     expectedProtocolAvailableFunds;
-  let tokenListSeller, tokenListBuyer, tokenAmountsSeller, tokenAmountsBuyer, tokenList, tokenAmounts;
+  let tokenListSeller,
+    tokenListBuyer,
+    tokenListDR,
+    tokenAmountsSeller,
+    tokenAmountsBuyer,
+    tokenAmountsDR,
+    tokenList,
+    tokenAmounts;
   let tx, txReceipt, txCost, event;
   let disputeResolverFees, disputeResolver, disputeResolverId;
   let buyerPercentBasisPoints;
@@ -111,6 +119,7 @@ describe("IBosonFundsHandler", function () {
       configHandler: "IBosonConfigHandler",
       pauseHandler: "IBosonPauseHandler",
       disputeHandler: "IBosonDisputeHandler",
+      orchestrationHandler: "IBosonOrchestrationHandler",
     };
 
     ({
@@ -124,6 +133,7 @@ describe("IBosonFundsHandler", function () {
         configHandler,
         pauseHandler,
         disputeHandler,
+        orchestrationHandler,
       },
       protocolConfig: [, , { percentage: protocolFeePercentage, buyerEscalationDepositPercentage }],
       diamondAddress: protocolDiamondAddress,
@@ -377,9 +387,10 @@ describe("IBosonFundsHandler", function () {
         expect(disputeResolver.isValid()).is.true;
 
         //Create DisputeResolverFee array so offer creation will succeed
+        DRFeeToken = DRFeeNative = ethers.utils.parseUnits("0.1", "ether").toString();
         disputeResolverFees = [
-          new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
-          new DisputeResolverFee(mockToken.address, "mockToken", "0"),
+          new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative),
+          new DisputeResolverFee(mockToken.address, "mockToken", DRFeeToken),
         ];
 
         // Make empty seller list, so every seller is allowed
@@ -391,7 +402,7 @@ describe("IBosonFundsHandler", function () {
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // Mock offer
-        const { offer, offerDates, offerDurations, disputeResolverId, offerFees } = await mockOffer();
+        const { offer, offerDates, offerDurations, offerFees } = await mockOffer();
         offer.quantityAvailable = "2";
 
         offerNative = offer;
@@ -413,24 +424,28 @@ describe("IBosonFundsHandler", function () {
         await Promise.all([
           offerHandler
             .connect(assistant)
-            .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId),
+            .createOffer(offerNative, offerDates, offerDurations, disputeResolver.id, agentId),
           offerHandler
             .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId),
+            .createOffer(offerToken, offerDates, offerDurations, disputeResolver.id, agentId),
         ]);
 
         // Set used variables
-        price = offerToken.price;
-        sellerDeposit = offerToken.sellerDeposit;
+        buyerEscalationDeposit = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
+        const buyerTokens = BN(offerToken.price).add(buyerEscalationDeposit);
+        sellerDeposit = BN(offerToken.sellerDeposit).add(DRFeeToken);
         offerTokenProtocolFee = offerNativeProtocolFee = offerFees.protocolFee;
 
         // top up seller's and buyer's account
-        await Promise.all([mockToken.mint(assistant.address, sellerDeposit), mockToken.mint(buyer.address, price)]);
+        await Promise.all([
+          mockToken.mint(assistant.address, sellerDeposit),
+          mockToken.mint(buyer.address, buyerTokens),
+        ]);
 
         // approve protocol to transfer the tokens
         await Promise.all([
           mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit),
-          mockToken.connect(buyer).approve(protocolDiamondAddress, price),
+          mockToken.connect(buyer).approve(protocolDiamondAddress, buyerTokens),
         ]);
 
         // deposit to seller's pool
@@ -455,16 +470,30 @@ describe("IBosonFundsHandler", function () {
 
       context("👉 withdrawFunds()", async function () {
         beforeEach(async function () {
-          // cancel the voucher, so both seller and buyer have something to withdraw
-          await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
-          await exchangeHandler.connect(buyer).cancelVoucher(++exchangeId); // canceling the voucher in the native currency
+          // decide a dispute so seller, buyer and dispute resolver have something to withdraw
+          buyerPercentBasisPoints = "5566"; // 55.66%
+
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId); // voucher in tokens
+          await orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId);
+          await disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints);
+
+          await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId); // voucher in the native currency
+          await orchestrationHandler
+            .connect(buyer)
+            .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDeposit });
+          await disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints);
 
           // expected payoffs - they are the same for token and native currency
-          // buyer: price - buyerCancelPenalty
-          buyerPayoff = BN(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
+          // buyer:
+          const pot = BN(offerToken.price).add(offerToken.sellerDeposit).add(buyerEscalationDeposit);
+          buyerPayoff = applyPercentage(pot, buyerPercentBasisPoints);
 
-          // seller: sellerDeposit + buyerCancelPenalty
-          sellerPayoff = BN(offerToken.sellerDeposit).add(offerToken.buyerCancelPenalty).toString();
+          // seller:
+          sellerPayoff = pot.sub(buyerPayoff).toString();
+
+          // dispute resolver:
+          disputeResolverPayoff = DRFeeToken;
         });
 
         it("should emit a FundsWithdrawn event", async function () {
@@ -472,10 +501,12 @@ describe("IBosonFundsHandler", function () {
           // Withdraw tokens
           tokenListSeller = [mockToken.address, ethers.constants.AddressZero];
           tokenListBuyer = [ethers.constants.AddressZero, mockToken.address];
+          tokenListDR = [mockToken.address, ethers.constants.AddressZero];
 
           // Withdraw amounts
           tokenAmountsSeller = [sellerPayoff, BN(sellerPayoff).div("2").toString()];
           tokenAmountsBuyer = [buyerPayoff, BN(buyerPayoff).div("5").toString()];
+          tokenAmountsDR = [disputeResolverPayoff, BN(disputeResolverPayoff).div("3").toString()];
 
           // seller withdrawal
           const tx = await fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
@@ -490,12 +521,36 @@ describe("IBosonFundsHandler", function () {
           // buyer withdrawal
           const tx2 = await fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer);
           await expect(tx2)
-            .to.emit(fundsHandler, "FundsWithdrawn", buyer.address)
+            .to.emit(fundsHandler, "FundsWithdrawn")
             .withArgs(buyerId, buyer.address, mockToken.address, BN(buyerPayoff).div("5"), buyer.address);
 
           await expect(tx2)
             .to.emit(fundsHandler, "FundsWithdrawn")
             .withArgs(buyerId, buyer.address, ethers.constants.Zero, buyerPayoff, buyer.address);
+
+          // DR withdrawal
+          const tx3 = await fundsHandler
+            .connect(assistantDR)
+            .withdrawFunds(disputeResolver.id, tokenListDR, tokenAmountsDR);
+          await expect(tx3)
+            .to.emit(fundsHandler, "FundsWithdrawn")
+            .withArgs(
+              disputeResolver.id,
+              treasuryDR.address,
+              mockToken.address,
+              disputeResolverPayoff,
+              assistantDR.address
+            );
+
+          await expect(tx3)
+            .to.emit(fundsHandler, "FundsWithdrawn")
+            .withArgs(
+              disputeResolver.id,
+              treasuryDR.address,
+              ethers.constants.Zero,
+              BN(disputeResolverPayoff).div("3"),
+              assistantDR.address
+            );
         });
 
         it("should update state", async function () {
@@ -2529,20 +2584,12 @@ describe("IBosonFundsHandler", function () {
                     case "DISPUTED - ESCALATED - RESOLVED":
                     case "DISPUTED - ESCALATED - DECIDED": {
                       buyerPercentBasisPoints = "5566"; // 55.66%
-                      const buyerPayoffSplit = BN(offerToken.price)
-                        .add(offerToken.sellerDeposit)
-                        .add(buyerEscalationDeposit)
-                        .mul(buyerPercentBasisPoints)
-                        .div("10000")
-                        .toString();
+                      const pot = BN(offerToken.price).add(offerToken.sellerDeposit).add(buyerEscalationDeposit);
+                      const buyerPayoffSplit = applyPercentage(pot, buyerPercentBasisPoints);
 
                       payoffs = {
                         buyer: buyerPayoffSplit,
-                        seller: BN(offerToken.price)
-                          .add(offerToken.sellerDeposit)
-                          .add(buyerEscalationDeposit)
-                          .sub(buyerPayoffSplit)
-                          .toString(),
+                        seller: pot.sub(buyerPayoffSplit).toString(),
                         protocol: "0",
                         mutualizer: "0",
                         disputeResolver: DRFeeToken,
