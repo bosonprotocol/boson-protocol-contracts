@@ -173,6 +173,12 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         // make sure all offers exist and belong to the seller
         Offer storage offer = getValidOffer(_offerId);
 
+        // Get seller, we assume seller exists if offer exists
+        (, Seller storage seller, ) = fetchSeller(offer.sellerId);
+
+        // Caller must be seller's assistant address
+        require(seller.assistant == msgSender(), NOT_ASSISTANT);
+
         // Unchecked because we're handling overflow below
         unchecked {
             // Calculate the bundle offers total quantity available.

@@ -636,6 +636,30 @@ describe("IBosonExchangeHandler", function () {
         );
       });
 
+      it("If group has no condition, buyers can commit using this method", async function () {
+        // Required constructor params for Group
+        groupId = "1";
+        offerIds = [offerId];
+
+        // Create Condition
+        condition = mockCondition({
+          method: EvaluationMethod.None,
+          tokenAddress: ethers.constants.AddressZero,
+          threshold: "0",
+          maxCommits: "0",
+        });
+        expect(condition.isValid()).to.be.true;
+
+        // Create Group
+        group = new Group(groupId, seller.id, offerIds);
+        expect(group.isValid()).is.true;
+        await groupHandler.connect(assistant).createGroup(group, condition);
+
+        await expect(
+          exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+        ).to.not.reverted;
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
@@ -1056,6 +1080,33 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
           ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
         });
+
+        it("buyer does not meet condition for commit", async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          condition = mockCondition({
+            tokenAddress: foreign721.address,
+            threshold: "1",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken,
+            tokenId: "1",
+            method: EvaluationMethod.Threshold,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await expect(
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
+          ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+        });
       });
     });
 
@@ -1123,6 +1174,17 @@ describe("IBosonExchangeHandler", function () {
             await expect(
               exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, 0, { value: price })
             ).to.revertedWith(RevertReasons.MAX_COMMITS_ADDRESS_REACHED);
+          });
+
+          it("Group doesn't exist", async function () {
+            // Create a new offer
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+            await expect(
+              exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, ++offerId, 0, { value: price })
+            ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
           });
         });
       });
@@ -1355,6 +1417,115 @@ describe("IBosonExchangeHandler", function () {
             // Attempt to commit, expecting revert
             await expect(
               exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
+            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          });
+
+          it("max commits per token id reached", async function () {
+            // Commit to offer the maximum number of times
+            for (let i = 0; i < Number(condition.maxCommits); i++) {
+              await exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price });
+            }
+
+            // Attempt to commit again after maximum commits has been reached
+            await expect(
+              exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
+            ).to.revertedWith(RevertReasons.MAX_COMMITS_TOKEN_REACHED);
+          });
+
+          it("token id not in condition range", async function () {
+            tokenId = "666";
+            // Attempt to commit, expecting revert
+            await expect(
+              exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
+            ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
+          });
+        });
+      });
+
+      context("✋ SpecificToken ERC1155", async function () {
+        let tokenId;
+        beforeEach(async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+          tokenId = "12";
+
+          // Create Condition
+          condition = mockCondition({
+            tokenAddress: foreign1155.address,
+            threshold: "1",
+            maxCommits: "3",
+            tokenType: TokenType.MultiToken,
+            tokenId,
+            method: EvaluationMethod.SpecificToken,
+            length: "10",
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          // mint correct token for the buyer
+          await foreign1155.connect(buyer).mint(tokenId, "1");
+        });
+
+        it("should emit a BuyerCommitted event if user meets condition", async function () {
+          // Commit to offer.
+          // We're only concerned that the event is emitted, indicating the condition was met
+          await expect(
+            exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
+          ).to.emit(exchangeHandler, "BuyerCommitted");
+        });
+
+        it("should allow buyer to commit up to the max times for the group", async function () {
+          // Commit to offer the maximum number of times
+          for (let i = 0; i < Number(condition.maxCommits); i++) {
+            // We're only concerned that the event is emitted, indicating the commit was allowed
+            await expect(
+              exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
+            ).to.emit(exchangeHandler, "BuyerCommitted");
+          }
+        });
+
+        it("If tokenId is not specified, should allow any token from collection", async function () {
+          condition.tokenId = "0";
+          condition.length = "0";
+
+          // remove offer from old group
+          await groupHandler.connect(assistant).removeOffersFromGroup(groupId, offerIds);
+
+          // create new group with new condition
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          // mint any token for buyer
+          tokenId = "123";
+          await foreign1155.connect(buyer).mint(tokenId, "1");
+
+          // buyer can commit
+          await expect(
+            exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
+          ).to.not.reverted;
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("token id does not exist", async function () {
+            tokenId = "13";
+
+            // Attempt to commit, expecting revert
+            await expect(
+              exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
+            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          });
+
+          it("buyer does not meet condition for commit", async function () {
+            // Attempt to commit, expecting revert
+            await expect(
+              exchangeHandler.connect(rando).commitToConditionalOffer(rando.address, offerId, tokenId, { value: price })
             ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
           });
 

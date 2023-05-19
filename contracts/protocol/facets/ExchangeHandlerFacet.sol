@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
-
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
@@ -1034,7 +1033,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 _tokenId
     ) internal view returns (bool) {
         if (_condition.tokenType == TokenType.MultiToken) {
-            return IERC1155(_condition.tokenAddress).balanceOf(_buyer, _tokenId) > _condition.threshold;
+            return IERC1155(_condition.tokenAddress).balanceOf(_buyer, _tokenId) >= _condition.threshold;
         } else {
             // no need to check if is NonFungible token there is no way to create a SpecifiedToken condition with a Fungible token
             return (IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer);
