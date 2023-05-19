@@ -2,7 +2,7 @@
   "chainId": 137,
   "network": "polygon",
   "env": "prod",
-  "protocolVersion": "2.2.0",
+  "protocolVersion": "2.2.1",
   "contracts": [
     {
       "name": "AccessController",
@@ -127,22 +127,10 @@
       "interfaceId": "0xa1598d02"
     },
     {
-      "name": "OrchestrationHandlerFacet1",
-      "address": "0x00441e5306fbCa0Cf05B6cf6b76063c594bd60c1",
-      "args": [],
-      "interfaceId": "0xa38bc2e7"
-    },
-    {
       "name": "OrchestrationHandlerFacet2",
       "address": "0xDC54FD3cC71fa5D0579512D9eccA48e2f59DF358",
       "args": [],
-      "interfaceId": "0xa38bc2e7"
-    },
-    {
-      "name": "ProtocolInitializationHandlerFacet",
-      "address": "0xf2a5C2794AEa2C6Dbb551D0d6884dD0b2e30048e",
-      "args": [],
-      "interfaceId": "0x0d8e6e2c"
+      "interfaceId": "0x0c62d8e3"
     },
     {
       "name": "TwinHandlerFacet",
@@ -178,30 +166,42 @@
       "interfaceId": "0x2ae6ea10"
     },
     {
-      "name": "AccountHandlerFacet",
-      "address": "0x3FDD5561c8fa0259BdcbcfDe917Ee29CA746297d",
-      "args": [],
-      "interfaceId": "0x1f891681"
-    },
-    {
-      "name": "SellerHandlerFacet",
-      "address": "0x7a6bb73baf8A92E834CF8EFb9eEA2F98f75A6F2C",
-      "args": [],
-      "interfaceId": "0x1f891681"
-    },
-    {
-      "name": "DisputeResolverHandlerFacet",
-      "address": "0xBB3C6140dC6bDA8236682262Fd2478062B0Dca17",
-      "args": [],
-      "interfaceId": "0x1f891681"
-    },
-    {
       "name": "BosonVoucher Logic",
-      "address": "0x87bc3BCF0C792E5aa2CDc06FbdceCAD34E1059b7",
+      "address": "0x4901F1c8e2D88E87001CFfA1E644cc5Ab6941F72",
       "args": [
         "0x86C80a8aa58e0A4fa09A69624c31Ab2a6CAD56b8"
       ],
       "interfaceId": ""
+    },
+    {
+      "name": "AccountHandlerFacet",
+      "address": "0x649a6a3c73820887397D7361732DbDFdA7926567",
+      "args": [],
+      "interfaceId": "0x15335ed7"
+    },
+    {
+      "name": "SellerHandlerFacet",
+      "address": "0x826CbC9B37192B1dDd4BB1c973C2eB435CD9CF53",
+      "args": [],
+      "interfaceId": "0x15335ed7"
+    },
+    {
+      "name": "DisputeResolverHandlerFacet",
+      "address": "0xAA1F019Cab69C066A5475028e14B020172897459",
+      "args": [],
+      "interfaceId": "0x15335ed7"
+    },
+    {
+      "name": "OrchestrationHandlerFacet1",
+      "address": "0x42a9a321aE5e71a9Fe12eD3caD0d35B278CBa5cA",
+      "args": [],
+      "interfaceId": "0x0c62d8e3"
+    },
+    {
+      "name": "ProtocolInitializationHandlerFacet",
+      "address": "0xDb105aA94eC58924bAe8e24524A38c70bEf9a116",
+      "args": [],
+      "interfaceId": "0x0d8e6e2c"
     }
   ]
 }
