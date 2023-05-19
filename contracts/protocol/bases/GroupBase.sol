@@ -110,10 +110,12 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * - EvaluationMethod.None: any fields different from 0
      * - EvaluationMethod.Threshold: token address, maxCommits or threshold is zero and length is not zero
      * - EvaluationMethod.SpecificToken:
-         - tokenType is FungibleToken
-         - tokenType is NonFungibleToken and threshold is not zero
-         - maxCommits is zero
-         - token address is zero
+     *    - tokenType is FungibleToken
+     *    - tokenType is NonFungibleToken and threshold is not zero
+     *    - tokenType is NonFunbileToken, tokenId is not zero and length is zero
+     *    - tokenType is MultiToken and threshold is zero
+     *    - maxCommits is zero
+     *    - token address is zero
      *
      * @param _condition - fully populated condition struct
      * @return valid - validity of condition
@@ -145,6 +147,9 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
                     // SpecificToken with NonFungibleToken and tokenId should have length
                     valid = valid && _condition.length > 0;
                 }
+            } else {
+                // SpecificToken with MultiToken should have threshold
+                valid = valid && _condition.threshold > 0;
             }
         }
     }

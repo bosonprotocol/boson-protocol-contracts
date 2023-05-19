@@ -503,6 +503,15 @@ describe("IBosonGroupHandler", function () {
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
+
+          it("Length is zero when tokenId is not zero", async function () {
+            condition.length = "0";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
         });
       });
     });
@@ -846,7 +855,7 @@ describe("IBosonGroupHandler", function () {
         condition = mockCondition({
           tokenAddress: accounts[1].address,
           tokenId: "88775544",
-          threshold: "0",
+          threshold: "1",
           tokenType: TokenType.MultiToken,
           method: EvaluationMethod.SpecificToken,
         });
