@@ -362,10 +362,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @param _functionNameHashes - a list of hashed function names (keccak256)
      * @param _isAllowlisted - new allowlist status
      */
-    function setAllowlistedFunctionsInternal(
-        bytes32[] calldata _functionNameHashes,
-        bool _isAllowlisted
-    ) private {
+    function setAllowlistedFunctionsInternal(bytes32[] calldata _functionNameHashes, bool _isAllowlisted) private {
         ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
 
         // set new values
