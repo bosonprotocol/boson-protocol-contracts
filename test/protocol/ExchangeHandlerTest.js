@@ -1553,36 +1553,6 @@ describe("IBosonExchangeHandler", function () {
         });
       });
 
-      context("✋ Group without condition", async function () {
-        let tokenId = "0";
-        beforeEach(async function () {
-          // Create a new offer
-          await offerHandler
-            .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-
-          // Required constructor params for Group
-          groupId = "1";
-          offerIds = [(++offerId).toString()];
-
-          // Create Condition
-          condition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
-          expect(condition.isValid()).to.be.true;
-
-          // Create Group
-          group = new Group(groupId, seller.id, offerIds);
-          expect(group.isValid()).is.true;
-          await groupHandler.connect(assistant).createGroup(group, condition);
-        });
-
-        it("should emit a BuyerCommitted event", async function () {
-          // Commit to offer.
-          await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
-          ).to.emit(exchangeHandler, "BuyerCommitted");
-        });
-      });
-
       context("💔 Revert Reasons", async function () {
         let tokenId;
 
@@ -1716,6 +1686,33 @@ describe("IBosonExchangeHandler", function () {
           await expect(
             exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
           ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
+        });
+
+        it("Group without condition ", async function () {
+          let tokenId = "0";
+
+          // Create a new offer
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [(++offerId).toString()];
+
+          // Create Condition
+          condition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          // Commit to offer.
+          await expect(
+            exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
+          ).to.revertedWith(RevertReasons.GROUP_HAS_NO_CONDITION);
         });
       });
     });

@@ -858,6 +858,7 @@ describe("IBosonGroupHandler", function () {
           threshold: "1",
           tokenType: TokenType.MultiToken,
           method: EvaluationMethod.SpecificToken,
+          length: "1",
         });
         expect(condition.isValid()).to.be.true;
 

@@ -300,13 +300,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         address _to
     ) internal offersNotPaused exchangesNotPaused {
         // Get offer, make sure the caller is the assistant
-        Offer storage offer = getValidOffer(_offerId);
-
-        // Get seller, we assume seller exists if offer exists
-        (, Seller storage seller, ) = fetchSeller(offer.sellerId);
-
-        // Caller must be seller's assistant address
-        require(seller.assistant == msgSender(), NOT_ASSISTANT);
+        (Offer storage offer, ) = getValidOfferAndSeller(_offerId);
 
         // Prevent reservation of an empty range
         require(_length > 0, INVALID_RANGE_LENGTH);

@@ -119,6 +119,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
+     * @param _tokenId - the id of the token to use for the conditional commit
      */
     function commitToConditionalOffer(
         address payable _buyer,
@@ -138,6 +139,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         // Get the condition
         Condition storage condition = fetchCondition(groupId);
+
+        require(condition.method != EvaluationMethod.None, GROUP_HAS_NO_CONDITION);
 
         bool allow = authorizeCommit(_buyer, condition, groupId, _tokenId);
         require(allow, CANNOT_COMMIT);
@@ -960,7 +963,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         if (_condition.method == EvaluationMethod.SpecificToken) {
             // How many times has this token id been used to commit to offers in the group?
-            uint256 commitCount = lookups.conditionalCommitsByTokenId[_groupId][_tokenId];
+            uint256 commitCount = lookups.conditionalCommitsByTokenId[_tokenId][_groupId];
 
             require(commitCount < _condition.maxCommits, MAX_COMMITS_TOKEN_REACHED);
 
@@ -976,7 +979,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             if (allow) {
                 // Increment number of commits to the group for this token id if they are allowed to commit
-                lookups.conditionalCommitsByTokenId[_groupId][_tokenId] = ++commitCount;
+                lookups.conditionalCommitsByTokenId[_tokenId][_groupId] = ++commitCount;
             }
         } else if (_condition.method == EvaluationMethod.Threshold) {
             // How many times has this address committed to offers in the group?

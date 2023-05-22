@@ -536,6 +536,29 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
+     * @notice Gets offer and seller from protocol storage
+     *
+     * Reverts if:
+     * - Offer does not exist
+     * - Offer already voided
+     * - Seller assistant is not the caller
+     *
+     *  @param _offerId - the id of the offer to check
+     */
+    function getValidOfferAndSeller(
+        uint256 _offerId
+    ) internal view returns (Offer storage offer, Seller storage seller) {
+        // Get offer
+        offer = getValidOffer(_offerId);
+
+        // Get seller, we assume seller exists if offer exists
+        (, seller, ) = fetchSeller(offer.sellerId);
+
+        // Caller must be seller's assistant address
+        require(seller.assistant == msgSender(), NOT_ASSISTANT);
+    }
+
+    /**
      * @notice Gets the bundle id for a given offer id.
      *
      * @param _offerId - the offer id.
