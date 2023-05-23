@@ -5,15 +5,16 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    types: [opened, reopened, synchronize, ready_for_review]
+    types: [opened, reopened, synchronize, ready_for_review, drat]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.draft }}
+    runs-on:
+      ubuntu-latest
+      #   if: ${{ !github.event.pull_request.draft }}
     name: build
-    outputs: 
-      test-chunks:  ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
+    outputs:
+      test-chunks: ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
       test-chunk-ids: ${{ steps['set-test-chunk-ids'].outputs['test-chunk-ids'] }}
     steps:
       - name: Checkout repository
@@ -72,8 +73,8 @@ jobs:
         run: npm run build
       - name: Contract Sizing
         run: npm run size
-      - name: Unit Tests 
-        run: echo $CHUNKS | jq '.[${{ matrix.chunk }}] | .[] | @text' | xargs npx hardhat test 
+      - name: Unit Tests
+        run: echo $CHUNKS | jq '.[${{ matrix.chunk }}] | .[] | @text' | xargs npx hardhat test
         env:
           CHUNKS: ${{ needs.build.outputs['test-chunks'] }}
 
@@ -91,7 +92,7 @@ jobs:
         uses: actions/setup-node@v3.5.1
         with:
           node-version: 16.14.x
-          cache: 'npm'
+          cache: "npm"
       - name: Install Dependencies
         run: npm install
       - name: Prepare Environment
@@ -103,8 +104,9 @@ jobs:
 
   coverage:
     needs: build
-    runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.draft }}
+    runs-on:
+      ubuntu-latest
+      ##if: ${{ !github.event.pull_request.draft }}
     env:
       GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
     name: code coverage
@@ -140,6 +142,36 @@ jobs:
           echo "solidity code coverage is '$COVERAGE'"
           if (( $(echo "$SKIPPED > $MAX_SKIPPED" | bc -l) )); then echo "Fail: number of skipped statements '$SKIPPED' is higher than configured '$MAX_SKIPPED'" >&2; exit 1; fi
           echo "Number of skipped statements '$SKIPPED' is within configured '$MAX_SKIPPED'"
+report-coverage:
+  needs: coverage
+  runs-on: ubuntu-latest
+  env:
+    COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+  name: "report: coverage"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v1
+
+    - name: Setup node
+      uses: actions/setup-node@v1
+      with:
+        node-version: 16.14.x
+        cache: "npm"
+
+    - name: npm install
+      run: npm install
+
+    - name: Download code coverage results
+      uses: actions/download-artifact@v2
+      with:
+        name: code-coverage-report
+        path: coverage/
+
+    - name: Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: ./coverage/lcov.info
 
   deploy-dry-run:
     needs: build
@@ -166,19 +198,19 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.2
   analyze:
-      needs: build
-      runs-on: ubuntu-latest
-      permissions:
-        contents: read
-        security-events: write
-      steps:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v3.1.0
       - name: Setup node
         uses: actions/setup-node@v3.5.1
         with:
           node-version: 16.14.x
-          cache: 'npm'
+          cache: "npm"
       - name: Install Dependencies
         run: npm install
       - name: Prepare Environment
@@ -197,5 +229,3 @@ jobs:
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: ${{ steps.slither.outputs.sarif }}
-
-
