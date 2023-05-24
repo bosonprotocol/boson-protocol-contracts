@@ -5,16 +5,16 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    types: [opened, reopened, synchronize, ready_for_review, draft]
+    types: [opened, reopened, synchronize, ready_for_review]
 
 jobs:
   setup:
     runs-on: ubuntu-latest
-    name: setup
     if: ${{ !github.event.pull_request.draft }}
+    name: setup
     outputs:
-      test-chunks: ${{ steps.set-test-chunks.outputs.test-chunks }}
-      test-chunk-ids: ${{ steps.set-test-chunk-ids.outputs.test-chunk-ids }}
+      test-chunks: ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
+      test-chunk-ids: ${{ steps['set-test-chunk-ids'].outputs['test-chunk-ids'] }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3.1.0
@@ -29,34 +29,21 @@ jobs:
         run: |
           cp .env.example .env
       - run: npm run build
-      - name: Set Chunks
-        id: set-test-chunks
-        run: echo "test-chunks=$(cat test/util/test-chunks.txt | jq -c '.')" >> $GITHUB_ENV
-      - name: Set Chunk IDs
-        id: set-test-chunk-ids
+      - name: Lint
         run: |
-          echo "test-chunk-ids=$(echo $CHUNKS | jq -cM 'to_entries | map(.key)')" >> $GITHUB_ENV
-        env:
-          CHUNKS: ${{ steps.set-test-chunks.outputs.test-chunks }}
-
-  lint:
-    needs: setup
-    runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.draft }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3.1.0
-      - name: Setup node
-        uses: actions/setup-node@v3.5.1
-        with:
-          node-version: "16.14.x"
-          cache: "npm"
-      - run: npm install
-      - run: npm run check:contracts
-      - run: npm run check:scripts
+          npm run check:contracts
+          npm run check:scripts
       - name: Verify interface ids
         run: npm run natspec-interface-id
-
+      - id: set-test-chunks
+        name: Set Chunks
+        run: echo "test-chunks=$(jq -c '.' test/util/test-chunks.txt)" >> $GITHUB_OUTPUT
+      - id: set-test-chunk-ids
+        name: Set Chunk IDs
+        run: |
+          echo "test-chunk-ids=$( echo $CHUNKS | jq -cM 'to_entries | map(.key)')" >> $GITHUB_OUTPUT
+        env:
+          CHUNKS: ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
   test:
     needs: setup
     runs-on: ubuntu-latest
@@ -66,7 +53,7 @@ jobs:
     name: test (chunk ${{ matrix.chunk }})
     strategy:
       matrix:
-        chunk: ${{ fromJson(needs.build.outputs['test-chunk-ids']) }}
+        chunk: ${{ fromJson(needs.setup.outputs['test-chunk-ids']) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3.1.0
@@ -77,12 +64,18 @@ jobs:
           cache: "npm"
       - name: Install Dependencies
         run: npm install
+      - name: Prepare Environment
+        shell: bash
+        run: |
+          cp .env.example .env
+      - name: Compile Contracts
+        run: npm run build
       - name: Contract Sizing
         run: npm run size
       - name: Unit Tests
         run: echo $CHUNKS | jq '.[${{ matrix.chunk }}] | .[] | @text' | xargs npx hardhat test
         env:
-          CHUNKS: ${{ needs.build.outputs['test-chunks'] }}
+          CHUNKS: ${{ needs.setup.outputs['test-chunks'] }}
 
   integration-test:
     needs: setup
@@ -111,10 +104,10 @@ jobs:
   coverage:
     needs: setup
     if: ${{ !github.event.pull_request.draft }}
-    runs-on: ubuntu-latest
     env:
       GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
     name: code coverage
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3.1.0
@@ -129,8 +122,6 @@ jobs:
         shell: bash
         run: |
           cp .env.example .env
-      - name: Compile Contracts
-        run: npm run build
       - name: Code coverage
         run: npm run coverage
       - name: Upload code coverage results
@@ -147,6 +138,7 @@ jobs:
           echo "solidity code coverage is '$COVERAGE'"
           if (( $(echo "$SKIPPED > $MAX_SKIPPED" | bc -l) )); then echo "Fail: number of skipped statements '$SKIPPED' is higher than configured '$MAX_SKIPPED'" >&2; exit 1; fi
           echo "Number of skipped statements '$SKIPPED' is within configured '$MAX_SKIPPED'"
+
   report-coverage:
     needs: coverage
     runs-on: ubuntu-latest
@@ -155,10 +147,10 @@ jobs:
     name: "report: coverage"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3.1.0
 
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3.5.1
         with:
           node-version: 16.14.x
           cache: "npm"

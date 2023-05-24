@@ -64,8 +64,8 @@
     "manage-roles:polygon:mainnet": "npx hardhat manage-roles --network polygon --env prod >> logs/polygon.manage.roles.txt",
     "manage-roles:local": "npx hardhat manage-roles --network localhost >> logs/localhost.manage.roles.txt",
     "manage-roles:test": "npx hardhat manage-roles --network test --env test >> logs/test.manage.roles.txt",
-    "natspec-interface-id": "npx hardhat compile && node scripts/util/natspec-interfaceid.js",
-    "natspec-interface-id:fix": "npx hardhat compile && node scripts/util/natspec-interfaceid.js --fix",
+    "natspec-interface-id": "node scripts/util/natspec-interfaceid.js",
+    "natspec-interface-id:fix": "node scripts/util/natspec-interfaceid.js --fix",
     "estimate-limits": "npx hardhat clean && npx hardhat compile && npx hardhat estimate-limits"
   },
   "dependencies": {
