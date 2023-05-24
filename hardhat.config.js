@@ -180,9 +180,5 @@ module.exports = {
   },
   mocha: {
     timeout: 100000,
-    reporter: "mocha-multi-reporters",
-    reporterOptions: {
-      reporterEnabled: ["spec", "tap"],
-    },
   },
 };

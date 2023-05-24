@@ -2301,6 +2301,11 @@ describe("IBosonVoucher", function () {
       // Reset the accountId iterator
       accountId.next(true);
     });
+
+    it("should return 0 if the seller doesn't exist", async function () {
+      await bosonVoucher.connect(protocol).transferOwnership(rando.address);
+      expect(await bosonVoucher.getSellerId()).to.equal(0, "Invalid seller id returned");
+    });
   });
 
   context("callExternalContract()", function () {
