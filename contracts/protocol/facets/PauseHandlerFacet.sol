@@ -2,6 +2,7 @@
 pragma solidity 0.8.9;
 import "../../domain/BosonConstants.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import "../../domain/BosonConstants.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { ProtocolBase } from "../bases/OfferBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -28,7 +29,6 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      *
      * Reverts if:
      * - Caller does not have PAUSER role
-     * - No regions are specified
      * - Protocol is already paused
      * - A region is specified more than once
      *
@@ -38,13 +38,62 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
         // Cache protocol status for reference
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
 
-        // Make sure at least one region is specified
-        require(_regions.length > 0, NO_REGIONS_SPECIFIED);
-
         // Make sure the protocol isn't already paused
         require(status.pauseScenario == 0, ALREADY_PAUSED);
 
-        // Build the pause scenario by summing the supplied
+        togglePause(_regions, true);
+
+        // Notify watchers of state change
+        emit ProtocolPaused(_regions, msgSender());
+    }
+
+    /**
+     * @notice Unpauses the protocol.
+     *
+     * Emits a ProtocolUnpaused event if successful.
+     *
+     * Reverts if:
+     * - Caller does not have PAUSER role
+     * - Protocol is not currently paused
+     * - A region is specified more than once
+     */
+    function unpause(BosonTypes.PausableRegion[] calldata _regions) external onlyRole(PAUSER) nonReentrant {
+        // Cache protocol status for reference
+        ProtocolLib.ProtocolStatus storage status = protocolStatus();
+
+        // Make sure the protocol is already paused
+        require(status.pauseScenario > 0, NOT_PAUSED);
+
+        togglePause(_regions, false);
+
+        // Notify watchers of state change
+        emit ProtocolUnpaused(_regions, msgSender());
+    }
+
+    /**
+     * @notice Toggles pause/unpause for some or all of the protocol.
+     *
+     * Toggle all regions if none are specified.
+     *
+     * Reverts if:
+     * - A region is specified more than once
+     *
+     * @param _regions - an array of regions to pause/unpause. See: {BosonTypes.PausableRegion}
+     * @param paused - a boolean indicating whether to pause (true) or unpause (false)
+     */
+    function togglePause(BosonTypes.PausableRegion[] calldata _regions, bool paused) internal {
+        // Cache protocol status for reference
+        ProtocolLib.ProtocolStatus storage status = protocolStatus();
+
+        // Toggle all regions if none are specified.
+        if (_regions.length == 0) {
+            // Store the toggle scenario
+            status.pauseScenario = paused ? ALL_REGIONS_MASK : 0;
+
+            return;
+        }
+
+        // Build the toggle scenario by summing the supplied
         // enum values, first converted to powers of two
         uint8 enumVal;
         uint256 region;
@@ -59,37 +108,11 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
             require(used[enumVal] != region, REGION_DUPLICATED);
             used[enumVal] = region;
 
-            // Sum maskable region representation into scenario
-            scenario += region;
+            // Sum or subtract maskable region representation into/from scenario
+            scenario = paused ? scenario + region : scenario - region;
         }
 
-        // Store the pause scenario
+        // Store the toggle scenario
         status.pauseScenario = scenario;
-
-        // Notify watchers of state change
-        emit ProtocolPaused(_regions, msgSender());
-    }
-
-    /**
-     * @notice Unpauses the protocol.
-     *
-     * Emits a ProtocolUnpaused event if successful.
-     *
-     * Reverts if:
-     * - Caller does not have PAUSER role
-     * - Protocol is not currently paused
-     */
-    function unpause() external onlyRole(PAUSER) nonReentrant {
-        // Cache protocol status for reference
-        ProtocolLib.ProtocolStatus storage status = protocolStatus();
-
-        // Make sure the protocol is already paused
-        require(status.pauseScenario > 0, NOT_PAUSED);
-
-        // Clear the pause scenario
-        status.pauseScenario = 0;
-
-        // Notify watchers of state change
-        emit ProtocolUnpaused(msgSender());
     }
 }

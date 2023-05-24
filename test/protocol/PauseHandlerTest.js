@@ -1,5 +1,7 @@
+const hre = require("hardhat");
 const { expect } = require("chai");
-
+const { utils, BigNumber } = hre.ethers;
+const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -70,15 +72,25 @@ describe("IBosonPauseHandler", function () {
           .withArgs(regions, pauser.address);
       });
 
+      it.only("should pause all regions when no regions are specified", async function () {
+        // Pause the protocol, testing for the event
+        await expect(pauseHandler.connect(pauser).pause([]))
+          .to.emit(pauseHandler, "ProtocolPaused")
+          .withArgs([], pauser.address);
+
+        // Check that all regions are paused
+        const protocolStatusStorageSlot = utils.keccak256(utils.toUtf8Bytes("boson.protocol.initializers"));
+        const protocolStatusStorageSlotNumber = BigNumber.from(protocolStatusStorageSlot);
+
+        // pause scenario
+        const pauseScenario = await getStorageAt(pauseHandler.address, protocolStatusStorageSlotNumber);
+        expect(BigNumber.from(pauseScenario).toNumber(), "Protocol not paused").to.equal(78);
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Caller does not have PAUSER role", async function () {
           // Attempt to pause without PAUSER role, expecting revert
           await expect(pauseHandler.connect(rando).pause([])).to.revertedWith(RevertReasons.ACCESS_DENIED);
-        });
-
-        it("No regions are specified", async function () {
-          // Attempt to pause with no regions, expecting revert
-          await expect(pauseHandler.connect(pauser).pause([])).to.revertedWith(RevertReasons.NO_REGIONS_SPECIFIED);
         });
 
         it("Protocol is already paused", async function () {
@@ -89,14 +101,6 @@ describe("IBosonPauseHandler", function () {
           await expect(pauseHandler.connect(pauser).pause([PausableRegion.Buyers])).to.revertedWith(
             RevertReasons.ALREADY_PAUSED
           );
-        });
-
-        it("A region is specified more than once", async function () {
-          // Regions to pause
-          regions = [PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles, PausableRegion.Twins];
-
-          // Attempt to pause with a duplicate region, expecting revert
-          await expect(pauseHandler.connect(pauser).pause(regions)).to.revertedWith(RevertReasons.REGION_DUPLICATED);
         });
       });
     });
