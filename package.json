@@ -69,7 +69,7 @@
     "estimate-limits": "npx hardhat clean && npx hardhat compile && npx hardhat estimate-limits"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.8.1",
+    "@openzeppelin/contracts": "^4.9.0",
     "@openzeppelin/contracts-upgradeable": "4.7.1"
   },
   "devDependencies": {
