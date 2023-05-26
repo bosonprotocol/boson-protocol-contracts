@@ -9,7 +9,7 @@ import { IBosonPauseEvents } from "../events/IBosonPauseEvents.sol";
  *
  * @notice Handles pausing all or part of the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x9ddb8ca6
+ * The ERC-165 identifier for this interface is: 0x2903f9ff
  */
 interface IBosonPauseHandler is IBosonPauseEvents {
     /**
@@ -19,7 +19,6 @@ interface IBosonPauseHandler is IBosonPauseEvents {
      *
      * Reverts if:
      * - Caller does not have PAUSER role
-     * - Protocol is already paused
      * - A region is specified more than once
      *
      * @param _regions - an array of regions to pause. See: {BosonTypes.PausableRegion}

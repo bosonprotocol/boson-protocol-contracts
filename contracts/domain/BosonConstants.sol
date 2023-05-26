@@ -11,10 +11,16 @@ bytes32 constant FEE_COLLECTOR = keccak256("FEE_COLLECTOR"); // Role for collect
 
 // Revert Reasons: Pause related
 string constant REGION_DUPLICATED = "A region may only be specified once";
-string constant ALREADY_PAUSED = "Protocol is already paused";
 string constant NOT_PAUSED = "Protocol is not currently paused";
 string constant REGION_PAUSED = "This region of the protocol is currently paused";
-uint256 constant ALL_REGIONS_MASK = 78;
+
+// @dev a = first term, r = ratio, n = number of terms
+// S = a * (1 - r^n) / (1 - r)
+// S = 2**0 * (1 - 2**13) / (1 - 2)
+// S = 1 * (1 - 8192) / (1 - 2)
+// S = -8191 / -1 = 8191
+// this should be updated when adding new regions
+uint256 constant ALL_REGIONS_MASK = 8191;
 
 // Revert Reasons: General
 string constant INVALID_ADDRESS = "Invalid address";

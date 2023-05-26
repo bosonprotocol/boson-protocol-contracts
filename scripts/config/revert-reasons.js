@@ -9,9 +9,7 @@ exports.RevertReasons = {
   CAN_ONLY_REVOKE_SELF: "AccessControl: can only renounce roles for self",
 
   // Pause related
-  NO_REGIONS_SPECIFIED: "Must specify at least one region to pause",
   REGION_DUPLICATED: "A region may only be specified once",
-  ALREADY_PAUSED: "Protocol is already paused",
   NOT_PAUSED: "Protocol is not currently paused",
   REGION_PAUSED: "This region of the protocol is currently paused",
 
