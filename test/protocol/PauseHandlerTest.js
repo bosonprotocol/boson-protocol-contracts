@@ -142,14 +142,6 @@ describe("IBosonPauseHandler", function () {
           // Attempt to pause without PAUSER role, expecting revert
           await expect(pauseHandler.connect(rando).pause([])).to.revertedWith(RevertReasons.ACCESS_DENIED);
         });
-
-        it("Region is passed twice", async function () {
-          // Regions to pause
-          regions = [PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles, PausableRegion.Bundles];
-
-          // Attempt to pause with region passed twice, expecting revert
-          await expect(pauseHandler.connect(pauser).pause(regions)).to.revertedWith(RevertReasons.REGION_DUPLICATED);
-        });
       });
     });
 
@@ -213,17 +205,6 @@ describe("IBosonPauseHandler", function () {
         it("Protocol is not currently paused", async function () {
           // Attempt to unpause while not paused, expecting revert
           await expect(pauseHandler.connect(pauser).unpause([])).to.revertedWith(RevertReasons.NOT_PAUSED);
-        });
-
-        it("Region is passed twice", async function () {
-          regions = [PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles];
-
-          await pauseHandler.connect(pauser).pause(regions);
-
-          regions = [...regions, PausableRegion.Bundles];
-
-          // Attempt to pause with region passed twice, expecting revert
-          await expect(pauseHandler.connect(pauser).pause(regions)).to.revertedWith(RevertReasons.REGION_DUPLICATED);
         });
       });
     });

@@ -83,34 +83,29 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
         if (_regions.length == 0) {
             // Store the toggle scenario
             status.pauseScenario = _pause ? ALL_REGIONS_MASK : 0;
-
             return;
         }
 
-        // Build the toggle scenario by summing the supplied
-        // enum values, first converted to powers of two
-        uint8 enumVal;
         uint256 region;
-        uint256 scenario = status.pauseScenario;
+        uint256 incomingScenario;
 
-        uint256[] memory used = new uint256[](20); // arbitrarily a little more than # of regions
+        // Calculate the incoming scenario as the sum of individual regions
+        // Use "or" to get the correct value even if the same region is specified more than once
         for (uint256 i = 0; i < _regions.length; i++) {
             // Get enum value as power of 2
-            enumVal = uint8(_regions[i]);
-            region = 2 ** uint256(enumVal);
-
-            // Prevent duplicates
-            require(used[enumVal] != region, REGION_DUPLICATED);
-            used[enumVal] = region;
-
-            if (_pause && (scenario & region) == 0) {
-                scenario = scenario + region;
-            } else if (!_pause && (scenario & region) != 0) {
-                scenario = scenario - region;
-            }
+            region = 1 << uint256(_regions[i]);
+            incomingScenario |= region;
         }
 
         // Store the toggle scenario
-        status.pauseScenario = scenario;
+        if (_pause) {
+            // for pausing, just "or" the incoming scenario with the existing one
+            // equivalent to summation
+            status.pauseScenario |= incomingScenario;
+        } else {
+            // for unpausing, "and" the inverse of the incoming scenario with the existing one
+            // equivalent to subtraction
+            status.pauseScenario &= ~incomingScenario;
+        }
     }
 }

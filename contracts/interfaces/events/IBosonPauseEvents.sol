@@ -12,5 +12,5 @@ interface IBosonPauseEvents {
     // When array of regions is empty, all regions are paused
     event ProtocolPaused(BosonTypes.PausableRegion[] regions, address executedBy);
     // When array of regions is empty, all regions are unpaused
-    event ProtocolUnpaused(BosonTypes.PausableRegion[], address executedBy);
+    event ProtocolUnpaused(BosonTypes.PausableRegion[] regions, address executedBy);
 }
