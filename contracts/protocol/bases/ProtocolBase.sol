@@ -544,15 +544,14 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * - Seller assistant is not the caller
      *
      *  @param _offerId - the id of the offer to check
+     *  @return offer - the offer details. See {BosonTypes.Offer}
      */
-    function getValidOfferAndSeller(
-        uint256 _offerId
-    ) internal view returns (Offer storage offer, Seller storage seller) {
+    function getValidOfferWithSellerCheck(uint256 _offerId) internal view returns (Offer storage offer) {
         // Get offer
         offer = getValidOffer(_offerId);
 
         // Get seller, we assume seller exists if offer exists
-        (, seller, ) = fetchSeller(offer.sellerId);
+        (, Seller storage seller, ) = fetchSeller(offer.sellerId);
 
         // Caller must be seller's assistant address
         require(seller.assistant == msgSender(), NOT_ASSISTANT);

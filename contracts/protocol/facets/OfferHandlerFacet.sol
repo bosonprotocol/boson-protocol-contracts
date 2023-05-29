@@ -164,7 +164,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      */
     function voidOffer(uint256 _offerId) public override offersNotPaused nonReentrant {
         // Get offer. Make sure caller is assistant
-        (Offer storage offer, ) = getValidOfferAndSeller(_offerId);
+        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
 
         // Void the offer
         offer.voided = true;
@@ -214,7 +214,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      */
     function extendOffer(uint256 _offerId, uint256 _validUntilDate) public override offersNotPaused nonReentrant {
         // Make sure the caller is the assistant, offer exists and is not voided
-        (Offer storage offer, ) = getValidOfferAndSeller(_offerId);
+        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
 
         // Fetch the offer dates
         OfferDates storage offerDates = fetchOfferDates(_offerId);

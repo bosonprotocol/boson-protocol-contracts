@@ -49,7 +49,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
         for (uint256 i = 0; i < _group.offerIds.length; i++) {
             // make sure offer exists and belongs to the seller
-            getValidOfferAndSeller(_group.offerIds[i]);
+            getValidOfferWithSellerCheck(_group.offerIds[i]);
 
             // Offer should not belong to another group already
             (bool exist, ) = getGroupIdByOffer(_group.offerIds[i]);
@@ -180,7 +180,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         for (uint256 i = 0; i < _offerIds.length; i++) {
             uint256 offerId = _offerIds[i];
 
-            getValidOfferAndSeller(offerId);
+            getValidOfferWithSellerCheck(offerId);
 
             // Offer should not belong to another group already
             (bool exist, ) = getGroupIdByOffer(offerId);
