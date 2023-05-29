@@ -16,12 +16,12 @@ async function verifyOnBlockExplorer(contract) {
       await hre.run("verify:verify", {
         contract: "contracts/protocol/clients/proxy/BosonClientBeacon.sol:BosonClientBeacon",
         address: contract.address,
-        constructorArgs: contract.args,
+        constructorArguments: contract.args,
       });
     } else {
       await hre.run("verify:verify", {
         address: contract.address,
-        constructorArgs: contract.args,
+        constructorArguments: contract.args,
       });
     }
   } catch (e) {
