@@ -9,7 +9,7 @@ const Seller = require("../../scripts/domain/Seller");
 describe("Seller", function () {
   // Suite-wide scope
   let seller, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let accounts, id, assistant, admin, clerk, treasury, active;
+  let accounts, id, assistant, admin, clerk, treasury, active, metadataUri;
 
   beforeEach(async function () {
     // Get a list of accounts
@@ -22,18 +22,20 @@ describe("Seller", function () {
     // Required constructor params
     id = "78";
     active = true;
+    metadataUri = `https://ipfs.io/ipfs/seller1`;
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Seller instance", async function () {
       // Create a valid seller
-      seller = new Seller(id, assistant, admin, clerk, treasury, active);
+      seller = new Seller(id, assistant, admin, clerk, treasury, active, metadataUri);
       expect(seller.idIsValid()).is.true;
       expect(seller.assistantIsValid()).is.true;
       expect(seller.adminIsValid()).is.true;
       expect(seller.clerkIsValid()).is.true;
       expect(seller.treasuryIsValid()).is.true;
       expect(seller.activeIsValid()).is.true;
+      expect(seller.metadataUriIsValid()).is.true;
       expect(seller.isValid()).is.true;
     });
   });
@@ -41,7 +43,7 @@ describe("Seller", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid seller, then set fields in tests directly
-      seller = new Seller(id, assistant, admin, clerk, treasury, active);
+      seller = new Seller(id, assistant, admin, clerk, treasury, active, metadataUri);
       expect(seller.isValid()).is.true;
     });
 
@@ -181,12 +183,33 @@ describe("Seller", function () {
       expect(seller.activeIsValid()).is.true;
       expect(seller.isValid()).is.true;
     });
+    it("Always present, metadataUri must be a string", async function () {
+      // Invalid field value
+      seller.metadataUri = 12;
+      expect(seller.metadataUriIsValid()).is.false;
+      expect(seller.isValid()).is.false;
+
+      // Valid field value
+      seller.metadataUri = "zedzdeadbaby";
+      expect(seller.metadataUriIsValid()).is.true;
+      expect(seller.isValid()).is.true;
+
+      // Valid field value
+      seller.metadataUri = "https://ipfs.io/ipfs/QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+      expect(seller.metadataUriIsValid()).is.true;
+      expect(seller.isValid()).is.true;
+
+      // Valid field value
+      seller.tokenName = "";
+      expect(seller.metadataUriIsValid()).is.true;
+      expect(seller.isValid()).is.true;
+    });
   });
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid seller, then set fields in tests directly
-      seller = new Seller(id, assistant, admin, clerk, treasury, active);
+      seller = new Seller(id, assistant, admin, clerk, treasury, active, metadataUri);
       expect(seller.isValid()).is.true;
 
       // Get plain object
@@ -197,10 +220,11 @@ describe("Seller", function () {
         clerk,
         treasury,
         active,
+        metadataUri,
       };
 
       // Struct representation
-      struct = [id, assistant, admin, clerk, treasury, active];
+      struct = [id, assistant, admin, clerk, treasury, active, metadataUri];
     });
 
     context("👉 Static", async function () {

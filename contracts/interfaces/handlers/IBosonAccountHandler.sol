@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x1f891681
+ * The ERC-165 identifier for this interface is: 0x15335ed7
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -116,6 +116,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - AuthTokenType is Custom
+     * - No field has been updated or requested to be updated
      *
      * @param _seller - the fully populated seller struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -180,6 +181,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
      * - EscalationResponsePeriod is invalid
+     * - No field has been updated or requested to be updated
      *
      * @param _disputeResolver - the fully populated dispute resolver struct
      */

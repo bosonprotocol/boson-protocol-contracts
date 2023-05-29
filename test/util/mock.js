@@ -130,12 +130,28 @@ function mockDisputeResolver(assistantAddress, adminAddress, clerkAddress, treas
   );
 }
 
-function mockSeller(assistantAddress, adminAddress, clerkAddress, treasuryAddress, refreshModule) {
+function mockSeller(
+  assistantAddress,
+  adminAddress,
+  clerkAddress,
+  treasuryAddress,
+  active = true,
+  metadataUri = "",
+  { refreshModule } = {}
+) {
   if (refreshModule) {
     decache("../../scripts/domain/Seller.js");
     Seller = require("../../scripts/domain/Seller.js");
   }
-  return new Seller(accountId.next().value, assistantAddress, adminAddress, clerkAddress, treasuryAddress, true);
+  return new Seller(
+    accountId.next().value,
+    assistantAddress,
+    adminAddress,
+    clerkAddress,
+    treasuryAddress,
+    active,
+    metadataUri
+  );
 }
 
 function mockBuyer(wallet) {

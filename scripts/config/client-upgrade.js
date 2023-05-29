@@ -6,6 +6,6 @@ module.exports = {
     test: "0x69015912AA33720b842dCD6aC059Ed623F28d9f7",
     staging: "0x69015912AA33720b842dCD6aC059Ed623F28d9f7",
     mumbai: "0x69015912AA33720b842dCD6aC059Ed623F28d9f7",
-    polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
+    polygon: "0x86C80a8aa58e0A4fa09A69624c31Ab2a6CAD56b8",
   },
 };

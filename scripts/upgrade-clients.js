@@ -25,7 +25,7 @@ const Role = require("./domain/Role");
  * Currently script upgrades the only existing client - BosonVoucher.
  * If new clients are introduced, this script should be modified to get the list of clients to upgrade from the config.
  */
-async function main(env, clientConfig) {
+async function main(env, clientConfig, version) {
   // Bail now if hardhat network, unless the upgrade is tested
   if (network === "hardhat" && env !== "upgrade-test") process.exit();
 
@@ -90,7 +90,7 @@ async function main(env, clientConfig) {
   contracts = contracts.filter((i) => i.name !== "BosonVoucher Logic");
   deploymentComplete("BosonVoucher Logic", bosonVoucherImplementation.address, clientImplementationArgs, "", contracts);
 
-  const contractsPath = await writeContracts(contracts, env);
+  const contractsPath = await writeContracts(contracts, env, version);
   console.log(divider);
   console.log(`✅ Contracts written to ${contractsPath}`);
   console.log(divider);

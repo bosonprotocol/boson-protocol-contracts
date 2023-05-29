@@ -1,6 +1,6 @@
 {
   "name": "@bosonprotocol/boson-protocol-contracts",
-  "version": "2.2.0-rc.4",
+  "version": "2.2.1",
   "description": "Boson Protocol core exchange mechanism",
   "author": "Boson Protocol Maintainers",
   "license": "GPL-3.0-or-later",
@@ -69,8 +69,8 @@
     "estimate-limits": "npx hardhat clean && npx hardhat compile && npx hardhat estimate-limits"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.8.1",
-    "@openzeppelin/contracts-upgradeable": "4.7.1"
+    "@openzeppelin/contracts": "^4.9.0",
+    "@openzeppelin/contracts-upgradeable": "4.8.3"
   },
   "devDependencies": {
     "@bosonprotocol/solidoc": "3.0.3",

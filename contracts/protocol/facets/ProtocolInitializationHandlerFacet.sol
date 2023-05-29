@@ -92,12 +92,16 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             if (_version == bytes32("2.2.0")) {
                 initV2_2_0(_initializationData);
             }
+            if (_version == bytes32("2.2.1")) {
+                initV2_2_1();
+            }
         }
 
         removeInterfaces(_interfacesToRemove);
         addInterfaces(_interfacesToAdd);
 
         status.version = _version;
+
         emit ProtocolInitialized(string(abi.encodePacked(_version)));
     }
 
@@ -117,6 +121,14 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         require(_maxPremintedVouchers != 0, VALUE_ZERO_NOT_ALLOWED);
         protocolLimits().maxPremintedVouchers = _maxPremintedVouchers;
         emit MaxPremintedVouchersChanged(_maxPremintedVouchers, msgSender());
+    }
+
+    /**
+     * @notice Initializes the version 2.2.0.
+     */
+    function initV2_2_1() internal view {
+        // Current version must be 2.2.0
+        require(protocolStatus().version == bytes32("2.2.0"), WRONG_CURRENT_VERSION);
     }
 
     /**

@@ -3,8 +3,9 @@ const _ = require("lodash");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { keccak256 } = ethers.utils;
+const { keccak256, formatBytes32String } = ethers.utils;
 const AuthToken = require("../../scripts/domain/AuthToken");
+const { getMetaTransactionsHandlerFacetInitArgs } = require("../../scripts/config/facet-deploy.js");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Role = require("../../scripts/domain/Role");
 const Bundle = require("../../scripts/domain/Bundle");
@@ -44,16 +45,41 @@ const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Agent = require("../../scripts/domain/Agent");
 const Buyer = require("../../scripts/domain/Buyer");
+const { tagsByVersion } = require("../upgrade/00_config");
 
 // Common vars
 const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
 let rando;
-let preUpgradeInterfaceIds;
+let preUpgradeInterfaceIds, preUpgradeVersions;
+let facets, versionTags;
+
+function getVersionsBeforeTarget(versions, targetVersion) {
+  const versionsBefore = versions.filter((v, index, arr) => {
+    if (v === "v2.1.0" || v === "latest") return false;
+    if (v === targetVersion) {
+      arr.splice(index + 1); // Truncate array after the target version
+      return false; //
+    }
+    return true;
+  });
+
+  return versionsBefore.map((version) => {
+    // Remove "v" prefix and "-rc.${number}" suffix
+    return formatBytes32String(version.replace(/^v/, "").replace(/-rc\.\d+$/, ""));
+  });
+}
 
 // deploy suite and return deployed contracts
-async function deploySuite(deployer, tag, scriptsTag) {
-  const facets = await getFacets();
+async function deploySuite(deployer, newVersion) {
+  // Cache config data
+  versionTags = tagsByVersion[newVersion];
+  facets = await getFacets();
+
   // checkout old version
+  const { oldVersion: tag, deployScript: scriptsTag } = versionTags;
+
+  console.log(`Fetching tags`);
+  shell.exec(`git fetch --force --tags origin`);
   console.log(`Checking out version ${tag}`);
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`git checkout ${tag} contracts`);
@@ -63,8 +89,18 @@ async function deploySuite(deployer, tag, scriptsTag) {
     shell.exec(`git checkout ${scriptsTag} scripts`);
   }
 
+  const deployConfig = facets.deploy[tag];
+
+  if (!deployConfig) {
+    throw new Error(`No deploy config found for tag ${tag}`);
+  }
+
   // run deploy suite, which automatically compiles the contracts
-  await hre.run("deploy-suite", { env: "upgrade-test", facetConfig: JSON.stringify(facets.deploy[tag]) });
+  await hre.run("deploy-suite", {
+    env: "upgrade-test",
+    facetConfig: JSON.stringify(deployConfig),
+    version: tag.replace(/^v/, ""),
+  });
 
   // Read contract info from file
   const chainId = (await hre.ethers.provider.getNetwork()).chainId;
@@ -97,6 +133,10 @@ async function deploySuite(deployer, tag, scriptsTag) {
   const metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamondAddress);
   const configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamondAddress);
   const ERC165Facet = await ethers.getContractAt("ERC165Facet", protocolDiamondAddress);
+  const protocolInitializationHandler = await ethers.getContractAt(
+    "IBosonProtocolInitializationHandler",
+    protocolDiamondAddress
+  );
 
   // create mock token for auth
   const [mockAuthERC721Contract] = await deployMockTokens(["Foreign721"]);
@@ -123,6 +163,7 @@ async function deploySuite(deployer, tag, scriptsTag) {
       pauseHandler,
       metaTransactionsHandler,
       ERC165Facet,
+      protocolInitializationHandler,
     },
     mockContracts: {
       mockAuthERC721Contract,
@@ -137,9 +178,15 @@ async function deploySuite(deployer, tag, scriptsTag) {
 
 // upgrade the suite to new version and returns handlers with upgraded interfaces
 // upgradedInterfaces is object { handlerName : "interfaceName"}
-async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scriptsTag, overrideFacetConfig) {
+async function upgradeSuite(protocolDiamondAddress, upgradedInterfaces, overrideFacetConfig) {
+  if (!versionTags) {
+    throw new Error("Version tags not cached");
+  }
+  const { newVersion: tag, upgradeScript: scriptsTag } = versionTags;
+
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`rm -rf scripts/*`);
+
   if (scriptsTag) {
     console.log(`Checking out scripts on version ${scriptsTag}`);
     shell.exec(`git checkout ${scriptsTag} scripts`);
@@ -158,7 +205,8 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scr
     shell.exec(`git checkout HEAD contracts`);
   }
 
-  const facets = await getFacets();
+  if (!facets) facets = await getFacets();
+
   let facetConfig = facets.upgrade[tag] || facets.upgrade["latest"];
   if (overrideFacetConfig) {
     facetConfig = _.merge(facetConfig, overrideFacetConfig);
@@ -181,19 +229,15 @@ async function upgradeSuite(tag, protocolDiamondAddress, upgradedInterfaces, scr
 }
 
 // upgrade the clients to new version
-async function upgradeClients(tag) {
+async function upgradeClients() {
   // Upgrade Clients
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`git checkout HEAD scripts`);
-  if (tag) {
-    // checkout the new tag
-    console.log(`Checking out version ${tag}`);
-    shell.exec(`git checkout ${tag} contracts`);
-  } else {
-    // if tag was not created yet, use the latest code
-    console.log(`Checking out latest code`);
-    shell.exec(`git checkout HEAD contracts`);
-  }
+  const tag = versionTags.newVersion;
+
+  // checkout the new tag
+  console.log(`Checking out version ${tag}`);
+  shell.exec(`git checkout ${tag} contracts`);
 
   await hre.run("compile");
   // Mock forwarder to test metatx
@@ -208,7 +252,11 @@ async function upgradeClients(tag) {
   };
 
   // Upgrade clients
-  await hre.run("upgrade-clients", { env: "upgrade-test", clientConfig: JSON.stringify(clientConfig) });
+  await hre.run("upgrade-clients", {
+    env: "upgrade-test",
+    clientConfig: JSON.stringify(clientConfig),
+    newVersion: tag.replace("v", ""),
+  });
 
   return forwarder;
 }
@@ -238,7 +286,7 @@ async function populateProtocolContract(
     twinHandler,
   },
   { mockToken, mockConditionalToken, mockAuthERC721Contract, mockTwinTokens, mockTwin20, mockTwin1155 },
-  version
+  isBefore = false
 ) {
   let DRs = [];
   let sellers = [];
@@ -318,7 +366,7 @@ async function populateProtocolContract(
           sellerAllowList,
         });
 
-        if (versionsWithActivateDRFunction.includes(version)) {
+        if (versionsWithActivateDRFunction.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
           //ADMIN role activates Dispute Resolver
           await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
         }
@@ -685,8 +733,12 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
   for (const account of accounts) {
     const id = account.id;
 
-    sellerState.push(await getSeller(accountHandlerRando, id, { getBy: "id" }));
     DRsState.push(await getDisputeResolver(accountHandlerRando, id, { getBy: "id" }));
+    try {
+      sellerState.push(await getSeller(accountHandlerRando, id, { getBy: "id" }));
+    } catch (e) {
+      console.log(e);
+    }
     agentsState.push(await getAgent(accountHandlerRando, id));
     buyersState.push(await getBuyer(accountHandlerRando, id));
 
@@ -962,15 +1014,16 @@ async function getMetaTxContractState() {
 
 async function getMetaTxPrivateContractState(protocolDiamondAddress) {
   /*
-    ProtocolMetaTxInfo storage layout
-
-    #0 [ currentSenderAddress + isMetaTransaction ]
-    #1 [ domain separator ]
-    #2 [ ] // placeholder for usedNonce
-    #3 [ cachedChainId ]
-    #4 [ ] // placeholder for inputType
-    #5 [ ] // placeholder for hashInfo
-    */
+        ProtocolMetaTxInfo storage layout
+    
+        #0 [ currentSenderAddress + isMetaTransaction ]
+        #1 [ domain separator ]
+        #2 [ ] // placeholder for usedNonce
+        #3 [ cachedChainId ]
+        #4 [ ] // placeholder for inputType
+        #5 [ ] // placeholder for hashInfo
+        #6 [ ] // placeholder for isAllowlisted
+        */
 
   // starting slot
   const metaTxStorageSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.metaTransactions"));
@@ -1024,18 +1077,47 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
       functionPointer: await getStorageAt(protocolDiamondAddress, ethers.BigNumber.from(storageSlot).add(1)),
     });
   }
+  const isAllowlistedState = {};
 
-  return { inTransactionInfo, domainSeparator, cachedChainId, inputTypesState, hashInfoState };
+  const facets = [
+    "AccountHandlerFacet",
+    "SellerHandlerFacet",
+    "BuyerHandlerFacet",
+    "DisputeResolverHandlerFacet",
+    "AgentHandlerFacet",
+    "BundleHandlerFacet",
+    "DisputeHandlerFacet",
+    "ExchangeHandlerFacet",
+    "FundsHandlerFacet",
+    "GroupHandlerFacet",
+    "OfferHandlerFacet",
+    "TwinHandlerFacet",
+    "PauseHandlerFacet",
+    "MetaTransactionsHandlerFacet",
+    "OrchestrationHandlerFacet1",
+    "OrchestrationHandlerFacet2",
+  ];
+
+  const selectors = await getMetaTransactionsHandlerFacetInitArgs(facets);
+
+  for (const selector of Object.values(selectors)) {
+    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber.add("6"), selector, paddingType.START);
+    isAllowlistedState[selector] = await getStorageAt(protocolDiamondAddress, storageSlot);
+  }
+
+  return { inTransactionInfo, domainSeparator, cachedChainId, inputTypesState, hashInfoState, isAllowlistedState };
 }
 
 async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
   /*
-    ProtocolStatus storage layout
-
-    #0 [ pauseScenario ]
-    #1 [ reentrancyStatus ]
-    #2 [ ] // placeholder for initializedInterfaces
-    */
+        ProtocolStatus storage layout
+    
+        #0 [ pauseScenario ]
+        #1 [ reentrancyStatus ]
+        #2 [ ] // placeholder for initializedInterfaces
+        #3 [ ] // placeholder for initializedVersions
+        #4 [ version ] - not here as should be updated one very upgrade
+        */
 
   // starting slot
   const protocolStatusStorageSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.initializers"));
@@ -1045,7 +1127,7 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
   const pauseScenario = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber.add("0"));
 
   // reentrancy status
-  // defualt: NOT_ENTERED = 1
+  // default: NOT_ENTERED = 1
   const reentrancyStatus = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber.add("1"));
 
   // initializedInterfaces
@@ -1064,7 +1146,17 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
     initializedInterfacesState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
   }
 
-  return { pauseScenario, reentrancyStatus, initializedInterfacesState };
+  if (!preUpgradeVersions) {
+    preUpgradeVersions = getVersionsBeforeTarget(Object.keys(facets.upgrade), versionTags.newVersion);
+  }
+
+  const initializedVersionsState = [];
+  for (const version of preUpgradeVersions) {
+    const storageSlot = getMappingStoragePosition(protocolStatusStorageSlotNumber.add("3"), version, paddingType.END);
+    initializedVersionsState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
+  }
+
+  return { pauseScenario, reentrancyStatus, initializedInterfacesState, initializedVersionsState };
 }
 
 async function getProtocolLookupsPrivateContractState(
@@ -1073,42 +1165,42 @@ async function getProtocolLookupsPrivateContractState(
   { sellers, DRs, agents, buyers, offers, groups }
 ) {
   /*
-    ProtocolLookups storage layout
-
-    Variables marked with X have an external getter and are not handled here
-    #0  [ ] // placeholder for exchangeIdsByOffer
-    #1  [X] // placeholder for bundleIdByOffer
-    #2  [X] // placeholder for bundleIdByTwin
-    #3  [ ] // placeholder for groupIdByOffer
-    #4  [X] // placeholder for agentIdByOffer
-    #5  [X] // placeholder for sellerIdByAssistant
-    #6  [X] // placeholder for sellerIdByAdmin
-    #7  [X] // placeholder for sellerIdByClerk
-    #8  [ ] // placeholder for buyerIdByWallet
-    #9  [X] // placeholder for disputeResolverIdByAssistant
-    #10 [X] // placeholder for disputeResolverIdByAdmin
-    #11 [X] // placeholder for disputeResolverIdByClerk
-    #12 [ ] // placeholder for disputeResolverFeeTokenIndex
-    #13 [ ] // placeholder for agentIdByWallet
-    #14 [X] // placeholder for availableFunds
-    #15 [X] // placeholder for tokenList
-    #16 [ ] // placeholder for tokenIndexByAccount
-    #17 [ ] // placeholder for cloneAddress
-    #18 [ ] // placeholder for voucherCount
-    #19 [ ] // placeholder for conditionalCommitsByAddress
-    #20 [X] // placeholder for authTokenContracts
-    #21 [X] // placeholder for sellerIdByAuthToken
-    #22 [ ] // placeholder for twinRangesBySeller
-    #23 [ ] // placeholder for twinIdsByTokenAddressAndBySeller
-    #24 [X] // placeholder for twinReceiptsByExchange
-    #25 [X] // placeholder for allowedSellers
-    #26 [ ] // placeholder for allowedSellerIndex
-    #27 [X] // placeholder for exchangeCondition
-    #28 [ ] // placeholder for offerIdIndexByGroup
-    #29 [ ] // placeholder for pendingAddressUpdatesBySeller
-    #30 [ ] // placeholder for pendingAuthTokenUpdatesBySeller
-    #31 [ ] // placeholder for pendingAddressUpdatesByDisputeResolver
-    */
+        ProtocolLookups storage layout
+    
+        Variables marked with X have an external getter and are not handled here
+        #0  [ ] // placeholder for exchangeIdsByOffer
+        #1  [X] // placeholder for bundleIdByOffer
+        #2  [X] // placeholder for bundleIdByTwin
+        #3  [ ] // placeholder for groupIdByOffer
+        #4  [X] // placeholder for agentIdByOffer
+        #5  [X] // placeholder for sellerIdByAssistant
+        #6  [X] // placeholder for sellerIdByAdmin
+        #7  [X] // placeholder for sellerIdByClerk
+        #8  [ ] // placeholder for buyerIdByWallet
+        #9  [X] // placeholder for disputeResolverIdByAssistant
+        #10 [X] // placeholder for disputeResolverIdByAdmin
+        #11 [X] // placeholder for disputeResolverIdByClerk
+        #12 [ ] // placeholder for disputeResolverFeeTokenIndex
+        #13 [ ] // placeholder for agentIdByWallet
+        #14 [X] // placeholder for availableFunds
+        #15 [X] // placeholder for tokenList
+        #16 [ ] // placeholder for tokenIndexByAccount
+        #17 [ ] // placeholder for cloneAddress
+        #18 [ ] // placeholder for voucherCount
+        #19 [ ] // placeholder for conditionalCommitsByAddress
+        #20 [X] // placeholder for authTokenContracts
+        #21 [X] // placeholder for sellerIdByAuthToken
+        #22 [ ] // placeholder for twinRangesBySeller
+        #23 [ ] // placeholder for twinIdsByTokenAddressAndBySeller
+        #24 [X] // placeholder for twinReceiptsByExchange
+        #25 [X] // placeholder for allowedSellers
+        #26 [ ] // placeholder for allowedSellerIndex
+        #27 [X] // placeholder for exchangeCondition
+        #28 [ ] // placeholder for offerIdIndexByGroup
+        #29 [ ] // placeholder for pendingAddressUpdatesBySeller
+        #30 [ ] // placeholder for pendingAuthTokenUpdatesBySeller
+        #31 [ ] // placeholder for pendingAddressUpdatesByDisputeResolver
+        */
 
   // starting slot
   const protocolLookupsSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.lookups"));
@@ -1434,7 +1526,7 @@ async function populateVoucherContract(
   { accountHandler, exchangeHandler, offerHandler, fundsHandler },
   { mockToken },
   existingEntities,
-  version
+  isBefore = false
 ) {
   let DR;
   let sellers = [];
@@ -1512,14 +1604,16 @@ async function populateVoucherContract(
             sellerAllowList,
           };
 
-          if (versionsWithActivateDRFunction.includes(version)) {
+          if (versionsWithActivateDRFunction.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
             //ADMIN role activates Dispute Resolver
             await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
           }
           break;
         }
         case entityType.SELLER: {
-          const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address, true);
+          const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address, true, undefined, {
+            refreshModule: true,
+          });
           const id = (seller.id = nextAccountId.toString());
           let authToken = mockAuthToken();
 

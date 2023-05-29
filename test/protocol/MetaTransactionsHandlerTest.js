@@ -282,7 +282,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         message.from = assistant.address;
         message.contractAddress = accountHandler.address;
         message.functionName =
-          "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint256))";
+          "createSeller((uint256,address,address,address,address,bool,string),(uint256,uint8),(string,uint256))";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -398,9 +398,11 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       it("after initialization all state modifying functions should be allowlisted", async function () {
-        const stateModifyingFunctionsHashes = await getStateModifyingFunctionsHashes(facetNames, [
+        const stateModifyingFunctionsClosure = getStateModifyingFunctionsHashes(facetNames, [
           "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)",
         ]);
+        const stateModifyingFunctionsHashes = await stateModifyingFunctionsClosure();
+
         // Functions should be enabled
         for (const func of stateModifyingFunctionsHashes) {
           expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.true;
@@ -450,9 +452,10 @@ describe("IBosonMetaTransactionsHandler", function () {
 
       it("after initialization all state modifying functions should be allowlisted", async function () {
         // Get list of state modifying functions
-        const stateModifyingFunctions = (await getStateModifyingFunctions(facetNames)).filter(
-          (fn) => fn != "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"
-        );
+        const stateModifyingFunctions = await getStateModifyingFunctions(facetNames, [
+          "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)",
+          "initialize()",
+        ]);
 
         for (const func of stateModifyingFunctions) {
           expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.true;
@@ -524,7 +527,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.from = assistant.address;
           message.contractAddress = accountHandler.address;
           message.functionName =
-            "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint256))";
+            "createSeller((uint256,address,address,address,address,bool,string),(uint256,uint8),(string,uint256))";
         });
 
         it("Should emit MetaTransactionExecuted event and update state", async () => {

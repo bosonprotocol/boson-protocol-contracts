@@ -12,15 +12,30 @@ const { populateProtocolContract, getProtocolContractState } = require("../util/
 function getGenericContext(
   deployer,
   protocolDiamondAddress,
-  protocolContracts,
+  contractsBefore,
+  contractsAfter,
   mockContracts,
   protocolContractState,
+  protocolContractStateAfterUpgrade,
   preUpgradeEntities,
   snapshot,
-  newVersion
+  includeTests = [
+    "accountContractState",
+    "offerContractState",
+    "exchangeContractState",
+    "bundleContractState",
+    "configContractState",
+    "disputeContractState",
+    "fundsContractState",
+    "groupContractState",
+    "twinContractState",
+    "metaTxPrivateContractState",
+    "protocolStatusPrivateContractState",
+    "protocolLookupsPrivateContractState",
+  ]
 ) {
   let postUpgradeEntities;
-  let { exchangeHandler, offerHandler, fundsHandler, disputeHandler } = protocolContracts;
+  let { exchangeHandler, offerHandler, fundsHandler, disputeHandler } = contractsBefore;
   let { mockToken } = mockContracts;
 
   const genericContextFunction = async function () {
@@ -40,52 +55,30 @@ function getGenericContext(
 
     // Protocol state
     context("📋 Right After upgrade", async function () {
-      it("State is not affected directly after the update", async function () {
-        // Get protocol state after the upgrade
-        let protocolContractStateAfterUpgrade = await getProtocolContractState(
-          protocolDiamondAddress,
-          protocolContracts,
-          mockContracts,
-          preUpgradeEntities
-        );
-
-        if (newVersion == "v2.2.0") {
-          // Meta transactions private state was changed on v2.2.0 and should be tested separately
-          // We need to remove the old state from the protocol state
-          delete protocolContractStateAfterUpgrade.metaTxPrivateContractState;
-          delete protocolContractState.metaTxPrivateContractState;
-
-          // Operator has changed to assistant so we need to test separately
-          delete protocolContractState.accountContractState.DRsState;
-          delete protocolContractStateAfterUpgrade.accountContractState.DRsState;
-          delete protocolContractState.accountContractState.sellerState;
-          delete protocolContractStateAfterUpgrade.accountContractState.sellerState;
-          delete protocolContractState.accountContractState.sellerByAddressState;
-          delete protocolContractStateAfterUpgrade.accountContractState.sellerByAddressState;
-          delete protocolContractState.accountContractState.sellerByAuthTokenState;
-          delete protocolContractStateAfterUpgrade.accountContractState.sellerByAuthTokenState;
-        }
-
-        assert.deepEqual(protocolContractState, protocolContractStateAfterUpgrade);
-      });
+      for (const test in includeTests) {
+        it(`State of ${test} is not affected`, async function () {
+          assert.deepEqual(protocolContractState[test], protocolContractStateAfterUpgrade[test]);
+        });
+      }
     });
 
     // Create new protocol entities. Existing data should not be affected
     context("📋 New data after the upgrade do not corrupt the data from before the upgrade", async function () {
-      it("State is not affected", async function () {
+      let protocolContractStateAfterUpgradeAndActions;
+
+      before(async function () {
         postUpgradeEntities = await populateProtocolContract(
           deployer,
           protocolDiamondAddress,
-          protocolContracts,
-          mockContracts,
-          newVersion
+          contractsAfter,
+          mockContracts
         );
 
         // Get protocol state after the upgrade
         // First get the data that should be in location of old data
-        const protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(
+        protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(
           protocolDiamondAddress,
-          protocolContracts,
+          contractsAfter,
           mockContracts,
           preUpgradeEntities
         );
@@ -143,30 +136,13 @@ function getGenericContext(
         delete protocolContractState.offerContractState.nextOfferId;
         delete protocolContractState.twinContractState.nextTwinId;
         delete protocolContractState.bundleContractState.nextBundleId;
-
-        if (newVersion == "v2.2.0") {
-          // Meta transactions private state was changed on v2.2.0 and should be tested separately
-          // We need to remove the old state from the protocol state
-          delete protocolContractStateAfterUpgradeAndActions.metaTxPrivateContractState;
-          delete protocolContractState.metaTxPrivateContractState;
-
-          // Operator has changed to assistant so we need to test separately
-          delete protocolContractState.accountContractState.DRsState;
-          delete protocolContractStateAfterUpgradeAndActions.accountContractState.DRsState;
-          delete protocolContractState.accountContractState.sellerState;
-          delete protocolContractStateAfterUpgradeAndActions.accountContractState.sellerState;
-          delete protocolContractState.accountContractState.sellerByAddressState;
-          delete protocolContractStateAfterUpgradeAndActions.accountContractState.sellerByAddressState;
-          delete protocolContractState.accountContractState.sellerByAuthTokenState;
-          delete protocolContractStateAfterUpgradeAndActions.accountContractState.sellerByAuthTokenState;
-        }
-
-        assert.deepEqual(
-          protocolContractState,
-          protocolContractStateAfterUpgradeAndActions,
-          "state mismatch after upgrade"
-        );
       });
+
+      for (const test of includeTests) {
+        it(`State of ${test} is not affected`, async function () {
+          assert.deepEqual(protocolContractState[test], protocolContractStateAfterUpgradeAndActions[test]);
+        });
+      }
     });
 
     // Test that offers and exchanges from before the upgrade can normally be used
@@ -337,6 +313,7 @@ function getGenericContext(
       });
     });
   };
+
   return genericContextFunction;
 }
 

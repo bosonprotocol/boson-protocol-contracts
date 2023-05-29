@@ -128,6 +128,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         seller.clerk = _seller.clerk;
         seller.treasury = _seller.treasury;
         seller.active = _seller.active;
+        seller.metadataUri = _seller.metadataUri;
 
         // Auth token passed in
         if (_authToken.tokenType != AuthTokenType.None) {
