@@ -50,7 +50,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             hashDisputeResolutionDetails
         );
 
-        setAllowlistedFunctions(_functionNameHashes, true);
+        setAllowlistedFunctionsInternal(_functionNameHashes, true);
     }
 
     /**
@@ -331,15 +331,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes32[] calldata _functionNameHashes,
         bool _isAllowlisted
     ) public override onlyRole(ADMIN) {
-        ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
-
-        // set new values
-        for (uint256 i = 0; i < _functionNameHashes.length; i++) {
-            pmti.isAllowlisted[_functionNameHashes[i]] = _isAllowlisted;
-        }
-
-        // Notify external observers
-        emit FunctionsAllowlisted(_functionNameHashes, _isAllowlisted, msgSender());
+        setAllowlistedFunctionsInternal(_functionNameHashes, _isAllowlisted);
     }
 
     /**
@@ -360,5 +352,25 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      */
     function isFunctionAllowlisted(string calldata _functionName) external view override returns (bool isAllowlisted) {
         return protocolMetaTxInfo().isAllowlisted[keccak256(abi.encodePacked(_functionName))];
+    }
+
+    /**
+     * @notice Internal function that manages allow list of functions that can be executed using metatransactions.
+     *
+     * Emits a FunctionsAllowlisted event if successful.
+     *
+     * @param _functionNameHashes - a list of hashed function names (keccak256)
+     * @param _isAllowlisted - new allowlist status
+     */
+    function setAllowlistedFunctionsInternal(bytes32[] calldata _functionNameHashes, bool _isAllowlisted) private {
+        ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
+
+        // set new values
+        for (uint256 i = 0; i < _functionNameHashes.length; i++) {
+            pmti.isAllowlisted[_functionNameHashes[i]] = _isAllowlisted;
+        }
+
+        // Notify external observers
+        emit FunctionsAllowlisted(_functionNameHashes, _isAllowlisted, msgSender());
     }
 }

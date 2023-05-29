@@ -1,7 +1,7 @@
 {
   "_format": "hh-sol-artifact-1",
-  "contractName": "IBosonConfigEvents",
-  "sourceName": "contracts/interfaces/events/IBosonConfigEvents.sol",
+  "contractName": "IBosonProtocolInitializationHandler",
+  "sourceName": "contracts/interfaces/handlers/IBosonProtocolInitializationHandler.sol",
   "abi": [
     {
       "anonymous": false,
@@ -412,6 +412,19 @@
       "anonymous": false,
       "inputs": [
         {
+          "indexed": false,
+          "internalType": "string",
+          "name": "version",
+          "type": "string"
+        }
+      ],
+      "name": "ProtocolInitialized",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
           "indexed": true,
           "internalType": "address",
           "name": "tokenAddress",
@@ -464,6 +477,19 @@
       ],
       "name": "VoucherBeaconAddressChanged",
       "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "getVersion",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "version",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
     }
   ],
   "bytecode": "0x",
