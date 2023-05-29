@@ -804,6 +804,37 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     twinReceipt.amount = twin.amount;
                     twinReceipt.tokenType = twin.tokenType;
 
+                    if (twin.tokenType == TokenType.NonFungibleToken) {
+                        // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
+                        TokenRange[] storage twinRanges = lookups.twinRangesBySeller[seller.id][twin.tokenAddress];
+
+                        uint256 lastIndex = twinRanges.length - 1;
+                        // Find the range that contains the twin
+                        for (uint256 j = 0; j <= lastIndex; j++) {
+                            if (twinRanges[j].start <= twin.tokenId && twinRanges[j].end >= twin.tokenId) {
+                                // If twin is the last one in the range, remove the range
+                                if (twinRanges[j].end == twin.tokenId) {
+                                    // If not removing last element, move the last to the removed index
+                                    if (j != lastIndex) {
+                                        twinRanges[j] = twinRanges[lastIndex];
+                                    }
+
+                                    // Remove last element
+                                    twinRanges.pop();
+                                } else {
+                                    // If twin has limited supply
+                                    if (twin.supplyAvailable != type(uint256).max) {
+                                        // Reduce end property
+                                        twinRanges[j].end--;
+                                    } else {
+                                        // Otherwise, increase start property
+                                        twinRanges[j].start++;
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
                     emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 }
             }
