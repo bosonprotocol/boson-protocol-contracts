@@ -27,10 +27,10 @@ abstract contract BeaconClientBase is BosonTypes {
      *
      * See: {AccessController.hasRole}
      *
-     * @param role - the role to check
+     * @param _role - the role to check
      */
-    modifier onlyRole(bytes32 role) {
-        require(BeaconClientLib.hasRole(role), ACCESS_DENIED);
+    modifier onlyRole(bytes32 _role) {
+        require(BeaconClientLib.hasRole(_role), ACCESS_DENIED);
         _;
     }
 
