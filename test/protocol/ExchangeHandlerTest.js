@@ -32,7 +32,11 @@ const {
   mockBuyer,
   accountId,
 } = require("../util/mock");
+
+const { keccak256 } = ethers.utils;
 const {
+  getMappingStoragePosition,
+  paddingType,
   getEvent,
   setNextBlockTimestamp,
   calculateVoucherExpiry,
@@ -46,6 +50,7 @@ const {
 } = require("../util/utils.js");
 const { oneWeek, oneMonth } = require("../util/constants");
 const { FundsList } = require("../../scripts/domain/Funds");
+const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
 
 /**
@@ -2429,6 +2434,36 @@ describe("IBosonExchangeHandler", function () {
 
           const [, twin] = await twinHandler.getTwin(twin721.id);
           expect(twin.supplyAvailable).to.equal(0);
+        });
+
+        it.only("Should decrease twinRangesBySeller range", async function () {
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // starting slot
+          const protocolLookupsSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.lookups"));
+          const protocolLookupsSlotNumber = ethers.BigNumber.from(protocolLookupsSlot);
+
+          // seller id mapping from twinRangesBySeller
+          const firstMappingSlot = ethers.BigNumber.from(
+            getMappingStoragePosition(
+              protocolLookupsSlotNumber.add("24"),
+              ethers.BigNumber.from(seller.id).toNumber(),
+              paddingType.START
+            )
+          );
+
+          // token address mapping from twinRangesBySeller
+          const secondMappingSlot = getMappingStoragePosition(
+            firstMappingSlot,
+            twin721.tokenAddress.toLowerCase(),
+            paddingType.START
+          );
+
+          // first element of range from twinRangesBySeller
+          const firstRangeSlot = keccak256(secondMappingSlot);
+          const range = await getStorageAt(twinHandler.address, firstRangeSlot);
+          console.log(range);
         });
 
         context("Unlimited supply", async function () {
