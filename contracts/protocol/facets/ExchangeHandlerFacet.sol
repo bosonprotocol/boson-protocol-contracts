@@ -24,7 +24,7 @@ import { IERC20 } from "../../interfaces/IERC20.sol";
 contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     using Address for address;
 
-    uint256 private immutable EXCHANGE_ID_2_2_0;
+    uint256 private immutable EXCHANGE_ID_2_2_0; // solhint-disable-line
 
     /**
      * @notice After v2.2.0, token ids are derived from offerId and exchangeId.
@@ -33,6 +33,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
      */
+    //solhint-disable-next-line
     constructor(uint256 _firstExchangeId2_2_0) {
         EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
     }
