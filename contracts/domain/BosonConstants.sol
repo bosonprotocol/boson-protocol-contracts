@@ -199,6 +199,17 @@ string constant NOT_COMMITTABLE = "Token not committable";
 string constant INVALID_TO_ADDRESS = "Tokens can only be pre-mined to the contract or contract owner address";
 string constant EXTERNAL_CALL_FAILED = "External call failed";
 
+// DRFeeMutualizer
+string constant ONLY_PROTOCOL = "Only protocol can call this function";
+string constant AGREEMENT_NOT_STARTED = "Agreement not started yet";
+string constant AGREEMENT_EXPIRED = "Agreement expired";
+string constant AGREEMENT_VOIDED = "Agreement voided";
+string constant EXCEEDED_SINGLE_FEE = "Fee amount exceeds max mutualized amount per transaction";
+string constant EXCEEDED_TOTAL_FEE = "Fee amount exceeds max total mutualized amount";
+string constant INVALID_UUID = "Invalid UUID";
+string constant INVALID_SELLER_ADDRESS = "Invalid seller address";
+string constant INVALID_AGREEMENT = "Invalid agreement";
+
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(
     bytes(

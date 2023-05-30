@@ -1,5 +1,4 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
 

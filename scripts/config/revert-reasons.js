@@ -212,4 +212,15 @@ exports.RevertReasons = {
   INIT_ZERO_ADDRESS_NON_EMPTY_CALLDATA: "LibDiamondCut: _init is address(0) but _calldata is not empty",
   INIT_EMPTY_CALLDATA_NON_ZERO_ADDRESS: "LibDiamondCut: _calldata is empty but _init is not address(0)",
   INIT_ADDRESS_WITH_NO_CODE: "LibDiamondCut: _init address has no code",
+
+  // DRFeeMutualizer
+  ONLY_PROTOCOL: "Only protocol can call this function",
+  AGREEMENT_NOT_STARTED: "Agreement not started yet",
+  AGREEMENT_EXPIRED: "Agreement expired",
+  AGREEMENT_VOIDED: "Agreement voided",
+  EXCEEDED_SINGLE_FEE: "Fee amount exceeds max mutualized amount per transaction",
+  EXCEEDED_TOTAL_FEE: "Fee amount exceeds max total mutualized amount",
+  INVALID_UUID: "Invalid UUID",
+  INVALID_SELLER_ADDRESS: "Invalid seller address",
+  INVALID_AGREEMENT: "Invalid agreement",
 };
