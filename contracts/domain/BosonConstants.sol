@@ -210,6 +210,7 @@ string constant INVALID_UUID = "Invalid UUID";
 string constant INVALID_SELLER_ADDRESS = "Invalid seller address";
 string constant INVALID_AGREEMENT = "Invalid agreement";
 string constant AGREEMENT_ALREADY_CONFIRMED = "Agreement already confirmed";
+string constant NOT_OWNER_OR_SELLER = "Not owner or seller";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(

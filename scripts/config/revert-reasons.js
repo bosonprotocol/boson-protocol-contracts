@@ -224,4 +224,5 @@ exports.RevertReasons = {
   INVALID_SELLER_ADDRESS: "Invalid seller address",
   INVALID_AGREEMENT: "Invalid agreement",
   AGREEMENT_ALREADY_CONFIRMED: "Agreement already confirmed",
+  NOT_OWNER_OR_SELLER: "Not owner or seller",
 };

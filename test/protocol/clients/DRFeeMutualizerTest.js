@@ -8,7 +8,7 @@ const { getSnapshot, revertToSnapshot, setNextBlockTimestamp } = require("../../
 const { oneMonth } = require("../../util/constants");
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
 
-describe("IDRFeeMutualizer", function () {
+describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
   let interfaceIds;
   let protocol, mutualizerOwner, rando, assistant;
   let snapshotId;
@@ -256,7 +256,7 @@ describe("IDRFeeMutualizer", function () {
           ).to.be.revertedWith(RevertReasons.AGREEMENT_ALREADY_CONFIRMED);
         });
 
-        it("agreement is already confirmed", async function () {
+        it("agreement is voided", async function () {
           await mutualizer.connect(mutualizerOwner).voidAgreement(agreementId);
 
           // Expect revert if voided
@@ -272,6 +272,81 @@ describe("IDRFeeMutualizer", function () {
           await expect(
             mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium })
           ).to.be.revertedWith(RevertReasons.AGREEMENT_EXPIRED);
+        });
+      });
+    });
+
+    context("👉 voidAgreement()", function () {
+      let agreementId;
+
+      beforeEach(async function () {
+        // Create a new agreement
+        await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+
+        agreementId = "1";
+      });
+
+      it("should emit an AgreementVoided event", async function () {
+        // Void the agreement, test for event
+        await expect(mutualizer.connect(mutualizerOwner).voidAgreement(agreementId))
+          .to.emit(mutualizer, "AgreementVoided")
+          .withArgs(assistant.address, agreementId);
+      });
+
+      it("should update state", async function () {
+        await mutualizer.connect(mutualizerOwner).voidAgreement(agreementId);
+
+        // Get agreement object from contract
+        const returnedAgreement = Agreement.fromStruct(await mutualizer.getAgreement("1"));
+
+        // Values should match
+        expect(returnedAgreement.voided).to.be.true;
+      });
+
+      it("seller can void the agreement", async function () {
+        // Void the agreement, test for event
+        await expect(mutualizer.connect(assistant).voidAgreement(agreementId))
+          .to.emit(mutualizer, "AgreementVoided")
+          .withArgs(assistant.address, agreementId);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("agreement does not exist", async function () {
+          // Expect revert if agreement id is out of bound
+          agreementId = "100";
+          await expect(mutualizer.connect(mutualizerOwner).voidAgreement(agreementId)).to.be.revertedWith(
+            RevertReasons.INVALID_AGREEMENT
+          );
+
+          agreementId = "0";
+          await expect(mutualizer.connect(mutualizerOwner).voidAgreement(agreementId)).to.be.revertedWith(
+            RevertReasons.INVALID_AGREEMENT
+          );
+        });
+
+        it("caller is not the contract owner or the seller", async function () {
+          // Expect revert if rando calls
+          await expect(mutualizer.connect(rando).voidAgreement(agreementId)).to.be.revertedWith(
+            RevertReasons.NOT_OWNER_OR_SELLER
+          );
+        });
+
+        it("agreement is voided already", async function () {
+          await mutualizer.connect(mutualizerOwner).voidAgreement(agreementId);
+
+          // Expect revert if voided
+          await expect(mutualizer.connect(mutualizerOwner).voidAgreement(agreementId)).to.be.revertedWith(
+            RevertReasons.AGREEMENT_VOIDED
+          );
+        });
+
+        it("agreement expired", async function () {
+          await setNextBlockTimestamp(ethers.BigNumber.from(agreement.endTimestamp).add(1).toHexString());
+
+          // Expect revert if expired
+          await expect(mutualizer.connect(mutualizerOwner).voidAgreement(agreementId)).to.be.revertedWith(
+            RevertReasons.AGREEMENT_EXPIRED
+          );
         });
       });
     });

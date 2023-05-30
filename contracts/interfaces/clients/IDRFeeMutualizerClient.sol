@@ -24,6 +24,7 @@ interface IDRFeeMutualizerClient is IDRFeeMutualizer {
 
     event AgreementCreated(address indexed sellerAddress, uint256 indexed agreementId, Agreement agreement);
     event AgreementConfirmed(address indexed sellerAddress, uint256 indexed agreementId);
+    event AgreementVoided(address indexed sellerAddress, uint256 indexed agreementId);
 
     /**
      * @notice Stores a new agreement between mutualizer and seller. Only contract owner can submit an agreement,
@@ -58,6 +59,19 @@ interface IDRFeeMutualizerClient is IDRFeeMutualizer {
      */
     function payPremium(uint256 _agreementId) external payable;
 
+    /**
+     * @notice Void the agreement.
+     *
+     * Emits AgreementVoided event if successful.
+     *
+     * Reverts if:
+     * - agreement does not exist
+     * - caller is not the contract owner or the seller
+     * - agreement is voided already
+     * - agreement expired
+     *
+     * @param _agreementId - a unique identifier of the agreement
+     */
     function voidAgreement(uint256 _agreementId) external;
 
     function deposit(address _tokenAddress, uint256 _amount) external payable;

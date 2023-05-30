@@ -45,19 +45,19 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
      * @param _token - the token address (use 0x0 for ETH)
      * @param _feeAmount - amount to cover
      * @param _feeRequester - address of the requester
-     * @param _context - additional data, describing the context
+     * @param /_context - additional data, describing the context
      */
     function isSellerCovered(
         address _sellerAddress,
         address _token,
         uint256 _feeAmount,
         address _feeRequester,
-        bytes calldata _context
+        bytes calldata /*_context*/
     ) external view returns (bool) {
         uint256 agreementId = agreementBySellerAndToken[_sellerAddress][_token];
         Agreement storage agreement = agreements[agreementId];
 
-        return (msg.sender == protocolAddress &&
+        return (_feeRequester == protocolAddress &&
             agreement.startTimestamp <= block.timestamp &&
             agreement.endTimestamp >= block.timestamp &&
             !agreement.voided &&
@@ -74,7 +74,7 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
      * @param _sellerAddress - the seller address
      * @param _token - the token address (use 0x0 for ETH)
      * @param _feeAmount - amount to cover
-     * @param _context - additional data, describing the context
+     * @param /_context - additional data, describing the context
      * @return isCovered - true if the seller is covered
      * @return uuid - unique identifier of the request
      */
@@ -82,7 +82,7 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
         address _sellerAddress,
         address _token,
         uint256 _feeAmount,
-        bytes calldata _context
+        bytes calldata /*_context*/
     ) external returns (bool isCovered, uint256 uuid) {
         require(msg.sender == protocolAddress, ONLY_PROTOCOL);
         uint256 agreementId = agreementBySellerAndToken[_sellerAddress][_token];
@@ -186,14 +186,10 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
      * @param _agreementId - a unique identifier of the agreement
      */
     function payPremium(uint256 _agreementId) external payable {
-        require(_agreementId > 0 && _agreementId < agreements.length, INVALID_AGREEMENT);
+        Agreement storage agreement = getValidAgreement(_agreementId);
 
         AgreementStatus storage status = agreementStatus[_agreementId];
         require(!status.confirmed, AGREEMENT_ALREADY_CONFIRMED);
-
-        Agreement storage agreement = agreements[_agreementId];
-        require(!agreement.voided, AGREEMENT_VOIDED);
-        require(agreement.endTimestamp > block.timestamp, AGREEMENT_EXPIRED);
 
         transferFundsToMutualizer(agreement.token, agreement.premium);
 
@@ -204,17 +200,34 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
         emit AgreementConfirmed(agreement.sellerAddress, _agreementId);
     }
 
+    /**
+     * @notice Void the agreement.
+     *
+     * Emits AgreementVoided event if successful.
+     *
+     * Reverts if:
+     * - agreement does not exist
+     * - caller is not the contract owner or the seller
+     * - agreement is voided already
+     * - agreement expired
+     *
+     * @param _agreementId - a unique identifier of the agreement
+     */
     function voidAgreement(uint256 _agreementId) external {
-        Agreement storage agreement = agreements[_agreementId];
+        Agreement storage agreement = getValidAgreement(_agreementId);
 
-        require(msg.sender == owner() || msg.sender == agreement.sellerAddress, INVALID_SELLER_ADDRESS);
+        require(msg.sender == owner() || msg.sender == agreement.sellerAddress, NOT_OWNER_OR_SELLER);
 
         agreement.voided = true;
 
         if (agreement.refundOnCancel) {
             // calculate unused premium
+            // ToDo: what is the business logic here?
             // what with the outstanding requests?
+            // uint256 unusedPremium = agreement.premium*(agreement.endTimestamp-block.timestamp)/(agreement.endTimestamp-agreement.startTimestamp); // potential overflow
         }
+
+        emit AgreementVoided(agreement.sellerAddress, _agreementId);
     }
 
     function deposit(address _tokenAddress, uint256 _amount) external payable {
@@ -268,5 +281,24 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
             uint256 balanceAfter = token.balanceOf(address(this));
             require(balanceAfter - balanceBefore == _amount, INSUFFICIENT_VALUE_RECEIVED);
         }
+    }
+
+    /**
+     * @notice Gets the agreement from the storage and verifies that it is valid.
+     *
+     * Reverts if:
+     * - agreement does not exist
+     * - agreement is voided
+     * - agreement expired
+     *
+     * @param _agreementId - a unique identifier of the agreement
+     */
+    function getValidAgreement(uint256 _agreementId) internal view returns (Agreement storage agreement) {
+        require(_agreementId > 0 && _agreementId < agreements.length, INVALID_AGREEMENT);
+
+        agreement = agreements[_agreementId];
+
+        require(!agreement.voided, AGREEMENT_VOIDED);
+        require(agreement.endTimestamp > block.timestamp, AGREEMENT_EXPIRED);
     }
 }
