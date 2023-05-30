@@ -223,4 +223,5 @@ exports.RevertReasons = {
   INVALID_UUID: "Invalid UUID",
   INVALID_SELLER_ADDRESS: "Invalid seller address",
   INVALID_AGREEMENT: "Invalid agreement",
+  AGREEMENT_ALREADY_CONFIRMED: "Agreement already confirmed",
 };

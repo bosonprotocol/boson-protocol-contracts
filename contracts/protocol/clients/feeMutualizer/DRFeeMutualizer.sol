@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 import "../../../domain/BosonConstants.sol";
-import { IDRFeeMutualizerClient } from "../../../interfaces/clients/IDRFeeMutualizer.sol";
+import { IDRFeeMutualizer } from "../../../interfaces/clients/IDRFeeMutualizer.sol";
+import { IDRFeeMutualizerClient } from "../../../interfaces/clients/IDRFeeMutualizerClient.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -15,14 +16,21 @@ import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
     using SafeERC20 for IERC20;
 
+    struct AgreementStatus {
+        bool confirmed;
+        uint256 outstandingExchanges;
+        uint256 totalMutualizedAmount;
+    }
+
     address private immutable protocolAddress;
 
     Agreement[] private agreements;
     mapping(address => mapping(address => uint256)) private agreementBySellerAndToken;
-    mapping(uint256 => uint256) private outstandingExchaganes;
-    mapping(uint256 => uint256) private totalMutualizedAmount;
+    // mapping(uint256 => uint256) private totalMutualizedAmount;
+    mapping(uint256 => AgreementStatus) private agreementStatus;
+
     mapping(uint256 => uint256) private agreementByUuid;
-    uint256 private agreementCounter;
+    uint256 private uuidCounter;
 
     constructor(address _protocolAddress) {
         protocolAddress = _protocolAddress;
@@ -54,7 +62,7 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
             agreement.endTimestamp >= block.timestamp &&
             !agreement.voided &&
             agreement.maxMutualizedAmountPerTransaction >= _feeAmount &&
-            agreement.maxTotalMutualizedAmount + _feeAmount >= totalMutualizedAmount[agreementId]);
+            agreement.maxTotalMutualizedAmount + _feeAmount >= agreementStatus[agreementId].totalMutualizedAmount);
     }
 
     /**
@@ -85,12 +93,13 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
         require(!agreement.voided, AGREEMENT_VOIDED);
         require(agreement.maxMutualizedAmountPerTransaction >= _feeAmount, EXCEEDED_SINGLE_FEE);
 
-        totalMutualizedAmount[agreementId] += _feeAmount;
-        require(agreement.maxTotalMutualizedAmount >= totalMutualizedAmount[agreementId], EXCEEDED_TOTAL_FEE);
+        AgreementStatus storage status = agreementStatus[agreementId];
+        status.totalMutualizedAmount += _feeAmount;
+        require(agreement.maxTotalMutualizedAmount >= status.totalMutualizedAmount, EXCEEDED_TOTAL_FEE);
 
-        outstandingExchaganes[agreementId]++;
+        status.outstandingExchanges++;
 
-        agreementByUuid[++agreementCounter] = agreementId;
+        agreementByUuid[++uuidCounter] = agreementId;
         if (agreement.token == address(0)) {
             payable(msg.sender).transfer(_feeAmount);
         } else {
@@ -98,7 +107,7 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
             token.safeTransfer(msg.sender, _feeAmount);
         }
 
-        return (true, agreementCounter);
+        return (true, uuidCounter);
     }
 
     /**
@@ -113,20 +122,23 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
     function returnDRFee(uint256 _uuid, uint256 _feeAmount, bytes calldata _context) external payable {
         uint256 agreementId = agreementByUuid[_uuid];
         require(agreementId != 0, INVALID_UUID);
+
+        AgreementStatus storage status = agreementStatus[agreementId];
         if (_feeAmount > 0) {
             Agreement storage agreement = agreements[agreementId];
 
             transferFundsToMutualizer(agreement.token, _feeAmount);
 
-            if (_feeAmount < totalMutualizedAmount[agreementId]) {
+            if (_feeAmount < status.totalMutualizedAmount) {
                 // not necessary if we restrict call to the protocol only
-                totalMutualizedAmount[agreementId] -= _feeAmount;
+                status.totalMutualizedAmount -= _feeAmount;
             } else {
-                totalMutualizedAmount[agreementId] = 0;
+                status.totalMutualizedAmount = 0;
             }
         }
 
-        outstandingExchaganes[agreementId]--;
+        status.outstandingExchanges--;
+
         delete agreementByUuid[_uuid]; // prevent using the same uuid twice
         emit DRFeeReturned(_uuid, _feeAmount, _context);
     }
@@ -160,16 +172,34 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
         emit AgreementCreated(_agreement.sellerAddress, agreementId, _agreement);
     }
 
+    /**
+     * @notice Pay the premium for the agreement and confirm it.
+     *
+     * Emits AgreementConfirmed event if successful.
+     *
+     * Reverts if:
+     * - agreement does not exist
+     * - agreement is already confirmed
+     * - agreement is voided
+     * - agreement expired
+     *
+     * @param _agreementId - a unique identifier of the agreement
+     */
     function payPremium(uint256 _agreementId) external payable {
-        Agreement storage agreement = agreements[_agreementId];
+        require(_agreementId > 0 && _agreementId < agreements.length, INVALID_AGREEMENT);
 
-        require(agreement.sellerAddress == msg.sender, INVALID_SELLER_ADDRESS);
+        AgreementStatus storage status = agreementStatus[_agreementId];
+        require(!status.confirmed, AGREEMENT_ALREADY_CONFIRMED);
+
+        Agreement storage agreement = agreements[_agreementId];
         require(!agreement.voided, AGREEMENT_VOIDED);
+        require(agreement.endTimestamp > block.timestamp, AGREEMENT_EXPIRED);
 
         transferFundsToMutualizer(agreement.token, agreement.premium);
 
         // even if agreementBySellerAndToken[_agreement.sellerAddress][_agreement.token] exists, seller can overwrite it
         agreementBySellerAndToken[agreement.sellerAddress][agreement.token] = _agreementId;
+        status.confirmed = true;
 
         emit AgreementConfirmed(agreement.sellerAddress, _agreementId);
     }
@@ -209,11 +239,22 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
      * This function call must use less than 30 000 gas.
      */
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return interfaceId == type(IDRFeeMutualizerClient).interfaceId || super.supportsInterface(interfaceId);
+        return
+            (interfaceId == type(IDRFeeMutualizer).interfaceId) ||
+            (interfaceId == type(IDRFeeMutualizerClient).interfaceId) ||
+            super.supportsInterface(interfaceId);
     }
 
     function getAgreement(uint256 _agreementId) external view returns (Agreement memory) {
         return agreements[_agreementId];
+    }
+
+    function getAgreementBySellerAndToken(
+        address _seller,
+        address _token
+    ) external view returns (uint256 agreementId, Agreement memory aggreement) {
+        agreementId = agreementBySellerAndToken[_seller][_token];
+        aggreement = agreements[agreementId];
     }
 
     function transferFundsToMutualizer(address _tokenAddress, uint256 _amount) internal {

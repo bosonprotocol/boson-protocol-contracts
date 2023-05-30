@@ -209,6 +209,7 @@ string constant EXCEEDED_TOTAL_FEE = "Fee amount exceeds max total mutualized am
 string constant INVALID_UUID = "Invalid UUID";
 string constant INVALID_SELLER_ADDRESS = "Invalid seller address";
 string constant INVALID_AGREEMENT = "Invalid agreement";
+string constant AGREEMENT_ALREADY_CONFIRMED = "Agreement already confirmed";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(

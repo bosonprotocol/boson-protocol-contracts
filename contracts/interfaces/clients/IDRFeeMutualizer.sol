@@ -8,7 +8,7 @@ pragma solidity 0.8.9;
  *
  * ToDo: should this be split into two interfaces? Minimal interface for the protocol and full interface for the clients?
  *
- * The ERC-165 identifier for this interface is: 0xb13f055e
+ * The ERC-165 identifier for this interface is: 0x41283543
  */
 interface IDRFeeMutualizer {
     event DRFeeRequsted(
@@ -67,57 +67,4 @@ interface IDRFeeMutualizer {
      * @param _context - additional data, describing the context
      */
     function returnDRFee(uint256 _uuid, uint256 _feeAmount, bytes calldata _context) external payable;
-}
-
-
-/**
- * @title IDRFeeMutualizerClient
- *
- * @notice This is the interface for the Dispute Resolver fee mutualizers.
- *
- * The ERC-165 identifier for this interface is: 0x41283543
- */
-interface IDRFeeMutualizerClient is IDRFeeMutualizer {
-    struct Agreement {
-        address sellerAddress;
-        address token;
-        uint256 maxMutualizedAmountPerTransaction;
-        uint256 maxTotalMutualizedAmount;
-        uint256 premium;
-        uint128 startTimestamp;
-        uint128 endTimestamp;
-        bool refundOnCancel;
-        bool voided;
-    }
-
-    event AgreementCreated(address indexed sellerAddress, uint256 indexed agreementId, Agreement agreement);
-    event AgreementConfirmed(address indexed sellerAddress, uint256 indexed agreementId);
-
-    /**
-     * @notice Stores a new agreement between mutualizer and seller. Only contract owner can submint an agreement,
-     * however it becomes valid only after seller confirms it by calling payPremium.
-     *
-     * Emits AgreementCreated event if successful.
-     *
-     * Reverts if:
-     * - caller is not the contract owner
-     * - parameter "voided" is set to true
-     * - max mutualized amount per transaction is greater than max total mutualized amount
-     * - max mutualized amount per transaction is 0
-     * - end timestamp is not greater than start timestamp
-     * - end timestamp is not greater than current block timestamp
-     *
-     * @param _agreement - a fully populated agreement object
-     */
-    function newAgreement(Agreement calldata _agreement) external;
-
-    function payPremium(uint256 _agreementId) external payable;
-
-    function voidAgreement(uint256 _agreementId) external;
-
-    function deposit(address _tokenAddress, uint256 _amount) external payable;
-
-    function withdraw(address _tokenAddress, uint256 _amount) external;
-
-    function getAgreement(uint256 _agreementId) external view returns (Agreement memory);
 }

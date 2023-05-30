@@ -53,6 +53,8 @@ async function getInterfaceIds(useCache = true) {
     "contracts/interfaces/IERC721.sol:IERC721",
     "contracts/interfaces/IERC2981.sol:IERC2981",
     "IAccessControl",
+    // "IDRFeeMutualizer",
+    "IDRFeeMutualizerClient",
   ].forEach((iFace) => {
     skipBaseCheck[iFace] = false;
   });
