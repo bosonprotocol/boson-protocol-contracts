@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
@@ -691,9 +691,10 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      *
      * @param _from - the address from which the voucher is being transferred
      * @param _to - the address to which the voucher is being transferred
-     * @param _tokenId - the tokenId of the voucher that is being transferred
+     * @param _tokenId - the first token id of the batch
+     * @param - this parameter is ignored, but required to match the signature of the parent method
      */
-    function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId) internal override {
+    function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId, uint256) internal override {
         // Derive the exchange id
         uint256 exchangeId = _tokenId & type(uint128).max;
         if (_isCommitable) {

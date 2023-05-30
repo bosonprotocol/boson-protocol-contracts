@@ -3,12 +3,9 @@ dotEnvConfig.config();
 
 const environments = require("./environments");
 const { task } = require("hardhat/config");
-require("@nomiclabs/hardhat-etherscan");
-require("@nomiclabs/hardhat-waffle");
+require("@nomicfoundation/hardhat-toolbox");
 require("@nomiclabs/hardhat-web3");
 require("hardhat-contract-sizer");
-require("hardhat-gas-reporter");
-require("solidity-coverage");
 
 const lazyImport = async (module) => {
   return await require(module);
@@ -148,7 +145,7 @@ module.exports = {
   solidity: {
     compilers: [
       {
-        version: "0.8.9",
+        version: "0.8.18",
         settings: {
           optimizer: {
             enabled: true,

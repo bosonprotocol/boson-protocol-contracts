@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
+
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
@@ -23,7 +24,7 @@ import { IERC20 } from "../../interfaces/IERC20.sol";
 contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     using Address for address;
 
-    uint256 private immutable EXCHANGE_ID_2_2_0;
+    uint256 private immutable EXCHANGE_ID_2_2_0; // solhint-disable-line
 
     /**
      * @notice After v2.2.0, token ids are derived from offerId and exchangeId.
@@ -32,6 +33,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
      */
+    //solhint-disable-next-line
     constructor(uint256 _firstExchangeId2_2_0) {
         EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
     }
@@ -729,14 +731,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * Reverts if
      * - Exchange is not in Committed state
      *
-     * @param exchange - the exchange to revoke
+     * @param _exchange - the exchange to revoke
      */
-    function revokeVoucherInternal(Exchange storage exchange) internal {
+    function revokeVoucherInternal(Exchange storage _exchange) internal {
         // Finalize the exchange, burning the voucher
-        finalizeExchange(exchange, ExchangeState.Revoked);
+        finalizeExchange(_exchange, ExchangeState.Revoked);
 
         // Notify watchers of state change
-        emit VoucherRevoked(exchange.offerId, exchange.id, msgSender());
+        emit VoucherRevoked(_exchange.offerId, _exchange.id, msgSender());
     }
 
     /**
