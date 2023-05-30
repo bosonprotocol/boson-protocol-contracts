@@ -2329,7 +2329,7 @@ describe("SellerHandler", function () {
           // Attempt to update seller2 for token Id that doesn't exist
           await expect(
             accountHandler.connect(authTokenOwner).createSeller(seller2, authToken2, voucherInitValues)
-          ).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+          ).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
         });
 
         it("No updates applied or set to pending", async function () {

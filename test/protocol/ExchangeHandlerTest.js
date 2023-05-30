@@ -399,9 +399,9 @@ describe("IBosonExchangeHandler", function () {
 
         // Make sure that vouchers belong to correct buyers and that exist on the correct clone
         expect(await bosonVoucherClone.ownerOf(tokenId1)).to.equal(buyer.address, "Voucher 1: Wrong buyer address");
-        await expect(bosonVoucherClone.ownerOf(tokenId2)).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        await expect(bosonVoucherClone.ownerOf(tokenId2)).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
         expect(await bosonVoucherClone2.ownerOf(tokenId2)).to.equal(buyer2.address, "Voucher 2: Wrong buyer address");
-        await expect(bosonVoucherClone2.ownerOf(tokenId1)).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        await expect(bosonVoucherClone2.ownerOf(tokenId1)).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
 
         // reference boson voucher proxy should not have any vouchers
         expect(await bosonVoucher.balanceOf(buyer.address)).to.equal(
@@ -414,8 +414,8 @@ describe("IBosonExchangeHandler", function () {
         );
 
         // reference boson voucher should not have vouchers with id 1 and 2
-        await expect(bosonVoucher.ownerOf(tokenId1)).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
-        await expect(bosonVoucher.ownerOf(tokenId2)).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        await expect(bosonVoucher.ownerOf(tokenId1)).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
+        await expect(bosonVoucher.ownerOf(tokenId2)).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
 
         // boson voucher implementation should not have any vouchers
         expect(await voucherImplementation.balanceOf(buyer.address)).to.equal(
@@ -428,8 +428,8 @@ describe("IBosonExchangeHandler", function () {
         );
 
         // boson voucher implementation should not have vouchers with id 1 and 2
-        await expect(voucherImplementation.ownerOf(tokenId1)).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
-        await expect(voucherImplementation.ownerOf(tokenId2)).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        await expect(voucherImplementation.ownerOf(tokenId1)).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
+        await expect(voucherImplementation.ownerOf(tokenId2)).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
       });
 
       it("ERC2981: issued voucher should have royalty fees", async function () {
@@ -486,9 +486,9 @@ describe("IBosonExchangeHandler", function () {
 
         // Make sure that vouchers belong to correct buyers and that exist on the correct clone
         expect(await bosonVoucherClone.ownerOf(tokenId1)).to.equal(buyer.address, "Voucher 1: Wrong buyer address");
-        await expect(bosonVoucherClone.ownerOf(tokenId2)).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        await expect(bosonVoucherClone.ownerOf(tokenId2)).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
         expect(await bosonVoucherClone2.ownerOf(tokenId2)).to.equal(buyer2.address, "Voucher 2: Wrong buyer address");
-        await expect(bosonVoucherClone2.ownerOf(tokenId1)).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        await expect(bosonVoucherClone2.ownerOf(tokenId1)).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
 
         // Make sure that vouchers have correct royalty fee for exchangeId 1
         exchangeId = "1";
@@ -797,13 +797,13 @@ describe("IBosonExchangeHandler", function () {
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
 
         // Voucher with nextExchangeId should not exist
-        await expect(bosonVoucher.ownerOf(nextExchangeId)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        await expect(bosonVoucher.ownerOf(nextExchangeId)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
 
         // Commit to preminted offer, creating a new exchange
         await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
 
         // Voucher with nextExchangeId still should not exist
-        await expect(bosonVoucher.ownerOf(nextExchangeId)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        await expect(bosonVoucher.ownerOf(nextExchangeId)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
       });
 
       it("ERC2981: issued voucher should have royalty fees", async function () {
@@ -1248,7 +1248,7 @@ describe("IBosonExchangeHandler", function () {
             // Attempt to commit, expecting revert
             await expect(
               exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
-            ).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+            ).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
           });
 
           it("buyer does not meet condition for commit", async function () {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.7.0) (token/ERC721/ERC721.sol)
 
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import "../../../interfaces/IERC721.sol";
 import "../../../ext_libs/Address.sol";
@@ -108,7 +108,7 @@ contract ERC721 is IERC721, IERC721Metadata {
 
         require(
             msg.sender == owner || isApprovedForAll(owner, msg.sender),
-            "ERC721: approve caller is not token owner nor approved for all"
+            "ERC721: approve caller is not token owner or approved for all"
         );
 
         _approve(to, tokenId);
