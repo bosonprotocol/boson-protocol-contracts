@@ -2,6 +2,7 @@
 pragma solidity 0.8.9;
 
 import { IBosonFundsHandler } from "../interfaces/handlers/IBosonFundsHandler.sol";
+import { IDRFeeMutualizerClient } from "../interfaces/clients/IDRFeeMutualizerClient.sol";
 
 /**
  * @title WithoutFallbackError
@@ -24,6 +25,17 @@ contract WithoutFallbackError {
         uint256[] calldata _tokenAmounts
     ) external {
         IBosonFundsHandler(_fundsHandlerAddress).withdrawFunds(_buyerId, _tokenList, _tokenAmounts);
+    }
+
+    /**
+     * @notice Function to call withdraw on mutualizer, contract being the owner
+     *
+     * @param _mutualizerAddress - mutualizer address
+     * @param _tokenAddress - the token address (use 0x0 for native token)
+     * @param _amount - amount to transfer
+     */
+    function withdrawMutualizerFunds(address _mutualizerAddress, address _tokenAddress, uint256 _amount) external {
+        IDRFeeMutualizerClient(_mutualizerAddress).withdraw(_tokenAddress, _amount);
     }
 }
 

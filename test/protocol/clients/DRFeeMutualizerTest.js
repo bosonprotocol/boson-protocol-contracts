@@ -147,131 +147,212 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
     context("👉 payPremium()", function () {
       let agreementId;
 
-      beforeEach(async function () {
-        // Create a new agreement
-        await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+      context("💰 Native Token", function () {
+        beforeEach(async function () {
+          // Create a new agreement
+          await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
 
-        agreementId = "1";
-      });
-
-      it("should emit an AgreementConfirmed event", async function () {
-        // Pay the premium, test for event
-        await expect(mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium }))
-          .to.emit(mutualizer, "AgreementConfirmed")
-          .withArgs(assistant.address, agreementId);
-      });
-
-      it("should update state", async function () {
-        await mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium });
-
-        // Get agreement id and agreement object from contract
-        const [returnedAgreementId, returnedAgreement] = await mutualizer.getAgreementBySellerAndToken(
-          assistant.address,
-          ethers.constants.AddressZero
-        );
-        const returnedAgreementStruct = Agreement.fromStruct(returnedAgreement);
-
-        // Values should match
-        expect(returnedAgreementStruct.toString()).eq(agreement.toString());
-        expect(returnedAgreementId.toString()).eq(agreementId);
-      });
-
-      it("anyone can pay premium on seller's behalf", async function () {
-        // Pay the premium, test for event
-        await expect(mutualizer.connect(rando).payPremium(agreementId, { value: agreement.premium }))
-          .to.emit(mutualizer, "AgreementConfirmed")
-          .withArgs(assistant.address, agreementId);
-      });
-
-      it("premium in ERC20 tokens", async function () {
-        agreement.token = foreign20.address;
-        await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
-        agreementId = "2";
-
-        await foreign20.connect(assistant).mint(assistant.address, agreement.premium);
-        await foreign20.connect(assistant).approve(mutualizer.address, agreement.premium);
-
-        // Pay the premium, test for event
-        await expect(mutualizer.connect(assistant).payPremium(agreementId))
-          .to.emit(mutualizer, "AgreementConfirmed")
-          .withArgs(assistant.address, agreementId);
-      });
-
-      it("it is possible to substitute an agreement", async function () {
-        // Agreement is confirmed
-        await mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium });
-
-        // Create a new agreement for the same seller and token
-        const startTimestamp = ethers.BigNumber.from(Date.now()).div(1000); // valid from now
-        const endTimestamp = startTimestamp.add(oneMonth * 2); // valid for 30 days
-        agreement = new Agreement(
-          assistant.address,
-          ethers.constants.AddressZero,
-          ethers.utils.parseUnits("2", "ether").toString(),
-          ethers.utils.parseUnits("2", "ether").toString(),
-          ethers.utils.parseUnits("0.001", "ether").toString(),
-          startTimestamp.toString(),
-          endTimestamp.toString(),
-          false,
-          false
-        );
-
-        await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
-        agreementId = "2";
-
-        await mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium });
-
-        // Get agreement id and agreement object from contract
-        const [returnedAgreementId, returnedAgreement] = await mutualizer.getAgreementBySellerAndToken(
-          assistant.address,
-          ethers.constants.AddressZero
-        );
-        const returnedAgreementStruct = Agreement.fromStruct(returnedAgreement);
-
-        // Values should match
-        expect(returnedAgreementStruct.toString()).eq(agreement.toString());
-        expect(returnedAgreementId.toString()).eq(agreementId);
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("agreement does not exist", async function () {
-          // Expect revert if agreement id is out of bound
-          agreementId = "100";
-          await expect(
-            mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium })
-          ).to.be.revertedWith(RevertReasons.INVALID_AGREEMENT);
-
-          agreementId = "0";
-          await expect(
-            mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium })
-          ).to.be.revertedWith(RevertReasons.INVALID_AGREEMENT);
+          agreementId = "1";
         });
 
-        it("agreement is already confirmed", async function () {
+        it("should emit an AgreementConfirmed event", async function () {
+          // Pay the premium, test for event
+          await expect(mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium }))
+            .to.emit(mutualizer, "AgreementConfirmed")
+            .withArgs(assistant.address, agreementId);
+        });
+
+        it("should update state", async function () {
           await mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium });
 
-          // Expect revert if already confirmed
-          await expect(
-            mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium })
-          ).to.be.revertedWith(RevertReasons.AGREEMENT_ALREADY_CONFIRMED);
+          // Get agreement id and agreement object from contract
+          const [returnedAgreementId, returnedAgreement] = await mutualizer.getAgreementBySellerAndToken(
+            assistant.address,
+            ethers.constants.AddressZero
+          );
+          const returnedAgreementStruct = Agreement.fromStruct(returnedAgreement);
+
+          // Values should match
+          expect(returnedAgreementStruct.toString()).eq(agreement.toString());
+          expect(returnedAgreementId.toString()).eq(agreementId);
         });
 
-        it("agreement is voided", async function () {
-          await mutualizer.connect(mutualizerOwner).voidAgreement(agreementId);
-
-          // Expect revert if voided
-          await expect(
-            mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium })
-          ).to.be.revertedWith(RevertReasons.AGREEMENT_VOIDED);
+        it("anyone can pay premium on seller's behalf", async function () {
+          // Pay the premium, test for event
+          await expect(mutualizer.connect(rando).payPremium(agreementId, { value: agreement.premium }))
+            .to.emit(mutualizer, "AgreementConfirmed")
+            .withArgs(assistant.address, agreementId);
         });
 
-        it("agreement expired", async function () {
-          await setNextBlockTimestamp(ethers.BigNumber.from(agreement.endTimestamp).add(1).toHexString());
+        it("it is possible to substitute an agreement", async function () {
+          // Agreement is confirmed
+          await mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium });
 
-          // Expect revert if expired
-          await expect(
-            mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium })
-          ).to.be.revertedWith(RevertReasons.AGREEMENT_EXPIRED);
+          // Create a new agreement for the same seller and token
+          const startTimestamp = ethers.BigNumber.from(Date.now()).div(1000); // valid from now
+          const endTimestamp = startTimestamp.add(oneMonth * 2); // valid for 30 days
+          agreement = new Agreement(
+            assistant.address,
+            ethers.constants.AddressZero,
+            ethers.utils.parseUnits("2", "ether").toString(),
+            ethers.utils.parseUnits("2", "ether").toString(),
+            ethers.utils.parseUnits("0.001", "ether").toString(),
+            startTimestamp.toString(),
+            endTimestamp.toString(),
+            false,
+            false
+          );
+
+          await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+          agreementId = "2";
+
+          await mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium });
+
+          // Get agreement id and agreement object from contract
+          const [returnedAgreementId, returnedAgreement] = await mutualizer.getAgreementBySellerAndToken(
+            assistant.address,
+            ethers.constants.AddressZero
+          );
+          const returnedAgreementStruct = Agreement.fromStruct(returnedAgreement);
+
+          // Values should match
+          expect(returnedAgreementStruct.toString()).eq(agreement.toString());
+          expect(returnedAgreementId.toString()).eq(agreementId);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("agreement does not exist", async function () {
+            // Expect revert if agreement id is out of bound
+            agreementId = "100";
+            await expect(
+              mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium })
+            ).to.be.revertedWith(RevertReasons.INVALID_AGREEMENT);
+
+            agreementId = "0";
+            await expect(
+              mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium })
+            ).to.be.revertedWith(RevertReasons.INVALID_AGREEMENT);
+          });
+
+          it("agreement is already confirmed", async function () {
+            await mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium });
+
+            // Expect revert if already confirmed
+            await expect(
+              mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium })
+            ).to.be.revertedWith(RevertReasons.AGREEMENT_ALREADY_CONFIRMED);
+          });
+
+          it("agreement is voided", async function () {
+            await mutualizer.connect(mutualizerOwner).voidAgreement(agreementId);
+
+            // Expect revert if voided
+            await expect(
+              mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium })
+            ).to.be.revertedWith(RevertReasons.AGREEMENT_VOIDED);
+          });
+
+          it("agreement expired", async function () {
+            await setNextBlockTimestamp(ethers.BigNumber.from(agreement.endTimestamp).add(1).toHexString());
+
+            // Expect revert if expired
+            await expect(
+              mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium })
+            ).to.be.revertedWith(RevertReasons.AGREEMENT_EXPIRED);
+          });
+
+          it("token is native and sent value is not equal to the agreement premium", async function () {
+            // Expect revert if sent less than amount
+            const value = ethers.BigNumber.from(agreement.premium).sub(1);
+            await expect(mutualizer.connect(assistant).payPremium(agreementId, { value })).to.be.revertedWith(
+              RevertReasons.INSUFFICIENT_VALUE_RECEIVED
+            );
+          });
+        });
+      });
+
+      context("💰 ERC20 tokens", function () {
+        beforeEach(async function () {
+          agreement.token = foreign20.address;
+          await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+          agreementId = "1";
+
+          await foreign20.connect(assistant).mint(assistant.address, agreement.premium);
+          await foreign20.connect(assistant).approve(mutualizer.address, agreement.premium);
+        });
+
+        it("should emit an AgreementConfirmed event", async function () {
+          // Pay the premium, test for event
+          await expect(mutualizer.connect(assistant).payPremium(agreementId))
+            .to.emit(mutualizer, "AgreementConfirmed")
+            .withArgs(assistant.address, agreementId);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("native token is sent along", async function () {
+            // Expect revert if native token is sent along
+            await expect(
+              mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium })
+            ).to.be.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
+          });
+
+          it("transferFrom fails", async function () {
+            await foreign20.connect(assistant).transfer(rando.address, "1"); // transfer to reduce balance
+
+            // Expect revert if premium higher than token balance
+            await expect(mutualizer.connect(assistant).payPremium(agreementId)).to.be.revertedWith(
+              RevertReasons.ERC20_EXCEEDS_BALANCE
+            );
+
+            const reducedAllowance = ethers.BigNumber.from(agreement.premium).sub(1);
+            await foreign20.connect(assistant).approve(mutualizer.address, reducedAllowance);
+
+            // Expect revert if premium higher than allowance
+            await expect(mutualizer.connect(assistant).payPremium(agreementId)).to.be.revertedWith(
+              RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE
+            );
+          });
+
+          it("sent value is not equal to the agreement premium", async function () {
+            // Deploy ERC20 with fees
+            const [foreign20WithFee] = await deployMockTokens(["Foreign20WithFee"]);
+
+            // mint tokens and approve
+            await foreign20WithFee.mint(assistant.address, agreement.premium);
+            await foreign20WithFee.connect(assistant).approve(mutualizer.address, agreement.premium);
+
+            agreement.token = foreign20WithFee.address;
+            await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+            agreementId = "2";
+
+            // Expect revert if received value does not match the premium
+            await expect(mutualizer.connect(assistant).payPremium(agreementId)).to.be.revertedWith(
+              RevertReasons.INSUFFICIENT_VALUE_RECEIVED
+            );
+          });
+
+          it("Token address contract does not support transferFrom", async function () {
+            // Deploy a contract without the transferFrom
+            const [bosonToken] = await deployMockTokens(["BosonToken"]);
+
+            agreement.token = bosonToken.address;
+            await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+            agreementId = "2";
+
+            // Expect revert if token does not support transferFrom
+            await expect(mutualizer.connect(assistant).payPremium(agreementId)).to.be.revertedWith(
+              RevertReasons.SAFE_ERC20_LOW_LEVEL_CALL
+            );
+          });
+
+          it("Token address is not a contract", async function () {
+            agreement.token = mutualizer.address;
+            await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+            agreementId = "2";
+
+            // Expect revert if token address is not a contract
+            await expect(mutualizer.connect(assistant).payPremium(agreementId)).to.be.revertedWith("");
+          });
         });
       });
     });
@@ -348,6 +429,288 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
             RevertReasons.AGREEMENT_EXPIRED
           );
         });
+      });
+    });
+
+    context("👉 deposit()", function () {
+      let amount;
+
+      beforeEach(async function () {
+        amount = ethers.utils.parseUnits("1", "ether");
+      });
+
+      context("💰 Native Token", function () {
+        it("should emit an FundsDeposited event", async function () {
+          // Deposit native token, test for event
+          await expect(
+            mutualizer.connect(mutualizerOwner).deposit(ethers.constants.AddressZero, amount, { value: amount })
+          )
+            .to.emit(mutualizer, "FundsDeposited")
+            .withArgs(ethers.constants.AddressZero, amount, mutualizerOwner.address);
+        });
+
+        it("should update state", async function () {
+          await expect(() =>
+            mutualizer.connect(mutualizerOwner).deposit(ethers.constants.AddressZero, amount, { value: amount })
+          ).to.changeEtherBalances([mutualizerOwner, mutualizer], [amount.mul(-1), amount]);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("value is not equal to _amount", async function () {
+            // Expect revert if sent less than amount
+            await expect(
+              mutualizer
+                .connect(mutualizerOwner)
+                .deposit(ethers.constants.AddressZero, amount, { value: amount.sub(1) })
+            ).to.be.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+          });
+        });
+      });
+
+      context("💰 ERC20", function () {
+        beforeEach(async function () {
+          await foreign20.connect(mutualizerOwner).mint(mutualizerOwner.address, amount);
+          await foreign20.connect(mutualizerOwner).approve(mutualizer.address, amount);
+        });
+
+        it("should emit an FundsDeposited event", async function () {
+          // Deposit ERC20 token, test for event
+          await expect(mutualizer.connect(mutualizerOwner).deposit(foreign20.address, amount))
+            .to.emit(mutualizer, "FundsDeposited")
+            .withArgs(foreign20.address, amount, mutualizerOwner.address);
+        });
+
+        it("should update state", async function () {
+          await expect(() =>
+            mutualizer.connect(mutualizerOwner).deposit(foreign20.address, amount)
+          ).to.changeTokenBalances(foreign20, [mutualizerOwner, mutualizer], [amount.mul(-1), amount]);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("native token is sent along", async function () {
+            // Expect revert if native token is sent along
+            await expect(
+              mutualizer.connect(mutualizerOwner).deposit(foreign20.address, amount, { value: 1 })
+            ).to.be.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
+          });
+
+          it("transferFrom fails", async function () {
+            amount = amount.add(1);
+            await foreign20.connect(mutualizerOwner).approve(mutualizer.address, amount);
+
+            // Expect revert if amount higher than token balance
+            await expect(mutualizer.connect(mutualizerOwner).deposit(foreign20.address, amount)).to.be.revertedWith(
+              RevertReasons.ERC20_EXCEEDS_BALANCE
+            );
+
+            // Expect revert if amount higher than allowance
+            await expect(
+              mutualizer.connect(mutualizerOwner).deposit(foreign20.address, amount.add(1))
+            ).to.be.revertedWith(RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE);
+          });
+
+          it("value is not equal to _amount", async function () {
+            // Deploy ERC20 with fees
+            const [foreign20WithFee] = await deployMockTokens(["Foreign20WithFee"]);
+
+            // mint tokens and approve
+            await foreign20WithFee.mint(mutualizerOwner.address, amount);
+            await foreign20WithFee.connect(mutualizerOwner).approve(mutualizer.address, amount);
+
+            // Expect revert if value does not match amount
+            await expect(
+              mutualizer.connect(mutualizerOwner).deposit(foreign20WithFee.address, amount)
+            ).to.be.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+          });
+
+          it("Token address contract does not support transferFrom", async function () {
+            // Deploy a contract without the transferFrom
+            const [bosonToken] = await deployMockTokens(["BosonToken"]);
+
+            // Attempt to deposit the funds, expecting revert
+            await expect(mutualizer.connect(mutualizerOwner).deposit(bosonToken.address, amount)).to.be.revertedWith(
+              RevertReasons.SAFE_ERC20_LOW_LEVEL_CALL
+            );
+          });
+
+          it("Token address is not a contract", async function () {
+            // Attempt to deposit the funds, expecting revert
+            await expect(mutualizer.connect(mutualizerOwner).deposit(assistant.address, amount)).to.be.revertedWith("");
+          });
+        });
+      });
+
+      it("anyone can deposit on mutualizer owner's behalf", async function () {
+        // Deposit native token, test for event
+        await expect(mutualizer.connect(rando).deposit(ethers.constants.AddressZero, amount, { value: amount }))
+          .to.emit(mutualizer, "FundsDeposited")
+          .withArgs(ethers.constants.AddressZero, amount, rando.address);
+      });
+    });
+
+    context("👉 withdraw()", function () {
+      let amount, amountToWithdraw;
+
+      beforeEach(async function () {
+        amount = ethers.utils.parseUnits("1", "ether");
+        await mutualizer.connect(mutualizerOwner).deposit(ethers.constants.AddressZero, amount, { value: amount });
+
+        amountToWithdraw = amount.div(2);
+      });
+
+      context("💰 Native Token", function () {
+        it("should emit an FundsWithdrawn event", async function () {
+          // Withdraw native token, test for event
+          await expect(mutualizer.connect(mutualizerOwner).withdraw(ethers.constants.AddressZero, amountToWithdraw))
+            .to.emit(mutualizer, "FundsWithdrawn")
+            .withArgs(ethers.constants.AddressZero, amountToWithdraw);
+        });
+
+        it("should update state", async function () {
+          await expect(() =>
+            mutualizer.connect(mutualizerOwner).withdraw(ethers.constants.AddressZero, amountToWithdraw)
+          ).to.changeEtherBalances([mutualizerOwner, mutualizer], [amountToWithdraw, amountToWithdraw.mul(-1)]);
+        });
+
+        it("it is possible to withdraw the full amount", async function () {
+          amountToWithdraw = amount;
+
+          // Withdraw native token, test for event
+          await expect(mutualizer.connect(mutualizerOwner).withdraw(ethers.constants.AddressZero, amountToWithdraw))
+            .to.emit(mutualizer, "FundsWithdrawn")
+            .withArgs(ethers.constants.AddressZero, amountToWithdraw);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the owner", async function () {
+            // Expect revert if caller is not the mutualizer owner
+            await expect(
+              mutualizer.connect(rando).withdraw(ethers.constants.AddressZero, amountToWithdraw)
+            ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
+          });
+
+          it("amount exceeds available balance", async function () {
+            amountToWithdraw = amount.add(1);
+
+            // Expect revert if trying to withdraw more than available balance
+            await expect(
+              mutualizer.connect(mutualizerOwner).withdraw(ethers.constants.AddressZero, amountToWithdraw)
+            ).to.be.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+          });
+
+          it("Transfer of funds failed - no payable fallback or receive", async function () {
+            // deploy a contract that cannot receive funds
+            const [fallbackErrorContract] = await deployMockTokens(["WithoutFallbackError"]);
+
+            // transfer ownership
+            await mutualizer.connect(mutualizerOwner).transferOwnership(fallbackErrorContract.address);
+
+            // Expect revert if mutualizer owner cannot receive funds
+            await expect(
+              fallbackErrorContract.withdrawMutualizerFunds(
+                mutualizer.address,
+                ethers.constants.AddressZero,
+                amountToWithdraw
+              )
+            ).to.be.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
+          });
+
+          it("Transfer of funds failed - revert in fallback", async function () {
+            // deploy a contract that cannot receive funds
+            const [fallbackErrorContract] = await deployMockTokens(["FallbackError"]);
+
+            // transfer ownership
+            await mutualizer.connect(mutualizerOwner).transferOwnership(fallbackErrorContract.address);
+
+            // Expect revert if mutualizer owner cannot receive funds
+            await expect(
+              fallbackErrorContract.withdrawMutualizerFunds(
+                mutualizer.address,
+                ethers.constants.AddressZero,
+                amountToWithdraw
+              )
+            ).to.be.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
+          });
+        });
+      });
+
+      context("💰 ERC20", function () {
+        beforeEach(async function () {
+          await foreign20.connect(mutualizerOwner).mint(mutualizerOwner.address, amount);
+          await foreign20.connect(mutualizerOwner).approve(mutualizer.address, amount);
+
+          await mutualizer.connect(mutualizerOwner).deposit(foreign20.address, amount);
+
+          amountToWithdraw = amount.div(2);
+        });
+
+        it("should emit an FundsWithdrawn event", async function () {
+          // Withdraw ERC20 token, test for event
+          await expect(mutualizer.connect(mutualizerOwner).withdraw(foreign20.address, amountToWithdraw))
+            .to.emit(mutualizer, "FundsWithdrawn")
+            .withArgs(foreign20.address, amountToWithdraw);
+        });
+
+        it("should update state", async function () {
+          await expect(() =>
+            mutualizer.connect(mutualizerOwner).withdraw(foreign20.address, amountToWithdraw)
+          ).to.changeTokenBalances(
+            foreign20,
+            [mutualizerOwner, mutualizer],
+            [amountToWithdraw, amountToWithdraw.mul(-1)]
+          );
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("amount exceeds available balance", async function () {
+            amountToWithdraw = amount.add(1);
+
+            // Expect revert if trying to withdraw more than available balance
+            await expect(
+              mutualizer.connect(mutualizerOwner).withdraw(foreign20.address, amountToWithdraw)
+            ).to.be.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+          });
+
+          it("Transfer of funds failed - ERC20 token does not exist anymore", async function () {
+            // destruct foreign20
+            await foreign20.destruct();
+
+            // Expect revert if ERC20 does not exist anymore
+            await expect(
+              mutualizer.connect(mutualizerOwner).withdraw(foreign20.address, amountToWithdraw)
+            ).to.be.revertedWith(RevertReasons.EOA_FUNCTION_CALL);
+          });
+
+          it("Transfer of funds failed - revert during ERC20 transfer", async function () {
+            // foreign20 mockToken
+            await foreign20.pause();
+
+            // Expect revert if ERC20 reverts during transfer
+            await expect(
+              mutualizer.connect(mutualizerOwner).withdraw(foreign20.address, amountToWithdraw)
+            ).to.be.revertedWith(RevertReasons.ERC20_PAUSED);
+          });
+
+          it("Transfer of funds failed - revert during ERC20 transfer", async function () {
+            const [foreign20ReturnFalse] = await deployMockTokens(["Foreign20TransferReturnFalse"]);
+
+            await foreign20ReturnFalse.connect(mutualizerOwner).mint(mutualizerOwner.address, amount);
+            await foreign20ReturnFalse.connect(mutualizerOwner).approve(mutualizer.address, amount);
+            await mutualizer.connect(mutualizerOwner).deposit(foreign20ReturnFalse.address, amount);
+
+            // Expect revert if ERC20 returns false during transfer
+            await expect(
+              mutualizer.connect(mutualizerOwner).withdraw(foreign20ReturnFalse.address, amountToWithdraw)
+            ).to.be.revertedWith(RevertReasons.SAFE_ERC20_NOT_SUCCEEDED);
+          });
+        });
+      });
+
+      it("anyone can deposit on mutualizer owner's behalf", async function () {
+        // Deposit native token, test for event
+        await expect(mutualizer.connect(rando).deposit(ethers.constants.AddressZero, amount, { value: amount }))
+          .to.emit(mutualizer, "FundsDeposited")
+          .withArgs(ethers.constants.AddressZero, amount, rando.address);
       });
     });
   });

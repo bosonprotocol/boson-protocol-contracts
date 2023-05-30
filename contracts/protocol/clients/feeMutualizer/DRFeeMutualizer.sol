@@ -182,6 +182,10 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
      * - agreement is already confirmed
      * - agreement is voided
      * - agreement expired
+     * - token is native and sent value is not equal to the agreement premium
+     * - token is ERC20, but some native value is sent
+     * - token is ERC20 and sent value is not equal to the agreement premium
+     * - token is ERC20 and transferFrom fails
      *
      * @param _agreementId - a unique identifier of the agreement
      */
@@ -230,17 +234,55 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
         emit AgreementVoided(agreement.sellerAddress, _agreementId);
     }
 
+    /**
+     * @notice Deposit funds to the mutualizer. Funds are used to cover the DR fees.
+     *
+     * Emits FundsDeposited event if successful.
+     *
+     * Reverts if:
+     * - token is native and sent value is not equal to _amount
+     * - token is ERC20, but some native value is sent
+     * - token is ERC20 and sent value is not equal to _amount
+     * - token is ERC20 and transferFrom fails
+     *
+     * @param _tokenAddress - the token address (use 0x0 for native token)
+     * @param _amount - amount to transfer
+     */
     function deposit(address _tokenAddress, uint256 _amount) external payable {
         transferFundsToMutualizer(_tokenAddress, _amount);
+        emit FundsDeposited(_tokenAddress, _amount, msg.sender);
     }
 
+    /**
+     * @notice Withdraw funds from the mutualizer.
+     *
+     * Emits FundsWithdrawn event if successful.
+     *
+     * Reverts if:
+     * - caller is not the mutualizer owner
+     * - amount exceeds available balance
+     * - token is ERC20 and transferFrom fails
+     *
+     * @param _tokenAddress - the token address (use 0x0 for native token)
+     * @param _amount - amount to transfer
+     */
     function withdraw(address _tokenAddress, uint256 _amount) external onlyOwner {
+        uint256 mutualizerBalance = _tokenAddress == address(0)
+            ? address(this).balance
+            : IERC20(_tokenAddress).balanceOf(address(this));
+
+        require(mutualizerBalance >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
+
         if (_tokenAddress == address(0)) {
-            payable(owner()).transfer(_amount);
+            // payable(owner()).transfer(_amount);
+            (bool success, ) = owner().call{ value: _amount }("");
+            require(success, TOKEN_TRANSFER_FAILED);
         } else {
             IERC20 token = IERC20(_tokenAddress);
             token.safeTransfer(owner(), _amount);
         }
+
+        emit FundsWithdrawn(_tokenAddress, _amount);
     }
 
     /**
@@ -270,11 +312,23 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
         aggreement = agreements[agreementId];
     }
 
+    /**
+     * @notice Internal function to handle incoming funds.
+     *
+     * Reverts if:
+     * - token is native and sent value is not equal to _amount
+     * - token is ERC20, but some native value is sent
+     * - token is ERC20 and sent value is not equal to _amount
+     * - token is ERC20 and transferFrom fails
+     *
+     * @param _tokenAddress - the token address (use 0x0 for native token)
+     * @param _amount - amount to transfer
+     */
     function transferFundsToMutualizer(address _tokenAddress, uint256 _amount) internal {
         if (_tokenAddress == address(0)) {
             require(msg.value == _amount, INSUFFICIENT_VALUE_RECEIVED);
         } else {
-            require(msg.value == 0, INSUFFICIENT_VALUE_RECEIVED);
+            require(msg.value == 0, NATIVE_NOT_ALLOWED);
             IERC20 token = IERC20(_tokenAddress);
             uint256 balanceBefore = token.balanceOf(address(this));
             token.safeTransferFrom(msg.sender, address(this), _amount);

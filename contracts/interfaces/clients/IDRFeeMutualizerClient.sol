@@ -25,6 +25,8 @@ interface IDRFeeMutualizerClient is IDRFeeMutualizer {
     event AgreementCreated(address indexed sellerAddress, uint256 indexed agreementId, Agreement agreement);
     event AgreementConfirmed(address indexed sellerAddress, uint256 indexed agreementId);
     event AgreementVoided(address indexed sellerAddress, uint256 indexed agreementId);
+    event FundsDeposited(address indexed tokenAddress, uint256 amount, address indexed depositor);
+    event FundsWithdrawn(address indexed tokenAddress, uint256 amount);
 
     /**
      * @notice Stores a new agreement between mutualizer and seller. Only contract owner can submit an agreement,
@@ -54,6 +56,10 @@ interface IDRFeeMutualizerClient is IDRFeeMutualizer {
      * - agreement is already confirmed
      * - agreement is voided
      * - agreement expired
+     * - token is native and sent value is not equal to the agreement premium
+     * - token is ERC20, but some native value is sent
+     * - token is ERC20 and sent value is not equal to the agreement premium
+     * - token is ERC20 and transferFrom fails
      *
      * @param _agreementId - a unique identifier of the agreement
      */
@@ -74,8 +80,35 @@ interface IDRFeeMutualizerClient is IDRFeeMutualizer {
      */
     function voidAgreement(uint256 _agreementId) external;
 
+    /**
+     * @notice Deposit funds to the mutualizer. Funds are used to cover the DR fees.
+     *
+     * Emits FundsDeposited event if successful.
+     *
+     * Reverts if:
+     * - token is native and sent value is not equal to _amount
+     * - token is ERC20, but some native value is sent
+     * - token is ERC20 and sent value is not equal to _amount
+     * - token is ERC20 and transferFrom fails
+     *
+     * @param _tokenAddress - the token address (use 0x0 for native token)
+     * @param _amount - amount to transfer
+     */
     function deposit(address _tokenAddress, uint256 _amount) external payable;
 
+    /**
+     * @notice Withdraw funds from the mutualizer.
+     *
+     * Emits FundsWithdrawn event if successful.
+     *
+     * Reverts if:
+     * - caller is not the mutualizer owner
+     * - amount exceeds available balance
+     * - token is ERC20 and transferFrom fails
+     *
+     * @param _tokenAddress - the token address (use 0x0 for native token)
+     * @param _amount - amount to transfer
+     */
     function withdraw(address _tokenAddress, uint256 _amount) external;
 
     function getAgreement(uint256 _agreementId) external view returns (Agreement memory);

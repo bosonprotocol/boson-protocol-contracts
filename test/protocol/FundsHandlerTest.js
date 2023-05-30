@@ -1026,7 +1026,7 @@ describe("IBosonFundsHandler", function () {
             );
           });
 
-          it("Transfer of funds failed - revert durin ERC20 transfer", async function () {
+          it("Transfer of funds failed - revert during ERC20 transfer", async function () {
             // pause mockToken
             await mockToken.pause();
 
