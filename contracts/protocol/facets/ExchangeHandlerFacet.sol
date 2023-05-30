@@ -995,9 +995,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 // Increment number of commits to the group for this address if they are allowed to commit
                 lookups.conditionalCommitsByAddress[_buyer][_groupId] = ++commitCount;
             }
-        } else {
-            // No condition set, so allow the commit
-            allow = true;
         }
     }
 
