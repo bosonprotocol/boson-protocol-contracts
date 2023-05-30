@@ -689,7 +689,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * Emits TwinTransferFailed if twin transfer failed
      *
      * If one of the twin transfers fails, the function will continue to transfer the remaining twins and
-     * autmaticaly raises a dispute for the exchange.
+     * automatically raises a dispute for the exchange.
      *
      * @param _exchange - the exchange for which twins should be transferred
      */
