@@ -1180,6 +1180,47 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
         });
 
+        it("Returns default revert reason if called function reverts without a reason", async function () {
+          // Create a valid seller for meta transaction
+          seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+          voucherInitValues = mockVoucherInitValues();
+          emptyAuthToken = mockAuthToken();
+          await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          // Depositing funds, where token address is not a contract address reverts without a reason.
+          functionSignature = fundsHandler.interface.encodeFunctionData("depositFunds", [
+            seller.id,
+            rando.address,
+            "10",
+          ]);
+
+          // Prepare the message
+          message.functionName = "depositFunds(uint256,address,uint256)";
+          message.functionSignature = functionSignature;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            assistant,
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // send a meta transaction, expecting revert
+          await expect(
+            metaTransactionsHandler.executeMetaTransaction(
+              assistant.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
+          ).to.revertedWith(RevertReasons.FUNCTION_CALL_NOT_SUCCESSFUL);
+        });
+
         context("Reentrancy guard", async function () {
           beforeEach(async function () {
             // Create a valid seller for meta transaction
