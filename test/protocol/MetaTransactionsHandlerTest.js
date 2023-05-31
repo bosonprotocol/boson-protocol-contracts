@@ -398,9 +398,11 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       it("after initialization all state modifying functions should be allowlisted", async function () {
-        const stateModifyingFunctionsHashes = await getStateModifyingFunctionsHashes(facetNames, [
+        const stateModifyingFunctionsClosure = getStateModifyingFunctionsHashes(facetNames, [
           "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)",
         ]);
+        const stateModifyingFunctionsHashes = await stateModifyingFunctionsClosure();
+
         // Functions should be enabled
         for (const func of stateModifyingFunctionsHashes) {
           expect(await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](func)).to.be.true;
@@ -450,9 +452,10 @@ describe("IBosonMetaTransactionsHandler", function () {
 
       it("after initialization all state modifying functions should be allowlisted", async function () {
         // Get list of state modifying functions
-        const stateModifyingFunctions = (await getStateModifyingFunctions(facetNames)).filter(
-          (fn) => fn != "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"
-        );
+        const stateModifyingFunctions = await getStateModifyingFunctions(facetNames, [
+          "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)",
+          "initialize()",
+        ]);
 
         for (const func of stateModifyingFunctions) {
           expect(await metaTransactionsHandler["isFunctionAllowlisted(string)"](func)).to.be.true;
@@ -1175,6 +1178,47 @@ describe("IBosonMetaTransactionsHandler", function () {
               v
             )
           ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+        });
+
+        it("Returns default revert reason if called function reverts without a reason", async function () {
+          // Create a valid seller for meta transaction
+          seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+          voucherInitValues = mockVoucherInitValues();
+          emptyAuthToken = mockAuthToken();
+          await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          // Depositing funds, where token address is not a contract address reverts without a reason.
+          functionSignature = fundsHandler.interface.encodeFunctionData("depositFunds", [
+            seller.id,
+            rando.address,
+            "10",
+          ]);
+
+          // Prepare the message
+          message.functionName = "depositFunds(uint256,address,uint256)";
+          message.functionSignature = functionSignature;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            assistant,
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // send a meta transaction, expecting revert
+          await expect(
+            metaTransactionsHandler.executeMetaTransaction(
+              assistant.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
+          ).to.revertedWith(RevertReasons.FUNCTION_CALL_NOT_SUCCESSFUL);
         });
 
         context("Reentrancy guard", async function () {

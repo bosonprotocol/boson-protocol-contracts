@@ -352,7 +352,7 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
             agreementId = "2";
 
             // Expect revert if token address is not a contract
-            await expect(mutualizer.connect(assistant).payPremium(agreementId)).to.be.revertedWith("");
+            await expect(mutualizer.connect(assistant).payPremium(agreementId)).to.be.revertedWithoutReason();
           });
         });
       });
@@ -536,7 +536,9 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
 
           it("Token address is not a contract", async function () {
             // Attempt to deposit the funds, expecting revert
-            await expect(mutualizer.connect(mutualizerOwner).deposit(assistant.address, amount)).to.be.revertedWith("");
+            await expect(
+              mutualizer.connect(mutualizerOwner).deposit(assistant.address, amount)
+            ).to.be.revertedWithoutReason();
           });
         });
       });

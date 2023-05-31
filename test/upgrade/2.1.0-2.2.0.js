@@ -34,9 +34,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons");
 const { readContracts } = require("../../scripts/util/utils.js");
 const { VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
 
-const oldVersion = "v2.1.0";
-const newVersion = "v2.2.0";
-const v2_1_0_scripts = "v2.1.0-scripts";
+const newVersion = "2.2.0";
 
 /**
  *  Upgrade test case - After upgrade from 2.1.0 to 2.0.0 everything is still operational
@@ -67,11 +65,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Make accounts available
       [deployer, rando, , assistant] = await ethers.getSigners();
 
-      ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(
-        deployer,
-        oldVersion,
-        v2_1_0_scripts
-      ));
+      ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(deployer, newVersion));
       ({ twinHandler, disputeHandler } = protocolContracts);
       ({ mockToken: mockToken } = mockContracts);
 
@@ -81,7 +75,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         protocolDiamondAddress,
         protocolContracts,
         mockContracts,
-        oldVersion
+        true
       );
 
       // Get current protocol state, which serves as the reference
@@ -90,8 +84,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         protocolDiamondAddress,
         protocolContracts,
         mockContracts,
-        preUpgradeEntities,
-        oldVersion
+        preUpgradeEntities
       );
 
       // upgrade clients
@@ -107,7 +100,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         offerHandler,
         exchangeHandler,
       } = await upgradeSuite(
-        newVersion,
         protocolDiamondAddress,
         {
           accountHandler: "IBosonAccountHandler",
@@ -126,7 +118,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         }
       ));
 
-      protocolContracts = {
+      const protocolContractsAfter = {
         ...protocolContracts,
         accountHandler,
         metaTransactionsHandler,
@@ -135,6 +127,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         offerHandler,
         exchangeHandler,
       };
+
+      // Get protocol state after the upgrade
+      const protocolContractStateAfter = await getProtocolContractState(
+        protocolDiamondAddress,
+        protocolContractsAfter,
+        mockContracts,
+        preUpgradeEntities
+      );
 
       snapshot = await ethers.provider.send("evm_snapshot", []);
 
@@ -148,11 +148,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           deployer,
           protocolDiamondAddress,
           protocolContracts,
+          protocolContractsAfter,
           mockContracts,
           protocolContractState,
+          protocolContractStateAfter,
           preUpgradeEntities,
-          snapshot,
-          newVersion
+          snapshot
         )
       );
     } catch (err) {
