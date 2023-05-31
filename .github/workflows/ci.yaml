@@ -8,10 +8,10 @@ on:
     types: [opened, reopened, synchronize, ready_for_review]
 
 jobs:
-  build:
+  setup:
     runs-on: ubuntu-latest
     if: ${{ !github.event.pull_request.draft }}
-    name: build
+    name: setup
     outputs:
       test-chunks: ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
       test-chunk-ids: ${{ steps['set-test-chunk-ids'].outputs['test-chunk-ids'] }}
@@ -21,7 +21,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3.5.1
         with:
-          node-version: "16.14.x"
+          node-version: 16.14.x
           cache: "npm"
       - run: npm install
       - name: Prepare Environment
@@ -29,23 +29,23 @@ jobs:
         run: |
           cp .env.example .env
       - run: npm run build
-      - run: npm run check:contracts
-      - run: npm run check:scripts
+      - name: Lint
+        run: |
+          npm run check:contracts
+          npm run check:scripts
       - name: Verify interface ids
         run: npm run natspec-interface-id
       - id: set-test-chunks
-        run: echo "test-chunks=$(cat test/util/test-chunks.txt | jq -cM '.')" >> $GITHUB_OUTPUT
         name: Set Chunks
+        run: echo "test-chunks=$(jq -c '.' test/util/test-chunks.txt)" >> $GITHUB_OUTPUT
       - id: set-test-chunk-ids
         name: Set Chunk IDs
         run: |
-          echo "CHUNNKS"
-          echo $CHUNKS
-          echo "test-chunk-ids=$(echo $CHUNKS | jq -cM 'to_entries | map(.key)')" >> $GITHUB_OUTPUT
+          echo "test-chunk-ids=$( echo $CHUNKS | jq -cM 'to_entries | map(.key)')" >> $GITHUB_OUTPUT
         env:
           CHUNKS: ${{ steps['set-test-chunks'].outputs['test-chunks'] }}
   test:
-    needs: build
+    needs: setup
     runs-on: ubuntu-latest
     if: ${{ !github.event.pull_request.draft }}
     env:
@@ -53,7 +53,7 @@ jobs:
     name: test (chunk ${{ matrix.chunk }})
     strategy:
       matrix:
-        chunk: ${{ fromJson(needs.build.outputs['test-chunk-ids']) }}
+        chunk: ${{ fromJson(needs.setup.outputs['test-chunk-ids']) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3.1.0
@@ -75,10 +75,10 @@ jobs:
       - name: Unit Tests
         run: echo $CHUNKS | jq '.[${{ matrix.chunk }}] | .[] | @text' | xargs npx hardhat test
         env:
-          CHUNKS: ${{ needs.build.outputs['test-chunks'] }}
+          CHUNKS: ${{ needs.setup.outputs['test-chunks'] }}
 
   integration-test:
-    needs: build
+    needs: setup
     runs-on: ubuntu-latest
     if: ${{ !github.event.pull_request.draft }}
     env:
@@ -102,12 +102,12 @@ jobs:
         run: npx hardhat test test/integration/*.js
 
   coverage:
-    needs: build
-    runs-on: ubuntu-latest
+    needs: setup
     if: ${{ !github.event.pull_request.draft }}
     env:
       GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
     name: code coverage
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3.1.0
@@ -122,8 +122,6 @@ jobs:
         shell: bash
         run: |
           cp .env.example .env
-      - name: Compile Contracts
-        run: npm run build
       - name: Code coverage
         run: npm run coverage
       - name: Upload code coverage results
@@ -141,8 +139,38 @@ jobs:
           if (( $(echo "$SKIPPED > $MAX_SKIPPED" | bc -l) )); then echo "Fail: number of skipped statements '$SKIPPED' is higher than configured '$MAX_SKIPPED'" >&2; exit 1; fi
           echo "Number of skipped statements '$SKIPPED' is within configured '$MAX_SKIPPED'"
 
+  report-coverage:
+    needs: coverage
+    runs-on: ubuntu-latest
+    env:
+      COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+    name: "report: coverage"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3.1.0
+
+      - name: Setup node
+        uses: actions/setup-node@v3.5.1
+        with:
+          node-version: 16.14.x
+          cache: "npm"
+
+      - name: npm install
+        run: npm install
+
+      - name: Download code coverage results
+        uses: actions/download-artifact@v3
+        with:
+          name: code-coverage-report
+          path: coverage/
+      - name: Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./coverage/lcov.info
+
   deploy-dry-run:
-    needs: build
+    needs: setup
     runs-on: ubuntu-latest
     if: ${{ !github.event.pull_request.draft }}
     name: "deploy: dry run"
@@ -165,8 +193,9 @@ jobs:
       - name: Cancelling tests in case of failure
         if: failure()
         uses: andymckay/cancel-action@0.2
+
   analyze:
-    needs: build
+    needs: setup
     runs-on: ubuntu-latest
     permissions:
       contents: read
