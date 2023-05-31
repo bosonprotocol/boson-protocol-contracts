@@ -51,7 +51,7 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
     });
   });
 
-  context("📋 DRMutualizer methods", async function () {
+  context("📋 DRMutualizer client methods", async function () {
     let agreement;
 
     beforeEach(function () {
@@ -692,7 +692,7 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
             ).to.be.revertedWith(RevertReasons.ERC20_PAUSED);
           });
 
-          it("Transfer of funds failed - revert during ERC20 transfer", async function () {
+          it("Transfer of funds failed - ERC20 returns false", async function () {
             const [foreign20ReturnFalse] = await deployMockTokens(["Foreign20TransferReturnFalse"]);
 
             await foreign20ReturnFalse.connect(mutualizerOwner).mint(mutualizerOwner.address, amount);
@@ -788,6 +788,317 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
           await expect(
             mutualizer.getConfirmedAgreementBySellerAndToken(assistant.address, foreign20.address)
           ).to.be.revertedWith(RevertReasons.INVALID_AGREEMENT);
+        });
+      });
+    });
+  });
+
+  context("📋 DRMutualizer protocol methods", async function () {
+    let agreement;
+
+    beforeEach(function () {
+      const startTimestamp = ethers.BigNumber.from(Date.now()).div(1000); // valid from now
+      const endTimestamp = startTimestamp.add(oneMonth); // valid for 30 days
+      agreement = new Agreement(
+        assistant.address,
+        ethers.constants.AddressZero,
+        ethers.utils.parseUnits("1", "ether").toString(),
+        ethers.utils.parseUnits("2", "ether").toString(),
+        ethers.utils.parseUnits("0.001", "ether").toString(),
+        startTimestamp.toString(),
+        endTimestamp.toString(),
+        false,
+        false
+      );
+    });
+
+    context("👉 requestDRFee()", function () {
+      let amount, amountToRequest;
+
+      context("💰 Native Token", function () {
+        let agreementId;
+
+        beforeEach(async function () {
+          agreementId = "1";
+
+          amount = agreement.maxTotalMutualizedAmount;
+          await mutualizer.connect(mutualizerOwner).deposit(ethers.constants.AddressZero, amount, { value: amount });
+
+          // Create a new agreement
+          await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+          await mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium });
+
+          amountToRequest = ethers.BigNumber.from(agreement.maxMutualizedAmountPerTransaction).div(2);
+        });
+
+        it("should emit a DRFeeSent event", async function () {
+          // Request DR fee, test for event
+          await expect(
+            mutualizer
+              .connect(protocol)
+              .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x")
+          )
+            .to.emit(mutualizer, "DRFeeSent")
+            .withArgs(protocol.address, ethers.constants.AddressZero, amountToRequest, "1");
+        });
+
+        it("should return correct values", async function () {
+          // Request DR fee, get return values
+          const [isCovered, uuid] = await mutualizer
+            .connect(protocol)
+            .callStatic.requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x");
+
+          expect(isCovered).to.be.true;
+          expect(uuid).to.be.equal("1");
+        });
+
+        it("should transfer funds", async function () {
+          await expect(() =>
+            mutualizer
+              .connect(protocol)
+              .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x")
+          ).to.changeEtherBalances([protocol, mutualizer], [amountToRequest, amountToRequest.mul(-1)]);
+        });
+
+        it("should update state", async function () {
+          await mutualizer
+            .connect(protocol)
+            .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x");
+
+          let expectedAgreementStatus = new AgreementStatus(true, false, "1", amountToRequest.toString());
+
+          // Get agreement object from contract
+          const [, returnedAgreementStatus] = await mutualizer.getAgreement("1");
+          const returnedAgreementStatusStruct = AgreementStatus.fromStruct(returnedAgreementStatus);
+          expect(returnedAgreementStatusStruct.toString()).eq(expectedAgreementStatus.toString());
+        });
+
+        it("it is possible to request max mutualized amount per transaction", async function () {
+          amountToRequest = agreement.maxMutualizedAmountPerTransaction;
+
+          // Request DR fee, test for event
+          await expect(
+            mutualizer
+              .connect(protocol)
+              .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x")
+          )
+            .to.emit(mutualizer, "DRFeeSent")
+            .withArgs(protocol.address, ethers.constants.AddressZero, amountToRequest, "1");
+        });
+
+        it("it is possible to request max total mutualized amount", async function () {
+          amountToRequest = agreement.maxMutualizedAmountPerTransaction;
+
+          // Request twice to reach max total mutualized amount
+          await expect(
+            mutualizer
+              .connect(protocol)
+              .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x")
+          )
+            .to.emit(mutualizer, "DRFeeSent")
+            .withArgs(protocol.address, ethers.constants.AddressZero, amountToRequest, "1");
+
+          await expect(
+            mutualizer
+              .connect(protocol)
+              .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x")
+          )
+            .to.emit(mutualizer, "DRFeeSent")
+            .withArgs(protocol.address, ethers.constants.AddressZero, amountToRequest, "2");
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the protocol", async function () {
+            // Expect revert if caller is not the protocol
+            await expect(
+              mutualizer
+                .connect(rando)
+                .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x")
+            ).to.be.revertedWith(RevertReasons.ONLY_PROTOCOL);
+          });
+
+          it("agreement does not exist - no agreement for the token", async function () {
+            // Seller has no agreement for the token
+            await expect(
+              mutualizer.connect(protocol).requestDRFee(assistant.address, foreign20.address, amountToRequest, "0x")
+            ).to.be.revertedWith(RevertReasons.INVALID_AGREEMENT);
+          });
+
+          it("agreement does not exist - no agreement for the seller", async function () {
+            // Rando has no agreement
+            await expect(
+              mutualizer
+                .connect(protocol)
+                .requestDRFee(rando.address, ethers.constants.AddressZero, amountToRequest, "0x")
+            ).to.be.revertedWith(RevertReasons.INVALID_AGREEMENT);
+          });
+
+          it("agreement not confirmed yet", async function () {
+            // Create a new agreement, but don't confirm it
+            agreement.token = foreign20.address;
+            await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+
+            // Seller has no agreement for the token
+            await expect(
+              mutualizer.connect(protocol).requestDRFee(assistant.address, foreign20.address, amountToRequest, "0x")
+            ).to.be.revertedWith(RevertReasons.INVALID_AGREEMENT);
+          });
+
+          it("agreement is voided", async function () {
+            await mutualizer.connect(mutualizerOwner).voidAgreement(agreementId);
+
+            // Agreement is voided
+            await expect(
+              mutualizer
+                .connect(protocol)
+                .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x")
+            ).to.be.revertedWith(RevertReasons.AGREEMENT_VOIDED);
+          });
+
+          it("agreement has not started yet", async function () {
+            // Create a new agreement with start date in the future
+            const startTimestamp = ethers.BigNumber.from(Date.now())
+              .div(1000)
+              .add(oneMonth / 2); // valid in the future
+            agreement.startTimestamp = startTimestamp.toString();
+            await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+            await mutualizer.connect(assistant).payPremium(++agreementId, { value: agreement.premium });
+
+            // Agreement has not started yet
+            await expect(
+              mutualizer
+                .connect(protocol)
+                .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x")
+            ).to.be.revertedWith(RevertReasons.AGREEMENT_NOT_STARTED);
+          });
+
+          it("agreement expired", async function () {
+            await setNextBlockTimestamp(ethers.BigNumber.from(agreement.endTimestamp).add(1).toHexString());
+
+            // Agreement expired
+            await expect(
+              mutualizer
+                .connect(protocol)
+                .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x")
+            ).to.be.revertedWith(RevertReasons.AGREEMENT_EXPIRED);
+          });
+
+          it("fee amount exceeds max mutualized amount per transaction", async function () {
+            amountToRequest = ethers.BigNumber.from(agreement.maxMutualizedAmountPerTransaction).add(1);
+
+            // Expect revert if trying to withdraw more than max mutualized amount per transaction
+            await expect(
+              mutualizer
+                .connect(protocol)
+                .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x")
+            ).to.be.revertedWith(RevertReasons.EXCEEDED_SINGLE_FEE);
+          });
+
+          it("fee amount exceeds max total mutualized amount", async function () {
+            amountToRequest = agreement.maxMutualizedAmountPerTransaction;
+
+            // Request twice to reach max total mutualized amount
+            await mutualizer
+              .connect(protocol)
+              .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x");
+            await mutualizer
+              .connect(protocol)
+              .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x");
+
+            // Expect revert if requested more than max mutualized amount per transaction
+            amountToRequest = "1";
+            await expect(
+              mutualizer
+                .connect(protocol)
+                .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x")
+            ).to.be.revertedWith(RevertReasons.EXCEEDED_TOTAL_FEE);
+          });
+
+          it("amount exceeds available balance", async function () {
+            const amountToWithdraw = ethers.BigNumber.from(agreement.maxTotalMutualizedAmount)
+              .add(agreement.premium)
+              .sub(amountToRequest)
+              .add(1);
+            await mutualizer.connect(mutualizerOwner).withdraw(ethers.constants.AddressZero, amountToWithdraw);
+
+            // Expect revert if requested more than available balance
+            await expect(
+              mutualizer
+                .connect(protocol)
+                .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x")
+            ).to.be.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+          });
+        });
+      });
+
+      context("💰 ERC20", function () {
+        beforeEach(async function () {
+          let agreementId = "1";
+
+          amount = agreement.maxTotalMutualizedAmount;
+          await foreign20.connect(mutualizerOwner).mint(mutualizerOwner.address, amount);
+          await foreign20.connect(mutualizerOwner).approve(mutualizer.address, amount);
+          await mutualizer.connect(mutualizerOwner).deposit(foreign20.address, amount);
+
+          // Create a new agreement
+          agreement.token = foreign20.address;
+          await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+          // Confirm the agreement
+          await foreign20.connect(assistant).mint(assistant.address, agreement.premium);
+          await foreign20.connect(assistant).approve(mutualizer.address, agreement.premium);
+          await mutualizer.connect(assistant).payPremium(agreementId);
+
+          amountToRequest = ethers.BigNumber.from(agreement.maxMutualizedAmountPerTransaction).div(2);
+        });
+
+        it("should emit a DRFeeSent event", async function () {
+          // Request DR fee, test for event
+          await expect(
+            mutualizer.connect(protocol).requestDRFee(assistant.address, foreign20.address, amountToRequest, "0x")
+          )
+            .to.emit(mutualizer, "DRFeeSent")
+            .withArgs(protocol.address, foreign20.address, amountToRequest, "1");
+        });
+
+        it("should transfer funds", async function () {
+          await expect(() =>
+            mutualizer.connect(protocol).requestDRFee(assistant.address, foreign20.address, amountToRequest, "0x")
+          ).to.changeTokenBalances(foreign20, [protocol, mutualizer], [amountToRequest, amountToRequest.mul(-1)]);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("amount exceeds available balance", async function () {
+            const amountToWithdraw = ethers.BigNumber.from(agreement.maxTotalMutualizedAmount)
+              .add(agreement.premium)
+              .sub(amountToRequest)
+              .add(1);
+            await mutualizer.connect(mutualizerOwner).withdraw(foreign20.address, amountToWithdraw);
+
+            // Expect revert if requested more than available balance
+            await expect(
+              mutualizer.connect(protocol).requestDRFee(assistant.address, foreign20.address, amountToRequest, "0x")
+            ).to.be.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+          });
+
+          it("Transfer of funds failed - ERC20 token does not exist anymore", async function () {
+            // destruct foreign20
+            await foreign20.destruct();
+
+            // Expect revert if ERC20 does not exist anymore
+            await expect(
+              mutualizer.connect(protocol).requestDRFee(assistant.address, foreign20.address, amountToRequest, "0x")
+            ).to.be.revertedWith(RevertReasons.EOA_FUNCTION_CALL);
+          });
+
+          it("Transfer of funds failed - revert during ERC20 transfer", async function () {
+            // foreign20 mockToken
+            await foreign20.pause();
+
+            // Expect revert if ERC20 reverts during transfer
+            await expect(
+              mutualizer.connect(protocol).requestDRFee(assistant.address, foreign20.address, amountToRequest, "0x")
+            ).to.be.revertedWith(RevertReasons.ERC20_PAUSED);
+          });
         });
       });
     });

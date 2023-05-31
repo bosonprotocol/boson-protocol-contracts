@@ -59,7 +59,7 @@ contract MockDRFeeMutualizer is IDRFeeMutualizer {
     /**
      * @notice Mock function that does not accept payment from the protocol.
      */
-    function returnDRFee(uint256 _uuid, uint256 _feeAmount, bytes calldata _context) external payable {
+    function returnDRFee(uint256, uint256, bytes calldata) external payable {
         revert("MockDRFeeMutualizer: revert");
     }
 

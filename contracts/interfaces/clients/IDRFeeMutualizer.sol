@@ -18,6 +18,8 @@ interface IDRFeeMutualizer {
         address feeRequester,
         bytes context
     );
+
+    event DRFeeSent(address indexed feeRequester, address token, uint256 feeAmount, uint256 indexed uuid);
     event DRFeeReturned(uint256 indexed uuid, uint256 feeAmount, bytes context);
 
     /**
@@ -42,6 +44,19 @@ interface IDRFeeMutualizer {
      *
      * @dev Verify that seller is covered and send the fee amount to the msg.sender.
      * Returned uuid can be used to track the status of the request.
+     *
+     * Reverts if:
+     * - caller is not the protocol
+     * - agreement does not exist
+     * - agreement is not confirmed yet
+     * - agreement is voided
+     * - agreement has not started yet
+     * - agreement expired
+     * - fee amount exceeds max mutualized amount per transaction
+     * - fee amount exceeds max total mutualized amount
+     * - amount exceeds available balance
+     * - token is native and transfer fails
+     * - token is ERC20 and transferFrom fails
      *
      * @param _sellerAddress - the seller address
      * @param _token - the token address (use 0x0 for ETH)

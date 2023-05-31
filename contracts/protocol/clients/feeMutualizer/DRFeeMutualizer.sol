@@ -65,6 +65,21 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
      * @dev Verify that seller is covered and send the fee amount to the msg.sender.
      * Returned uuid can be used to track the status of the request.
      *
+     * Emits DRFeeSent event if successful.
+     *
+     * Reverts if:
+     * - caller is not the protocol
+     * - agreement does not exist
+     * - agreement is not confirmed yet
+     * - agreement is voided
+     * - agreement has not started yet
+     * - agreement expired
+     * - fee amount exceeds max mutualized amount per transaction
+     * - fee amount exceeds max total mutualized amount
+     * - amount exceeds available balance
+     * - token is native and transfer fails
+     * - token is ERC20 and transferFrom fails
+     *
      * @param _sellerAddress - the seller address
      * @param _token - the token address (use 0x0 for ETH)
      * @param _feeAmount - amount to cover
@@ -79,28 +94,26 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
         bytes calldata /*_context*/
     ) external returns (bool isCovered, uint256 uuid) {
         require(msg.sender == protocolAddress, ONLY_PROTOCOL);
-        uint256 agreementId = agreementBySellerAndToken[_sellerAddress][_token];
-        Agreement storage agreement = agreements[agreementId];
 
+        // Make sure agreement is valid
+        uint256 agreementId = agreementBySellerAndToken[_sellerAddress][_token];
+        (Agreement storage agreement, AgreementStatus storage status) = getValidAgreement(agreementId);
         require(agreement.startTimestamp <= block.timestamp, AGREEMENT_NOT_STARTED);
-        require(agreement.endTimestamp >= block.timestamp, AGREEMENT_EXPIRED);
         require(agreement.maxMutualizedAmountPerTransaction >= _feeAmount, EXCEEDED_SINGLE_FEE);
 
-        AgreementStatus storage status = agreementStatus[agreementId];
-        require(!status.voided, AGREEMENT_VOIDED);
-
+        // Increase total mutualized amount
         status.totalMutualizedAmount += _feeAmount;
         require(agreement.maxTotalMutualizedAmount >= status.totalMutualizedAmount, EXCEEDED_TOTAL_FEE);
 
+        // Increase number of exchanges
         status.outstandingExchanges++;
 
         agreementByUuid[++uuidCounter] = agreementId;
-        if (agreement.token == address(0)) {
-            payable(msg.sender).transfer(_feeAmount);
-        } else {
-            IERC20 token = IERC20(agreement.token);
-            token.safeTransfer(msg.sender, _feeAmount);
-        }
+
+        address token = agreement.token;
+        transferFundsFromMutualizer(token, _feeAmount);
+
+        emit DRFeeSent(msg.sender, token, _feeAmount, uuidCounter);
 
         return (true, uuidCounter);
     }
@@ -253,26 +266,14 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
      * Reverts if:
      * - caller is not the mutualizer owner
      * - amount exceeds available balance
+     * - token is native and transfer fails
      * - token is ERC20 and transferFrom fails
      *
      * @param _tokenAddress - the token address (use 0x0 for native token)
      * @param _amount - amount to transfer
      */
     function withdraw(address _tokenAddress, uint256 _amount) external onlyOwner {
-        uint256 mutualizerBalance = _tokenAddress == address(0)
-            ? address(this).balance
-            : IERC20(_tokenAddress).balanceOf(address(this));
-
-        require(mutualizerBalance >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
-
-        if (_tokenAddress == address(0)) {
-            // payable(owner()).transfer(_amount);
-            (bool success, ) = owner().call{ value: _amount }("");
-            require(success, TOKEN_TRANSFER_FAILED);
-        } else {
-            IERC20 token = IERC20(_tokenAddress);
-            token.safeTransfer(owner(), _amount);
-        }
+        transferFundsFromMutualizer(_tokenAddress, _amount); // msg.sender is mutualizer owner
 
         emit FundsWithdrawn(_tokenAddress, _amount);
     }
@@ -354,6 +355,34 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
             token.safeTransferFrom(msg.sender, address(this), _amount);
             uint256 balanceAfter = token.balanceOf(address(this));
             require(balanceAfter - balanceBefore == _amount, INSUFFICIENT_VALUE_RECEIVED);
+        }
+    }
+
+    /**
+     * @notice Internal function to handle outcoming funds.
+     * It always sends them to msg.sender, which is either the mutualizer owner or the protocol.
+     *
+     * Reverts if:
+     * - amount exceeds available balance
+     * - token is native and transfer fails
+     * - token is ERC20 and transferFrom fails
+     *
+     * @param _tokenAddress - the token address (use 0x0 for native token)
+     * @param _amount - amount to transfer
+     */
+    function transferFundsFromMutualizer(address _tokenAddress, uint256 _amount) internal {
+        uint256 mutualizerBalance = _tokenAddress == address(0)
+            ? address(this).balance
+            : IERC20(_tokenAddress).balanceOf(address(this));
+
+        require(mutualizerBalance >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
+
+        if (_tokenAddress == address(0)) {
+            (bool success, ) = msg.sender.call{ value: _amount }("");
+            require(success, TOKEN_TRANSFER_FAILED);
+        } else {
+            IERC20 token = IERC20(_tokenAddress);
+            token.safeTransfer(msg.sender, _amount);
         }
     }
 
