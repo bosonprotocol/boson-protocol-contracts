@@ -25,6 +25,8 @@ interface IDRFeeMutualizer {
     /**
      * @notice Tells if mutualizer will cover the fee amount for a given seller and requrested by a given address.
      *
+     * It checks if agreement is valid, but not if the mutualizer has enough funds to cover the fee.
+     *
      * @param _sellerAddress - the seller address
      * @param _token - the token address (use 0x0 for ETH)
      * @param _feeAmount - amount to cover

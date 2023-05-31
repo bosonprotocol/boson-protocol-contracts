@@ -1284,5 +1284,171 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
         });
       });
     });
+
+    context("👉 isSellerCovered()", function () {
+      let amount, amountToRequest;
+      let agreementId;
+
+      beforeEach(async function () {
+        agreementId = "1";
+
+        amount = agreement.maxTotalMutualizedAmount;
+        await mutualizer.connect(mutualizerOwner).deposit(ethers.constants.AddressZero, amount, { value: amount });
+
+        // Create a new agreement
+        await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+        await mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium });
+
+        amountToRequest = ethers.BigNumber.from(agreement.maxMutualizedAmountPerTransaction).div(2);
+      });
+
+      it("should return true for a valid agreement", async function () {
+        expect(
+          await mutualizer.isSellerCovered(
+            assistant.address,
+            ethers.constants.AddressZero,
+            amountToRequest,
+            protocol.address,
+            "0x"
+          )
+        ).to.be.true;
+      });
+
+      it("should return false if _feeRequester is not the protocol", async function () {
+        expect(
+          await mutualizer.isSellerCovered(
+            assistant.address,
+            ethers.constants.AddressZero,
+            amountToRequest,
+            rando.address,
+            "0x"
+          )
+        ).to.be.false;
+      });
+
+      it("should return false if agreement does not exist - no agreement for the token", async function () {
+        expect(
+          await mutualizer.isSellerCovered(
+            assistant.address,
+            foreign20.address,
+            amountToRequest,
+            protocol.address,
+            "0x"
+          )
+        ).to.be.false;
+      });
+
+      it("should return false if agreement does not exist - no agreement for the seller", async function () {
+        expect(
+          await mutualizer.isSellerCovered(
+            rando.address,
+            ethers.constants.AddressZero,
+            amountToRequest,
+            protocol.address,
+            "0x"
+          )
+        ).to.be.false;
+      });
+
+      it("should return false if agreement not confirmed yet", async function () {
+        // Create a new agreement, but don't confirm it
+        agreement.token = foreign20.address;
+        await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+
+        expect(
+          await mutualizer.isSellerCovered(
+            assistant.address,
+            foreign20.address,
+            amountToRequest,
+            protocol.address,
+            "0x"
+          )
+        ).to.be.false;
+      });
+
+      it("should return false if agreement is voided", async function () {
+        await mutualizer.connect(mutualizerOwner).voidAgreement(agreementId);
+
+        expect(
+          await mutualizer.isSellerCovered(
+            assistant.address,
+            ethers.constants.AddressZero,
+            amountToRequest,
+            protocol.address,
+            "0x"
+          )
+        ).to.be.false;
+      });
+
+      it("should return false if agreement has not started yet", async function () {
+        // Create a new agreement with start date in the future
+        const startTimestamp = ethers.BigNumber.from(Date.now())
+          .div(1000)
+          .add(oneMonth / 2); // valid in the future
+        agreement.startTimestamp = startTimestamp.toString();
+        await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+        await mutualizer.connect(assistant).payPremium(++agreementId, { value: agreement.premium });
+
+        expect(
+          await mutualizer.isSellerCovered(
+            assistant.address,
+            ethers.constants.AddressZero,
+            amountToRequest,
+            protocol.address,
+            "0x"
+          )
+        ).to.be.false;
+      });
+
+      it("should return false if agreement expired", async function () {
+        await setNextBlockTimestamp(ethers.BigNumber.from(agreement.endTimestamp).add(1).toHexString());
+
+        expect(
+          await mutualizer.isSellerCovered(
+            assistant.address,
+            ethers.constants.AddressZero,
+            amountToRequest,
+            protocol.address,
+            "0x"
+          )
+        ).to.be.false;
+      });
+
+      it("should return false if fee amount exceeds max mutualized amount per transaction", async function () {
+        amountToRequest = ethers.BigNumber.from(agreement.maxMutualizedAmountPerTransaction).add(1);
+
+        expect(
+          await mutualizer.isSellerCovered(
+            assistant.address,
+            ethers.constants.AddressZero,
+            amountToRequest,
+            protocol.address,
+            "0x"
+          )
+        ).to.be.false;
+      });
+
+      it("should return false if fee amount exceeds max total mutualized amount", async function () {
+        amountToRequest = agreement.maxMutualizedAmountPerTransaction;
+
+        // Request twice to reach max total mutualized amount
+        await mutualizer
+          .connect(protocol)
+          .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x");
+        await mutualizer
+          .connect(protocol)
+          .requestDRFee(assistant.address, ethers.constants.AddressZero, amountToRequest, "0x");
+
+        expect(
+          await mutualizer.isSellerCovered(
+            assistant.address,
+            ethers.constants.AddressZero,
+            amountToRequest,
+            protocol.address,
+            "0x"
+          )
+        ).to.be.false;
+      });
+    });
   });
 });

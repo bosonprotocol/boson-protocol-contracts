@@ -34,6 +34,8 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
     /**
      * @notice Tells if mutualizer will cover the fee amount for a given seller and requrested by a given address.
      *
+     * It checks if agreement is valid, but not if the mutualizer has enough funds to cover the fee.
+     *
      * @param _sellerAddress - the seller address
      * @param _token - the token address (use 0x0 for ETH)
      * @param _feeAmount - amount to cover
@@ -48,6 +50,10 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
         bytes calldata /*_context*/
     ) external view returns (bool) {
         uint256 agreementId = agreementBySellerAndToken[_sellerAddress][_token];
+        if (agreementId == 0 || agreementId >= agreements.length) {
+            return false;
+        }
+
         Agreement storage agreement = agreements[agreementId];
         AgreementStatus storage status = agreementStatus[agreementId];
 
@@ -56,7 +62,7 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
             agreement.endTimestamp >= block.timestamp &&
             !status.voided &&
             agreement.maxMutualizedAmountPerTransaction >= _feeAmount &&
-            agreement.maxTotalMutualizedAmount + _feeAmount >= agreementStatus[agreementId].totalMutualizedAmount);
+            agreement.maxTotalMutualizedAmount >= status.totalMutualizedAmount + _feeAmount);
     }
 
     /**
