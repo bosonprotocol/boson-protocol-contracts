@@ -79,6 +79,7 @@
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/test-helpers": "^0.5.16",
+    "coveralls": "^3.1.1",
     "decache": "^4.6.1",
     "dotenv": "^16.0.3",
     "eip55": "^2.1.0",
