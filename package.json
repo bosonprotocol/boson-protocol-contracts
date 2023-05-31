@@ -97,6 +97,6 @@
     "simple-statistics": "^7.8.2",
     "solhint": "^3.3.8",
     "truffle": "^5.7.9",
-    "web3": "^1.8.1"
+    "web3": "^1.10.0"
   }
 }
