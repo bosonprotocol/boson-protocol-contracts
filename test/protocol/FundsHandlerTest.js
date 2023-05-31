@@ -2135,7 +2135,7 @@ describe("IBosonFundsHandler", function () {
           });
 
           // Create new agreements
-          const latestBlock = await ethers.provider.getBlock("latest")
+          const latestBlock = await ethers.provider.getBlock("latest");
           const startTimestamp = BN(latestBlock.timestamp); // valid from now
           const endTimestamp = startTimestamp.add(oneMonth); // valid for 30 days
           const agreementToken = new Agreement(
@@ -2369,7 +2369,7 @@ describe("IBosonFundsHandler", function () {
                 await mutualizer.connect(mutualizerOwner).deposit(mockToken.address, poolToken);
 
                 // Create new agreement
-                const latestBlock = await ethers.provider.getBlock("latest")
+                const latestBlock = await ethers.provider.getBlock("latest");
                 const startTimestamp = BN(latestBlock.timestamp); // valid from now
                 const endTimestamp = startTimestamp.add(oneMonth); // valid for 30 days
                 const agreementToken = new Agreement(

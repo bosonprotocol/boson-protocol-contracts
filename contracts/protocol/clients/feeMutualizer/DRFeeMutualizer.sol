@@ -50,7 +50,7 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
         bytes calldata /*_context*/
     ) external view returns (bool) {
         uint256 agreementId = agreementBySellerAndToken[_sellerAddress][_token];
-        if (agreementId == 0 || agreementId >= agreements.length) {
+        if (agreementId == 0) {
             return false;
         }
 
@@ -243,12 +243,12 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
 
         status.voided = true;
 
-        if (agreement.refundOnCancel) {
-            // calculate unused premium
-            // ToDo: what is the business logic here?
-            // what with the outstanding requests?
-            // uint256 unusedPremium = agreement.premium*(agreement.endTimestamp-block.timestamp)/(agreement.endTimestamp-agreement.startTimestamp); // potential overflow
-        }
+        // if (agreement.refundOnCancel) {
+        //     // calculate unused premium
+        //     // ToDo: what is the business logic here?
+        //     // what with the outstanding requests?
+        //     // uint256 unusedPremium = agreement.premium*(agreement.endTimestamp-block.timestamp)/(agreement.endTimestamp-agreement.startTimestamp); // potential overflow
+        // }
 
         emit AgreementVoided(agreement.sellerAddress, _agreementId);
     }

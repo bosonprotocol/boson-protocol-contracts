@@ -40,8 +40,12 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
   context("📋 Interfaces", async function () {
     context("👉 supportsInterface()", async function () {
       it("should indicate support for IDRFeeMutualizer and IDRFeeMutualizerClient", async function () {
+        // "ERC165" interface
+        let support = await mutualizer.supportsInterface(interfaceIds["IERC165"]);
+        expect(support, "IERC165 interface not supported").is.true;
+
         // IDRFeeMutualizer interface
-        let support = await mutualizer.supportsInterface(interfaceIds["IDRFeeMutualizer"]);
+        support = await mutualizer.supportsInterface(interfaceIds["IDRFeeMutualizer"]);
         expect(support, "IDRFeeMutualizer interface not supported").is.true;
 
         // IDRFeeMutualizerClient interface
@@ -131,7 +135,9 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
         });
 
         it("end timestamp is not greater than current block timestamp", async function () {
-          agreement.endTimestamp = ethers.BigNumber.from(Date.now()).div(1000).sub(1).toString();
+          agreement.startTimestamp = "0";
+          const latestBlock = await ethers.provider.getBlock("latest");
+          agreement.endTimestamp = ethers.BigNumber.from(latestBlock.timestamp).sub(1).toString();
 
           // Expect revert if the end timestamp is not greater than current block timestamp
           await expect(mutualizer.connect(mutualizerOwner).newAgreement(agreement)).to.be.revertedWith(
@@ -190,7 +196,8 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
           await mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium });
 
           // Create a new agreement for the same seller and token
-          const startTimestamp = ethers.BigNumber.from(Date.now()).div(1000); // valid from now
+          const latestBlock = await ethers.provider.getBlock("latest");
+          const startTimestamp = ethers.BigNumber.from(latestBlock.timestamp); // valid from now
           const endTimestamp = startTimestamp.add(oneMonth * 2); // valid for 30 days
           agreement = new Agreement(
             assistant.address,
@@ -798,8 +805,9 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
   context("📋 DRMutualizer protocol methods", async function () {
     let agreement;
 
-    beforeEach(function () {
-      const startTimestamp = ethers.BigNumber.from(Date.now()).div(1000); // valid from now
+    beforeEach(async function () {
+      const latestBlock = await ethers.provider.getBlock("latest");
+      const startTimestamp = ethers.BigNumber.from(latestBlock.timestamp); // valid from now
       const endTimestamp = startTimestamp.add(oneMonth); // valid for 30 days
       agreement = new Agreement(
         assistant.address,
