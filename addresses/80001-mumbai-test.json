@@ -2,7 +2,7 @@
   "chainId": 80001,
   "network": "mumbai",
   "env": "test",
-  "protocolVersion": "2.2.1",
+  "protocolVersion": "2.2.1-rc.3",
   "contracts": [
     {
       "name": "AccessController",
@@ -37,28 +37,42 @@
           [
             "0x7009b015c5BEf413A0E47FDC5A07c6a2b12023F4",
             0,
-            ["0xcdffacc6", "0x52ef6b2c", "0xadfca15e", "0x7a0ed627"]
+            [
+              "0xcdffacc6",
+              "0x52ef6b2c",
+              "0xadfca15e",
+              "0x7a0ed627"
+            ]
           ],
-          ["0x5304715b798e36962B5a8F00b9A64008431eD80B", 0, ["0x1f931c1c"]],
+          [
+            "0x5304715b798e36962B5a8F00b9A64008431eD80B",
+            0,
+            [
+              "0x1f931c1c"
+            ]
+          ],
           [
             "0x90bb2e17b13afCb49A812faed5A59c1529c68c9e",
             0,
-            ["0x92552b4a", "0xb8b3c15a", "0x01ffc9a7"]
+            [
+              "0x92552b4a",
+              "0xb8b3c15a",
+              "0x01ffc9a7"
+            ]
           ]
         ],
-        ["0x48e2b093", "0x1f931c1c", "0x01ffc9a7", "0x2ae6ea10"]
+        [
+          "0x48e2b093",
+          "0x1f931c1c",
+          "0x01ffc9a7",
+          "0x2ae6ea10"
+        ]
       ],
       "interfaceId": ""
     },
     {
       "name": "AccountHandlerFacet",
       "address": "0x03e583A035aFFF33ec0918a4c690BC9883C423a0",
-      "args": [],
-      "interfaceId": "0x15335ed7"
-    },
-    {
-      "name": "SellerHandlerFacet",
-      "address": "0x419c208f9F62f43278190b58da59200f06e64619",
       "args": [],
       "interfaceId": "0x15335ed7"
     },
@@ -95,7 +109,9 @@
     {
       "name": "ExchangeHandlerFacet",
       "address": "0x9AE3F5C157656C4e86b5F8340F399Ee33C62792e",
-      "args": [1],
+      "args": [
+        1
+      ],
       "interfaceId": "0xe300dfc1"
     },
     {
@@ -141,12 +157,6 @@
       "interfaceId": "0x9ddb8ca6"
     },
     {
-      "name": "ProtocolInitializationHandlerFacet",
-      "address": "0x8171d25FE402e0FaC0b557C124bab20C3f7AF081",
-      "args": [],
-      "interfaceId": "0x0d8e6e2c"
-    },
-    {
       "name": "ConfigHandlerFacet",
       "address": "0x11663F45bb38d374F0bcE4f8A5CeEaa34AeF4aC0",
       "args": [],
@@ -178,6 +188,18 @@
       "address": "0x6AB7615f663c60E144D8C109547A2A38Fa0bB9F4",
       "args": [],
       "interfaceId": ""
+    },
+    {
+      "name": "ProtocolInitializationHandlerFacet",
+      "address": "0x849e1Cd5Ca803D28b9C1D8a247325c99033f0ad1",
+      "args": [],
+      "interfaceId": "0x0d8e6e2c"
+    },
+    {
+      "name": "SellerHandlerFacet",
+      "address": "0xCe7aCDE5460Ac3683AC0D67c0524c15509f2678C",
+      "args": [],
+      "interfaceId": "0x15335ed7"
     }
   ]
 }
