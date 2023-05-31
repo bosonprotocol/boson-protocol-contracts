@@ -16,8 +16,7 @@ describe("Agreement", function () {
     premium,
     startTimestamp,
     endTimestamp,
-    refundOnCancel,
-    voided;
+    refundOnCancel;
 
   beforeEach(async function () {
     // Get a list of accounts
@@ -31,7 +30,6 @@ describe("Agreement", function () {
     startTimestamp = "123456789";
     endTimestamp = "987654321";
     refundOnCancel = true;
-    voided = false;
   });
 
   context("📋 Constructor", async function () {
@@ -45,8 +43,7 @@ describe("Agreement", function () {
         premium,
         startTimestamp,
         endTimestamp,
-        refundOnCancel,
-        voided
+        refundOnCancel
       );
       expect(agreement.sellerAddressIsValid()).is.true;
       expect(agreement.tokenIsValid()).is.true;
@@ -56,7 +53,6 @@ describe("Agreement", function () {
       expect(agreement.startTimestampIsValid()).is.true;
       expect(agreement.endTimestampIsValid()).is.true;
       expect(agreement.refundOnCancelIsValid()).is.true;
-      expect(agreement.voidedIsValid()).is.true;
       expect(agreement.isValid()).is.true;
     });
   });
@@ -72,8 +68,7 @@ describe("Agreement", function () {
         premium,
         startTimestamp,
         endTimestamp,
-        refundOnCancel,
-        voided
+        refundOnCancel
       );
       expect(agreement.isValid()).is.true;
     });
@@ -278,28 +273,6 @@ describe("Agreement", function () {
       expect(agreement.refundOnCancelIsValid()).is.true;
       expect(agreement.isValid()).is.true;
     });
-
-    it("Always present, voided must be a boolean", async function () {
-      // Invalid field value
-      agreement.voided = 12;
-      expect(agreement.voidedIsValid()).is.false;
-      expect(agreement.isValid()).is.false;
-
-      // Invalid field value
-      agreement.voided = "zedzdeadbaby";
-      expect(agreement.voidedIsValid()).is.false;
-      expect(agreement.isValid()).is.false;
-
-      // Valid field value
-      agreement.voided = false;
-      expect(agreement.voidedIsValid()).is.true;
-      expect(agreement.isValid()).is.true;
-
-      // Valid field value
-      agreement.voided = true;
-      expect(agreement.voidedIsValid()).is.true;
-      expect(agreement.isValid()).is.true;
-    });
   });
 
   context("📋 Utility functions", async function () {
@@ -316,8 +289,7 @@ describe("Agreement", function () {
         premium,
         startTimestamp,
         endTimestamp,
-        refundOnCancel,
-        voided
+        refundOnCancel
       );
       expect(agreement.isValid()).is.true;
 
@@ -331,7 +303,6 @@ describe("Agreement", function () {
         startTimestamp,
         endTimestamp,
         refundOnCancel,
-        voided,
       };
     });
 
@@ -359,7 +330,6 @@ describe("Agreement", function () {
           agreement.startTimestamp,
           agreement.endTimestamp,
           agreement.refundOnCancel,
-          agreement.voided,
         ];
 
         // Get struct

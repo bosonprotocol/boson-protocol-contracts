@@ -1,6 +1,7 @@
 const { ethers } = require("hardhat");
 const { getInterfaceIds } = require("../../../scripts/config/supported-interfaces.js");
 const Agreement = require("../../../scripts/domain/Agreement");
+const AgreementStatus = require("../../../scripts/domain/AgreementStatus");
 
 const { expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
@@ -78,13 +79,18 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
       });
 
       it("should update state", async function () {
+        let expectedAgreementStatus = new AgreementStatus(false, false, "0", "0");
+
         await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
 
         // Get agreement object from contract
-        const returnedAgreement = Agreement.fromStruct(await mutualizer.getAgreement("1"));
+        const [returnedAgreement, returnedAgreementStatus] = await mutualizer.getAgreement("1");
+        const returnedAgreementStruct = Agreement.fromStruct(returnedAgreement);
+        const returnedAgreementStatusStruct = AgreementStatus.fromStruct(returnedAgreementStatus);
 
         // Values should match
-        expect(returnedAgreement.toString()).eq(agreement.toString());
+        expect(returnedAgreementStruct.toString()).eq(agreement.toString());
+        expect(returnedAgreementStatusStruct.toString()).eq(expectedAgreementStatus.toString());
       });
 
       context("💔 Revert Reasons", async function () {
@@ -92,15 +98,6 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
           // Expect revert if random user attempts to issue voucher
           await expect(mutualizer.connect(rando).newAgreement(agreement)).to.be.revertedWith(
             RevertReasons.OWNABLE_NOT_OWNER
-          );
-        });
-
-        it("voided is set to true", async function () {
-          agreement.voided = true;
-
-          // Expect revert if voided is true
-          await expect(mutualizer.connect(mutualizerOwner).newAgreement(agreement)).to.be.revertedWith(
-            RevertReasons.INVALID_AGREEMENT
           );
         });
 
@@ -163,17 +160,19 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
         });
 
         it("should update state", async function () {
+          let expectedAgreementStatus = new AgreementStatus(true, false, "0", "0");
+
           await mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium });
 
           // Get agreement id and agreement object from contract
-          const [returnedAgreementId, returnedAgreement] = await mutualizer.getAgreementBySellerAndToken(
-            assistant.address,
-            ethers.constants.AddressZero
-          );
+          const [returnedAgreementId, returnedAgreement, returnedAgreementStatus] =
+            await mutualizer.getConfirmedAgreementBySellerAndToken(agreement.sellerAddress, agreement.token);
           const returnedAgreementStruct = Agreement.fromStruct(returnedAgreement);
+          const returnedAgreementStatusStruct = AgreementStatus.fromStruct(returnedAgreementStatus);
 
           // Values should match
           expect(returnedAgreementStruct.toString()).eq(agreement.toString());
+          expect(returnedAgreementStatusStruct.toString()).eq(expectedAgreementStatus.toString());
           expect(returnedAgreementId.toString()).eq(agreementId);
         });
 
@@ -185,6 +184,8 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
         });
 
         it("it is possible to substitute an agreement", async function () {
+          let expectedAgreementStatus = new AgreementStatus(true, false, "0", "0");
+
           // Agreement is confirmed
           await mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium });
 
@@ -209,14 +210,14 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
           await mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium });
 
           // Get agreement id and agreement object from contract
-          const [returnedAgreementId, returnedAgreement] = await mutualizer.getAgreementBySellerAndToken(
-            assistant.address,
-            ethers.constants.AddressZero
-          );
+          const [returnedAgreementId, returnedAgreement, returnedAgreementStatus] =
+            await mutualizer.getConfirmedAgreementBySellerAndToken(agreement.sellerAddress, agreement.token);
           const returnedAgreementStruct = Agreement.fromStruct(returnedAgreement);
+          const returnedAgreementStatusStruct = AgreementStatus.fromStruct(returnedAgreementStatus);
 
           // Values should match
           expect(returnedAgreementStruct.toString()).eq(agreement.toString());
+          expect(returnedAgreementStatusStruct.toString()).eq(expectedAgreementStatus.toString());
           expect(returnedAgreementId.toString()).eq(agreementId);
         });
 
@@ -378,10 +379,10 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
         await mutualizer.connect(mutualizerOwner).voidAgreement(agreementId);
 
         // Get agreement object from contract
-        const returnedAgreement = Agreement.fromStruct(await mutualizer.getAgreement("1"));
+        const [, returnedStatus] = await mutualizer.getAgreement("1");
 
         // Values should match
-        expect(returnedAgreement.voided).to.be.true;
+        expect(returnedStatus.voided).to.be.true;
       });
 
       it("seller can void the agreement", async function () {
@@ -711,6 +712,83 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
         await expect(mutualizer.connect(rando).deposit(ethers.constants.AddressZero, amount, { value: amount }))
           .to.emit(mutualizer, "FundsDeposited")
           .withArgs(ethers.constants.AddressZero, amount, rando.address);
+      });
+    });
+
+    context("👉 getAgreement()", function () {
+      it("returns the correct agreement", async function () {
+        let expectedAgreementStatus = new AgreementStatus(false, false, "0", "0");
+
+        await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+
+        // Get agreement object from contract
+        const [returnedAgreement, returnedAgreementStatus] = await mutualizer.getAgreement("1");
+        const returnedAgreementStruct = Agreement.fromStruct(returnedAgreement);
+        const returnedAgreementStatusStruct = AgreementStatus.fromStruct(returnedAgreementStatus);
+
+        // Values should match
+        expect(returnedAgreementStruct.toString()).eq(agreement.toString());
+        expect(returnedAgreementStatusStruct.toString()).eq(expectedAgreementStatus.toString());
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("agreement does not exist", async function () {
+          // Index out of bound
+          await expect(mutualizer.getAgreement("0")).to.be.revertedWith(RevertReasons.INVALID_AGREEMENT);
+
+          await expect(mutualizer.getAgreement("10")).to.be.revertedWith(RevertReasons.INVALID_AGREEMENT);
+        });
+      });
+    });
+
+    context("👉 getConfirmedAgreementBySellerAndToken()", function () {
+      let agreementId;
+
+      beforeEach(async function () {
+        agreementId = "1";
+        await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+        await mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium });
+      });
+
+      it("returns the correct agreement", async function () {
+        let expectedAgreementStatus = new AgreementStatus(true, false, "0", "0");
+        // Get agreement id and agreement object from contract
+        const [returnedAgreementId, returnedAgreement, returnedAgreementStatus] =
+          await mutualizer.getConfirmedAgreementBySellerAndToken(agreement.sellerAddress, agreement.token);
+        const returnedAgreementStruct = Agreement.fromStruct(returnedAgreement);
+        const returnedAgreementStatusStruct = AgreementStatus.fromStruct(returnedAgreementStatus);
+
+        // Values should match
+        expect(returnedAgreementStruct.toString()).eq(agreement.toString());
+        expect(returnedAgreementStatusStruct.toString()).eq(expectedAgreementStatus.toString());
+        expect(returnedAgreementId.toString()).eq(agreementId);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("agreement does not exist - no agreement for the token", async function () {
+          // Seller has no agreement for the token
+          await expect(
+            mutualizer.getConfirmedAgreementBySellerAndToken(assistant.address, foreign20.address)
+          ).to.be.revertedWith(RevertReasons.INVALID_AGREEMENT);
+        });
+
+        it("agreement does not exist - no agreement for the seller", async function () {
+          // Rando has no agreement
+          await expect(
+            mutualizer.getConfirmedAgreementBySellerAndToken(rando.address, ethers.constants.AddressZero)
+          ).to.be.revertedWith(RevertReasons.INVALID_AGREEMENT);
+        });
+
+        it("agreement not confirmed yet", async function () {
+          // Create a new agreement, but don't confirm it
+          agreement.token = foreign20.address;
+          await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+
+          // Seller has no agreement for the token
+          await expect(
+            mutualizer.getConfirmedAgreementBySellerAndToken(assistant.address, foreign20.address)
+          ).to.be.revertedWith(RevertReasons.INVALID_AGREEMENT);
+        });
       });
     });
   });

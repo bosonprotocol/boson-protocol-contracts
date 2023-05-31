@@ -16,17 +16,10 @@ import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
     using SafeERC20 for IERC20;
 
-    struct AgreementStatus {
-        bool confirmed;
-        uint256 outstandingExchanges;
-        uint256 totalMutualizedAmount;
-    }
-
     address private immutable protocolAddress;
 
     Agreement[] private agreements;
     mapping(address => mapping(address => uint256)) private agreementBySellerAndToken;
-    // mapping(uint256 => uint256) private totalMutualizedAmount;
     mapping(uint256 => AgreementStatus) private agreementStatus;
 
     mapping(uint256 => uint256) private agreementByUuid;
@@ -56,11 +49,12 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
     ) external view returns (bool) {
         uint256 agreementId = agreementBySellerAndToken[_sellerAddress][_token];
         Agreement storage agreement = agreements[agreementId];
+        AgreementStatus storage status = agreementStatus[agreementId];
 
         return (_feeRequester == protocolAddress &&
             agreement.startTimestamp <= block.timestamp &&
             agreement.endTimestamp >= block.timestamp &&
-            !agreement.voided &&
+            !status.voided &&
             agreement.maxMutualizedAmountPerTransaction >= _feeAmount &&
             agreement.maxTotalMutualizedAmount + _feeAmount >= agreementStatus[agreementId].totalMutualizedAmount);
     }
@@ -90,10 +84,11 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
 
         require(agreement.startTimestamp <= block.timestamp, AGREEMENT_NOT_STARTED);
         require(agreement.endTimestamp >= block.timestamp, AGREEMENT_EXPIRED);
-        require(!agreement.voided, AGREEMENT_VOIDED);
         require(agreement.maxMutualizedAmountPerTransaction >= _feeAmount, EXCEEDED_SINGLE_FEE);
 
         AgreementStatus storage status = agreementStatus[agreementId];
+        require(!status.voided, AGREEMENT_VOIDED);
+
         status.totalMutualizedAmount += _feeAmount;
         require(agreement.maxTotalMutualizedAmount >= status.totalMutualizedAmount, EXCEEDED_TOTAL_FEE);
 
@@ -151,7 +146,6 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
      *
      * Reverts if:
      * - caller is not the contract owner
-     * - parameter "voided" is set to true
      * - max mutualized amount per transaction is greater than max total mutualized amount
      * - max mutualized amount per transaction is 0
      * - end timestamp is not greater than start timestamp
@@ -160,7 +154,6 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
      * @param _agreement - a fully populated agreement object
      */
     function newAgreement(Agreement calldata _agreement) external onlyOwner {
-        require(!_agreement.voided, INVALID_AGREEMENT);
         require(_agreement.maxMutualizedAmountPerTransaction <= _agreement.maxTotalMutualizedAmount, INVALID_AGREEMENT);
         require(_agreement.maxMutualizedAmountPerTransaction > 0, INVALID_AGREEMENT);
         require(_agreement.endTimestamp > _agreement.startTimestamp, INVALID_AGREEMENT);
@@ -190,9 +183,8 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
      * @param _agreementId - a unique identifier of the agreement
      */
     function payPremium(uint256 _agreementId) external payable {
-        Agreement storage agreement = getValidAgreement(_agreementId);
+        (Agreement storage agreement, AgreementStatus storage status) = getValidAgreement(_agreementId);
 
-        AgreementStatus storage status = agreementStatus[_agreementId];
         require(!status.confirmed, AGREEMENT_ALREADY_CONFIRMED);
 
         transferFundsToMutualizer(agreement.token, agreement.premium);
@@ -218,11 +210,11 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
      * @param _agreementId - a unique identifier of the agreement
      */
     function voidAgreement(uint256 _agreementId) external {
-        Agreement storage agreement = getValidAgreement(_agreementId);
+        (Agreement storage agreement, AgreementStatus storage status) = getValidAgreement(_agreementId);
 
         require(msg.sender == owner() || msg.sender == agreement.sellerAddress, NOT_OWNER_OR_SELLER);
 
-        agreement.voided = true;
+        status.voided = true;
 
         if (agreement.refundOnCancel) {
             // calculate unused premium
@@ -300,16 +292,44 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
             super.supportsInterface(interfaceId);
     }
 
-    function getAgreement(uint256 _agreementId) external view returns (Agreement memory) {
-        return agreements[_agreementId];
+    /**
+     * @notice Returns agreement details and status for a given agreement id.
+     *
+     * Reverts if:
+     * - agreement does not exist
+     *
+     * @param _agreementId - a unique identifier of the agreement
+     * @return agreement - agreement details
+     * @return status - agreement status
+     */
+    function getAgreement(
+        uint256 _agreementId
+    ) public view returns (Agreement memory agreement, AgreementStatus memory status) {
+        require(_agreementId > 0 && _agreementId < agreements.length, INVALID_AGREEMENT);
+
+        agreement = agreements[_agreementId];
+        status = agreementStatus[_agreementId];
     }
 
-    function getAgreementBySellerAndToken(
+    /**
+     * @notice Returns agreement id, agreement details and status for given seller and token.
+     *
+     * Reverts if:
+     * - agreement does not exist
+     * - agreement is not confirmed yet
+     *
+     * @param _seller - the seller address
+     * @param _token - the token address (use 0x0 for native token)
+     * @return agreementId - a unique identifier of the agreement
+     * @return agreement - agreement details
+     * @return status - agreement status
+     */
+    function getConfirmedAgreementBySellerAndToken(
         address _seller,
         address _token
-    ) external view returns (uint256 agreementId, Agreement memory aggreement) {
+    ) external view returns (uint256 agreementId, Agreement memory agreement, AgreementStatus memory status) {
         agreementId = agreementBySellerAndToken[_seller][_token];
-        aggreement = agreements[agreementId];
+        (agreement, status) = getAgreement(agreementId);
     }
 
     /**
@@ -347,12 +367,15 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
      *
      * @param _agreementId - a unique identifier of the agreement
      */
-    function getValidAgreement(uint256 _agreementId) internal view returns (Agreement storage agreement) {
+    function getValidAgreement(
+        uint256 _agreementId
+    ) internal view returns (Agreement storage agreement, AgreementStatus storage status) {
         require(_agreementId > 0 && _agreementId < agreements.length, INVALID_AGREEMENT);
 
-        agreement = agreements[_agreementId];
+        status = agreementStatus[_agreementId];
+        require(!status.voided, AGREEMENT_VOIDED);
 
-        require(!agreement.voided, AGREEMENT_VOIDED);
+        agreement = agreements[_agreementId];
         require(agreement.endTimestamp > block.timestamp, AGREEMENT_EXPIRED);
     }
 }

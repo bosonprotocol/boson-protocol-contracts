@@ -16,7 +16,6 @@ class Agreement {
         uint128 startTimestamp;
         uint128 endTimestamp;
         bool refundOnCancel;
-        bool voided;
     }
     */
 
@@ -28,8 +27,7 @@ class Agreement {
     premium,
     startTimestamp,
     endTimestamp,
-    refundOnCancel,
-    voided
+    refundOnCancel
   ) {
     this.sellerAddress = sellerAddress;
     this.token = token;
@@ -39,7 +37,6 @@ class Agreement {
     this.startTimestamp = startTimestamp;
     this.endTimestamp = endTimestamp;
     this.refundOnCancel = refundOnCancel;
-    this.voided = voided;
   }
 
   /**
@@ -57,7 +54,6 @@ class Agreement {
       startTimestamp,
       endTimestamp,
       refundOnCancel,
-      voided,
     } = o;
 
     return new Agreement(
@@ -68,8 +64,7 @@ class Agreement {
       premium,
       startTimestamp,
       endTimestamp,
-      refundOnCancel,
-      voided
+      refundOnCancel
     );
   }
 
@@ -86,8 +81,7 @@ class Agreement {
       premium,
       startTimestamp,
       endTimestamp,
-      refundOnCancel,
-      voided;
+      refundOnCancel;
 
     // destructure struct
     [
@@ -99,7 +93,6 @@ class Agreement {
       startTimestamp,
       endTimestamp,
       refundOnCancel,
-      voided,
     ] = struct;
 
     return Agreement.fromObject({
@@ -111,7 +104,6 @@ class Agreement {
       startTimestamp: startTimestamp.toString(),
       endTimestamp: endTimestamp.toString(),
       refundOnCancel,
-      voided,
     });
   }
 
@@ -145,7 +137,6 @@ class Agreement {
       this.startTimestamp,
       this.endTimestamp,
       this.refundOnCancel,
-      this.voided,
     ];
   }
 
@@ -232,14 +223,6 @@ class Agreement {
   }
 
   /**
-   * Is this Agreement instance's voided field valid?
-   * @returns {boolean}
-   */
-  voidedIsValid() {
-    return booleanIsValid(this.voided);
-  }
-
-  /**
    * Is this Agreement instance valid?
    * @returns {boolean}
    */
@@ -252,8 +235,7 @@ class Agreement {
       this.premiumIsValid() &&
       this.startTimestampIsValid() &&
       this.endTimestampIsValid() &&
-      this.refundOnCancelIsValid() &&
-      this.voidedIsValid()
+      this.refundOnCancelIsValid()
     );
   }
 }

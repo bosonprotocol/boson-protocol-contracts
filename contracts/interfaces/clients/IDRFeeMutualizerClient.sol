@@ -7,7 +7,7 @@ import "./IDRFeeMutualizer.sol";
  *
  * @notice This is the interface for the Dispute Resolver fee mutualizers.
  *
- * The ERC-165 identifier for this interface is: 0x3ac29309
+ * The ERC-165 identifier for this interface is: 0x391b17cd
  */
 interface IDRFeeMutualizerClient is IDRFeeMutualizer {
     struct Agreement {
@@ -19,7 +19,13 @@ interface IDRFeeMutualizerClient is IDRFeeMutualizer {
         uint128 startTimestamp;
         uint128 endTimestamp;
         bool refundOnCancel;
+    }
+
+    struct AgreementStatus {
+        bool confirmed;
         bool voided;
+        uint256 outstandingExchanges;
+        uint256 totalMutualizedAmount;
     }
 
     event AgreementCreated(address indexed sellerAddress, uint256 indexed agreementId, Agreement agreement);
@@ -36,7 +42,6 @@ interface IDRFeeMutualizerClient is IDRFeeMutualizer {
      *
      * Reverts if:
      * - caller is not the contract owner
-     * - parameter "voided" is set to true
      * - max mutualized amount per transaction is greater than max total mutualized amount
      * - max mutualized amount per transaction is 0
      * - end timestamp is not greater than start timestamp
@@ -111,10 +116,35 @@ interface IDRFeeMutualizerClient is IDRFeeMutualizer {
      */
     function withdraw(address _tokenAddress, uint256 _amount) external;
 
-    function getAgreement(uint256 _agreementId) external view returns (Agreement memory);
+    /**
+     * @notice Returns agreement details and status for a given agreement id.
+     *
+     * Reverts if:
+     * - agreement does not exist
+     *
+     * @param _agreementId - a unique identifier of the agreement
+     * @return agreement - agreement details
+     * @return status - agreement status
+     */
+    function getAgreement(
+        uint256 _agreementId
+    ) external view returns (Agreement memory agreement, AgreementStatus memory status);
 
-    function getAgreementBySellerAndToken(
+    /**
+     * @notice Returns agreement id, agreement details and status for given seller and token.
+     *
+     * Reverts if:
+     * - agreement does not exist
+     * - agreement is not confirmed yet
+     *
+     * @param _seller - the seller address
+     * @param _token - the token address (use 0x0 for native token)
+     * @return agreementId - a unique identifier of the agreement
+     * @return agreement - agreement details
+     * @return status - agreement status
+     */
+    function getConfirmedAgreementBySellerAndToken(
         address _seller,
         address _token
-    ) external view returns (uint256 agreementId, Agreement memory aggreement);
+    ) external view returns (uint256 agreementId, Agreement memory agreement, AgreementStatus memory status);
 }
