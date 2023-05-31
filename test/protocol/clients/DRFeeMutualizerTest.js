@@ -681,7 +681,7 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
             // Expect revert if ERC20 does not exist anymore
             await expect(
               mutualizer.connect(mutualizerOwner).withdraw(foreign20.address, amountToWithdraw)
-            ).to.be.revertedWith(RevertReasons.EOA_FUNCTION_CALL);
+            ).to.be.revertedWithoutReason();
           });
 
           it("Transfer of funds failed - revert during ERC20 transfer", async function () {
@@ -1089,7 +1089,7 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
             // Expect revert if ERC20 does not exist anymore
             await expect(
               mutualizer.connect(protocol).requestDRFee(assistant.address, foreign20.address, amountToRequest, "0x")
-            ).to.be.revertedWith(RevertReasons.EOA_FUNCTION_CALL);
+            ).to.be.revertedWithoutReason();
           });
 
           it("Transfer of funds failed - revert during ERC20 transfer", async function () {
@@ -1279,9 +1279,7 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
             await foreign20.destruct();
 
             // Expect revert if ERC20 does not exist anymore
-            await expect(mutualizer.connect(protocol).returnDRFee(uuid, DRFee, "0x")).to.be.revertedWith(
-              RevertReasons.EOA_FUNCTION_CALL
-            );
+            await expect(mutualizer.connect(protocol).returnDRFee(uuid, DRFee, "0x")).to.be.revertedWithoutReason();
           });
         });
       });
