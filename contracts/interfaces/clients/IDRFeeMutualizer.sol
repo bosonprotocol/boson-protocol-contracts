@@ -20,7 +20,7 @@ interface IDRFeeMutualizer {
     );
 
     event DRFeeSent(address indexed feeRequester, address token, uint256 feeAmount, uint256 indexed uuid);
-    event DRFeeReturned(uint256 indexed uuid, uint256 feeAmount, bytes context);
+    event DRFeeReturned(uint256 indexed uuid, address indexed token, uint256 feeAmount, bytes context);
 
     /**
      * @notice Tells if mutualizer will cover the fee amount for a given seller and requrested by a given address.
@@ -76,6 +76,14 @@ interface IDRFeeMutualizer {
      * @notice Return fee to the mutualizer.
      *
      * @dev Returned amount can be between 0 and _feeAmount that was requested for the given uuid.
+     *
+     * - caller is not the protocol
+     * - uuid does not exist
+     * - same uuid is used twice
+     * - token is native and sent value is not equal to _feeAmount
+     * - token is ERC20, but some native value is sent
+     * - token is ERC20 and sent value is not equal to _feeAmount
+     * - token is ERC20 and transferFrom fails
      *
      * @param _uuid - unique identifier of the request
      * @param _feeAmount - returned amount

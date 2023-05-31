@@ -92,9 +92,7 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
         address _token,
         uint256 _feeAmount,
         bytes calldata /*_context*/
-    ) external returns (bool isCovered, uint256 uuid) {
-        require(msg.sender == protocolAddress, ONLY_PROTOCOL);
-
+    ) external onlyProtocol returns (bool isCovered, uint256 uuid) {
         // Make sure agreement is valid
         uint256 agreementId = agreementBySellerAndToken[_sellerAddress][_token];
         (Agreement storage agreement, AgreementStatus storage status) = getValidAgreement(agreementId);
@@ -123,22 +121,31 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
      *
      * @dev Returned amount can be between 0 and _feeAmount that was requested for the given uuid.
      *
+     * Reverts if:
+     * - caller is not the protocol
+     * - uuid does not exist
+     * - same uuid is used twice
+     * - token is native and sent value is not equal to _feeAmount
+     * - token is ERC20, but some native value is sent
+     * - token is ERC20 and sent value is not equal to _feeAmount
+     * - token is ERC20 and transferFrom fails
+     *
      * @param _uuid - unique identifier of the request
      * @param _feeAmount - returned amount
      * @param _context - additional data, describing the context
      */
-    function returnDRFee(uint256 _uuid, uint256 _feeAmount, bytes calldata _context) external payable {
+    function returnDRFee(uint256 _uuid, uint256 _feeAmount, bytes calldata _context) external payable onlyProtocol {
         uint256 agreementId = agreementByUuid[_uuid];
         require(agreementId != 0, INVALID_UUID);
 
         AgreementStatus storage status = agreementStatus[agreementId];
+        Agreement storage agreement = agreements[agreementId];
+        address token = agreement.token;
         if (_feeAmount > 0) {
-            Agreement storage agreement = agreements[agreementId];
+            transferFundsToMutualizer(token, _feeAmount);
 
-            transferFundsToMutualizer(agreement.token, _feeAmount);
-
+            // Protocol should not return more than it has received, but we handle this case if behavior changes in the future
             if (_feeAmount < status.totalMutualizedAmount) {
-                // not necessary if we restrict call to the protocol only
                 status.totalMutualizedAmount -= _feeAmount;
             } else {
                 status.totalMutualizedAmount = 0;
@@ -148,7 +155,8 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
         status.outstandingExchanges--;
 
         delete agreementByUuid[_uuid]; // prevent using the same uuid twice
-        emit DRFeeReturned(_uuid, _feeAmount, _context);
+
+        emit DRFeeReturned(_uuid, token, _feeAmount, _context);
     }
 
     /**
@@ -406,5 +414,10 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
 
         agreement = agreements[_agreementId];
         require(agreement.endTimestamp > block.timestamp, AGREEMENT_EXPIRED);
+    }
+
+    modifier onlyProtocol() {
+        require(msg.sender == protocolAddress, ONLY_PROTOCOL);
+        _;
     }
 }

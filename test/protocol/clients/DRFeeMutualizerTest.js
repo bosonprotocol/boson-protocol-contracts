@@ -1102,5 +1102,187 @@ describe("IDRFeeMutualizer + IDRFeeMutualizerClient", function () {
         });
       });
     });
+
+    context("👉 returnDRFee()", function () {
+      let amount, DRFee;
+
+      context("💰 Native Token", function () {
+        let uuid;
+
+        beforeEach(async function () {
+          const agreementId = "1";
+          uuid = "1";
+
+          amount = agreement.maxTotalMutualizedAmount;
+          await mutualizer.connect(mutualizerOwner).deposit(ethers.constants.AddressZero, amount, { value: amount });
+
+          // Create a new agreement
+          await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+          await mutualizer.connect(assistant).payPremium(agreementId, { value: agreement.premium });
+
+          // Request the DR fee
+          DRFee = ethers.BigNumber.from(agreement.maxMutualizedAmountPerTransaction).div(2);
+          await mutualizer.connect(protocol).requestDRFee(assistant.address, ethers.constants.AddressZero, DRFee, "0x");
+        });
+
+        it("should emit a DRFeeReturned event", async function () {
+          // Return DR fee, test for event
+          await expect(mutualizer.connect(protocol).returnDRFee(uuid, DRFee, "0x", { value: DRFee }))
+            .to.emit(mutualizer, "DRFeeReturned")
+            .withArgs(uuid, ethers.constants.AddressZero, DRFee, "0x");
+        });
+
+        it("should transfer funds", async function () {
+          await expect(() =>
+            mutualizer.connect(protocol).returnDRFee(uuid, DRFee, "0x", { value: DRFee })
+          ).to.changeEtherBalances([protocol, mutualizer], [DRFee.mul(-1), DRFee]);
+        });
+
+        it("should update state", async function () {
+          let returnedDRFee = DRFee.div(10).mul(9);
+          await mutualizer.connect(protocol).returnDRFee(uuid, returnedDRFee, "0x", { value: returnedDRFee });
+
+          let expectedAgreementStatus = new AgreementStatus(true, false, "0", DRFee.sub(returnedDRFee).toString());
+
+          // Get agreement object from contract
+          const [, returnedAgreementStatus] = await mutualizer.getAgreement("1");
+          const returnedAgreementStatusStruct = AgreementStatus.fromStruct(returnedAgreementStatus);
+          expect(returnedAgreementStatusStruct.toString()).eq(expectedAgreementStatus.toString());
+        });
+
+        it("It is possible to return 0 fee", async function () {
+          DRFee = "0";
+          // Return DR fee, test for event
+          await expect(mutualizer.connect(protocol).returnDRFee(uuid, DRFee, "0x", { value: DRFee }))
+            .to.emit(mutualizer, "DRFeeReturned")
+            .withArgs(uuid, ethers.constants.AddressZero, DRFee, "0x");
+        });
+
+        it("It is possible to return more than it received", async function () {
+          let returnedDRFee = DRFee.div(10).mul(11);
+          await mutualizer.connect(protocol).returnDRFee(uuid, returnedDRFee, "0x", { value: returnedDRFee });
+
+          let expectedAgreementStatus = new AgreementStatus(true, false, "0", "0");
+
+          // Get agreement object from contract
+          const [, returnedAgreementStatus] = await mutualizer.getAgreement("1");
+          const returnedAgreementStatusStruct = AgreementStatus.fromStruct(returnedAgreementStatus);
+          expect(returnedAgreementStatusStruct.toString()).eq(expectedAgreementStatus.toString());
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the protocol", async function () {
+            // Expect revert if caller is not the protocol
+            await expect(mutualizer.connect(rando).returnDRFee(uuid, DRFee, "0x", { value: DRFee })).to.be.revertedWith(
+              RevertReasons.ONLY_PROTOCOL
+            );
+          });
+
+          it("uuid does not exist", async function () {
+            uuid = "2";
+
+            // Invalid uuid
+            await expect(
+              mutualizer.connect(protocol).returnDRFee(uuid, DRFee, "0x", { value: DRFee })
+            ).to.be.revertedWith(RevertReasons.INVALID_UUID);
+          });
+
+          it("same uuid is used twice", async function () {
+            await mutualizer.connect(protocol).returnDRFee(uuid, DRFee, "0x", { value: DRFee });
+
+            // Invalid uuid
+            await expect(
+              mutualizer.connect(protocol).returnDRFee(uuid, DRFee, "0x", { value: DRFee })
+            ).to.be.revertedWith(RevertReasons.INVALID_UUID);
+          });
+
+          it("sent value is not equal to _feeAmount", async function () {
+            await expect(
+              mutualizer.connect(protocol).returnDRFee(uuid, DRFee, "0x", { value: DRFee.add(1) })
+            ).to.be.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+          });
+        });
+      });
+
+      context("💰 ERC20", function () {
+        let uuid;
+
+        beforeEach(async function () {
+          const agreementId = "1";
+          uuid = "1";
+
+          amount = agreement.maxTotalMutualizedAmount;
+          await foreign20.connect(mutualizerOwner).mint(mutualizerOwner.address, amount);
+          await foreign20.connect(mutualizerOwner).approve(mutualizer.address, amount);
+          await mutualizer.connect(mutualizerOwner).deposit(foreign20.address, amount);
+
+          // Create a new agreement
+          agreement.token = foreign20.address;
+          await mutualizer.connect(mutualizerOwner).newAgreement(agreement);
+          // Confirm the agreement
+          await foreign20.connect(assistant).mint(assistant.address, agreement.premium);
+          await foreign20.connect(assistant).approve(mutualizer.address, agreement.premium);
+          await mutualizer.connect(assistant).payPremium(agreementId);
+
+          // Request the DR fee
+          DRFee = ethers.BigNumber.from(agreement.maxMutualizedAmountPerTransaction).div(2);
+          await mutualizer.connect(protocol).requestDRFee(assistant.address, foreign20.address, DRFee, "0x");
+
+          // Approve the mutualizer to transfer fees back
+          await foreign20.connect(protocol).approve(mutualizer.address, DRFee);
+        });
+
+        it("should emit a DRFeeReturned event", async function () {
+          // Return DR fee, test for event
+          await expect(mutualizer.connect(protocol).returnDRFee(uuid, DRFee, "0x"))
+            .to.emit(mutualizer, "DRFeeReturned")
+            .withArgs(uuid, foreign20.address, DRFee, "0x");
+        });
+
+        it("should transfer funds", async function () {
+          await expect(() => mutualizer.connect(protocol).returnDRFee(uuid, DRFee, "0x")).to.changeTokenBalances(
+            foreign20,
+            [protocol, mutualizer],
+            [DRFee.mul(-1), DRFee]
+          );
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("native token is sent along", async function () {
+            // Expect revert if native token is sent along
+            await expect(
+              mutualizer.connect(protocol).returnDRFee(uuid, DRFee, "0x", { value: DRFee })
+            ).to.be.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
+          });
+
+          it("transferFrom fails", async function () {
+            await foreign20.connect(protocol).transfer(rando.address, "1"); // transfer to reduce balance
+
+            // Expect revert if DRFee is higher than token balance
+            await expect(mutualizer.connect(protocol).returnDRFee(uuid, DRFee, "0x")).to.be.revertedWith(
+              RevertReasons.ERC20_EXCEEDS_BALANCE
+            );
+
+            const reducedAllowance = DRFee.sub(1);
+            await foreign20.connect(protocol).approve(mutualizer.address, reducedAllowance);
+
+            // Expect revert if premium higher than allowance
+            await expect(mutualizer.connect(protocol).returnDRFee(uuid, DRFee, "0x")).to.be.revertedWith(
+              RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE
+            );
+          });
+
+          it("Transfer of funds failed - ERC20 token does not exist anymore", async function () {
+            // destruct foreign20
+            await foreign20.destruct();
+
+            // Expect revert if ERC20 does not exist anymore
+            await expect(mutualizer.connect(protocol).returnDRFee(uuid, DRFee, "0x")).to.be.revertedWith(
+              RevertReasons.EOA_FUNCTION_CALL
+            );
+          });
+        });
+      });
+    });
   });
 });
