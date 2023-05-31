@@ -170,8 +170,8 @@ describe("IBosonGroupHandler", function () {
       condition = mockCondition({
         tokenType: TokenType.MultiToken,
         tokenAddress: accounts[0].address,
-        tokenId: "5150",
         length: "0",
+        method: EvaluationMethod.Threshold,
       });
       expect(condition.isValid()).to.be.true;
 
@@ -459,6 +459,15 @@ describe("IBosonGroupHandler", function () {
 
           it("Condition 'Threshold' has non zero length", async function () {
             condition.length = "5";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'Threshold' has non zero tokenId", async function () {
+            condition.tokenId = "123";
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(

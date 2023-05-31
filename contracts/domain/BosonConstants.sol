@@ -105,6 +105,7 @@ string constant GROUP_HAS_CONDITION = "Offer belongs to a group with a condition
 string constant MAX_COMMITS_ADDRESS_REACHED = "Max commits per address reached";
 string constant MAX_COMMITS_TOKEN_REACHED = "Max commits per token id reached";
 string constant TOKEN_ID_NOT_IN_CONDITION_RANGE = "Token id not in condition range";
+string constant INVALID_TOKEN_ID = "ERC1155 requires non-zero tokenId; ERC721 and ERC20 require zero tokenId.";
 
 // Revert Reasons: Exchange related
 string constant NO_SUCH_EXCHANGE = "No such exchange";

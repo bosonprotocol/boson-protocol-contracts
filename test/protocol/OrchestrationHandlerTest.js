@@ -2199,7 +2199,11 @@ describe("IBosonOrchestrationHandler", function () {
         seller.id = "2"; // "1" is dispute resolver
         offerIds = ["1"];
 
-        condition = mockCondition({ tokenAddress: other2.address, tokenType: TokenType.MultiToken, tokenId: "5150" });
+        condition = mockCondition({
+          tokenAddress: other2.address,
+          tokenType: TokenType.MultiToken,
+          method: EvaluationMethod.Threshold,
+        });
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, seller.id, offerIds);
@@ -2879,7 +2883,7 @@ describe("IBosonOrchestrationHandler", function () {
         condition = mockCondition({
           tokenType: TokenType.MultiToken,
           tokenAddress: other2.address,
-          tokenId: "5150",
+          method: EvaluationMethod.Threshold,
           maxCommits: "3",
         });
         expect(condition.isValid()).to.be.true;
@@ -4250,7 +4254,11 @@ describe("IBosonOrchestrationHandler", function () {
         // Required constructor params for Group
         offerIds = ["1"];
 
-        condition = mockCondition({ tokenType: TokenType.MultiToken, tokenAddress: other2.address, tokenId: "5150" });
+        condition = mockCondition({
+          tokenType: TokenType.MultiToken,
+          tokenAddress: other2.address,
+          method: EvaluationMethod.Threshold,
+        });
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, seller.id, offerIds);
@@ -5174,7 +5182,11 @@ describe("IBosonOrchestrationHandler", function () {
         // Required constructor params for Group
         offerIds = ["1"];
 
-        condition = mockCondition({ tokenType: TokenType.MultiToken, tokenAddress: other2.address, tokenId: "5150" });
+        condition = mockCondition({
+          tokenType: TokenType.MultiToken,
+          tokenAddress: other2.address,
+          method: EvaluationMethod.Threshold,
+        });
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, seller.id, offerIds);
@@ -6706,7 +6718,11 @@ describe("IBosonOrchestrationHandler", function () {
 
         offerIds = ["1"];
 
-        condition = mockCondition({ tokenType: TokenType.MultiToken, tokenAddress: other2.address, tokenId: "5150" });
+        condition = mockCondition({
+          tokenType: TokenType.MultiToken,
+          tokenAddress: other2.address,
+          method: EvaluationMethod.Threshold,
+        });
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, seller.id, offerIds);

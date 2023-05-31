@@ -62,6 +62,7 @@ exports.RevertReasons = {
   GROUP_HAS_NO_CONDITION: "Offer belongs to a group without a condition. Use commitToOffer instead",
   GROUP_HAS_CONDITION: "Offer belongs to a group with a condition. Use commitToConditionalOffer instead",
   TOKEN_ID_NOT_IN_CONDITION_RANGE: "Token id not in condition range",
+  INVALID_TOKEN_ID: "ERC1155 requires non-zero tokenId; ERC721 and ERC20 require zero tokenId.",
 
   // Account-related
   MUST_BE_ACTIVE: "Account must be active",

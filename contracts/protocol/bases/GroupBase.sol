@@ -126,7 +126,8 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
             valid = (_condition.tokenAddress != address(0) &&
                 _condition.maxCommits > 0 &&
                 _condition.threshold > 0 &&
-                _condition.length == 0);
+                _condition.length == 0 &&
+                _condition.tokenId == 0);
         } else {
             // SpecificToken
             valid = (_condition.tokenAddress != address(0) &&

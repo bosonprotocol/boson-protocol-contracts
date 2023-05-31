@@ -196,7 +196,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             Condition storage condition = fetchCondition(groupId);
 
             // Make sure condition is not SpecificToken as it is not supported for preminted offers
-            require(condition.method != EvaluationMethod.SpecificToken, CANNOT_COMMIT);
+            require(
+                condition.method == EvaluationMethod.Threshold && condition.tokenType != TokenType.MultiToken,
+                CANNOT_COMMIT
+            );
 
             bool allow = authorizeCommit(_buyer, condition, groupId, 0);
             require(allow, CANNOT_COMMIT);
@@ -950,7 +953,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _buyer buyer address
      * @param _condition - the condition to check
      * @param _groupId - the group id
-     * @param _tokenId - the token id. Valid only for SpecificToken evaluation method
+     * @param _tokenId - the token id
      *
      * @return allow - true if buyer is authorized to commit
      */
@@ -964,11 +967,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         if (_condition.method == EvaluationMethod.SpecificToken) {
-            // How many times has this token id been used to commit to offers in the group?
-            uint256 commitCount = lookups.conditionalCommitsByTokenId[_tokenId][_groupId];
-
-            require(commitCount < _condition.maxCommits, MAX_COMMITS_TOKEN_REACHED);
-
             // If condition has a token id, check that the token id is in range, otherwise accept any token id
             if (_condition.tokenId > 0) {
                 require(
@@ -977,6 +975,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 );
             }
 
+            // How many times has this token id been used to commit to offers in the group?
+            uint256 commitCount = lookups.conditionalCommitsByTokenId[_tokenId][_groupId];
+
+            require(commitCount < _condition.maxCommits, MAX_COMMITS_TOKEN_REACHED);
+
             allow = holdsSpecificToken(_buyer, _condition, _tokenId);
 
             if (allow) {
@@ -984,12 +987,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 lookups.conditionalCommitsByTokenId[_tokenId][_groupId] = ++commitCount;
             }
         } else if (_condition.method == EvaluationMethod.Threshold) {
+            require(_condition.tokenType == TokenType.MultiToken ? _tokenId > 0 : _tokenId == 0, INVALID_TOKEN_ID);
+
             // How many times has this address committed to offers in the group?
             uint256 commitCount = lookups.conditionalCommitsByAddress[_buyer][_groupId];
 
             require(commitCount < _condition.maxCommits, MAX_COMMITS_ADDRESS_REACHED);
 
-            allow = holdsThreshold(_buyer, _condition);
+            allow = holdsThreshold(_buyer, _condition, _tokenId);
 
             if (allow) {
                 // Increment number of commits to the group for this address if they are allowed to commit
@@ -1003,14 +1008,19 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _buyer - address of potential buyer
      * @param _condition - the condition to be evaluated
+     * @param _tokenId - the token id. Valid only for ERC1155 tokens.
      *
      * @return bool - true if buyer meets the condition
      */
-    function holdsThreshold(address _buyer, Condition storage _condition) internal view returns (bool) {
+    function holdsThreshold(
+        address _buyer,
+        Condition storage _condition,
+        uint256 _tokenId
+    ) internal view returns (bool) {
         uint256 balance;
 
         if (_condition.tokenType == TokenType.MultiToken) {
-            balance = IERC1155(_condition.tokenAddress).balanceOf(_buyer, _condition.tokenId);
+            balance = IERC1155(_condition.tokenAddress).balanceOf(_buyer, _tokenId);
         } else if (_condition.tokenType == TokenType.NonFungibleToken) {
             balance = IERC721(_condition.tokenAddress).balanceOf(_buyer);
         } else {
