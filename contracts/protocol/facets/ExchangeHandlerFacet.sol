@@ -809,28 +809,31 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         TokenRange[] storage twinRanges = lookups.twinRangesBySeller[seller.id][twin.tokenAddress];
 
                         uint256 lastIndex = twinRanges.length - 1;
+
                         // Find the range that contains the twin
                         for (uint256 j = 0; j <= lastIndex; j++) {
-                            if (twinRanges[j].start <= twin.tokenId && twinRanges[j].end >= twin.tokenId) {
-                                // If twin is the last one in the range, remove the range
-                                if (twinRanges[j].end == twin.tokenId) {
-                                    // If not removing last element, move the last to the removed index
+                            if (twinRanges[j].start <= tokenId && twinRanges[j].end >= tokenId) {
+                                bool unlimitedSupply = twin.supplyAvailable == type(uint256).max;
+
+                                // Limited: Order is descending first tokenId is the last one to be transferred
+                                // Unlimited: Order is ascending first tokenId is the first one to be transferred
+                                if ((unlimitedSupply ? twinRanges[j].end : twinRanges[j].start) == tokenId) {
+                                    // Remove from ranges mapping
                                     if (j != lastIndex) {
                                         twinRanges[j] = twinRanges[lastIndex];
                                     }
 
-                                    // Remove last element
                                     twinRanges.pop();
-                                } else {
-                                    // If twin has limited supply
-                                    if (twin.supplyAvailable != type(uint256).max) {
-                                        // Reduce end property
-                                        twinRanges[j].end--;
-                                    } else {
-                                        // Otherwise, increase start property
-                                        twinRanges[j].start++;
-                                    }
                                     break;
+                                }
+
+                                // If twin has unlimited supply
+                                if (unlimitedSupply) {
+                                    // Increase start property
+                                    twinRanges[j].start++;
+                                } else {
+                                    // Otherwise reduce end property
+                                    twinRanges[j].end--;
                                 }
                             }
                         }

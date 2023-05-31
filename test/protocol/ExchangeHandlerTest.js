@@ -2474,6 +2474,59 @@ describe("IBosonExchangeHandler", function () {
           expect(range).to.deep.equal(expectedRange);
         });
 
+        it("Should remove element from range when transfering last twin", async function () {
+          // starting slot
+          const protocolLookupsSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.lookups"));
+          const protocolLookupsSlotNumber = ethers.BigNumber.from(protocolLookupsSlot);
+
+          // seller id mapping from twinRangesBySeller
+          const firstMappingSlot = ethers.BigNumber.from(
+            getMappingStoragePosition(
+              protocolLookupsSlotNumber.add("22"),
+              ethers.BigNumber.from(seller.id).toNumber(),
+              paddingType.START
+            )
+          );
+
+          // token address mapping from twinRangesBySeller
+          const secondMappingSlot = getMappingStoragePosition(
+            firstMappingSlot,
+            twin721.tokenAddress.toLowerCase(),
+            paddingType.START
+          );
+
+          const range = {};
+          const arrayStart = ethers.BigNumber.from(keccak256(secondMappingSlot));
+          let exchangeId = 1;
+          let supply = 9;
+
+          // redeem first exchange and increase exchangeId
+          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId++);
+
+          while (exchangeId <= 10) {
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+            range.start = await getStorageAt(protocolDiamondAddress, arrayStart.add(0));
+            range.end = await getStorageAt(protocolDiamondAddress, arrayStart.add(1));
+
+            let expectedRange = {};
+            if (exchangeId == 10) {
+              // Last transfer should remove range
+              expectedRange.start = ethers.utils.hexZeroPad(ethers.BigNumber.from("0").toHexString(), 32);
+              expectedRange.end = ethers.utils.hexZeroPad(ethers.BigNumber.from("0").toHexString(), 32);
+            } else {
+              expectedRange.start = ethers.utils.hexZeroPad(ethers.BigNumber.from("1").toHexString(), 32);
+              expectedRange.end = ethers.utils.hexZeroPad(ethers.BigNumber.from(--supply).toHexString(), 32);
+            }
+
+            expect(range).to.deep.equal(expectedRange);
+
+            exchangeId++;
+          }
+        });
+
         context("Unlimited supply", async function () {
           let other721;
           beforeEach(async function () {
@@ -2501,6 +2554,9 @@ describe("IBosonExchangeHandler", function () {
             twin721.id = "4";
             twin721.tokenId = "1";
 
+            // Increase exchange id
+            exchange.id++;
+
             // Create a new twin with the new token address
             await twinHandler.connect(assistant).createTwin(twin721.toStruct());
 
@@ -2527,7 +2583,7 @@ describe("IBosonExchangeHandler", function () {
           });
 
           it("Transfer token order must be ascending if twin supply is unlimited", async function () {
-            let exchangeId = ++exchange.id;
+            let exchangeId = exchange.id;
 
             // tokenId transferred to the buyer is 1
             let expectedTokenId = "1";
@@ -2554,6 +2610,7 @@ describe("IBosonExchangeHandler", function () {
             // Commit to offer for the second time
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
+            console.log("transferring second exchange");
             // Redeem the voucher
             // tokenId transferred to the buyer is 1
             await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchangeId))
@@ -2565,7 +2622,7 @@ describe("IBosonExchangeHandler", function () {
             expect(owner).to.equal(buyer.address);
           });
 
-          it.only("Should increase start in twinRangesBySeller range", async function () {
+          it("Should increase start in twinRangesBySeller range", async function () {
             // Redeem the voucher
             await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
