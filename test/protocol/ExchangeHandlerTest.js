@@ -2438,93 +2438,145 @@ describe("IBosonExchangeHandler", function () {
           expect(twin.supplyAvailable).to.equal(0);
         });
 
-        it("Should reduce end in twinRangesBySeller range", async function () {
-          // Redeem the voucher
-          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+        context("Check twinRangesBySeller slot", async function () {
+          let sellerTwinRangesSlot;
 
-          // starting slot
-          const protocolLookupsSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.lookups"));
-          const protocolLookupsSlotNumber = ethers.BigNumber.from(protocolLookupsSlot);
+          before(async function () {
+            // starting slot
+            const protocolLookupsSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.lookups"));
+            const protocolLookupsSlotNumber = ethers.BigNumber.from(protocolLookupsSlot);
 
-          // seller id mapping from twinRangesBySeller
-          const firstMappingSlot = ethers.BigNumber.from(
-            getMappingStoragePosition(
-              protocolLookupsSlotNumber.add("22"),
-              ethers.BigNumber.from(seller.id).toNumber(),
+            // seller id mapping from twinRangesBySeller
+            const firstMappingSlot = ethers.BigNumber.from(
+              getMappingStoragePosition(
+                protocolLookupsSlotNumber.add("22"),
+                ethers.BigNumber.from(seller.id).toNumber(),
+                paddingType.START
+              )
+            );
+
+            // token address mapping from twinRangesBySeller
+            const secondMappingSlot = getMappingStoragePosition(
+              firstMappingSlot,
+              twin721.tokenAddress.toLowerCase(),
               paddingType.START
-            )
-          );
+            );
 
-          // token address mapping from twinRangesBySeller
-          const secondMappingSlot = getMappingStoragePosition(
-            firstMappingSlot,
-            twin721.tokenAddress.toLowerCase(),
-            paddingType.START
-          );
+            sellerTwinRangesSlot = ethers.BigNumber.from(keccak256(secondMappingSlot));
+          });
 
-          const range = {};
-          const arrayStart = ethers.BigNumber.from(keccak256(secondMappingSlot));
-          (range.start = await getStorageAt(protocolDiamondAddress, arrayStart.add(0))),
-            (range.end = await getStorageAt(protocolDiamondAddress, arrayStart.add(1)));
+          it("Should reduce end in twinRangesBySeller range", async function () {
+            // Redeem the voucher
+            await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
-          const expectedRange = {
-            start: ethers.utils.hexZeroPad(ethers.BigNumber.from("1").toHexString(), 32),
-            end: ethers.utils.hexZeroPad(ethers.BigNumber.from("9").toHexString(), 32),
-          };
-          expect(range).to.deep.equal(expectedRange);
-        });
+            const start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot);
+            expect(start).to.equal(ethers.utils.hexZeroPad(ethers.BigNumber.from("1").toHexString(), 32));
 
-        it("Should remove element from range when transfering last twin", async function () {
-          // starting slot
-          const protocolLookupsSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.lookups"));
-          const protocolLookupsSlotNumber = ethers.BigNumber.from(protocolLookupsSlot);
+            const end = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(1));
+            expect(end).to.equal(ethers.utils.hexZeroPad(ethers.BigNumber.from("9").toHexString(), 32));
+          });
 
-          // seller id mapping from twinRangesBySeller
-          const firstMappingSlot = ethers.BigNumber.from(
-            getMappingStoragePosition(
-              protocolLookupsSlotNumber.add("22"),
-              ethers.BigNumber.from(seller.id).toNumber(),
-              paddingType.START
-            )
-          );
+          it("Should remove element from range when transfering last twin", async function () {
+            let exchangeId = 1;
+            let supply = 9;
 
-          // token address mapping from twinRangesBySeller
-          const secondMappingSlot = getMappingStoragePosition(
-            firstMappingSlot,
-            twin721.tokenAddress.toLowerCase(),
-            paddingType.START
-          );
+            // redeem first exchange and increase exchangeId
+            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId++);
 
-          const range = {};
-          const arrayStart = ethers.BigNumber.from(keccak256(secondMappingSlot));
-          let exchangeId = 1;
-          let supply = 9;
+            while (exchangeId <= 10) {
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
-          // redeem first exchange and increase exchangeId
-          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId++);
+              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
-          while (exchangeId <= 10) {
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+              let expectedStart;
+              let expectedEnd;
+              if (exchangeId == 10) {
+                // Last transfer should remove range
+                expectedStart = ethers.utils.hexZeroPad(ethers.BigNumber.from("0").toHexString(), 32);
+                expectedEnd = ethers.utils.hexZeroPad(ethers.BigNumber.from("0").toHexString(), 32);
+              } else {
+                expectedStart = ethers.utils.hexZeroPad(ethers.BigNumber.from("1").toHexString(), 32);
+                expectedEnd = ethers.utils.hexZeroPad(ethers.BigNumber.from(--supply).toHexString(), 32);
+              }
+              const start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot);
+              expect(start).to.equal(expectedStart);
 
-            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+              const end = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(1));
+              expect(end).to.equal(expectedEnd);
 
-            range.start = await getStorageAt(protocolDiamondAddress, arrayStart.add(0));
-            range.end = await getStorageAt(protocolDiamondAddress, arrayStart.add(1));
+              exchangeId++;
+            }
+          });
 
-            let expectedRange = {};
-            if (exchangeId == 10) {
-              // Last transfer should remove range
-              expectedRange.start = ethers.utils.hexZeroPad(ethers.BigNumber.from("0").toHexString(), 32);
-              expectedRange.end = ethers.utils.hexZeroPad(ethers.BigNumber.from("0").toHexString(), 32);
-            } else {
-              expectedRange.start = ethers.utils.hexZeroPad(ethers.BigNumber.from("1").toHexString(), 32);
-              expectedRange.end = ethers.utils.hexZeroPad(ethers.BigNumber.from(--supply).toHexString(), 32);
+          it("If seller has more than one range for the same token should remove correct range", async () => {
+            // Create a new twin with the same token addresses
+            twin721.id = "4";
+            twin721.tokenId = "11";
+
+            await twinHandler.connect(assistant).createTwin(twin721.toStruct());
+
+            // Create a new offer
+            const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+            offer.quantityAvailable = "10";
+
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+            // Bundle offer with twin
+            bundle = new Bundle("2", seller.id, [++offerId], [twin721.id]);
+            await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
+
+            // First range
+            let range1Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot);
+            let expectedRange1Start = ethers.utils.hexZeroPad(ethers.BigNumber.from("1").toHexString(), 32);
+            expect(range1Start).to.equal(expectedRange1Start);
+
+            let range1End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(1));
+            let expectedRange1End = ethers.utils.hexZeroPad(ethers.BigNumber.from("10").toHexString(), 32);
+            expect(range1End).to.equal(expectedRange1End);
+
+            // Second range
+            let range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(2));
+            let expectedRange2Start = ethers.utils.hexZeroPad(ethers.BigNumber.from("11").toHexString(), 32);
+            expect(range2Start).to.equal(expectedRange2Start);
+
+            let range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(3));
+            let expectedRange2End = ethers.utils.hexZeroPad(ethers.BigNumber.from("20").toHexString(), 32);
+            expect(range2End).to.equal(expectedRange2End);
+
+            // Set time forward to the offer's voucherRedeemableFrom
+            voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+            await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+            let exchangeId = 1;
+            // Redeem all twins from first offer
+            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId++);
+
+            // Reduce offer id to commit to first offer
+            --offerId;
+
+            while (exchangeId <= 10) {
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+              exchangeId++;
             }
 
-            expect(range).to.deep.equal(expectedRange);
+            // First range now should be second range
+            range1Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot);
+            expect(range1Start).to.equal(expectedRange2Start);
+            range1End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(1));
+            expect(range1End).to.equal(expectedRange2End);
 
-            exchangeId++;
-          }
+            // Second range should be empty
+            const slotEmpty = ethers.utils.hexZeroPad(ethers.BigNumber.from("0").toHexString(), 32);
+            range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(2));
+            expect(range2Start).to.equal(slotEmpty);
+            range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(3));
+            expect(range2End).to.equal(slotEmpty);
+          });
         });
 
         context("Unlimited supply", async function () {
@@ -2610,7 +2662,6 @@ describe("IBosonExchangeHandler", function () {
             // Commit to offer for the second time
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
-            console.log("transferring second exchange");
             // Redeem the voucher
             // tokenId transferred to the buyer is 1
             await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchangeId))
