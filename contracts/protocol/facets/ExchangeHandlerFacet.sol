@@ -197,7 +197,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             // Make sure condition is not SpecificToken as it is not supported for preminted offers
             require(
-                condition.method == EvaluationMethod.Threshold && condition.tokenType != TokenType.MultiToken,
+                condition.method != EvaluationMethod.SpecificToken && condition.tokenType != TokenType.MultiToken,
                 CANNOT_COMMIT
             );
 
@@ -966,14 +966,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
+        if (_condition.tokenId > 0) {
+            require(
+                _tokenId >= _condition.tokenId && _tokenId < _condition.tokenId + _condition.length,
+                TOKEN_ID_NOT_IN_CONDITION_RANGE
+            );
+        }
+
         if (_condition.method == EvaluationMethod.SpecificToken) {
             // If condition has a token id, check that the token id is in range, otherwise accept any token id
-            if (_condition.tokenId > 0) {
-                require(
-                    _tokenId >= _condition.tokenId && _tokenId < _condition.tokenId + _condition.length,
-                    TOKEN_ID_NOT_IN_CONDITION_RANGE
-                );
-            }
 
             // How many times has this token id been used to commit to offers in the group?
             uint256 commitCount = lookups.conditionalCommitsByTokenId[_tokenId][_groupId];
@@ -1000,6 +1001,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 // Increment number of commits to the group for this address if they are allowed to commit
                 lookups.conditionalCommitsByAddress[_buyer][_groupId] = ++commitCount;
             }
+        } else {
+            allow = true;
         }
     }
 
