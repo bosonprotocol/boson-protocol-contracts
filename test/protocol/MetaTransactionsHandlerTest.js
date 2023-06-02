@@ -1183,7 +1183,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         it("Returns default revert reason if called function reverts without a reason", async function () {
           // Create a valid seller for meta transaction
-          seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
           voucherInitValues = mockVoucherInitValues();
           emptyAuthToken = mockAuthToken();
           await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
