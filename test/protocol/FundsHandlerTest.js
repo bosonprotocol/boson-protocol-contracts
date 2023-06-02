@@ -314,7 +314,7 @@ describe("IBosonFundsHandler", function () {
           // Attempt to deposit the funds, expecting revert
           await expect(
             fundsHandler.connect(rando).depositFunds(seller.id, admin.address, depositAmount)
-          ).to.revertedWith("");
+          ).to.revertedWithoutReason();
         });
 
         it("Token contract revert for another reason", async function () {
@@ -1938,9 +1938,9 @@ describe("IBosonFundsHandler", function () {
             .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
 
           // Attempt to commit to an offer, expecting revert
-          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
-            RevertReasons.EOA_FUNCTION_CALL
-          );
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)
+          ).to.revertedWithoutReason();
         });
 
         it("Token contract revert for another reason", async function () {

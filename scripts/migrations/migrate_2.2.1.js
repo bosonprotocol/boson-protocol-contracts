@@ -4,8 +4,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const network = hre.network.name;
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
-// @TODO change this to v2.1.1 when it's released
-const tag = "upgrade-tests-2.2.1";
+const tag = "v2.2.1";
 const version = "2.2.1";
 
 const config = {
@@ -14,10 +13,14 @@ const config = {
     "SellerHandlerFacet",
     "DisputeResolverHandlerFacet",
     "OrchestrationHandlerFacet1",
+    "ProtocolInitializationHandlerFacet",
   ],
   remove: [],
   skipSelectors: {},
-  facetsToInit: {},
+  facetsToInit: {
+    AccountHandlerFacet: { init: [] },
+    OrchestrationHandlerFacet1: { init: [] },
+  },
   initializationData: "0x",
 };
 

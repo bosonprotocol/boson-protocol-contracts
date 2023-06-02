@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 
@@ -167,6 +167,7 @@ library ProtocolLib {
         // seller id => token address (only ERC721) => start and end of token ids range
         mapping(uint256 => mapping(address => BosonTypes.TokenRange[])) twinRangesBySeller;
         // seller id => token address (only ERC721) => twin ids
+        // @deprecated twinIdsByTokenAddressAndBySeller is no longer used. Keeping it for backwards compatibility.
         mapping(uint256 => mapping(address => uint256[])) twinIdsByTokenAddressAndBySeller;
         // exchange id => BosonTypes.TwinReceipt
         mapping(uint256 => BosonTypes.TwinReceipt[]) twinReceiptsByExchange;
