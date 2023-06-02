@@ -2,7 +2,7 @@
 pragma solidity 0.8.18;
 
 import { IBosonFundsHandler } from "../interfaces/handlers/IBosonFundsHandler.sol";
-import { IDRFeeMutualizerClient } from "../interfaces/clients/IDRFeeMutualizerClient.sol";
+import { IDRFeeMutualizerClient } from "../interfaces/clients/IDRFeeMutualizer.sol";
 
 /**
  * @title WithoutFallbackError

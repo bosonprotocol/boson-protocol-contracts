@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.18;
 import "../../../domain/BosonConstants.sol";
-import { IDRFeeMutualizer } from "../../../interfaces/clients/IDRFeeMutualizer.sol";
-import { IDRFeeMutualizerClient } from "../../../interfaces/clients/IDRFeeMutualizerClient.sol";
+import { IDRFeeMutualizer, IDRFeeMutualizerClient } from "../../../interfaces/clients/IDRFeeMutualizer.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -32,7 +31,7 @@ contract DRFeeMutualizer is IDRFeeMutualizerClient, Ownable, ERC165 {
     }
 
     /**
-     * @notice Tells if mutualizer will cover the fee amount for a given seller and requrested by a given address.
+     * @notice Tells if mutualizer will cover the fee amount for a given seller and requested by a given address.
      *
      * It checks if agreement is valid, but not if the mutualizer has enough funds to cover the fee.
      *
