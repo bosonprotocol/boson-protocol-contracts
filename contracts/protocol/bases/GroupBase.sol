@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
-
 import "./../../domain/BosonConstants.sol";
 import { IBosonGroupEvents } from "../../interfaces/events/IBosonGroupEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
@@ -101,12 +100,18 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * @notice Validates that condition parameters make sense.
      *
      * A invalid condition is one that fits any of the following criteria:
-     * - EvaluationMethod.None: any fields different from 0
-     * - EvaluationMethod.Threshold: token address, maxCommits or threshold is zero or length is not zero
+     * - EvaluationMethod.None: any field different from zero
+     * - EvaluationMethod.Threshold: 
+          -Token address, maxCommits, or threshold is zero. 
+     *    - TokenType is FungibleToken or NonFungibleToken and length and tokenId are not 0.
+     * - EvaluationMethod.Threshold:
+     *    - token address, maxCommits or threshold is zero
+     *    - tokenType is FungibleToken or NonFungibleToken and length and tokenId is not zero
+     *    - tokenType is MultiToken and length is zero when tokenId is not zero or range overflow
      * - EvaluationMethod.SpecificToken:
      *    - tokenType is FungibleToken
      *    - tokenType is NonFungibleToken and threshold is not zero
-     *    - tokenId is not zero and length is zero
+     *    - tokenId is not zero and length is zero or range overflow
      *    - tokenType is MultiToken and threshold is zero
      *    - maxCommits is zero
      *    - token address is zero
@@ -115,32 +120,57 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * @return valid - validity of condition
      *
      */
-    function validateCondition(Condition memory _condition) internal pure returns (bool valid) {
+    function validateCondition(Condition memory _condition) internal returns (bool valid) {
         if (_condition.method == EvaluationMethod.None) {
             valid = (_condition.tokenAddress == address(0) &&
                 _condition.tokenId == 0 &&
                 _condition.threshold == 0 &&
                 _condition.maxCommits == 0 &&
                 _condition.length == 0);
-        } else if (_condition.method == EvaluationMethod.Threshold) {
-            valid = (_condition.tokenAddress != address(0) && _condition.maxCommits > 0 && _condition.threshold > 0);
         } else {
-            // SpecificToken
-            valid = (_condition.tokenAddress != address(0) &&
-                _condition.maxCommits > 0 &&
-                _condition.tokenType != TokenType.FungibleToken); // FungibleToken not allowed for SpecificToken
-
             if (_condition.tokenId != 0) {
-                // SpecificToken with tokenId should have length
-                valid = valid && _condition.length > 0;
+                if (_condition.length == 0) {
+                    return false;
+                }
+
+                // Create local copy so we can use assembly to check for overflow
+                uint256 tokenId = _condition.tokenId;
+                uint256 length = _condition.length;
+                uint256 sum;
+                assembly {
+                    // Adding and checking for overflow in Assembly
+                    let tmp := add(tokenId, sub(length, 1))
+                    if iszero(lt(tmp, tokenId)) {
+                        sum := tmp
+                    }
+                }
+
+                if (sum == 0) {
+                    return false;
+                }
             }
 
-            // SpecificToken with NonFungibleToken should not have threshold
-            if (_condition.tokenType == TokenType.NonFungibleToken) {
-                valid = valid && _condition.threshold == 0;
+            if (_condition.method == EvaluationMethod.Threshold) {
+                valid = (_condition.tokenAddress != address(0) &&
+                    _condition.maxCommits > 0 &&
+                    _condition.threshold > 0);
+
+                if (_condition.tokenType != TokenType.MultiToken) {
+                    // NonFungibleToken and FungibleToken should not have length and tokenId
+                    valid = valid && _condition.length == 0 && _condition.tokenId == 0;
+                }
             } else {
-                // SpecificToken with MultiToken should have threshold
-                valid = valid && _condition.threshold > 0;
+                valid = (_condition.tokenAddress != address(0) &&
+                    _condition.maxCommits > 0 &&
+                    _condition.tokenType != TokenType.FungibleToken); // FungibleToken not allowed for SpecificToken
+
+                // SpecificToken with NonFungibleToken should not have threshold
+                if (_condition.tokenType == TokenType.NonFungibleToken) {
+                    valid = valid && _condition.threshold == 0;
+                } else {
+                    // SpecificToken with MultiToken should have threshold
+                    valid = valid && _condition.threshold > 0;
+                }
             }
         }
     }

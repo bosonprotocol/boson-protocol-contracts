@@ -144,6 +144,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         require(condition.method != EvaluationMethod.None, GROUP_HAS_NO_CONDITION);
 
+        if (condition.length > 1) {
+            // If condition has length > 1, check that the token id is in range
+            require(
+                _tokenId >= condition.tokenId && _tokenId < condition.tokenId + condition.length,
+                TOKEN_ID_NOT_IN_CONDITION_RANGE
+            );
+        }
+
         bool allow = authorizeCommit(_buyer, condition, groupId, _tokenId);
         require(allow, CANNOT_COMMIT);
 
@@ -195,11 +203,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // Get the condition
             Condition storage condition = fetchCondition(groupId);
 
-            // Make sure condition is not SpecificToken as it is not supported for preminted offers
-            require(
-                condition.method != EvaluationMethod.SpecificToken && condition.tokenType != TokenType.MultiToken,
-                CANNOT_COMMIT
-            );
+            // Pre-minted vouchers cannot be used for token-gated offers which have a range condition since the caller (Boson Voucher) cannot specify the token id
+            if (condition.method != EvaluationMethod.None && condition.tokenType != TokenType.FungibleToken) {
+                require(condition.length == 1, CANNOT_COMMIT);
+            }
 
             bool allow = authorizeCommit(_buyer, condition, groupId, 0);
             require(allow, CANNOT_COMMIT);
@@ -966,36 +973,29 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        if (_condition.tokenId > 0) {
-            require(
-                _tokenId >= _condition.tokenId && _tokenId < _condition.tokenId + _condition.length,
-                TOKEN_ID_NOT_IN_CONDITION_RANGE
-            );
-        }
-
         if (_condition.method == EvaluationMethod.SpecificToken) {
-            // If condition has a token id, check that the token id is in range, otherwise accept any token id
-
             // How many times has this token id been used to commit to offers in the group?
             uint256 commitCount = lookups.conditionalCommitsByTokenId[_tokenId][_groupId];
 
             require(commitCount < _condition.maxCommits, MAX_COMMITS_TOKEN_REACHED);
 
-            allow = holdsSpecificToken(_buyer, _condition, _tokenId);
+            allow = holdsSpecificToken(_buyer, _condition, _condition.length == 1 ? _condition.tokenId : _tokenId);
 
             if (allow) {
                 // Increment number of commits to the group for this token id if they are allowed to commit
                 lookups.conditionalCommitsByTokenId[_tokenId][_groupId] = ++commitCount;
             }
         } else if (_condition.method == EvaluationMethod.Threshold) {
-            require(_condition.tokenType == TokenType.MultiToken ? _tokenId > 0 : _tokenId == 0, INVALID_TOKEN_ID);
+            if (_condition.tokenType != TokenType.MultiToken) {
+                require(_tokenId == 0, INVALID_TOKEN_ID);
+            }
 
             // How many times has this address committed to offers in the group?
             uint256 commitCount = lookups.conditionalCommitsByAddress[_buyer][_groupId];
 
             require(commitCount < _condition.maxCommits, MAX_COMMITS_ADDRESS_REACHED);
 
-            allow = holdsThreshold(_buyer, _condition, _tokenId);
+            allow = holdsThreshold(_buyer, _condition, _condition.length == 1 ? _condition.tokenId : _tokenId);
 
             if (allow) {
                 // Increment number of commits to the group for this address if they are allowed to commit

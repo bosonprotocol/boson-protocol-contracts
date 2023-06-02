@@ -1428,13 +1428,6 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
             ).to.revertedWith(RevertReasons.MAX_COMMITS_ADDRESS_REACHED);
           });
-
-          it("Caller sends zero tokenId", async function () {
-            tokenId = 0;
-            await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, tokenId, { value: price })
-            ).to.revertedWith(RevertReasons.INVALID_TOKEN_ID);
-          });
         });
       });
 

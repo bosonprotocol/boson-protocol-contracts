@@ -456,6 +456,28 @@ describe("IBosonGroupHandler", function () {
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
+
+          it("Condition 'Threshold' with MultiToken has non-zero tokenId and zero length", async function () {
+            condition.tokenType = TokenType.MultiToken;
+            condition.tokenId = "1";
+            condition.length = "0";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'Threshold' with MultiToken has tokenId + length - 1 > max uint256", async function () {
+            condition.tokenType = TokenType.MultiToken;
+            condition.tokenId = 2;
+            condition.length = ethers.constants.MaxUint256;
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
         });
 
         context("Condition 'SpecificToken' has invalid fields", async function () {
@@ -477,7 +499,7 @@ describe("IBosonGroupHandler", function () {
             );
           });
 
-          it("Condition 'SpecificToken' has non zero threshold", async function () {
+          it("Condition 'SpecificToken' has non zero threshold when tokenType is NonFungibleToken", async function () {
             condition.threshold = "10";
 
             // Attempt to create the group, expecting revert
@@ -497,6 +519,16 @@ describe("IBosonGroupHandler", function () {
 
           it("Length is zero when tokenId is not zero", async function () {
             condition.length = "0";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'SpecificToken' with MultiToken has zero threshold", async function () {
+            condition.tokenType = TokenType.MultiToken;
+            condition.threshold = "0";
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
