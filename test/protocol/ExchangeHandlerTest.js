@@ -915,57 +915,84 @@ describe("IBosonExchangeHandler", function () {
         ).to.emit(exchangeHandler, "BuyerCommitted");
       });
 
-      it("Offer is part of a group that enforces per-address conditions and utilizes ERC20 tokens", async function () {
-        // Required constructor params for Group
-        groupId = "1";
-        offerIds = [offerId];
+      context("Offer is part a group", async function () {
+        let groupId;
+        let offerIds;
 
-        // Create Condition
-        condition = mockCondition({ tokenAddress: foreign20.address, threshold: "50", maxCommits: "3" });
-        expect(condition.isValid()).to.be.true;
-
-        // Create Group
-        group = new Group(groupId, seller.id, offerIds);
-        expect(group.isValid()).is.true;
-
-        await groupHandler.connect(assistant).createGroup(group, condition);
-
-        // mint enough tokens for the buyer
-        await foreign20.connect(buyer).mint(buyer.address, condition.threshold);
-
-        await expect(bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)).to.emit(
-          exchangeHandler,
-          "BuyerCommitted"
-        );
-      });
-
-      it("Offer is part of a group that enforces per-address conditions and utilizes ERC721 tokens", async function () {
-        // Required constructor params for Group
-        groupId = "1";
-        offerIds = [offerId];
-
-        condition = mockCondition({
-          tokenAddress: foreign721.address,
-          threshold: "1",
-          maxCommits: "3",
-          tokenType: TokenType.NonFungibleToken,
-          method: EvaluationMethod.Threshold,
+        beforeEach(async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
         });
 
-        expect(condition.isValid()).to.be.true;
+        it("Offer is part of a group that enforces per-address conditions and utilizes ERC20 tokens", async function () {
+          // Create Condition
+          condition = mockCondition({ tokenAddress: foreign20.address, threshold: "50", maxCommits: "3" });
+          expect(condition.isValid()).to.be.true;
 
-        // Create Group
-        group = new Group(groupId, seller.id, offerIds);
-        expect(group.isValid()).is.true;
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
 
-        await groupHandler.connect(assistant).createGroup(group, condition);
+          await groupHandler.connect(assistant).createGroup(group, condition);
 
-        await foreign721.connect(buyer).mint("123", 1);
+          // mint enough tokens for the buyer
+          await foreign20.connect(buyer).mint(buyer.address, condition.threshold);
 
-        await expect(bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)).to.emit(
-          exchangeHandler,
-          "BuyerCommitted"
-        );
+          await expect(bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)).to.emit(
+            exchangeHandler,
+            "BuyerCommitted"
+          );
+        });
+
+        it("Offer is part of a group that enforces per-address conditions and utilizes ERC721 tokens", async function () {
+          condition = mockCondition({
+            tokenAddress: foreign721.address,
+            threshold: "1",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken,
+            method: EvaluationMethod.Threshold,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await foreign721.connect(buyer).mint("123", 1);
+
+          await expect(bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)).to.emit(
+            exchangeHandler,
+            "BuyerCommitted"
+          );
+        });
+
+        it("Offer is part of a group that has no condition", async function () {
+          condition = mockCondition({
+            tokenAddress: ethers.constants.AddressZero,
+            threshold: "0",
+            maxCommits: "0",
+            tokenType: TokenType.FungibleToken,
+            method: EvaluationMethod.None,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await foreign721.connect(buyer).mint("123", 1);
+
+          await expect(bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)).to.emit(
+            exchangeHandler,
+            "BuyerCommitted"
+          );
+        });
       });
 
       context("💔 Revert Reasons", async function () {

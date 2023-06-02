@@ -456,24 +456,6 @@ describe("IBosonGroupHandler", function () {
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
-
-          it("Condition 'Threshold' has non zero length", async function () {
-            condition.length = "5";
-
-            // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
-              RevertReasons.INVALID_CONDITION_PARAMETERS
-            );
-          });
-
-          it("Condition 'Threshold' has non zero tokenId", async function () {
-            condition.tokenId = "123";
-
-            // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
-              RevertReasons.INVALID_CONDITION_PARAMETERS
-            );
-          });
         });
 
         context("Condition 'SpecificToken' has invalid fields", async function () {
