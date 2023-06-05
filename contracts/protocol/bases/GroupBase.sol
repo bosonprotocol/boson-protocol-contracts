@@ -120,7 +120,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * @return valid - validity of condition
      *
      */
-    function validateCondition(Condition memory _condition) internal returns (bool valid) {
+    function validateCondition(Condition memory _condition) internal pure returns (bool valid) {
         if (_condition.method == EvaluationMethod.None) {
             valid = (_condition.tokenAddress == address(0) &&
                 _condition.tokenId == 0 &&
