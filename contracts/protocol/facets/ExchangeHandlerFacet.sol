@@ -153,6 +153,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             );
         }
 
+        if (condition.method == EvaluationMethod.Threshold && condition.tokenType != TokenType.MultiToken) {
+            require(_tokenId == 0, INVALID_TOKEN_ID);
+        }
+
         bool allow = authorizeCommit(_buyer, condition, groupId, _tokenId);
         require(allow, CANNOT_COMMIT);
 
@@ -990,10 +994,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 lookups.conditionalCommitsByTokenId[_tokenId][_groupId] = ++commitCount;
             }
         } else if (_condition.method == EvaluationMethod.Threshold) {
-            if (_condition.tokenType != TokenType.MultiToken) {
-                require(_tokenId == 0, INVALID_TOKEN_ID);
-            }
-
             // How many times has this address committed to offers in the group?
             uint256 commitCount = lookups.conditionalCommitsByAddress[_buyer][_groupId];
 

@@ -1428,10 +1428,11 @@ describe("IBosonExchangeHandler", function () {
             ).to.revertedWith(RevertReasons.MAX_COMMITS_ADDRESS_REACHED);
           });
 
-          it("Caller sends non-zero tokenId", async function () {});
-          await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, 1, { value: price })
-          ).to.revertedWith(RevertReasons.INVALID_TOKEN_ID);
+          it("Caller sends non-zero tokenId", async function () {
+            await expect(
+              exchangeHandler.connect(buyer).commitToConditionalOffer(buyer.address, offerId, 1, { value: price })
+            ).to.revertedWith(RevertReasons.INVALID_TOKEN_ID);
+          });
         });
       });
 
