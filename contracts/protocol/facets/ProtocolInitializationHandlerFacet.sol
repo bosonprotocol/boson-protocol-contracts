@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonProtocolInitializationHandler } from "../../interfaces/handlers/IBosonProtocolInitializationHandler.sol";
@@ -79,7 +79,9 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             if (!success) {
                 if (error.length > 0) {
                     // bubble up the error
-                    revert(string(error));
+                    assembly {
+                        revert(add(32, error), mload(error))
+                    }
                 } else {
                     // Reverts with default message
                     revert(PROTOCOL_INITIALIZATION_FAILED);

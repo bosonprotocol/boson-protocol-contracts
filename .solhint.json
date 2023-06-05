@@ -4,7 +4,7 @@
     "max-line-length": "off",
     "compiler-version": [
       "error",
-      "0.8.9"
+      "0.8.18"
     ],
     "func-name-mixedcase": "off",
     "not-rely-on-time": "off",
