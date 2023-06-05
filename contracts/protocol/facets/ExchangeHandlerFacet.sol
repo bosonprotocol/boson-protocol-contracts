@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.18;
 
+import "hardhat/console.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
@@ -118,6 +119,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - Received ERC20 token amount differs from the expected value
      * - Seller has less funds available than sellerDeposit
+     * - Condition has a range and the token id is not within the range
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
@@ -175,7 +177,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - Offer is not yet available for commits
      * - Buyer account is inactive
      * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Buyer is token-gated and evaluation method is SpecificToken
+     * - Buyer is token-gated and condition has a range.
      * - Seller has less funds available than sellerDeposit and price
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
@@ -203,8 +205,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // Get the condition
             Condition storage condition = fetchCondition(groupId);
 
-            // Pre-minted vouchers cannot be used for token-gated offers which have a range condition since the caller (Boson Voucher) cannot specify the token id
-            if (condition.method != EvaluationMethod.None && condition.tokenType != TokenType.FungibleToken) {
+            // If is a per-token condition or a per-address condition gated with a 1155 token, make sure the condition is not a range since caller (Boson Voucher) cannot specify the token id
+            if (
+                condition.method == EvaluationMethod.SpecificToken ||
+                (condition.method == EvaluationMethod.Threshold && condition.tokenType == TokenType.MultiToken)
+            ) {
                 require(condition.length == 1, CANNOT_COMMIT);
             }
 

@@ -66,6 +66,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - Received ERC20 token amount differs from the expected value
      * - Seller has less funds available than sellerDeposit
+     * - Condition has a range and the token id is not within the range
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
@@ -88,6 +89,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - Offer is not yet available for commits
      * - Buyer account is inactive
      * - Buyer is token-gated (conditional commit requirements not met or already used)
+     * - Buyer is token-gated and condition has a range.
      * - Seller has less funds available than sellerDeposit and price
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)

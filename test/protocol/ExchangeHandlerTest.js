@@ -970,6 +970,33 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
+        it("Offer is part of a group that enfoces per-address conditions and utilizes ERC1155 tokens with range length == 1", async function () {
+          condition = mockCondition({
+            tokenAddress: foreign1155.address,
+            threshold: "2",
+            maxCommits: "3",
+            tokenType: TokenType.MultiToken,
+            method: EvaluationMethod.Threshold,
+            length: "1",
+            tokenId: "123",
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await foreign1155.connect(buyer).mint(condition.tokenId, condition.threshold);
+
+          await expect(bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)).to.emit(
+            exchangeHandler,
+            "BuyerCommitted"
+          );
+        });
+
         it("Offer is part of a group that has no condition", async function () {
           condition = mockCondition({
             tokenAddress: ethers.constants.AddressZero,
@@ -987,6 +1014,36 @@ describe("IBosonExchangeHandler", function () {
           await groupHandler.connect(assistant).createGroup(group, condition);
 
           await foreign721.connect(buyer).mint("123", 1);
+
+          await expect(bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)).to.emit(
+            exchangeHandler,
+            "BuyerCommitted"
+          );
+        });
+
+        it("Offer is part of a group that has a per-wallet ERC721 condition", async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          condition = mockCondition({
+            tokenAddress: foreign721.address,
+            threshold: "1",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken,
+            method: EvaluationMethod.Threshold,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          // mint enough tokens for the buyer
+          await foreign721.connect(buyer).mint(condition.tokenId, 1);
 
           await expect(bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)).to.emit(
             exchangeHandler,
@@ -1106,37 +1163,6 @@ describe("IBosonExchangeHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
         });
 
-        it("Offer is part of a group that has a per-wallet condition", async function () {
-          // Required constructor params for Group
-          groupId = "1";
-          offerIds = [offerId];
-
-          condition = mockCondition({
-            tokenAddress: foreign721.address,
-            threshold: "0",
-            maxCommits: "3",
-            tokenType: TokenType.NonFungibleToken,
-            tokenId: "1",
-            method: EvaluationMethod.SpecificToken,
-            length: "10",
-          });
-
-          expect(condition.isValid()).to.be.true;
-
-          // Create Group
-          group = new Group(groupId, seller.id, offerIds);
-          expect(group.isValid()).is.true;
-
-          await groupHandler.connect(assistant).createGroup(group, condition);
-
-          // mint enough tokens for the buyer
-          await foreign721.connect(buyer).mint(condition.tokenId, 1);
-
-          await expect(
-            bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
-          ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
-        });
-
         it("Offer is part of a group that has a per-address condition and token is ERC1155", async function () {
           // Required constructor params for Group
           groupId = "1";
@@ -1175,6 +1201,62 @@ describe("IBosonExchangeHandler", function () {
             tokenType: TokenType.NonFungibleToken,
             tokenId: "0",
             method: EvaluationMethod.Threshold,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await expect(
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
+          ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+        });
+
+        it("Offer is part of a group that has a per-wallet ERC1155 condition with length > 1", async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          condition = mockCondition({
+            tokenAddress: foreign1155.address,
+            threshold: "2",
+            maxCommits: "3",
+            tokenType: TokenType.MultiToken, // ERC1155
+            tokenId: "1",
+            method: EvaluationMethod.Threshold, // per-wallet
+            length: "2",
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await expect(
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId)
+          ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+        });
+
+        it("Offer is part a group with a per-token condition with length > 1", async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          condition = mockCondition({
+            tokenAddress: foreign721.address,
+            threshold: "0",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken, // ERC721
+            tokenId: "0",
+            method: EvaluationMethod.SpecificToken, // per-wallet
+            length: "0",
           });
 
           expect(condition.isValid()).to.be.true;

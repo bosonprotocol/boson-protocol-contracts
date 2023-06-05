@@ -334,7 +334,7 @@ describe("SnapshotGate", function () {
           tokenType: TokenType.NonFungibleToken,
           tokenId: tokenId,
           method: EvaluationMethod.SpecificToken,
-          length: "1",
+          length: "3",
         });
         expect(condition.isValid()).to.be.true;
 
