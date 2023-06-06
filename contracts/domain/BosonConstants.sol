@@ -60,7 +60,6 @@ string constant NO_SUCH_DISPUTE_RESOLVER = "No such dispute resolver";
 string constant INVALID_ESCALATION_PERIOD = "Invalid escalation period";
 string constant INVALID_AMOUNT_DISPUTE_RESOLVER_FEES = "Dispute resolver fees are not present or exceed maximum dispute resolver fees in a single transaction";
 string constant DUPLICATE_DISPUTE_RESOLVER_FEES = "Duplicate dispute resolver fee";
-string constant FEE_AMOUNT_NOT_YET_SUPPORTED = "Non-zero dispute resolver fees not yet supported";
 string constant DISPUTE_RESOLVER_FEE_NOT_FOUND = "Dispute resolver fee not found";
 string constant SELLER_ALREADY_APPROVED = "Seller id is approved already";
 string constant SELLER_NOT_APPROVED = "Seller id is not approved";
@@ -149,6 +148,9 @@ string constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
 string constant INSUFFICIENT_VALUE_RECEIVED = "Insufficient value received";
 string constant INSUFFICIENT_AVAILABLE_FUNDS = "Insufficient available funds";
 string constant NATIVE_NOT_ALLOWED = "Transfer of native currency not allowed";
+string constant DR_FEE_NOT_RECEIVED = "DR fee not received";
+string constant SELLER_NOT_COVERED = "Seller not covered";
+string constant INVALID_ENTITY_ID = "Invalid entity id";
 
 // Revert Reasons: Meta-Transactions related
 string constant NONCE_USED_ALREADY = "Nonce used already";
@@ -196,6 +198,19 @@ string constant ROYALTY_FEE_INVALID = "ERC2981: royalty fee exceeds protocol lim
 string constant NOT_COMMITTABLE = "Token not committable";
 string constant INVALID_TO_ADDRESS = "Tokens can only be pre-mined to the contract or contract owner address";
 string constant EXTERNAL_CALL_FAILED = "External call failed";
+
+// DRFeeMutualizer
+string constant ONLY_PROTOCOL = "Only protocol can call this function";
+string constant AGREEMENT_NOT_STARTED = "Agreement not started yet";
+string constant AGREEMENT_EXPIRED = "Agreement expired";
+string constant AGREEMENT_VOIDED = "Agreement voided";
+string constant EXCEEDED_SINGLE_FEE = "Fee amount exceeds max mutualized amount per transaction";
+string constant EXCEEDED_TOTAL_FEE = "Fee amount exceeds max total mutualized amount";
+string constant INVALID_UUID = "Invalid UUID";
+string constant INVALID_SELLER_ADDRESS = "Invalid seller address";
+string constant INVALID_AGREEMENT = "Invalid agreement";
+string constant AGREEMENT_ALREADY_CONFIRMED = "Agreement already confirmed";
+string constant NOT_OWNER_OR_SELLER = "Not owner or seller";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(

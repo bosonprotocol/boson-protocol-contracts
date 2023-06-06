@@ -92,34 +92,8 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         address[] calldata _tokenList,
         uint256[] calldata _tokenAmounts
     ) external override fundsNotPaused nonReentrant {
-        address payable sender = payable(msgSender());
-
         // Address that will receive the funds
-        address payable destinationAddress;
-
-        // First check if the caller is a buyer
-        (bool exists, uint256 callerId) = getBuyerIdByWallet(sender);
-        if (exists && callerId == _entityId) {
-            // Caller is a buyer
-            destinationAddress = sender;
-        } else {
-            // Check if the caller is a clerk
-            (exists, callerId) = getSellerIdByClerk(sender);
-            if (exists && callerId == _entityId) {
-                // Caller is a clerk. In this case funds are transferred to the treasury address
-                (, Seller storage seller, ) = fetchSeller(callerId);
-                destinationAddress = seller.treasury;
-            } else {
-                (exists, callerId) = getAgentIdByWallet(sender);
-                if (exists && callerId == _entityId) {
-                    // Caller is an agent
-                    destinationAddress = sender;
-                } else {
-                    // In this branch, caller is neither buyer, clerk or agent or does not match the _entityId
-                    revert(NOT_AUTHORIZED);
-                }
-            }
-        }
+        address payable destinationAddress = getDestinationAddress(_entityId);
 
         withdrawFundsInternal(destinationAddress, _entityId, _tokenList, _tokenAmounts);
     }
@@ -256,5 +230,41 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
                 FundsLib.transferFundsFromProtocol(_entityId, _tokenList[i], _destinationAddress, _tokenAmounts[i]);
             }
         }
+    }
+
+    /**
+     * @notice Checks if message sender is associated with the entity id and returns the address that will receive the funds.
+     *
+     * Reverts if:
+     * - Entity id is 0
+     * - Caller is not associated with the entity id
+     *
+     * @param _entityId - id of entity for which funds should be withdrawn
+     */
+    function getDestinationAddress(uint256 _entityId) internal view returns (address payable _destinationAddress) {
+        require(_entityId != 0, INVALID_ENTITY_ID);
+
+        address payable sender = payable(msgSender());
+        uint256 callerId;
+
+        (, callerId) = getBuyerIdByWallet(sender);
+        if (callerId == _entityId) return sender;
+
+        (, callerId) = getSellerIdByClerk(sender);
+        if (callerId == _entityId) {
+            (, Seller storage seller, ) = fetchSeller(callerId);
+            return seller.treasury;
+        }
+
+        (, callerId) = getDisputeResolverIdByAssistant(sender);
+        if (callerId == _entityId) {
+            (, DisputeResolver storage disputeResolver, ) = fetchDisputeResolver(callerId);
+            return disputeResolver.treasury;
+        }
+
+        (, callerId) = getAgentIdByWallet(sender);
+        if (callerId == _entityId) return sender;
+
+        revert(NOT_AUTHORIZED);
     }
 }

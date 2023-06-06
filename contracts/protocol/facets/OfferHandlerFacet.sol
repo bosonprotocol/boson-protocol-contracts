@@ -260,6 +260,60 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     }
 
     /**
+     * @notice Changes the mutualizer for a given offer.
+     * Existing exchanges are not affected.
+     *
+     * Emits an OfferMutualizerChanged event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Offer id is invalid
+     * - Caller is not the assistant of the offer
+     *
+     * @param _offerId - the id of the offer to void
+     * @param _feeMutualizer - the new mutualizer address
+     */
+    function changeOfferMutualizer(
+        uint256 _offerId,
+        address _feeMutualizer
+    ) public override offersNotPaused nonReentrant {
+        // Get offer, make sure the caller is the assistant
+        Offer storage offer = getValidOffer(_offerId);
+
+        // Change the DR fee mutualizer
+        offer.feeMutualizer = _feeMutualizer;
+
+        // Notify listeners of state change
+        emit OfferMutualizerChanged(_offerId, offer.sellerId, _feeMutualizer, msgSender());
+    }
+
+    /**
+     * @notice  Changes the mutualizers for a batch of offers.
+     * Existing exchanges are not affected.
+     *
+     * Emits an OfferMutualizerChanged event for every offer if successful.
+     *
+     * Reverts if, for any offer:
+     * - The offers region of protocol is paused
+     * - Number of offers exceeds maximum allowed number per batch
+     * - Offer id is invalid
+     * - Caller is not the assistant of the offer
+     *
+     * @param _offerIds - list of ids of offers to change the mutualizer for
+     * @param _feeMutualizer - the new mutualizers address
+     */
+    function changeOfferMutualizerBatch(
+        uint256[] calldata _offerIds,
+        address _feeMutualizer
+    ) external override offersNotPaused {
+        // limit maximum number of offers to avoid running into block gas limit in a loop
+        require(_offerIds.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
+        for (uint256 i = 0; i < _offerIds.length; i++) {
+            changeOfferMutualizer(_offerIds[i], _feeMutualizer);
+        }
+    }
+
+    /**
      * @notice Gets the details about a given offer.
      *
      * @param _offerId - the id of the offer to retrieve

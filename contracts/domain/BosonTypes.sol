@@ -133,6 +133,7 @@ contract BosonTypes {
         uint256 escalationResponsePeriod;
         uint256 feeAmount;
         uint256 buyerEscalationDeposit;
+        address feeMutualizer;
     }
 
     struct Offer {
@@ -146,6 +147,7 @@ contract BosonTypes {
         string metadataUri;
         string metadataHash;
         bool voided;
+        address feeMutualizer;
     }
 
     struct OfferDates {

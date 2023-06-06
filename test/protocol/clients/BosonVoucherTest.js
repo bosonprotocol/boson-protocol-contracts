@@ -273,7 +273,7 @@ describe("IBosonVoucher", function () {
       // Mock getOffer call, otherwise getAvailablePreMints will return 0
       const mockProtocol = await deployMockProtocol();
       const { offer, offerDates, offerDurations, offerFees } = await mockOffer();
-      const disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
+      const disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0", ethers.constants.AddressZero);
       await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
       await mockProtocol.mock.getOffer.returns(
         true,
@@ -312,7 +312,7 @@ describe("IBosonVoucher", function () {
         // Mock getOffer call, otherwise getAvailablePreMints will return 0
         const mockProtocol = await deployMockProtocol();
         const { offer, offerDates, offerDurations, offerFees } = await mockOffer();
-        const disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
+        const disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0", ethers.constants.AddressZero);
         await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
         await mockProtocol.mock.getOffer.returns(
           true,
@@ -396,7 +396,7 @@ describe("IBosonVoucher", function () {
     beforeEach(async function () {
       mockProtocol = await deployMockProtocol();
       ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
-      disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
+      disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0", ethers.constants.AddressZero);
       await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
       await mockProtocol.mock.getOffer.returns(
         true,
@@ -654,7 +654,7 @@ describe("IBosonVoucher", function () {
 
       mockProtocol = await deployMockProtocol();
       ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
-      disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
+      disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0", ethers.constants.AddressZero);
       await mockProtocol.mock.getMaxPremintedVouchers.returns(maxPremintedVouchers);
       await mockProtocol.mock.getOffer
         .withArgs(offerId)
@@ -997,7 +997,7 @@ describe("IBosonVoucher", function () {
 
       mockProtocol = await deployMockProtocol();
       ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
-      disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
+      disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0", ethers.constants.AddressZero);
       await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
       await mockProtocol.mock.getOffer.returns(
         true,
@@ -1096,7 +1096,7 @@ describe("IBosonVoucher", function () {
 
       const mockProtocol = await deployMockProtocol();
       const { offer, offerDates, offerDurations, offerFees } = await mockOffer();
-      const disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
+      const disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0", ethers.constants.AddressZero);
       await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
       await mockProtocol.mock.getOffer.returns(
         true,
@@ -1166,7 +1166,7 @@ describe("IBosonVoucher", function () {
 
         mockProtocol = await deployMockProtocol();
         ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
-        disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
+        disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0", ethers.constants.AddressZero);
         await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
         await mockProtocol.mock.getOffer.returns(
           true,

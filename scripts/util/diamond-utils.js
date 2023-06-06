@@ -48,15 +48,12 @@ async function getInterfaceId(contractName, skipBaseCheck = false, isFullPath = 
     // Get base contracts
     let buildInfo;
     const { sourceName } = await hre.artifacts.readArtifact(contractName);
+    contractName = contractName.split(":").pop();
 
-    if (!isFullPath) {
-      buildInfo = await hre.artifacts.getBuildInfo(`${sourceName}:${contractName}`);
-    } else {
-      buildInfo = await hre.artifacts.getBuildInfo(contractName);
-    }
+    buildInfo = await hre.artifacts.getBuildInfo(`${sourceName}:${contractName}`);
 
     const nodes = buildInfo.output?.sources?.[sourceName]?.ast?.nodes;
-    const node = nodes.find((n) => n.baseContracts); // node with information about base contracts
+    const node = nodes.find((n) => n.name == contractName); // node with information about base contracts
 
     for (const baseContract of node.baseContracts) {
       const baseName = baseContract.baseName.name;

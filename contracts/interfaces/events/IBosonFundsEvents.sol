@@ -44,4 +44,20 @@ interface IBosonFundsLibEvents {
         uint256 amount,
         address executedBy
     );
+    event DRFeeEncumbered(
+        address indexed feeMutualizer,
+        uint256 indexed uuid,
+        uint256 indexed exchangeId,
+        address tokenAddress,
+        uint256 feeAmount,
+        address executedBy
+    );
+    event DRFeeReturned(
+        address indexed feeMutualizer,
+        uint256 indexed uuid,
+        uint256 indexed exchangeId,
+        address tokenAddress,
+        uint256 feeAmount,
+        address executedBy
+    );
 }

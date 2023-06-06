@@ -80,7 +80,6 @@ exports.RevertReasons = {
     "Dispute resolver fees are not present or exceed maximum dispute resolver fees in a single transaction",
   DUPLICATE_DISPUTE_RESOLVER_FEES: "Duplicate dispute resolver fee",
   DISPUTE_RESOLVER_FEE_NOT_FOUND: "Dispute resolver fee not found",
-  FEE_AMOUNT_NOT_YET_SUPPORTED: "Non-zero dispute resolver fees not yet supported",
   INVALID_AUTH_TOKEN_TYPE: "Invalid AuthTokenType",
   ADMIN_OR_AUTH_TOKEN: "An admin address or an auth token is required",
   AUTH_TOKEN_MUST_BE_UNIQUE: "Auth token cannot be assigned to another entity of the same type",
@@ -155,6 +154,8 @@ exports.RevertReasons = {
   TOKEN_AMOUNT_MISMATCH: "Number of amounts should match number of tokens",
   NOTHING_TO_WITHDRAW: "Nothing to withdraw",
   NOT_AUTHORIZED: "Not authorized to withdraw",
+  DR_FEE_NOT_RECEIVED: "DR fee not received",
+  SELLER_NOT_COVERED: "Seller not covered",
 
   // Outside the protocol revert reasons
   ERC20_EXCEEDS_BALANCE: "ERC20: transfer amount exceeds balance",
@@ -169,6 +170,7 @@ exports.RevertReasons = {
   SAFE_ERC20_LOW_LEVEL_CALL: "SafeERC20: low-level call failed",
   SAFE_ERC20_NOT_SUCCEEDED: "SafeERC20: ERC20 operation did not succeed",
   INITIALIZABLE_ALREADY_INITIALIZED: "Initializable: contract is already initialized",
+  MUTUALIZER_REVERT: "MockDRFeeMutualizer: revert",
 
   // Meta-Transactions related
   NONCE_USED_ALREADY: "Nonce used already",
@@ -210,4 +212,17 @@ exports.RevertReasons = {
   INIT_ZERO_ADDRESS_NON_EMPTY_CALLDATA: "LibDiamondCut: _init is address(0) but _calldata is not empty",
   INIT_EMPTY_CALLDATA_NON_ZERO_ADDRESS: "LibDiamondCut: _calldata is empty but _init is not address(0)",
   INIT_ADDRESS_WITH_NO_CODE: "LibDiamondCut: _init address has no code",
+
+  // DRFeeMutualizer
+  ONLY_PROTOCOL: "Only protocol can call this function",
+  AGREEMENT_NOT_STARTED: "Agreement not started yet",
+  AGREEMENT_EXPIRED: "Agreement expired",
+  AGREEMENT_VOIDED: "Agreement voided",
+  EXCEEDED_SINGLE_FEE: "Fee amount exceeds max mutualized amount per transaction",
+  EXCEEDED_TOTAL_FEE: "Fee amount exceeds max total mutualized amount",
+  INVALID_UUID: "Invalid UUID",
+  INVALID_SELLER_ADDRESS: "Invalid seller address",
+  INVALID_AGREEMENT: "Invalid agreement",
+  AGREEMENT_ALREADY_CONFIRMED: "Agreement already confirmed",
+  NOT_OWNER_OR_SELLER: "Not owner or seller",
 };

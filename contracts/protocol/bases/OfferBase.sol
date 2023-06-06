@@ -187,6 +187,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                 disputeResolutionTerms.buyerEscalationDeposit =
                     (feeAmount * protocolFees().buyerEscalationDepositPercentage) /
                     10000;
+                disputeResolutionTerms.feeMutualizer = _offer.feeMutualizer;
 
                 protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
             }
@@ -243,6 +244,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.exchangeToken = _offer.exchangeToken;
         offer.metadataUri = _offer.metadataUri;
         offer.metadataHash = _offer.metadataHash;
+        offer.feeMutualizer = _offer.feeMutualizer;
 
         // Get storage location for offer dates
         OfferDates storage offerDates = fetchOfferDates(_offer.id);

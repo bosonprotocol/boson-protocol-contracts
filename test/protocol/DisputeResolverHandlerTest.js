@@ -161,9 +161,9 @@ describe("DisputeResolverHandler", function () {
 
       //Create DisputeResolverFee array
       disputeResolverFees = [
-        new DisputeResolverFee(other1.address, "MockToken1", "0"),
+        new DisputeResolverFee(other1.address, "MockToken1", "100"),
         new DisputeResolverFee(other2.address, "MockToken2", "0"),
-        new DisputeResolverFee(other3.address, "MockToken3", "0"),
+        new DisputeResolverFee(other3.address, "MockToken3", "50"),
       ];
 
       disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
@@ -516,8 +516,8 @@ describe("DisputeResolverHandler", function () {
           //Create new DisputeResolverFee array
           disputeResolverFees2 = [
             new DisputeResolverFee(other1.address, "MockToken1", "0"),
-            new DisputeResolverFee(other3.address, "MockToken3", "0"),
-            new DisputeResolverFee(other2.address, "MockToken2", "0"),
+            new DisputeResolverFee(other3.address, "MockToken3", "10"),
+            new DisputeResolverFee(other2.address, "MockToken2", "30"),
             new DisputeResolverFee(other2.address, "MockToken2", "0"),
           ];
 
@@ -594,15 +594,6 @@ describe("DisputeResolverHandler", function () {
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
-
-        it("Fee amount is not 0", async function () {
-          disputeResolverFees[0].feeAmount = "200";
-
-          // Attempt to Create a DR, expecting revert
-          await expect(
-            accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.FEE_AMOUNT_NOT_YET_SUPPORTED);
-        });
       });
     });
 
@@ -610,9 +601,9 @@ describe("DisputeResolverHandler", function () {
       beforeEach(async function () {
         //Create DisputeResolverFee array
         disputeResolverFees = [
-          new DisputeResolverFee(other1.address, "MockToken1", "0"),
+          new DisputeResolverFee(other1.address, "MockToken1", "50"),
           new DisputeResolverFee(other2.address, "MockToken2", "0"),
-          new DisputeResolverFee(other3.address, "MockToken3", "0"),
+          new DisputeResolverFee(other3.address, "MockToken3", "123"),
         ];
 
         sellerAllowList = ["1"];
@@ -1379,7 +1370,7 @@ describe("DisputeResolverHandler", function () {
       it("should emit a DisputeResolverFeesAdded event", async function () {
         const disputeResolverFeesToAdd = [
           new DisputeResolverFee(other4.address, "MockToken4", "0"),
-          new DisputeResolverFee(other5.address, "MockToken5", "0"),
+          new DisputeResolverFee(other5.address, "MockToken5", "50"),
         ];
 
         const addedDisputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFeesToAdd);
@@ -1405,17 +1396,12 @@ describe("DisputeResolverHandler", function () {
       it("should update DisputeResolverFee state only", async function () {
         const disputeResolverFeesToAdd = [
           new DisputeResolverFee(other4.address, "MockToken4", "0"),
-          new DisputeResolverFee(other5.address, "MockToken5", "0"),
+          new DisputeResolverFee(other5.address, "MockToken5", "50"),
         ];
 
-        const expectedDisputeResovlerFees = (disputeResolverFees = [
-          new DisputeResolverFee(other1.address, "MockToken1", "0"),
-          new DisputeResolverFee(other2.address, "MockToken2", "0"),
-          new DisputeResolverFee(other3.address, "MockToken3", "0"),
-          new DisputeResolverFee(other4.address, "MockToken4", "0"),
-          new DisputeResolverFee(other5.address, "MockToken5", "0"),
-        ]);
-        const expectedDisputeResolverFeeList = new DisputeResolverFeeList(expectedDisputeResovlerFees);
+        const expectedDisputeResolverFees = [...disputeResolverFees, ...disputeResolverFeesToAdd];
+
+        const expectedDisputeResolverFeeList = new DisputeResolverFeeList(expectedDisputeResolverFees);
 
         // Add fees to dispute resolver
         await accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFeesToAdd);
@@ -1515,15 +1501,6 @@ describe("DisputeResolverHandler", function () {
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
         });
-
-        it("Fee amount is not 0", async function () {
-          disputeResolverFees = [new DisputeResolverFee(other4.address, "MockToken4", "200")];
-
-          // Attempt to Create a DR, expecting revert
-          await expect(
-            accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
-          ).to.revertedWith(RevertReasons.FEE_AMOUNT_NOT_YET_SUPPORTED);
-        });
       });
     });
 
@@ -1574,10 +1551,7 @@ describe("DisputeResolverHandler", function () {
           expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
         }
 
-        const expectedDisputeResolverFees = [
-          new DisputeResolverFee(other3.address, "MockToken3", "0"),
-          new DisputeResolverFee(other2.address, "MockToken2", "0"),
-        ];
+        const expectedDisputeResolverFees = [disputeResolverFees[2], disputeResolverFees[1]];
 
         const expectedDisputeResolverFeeList = new DisputeResolverFeeList(expectedDisputeResolverFees);
         assert.equal(
@@ -1611,10 +1585,7 @@ describe("DisputeResolverHandler", function () {
           expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
         }
 
-        const expectedDisputeResolverFees = [
-          new DisputeResolverFee(other1.address, "MockToken1", "0"),
-          new DisputeResolverFee(other2.address, "MockToken2", "0"),
-        ];
+        const expectedDisputeResolverFees = [disputeResolverFees[0], disputeResolverFees[1]];
 
         const expectedDisputeResolverFeeList = new DisputeResolverFeeList(expectedDisputeResolverFees);
         assert.equal(
