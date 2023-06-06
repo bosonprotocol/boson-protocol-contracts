@@ -383,10 +383,11 @@ contract SellerHandlerFacet is SellerBase {
 
         // Create clone and store its address to additionalCollections
         address voucherCloneAddress = cloneBosonVoucher(sellerId, collectionIndex, assistant, _voucherInitValues);
-        Collection memory newCollection;
+
+        // Store collection details
+        Collection storage newCollection = sellersAdditionalCollections.push();
         newCollection.collectionAddress = voucherCloneAddress;
         newCollection.externalId = _externalId;
-        sellersAdditionalCollections.push(newCollection);
 
         emit CollectionCreated(sellerId, collectionIndex, voucherCloneAddress, _externalId, assistant);
     }
