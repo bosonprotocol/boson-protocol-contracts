@@ -164,7 +164,7 @@ library ProtocolLib {
         mapping(BosonTypes.AuthTokenType => mapping(uint256 => uint256)) sellerIdByAuthToken;
         // seller id => token address (only ERC721) => start and end of token ids range
         mapping(uint256 => mapping(address => BosonTypes.TokenRange[])) twinRangesBySeller;
-        // seller id => token address (only ERC721) => twin ids
+        // @deprecated twinIdsByTokenAddressAndBySeller is no longer used. Keeping it for backwards compatibility.
         mapping(uint256 => mapping(address => uint256[])) twinIdsByTokenAddressAndBySeller;
         // exchange id => BosonTypes.TwinReceipt
         mapping(uint256 => BosonTypes.TwinReceipt[]) twinReceiptsByExchange;
@@ -182,6 +182,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.AuthToken) pendingAuthTokenUpdatesBySeller;
         // dispute resolver id => DisputeResolver
         mapping(uint256 => BosonTypes.DisputeResolver) pendingAddressUpdatesByDisputeResolver;
+        // twin id => range id
+        mapping(uint256 => uint256) rangeIdByTwin;
     }
 
     // Incrementing id counters

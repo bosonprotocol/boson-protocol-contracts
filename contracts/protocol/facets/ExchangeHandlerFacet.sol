@@ -720,11 +720,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // Get seller account
             (, Seller storage seller, ) = fetchSeller(bundle.sellerId);
 
-            // Variable to track whether some twin transfer failed
-            bool transferFailed;
-
-            uint256 exchangeId = _exchange.id;
-
             ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
             address sender = msgSender();
@@ -738,64 +733,78 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 // N.B. Using call here so as to normalize the revert reason
                 bytes memory result;
                 bool success;
+
                 uint256 tokenId = twin.tokenId;
-                TokenType tokenType = twin.tokenType;
 
-                // Shouldn't decrement supply if twin supply is unlimited
-                if (twin.supplyAvailable != type(uint256).max) {
-                    // Decrement by 1 if token type is NonFungible otherwise decrement amount (i.e, tokenType is MultiToken or FungibleToken)
-                    twin.supplyAvailable = twin.tokenType == TokenType.NonFungibleToken
-                        ? twin.supplyAvailable - 1
-                        : twin.supplyAvailable - twin.amount;
-                }
+                {
+                    TokenType tokenType = twin.tokenType;
 
-                if (tokenType == TokenType.FungibleToken) {
-                    // ERC-20 style transfer
-                    (success, result) = twin.tokenAddress.call(
-                        abi.encodeWithSignature(
-                            "transferFrom(address,address,uint256)",
-                            seller.assistant,
-                            sender,
-                            twin.amount
-                        )
-                    );
-                } else if (tokenType == TokenType.NonFungibleToken) {
-                    // Token transfer order is ascending to avoid overflow when twin supply is unlimited
-                    if (twin.supplyAvailable == type(uint256).max) {
-                        twin.tokenId++;
-                    } else {
-                        // Token transfer order is descending
-                        tokenId = twin.tokenId + twin.supplyAvailable;
+                    // Shouldn't decrement supply if twin supply is unlimited
+                    if (twin.supplyAvailable != type(uint256).max) {
+                        // Decrement by 1 if token type is NonFungible otherwise decrement amount (i.e, tokenType is MultiToken or FungibleToken)
+                        twin.supplyAvailable = tokenType == TokenType.NonFungibleToken
+                            ? twin.supplyAvailable - 1
+                            : twin.supplyAvailable - twin.amount;
                     }
-                    // ERC-721 style transfer
-                    (success, result) = twin.tokenAddress.call(
-                        abi.encodeWithSignature(
-                            "safeTransferFrom(address,address,uint256,bytes)",
-                            seller.assistant,
-                            sender,
-                            tokenId,
-                            ""
-                        )
-                    );
-                } else if (twin.tokenType == TokenType.MultiToken) {
-                    // ERC-1155 style transfer
-                    (success, result) = twin.tokenAddress.call(
-                        abi.encodeWithSignature(
-                            "safeTransferFrom(address,address,uint256,uint256,bytes)",
-                            seller.assistant,
-                            sender,
-                            tokenId,
-                            twin.amount,
-                            ""
-                        )
-                    );
+
+                    if (tokenType == TokenType.FungibleToken) {
+                        // ERC-20 style transfer
+                        (success, result) = twin.tokenAddress.call(
+                            abi.encodeWithSignature(
+                                "transferFrom(address,address,uint256)",
+                                seller.assistant,
+                                sender,
+                                twin.amount
+                            )
+                        );
+                    } else if (tokenType == TokenType.NonFungibleToken) {
+                        // Token transfer order is ascending to avoid overflow when twin supply is unlimited
+                        if (twin.supplyAvailable == type(uint256).max) {
+                            twin.tokenId++;
+                        } else {
+                            // Token transfer order is descending
+                            tokenId = twin.tokenId + twin.supplyAvailable;
+                        }
+                        // ERC-721 style transfer
+                        (success, result) = twin.tokenAddress.call(
+                            abi.encodeWithSignature(
+                                "safeTransferFrom(address,address,uint256,bytes)",
+                                seller.assistant,
+                                sender,
+                                tokenId,
+                                ""
+                            )
+                        );
+                    } else if (tokenType == TokenType.MultiToken) {
+                        // ERC-1155 style transfer
+                        (success, result) = twin.tokenAddress.call(
+                            abi.encodeWithSignature(
+                                "safeTransferFrom(address,address,uint256,uint256,bytes)",
+                                seller.assistant,
+                                sender,
+                                tokenId,
+                                twin.amount,
+                                ""
+                            )
+                        );
+                    }
                 }
 
                 // If token transfer failed
                 if (!success || (result.length > 0 && !abi.decode(result, (bool)))) {
-                    transferFailed = true;
-                    emit TwinTransferFailed(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
+                    // Raise a dispute if caller is a contract
+                    if (sender.isContract()) {
+                        raiseDisputeInternal(_exchange, _voucher, seller.id);
+                    } else {
+                        // Revoke voucher if caller is an EOA
+                        revokeVoucherInternal(_exchange);
+                        // N.B.: If voucher was revoked because transfer twin failed, then voucher was already burned
+                        shouldBurnVoucher = false;
+                    }
+
+                    emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, twin.amount, sender);
                 } else {
+                    uint256 exchangeId = _exchange.id;
                     // Store twin receipt on twinReceiptsByExchange
                     TwinReceipt storage twinReceipt = lookups.twinReceiptsByExchange[exchangeId].push();
                     twinReceipt.twinId = twin.id;
@@ -804,53 +813,34 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     twinReceipt.amount = twin.amount;
                     twinReceipt.tokenType = twin.tokenType;
 
+                    emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
+
                     if (twin.tokenType == TokenType.NonFungibleToken) {
                         // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
                         TokenRange[] storage twinRanges = lookups.twinRangesBySeller[seller.id][twin.tokenAddress];
 
-                        uint256 lastIndex = twinRanges.length - 1;
+                        bool unlimitedSupply = twin.supplyAvailable == type(uint256).max;
 
-                        // Find the range that contains the twin
-                        for (uint256 j = 0; j <= lastIndex; j++) {
-                            if (twinRanges[j].start <= tokenId && twinRanges[j].end >= tokenId) {
-                                bool unlimitedSupply = twin.supplyAvailable == type(uint256).max;
+                        uint256 rangeIndex = lookups.rangeIdByTwin[twin.id] - 1;
+                        TokenRange storage range = twinRanges[rangeIndex];
 
-                                // Limited: Order is descending first tokenId is the last one to be transferred
-                                // Unlimited: Order is ascending first tokenId is the first one to be transferred
-                                if ((unlimitedSupply ? twinRanges[j].end : twinRanges[j].start) == tokenId) {
-                                    // Remove from ranges mapping
-                                    if (j != lastIndex) {
-                                        twinRanges[j] = twinRanges[lastIndex];
-                                    }
+                        if (unlimitedSupply ? range.end == tokenId : range.start == tokenId) {
+                            uint256 lastIndex = twinRanges.length - 1;
 
-                                    twinRanges.pop();
-                                    break;
-                                }
-
-                                // If twin has unlimited supply
-                                if (unlimitedSupply) {
-                                    // Increase start property
-                                    twinRanges[j].start++;
-                                } else {
-                                    // Otherwise reduce end property
-                                    twinRanges[j].end--;
-                                }
+                            if (rangeIndex != lastIndex) {
+                                // Replace range with last range
+                                twinRanges[rangeIndex] = twinRanges[lastIndex];
                             }
+
+                            // Remove from ranges mapping
+                            twinRanges.pop();
+
+                            // Delete rangeId from rangeIdByTwin mapping
+                            lookups.rangeIdByTwin[twin.id] = 0;
+                        } else {
+                            unlimitedSupply ? range.start++ : range.end--;
                         }
                     }
-                    emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
-                }
-            }
-
-            if (transferFailed) {
-                // Raise a dispute if caller is a contract
-                if (sender.isContract()) {
-                    raiseDisputeInternal(_exchange, _voucher, seller.id);
-                } else {
-                    // Revoke voucher if caller is an EOA
-                    revokeVoucherInternal(_exchange);
-                    // N.B.: If voucher was revoked because transfer twin failed, then voucher was already burned
-                    shouldBurnVoucher = false;
                 }
             }
         }

@@ -2439,12 +2439,12 @@ describe("IBosonExchangeHandler", function () {
         });
 
         context("Check twinRangesBySeller slot", async function () {
-          let sellerTwinRangesSlot;
+          let sellerTwinRangesSlot, protocolLookupsSlotNumber;
 
-          before(async function () {
+          beforeEach(async function () {
             // starting slot
             const protocolLookupsSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.lookups"));
-            const protocolLookupsSlotNumber = ethers.BigNumber.from(protocolLookupsSlot);
+            protocolLookupsSlotNumber = ethers.BigNumber.from(protocolLookupsSlot);
 
             // seller id mapping from twinRangesBySeller
             const firstMappingSlot = ethers.BigNumber.from(
@@ -2503,6 +2503,37 @@ describe("IBosonExchangeHandler", function () {
 
               const end = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(1));
               expect(end).to.equal(expectedEnd);
+
+              exchangeId++;
+            }
+          });
+
+          it("Should remove rangeIdByTwin when transfering last token from range", async () => {
+            const rangeIdByTwinMappingSlot = ethers.BigNumber.from(
+              getMappingStoragePosition(
+                protocolLookupsSlotNumber.add("32"),
+                ethers.BigNumber.from(twin721.id).toNumber(),
+                paddingType.START
+              )
+            );
+
+            let exchangeId = 1;
+
+            // redeem first exchange and increase exchangeId
+            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId++);
+
+            while (exchangeId <= 10) {
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+              let expectedRangeId = ethers.BigNumber.from("1");
+              if (exchangeId == 10) {
+                expectedRangeId = ethers.BigNumber.from("0");
+              }
+
+              const rangeId = await getStorageAt(protocolDiamondAddress, rangeIdByTwinMappingSlot);
+              expect(rangeId).to.equal(expectedRangeId);
 
               exchangeId++;
             }

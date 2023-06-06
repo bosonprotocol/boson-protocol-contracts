@@ -328,52 +328,6 @@ describe("IBosonTwinHandler", function () {
         assert.notEqual(storedTwin.id, twin.id, "Twin Id is incorrect");
       });
 
-      it("Should ignore twin id set by seller and use nextAccountId on twinIdsByTokenAddressAndBySeller lookup", async function () {
-        twin.id = "666";
-        twin.tokenType = TokenType.NonFungibleToken;
-        twin.tokenAddress = foreign721.address;
-        twin.amount = "0";
-        twin.tokenId = "1";
-        twin.supplyAvailable = "10";
-
-        // Approving the twinHandler contract to transfer seller's tokens
-        await foreign721.connect(assistant).mint(twin.tokenId, twin.supplyAvailable);
-        await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
-
-        const tx = await twinHandler.connect(assistant).createTwin(twin);
-        const txReceipt = await tx.wait();
-
-        const [id] = getEvent(txReceipt, twinHandler, "TwinCreated");
-
-        // starting slot
-        const protocolLookupsSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.lookups"));
-        const protocolLookupsSlotNumber = ethers.BigNumber.from(protocolLookupsSlot);
-
-        // seller id mapping from twinIdsByTokenAddressAndBySeller
-        const firstMappingSlot = ethers.BigNumber.from(
-          getMappingStoragePosition(
-            protocolLookupsSlotNumber.add("23"),
-            ethers.BigNumber.from(seller.id).toNumber(),
-            paddingType.START
-          )
-        );
-
-        // token address mapping from twinIdsByTokenAddressAndBySeller
-        const secondMappingSlot = getMappingStoragePosition(
-          firstMappingSlot,
-          twin.tokenAddress.toLowerCase(),
-          paddingType.START
-        );
-
-        // first element of twinIds from twinIdsByTokenAddressAndBySeller
-        const firstIdSlot = keccak256(secondMappingSlot);
-        const twinId = await getStorageAt(twinHandler.address, firstIdSlot);
-
-        assert.equal(id, nextTwinId, "Twin Id is incorrect");
-        assert.equal(ethers.BigNumber.from(twinId), nextTwinId, "Twin Id is incorrect");
-        assert.notEqual(id, twin.id, "Twin Id is incorrect");
-      });
-
       context("💔 Revert Reasons", async function () {
         it("The twins region of protocol is paused", async function () {
           // Pause the twins region of the protocol
@@ -718,7 +672,7 @@ describe("IBosonTwinHandler", function () {
           RevertReasons.INVALID_TWIN_TOKEN_RANGE
         );
         // Twin2 was removed, therefore it should be possible to be added again
-        await expect(twinHandler.connect(assistant).createTwin(twin2)).to.not.reverted;
+        await twinHandler.connect(assistant).createTwin(twin2);
       });
 
       context("💔 Revert Reasons", async function () {
