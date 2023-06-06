@@ -6,18 +6,9 @@ const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const {
-  getEvent,
-  getMappingStoragePosition,
-  paddingType,
-  setupTestEnvironment,
-  getSnapshot,
-  revertToSnapshot,
-} = require("../util/utils.js");
+const { getEvent, setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockOffer, mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues, accountId } = require("../util/mock");
-const { keccak256 } = ethers.utils;
-const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 
 /**
  *  Test the Boson Twin Handler interface
@@ -672,7 +663,7 @@ describe("IBosonTwinHandler", function () {
           RevertReasons.INVALID_TWIN_TOKEN_RANGE
         );
         // Twin2 was removed, therefore it should be possible to be added again
-        await twinHandler.connect(assistant).createTwin(twin2);
+        await expect(twinHandler.connect(assistant).createTwin(twin2)).to.not.reverted;
       });
 
       context("💔 Revert Reasons", async function () {
