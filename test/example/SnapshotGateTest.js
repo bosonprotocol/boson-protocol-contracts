@@ -83,8 +83,9 @@ describe("SnapshotGate", function () {
     ] = await ethers.getSigners();
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ethers.constants.AddressZero };
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -189,7 +190,7 @@ describe("SnapshotGate", function () {
     expect(seller.isValid()).is.true;
 
     // Create a second seller
-    seller2 = mockSeller(assistant2.address, assistant2.address, assistant2.address, assistant2.address);
+    seller2 = mockSeller(assistant2.address, assistant2.address, ethers.constants.AddressZero, assistant2.address);
     expect(seller2.isValid()).is.true;
 
     // AuthToken

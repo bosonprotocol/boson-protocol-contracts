@@ -18,7 +18,7 @@ Path should contain a JSON file with the following:
   "escalationResponsePeriod": string,
   "assistant": string,
   "admin": string,
-  "clerk": string,
+  "clerk": string, // ignored, zero address is used instead
   "treasury": string,
   "metadataUri": string,
   "active": boolean 
@@ -86,7 +86,7 @@ const createDisputeResolver = async (path) => {
   let initialDisputeResolver = { ...disputeResolver };
   initialDisputeResolver.admin = disputeResolverSigner.address;
   initialDisputeResolver.assistant = disputeResolverSigner.address;
-  initialDisputeResolver.clerk = disputeResolverSigner.address;
+  initialDisputeResolver.clerk = ethers.constants.AddressZero;
 
   tx = await accountHandler
     .connect(disputeResolverSigner)
@@ -98,8 +98,7 @@ const createDisputeResolver = async (path) => {
   // this is primarily used when one does not have access to private key of dispute resolver or it does not exist (i.e. DR is a smart contract)
   if (
     initialDisputeResolver.admin.toLowerCase() != disputeResolver.admin.toLowerCase() ||
-    initialDisputeResolver.assistant.toLowerCase() != disputeResolver.assistant.toLowerCase() ||
-    initialDisputeResolver.clerk.toLowerCase() != disputeResolver.clerk.toLowerCase()
+    initialDisputeResolver.assistant.toLowerCase() != disputeResolver.assistant.toLowerCase()
   ) {
     disputeResolver.id = initialDisputeResolver.id;
     tx = await accountHandler.connect(disputeResolverSigner).updateDisputeResolver(disputeResolver);
