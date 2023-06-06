@@ -145,8 +145,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         require(condition.method != EvaluationMethod.None, GROUP_HAS_NO_CONDITION);
 
-        if (condition.length > 1) {
-            // If condition has length > 1, check that the token id is in range
+        if (condition.length >= 1) {
+            // If condition has length >= 1, check that the token id is in range
             require(
                 _tokenId >= condition.tokenId && _tokenId < condition.tokenId + condition.length,
                 TOKEN_ID_NOT_IN_CONDITION_RANGE
@@ -208,15 +208,20 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // Get the condition
             Condition storage condition = fetchCondition(groupId);
 
+            uint256 tokenId = 0;
+
             // If is a per-token condition or a per-address condition gated with a 1155 token, make sure the condition is not a range since caller (Boson Voucher) cannot specify the token id
             if (
                 condition.method == EvaluationMethod.SpecificToken ||
                 (condition.method == EvaluationMethod.Threshold && condition.tokenType == TokenType.MultiToken)
             ) {
                 require(condition.length == 1, CANNOT_COMMIT);
+
+                // Uses token id from the condition
+                tokenId = condition.tokenId;
             }
 
-            bool allow = authorizeCommit(_buyer, condition, groupId, 0);
+            bool allow = authorizeCommit(_buyer, condition, groupId, tokenId);
             require(allow, CANNOT_COMMIT);
         }
 
@@ -987,7 +992,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             require(commitCount < _condition.maxCommits, MAX_COMMITS_TOKEN_REACHED);
 
-            allow = holdsSpecificToken(_buyer, _condition, _condition.length == 1 ? _condition.tokenId : _tokenId);
+            allow = holdsSpecificToken(_buyer, _condition, _tokenId);
 
             if (allow) {
                 // Increment number of commits to the group for this token id if they are allowed to commit
@@ -999,7 +1004,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             require(commitCount < _condition.maxCommits, MAX_COMMITS_ADDRESS_REACHED);
 
-            allow = holdsThreshold(_buyer, _condition, _condition.length == 1 ? _condition.tokenId : _tokenId);
+            allow = holdsThreshold(_buyer, _condition, _tokenId);
 
             if (allow) {
                 // Increment number of commits to the group for this address if they are allowed to commit

@@ -470,7 +470,7 @@ describe("IBosonGroupHandler", function () {
 
           it("Condition 'Threshold' with MultiToken has tokenId + length - 1 > max uint256", async function () {
             condition.tokenType = TokenType.MultiToken;
-            condition.tokenId = 2;
+            condition.tokenId = 1;
             condition.length = ethers.constants.MaxUint256;
 
             // Attempt to create the group, expecting revert

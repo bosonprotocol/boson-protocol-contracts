@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
+
 import "./../../domain/BosonConstants.sol";
 import { IBosonGroupEvents } from "../../interfaces/events/IBosonGroupEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
@@ -120,7 +121,8 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * @return valid - validity of condition
      *
      */
-    function validateCondition(Condition memory _condition) internal pure returns (bool valid) {
+    function validateCondition(Condition memory _condition) internal pure returns (bool) {
+        bool valid = true;
         if (_condition.method == EvaluationMethod.None) {
             valid = (_condition.tokenAddress == address(0) &&
                 _condition.tokenId == 0 &&
@@ -129,40 +131,25 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
                 _condition.length == 0);
         } else {
             if (_condition.tokenId != 0) {
-                if (_condition.length == 0) {
-                    return false;
-                }
-
-                // Create local copy so we can use assembly to check for overflow
-                uint256 tokenId = _condition.tokenId;
-                uint256 length = _condition.length;
-                uint256 sum;
-                assembly {
-                    // Adding and checking for overflow in Assembly
-                    let tmp := add(tokenId, sub(length, 1))
-                    if iszero(lt(tmp, tokenId)) {
-                        sum := tmp
-                    }
-                }
-
-                if (sum == 0) {
-                    return false;
-                }
+                valid = _condition.length != 0;
+                valid = valid && type(uint256).max - _condition.length >= _condition.tokenId;
             }
 
             if (_condition.method == EvaluationMethod.Threshold) {
-                valid = (_condition.tokenAddress != address(0) &&
-                    _condition.maxCommits > 0 &&
-                    _condition.threshold > 0);
+                valid =
+                    valid &&
+                    (_condition.tokenAddress != address(0) && _condition.maxCommits > 0 && _condition.threshold > 0);
 
                 if (_condition.tokenType != TokenType.MultiToken) {
                     // NonFungibleToken and FungibleToken should not have length and tokenId
                     valid = valid && _condition.length == 0 && _condition.tokenId == 0;
                 }
             } else {
-                valid = (_condition.tokenAddress != address(0) &&
-                    _condition.maxCommits > 0 &&
-                    _condition.tokenType != TokenType.FungibleToken); // FungibleToken not allowed for SpecificToken
+                valid =
+                    valid &&
+                    (_condition.tokenAddress != address(0) &&
+                        _condition.maxCommits > 0 &&
+                        _condition.tokenType != TokenType.FungibleToken); // FungibleToken not allowed for SpecificToken
 
                 // SpecificToken with NonFungibleToken should not have threshold
                 if (_condition.tokenType == TokenType.NonFungibleToken) {
@@ -173,6 +160,8 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
                 }
             }
         }
+
+        return valid;
     }
 
     /**

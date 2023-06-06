@@ -915,7 +915,7 @@ describe("IBosonExchangeHandler", function () {
         ).to.emit(exchangeHandler, "BuyerCommitted");
       });
 
-      context("Offer is part a group", async function () {
+      context("Offer is part of a group", async function () {
         let groupId;
         let offerIds;
 
@@ -970,7 +970,7 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
-        it("Offer is part of a group that enfoces per-address conditions and utilizes ERC1155 tokens with range length == 1", async function () {
+        it("Offer is part of a group that enforces per-address conditions and utilizes ERC1155 tokens with range length == 1", async function () {
           condition = mockCondition({
             tokenAddress: foreign1155.address,
             threshold: "2",
@@ -1021,17 +1021,18 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
-        it("Offer is part of a group that has a per-wallet ERC721 condition", async function () {
+        it("Offer is part of a group that enforces per-wallet conditions and range length == 1", async function () {
           // Required constructor params for Group
           groupId = "1";
           offerIds = [offerId];
 
           condition = mockCondition({
             tokenAddress: foreign721.address,
-            threshold: "1",
+            threshold: "0",
             maxCommits: "3",
             tokenType: TokenType.NonFungibleToken,
-            method: EvaluationMethod.Threshold,
+            method: EvaluationMethod.SpecificToken,
+            length: "1",
           });
 
           expect(condition.isValid()).to.be.true;
@@ -1163,7 +1164,7 @@ describe("IBosonExchangeHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
         });
 
-        it("Offer is part of a group that has a per-address condition and token is ERC1155", async function () {
+        it("Offer is part of a group that has a per-address condition and token is ERC1155 but accets any token", async function () {
           // Required constructor params for Group
           groupId = "1";
           offerIds = [offerId];
@@ -1244,7 +1245,7 @@ describe("IBosonExchangeHandler", function () {
           ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
         });
 
-        it("Offer is part a group with a per-token condition with length > 1", async function () {
+        it("Offer is part of a group with a per-token condition with length > 1", async function () {
           // Required constructor params for Group
           groupId = "1";
           offerIds = [offerId];
@@ -1255,7 +1256,7 @@ describe("IBosonExchangeHandler", function () {
             maxCommits: "3",
             tokenType: TokenType.NonFungibleToken, // ERC721
             tokenId: "0",
-            method: EvaluationMethod.SpecificToken, // per-wallet
+            method: EvaluationMethod.SpecificToken, // per-token
             length: "0",
           });
 
@@ -1565,11 +1566,7 @@ describe("IBosonExchangeHandler", function () {
           condition.tokenId = "0";
           condition.length = "0";
 
-          // remove offer from old group
-          await groupHandler.connect(assistant).removeOffersFromGroup(groupId, offerIds);
-
-          // create new group with new condition
-          await groupHandler.connect(assistant).createGroup(group, condition);
+          await groupHandler.connect(assistant).setGroupCondition(group.id, condition);
 
           // mint any token for buyer
           tokenId = "123";
@@ -1676,11 +1673,7 @@ describe("IBosonExchangeHandler", function () {
           condition.tokenId = "0";
           condition.length = "0";
 
-          // remove offer from old group
-          await groupHandler.connect(assistant).removeOffersFromGroup(groupId, offerIds);
-
-          // create new group with new condition
-          await groupHandler.connect(assistant).createGroup(group, condition);
+          await groupHandler.connect(assistant).setGroupCondition(group.id, condition);
 
           // mint any token for buyer
           tokenId = "123";

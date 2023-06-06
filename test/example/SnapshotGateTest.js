@@ -896,7 +896,7 @@ describe("SnapshotGate", function () {
           // Check that holder cannot commit directly to the offer on the protocol itself
           await expect(
             exchangeHandler.connect(holder).commitToConditionalOffer(holder.address, offerId, entry.tokenId)
-          ).to.revertedWith("Caller cannot commit");
+          ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
         });
       });
     });
