@@ -72,11 +72,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         address _newOwner,
         VoucherInitValues calldata voucherInitValues
     ) public initializer {
-        string memory sellerId = string(
-            abi.encodePacked(Strings.toString(_sellerId), "_", Strings.toString(_collectionIndex))
-        );
-        string memory voucherName = string(abi.encodePacked(VOUCHER_NAME, " ", sellerId));
-        string memory voucherSymbol = string(abi.encodePacked(VOUCHER_SYMBOL, "_", sellerId));
+        string memory sellerId = string.concat(Strings.toString(_sellerId), "_", Strings.toString(_collectionIndex));
+        string memory voucherName = string.concat(VOUCHER_NAME, " ", sellerId);
+        string memory voucherSymbol = string.concat(VOUCHER_SYMBOL, "_", sellerId);
 
         __ERC721_init_unchained(voucherName, voucherSymbol);
 

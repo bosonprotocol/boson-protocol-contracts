@@ -367,17 +367,16 @@ contract SellerHandlerFacet is SellerBase {
      *  - Caller is not the seller assistant
      *
      * @param _externalId - external collection id
-     * @param _contractURI - contract URI
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      */
-    function createNewCollection(string calldata _externalId, string calldata _contractURI) external sellersNotPaused {
+    function createNewCollection(
+        string calldata _externalId,
+        VoucherInitValues calldata _voucherInitValues
+    ) external sellersNotPaused {
         address assistant = msgSender();
 
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(assistant);
         require(exists, NO_SUCH_SELLER);
-
-        VoucherInitValues memory _voucherInitValues;
-        _voucherInitValues.contractURI = _contractURI;
-        // NB: we don't set any royalties here, since they are managed inside the protocol after BPIP-5
 
         Collection[] storage sellersAdditionalCollections = protocolLookups().additionalCollections[sellerId];
         uint256 collectionIndex = sellersAdditionalCollections.length + 1; // 0 is reserved for the original collection

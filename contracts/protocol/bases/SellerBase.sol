@@ -162,7 +162,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         uint256 _sellerId,
         uint256 _collectionIndex,
         address _assistant,
-        VoucherInitValues memory _voucherInitValues
+        VoucherInitValues calldata _voucherInitValues
     ) internal returns (address cloneAddress) {
         // Pointer to stored addresses
         ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();

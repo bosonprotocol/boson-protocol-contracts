@@ -2661,9 +2661,9 @@ describe("SellerHandler", function () {
         // create 3 additional collections
         for (let i = 0; i < 3; i++) {
           const externalId = `Brand${i}`;
-          const contractURI = `https://brand${i}.com`;
+          voucherInitValues.contractURI = `https://brand${i}.com`;
           const expectedCollectionAddress = calculateContractAddress(accountHandler.address, i + 2);
-          await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+          await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
           additionalCollections.push(await ethers.getContractAt("OwnableUpgradeable", expectedCollectionAddress));
         }
 
@@ -2861,20 +2861,22 @@ describe("SellerHandler", function () {
 
     context("👉 createNewCollection()", async function () {
       let externalId, expectedDefaultAddress, expectedCollectionAddress;
+      let royaltyPercentage;
 
       beforeEach(async function () {
         // Create a seller
         await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         externalId = "Brand1";
-        contractURI = "https://brand1.com";
+        voucherInitValues.contractURI = contractURI = "https://brand1.com";
+        voucherInitValues.royaltyPercentage = royaltyPercentage = "100"; // 1%
         expectedDefaultAddress = calculateContractAddress(accountHandler.address, "1"); // default
         expectedCollectionAddress = calculateContractAddress(accountHandler.address, "2");
       });
 
       it("should emit a CollectionCreated event", async function () {
         // Create a new collection, testing for the event
-        const tx = await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+        const tx = await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
         await expect(tx)
           .to.emit(accountHandler, "CollectionCreated")
@@ -2884,8 +2886,10 @@ describe("SellerHandler", function () {
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCollectionAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-        await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged").withArgs("0");
-        await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, "0", contractURI);
+        await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged").withArgs(royaltyPercentage);
+        await expect(tx)
+          .to.emit(bosonVoucher, "VoucherInitialized")
+          .withArgs(seller.id, royaltyPercentage, contractURI);
 
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCollectionAddress);
 
@@ -2896,7 +2900,7 @@ describe("SellerHandler", function () {
 
       it("should update state", async function () {
         // Create a new collection
-        await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
         const expectedCollections = new CollectionList([new Collection(expectedCollectionAddress, externalId)]);
 
@@ -2928,10 +2932,11 @@ describe("SellerHandler", function () {
         for (let i = 1; i < 4; i++) {
           expectedCollectionAddress = calculateContractAddress(accountHandler.address, (i + 1).toString());
           externalId = `Brand${i}`;
-          contractURI = `https://brand${i}.com`;
+          voucherInitValues.contractURI = contractURI = `https://brand${i}.com`;
+          voucherInitValues.royaltyPercentage = royaltyPercentage = (i * 100).toString(); // 1%, 2%, 3%
 
           // Create a new collection, testing for the event
-          const tx = await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+          const tx = await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
           await expect(tx)
             .to.emit(accountHandler, "CollectionCreated")
@@ -2941,10 +2946,10 @@ describe("SellerHandler", function () {
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCollectionAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-
-          await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged").withArgs("0");
-
-          await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, "0", contractURI);
+          await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged").withArgs(royaltyPercentage);
+          await expect(tx)
+            .to.emit(bosonVoucher, "VoucherInitialized")
+            .withArgs(seller.id, royaltyPercentage, contractURI);
 
           bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCollectionAddress);
 
@@ -2985,16 +2990,16 @@ describe("SellerHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
           // Attempt to create a new collection expecting revert
-          await expect(accountHandler.connect(assistant).createNewCollection(externalId, contractURI)).to.revertedWith(
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(
+            accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
         it("Caller is not anyone's assistant", async function () {
           // Attempt to create a new collection
-          await expect(accountHandler.connect(rando).createNewCollection(externalId, contractURI)).to.revertedWith(
-            RevertReasons.NO_SUCH_SELLER
-          );
+          await expect(
+            accountHandler.connect(rando).createNewCollection(externalId, voucherInitValues)
+          ).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
         });
       });
     });
@@ -3027,10 +3032,10 @@ describe("SellerHandler", function () {
         for (let i = 1; i < 4; i++) {
           expectedCollectionAddress = calculateContractAddress(accountHandler.address, (i + 1).toString());
           externalId = `Brand${i}`;
-          contractURI = `https://brand${i}.com`;
+          voucherInitValues.contractURI = `https://brand${i}.com`;
 
           // Create a new collection
-          await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+          await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
           // Add to expected collections
           expectedCollections.collections.push(new Collection(expectedCollectionAddress, externalId));

@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xf4de1a36
+ * The ERC-165 identifier for this interface is: 0x868de65b
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -313,9 +313,12 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      *  - Caller is not the seller assistant
      *
      * @param _externalId - external collection id
-     * @param _contractURI - contract URI
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      */
-    function createNewCollection(string calldata _externalId, string calldata _contractURI) external;
+    function createNewCollection(
+        string calldata _externalId,
+        BosonTypes.VoucherInitValues calldata _voucherInitValues
+    ) external;
 
     /**
      * @notice Gets the details about a seller.

@@ -534,12 +534,10 @@ describe("IBosonOfferHandler", function () {
 
         beforeEach(async function () {
           const externalId = "Brand1";
-          const contractURI = "https://brand1.com";
-
           expectedCollectionAddress = calculateContractAddress(accountHandler.address, "2");
 
-          // Create a new collection, testing for the event
-          await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+          // Create a new collection
+          await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
           // Update collection index
           offer.collectionIndex = "1";
@@ -857,8 +855,7 @@ describe("IBosonOfferHandler", function () {
 
           // Create a new collection
           const externalId = "Brand1";
-          const contractURI = "https://brand1.com";
-          await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+          await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
           // Set non existent collection index
           offer.collectionIndex = "2";
@@ -2604,8 +2601,7 @@ describe("IBosonOfferHandler", function () {
 
           // Create a new collection
           const externalId = "Brand1";
-          const contractURI = "https://brand1.com";
-          await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+          await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
           // Index "1" exists now, but "2" does not
           offers[3].collectionIndex = "2";

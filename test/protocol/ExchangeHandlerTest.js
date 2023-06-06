@@ -637,11 +637,9 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("should work on an additional collection", async function () {
-        const externalId = `Brand1`;
-        const contractURI = `https://brand1.com`;
-
         // Create a new collection
-        await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+        const externalId = `Brand1`;
+        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
         offer.collectionIndex = 1;
         offer.id = await offerHandler.getNextOfferId();
@@ -914,11 +912,9 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("should work on an additional collection", async function () {
-        const externalId = `Brand1`;
-        const contractURI = `https://brand1.com`;
-
         // Create a new collection
-        await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+        const externalId = `Brand1`;
+        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
         offer.collectionIndex = 1;
         offer.id = await offerHandler.getNextOfferId();
@@ -1822,11 +1818,9 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("should work on an additional collection", async function () {
-        const externalId = `Brand1`;
-        const contractURI = `https://brand1.com`;
-
         // Create a new collection
-        await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+        const externalId = `Brand1`;
+        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
         offer.collectionIndex = 1;
         offer.id = await offerHandler.getNextOfferId();
@@ -1929,11 +1923,9 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("should work on an additional collection", async function () {
-        const externalId = `Brand1`;
-        const contractURI = `https://brand1.com`;
-
         // Create a new collection
-        await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+        const externalId = `Brand1`;
+        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
         offer.collectionIndex = 1;
         offer.id = await offerHandler.getNextOfferId();
@@ -2172,11 +2164,9 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("should work on an additional collection", async function () {
-        const externalId = `Brand1`;
-        const contractURI = `https://brand1.com`;
-
         // Create a new collection
-        await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+        const externalId = `Brand1`;
+        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
         offer.collectionIndex = 1;
         offer.id = await offerHandler.getNextOfferId();
@@ -3511,11 +3501,9 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("should work with additional collections", async function () {
-        const externalId = `Brand1`;
-        const contractURI = `https://brand1.com`;
-
         // Create a new collection
-        await accountHandler.connect(assistant).createNewCollection(externalId, contractURI);
+        const externalId = `Brand1`;
+        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
         offer.collectionIndex = 1;
         offer.id = await offerHandler.getNextOfferId();
