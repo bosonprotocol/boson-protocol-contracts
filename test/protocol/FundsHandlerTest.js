@@ -31,7 +31,7 @@ const {
   mockBuyer,
   accountId,
 } = require("../util/mock");
-// const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
+const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { oneMonth } = require("../util/constants");
 
 /**
@@ -2181,7 +2181,7 @@ describe("IBosonFundsHandler", function () {
 
           await expect(tx)
             .to.emit(exchangeHandler, "DRFeeEncumbered")
-            .withArgs(mutualizer.address, "1", "1", mockToken.address, DRFeeToken, buyer.address); // ToDo: upgrade hardhat, and use anyValue predicate for UUID field
+            .withArgs(mutualizer.address, anyValue, "1", mockToken.address, DRFeeToken, buyer.address);
 
           // Commit to an offer with native currency, test for FundsEncumbered event
           const tx2 = await exchangeHandler
@@ -2197,7 +2197,7 @@ describe("IBosonFundsHandler", function () {
 
           await expect(tx2)
             .to.emit(exchangeHandler, "DRFeeEncumbered")
-            .withArgs(mutualizer.address, "2", "2", ethers.constants.AddressZero, DRFeeNative, buyer.address); // ToDo: upgrade hardhat, and use anyValue predicate for UUID field
+            .withArgs(mutualizer.address, anyValue, "2", ethers.constants.AddressZero, DRFeeNative, buyer.address);
         });
 
         it("should update state", async function () {
@@ -2774,12 +2774,12 @@ describe("IBosonFundsHandler", function () {
                       .to.emit(exchangeHandler, "DRFeeReturned")
                       .withArgs(
                         mutualizer.address,
-                        "1",
+                        anyValue,
                         exchangeId,
                         offerToken.exchangeToken,
                         payoffs.mutualizer,
                         caller.address
-                      ); // ToDo: upgrade hardhat, and use anyValue predicate for UUID field
+                      );
                   }
                 });
 
@@ -2971,12 +2971,12 @@ describe("IBosonFundsHandler", function () {
                     .to.emit(exchangeHandler, "DRFeeReturned")
                     .withArgs(
                       mutualizer.address,
-                      "1",
+                      anyValue,
                       exchangeId,
                       offerToken.exchangeToken,
                       payoffs.mutualizer,
                       buyer.address
-                    ); // ToDo: upgrade hardhat, and use anyValue predicate for UUID field
+                    );
                 }
               });
 
