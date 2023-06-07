@@ -12,6 +12,7 @@ const {
   accountId,
 } = require("../util/mock");
 const { setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util/utils");
+const { ethers } = require("hardhat");
 
 /**
  *  Test the Boson Account Handler interface
@@ -49,7 +50,8 @@ describe("IBosonAccountHandler", function () {
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
+    assistant = admin;
+    clerk = { address: ethers.constants.AddressZero };
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -148,7 +150,7 @@ describe("IBosonAccountHandler", function () {
         //addresses need to be unique to seller Id, so setting them to random addresses here
         seller.assistant = rando.address;
         seller.admin = rando.address;
-        seller.clerk = rando.address;
+        seller.clerk = ethers.constants.AddressZero;
 
         // Create another seller
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);

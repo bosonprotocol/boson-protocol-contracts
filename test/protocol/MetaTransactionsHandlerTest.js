@@ -150,8 +150,9 @@ describe("IBosonMetaTransactionsHandler", function () {
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ethers.constants.AddressZero };
 
     [deployer] = await ethers.getSigners();
 
@@ -245,7 +246,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         assert.equal(result, expectedResult, "Nonce is used");
 
         // Create a valid seller for meta transaction
-        seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+        seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
@@ -510,7 +511,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       context("👉 AccountHandlerFacet 👉 createSeller()", async function () {
         beforeEach(async function () {
           // Create a valid seller for meta transaction
-          seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -1061,7 +1062,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       context("👉TwinHandler 👉 removeTwin()", async function () {
         beforeEach(async function () {
           // Create a valid seller for meta transaction
-          seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -1182,7 +1183,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         it("Returns default revert reason if called function reverts without a reason", async function () {
           // Create a valid seller for meta transaction
-          seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
           voucherInitValues = mockVoucherInitValues();
           emptyAuthToken = mockAuthToken();
           await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -1224,7 +1225,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         context("Reentrancy guard", async function () {
           beforeEach(async function () {
             // Create a valid seller for meta transaction
-            seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+            seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
             expect(seller.isValid()).is.true;
 
             // VoucherInitValues
@@ -1453,7 +1454,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           offerId = "1";
 
           // Create a valid seller
-          seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -3012,7 +3013,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           offerId = "1";
 
           // Create a valid seller
-          seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
