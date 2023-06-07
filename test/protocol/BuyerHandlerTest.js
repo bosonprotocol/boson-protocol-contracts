@@ -53,7 +53,8 @@ describe("BuyerHandler", function () {
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
+    assistant = admin;
+    clerk = { address: ethers.constants.AddressZero };
 
     // Get snapshot id
     snapshotId = await getSnapshot();

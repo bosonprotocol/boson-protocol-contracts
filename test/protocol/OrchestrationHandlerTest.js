@@ -163,8 +163,9 @@ describe("IBosonOrchestrationHandler", function () {
     } = await setupTestEnvironment(contracts, { bosonTokenAddress: bosonToken.address }));
 
     // make all account the same
-    clerk = assistant = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ethers.constants.AddressZero };
 
     [deployer] = await ethers.getSigners();
 
@@ -1107,7 +1108,7 @@ describe("IBosonOrchestrationHandler", function () {
           );
 
         // create another offer, now with bosonToken as exchange token
-        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
         offer.exchangeToken = bosonToken.address;
         offer.id = "2";
@@ -1417,7 +1418,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Create a seller
           await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-          // Attempt to create a seller with non-unique admin, assistant and clerk, expecting revert
+          // Attempt to create a seller with non-unique admin and assistant, expecting revert
           // N.B. assistant and admin are tested together, since they must be the same
           await expect(
             orchestrationHandler
@@ -1437,7 +1438,6 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Caller is not the supplied admin", async function () {
           seller.assistant = rando.address;
-          seller.clerk = rando.address;
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -1459,7 +1459,6 @@ describe("IBosonOrchestrationHandler", function () {
         it("Caller does not own supplied auth token", async function () {
           seller.admin = ethers.constants.AddressZero;
           seller.assistant = rando.address;
-          seller.clerk = rando.address;
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -1480,6 +1479,27 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Caller is not the supplied assistant", async function () {
           seller.admin = rando.address;
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(rando)
+              .createSellerAndOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId
+              )
+          ).to.revertedWith(RevertReasons.NOT_ASSISTANT);
+        });
+
+        it("Clerk is not a zero address", async function () {
+          seller.admin = rando.address;
+          seller.assistant = rando.address;
           seller.clerk = rando.address;
 
           // Attempt to create a seller and an offer, expecting revert
@@ -1496,28 +1516,7 @@ describe("IBosonOrchestrationHandler", function () {
                 voucherInitValues,
                 agentId
               )
-          ).to.revertedWith(RevertReasons.NOT_ASSISTANT_AND_CLERK);
-        });
-
-        it("Caller is not the supplied clerk", async function () {
-          seller.admin = rando.address;
-          seller.assistant = rando.address;
-
-          // Attempt to create a seller and an offer, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(rando)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                disputeResolver.id,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId
-              )
-          ).to.revertedWith(RevertReasons.NOT_ASSISTANT_AND_CLERK);
+          ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
         });
 
         it("admin address is NOT zero address and AuthTokenType is NOT None", async function () {
@@ -1870,7 +1869,13 @@ describe("IBosonOrchestrationHandler", function () {
         // TODO - revisit when account deactivations are supported
         it.skip("Dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
-          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
+          disputeResolver = mockDisputeResolver(
+            rando.address,
+            rando.address,
+            ethers.constants.AddressZero,
+            rando.address,
+            false
+          );
           disputeResolver.id = "2"; // mock id is 3 because seller was mocked first but here we are creating dispute resolver first
           seller.id = "3";
           await accountHandler
@@ -1919,7 +1924,13 @@ describe("IBosonOrchestrationHandler", function () {
         // TODO - revisit when account deactivations are supported
         it.skip("For absolute zero offer, specified dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
-          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
+          disputeResolver = mockDisputeResolver(
+            rando.address,
+            rando.address,
+            ethers.constants.AddressZero,
+            rando.address,
+            false
+          );
           disputeResolver.id = "2"; // mock id is 3 because seller was mocked first but here we are creating dispute resolver first
           seller.id = "3";
 
@@ -1949,7 +1960,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
-          const newSeller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          const newSeller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
 
           await accountHandler.connect(rando).createSeller(newSeller, emptyAuthToken, voucherInitValues);
 

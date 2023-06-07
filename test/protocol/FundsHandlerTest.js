@@ -133,8 +133,9 @@ describe("IBosonFundsHandler", function () {
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ethers.constants.AddressZero };
 
     [deployer, protocolTreasury] = await ethers.getSigners();
 
@@ -313,7 +314,7 @@ describe("IBosonFundsHandler", function () {
           // Attempt to deposit the funds, expecting revert
           await expect(
             fundsHandler.connect(rando).depositFunds(seller.id, admin.address, depositAmount)
-          ).to.revertedWith("");
+          ).to.revertedWithoutReason();
         });
 
         it("Token contract revert for another reason", async function () {
@@ -476,10 +477,12 @@ describe("IBosonFundsHandler", function () {
           tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("5").toString()];
 
           // seller withdrawal
-          const tx = await fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
+          const tx = await fundsHandler
+            .connect(assistant)
+            .withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
           await expect(tx)
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(seller.id, treasury.address, mockToken.address, sellerPayoff, clerk.address);
+            .withArgs(seller.id, treasury.address, mockToken.address, sellerPayoff, assistant.address);
 
           await expect(tx)
             .to.emit(fundsHandler, "FundsWithdrawn")
@@ -488,7 +491,7 @@ describe("IBosonFundsHandler", function () {
               treasury.address,
               ethers.constants.Zero,
               ethers.BigNumber.from(sellerPayoff).div("2"),
-              clerk.address
+              assistant.address
             );
 
           // buyer withdrawal
@@ -529,7 +532,9 @@ describe("IBosonFundsHandler", function () {
           const withdrawAmount = ethers.BigNumber.from(sellerPayoff)
             .sub(ethers.utils.parseUnits("0.1", "ether"))
             .toString();
-          await fundsHandler.connect(clerk).withdrawFunds(seller.id, [ethers.constants.AddressZero], [withdrawAmount]);
+          await fundsHandler
+            .connect(assistant)
+            .withdrawFunds(seller.id, [ethers.constants.AddressZero], [withdrawAmount]);
 
           // Read on chain state
           sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -605,7 +610,7 @@ describe("IBosonFundsHandler", function () {
           );
 
           // withdraw all funds
-          await fundsHandler.connect(clerk).withdrawFunds(seller.id, [], []);
+          await fundsHandler.connect(assistant).withdrawFunds(seller.id, [], []);
 
           // Read on chain state
           sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -650,7 +655,7 @@ describe("IBosonFundsHandler", function () {
           );
 
           // withdraw all funds
-          await fundsHandler.connect(clerk).withdrawFunds(seller.id, [], []);
+          await fundsHandler.connect(assistant).withdrawFunds(seller.id, [], []);
 
           // Read on chain state
           sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -677,7 +682,7 @@ describe("IBosonFundsHandler", function () {
           );
 
           // withdraw all funds again
-          await fundsHandler.connect(clerk).withdrawFunds(seller.id, [], []);
+          await fundsHandler.connect(assistant).withdrawFunds(seller.id, [], []);
 
           // Read on chain state
           sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
@@ -704,7 +709,9 @@ describe("IBosonFundsHandler", function () {
           tokenAmountsSeller = [ethers.BigNumber.from(sellerPayoff).sub(reduction).toString(), reduction];
 
           // seller withdrawal
-          const tx = await fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
+          const tx = await fundsHandler
+            .connect(assistant)
+            .withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
           await expect(tx)
             .to.emit(fundsHandler, "FundsWithdrawn")
             .withArgs(
@@ -712,12 +719,12 @@ describe("IBosonFundsHandler", function () {
               treasury.address,
               mockToken.address,
               ethers.BigNumber.from(sellerPayoff).sub(reduction).toString(),
-              clerk.address
+              assistant.address
             );
 
           await expect(tx)
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(seller.id, treasury.address, mockToken.address, reduction, clerk.address);
+            .withArgs(seller.id, treasury.address, mockToken.address, reduction, assistant.address);
         });
 
         context("Agent Withdraws funds", async function () {
@@ -869,9 +876,9 @@ describe("IBosonFundsHandler", function () {
             tokenAmounts = [sellerPayoff];
 
             // Attempt to withdraw the funds, expecting revert
-            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenList, tokenAmounts)).to.revertedWith(
-              RevertReasons.TOKEN_AMOUNT_MISMATCH
-            );
+            await expect(
+              fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
+            ).to.revertedWith(RevertReasons.TOKEN_AMOUNT_MISMATCH);
           });
 
           it("Caller wants to withdraw more different tokens than allowed", async function () {
@@ -879,9 +886,9 @@ describe("IBosonFundsHandler", function () {
             tokenAmounts = new Array(101).fill("1");
 
             // Attempt to withdraw the funds, expecting revert
-            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenList, tokenAmounts)).to.revertedWith(
-              RevertReasons.TOO_MANY_TOKENS
-            );
+            await expect(
+              fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
+            ).to.revertedWith(RevertReasons.TOO_MANY_TOKENS);
           });
 
           it("Caller tries to withdraw more than they have in the available funds", async function () {
@@ -890,9 +897,9 @@ describe("IBosonFundsHandler", function () {
             tokenAmounts = [ethers.BigNumber.from(sellerPayoff).mul("2")];
 
             // Attempt to withdraw the funds, expecting revert
-            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenList, tokenAmounts)).to.revertedWith(
-              RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS
-            );
+            await expect(
+              fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
+            ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
           });
 
           it("Caller tries to withdraw the same token twice", async function () {
@@ -901,9 +908,9 @@ describe("IBosonFundsHandler", function () {
             tokenAmounts = [sellerPayoff, sellerPayoff];
 
             // Attempt to withdraw the funds, expecting revert
-            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenList, tokenAmounts)).to.revertedWith(
-              RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS
-            );
+            await expect(
+              fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
+            ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
           });
 
           it("Nothing to withdraw", async function () {
@@ -911,15 +918,15 @@ describe("IBosonFundsHandler", function () {
             tokenList = [mockToken.address];
             tokenAmounts = ["0"];
 
-            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenList, tokenAmounts)).to.revertedWith(
-              RevertReasons.NOTHING_TO_WITHDRAW
-            );
+            await expect(
+              fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
+            ).to.revertedWith(RevertReasons.NOTHING_TO_WITHDRAW);
 
             // first withdraw everything
-            await fundsHandler.connect(clerk).withdrawFunds(seller.id, [], []);
+            await fundsHandler.connect(assistant).withdrawFunds(seller.id, [], []);
 
             // Attempt to withdraw the funds, expecting revert
-            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, [], [])).to.revertedWith(
+            await expect(fundsHandler.connect(assistant).withdrawFunds(seller.id, [], [])).to.revertedWith(
               RevertReasons.NOTHING_TO_WITHDRAW
             );
           });
@@ -982,7 +989,7 @@ describe("IBosonFundsHandler", function () {
             // destruct mockToken
             await mockToken.destruct();
 
-            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, [], [])).to.revertedWith(
+            await expect(fundsHandler.connect(assistant).withdrawFunds(seller.id, [], [])).to.revertedWith(
               RevertReasons.EOA_FUNCTION_CALL_SAFE_ERC20
             );
           });
@@ -991,7 +998,7 @@ describe("IBosonFundsHandler", function () {
             // pause mockToken
             await mockToken.pause();
 
-            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, [], [])).to.revertedWith(
+            await expect(fundsHandler.connect(assistant).withdrawFunds(seller.id, [], [])).to.revertedWith(
               RevertReasons.ERC20_PAUSED
             );
           });
@@ -1005,7 +1012,7 @@ describe("IBosonFundsHandler", function () {
             await fundsHandler.connect(assistant).depositFunds(seller.id, foreign20ReturnFalse.address, sellerDeposit);
 
             await expect(
-              fundsHandler.connect(clerk).withdrawFunds(seller.id, [foreign20ReturnFalse.address], [sellerDeposit])
+              fundsHandler.connect(assistant).withdrawFunds(seller.id, [foreign20ReturnFalse.address], [sellerDeposit])
             ).to.revertedWith(RevertReasons.SAFE_ERC20_NOT_SUCCEEDED);
           });
         });
@@ -1931,9 +1938,9 @@ describe("IBosonFundsHandler", function () {
             .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
 
           // Attempt to commit to an offer, expecting revert
-          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
-            RevertReasons.EOA_FUNCTION_CALL
-          );
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)
+          ).to.revertedWithoutReason();
         });
 
         it("Token contract revert for another reason", async function () {

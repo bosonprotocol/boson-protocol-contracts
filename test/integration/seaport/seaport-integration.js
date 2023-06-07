@@ -44,13 +44,13 @@ describe("[@skip-on-coverage] Seaport integration", function () {
       contractInstances: { accountHandler, offerHandler, fundsHandler },
     } = await setupTestEnvironment(contracts));
 
-    const seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+    const seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
 
     const emptyAuthToken = mockAuthToken();
     const voucherInitValues = mockVoucherInitValues();
     await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-    const disputeResolver = mockDisputeResolver(DR.address, DR.address, DR.address, DR.address, true);
+    const disputeResolver = mockDisputeResolver(DR.address, DR.address, ethers.constants.AddressZero, DR.address, true);
 
     const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
     const sellerAllowList = [];

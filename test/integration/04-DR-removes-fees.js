@@ -55,8 +55,9 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ethers.constants.AddressZero };
 
     expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
     emptyAuthToken = mockAuthToken();

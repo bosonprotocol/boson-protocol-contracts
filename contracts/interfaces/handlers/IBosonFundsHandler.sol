@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonFundsEvents } from "../events/IBosonFundsEvents.sol";

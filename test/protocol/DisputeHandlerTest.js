@@ -115,8 +115,9 @@ describe("IBosonDisputeHandler", function () {
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ethers.constants.AddressZero };
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -866,7 +867,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Buyer can also have a seller account and this will work", async function () {
             // Create a valid seller with buyer's wallet
-            seller = mockSeller(buyer.address, buyer.address, buyer.address, buyer.address);
+            seller = mockSeller(buyer.address, buyer.address, ethers.constants.AddressZero, buyer.address);
             expect(seller.isValid()).is.true;
 
             await accountHandler.connect(buyer).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -1117,7 +1118,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Wallet with seller account, but not the seller in this exchange
             // Create a valid seller
-            seller = mockSeller(other1.address, other1.address, other1.address, other1.address);
+            seller = mockSeller(other1.address, other1.address, ethers.constants.AddressZero, other1.address);
             expect(seller.isValid()).is.true;
 
             await accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues);

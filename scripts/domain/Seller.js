@@ -11,7 +11,7 @@ class Seller {
             uint256 id;
             address assistant;
             address admin;
-            address clerk;
+            address clerk; // NB: deprecated, kept for backwards compatibility
             address payable treasury;
             bool active;
             string metadataUri;

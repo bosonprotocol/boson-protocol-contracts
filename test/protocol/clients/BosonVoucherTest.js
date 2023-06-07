@@ -1,5 +1,4 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
 
 const DisputeResolutionTerms = require("../../../scripts/domain/DisputeResolutionTerms");
 const { getInterfaceIds } = require("../../../scripts/config/supported-interfaces.js");
@@ -33,8 +32,7 @@ const {
   deriveTokenId,
 } = require("../../util/utils.js");
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
-const { waffle } = hre;
-const { deployMockContract } = waffle;
+const { deployMockContract } = require("@ethereum-waffle/mock-contract");
 const FormatTypes = ethers.utils.FormatTypes;
 
 describe("IBosonVoucher", function () {
@@ -94,8 +92,9 @@ describe("IBosonVoucher", function () {
     }));
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ethers.constants.AddressZero };
     [deployer] = await ethers.getSigners();
 
     // Grant protocol role to eoa so it's easier to test
@@ -2269,7 +2268,7 @@ describe("IBosonVoucher", function () {
         voucherInitValues = new VoucherInitValues("ContractURI", royaltyPercentage);
 
         // create another seller
-        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
         seller.id = "2";
 
         // royalty percentage too high, expectig revert
@@ -2300,6 +2299,11 @@ describe("IBosonVoucher", function () {
 
       // Reset the accountId iterator
       accountId.next(true);
+    });
+
+    it("should return 0 if the seller doesn't exist", async function () {
+      await bosonVoucher.connect(protocol).transferOwnership(rando.address);
+      expect(await bosonVoucher.getSellerId()).to.equal(0, "Invalid seller id returned");
     });
   });
 

@@ -6,18 +6,9 @@ const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const {
-  getEvent,
-  getMappingStoragePosition,
-  paddingType,
-  setupTestEnvironment,
-  getSnapshot,
-  revertToSnapshot,
-} = require("../util/utils.js");
+const { getEvent, setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockOffer, mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues, accountId } = require("../util/mock");
-const { keccak256 } = ethers.utils;
-const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 
 /**
  *  Test the Boson Twin Handler interface
@@ -71,7 +62,8 @@ describe("IBosonTwinHandler", function () {
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
+    assistant = admin;
+    clerk = { address: ethers.constants.AddressZero };
 
     // Deploy the mock tokens
     [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens();
@@ -326,52 +318,6 @@ describe("IBosonTwinHandler", function () {
         expect(exists).to.be.true;
         expect(storedTwin.id).to.be.equal(nextTwinId);
         assert.notEqual(storedTwin.id, twin.id, "Twin Id is incorrect");
-      });
-
-      it("Should ignore twin id set by seller and use nextAccountId on twinIdsByTokenAddressAndBySeller lookup", async function () {
-        twin.id = "666";
-        twin.tokenType = TokenType.NonFungibleToken;
-        twin.tokenAddress = foreign721.address;
-        twin.amount = "0";
-        twin.tokenId = "1";
-        twin.supplyAvailable = "10";
-
-        // Approving the twinHandler contract to transfer seller's tokens
-        await foreign721.connect(assistant).mint(twin.tokenId, twin.supplyAvailable);
-        await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
-
-        const tx = await twinHandler.connect(assistant).createTwin(twin);
-        const txReceipt = await tx.wait();
-
-        const [id] = getEvent(txReceipt, twinHandler, "TwinCreated");
-
-        // starting slot
-        const protocolLookupsSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.lookups"));
-        const protocolLookupsSlotNumber = ethers.BigNumber.from(protocolLookupsSlot);
-
-        // seller id mapping from twinIdsByTokenAddressAndBySeller
-        const firstMappingSlot = ethers.BigNumber.from(
-          getMappingStoragePosition(
-            protocolLookupsSlotNumber.add("23"),
-            ethers.BigNumber.from(seller.id).toNumber(),
-            paddingType.START
-          )
-        );
-
-        // token address mapping from twinIdsByTokenAddressAndBySeller
-        const secondMappingSlot = getMappingStoragePosition(
-          firstMappingSlot,
-          twin.tokenAddress.toLowerCase(),
-          paddingType.START
-        );
-
-        // first element of twinIds from twinIdsByTokenAddressAndBySeller
-        const firstIdSlot = keccak256(secondMappingSlot);
-        const twinId = await getStorageAt(twinHandler.address, firstIdSlot);
-
-        assert.equal(id, nextTwinId, "Twin Id is incorrect");
-        assert.equal(ethers.BigNumber.from(twinId), nextTwinId, "Twin Id is incorrect");
-        assert.notEqual(id, twin.id, "Twin Id is incorrect");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -825,7 +771,7 @@ describe("IBosonTwinHandler", function () {
     context("👉 getNextTwinId()", async function () {
       beforeEach(async function () {
         // Create another valid seller.
-        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
         expect(seller.isValid()).is.true;
 
         // AuthToken
