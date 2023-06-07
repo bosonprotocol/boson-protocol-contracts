@@ -170,6 +170,7 @@ contract Foreign20Malicious2 is Foreign20 {
  */
 contract Foreign20WithFee is Foreign20 {
     uint256 private fee = 3;
+    address private noFeeAddress;
 
     /**
      * @dev See {ERC20-_beforeTokenTransfer}.
@@ -178,7 +179,7 @@ contract Foreign20WithFee is Foreign20 {
      *
      */
     function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual override {
-        if (to != address(0) && from != address(0)) {
+        if (to != address(0) && from != address(0) && from != noFeeAddress) {
             uint256 _fee = (amount * fee) / 100;
             _burn(to, _fee);
         }
@@ -187,6 +188,10 @@ contract Foreign20WithFee is Foreign20 {
 
     function setFee(uint256 _newFee) external {
         fee = _newFee;
+    }
+
+    function setNoFeeAddress(address _noFeeAddress) external {
+        noFeeAddress = _noFeeAddress;
     }
 }
 
