@@ -103,7 +103,8 @@ describe("DisputeResolverHandler", function () {
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
+    assistant = admin;
+    clerk = { address: ethers.constants.AddressZero };
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -126,8 +127,8 @@ describe("DisputeResolverHandler", function () {
 
       // Create two additional sellers and create seller allow list
       seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
-      seller2 = mockSeller(other1.address, other1.address, other1.address, other1.address);
-      let seller3 = mockSeller(other2.address, other2.address, other2.address, other2.address);
+      seller2 = mockSeller(other1.address, other1.address, ethers.constants.AddressZero, other1.address);
+      let seller3 = mockSeller(other2.address, other2.address, ethers.constants.AddressZero, other2.address);
 
       // VoucherInitValues
       voucherInitValues = mockVoucherInitValues();
@@ -326,7 +327,13 @@ describe("DisputeResolverHandler", function () {
         );
 
         // Create a dispute resolver 2
-        disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, other1.address, true);
+        disputeResolver2 = mockDisputeResolver(
+          other1.address,
+          other1.address,
+          ethers.constants.AddressZero,
+          other1.address,
+          true
+        );
         expect(disputeResolver2.isValid()).is.true;
 
         await accountHandler
@@ -404,7 +411,13 @@ describe("DisputeResolverHandler", function () {
         expect(valid).is.true;
 
         // Create a valid dispute resolver, then set fields in tests directly
-        disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, treasury.address, true);
+        disputeResolver2 = mockDisputeResolver(
+          other1.address,
+          other1.address,
+          ethers.constants.AddressZero,
+          treasury.address,
+          true
+        );
         expect(disputeResolver2.isValid()).is.true;
         expectedDisputeResolverStruct = disputeResolver2.toStruct();
 
@@ -452,14 +465,6 @@ describe("DisputeResolverHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
           disputeResolver.admin = admin.address;
-          disputeResolver.clerk = ethers.constants.AddressZero;
-
-          // Attempt to Create a DisputeResolver, expecting revert
-          await expect(
-            accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
-
-          disputeResolver.clerk = clerk.address;
           disputeResolver.treasury = ethers.constants.AddressZero;
 
           // Attempt to Create a DisputeResolver, expecting revert
@@ -468,11 +473,20 @@ describe("DisputeResolverHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
+        it("Supplied clerk is not a zero address", async function () {
+          disputeResolver.clerk = rando.address;
+
+          // Attempt to Create a DisputeResolver, expecting revert
+          await expect(
+            accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+          ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
+        });
+
         it("Address is not unique to this dispute resolver Id", async function () {
           disputeResolver2 = mockDisputeResolver(
             assistant.address,
             assistant.address,
-            assistant.address,
+            ethers.constants.AddressZero,
             assistant.address
           );
           expect(disputeResolver2.isValid()).is.true;
@@ -558,32 +572,20 @@ describe("DisputeResolverHandler", function () {
 
         it("Caller is not the supplied admin", async function () {
           disputeResolver.assistant = rando.address;
-          disputeResolver.clerk = rando.address;
 
           // Create a dispute resolver
           await expect(
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.NOT_ADMIN_ASSISTANT_AND_CLERK);
+          ).to.revertedWith(RevertReasons.NOT_ADMIN_AND_ASSISTANT);
         });
 
         it("Caller is not the supplied assistant", async function () {
           disputeResolver.admin = rando.address;
-          disputeResolver.clerk = rando.address;
 
           // Create a dispute resolver
           await expect(
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.NOT_ADMIN_ASSISTANT_AND_CLERK);
-        });
-
-        it("Caller is not the supplied clerk", async function () {
-          disputeResolver.admin = rando.address;
-          disputeResolver.assistant = rando.address;
-
-          // Create a dispute resolver
-          await expect(
-            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.NOT_ADMIN_ASSISTANT_AND_CLERK);
+          ).to.revertedWith(RevertReasons.NOT_ADMIN_AND_ASSISTANT);
         });
 
         it("Active is false", async function () {
@@ -737,7 +739,6 @@ describe("DisputeResolverHandler", function () {
         ).toString();
         disputeResolver.assistant = disputeResolverPendingUpdate.assistant = other1.address;
         disputeResolver.admin = disputeResolverPendingUpdate.admin = other2.address;
-        disputeResolver.clerk = disputeResolverPendingUpdate.clerk = other3.address;
         disputeResolver.treasury = other4.address;
         disputeResolver.metadataUri = "https://ipfs.io/ipfs/updatedUri";
         disputeResolver.active = true;
@@ -755,10 +756,10 @@ describe("DisputeResolverHandler", function () {
           .to.emit(accountHandler, "DisputeResolverUpdatePending")
           .withArgs(disputeResolver.id, disputeResolverPendingUpdateStruct, admin.address);
 
-        // Assistant admin and clerk needs owner approval and won't be updated until then
+        // Assistant and admin needs owner approval and won't be updated until then
         expectedDisputeResolver.assistant = assistant.address;
         expectedDisputeResolver.admin = admin.address;
-        expectedDisputeResolver.clerk = clerk.address;
+        expectedDisputeResolver.clerk = ethers.constants.AddressZero;
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
 
         // Testing for the DisputeResolverUpdateApplied event
@@ -778,7 +779,7 @@ describe("DisputeResolverHandler", function () {
         ).toString();
         disputeResolver.assistant = other1.address;
         disputeResolver.admin = other2.address;
-        disputeResolver.clerk = other3.address;
+        disputeResolver.clerk = ethers.constants.AddressZero;
         disputeResolver.treasury = other4.address;
         disputeResolver.metadataUri = "https://ipfs.io/ipfs/updatedUri";
         disputeResolver.active = true;
@@ -798,11 +799,6 @@ describe("DisputeResolverHandler", function () {
         await accountHandler
           .connect(other2)
           .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Admin]);
-
-        // Approve clerk update
-        await accountHandler
-          .connect(other3)
-          .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Clerk]);
 
         // Get the disupte resolver as structs
         [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
@@ -840,9 +836,6 @@ describe("DisputeResolverHandler", function () {
         expect(exists).to.be.true;
 
         [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(disputeResolver.admin);
-        expect(exists).to.be.true;
-
-        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(disputeResolver.clerk);
         expect(exists).to.be.true;
       });
 
@@ -914,7 +907,12 @@ describe("DisputeResolverHandler", function () {
 
       it("should update the correct dispute resolver", async function () {
         // Configure another dispute resolver
-        disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, other1.address);
+        disputeResolver2 = mockDisputeResolver(
+          other1.address,
+          other1.address,
+          ethers.constants.AddressZero,
+          other1.address
+        );
         expect(disputeResolver2.isValid()).is.true;
 
         const expectedDisputeResolver2 = disputeResolver2.clone();
@@ -947,7 +945,7 @@ describe("DisputeResolverHandler", function () {
         ).toString();
         disputeResolver.assistant = rando.address;
         disputeResolver.admin = rando.address;
-        disputeResolver.clerk = rando.address;
+        disputeResolver.clerk = ethers.constants.AddressZero;
         disputeResolver.treasury = rando.address;
         disputeResolver.metadataUri = "https://ipfs.io/ipfs/updatedUri";
         expect(disputeResolver.isValid()).is.true;
@@ -958,13 +956,12 @@ describe("DisputeResolverHandler", function () {
         // Update the first dispute resolver
         await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
 
-        // Approve assistant, clerk and admin update
+        // Approve assistant and admin update
         await accountHandler
           .connect(rando)
           .optInToDisputeResolverUpdate(disputeResolver.id, [
             DisputeResolverUpdateFields.Assistant,
             DisputeResolverUpdateFields.Admin,
-            DisputeResolverUpdateFields.Clerk,
           ]);
 
         [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
@@ -1080,7 +1077,7 @@ describe("DisputeResolverHandler", function () {
         // Update dispute resolver fields
         disputeResolver.assistant = other1.address;
         disputeResolver.admin = other2.address;
-        disputeResolver.clerk = other3.address;
+        disputeResolver.clerk = ethers.constants.AddressZero;
         disputeResolver.active = true;
         expect(disputeResolver.isValid()).is.true;
 
@@ -1088,7 +1085,7 @@ describe("DisputeResolverHandler", function () {
 
         disputeResolverPendingUpdate.assistant = other1.address;
         disputeResolverPendingUpdate.admin = other2.address;
-        disputeResolverPendingUpdate.clerk = other3.address;
+        disputeResolverPendingUpdate.clerk = ethers.constants.AddressZero;
         disputeResolverPendingUpdateStruct = disputeResolverPendingUpdate.toStruct();
 
         // Request to update a dispute resolver, testing for the DisputeResolerUpdatePending event
@@ -1106,13 +1103,13 @@ describe("DisputeResolverHandler", function () {
           .connect(other2)
           .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Admin]);
 
-        // Approve clerk update
-        await accountHandler
-          .connect(other3)
-          .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Clerk]);
-
         // Configure another dispute resolver
-        disputeResolver2 = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address);
+        disputeResolver2 = mockDisputeResolver(
+          rando.address,
+          rando.address,
+          ethers.constants.AddressZero,
+          rando.address
+        );
         expect(disputeResolver2.isValid()).is.true;
 
         // Create another dispute resolver
@@ -1134,11 +1131,11 @@ describe("DisputeResolverHandler", function () {
           .withArgs(disputeResolver2.id, disputeResolver2Struct, disputeResolverPendingUpdateStruct, rando.address);
       });
 
-      it("should be possible to use the same address for assistant, admin, clerk, and treasury", async function () {
+      it("should be possible to use the same address for assistant, admin and treasury", async function () {
         // Update dispute resolver fields
         disputeResolver.assistant = other1.address;
         disputeResolver.admin = other1.address;
-        disputeResolver.clerk = other1.address;
+        disputeResolver.clerk = ethers.constants.AddressZero;
         disputeResolver.treasury = other1.address;
         expect(disputeResolver.isValid()).is.true;
 
@@ -1146,12 +1143,12 @@ describe("DisputeResolverHandler", function () {
         expectedDisputeResolver = disputeResolver.clone();
         expectedDisputeResolver.assistant = assistant.address;
         expectedDisputeResolver.admin = admin.address;
-        expectedDisputeResolver.clerk = clerk.address;
+        expectedDisputeResolver.clerk = ethers.constants.AddressZero;
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
 
         disputeResolverPendingUpdate.assistant = other1.address;
         disputeResolverPendingUpdate.admin = other1.address;
-        disputeResolverPendingUpdate.clerk = other1.address;
+        disputeResolverPendingUpdate.clerk = ethers.constants.AddressZero;
         disputeResolverPendingUpdateStruct = disputeResolverPendingUpdate.toStruct();
 
         // Update a dispute resolver
@@ -1187,7 +1184,6 @@ describe("DisputeResolverHandler", function () {
             .optInToDisputeResolverUpdate(disputeResolver.id, [
               DisputeResolverUpdateFields.Assistant,
               DisputeResolverUpdateFields.Admin,
-              DisputeResolverUpdateFields.Clerk,
             ])
         )
           .to.emit(accountHandler, "DisputeResolverUpdateApplied")
@@ -1252,14 +1248,6 @@ describe("DisputeResolverHandler", function () {
           );
 
           disputeResolver.admin = admin.address;
-          disputeResolver.clerk = ethers.constants.AddressZero;
-
-          // Attempt to update the disputer resolver, expecting revert
-          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
-            RevertReasons.INVALID_ADDRESS
-          );
-
-          disputeResolver.clerk = clerk.address;
           disputeResolver.treasury = ethers.constants.AddressZero;
 
           // Attempt to update the disputer resolver, expecting revert
@@ -1268,8 +1256,22 @@ describe("DisputeResolverHandler", function () {
           );
         });
 
+        it("Supplied clerk is not a zero address", async function () {
+          disputeResolver.clerk = rando.address;
+
+          // Attempt to update the disputer resolver, expecting revert
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+            RevertReasons.CLERK_DEPRECATED
+          );
+        });
+
         it("Address is not unique to this dispute resolver Id", async function () {
-          disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, other1.address);
+          disputeResolver2 = mockDisputeResolver(
+            other1.address,
+            other1.address,
+            ethers.constants.AddressZero,
+            other1.address
+          );
           expect(disputeResolver2.isValid()).is.true;
           disputeResolver2Struct = disputeResolver2.toStruct();
           await accountHandler
@@ -1291,21 +1293,17 @@ describe("DisputeResolverHandler", function () {
           await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
-
-          disputeResolver.admin = admin.address;
-          disputeResolver.clerk = other1.address;
-
-          // Attempt to update dispute resolver 1 with non-unique clerk address, expecting revert
-          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
-            RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
-          );
         });
 
         it("Address is not unique to this dispute resolver Id", async function () {
-          disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, other1.address);
+          disputeResolver2 = mockDisputeResolver(
+            other1.address,
+            other1.address,
+            ethers.constants.AddressZero,
+            other1.address
+          );
           expect(disputeResolver2.isValid()).is.true;
 
-          //disputeResolver2Struct = disputeResolver2.toStruct();
           await accountHandler
             .connect(other1)
             .createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
@@ -1318,20 +1316,11 @@ describe("DisputeResolverHandler", function () {
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
 
-          //Set dispute resolver 2's assistant address to dispute resolver 1's clerk address
+          //Set dispute resolver 2's assistant address to dispute resolver 1's assistant address
           disputeResolver2.admin = other2.address;
-          disputeResolver2.assistant = clerk.address;
+          disputeResolver2.assistant = assistant.address;
 
           // Attempt to update dispute resolver 1 with non-unique assistant address, expecting revert
-          await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver2)).to.revertedWith(
-            RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
-          );
-
-          //Set dispute resolver 2's clerk address to dispute resolver 1's admin address
-          disputeResolver2.assistant = other1.address;
-          disputeResolver2.clerk = admin.address;
-
-          // Attempt to update dispute resolver 1 with non-unique clerk address, expecting revert
           await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver2)).to.revertedWith(
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
@@ -1772,7 +1761,7 @@ describe("DisputeResolverHandler", function () {
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // make another seller with id = "5"
-        let seller4 = mockSeller(other3.address, other3.address, other3.address, other3.address);
+        let seller4 = mockSeller(other3.address, other3.address, ethers.constants.AddressZero, other3.address);
 
         await accountHandler.connect(other3).createSeller(seller4, emptyAuthToken, voucherInitValues);
 
@@ -1935,7 +1924,7 @@ describe("DisputeResolverHandler", function () {
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // make another seller with id = "5"
-        const seller4 = mockSeller(other3.address, other3.address, other3.address, other3.address);
+        const seller4 = mockSeller(other3.address, other3.address, ethers.constants.AddressZero, other3.address);
 
         // AuthToken
         emptyAuthToken = mockAuthToken();
@@ -2029,7 +2018,7 @@ describe("DisputeResolverHandler", function () {
         expect(returnedSellerAllowList.toString()).to.eql(expectedSellerAllowList.toString(), "Allowed list wrong");
 
         // make another seller with id = "6"
-        const seller6 = mockSeller(other4.address, other4.address, other4.address, other4.address);
+        const seller6 = mockSeller(other4.address, other4.address, ethers.constants.AddressZero, other4.address);
         await accountHandler.connect(other4).createSeller(seller6, emptyAuthToken, voucherInitValues);
 
         // check that mappings of allowed selleres were updated
@@ -2095,7 +2084,7 @@ describe("DisputeResolverHandler", function () {
 
         it("Seller id is not approved", async function () {
           // make another seller with id = "6"
-          const seller6 = mockSeller(other4.address, other4.address, other4.address, other4.address);
+          const seller6 = mockSeller(other4.address, other4.address, ethers.constants.AddressZero, other4.address);
           await accountHandler.connect(other4).createSeller(seller6, emptyAuthToken, voucherInitValues);
 
           // seller exists, it's not approved
@@ -2169,29 +2158,8 @@ describe("DisputeResolverHandler", function () {
           );
       });
 
-      it("New clerk should opt-in to update disputeResolver", async function () {
-        disputeResolver.clerk = other1.address;
-        expectedDisputeResolver.clerk = other1.address;
-        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
-
-        await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
-
-        await expect(
-          accountHandler
-            .connect(other1)
-            .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Clerk])
-        )
-          .to.emit(accountHandler, "DisputeResolverUpdateApplied")
-          .withArgs(
-            disputeResolver.id,
-            expectedDisputeResolverStruct,
-            disputeResolverPendingUpdateStruct,
-            other1.address
-          );
-      });
-
-      it("Should update admin, clerk and assistant in a single call ", async function () {
-        disputeResolver.clerk = expectedDisputeResolver.clerk = other1.address;
+      it("Should update admin and assistant in a single call ", async function () {
+        disputeResolver.clerk = expectedDisputeResolver.clerk = ethers.constants.AddressZero;
         disputeResolver.admin = expectedDisputeResolver.admin = other1.address;
         disputeResolver.assistant = expectedDisputeResolver.assistant = other1.address;
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
@@ -2202,7 +2170,6 @@ describe("DisputeResolverHandler", function () {
           accountHandler
             .connect(other1)
             .optInToDisputeResolverUpdate(disputeResolver.id, [
-              DisputeResolverUpdateFields.Clerk,
               DisputeResolverUpdateFields.Admin,
               DisputeResolverUpdateFields.Assistant,
             ])
@@ -2277,13 +2244,13 @@ describe("DisputeResolverHandler", function () {
         await expect(
           accountHandler
             .connect(other1)
-            .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Clerk])
+            .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Admin])
         ).to.not.emit(accountHandler, "DisputeResolverUpdateApplied");
       });
 
       context("💔 Revert Reasons", async function () {
         it("There are no pending updates", async function () {
-          disputeResolver.clerk = other1.address;
+          disputeResolver.clerk = ethers.constants.AddressZero;
           disputeResolver.admin = other1.address;
           disputeResolver.assistant = other1.address;
           expectedDisputeResolver = disputeResolver.clone();
@@ -2297,7 +2264,6 @@ describe("DisputeResolverHandler", function () {
             accountHandler
               .connect(other1)
               .optInToDisputeResolverUpdate(disputeResolver.id, [
-                DisputeResolverUpdateFields.Clerk,
                 DisputeResolverUpdateFields.Admin,
                 DisputeResolverUpdateFields.Assistant,
               ])
@@ -2325,19 +2291,6 @@ describe("DisputeResolverHandler", function () {
             accountHandler
               .connect(other2)
               .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Admin])
-          ).to.revertedWith(RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
-        });
-
-        it("Caller is not the new clerk", async function () {
-          disputeResolver.clerk = other1.address;
-          disputeResolverStruct = disputeResolver.toStruct();
-
-          await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
-
-          await expect(
-            accountHandler
-              .connect(other2)
-              .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Clerk])
           ).to.revertedWith(RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
         });
 
@@ -2373,7 +2326,12 @@ describe("DisputeResolverHandler", function () {
           await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
 
           // Create disputeResolver with same admin
-          disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, other1.address);
+          disputeResolver2 = mockDisputeResolver(
+            other1.address,
+            other1.address,
+            ethers.constants.AddressZero,
+            other1.address
+          );
           expect(disputeResolver2.isValid()).is.true;
 
           await accountHandler
@@ -2388,34 +2346,18 @@ describe("DisputeResolverHandler", function () {
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
         });
 
-        it("Clerk is not unique to this disputeResolver", async function () {
-          // Update disputeResolver clerk
-          disputeResolver.clerk = other1.address;
-          await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
-
-          // Create disputeResolver with same clerk
-          disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, other1.address);
-          expect(disputeResolver2.isValid()).is.true;
-
-          await accountHandler
-            .connect(other1)
-            .createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
-
-          // Attemp to approve the update with non-unique clerk, expecting revert
-          await expect(
-            accountHandler
-              .connect(other1)
-              .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Clerk])
-          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
-        });
-
         it("Assistant is not unique to this disputeResolver", async function () {
           // Update disputeResolver assistant
           disputeResolver.assistant = other1.address;
           await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
 
           // Create disputeResolver with same assistant
-          disputeResolver2 = mockDisputeResolver(other1.address, other1.address, other1.address, other1.address);
+          disputeResolver2 = mockDisputeResolver(
+            other1.address,
+            other1.address,
+            ethers.constants.AddressZero,
+            other1.address
+          );
           expect(disputeResolver2.isValid()).is.true;
 
           await accountHandler
@@ -2428,6 +2370,19 @@ describe("DisputeResolverHandler", function () {
               .connect(other1)
               .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Assistant])
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+        });
+
+        it("Dispute resolver tries to update the clerk", async function () {
+          disputeResolver.assistant = other1.address;
+          disputeResolverStruct = disputeResolver.toStruct();
+
+          await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+          await expect(
+            accountHandler
+              .connect(other2)
+              .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Clerk])
+          ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
         });
       });
     });

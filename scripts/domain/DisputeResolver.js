@@ -12,7 +12,7 @@ class DisputeResolver {
             uint256 escalationResponsePeriod;
             address assistant;
             address admin;
-            address clerk;
+            address clerk; // NB: deprecated, kept for backwards compatibility
             address payable treasury;
             string metadataUri;
             bool active;

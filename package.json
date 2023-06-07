@@ -70,7 +70,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.0",
-    "@openzeppelin/contracts-upgradeable": "4.8.3"
+    "@openzeppelin/contracts-upgradeable": "4.9.0"
   },
   "devDependencies": {
     "@bosonprotocol/solidoc": "3.0.3",
@@ -79,15 +79,16 @@
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/test-helpers": "^0.5.16",
+    "coveralls": "^3.1.1",
     "decache": "^4.6.1",
-    "dotenv": "^16.0.3",
+    "dotenv": "^16.1.4",
     "eip55": "^2.1.0",
-    "eslint": "^8.32.0",
+    "eslint": "^8.42.0",
     "eslint-config-prettier": "^8.6.0",
     "eslint-plugin-no-only-tests": "^3.1.0",
     "ethereum-input-data-decoder": "^0.4.2",
-    "glob": "^9.2.1",
-    "hardhat": "^2.14.0",
+    "glob": "^10.2.7",
+    "hardhat": "^2.14.1",
     "hardhat-contract-sizer": "^2.7.0",
     "hardhat-preprocessor": "^0.1.5",
     "husky": "^8.0.3",
@@ -96,7 +97,7 @@
     "prettier-plugin-solidity": "^1.0.0-beta.19",
     "simple-statistics": "^7.8.2",
     "solhint": "^3.3.8",
-    "truffle": "^5.7.9",
+    "truffle": "^5.9.4",
     "web3": "^1.8.1"
   }
 }

@@ -157,7 +157,13 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
     beforeEach(async function () {
       // Create a seller
       sellerId = await accountHandler.getNextAccountId();
-      const seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address, true);
+      const seller = mockSeller(
+        assistant.address,
+        assistant.address,
+        ethers.constants.AddressZero,
+        assistant.address,
+        true
+      );
       const voucherInitValues = mockVoucherInitValues();
       const emptyAuthToken = mockAuthToken();
       await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
