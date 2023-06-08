@@ -717,7 +717,7 @@ describe("ProtocolInitializationHandler", async function () {
         const [bosonToken] = await deployMockTokens();
         let twin = mockTwin(bosonToken.address, TokenType.FungibleToken);
 
-        const seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        const seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
         expect(seller.isValid()).is.true;
 
         const emptyAuthToken = mockAuthToken();

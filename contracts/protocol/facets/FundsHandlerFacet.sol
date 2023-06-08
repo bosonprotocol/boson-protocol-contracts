@@ -103,10 +103,10 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             // Caller is a buyer
             destinationAddress = sender;
         } else {
-            // Check if the caller is a clerk
-            (exists, callerId) = getSellerIdByClerk(sender);
+            // Check if the caller is an assistant
+            (exists, callerId) = getSellerIdByAssistant(sender);
             if (exists && callerId == _entityId) {
-                // Caller is a clerk. In this case funds are transferred to the treasury address
+                // Caller is an assistant. In this case funds are transferred to the treasury address
                 (, Seller storage seller, ) = fetchSeller(callerId);
                 destinationAddress = seller.treasury;
             } else {
@@ -115,7 +115,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
                     // Caller is an agent
                     destinationAddress = sender;
                 } else {
-                    // In this branch, caller is neither buyer, clerk or agent or does not match the _entityId
+                    // In this branch, caller is neither buyer, assistant or agent or does not match the _entityId
                     revert(NOT_AUTHORIZED);
                 }
             }

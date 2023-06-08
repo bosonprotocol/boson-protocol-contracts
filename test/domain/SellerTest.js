@@ -16,7 +16,7 @@ describe("Seller", function () {
     accounts = await ethers.getSigners();
     assistant = accounts[0].address;
     admin = accounts[1].address;
-    clerk = accounts[2].address;
+    clerk = ethers.constants.AddressZero;
     treasury = accounts[3].address;
 
     // Required constructor params

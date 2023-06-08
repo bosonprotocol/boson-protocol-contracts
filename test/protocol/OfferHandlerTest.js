@@ -128,8 +128,9 @@ describe("IBosonOfferHandler", function () {
     } = await setupTestEnvironment(contracts, { bosonTokenAddress: bosonToken.address }));
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ethers.constants.AddressZero };
     [deployer] = await ethers.getSigners();
 
     // Get snapshot id
@@ -505,7 +506,7 @@ describe("IBosonOfferHandler", function () {
 
       it("Should allow creation of an offer if DR has a sellerAllowList and seller is on it", async function () {
         // Create new seller so sellerAllowList can have an entry
-        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
 
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -702,7 +703,13 @@ describe("IBosonOfferHandler", function () {
         // TODO - revisit when account deactivations are supported
         it.skip("Dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
-          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
+          disputeResolver = mockDisputeResolver(
+            rando.address,
+            rando.address,
+            ethers.constants.AddressZero,
+            rando.address,
+            false
+          );
           await accountHandler
             .connect(rando)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -735,7 +742,13 @@ describe("IBosonOfferHandler", function () {
         // TODO - revisit when account deactivations are supported
         it.skip("For absolute zero offer, specified dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
-          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
+          disputeResolver = mockDisputeResolver(
+            rando.address,
+            rando.address,
+            ethers.constants.AddressZero,
+            rando.address,
+            false
+          );
           await accountHandler
             .connect(rando)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -759,7 +772,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
-          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -1003,7 +1016,7 @@ describe("IBosonOfferHandler", function () {
 
           // caller is an assistant of another seller
           // Create a valid seller, then set fields in tests directly
-          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
 
           // AuthToken
           emptyAuthToken = mockAuthToken();
@@ -1103,7 +1116,7 @@ describe("IBosonOfferHandler", function () {
 
             // caller is an assistant of another seller
             // Create a valid seller, then set fields in tests directly
-            seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+            seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
 
             // AuthToken
             emptyAuthToken = mockAuthToken();
@@ -1431,7 +1444,7 @@ describe("IBosonOfferHandler", function () {
 
           // caller is an assistant of another seller
           // Create a valid seller, then set fields in tests directly
-          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
 
           // AuthToken
           emptyAuthToken = mockAuthToken();
@@ -2104,7 +2117,7 @@ describe("IBosonOfferHandler", function () {
 
       it("Should allow creation of an offer if DR has a sellerAllowList and seller is on it", async function () {
         // Create new seller so sellerAllowList can have an entry
-        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
 
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -2340,7 +2353,13 @@ describe("IBosonOfferHandler", function () {
         // TODO - revisit when account deactivations are supported
         it.skip("For some offer, dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
-          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
+          disputeResolver = mockDisputeResolver(
+            rando.address,
+            rando.address,
+            ethers.constants.AddressZero,
+            rando.address,
+            false
+          );
           await accountHandler
             .connect(rando)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -2382,7 +2401,13 @@ describe("IBosonOfferHandler", function () {
         // TODO - revisit when account deactivations are supported
         it.skip("For some absolute zero offer, specified dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
-          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
+          disputeResolver = mockDisputeResolver(
+            rando.address,
+            rando.address,
+            ethers.constants.AddressZero,
+            rando.address,
+            false
+          );
           await accountHandler
             .connect(rando)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -2411,7 +2436,7 @@ describe("IBosonOfferHandler", function () {
 
         it("For some offer seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
-          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -2765,7 +2790,7 @@ describe("IBosonOfferHandler", function () {
           );
 
           // caller is an assistant of another seller
-          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
 
           // AuthToken
           emptyAuthToken = mockAuthToken();
@@ -2896,7 +2921,7 @@ describe("IBosonOfferHandler", function () {
           );
 
           // caller is an assistant of another seller
-          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
 
           // AuthToken
           emptyAuthToken = mockAuthToken();

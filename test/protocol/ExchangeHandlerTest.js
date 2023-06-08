@@ -156,8 +156,9 @@ describe("IBosonExchangeHandler", function () {
     [deployer] = await ethers.getSigners();
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ethers.constants.AddressZero };
 
     // Deploy the mock tokens
     [foreign20, foreign721, foreign1155] = await deployMockTokens(["Foreign20", "Foreign721", "Foreign1155"]);
@@ -358,7 +359,7 @@ describe("IBosonExchangeHandler", function () {
         bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
         // Create a new seller to get new clone
-        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
         seller.id = "3"; // buyer is created after seller in this test
         expect(seller.isValid()).is.true;
 
@@ -442,7 +443,7 @@ describe("IBosonExchangeHandler", function () {
         bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
         // Create a new seller to get new clone
-        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
         seller.id = "3"; // buyer is created after seller in this test
         expect(seller.isValid()).is.true;
 
@@ -3556,7 +3557,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("Caller is not a clone address associated with the seller", async function () {
           // Create a new seller to get new clone
-          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
           expect(seller.isValid()).is.true;
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
