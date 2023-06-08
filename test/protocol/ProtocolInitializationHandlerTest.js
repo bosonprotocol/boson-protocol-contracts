@@ -6,7 +6,7 @@ const Role = require("../../scripts/domain/Role");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployAndCutFacets, deployProtocolFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const { getInterfaceIds, interfaceImplementers } = require("../../scripts/config/supported-interfaces");
-const { maxPriorityFeePerGas } = require("../util/constants");
+const { maxPriorityFeePerGas, oneWeek } = require("../util/constants");
 const { getFees } = require("../../scripts/util/utils");
 const { getFacetAddCut, getFacetReplaceCut } = require("../../scripts/util/diamond-utils");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -76,10 +76,10 @@ describe("ProtocolInitializationHandler", async function () {
         let protocolInitializationFacetDeployed;
 
         beforeEach(async function () {
-          const ProtocolInitilizationContractFactory = await ethers.getContractFactory(
+          const ProtocolInitializationContractFactory = await ethers.getContractFactory(
             "ProtocolInitializationHandlerFacet"
           );
-          protocolInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
+          protocolInitializationFacetDeployed = await ProtocolInitializationContractFactory.deploy(
             await getFees(maxPriorityFeePerGas)
           );
 
@@ -260,7 +260,7 @@ describe("ProtocolInitializationHandler", async function () {
         const configHandlerInterface = InterfaceIds[interfaceImplementers["ConfigHandlerFacet"]];
         const accountInterface = InterfaceIds[interfaceImplementers["AccountHandlerFacet"]];
 
-        version = ethers.utils.formatBytes32String("2.3.0");
+        version = ethers.utils.formatBytes32String("0.0.0");
         const calldataProtocolInitialization =
           deployedProtocolInitializationHandlerFacet.contract.interface.encodeFunctionData("initialize", [
             version,
@@ -302,7 +302,7 @@ describe("ProtocolInitializationHandler", async function () {
 
       const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [rando.address]);
 
-      version = ethers.utils.formatBytes32String("2.3.0");
+      version = ethers.utils.formatBytes32String("0.0.0");
       const calldataProtocolInitialization =
         deployedProtocolInitializationHandlerFacet.contract.interface.encodeFunctionData("initialize", [
           version,
@@ -336,7 +336,7 @@ describe("ProtocolInitializationHandler", async function () {
         testFacet = await FacetTestFactory.deploy(await getFees(maxPriorityFeePerGas));
         await testFacet.deployTransaction.wait();
 
-        version = ethers.utils.formatBytes32String("2.3.0");
+        version = ethers.utils.formatBytes32String("0.0.0");
       });
 
       it("Delegate call to initialize fails", async function () {
@@ -405,10 +405,10 @@ describe("ProtocolInitializationHandler", async function () {
       version = "2.1.0";
 
       // Deploy mock protocol initialization facet which simulates state before v2.2.0
-      const ProtocolInitilizationContractFactory = await ethers.getContractFactory(
+      const ProtocolInitializationContractFactory = await ethers.getContractFactory(
         "MockProtocolInitializationHandlerFacet"
       );
-      const mockInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
+      const mockInitializationFacetDeployed = await ProtocolInitializationContractFactory.deploy(
         await getFees(maxPriorityFeePerGas)
       );
 
@@ -508,7 +508,7 @@ describe("ProtocolInitializationHandler", async function () {
 
       it("Current version is not 0", async () => {
         // Deploy higher version
-        version = "2.3.0";
+        version = "0.0.0";
         const interfaceId = InterfaceIds[interfaceImplementers["ProtocolInitializationHandlerFacet"]];
         const {
           deployedFacets: [{ contract: deployedProtocolInitializationHandlerFacet }],
@@ -583,7 +583,7 @@ describe("ProtocolInitializationHandler", async function () {
     context("💔 Revert Reasons", async function () {
       it("Current version is not 2.2.0", async () => {
         // Deploy higher version
-        const wrongVersion = "2.3.0";
+        const wrongVersion = "0.0.0";
 
         // Prepare calldata
         const calldataProtocolInitializationWrong =
@@ -614,6 +614,141 @@ describe("ProtocolInitializationHandler", async function () {
         facetCut = getFacetReplaceCut(accountHandler, ["initialize"]);
 
         // Make diamond cut, expect revert
+        await expect(
+          diamondCutFacet.diamondCut(
+            [facetCut],
+            deployedProtocolInitializationHandlerFacet.address,
+            calldataProtocolInitialization,
+            await getFees(maxPriorityFeePerGas)
+          )
+        ).to.be.revertedWith(RevertReasons.WRONG_CURRENT_VERSION);
+      });
+    });
+  });
+
+  describe("initV2_3_0", async function () {
+    let deployedProtocolInitializationHandlerFacet;
+    let configHandler;
+    let facetCut;
+    let calldataProtocolInitialization;
+    let minResolutionPeriod;
+
+    beforeEach(async function () {
+      version = "2.2.1";
+
+      const facetsToDeploy = await getV2_2_0DeployConfig(); // To deploy 2.2.1, we can use 2.2.0 config
+
+      // Make initial deployment (simulate v2.2.0)
+      await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas, version);
+
+      // Deploy v2.3.0 facets
+      [{ contract: deployedProtocolInitializationHandlerFacet }, { contract: configHandler }] =
+        await deployProtocolFacets(
+          ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet"],
+          {},
+          await getFees(maxPriorityFeePerGas)
+        );
+
+      // Prepare cut data
+      facetCut = getFacetReplaceCut(deployedProtocolInitializationHandlerFacet, ["initialize"]);
+
+      // initialization data for v2.3.0
+      minResolutionPeriod = oneWeek;
+      initializationData = ethers.utils.defaultAbiCoder.encode(["uint256"], [minResolutionPeriod]);
+
+      // Prepare calldata
+      version = "2.3.0";
+      calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+        "initialize",
+        [ethers.utils.formatBytes32String(version), [], [], true, initializationData, [], []]
+      );
+
+      configHandler = configHandler.attach(protocolDiamond.address);
+    });
+
+    it("Should emit MinResolutionPeriodChanged event", async function () {
+      // Make the cut, check the event
+      await expect(
+        diamondCutFacet.diamondCut(
+          [facetCut],
+          deployedProtocolInitializationHandlerFacet.address,
+          calldataProtocolInitialization,
+          await getFees(maxPriorityFeePerGas)
+        )
+      )
+        .to.emit(configHandler, "MinResolutionPeriodChanged")
+        .withArgs(minResolutionPeriod, deployer.address);
+    });
+
+    it("Should update state", async function () {
+      // Make the cut, check the event
+      await diamondCutFacet.diamondCut(
+        [facetCut],
+        deployedProtocolInitializationHandlerFacet.address,
+        calldataProtocolInitialization,
+        await getFees(maxPriorityFeePerGas)
+      );
+
+      // Verify that new value is stored
+      expect(await configHandler.connect(rando).getMinResolutionPeriod()).to.equal(minResolutionPeriod);
+    });
+
+    context("💔 Revert Reasons", async function () {
+      it("Min resolution period is zero", async function () {
+        // set invalid minResolutionPeriod
+        minResolutionPeriod = "0";
+        initializationData = ethers.utils.defaultAbiCoder.encode(["uint256"], [minResolutionPeriod]);
+
+        calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+          "initialize",
+          [ethers.utils.formatBytes32String(version), [], [], true, initializationData, [], []]
+        );
+
+        // make diamond cut, expect revert
+        await expect(
+          diamondCutFacet.diamondCut(
+            [facetCut],
+            deployedProtocolInitializationHandlerFacet.address,
+            calldataProtocolInitialization,
+            await getFees(maxPriorityFeePerGas)
+          )
+        ).to.be.revertedWith(RevertReasons.VALUE_ZERO_NOT_ALLOWED);
+      });
+
+      it("Current version is not 2.2.1", async () => {
+        // replace ProtocolInitializationHandlerFacet with incorrect version
+        version = "2.2.2";
+        calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+          "initialize",
+          [ethers.utils.formatBytes32String(version), [], [], true, [], [], []]
+        );
+        [{ contract: deployedProtocolInitializationHandlerFacet }] = await deployProtocolFacets(
+          ["ProtocolInitializationHandlerFacet"],
+          {},
+          await getFees(maxPriorityFeePerGas)
+        );
+        facetCut = getFacetReplaceCut(deployedProtocolInitializationHandlerFacet, ["initialize"]);
+        await diamondCutFacet.diamondCut(
+          [facetCut],
+          deployedProtocolInitializationHandlerFacet.address,
+          calldataProtocolInitialization,
+          await getFees(maxPriorityFeePerGas)
+        );
+
+        // Prepare 2.3.0 deployment
+        version = "2.3.0";
+        calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+          "initialize",
+          [ethers.utils.formatBytes32String(version), [], [], true, [], [], []]
+        );
+        [{ contract: deployedProtocolInitializationHandlerFacet }] = await deployProtocolFacets(
+          ["ProtocolInitializationHandlerFacet"],
+          {},
+          await getFees(maxPriorityFeePerGas)
+        );
+        facetCut = getFacetReplaceCut(deployedProtocolInitializationHandlerFacet, ["initialize"]);
+
+        // make diamond cut, expect revert
         await expect(
           diamondCutFacet.diamondCut(
             [facetCut],
