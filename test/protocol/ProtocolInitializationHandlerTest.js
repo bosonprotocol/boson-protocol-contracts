@@ -1,8 +1,11 @@
 const { expect } = require("chai");
 const hre = require("hardhat");
+const network = hre.network.name;
+const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const ethers = hre.ethers;
-
+const protocolConfig = require("../../scripts/config/protocol-parameters.js");
 const Role = require("../../scripts/domain/Role");
+const { mockTwin, mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployAndCutFacets, deployProtocolFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const { getInterfaceIds, interfaceImplementers } = require("../../scripts/config/supported-interfaces");
@@ -12,6 +15,7 @@ const { getFacetAddCut, getFacetReplaceCut } = require("../../scripts/util/diamo
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { getFacetsWithArgs } = require("../util/utils.js");
 const { getV2_2_0DeployConfig } = require("../upgrade/00_config.js");
+const TokenType = require("../../scripts/domain/TokenType");
 
 describe("ProtocolInitializationHandler", async function () {
   // Common vars
@@ -260,7 +264,7 @@ describe("ProtocolInitializationHandler", async function () {
         const configHandlerInterface = InterfaceIds[interfaceImplementers["ConfigHandlerFacet"]];
         const accountInterface = InterfaceIds[interfaceImplementers["AccountHandlerFacet"]];
 
-        version = ethers.utils.formatBytes32String("2.3.0");
+        version = ethers.utils.formatBytes32String("2.2.1");
         const calldataProtocolInitialization =
           deployedProtocolInitializationHandlerFacet.contract.interface.encodeFunctionData("initialize", [
             version,
@@ -302,7 +306,7 @@ describe("ProtocolInitializationHandler", async function () {
 
       const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [rando.address]);
 
-      version = ethers.utils.formatBytes32String("2.3.0");
+      version = ethers.utils.formatBytes32String("6.6.6");
       const calldataProtocolInitialization =
         deployedProtocolInitializationHandlerFacet.contract.interface.encodeFunctionData("initialize", [
           version,
@@ -336,7 +340,7 @@ describe("ProtocolInitializationHandler", async function () {
         testFacet = await FacetTestFactory.deploy(await getFees(maxPriorityFeePerGas));
         await testFacet.deployTransaction.wait();
 
-        version = ethers.utils.formatBytes32String("2.3.0");
+        version = ethers.utils.formatBytes32String("6.6.0");
       });
 
       it("Delegate call to initialize fails", async function () {
@@ -581,8 +585,8 @@ describe("ProtocolInitializationHandler", async function () {
 
     context("💔 Revert Reasons", async function () {
       it("Current version is not 2.2.0", async () => {
-        // Deploy higher version
-        const wrongVersion = "2.3.0";
+        // Deploy other version
+        const wrongVersion = "2.1.0";
 
         // Prepare calldata
         const calldataProtocolInitializationWrong =
@@ -621,6 +625,119 @@ describe("ProtocolInitializationHandler", async function () {
             await getFees(maxPriorityFeePerGas)
           )
         ).to.be.revertedWith(RevertReasons.WRONG_CURRENT_VERSION);
+      });
+    });
+  });
+
+  describe("initV2_3_0", async function () {
+    let deployedProtocolInitializationHandlerFacet;
+    let configHandler;
+    let facetCut;
+    let calldataProtocolInitialization;
+
+    beforeEach(async function () {
+      version = "2.2.1";
+
+      const facetsToDeploy = await getV2_2_0DeployConfig();
+
+      // Make initial deployment (simulate v2.2.0)
+      await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas, version);
+
+      // Deploy v2.3.0 facets
+      [{ contract: deployedProtocolInitializationHandlerFacet }, { contract: configHandler }] =
+        await deployProtocolFacets(
+          ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet", "ExchangeHandlerFacet", "TwinHandlerFacet"],
+          { ExchangeHandlerFacet: { constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network]] } },
+          await getFees(maxPriorityFeePerGas)
+        );
+
+      // Prepare cut data
+      facetCut = getFacetReplaceCut(deployedProtocolInitializationHandlerFacet, ["initialize"]);
+
+      // Prepare calldata
+      version = "2.3.0";
+      calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+        "initialize",
+        [ethers.utils.formatBytes32String(version), [], [], true, [], [], []]
+      );
+
+      configHandler = configHandler.attach(protocolDiamond.address);
+    });
+
+    context("💔 Revert Reasons", async function () {
+      it("Current version is not 2.2.1", async () => {
+        // replace ProtocolInitializationHandlerFacet with incorrect version
+        version = "2.2.2";
+        calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+          "initialize",
+          [ethers.utils.formatBytes32String(version), [], [], true, [], [], []]
+        );
+        [{ contract: deployedProtocolInitializationHandlerFacet }] = await deployProtocolFacets(
+          ["ProtocolInitializationHandlerFacet"],
+          {},
+          await getFees(maxPriorityFeePerGas)
+        );
+        facetCut = getFacetReplaceCut(deployedProtocolInitializationHandlerFacet, ["initialize"]);
+        await diamondCutFacet.diamondCut(
+          [facetCut],
+          deployedProtocolInitializationHandlerFacet.address,
+          calldataProtocolInitialization,
+          await getFees(maxPriorityFeePerGas)
+        );
+
+        // Prepare 2.3.0 deployment
+        version = "2.3.0";
+        calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+          "initialize",
+          [ethers.utils.formatBytes32String(version), [], [], true, [], [], []]
+        );
+
+        [{ contract: deployedProtocolInitializationHandlerFacet }] = await deployProtocolFacets(
+          ["ProtocolInitializationHandlerFacet"],
+          {},
+          await getFees(maxPriorityFeePerGas)
+        );
+        facetCut = getFacetReplaceCut(deployedProtocolInitializationHandlerFacet, ["initialize"]);
+
+        // make diamond cut, expect revert
+        await expect(
+          diamondCutFacet.diamondCut(
+            [facetCut],
+            deployedProtocolInitializationHandlerFacet.address,
+            calldataProtocolInitialization,
+            await getFees(maxPriorityFeePerGas)
+          )
+        ).to.be.revertedWith(RevertReasons.WRONG_CURRENT_VERSION);
+      });
+
+      it("Next twin id is not 1", async () => {
+        const twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
+        const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+
+        const [bosonToken] = await deployMockTokens();
+        let twin = mockTwin(bosonToken.address, TokenType.FungibleToken);
+
+        const seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        expect(seller.isValid()).is.true;
+
+        const emptyAuthToken = mockAuthToken();
+        const voucherInitValues = mockVoucherInitValues();
+
+        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        await bosonToken.connect(rando).approve(twinHandler.address, 1);
+
+        await twinHandler.connect(rando).createTwin(twin);
+
+        // make diamond cut, expect revert
+        await expect(
+          diamondCutFacet.diamondCut(
+            [facetCut],
+            deployedProtocolInitializationHandlerFacet.address,
+            calldataProtocolInitialization,
+            await getFees(maxPriorityFeePerGas)
+          )
+        ).to.be.revertedWith("Should not have any twins yet");
       });
     });
   });

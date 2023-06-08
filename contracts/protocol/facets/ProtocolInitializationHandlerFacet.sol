@@ -97,6 +97,9 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             if (_version == bytes32("2.2.1")) {
                 initV2_2_1();
             }
+            if (_version == bytes32("2.3.0")) {
+                initV2_3_0();
+            }
         }
 
         removeInterfaces(_interfacesToRemove);
