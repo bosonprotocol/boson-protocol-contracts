@@ -136,9 +136,10 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             // dispute period must be greater than or equal to the minimum dispute period
             require(_offerDurations.disputePeriod >= limits.minDisputePeriod, INVALID_DISPUTE_PERIOD);
 
-            // dispute duration must be greater than zero
+            // resolution period must be between the minimum and maximum resolution periods
             require(
-                _offerDurations.resolutionPeriod > 0 && _offerDurations.resolutionPeriod <= limits.maxResolutionPeriod,
+                _offerDurations.resolutionPeriod >= limits.minResolutionPeriod &&
+                    _offerDurations.resolutionPeriod <= limits.maxResolutionPeriod,
                 INVALID_RESOLUTION_PERIOD
             );
         }
