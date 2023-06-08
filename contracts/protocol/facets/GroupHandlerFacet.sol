@@ -77,7 +77,6 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * - The groups region of protocol is paused
      * - Caller is not the seller
      * - Offer ids param is an empty list
-     * - Number of offers exceeds maximum allowed number per group
      * - Group does not exist
      * - Any offer is not part of the group
      *
@@ -93,9 +92,6 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
 
         // Check if group can be updated
         (uint256 sellerId, Group storage group) = preUpdateChecks(_groupId, _offerIds);
-
-        // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_offerIds.length <= protocolLimits().maxOffersPerGroup, TOO_MANY_OFFERS);
 
         for (uint256 i = 0; i < _offerIds.length; i++) {
             uint256 offerId = _offerIds[i];

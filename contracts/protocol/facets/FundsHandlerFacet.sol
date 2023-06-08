@@ -235,14 +235,11 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             // Make sure that at least something will be withdrawn
             require(tokenList.length != 0, NOTHING_TO_WITHDRAW);
 
-            // Make sure that tokenList is not too long
-            uint256 len = maxTokensPerWithdrawal <= tokenList.length ? maxTokensPerWithdrawal : tokenList.length;
-
             // Get entity's availableFunds storage pointer
             mapping(address => uint256) storage entityFunds = lookups.availableFunds[_entityId];
 
             // Transfer funds
-            for (uint256 i = 0; i < len; i++) {
+            for (uint256 i = 0; i < tokenList.length; i++) {
                 // Get available funds from storage
                 uint256 availableFunds = entityFunds[tokenList[i]];
                 FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], _destinationAddress, availableFunds);

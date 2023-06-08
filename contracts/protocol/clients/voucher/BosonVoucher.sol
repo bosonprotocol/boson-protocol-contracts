@@ -200,7 +200,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * Reverts if:
      * - Offer id is not associated with a range
      * - Amount to mint is more than remaining un-minted in range
-     * - Too many to mint in a single transaction, given current block gas limit
      * - Offer already expired
      * - Offer is voided
      *
@@ -216,13 +215,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Revert if no more to mint in range
         require(range.length >= range.minted + _amount, INVALID_AMOUNT_TO_MINT);
-
-        // Get max amount that can be minted in a single transaction
-        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        uint256 maxPremintedVouchers = IBosonConfigHandler(protocolDiamond).getMaxPremintedVouchers();
-
-        // Revert if too many to mint in a single transaction
-        require(_amount <= maxPremintedVouchers, TOO_MANY_TO_MINT);
 
         // Make sure that offer is not expired or voided
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
@@ -283,10 +275,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
         require(offer.voided || (offerDates.validUntil <= block.timestamp), OFFER_STILL_VALID);
 
-        // Get max amount that can be burned in a single transaction
-        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        uint256 maxPremintedVouchers = IBosonConfigHandler(protocolDiamond).getMaxPremintedVouchers();
-
         // Get the first token to burn
         uint256 start = (range.lastBurnedTokenId == 0) ? range.start : (range.lastBurnedTokenId + 1);
 
@@ -295,11 +283,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // End should be greater than start
         require(end > start, NOTHING_TO_BURN);
-
-        // If amount to burn is more than maxPremintedVouchers, burn only maxPremintedVouchers
-        if (end > start + maxPremintedVouchers) {
-            end = start + maxPremintedVouchers;
-        }
 
         // Burn the range
         address rangeOwner = range.owner;

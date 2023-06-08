@@ -122,7 +122,6 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         uint256 _maxPremintedVouchers = abi.decode(_initializationData, (uint256));
         require(_maxPremintedVouchers != 0, VALUE_ZERO_NOT_ALLOWED);
         protocolLimits().maxPremintedVouchers = _maxPremintedVouchers;
-        emit MaxPremintedVouchersChanged(_maxPremintedVouchers, msgSender());
     }
 
     /**
