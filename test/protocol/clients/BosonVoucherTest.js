@@ -1944,7 +1944,7 @@ describe("IBosonVoucher", function () {
     });
 
     context("💔 Revert Reasons", async function () {
-      it("should revert if caller does not have PROTOCOL role", async function () {
+      it("should revert if tokenId does not exist", async function () {
         await expect(bosonVoucher.tokenURI(10)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
       });
     });
