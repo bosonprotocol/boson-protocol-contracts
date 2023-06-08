@@ -649,9 +649,9 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_PERIOD);
         });
 
-        it("Resolution period is set to zero", async function () {
-          // Set dispute duration period to 0
-          offerDurations.resolutionPeriod = "0";
+        it("Resolution period is less than minimum resolution period", async function () {
+          // Set resolution duration period to less than minResolutionPeriod (oneWeek)
+          offerDurations.resolutionPeriod = ethers.BigNumber.from(oneWeek).sub(10).toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -2314,9 +2314,9 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_PERIOD);
         });
 
-        it("For some offer, dispute duration is set to zero", async function () {
-          // Set dispute duration period to 0
-          offerDurationsList[0].resolutionPeriod = "0";
+        it("For some offer, resolution period is less than minimum dispute period", async function () {
+          // Set resolution duration period to less than minResolutionPeriod (oneWeek)
+          offerDurationsList[0].resolutionPeriod = ethers.BigNumber.from(oneWeek).sub(10).toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(

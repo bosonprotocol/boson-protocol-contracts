@@ -25,6 +25,7 @@ module.exports = {
     maxAllowedSellers: "140",
     maxTotalOfferFeePercentage: "10000", // 100%
     maxRoyaltyPecentage: "10000", //100%
+    minResolutionPeriod: oneWeek,
     maxResolutionPeriod: ninetyDays,
     minDisputePeriod: oneWeek,
     maxPremintedVouchers: "10000",

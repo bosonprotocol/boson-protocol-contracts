@@ -686,7 +686,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         checkNonZero(_minResolutionPeriod);
 
         protocolLimits().minResolutionPeriod = _minResolutionPeriod;
-        emit MaxResolutionPeriodChanged(_minResolutionPeriod, msgSender());
+        emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
     }
 
     /**

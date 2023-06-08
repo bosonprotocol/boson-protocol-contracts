@@ -536,6 +536,7 @@ describe("ProtocolInitializationHandler", async function () {
       });
     });
   });
+
   describe("initV2_2_1", async function () {
     let deployedProtocolInitializationHandlerFacet;
     let facetCut;
