@@ -324,14 +324,17 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         (sellerExists, sellerId) = getSellerIdByAssistant(msgSender());
 
         // Get the offer, which will definitely exist
-        Offer storage offer;
-        (, offer) = fetchOffer(exchange.offerId);
+        uint256 offerId = exchange.offerId;
+        (, Offer storage offer) = fetchOffer(offerId);
 
         // Only seller's assistant may call
         require(sellerExists && offer.sellerId == sellerId, NOT_ASSISTANT);
 
-        // Revoke the voucher
-        revokeVoucherInternal(exchange);
+        // Finalize the exchange, burning the voucher
+        finalizeExchange(exchange, ExchangeState.Revoked);
+
+        // Notify watchers of state change
+        emit VoucherRevoked(offerId, _exchangeId, msgSender());
     }
 
     /**
@@ -638,24 +641,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         // Release the funds
         FundsLib.releaseFunds(_exchange.id);
-    }
-
-    /**
-     * @notice Revokes a voucher.
-     *
-     * Emits a VoucherRevoked event if successful.
-     *
-     * Reverts if
-     * - Exchange is not in Committed state
-     *
-     * @param _exchange - the exchange to revoke
-     */
-    function revokeVoucherInternal(Exchange storage _exchange) internal {
-        // Finalize the exchange, burning the voucher
-        finalizeExchange(_exchange, ExchangeState.Revoked);
-
-        // Notify watchers of state change
-        emit VoucherRevoked(_exchange.offerId, _exchange.id, msgSender());
     }
 
     /**
