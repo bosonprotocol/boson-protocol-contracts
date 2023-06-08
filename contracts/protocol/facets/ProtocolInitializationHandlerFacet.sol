@@ -134,6 +134,20 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
     }
 
     /**
+     * @notice Initializes the version 2.3.0.
+     *
+     * Reverts if:
+     *  - Current version is not 2.2.1
+     *  - There are already twins. This version adds a new mapping for twins which make it incompatible with previous versions.
+     */
+    function initV2_3_0() internal view {
+        // Current version must be 2.2.1
+        require(protocolStatus().version == bytes32("2.2.1"), WRONG_CURRENT_VERSION);
+
+        require(protocolCounters().nextTwinId == 1, "Should not have any twins yet");
+    }
+
+    /**
      * @notice Gets the current protocol version.
      *
      */

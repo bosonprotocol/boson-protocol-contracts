@@ -805,15 +805,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, twin.amount, sender);
                 } else {
                     uint256 exchangeId = _exchange.id;
+                    uint256 twinId = twin.id;
                     // Store twin receipt on twinReceiptsByExchange
                     TwinReceipt storage twinReceipt = lookups.twinReceiptsByExchange[exchangeId].push();
-                    twinReceipt.twinId = twin.id;
+                    twinReceipt.twinId = twinId;
                     twinReceipt.tokenAddress = twin.tokenAddress;
                     twinReceipt.tokenId = tokenId;
                     twinReceipt.amount = twin.amount;
                     twinReceipt.tokenType = twin.tokenType;
-
-                    emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
 
                     if (twin.tokenType == TokenType.NonFungibleToken) {
                         // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
@@ -821,7 +820,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
                         bool unlimitedSupply = twin.supplyAvailable == type(uint256).max;
 
-                        uint256 rangeIndex = lookups.rangeIdByTwin[twin.id] - 1;
+                        uint256 rangeIndex = lookups.rangeIdByTwin[twinId] - 1;
                         TokenRange storage range = twinRanges[rangeIndex];
 
                         if (unlimitedSupply ? range.end == tokenId : range.start == tokenId) {
@@ -836,11 +835,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                             twinRanges.pop();
 
                             // Delete rangeId from rangeIdByTwin mapping
-                            lookups.rangeIdByTwin[twin.id] = 0;
+                            lookups.rangeIdByTwin[twinId] = 0;
                         } else {
                             unlimitedSupply ? range.start++ : range.end--;
                         }
                     }
+
+                    emit TwinTransferred(twinId, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 }
             }
         }

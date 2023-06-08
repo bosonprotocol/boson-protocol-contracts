@@ -84,7 +84,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
             TokenRange[] storage twinRanges = lookups.twinRangesBySeller[sellerId][twin.tokenAddress];
             uint256 lastIndex = twinRanges.length - 1;
 
-            uint256 rangeIndex = lookups.rangeIdByTwin[twin.id] - 1;
+            uint256 rangeIndex = lookups.rangeIdByTwin[_twinId] - 1;
 
             if (rangeIndex != lastIndex) {
                 twinRanges[rangeIndex] = twinRanges[lastIndex];
@@ -94,7 +94,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
             twinRanges.pop();
 
             // Delete rangeIdByTwin mapping
-            delete lookups.rangeIdByTwin[twin.tokenId];
+            delete lookups.rangeIdByTwin[_twinId];
         }
 
         // Notify watchers of state change

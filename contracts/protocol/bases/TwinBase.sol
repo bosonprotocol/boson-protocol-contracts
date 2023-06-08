@@ -75,8 +75,9 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
             TokenRange[] storage twinRanges = lookups.twinRangesBySeller[sellerId][_twin.tokenAddress];
 
+            uint256 twinRangesLength = twinRanges.length;
             // Checks if token range isn't being used in any other twin of seller
-            for (uint256 i = 0; i < twinRanges.length; i++) {
+            for (uint256 i = 0; i < twinRangesLength; i++) {
                 // A valid range has:
                 // - the first id of range greater than the last token id (tokenId + initialSupply - 1) of the looped twin or
                 // - the last id of range lower than the looped twin tokenId (beginning of range)
@@ -88,7 +89,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             tokenRange.start = tokenId;
             tokenRange.end = lastTokenId;
 
-            lookups.rangeIdByTwin[twinId] = twinRanges.length;
+            lookups.rangeIdByTwin[twinId] = ++twinRangesLength;
         } else if (_twin.tokenType == TokenType.MultiToken) {
             // If token is Fungible or MultiToken amount should not be zero
             // Also, the amount of tokens should not be more than the available token supply.
