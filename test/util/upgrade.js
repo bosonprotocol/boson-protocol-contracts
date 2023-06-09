@@ -81,9 +81,11 @@ async function deploySuite(deployer, newVersion) {
 
   console.log(`Fetching tags`);
   shell.exec(`git fetch --force --tags origin`);
+
   console.log(`Checking out version ${tag}`);
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`git checkout ${tag} contracts`);
+
   if (scriptsTag) {
     console.log(`Checking out scripts on version ${scriptsTag}`);
     shell.exec(`rm -rf scripts/*`);
