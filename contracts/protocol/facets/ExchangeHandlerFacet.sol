@@ -694,11 +694,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // Get seller account
             (, Seller storage seller, ) = fetchSeller(bundle.sellerId);
 
-            // Variable to track whether some twin transfer failed
-            bool transferFailed;
-
-            uint256 exchangeId = _exchange.id;
-
             ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
             address sender = msgSender();
@@ -767,10 +762,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
                 // If token transfer failed
                 if (!success || (result.length > 0 && !abi.decode(result, (bool)))) {
-                    transferFailed = true;
-                    emit TwinTransferFailed(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
+                    raiseDisputeInternal(_exchange, _voucher, seller.id);
+
+                    emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, twin.amount, sender);
                 } else {
                     // Store twin receipt on twinReceiptsByExchange
+                    uint256 exchangeId = _exchange.id;
                     TwinReceipt storage twinReceipt = lookups.twinReceiptsByExchange[exchangeId].push();
                     twinReceipt.twinId = twin.id;
                     twinReceipt.tokenAddress = twin.tokenAddress;
@@ -781,8 +778,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 }
             }
-
-            if (transferFailed) raiseDisputeInternal(_exchange, _voucher, seller.id);
         }
     }
 
