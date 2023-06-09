@@ -54,8 +54,9 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ethers.constants.AddressZero };
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -76,7 +77,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
-      const seller2 = mockSeller(other1.address, other1.address, other1.address, other1.address);
+      const seller2 = mockSeller(other1.address, other1.address, ethers.constants.AddressZero, other1.address);
       expect(seller2.isValid()).is.true;
 
       // VoucherInitValues

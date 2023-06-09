@@ -62,7 +62,8 @@ describe("IBosonTwinHandler", function () {
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
+    assistant = admin;
+    clerk = { address: ethers.constants.AddressZero };
 
     // Deploy the mock tokens
     [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens();
@@ -773,7 +774,7 @@ describe("IBosonTwinHandler", function () {
     context("👉 getNextTwinId()", async function () {
       beforeEach(async function () {
         // Create another valid seller.
-        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
         expect(seller.isValid()).is.true;
 
         // AuthToken

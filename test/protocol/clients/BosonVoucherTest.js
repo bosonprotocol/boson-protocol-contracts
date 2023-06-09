@@ -92,8 +92,9 @@ describe("IBosonVoucher", function () {
     }));
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ethers.constants.AddressZero };
     [deployer] = await ethers.getSigners();
 
     // Grant protocol role to eoa so it's easier to test
@@ -2267,7 +2268,7 @@ describe("IBosonVoucher", function () {
         voucherInitValues = new VoucherInitValues("ContractURI", royaltyPercentage);
 
         // create another seller
-        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
         seller.id = "2";
 
         // royalty percentage too high, expectig revert
