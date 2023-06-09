@@ -147,7 +147,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         // Current version must be 2.2.1
         require(protocolStatus().version == bytes32("2.2.1"), WRONG_CURRENT_VERSION);
 
-        require(protocolCounters().nextTwinId == 1, "Should not have any twins yet");
+        require(protocolCounters().nextTwinId == 1, TWINS_ALREADY_EXIST);
     }
 
     /**

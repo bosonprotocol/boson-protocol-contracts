@@ -737,7 +737,7 @@ describe("ProtocolInitializationHandler", async function () {
             calldataProtocolInitialization,
             await getFees(maxPriorityFeePerGas)
           )
-        ).to.be.revertedWith("Should not have any twins yet");
+        ).to.be.revertedWith(RevertReasons.TWINS_ALREADY_EXIST);
       });
     });
   });

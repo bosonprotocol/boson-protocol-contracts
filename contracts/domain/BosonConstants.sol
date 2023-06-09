@@ -33,6 +33,7 @@ string constant VERSION_MUST_BE_SET = "Version cannot be empty";
 string constant ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH = "Addresses and calldata must be same length";
 string constant WRONG_CURRENT_VERSION = "Wrong current protocol version";
 string constant DIRECT_INITIALIZATION_NOT_ALLOWED = "Direct initializtion is not allowed";
+string constant TWINS_ALREADY_EXIST = "Should not have any twins yet";
 
 // Revert Reasons: Access related
 string constant ACCESS_DENIED = "Access denied, caller doesn't have role";

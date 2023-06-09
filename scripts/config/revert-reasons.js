@@ -28,6 +28,7 @@ exports.RevertReasons = {
   ADDRESSES_AND_CALLDATA_MUST_BE_SAME_LENGTH: "Addresses and calldata must be same length",
   WRONG_CURRENT_VERSION: "Wrong current protocol version",
   DIRECT_INITIALIZATION_NOT_ALLOWED: "Direct initializtion is not allowed",
+  TWINS_ALREADY_EXIST: "Should not have any twins yet",
 
   // Offer related
   NOT_ASSISTANT: "Not seller's assistant",
