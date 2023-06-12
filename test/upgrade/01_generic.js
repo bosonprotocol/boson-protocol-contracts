@@ -41,7 +41,7 @@ function getGenericContext(
   const genericContextFunction = async function () {
     afterEach(async function () {
       // Revert to state right after the upgrade.
-      // This is used so the lengthly setup (deploy+upgrade) is done only once.
+      // This is used so the lengthy setup (deploy+upgrade) is done only once.
       await revertToSnapshot(snapshot);
       snapshot = await getSnapshot();
     });
@@ -55,7 +55,7 @@ function getGenericContext(
 
     // Protocol state
     context("📋 Right After upgrade", async function () {
-      for (const test in includeTests) {
+      for (const test of includeTests) {
         it(`State of ${test} is not affected`, async function () {
           assert.deepEqual(protocolContractState[test], protocolContractStateAfterUpgrade[test]);
         });

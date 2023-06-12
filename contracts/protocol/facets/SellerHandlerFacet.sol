@@ -391,7 +391,7 @@ contract SellerHandlerFacet is SellerBase {
 
         (exists, sellerId) = getSellerIdByAuthToken(_associatedAuthToken);
         if (exists) {
-            return fetchSeller(sellerId);
+            return fetchSellerWithoutClerk(sellerId);
         }
     }
 

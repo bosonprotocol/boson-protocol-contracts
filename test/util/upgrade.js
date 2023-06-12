@@ -792,6 +792,7 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
     buyersState,
     sellerByAddressState,
     sellerByAuthTokenState,
+    agentsState,
     DRbyAddressState,
     nextAccountId,
   };

@@ -1,14 +1,10 @@
 const hre = require("hardhat");
-const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
+// const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const ethers = hre.ethers;
 const { getSnapshot, revertToSnapshot } = require("../util/utils");
 
 // const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const { assert, expect } = require("chai");
-const DisputeResolver = require("../../scripts/domain/DisputeResolver");
-const Seller = require("../../scripts/domain/Seller");
-const { calculateContractAddress } = require("../util/utils.js");
-const { mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
 
 const { deploySuite, populateProtocolContract, getProtocolContractState, revertState } = require("../util/upgrade");
 const { getGenericContext } = require("./01_generic");
@@ -21,22 +17,20 @@ const { migrate } = require(`../../scripts/migrations/migrate_${version}.js`);
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
-  let deployer, rando;
-  let accountHandler;
+  let deployer;
   let snapshot;
   let protocolDiamondAddress, mockContracts;
   let contractsAfter;
   let protocolContractStateBefore, protocolContractStateAfter;
-  let removedFunctionHashes, addedFunctionHashes;
+  // let removedFunctionHashes, addedFunctionHashes;
 
   // reference protocol state
-  let accountContractState;
   let preUpgradeEntities;
 
   before(async function () {
     try {
       // Make accounts available
-      [deployer, rando] = await ethers.getSigners();
+      [deployer] = await ethers.getSigners();
 
       let contractsBefore;
 
@@ -65,7 +59,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         true
       );
 
-      ({ accountContractState } = protocolContractStateBefore);
+      // ({ accountContractState } = protocolContractStateBefore);
 
       // const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
       //   ["SellerHandlerFacet", "OrchestrationHandlerFacet1"],
@@ -89,25 +83,26 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
       }
 
-      ({ accountHandler } = contractsAfter);
+      // ({ accountHandler } = contractsAfter);
 
       // addedFunctionHashes = await getFunctionHashesClosure();
 
       snapshot = await getSnapshot();
 
-      // const includeTests = [
-      //   "accountContractState",
-      //   "offerContractState",
-      //   "exchangeContractState",
-      //   "bundleContractState",
-      //   "configContractState",
-      //   "disputeContractState",
-      //   "fundsContractState",
-      //   "groupContractState",
-      //   "twinContractState",
-      //   "protocolStatusPrivateContractState",
-      //   "protocolLookupsPrivateContractState",
-      // ];
+      const includeTests = [
+        // "accountContractState", // Clerk deprecated
+        "offerContractState",
+        "exchangeContractState",
+        "bundleContractState",
+        "configContractState",
+        "disputeContractState",
+        "fundsContractState",
+        "groupContractState",
+        "twinContractState",
+        "metaTxPrivateContractState",
+        "protocolStatusPrivateContractState",
+        "protocolLookupsPrivateContractState",
+      ];
 
       // Get protocol state after the upgrade
       protocolContractStateAfter = await getProtocolContractState(
@@ -132,8 +127,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           protocolContractStateBefore,
           protocolContractStateAfter,
           preUpgradeEntities,
-          snapshot
-          // includeTests
+          snapshot,
+          includeTests
         )
       );
     } catch (err) {
@@ -162,116 +157,62 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   });
 
   // Test actions that worked in previous version, but should not work anymore, or work differently
-  // Test methods that were added to see that upgrade was succesful
-  context.skip("📋 Breaking changes, new methods and bug fixes", async function () {
+  // Test methods that were added to see that upgrade was successful
+  context("📋 Breaking changes, new methods and bug fixes", async function () {
     context("Breaking changes", async function () {
-      context("DisputeResolverHandlerFacet", async function () {
-        it("updateDisputeResolver reverts if no update field has been updated or requested to be updated", async function () {
-          const { DRs } = preUpgradeEntities;
-          const { wallet, id, disputeResolver } = DRs[0];
+      context("accountContractState", async function () {
+        it("Existing DR's clerk is changed to 0", async function () {
+          // Lookup by id
+          let stateBeforeWithoutClerk = protocolContractStateBefore.accountContractState.DRsState.map((dr) => ({
+            ...dr,
+            DR: { ...dr.DR, clerk: ethers.constants.AddressZero },
+          }));
 
-          // Try to update with same values, should revert
-          await expect(accountHandler.connect(wallet).updateDisputeResolver(disputeResolver)).to.be.revertedWith(
-            RevertReasons.NO_UPDATE_APPLIED
+          // All DR's clerks should be 0
+          assert.deepEqual(stateBeforeWithoutClerk, protocolContractStateAfter.accountContractState.DRsState);
+
+          // Lookup by address
+          stateBeforeWithoutClerk = protocolContractStateBefore.accountContractState.DRbyAddressState.map((dr) => ({
+            ...dr,
+            DR: { ...dr.DR, clerk: ethers.constants.AddressZero },
+          }));
+
+          // All DR's clerks should be 0
+          assert.deepEqual(stateBeforeWithoutClerk, protocolContractStateAfter.accountContractState.DRbyAddressState);
+        });
+
+        it("Existing seller's clerk is changed to 0", async function () {
+          // Lookup by id
+          let stateBeforeWithoutClerk = protocolContractStateBefore.accountContractState.sellerState.map((s) => ({
+            ...s,
+            seller: { ...s.seller, clerk: ethers.constants.AddressZero },
+          }));
+
+          // All Seller's clerks should be 0
+          assert.deepEqual(stateBeforeWithoutClerk, protocolContractStateAfter.accountContractState.sellerState);
+
+          // Lookup by address
+          stateBeforeWithoutClerk = protocolContractStateBefore.accountContractState.sellerByAddressState.map((s) => ({
+            ...s,
+            seller: { ...s.seller, clerk: ethers.constants.AddressZero },
+          }));
+
+          // All Seller's clerks should be 0
+          assert.deepEqual(
+            stateBeforeWithoutClerk,
+            protocolContractStateAfter.accountContractState.sellerByAddressState
           );
-
-          // Validate if DR data is still the same
-          let [, disputeResolverAfter] = await accountHandler.getDisputeResolver(id);
-          disputeResolverAfter = DisputeResolver.fromStruct(disputeResolverAfter);
-          expect(disputeResolverAfter).to.deep.equal(disputeResolver);
         });
-      });
 
-      context("SellerHandlerFacet", async function () {
-        it("updateSeller reverts if no update field has been updated or requested to be updated", async function () {
-          const { sellers } = preUpgradeEntities;
-          const { wallet, id, seller, authToken } = sellers[0];
-
-          // Try to update with same values, should revert
-          await expect(accountHandler.connect(wallet).updateSeller(seller, authToken)).to.be.revertedWith(
-            RevertReasons.NO_UPDATE_APPLIED
+        it("Other account state should not be affected", async function () {
+          // Agent's and buyer's state should be unaffected
+          assert.deepEqual(
+            protocolContractStateBefore.accountContractState.buyersState,
+            protocolContractStateAfter.accountContractState.buyersState
           );
-
-          // Validate if seller data is still the same
-          let [, sellerAfter] = await accountHandler.getSeller(id);
-          sellerAfter = Seller.fromStruct(sellerAfter);
-          expect(sellerAfter).to.deep.equal(seller);
-        });
-
-        it("Old seller can update and add metadataUri field", async function () {
-          const { sellers } = preUpgradeEntities;
-          const { wallet, id, seller, authToken } = sellers[0];
-
-          seller.metadataUri = "metadata";
-
-          const tx = await accountHandler.connect(wallet).updateSeller(seller, authToken);
-          expect(tx).to.emit("SellerUpdateApplied");
-
-          // Validate if seller now has metadataUri
-          let [, sellerAfter] = await accountHandler.getSeller(id);
-          sellerAfter = DisputeResolver.fromStruct(sellerAfter);
-          expect(sellerAfter.metadataUri).to.equal(seller.metadataUri);
-        });
-
-        it("New seller has metadataUri field", async function () {
-          const { nextAccountId } = accountContractState;
-          const seller = mockSeller(rando.address, rando.address, rando.address, rando.address, true, "metadata");
-          const authToken = mockAuthToken();
-          const voucherInitValues = mockVoucherInitValues();
-
-          const tx = await accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues);
-          expect(tx)
-            .to.emit("SellerCreated")
-            .withArgs(
-              nextAccountId,
-              seller,
-              calculateContractAddress(accountHandler.address, nextAccountId),
-              authToken,
-              rando.address
-            );
-        });
-      });
-
-      context("MetaTransactionHandlerfacet", async function () {
-        it("Function hashes from removedFunctionsHashes list should not be allowlisted", async function () {
-          for (const hash of removedFunctionHashes) {
-            const [isAllowed] = await contractsAfter.metaTransactionsHandler.functions[
-              "isFunctionAllowlisted(bytes32)"
-            ](hash);
-            expect(isAllowed).to.be.false;
-          }
-        });
-
-        it("Function hashes from from addedFunctionsHashes list should be allowlisted", async function () {
-          for (const hash of addedFunctionHashes) {
-            const [isAllowed] = await contractsAfter.metaTransactionsHandler.functions[
-              "isFunctionAllowlisted(bytes32)"
-            ](hash);
-            expect(isAllowed).to.be.true;
-          }
-        });
-
-        it("State of metaTxPrivateContractState is not affected besides isAllowlistedState mapping", async function () {
-          // make a shallow copy to not modify original protocolContractState as it's used on getGenericContext
-          const metaTxPrivateContractStateBefore = { ...protocolContractStateBefore.metaTxPrivateContractState };
-          const metaTxPrivateContractStateAfter = { ...protocolContractStateAfter.metaTxPrivateContractState };
-
-          const { isAllowlistedState: isAllowlistedStateBefore } = metaTxPrivateContractStateBefore;
-          removedFunctionHashes.forEach((hash) => {
-            delete isAllowlistedStateBefore[hash];
-          });
-
-          const { isAllowlistedState: isAllowlistedStateAfter } = metaTxPrivateContractStateAfter;
-          addedFunctionHashes.forEach((hash) => {
-            delete isAllowlistedStateAfter[hash];
-          });
-
-          delete metaTxPrivateContractStateBefore.isAllowlistedState;
-          delete metaTxPrivateContractStateAfter.isAllowlistedState;
-
-          expect(isAllowlistedStateAfter).to.deep.equal(isAllowlistedStateBefore);
-          expect(protocolContractStateAfter.metaTxPrivateContractState).to.deep.equal(
-            protocolContractStateBefore.metaTxPrivateContractState
+          assert.deepEqual(
+            protocolContractStateBefore.accountContractState.agentsState,
+            protocolContractStateAfter.accountContractState.agentsState
           );
         });
       });
