@@ -635,73 +635,6 @@ describe("IBosonFundsHandler", function () {
           );
         });
 
-        it("if user has more different tokens than maximum number allowed to withdraw, only part of it is withdrawn", async function () {
-          // set maximum tokens per withdraw to 1
-          await configHandler.connect(deployer).setMaxTokensPerWithdrawal("1");
-
-          // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-          const treasuryNativeBalanceBefore = await ethers.provider.getBalance(treasury.address);
-          const treasuryTokenBalanceBefore = await mockToken.balanceOf(treasury.address);
-
-          // Chain state should match the expected available funds before the withdrawal
-          expectedSellerAvailableFunds = new FundsList([
-            new Funds(mockToken.address, "Foreign20", sellerPayoff),
-            new Funds(ethers.constants.AddressZero, "Native currency", sellerPayoff),
-          ]);
-          expect(sellersAvailableFunds).to.eql(
-            expectedSellerAvailableFunds,
-            "Seller available funds mismatch before withdrawal"
-          );
-
-          // withdraw all funds
-          await fundsHandler.connect(assistant).withdrawFunds(seller.id, [], []);
-
-          // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-          let treasuryNativeBalanceAfter = await ethers.provider.getBalance(treasury.address);
-          const treasuryTokenBalanceAfter = await mockToken.balanceOf(treasury.address);
-
-          // Chain state should match the expected available funds after the withdrawal
-          // Funds available should still have the entries from above the threshold
-          expectedSellerAvailableFunds = new FundsList([
-            new Funds(ethers.constants.AddressZero, "Native currency", sellerPayoff),
-          ]);
-          expect(sellersAvailableFunds).to.eql(
-            expectedSellerAvailableFunds,
-            "Seller available funds mismatch after first withdrawal"
-          );
-          // Token balance is increased for sellerPayoff, while native currency balance remains the same
-          expect(treasuryNativeBalanceAfter).to.eql(
-            treasuryNativeBalanceBefore,
-            "Treasury native currency balance mismatch after first withdrawal"
-          );
-          expect(treasuryTokenBalanceAfter).to.eql(
-            treasuryTokenBalanceBefore.add(sellerPayoff),
-            "Treasury token balance mismatch after first withdrawal"
-          );
-
-          // withdraw all funds again
-          await fundsHandler.connect(assistant).withdrawFunds(seller.id, [], []);
-
-          // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-          treasuryNativeBalanceAfter = await ethers.provider.getBalance(treasury.address);
-
-          // Chain state should match the expected available funds after the withdrawal
-          // Funds available should now be an empty list
-          expectedSellerAvailableFunds = new FundsList([]);
-          expect(sellersAvailableFunds).to.eql(
-            expectedSellerAvailableFunds,
-            "Seller available funds mismatch after second withdrawal"
-          );
-          // Native currency balance is increased for the withdrawAmount
-          expect(treasuryNativeBalanceAfter).to.eql(
-            treasuryNativeBalanceBefore.add(sellerPayoff),
-            "Treasury native currency balance mismatch after second withdrawal"
-          );
-        });
-
         it("It's possible to withdraw same toke twice if in total enough available funds", async function () {
           let reduction = ethers.utils.parseUnits("0.1", "ether").toString();
           // Withdraw token
@@ -879,16 +812,6 @@ describe("IBosonFundsHandler", function () {
             await expect(
               fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
             ).to.revertedWith(RevertReasons.TOKEN_AMOUNT_MISMATCH);
-          });
-
-          it("Caller wants to withdraw more different tokens than allowed", async function () {
-            tokenList = new Array(101).fill(ethers.constants.AddressZero);
-            tokenAmounts = new Array(101).fill("1");
-
-            // Attempt to withdraw the funds, expecting revert
-            await expect(
-              fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
-            ).to.revertedWith(RevertReasons.TOO_MANY_TOKENS);
           });
 
           it("Caller tries to withdraw more than they have in the available funds", async function () {
@@ -1180,81 +1103,6 @@ describe("IBosonFundsHandler", function () {
           );
         });
 
-        it("if protocol has more different tokens than maximum number allowed to withdraw, only part of it is withdrawn", async function () {
-          // set maximum tokens per withdraw to 1
-          await configHandler.connect(deployer).setMaxTokensPerWithdrawal("1");
-
-          // Read on chain state
-          protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-          let protocolTreasuryNativeBalanceBefore = await ethers.provider.getBalance(protocolTreasury.address);
-          const protocolTreasuryTokenBalanceBefore = await mockToken.balanceOf(protocolTreasury.address);
-
-          // Chain state should match the expected available funds before the withdrawal
-          expectedProtocolAvailableFunds = new FundsList([
-            new Funds(mockToken.address, "Foreign20", protocolPayoff),
-            new Funds(ethers.constants.AddressZero, "Native currency", protocolPayoff),
-          ]);
-          expect(protocolAvailableFunds).to.eql(
-            expectedProtocolAvailableFunds,
-            "Protocol available funds mismatch before withdrawal"
-          );
-
-          // withdraw all funds
-          let tx = await fundsHandler.connect(feeCollector).withdrawProtocolFees([], []);
-
-          // calcualte tx costs
-          txReceipt = await tx.wait();
-          txCost = tx.gasPrice.mul(txReceipt.gasUsed);
-
-          // Read on chain state
-          protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-          let protocolTreasuryNativeBalanceAfter = await ethers.provider.getBalance(protocolTreasury.address);
-          const protocolTreasuryTokenBalanceAfter = await mockToken.balanceOf(protocolTreasury.address);
-
-          // Chain state should match the expected available funds after the withdrawal
-          // Funds available should still have the entries from above the threshold
-          expectedProtocolAvailableFunds = new FundsList([
-            new Funds(ethers.constants.AddressZero, "Native currency", protocolPayoff),
-          ]);
-          expect(protocolAvailableFunds).to.eql(
-            expectedProtocolAvailableFunds,
-            "Protocol available funds mismatch after first withdrawal"
-          );
-          // Token balance is increased for protocolFee, while native currency balance is reduced only for tx costs
-          expect(protocolTreasuryNativeBalanceAfter).to.eql(
-            protocolTreasuryNativeBalanceBefore,
-            "Fee collector native currency balance mismatch after first withdrawal"
-          );
-          expect(protocolTreasuryTokenBalanceAfter).to.eql(
-            protocolTreasuryTokenBalanceBefore.add(protocolPayoff),
-            "Fee collector token balance mismatch after first withdrawal"
-          );
-
-          // withdraw all funds again
-          tx = await fundsHandler.connect(feeCollector).withdrawProtocolFees([], []);
-
-          // calcualte tx costs
-          txReceipt = await tx.wait();
-          txCost = tx.gasPrice.mul(txReceipt.gasUsed);
-
-          // Read on chain state
-          protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-          protocolTreasuryNativeBalanceAfter = await ethers.provider.getBalance(protocolTreasury.address);
-
-          // Chain state should match the expected available funds after the withdrawal
-          // Funds available should now be an empty list
-          expectedProtocolAvailableFunds = new FundsList([]);
-          expect(protocolAvailableFunds).to.eql(
-            expectedProtocolAvailableFunds,
-            "Protocol available funds mismatch after second withdrawal"
-          );
-          // Native currency balance is increased for the protocol fee
-          expect(protocolTreasuryNativeBalanceAfter).to.eql(
-            protocolTreasuryNativeBalanceBefore.add(offerTokenProtocolFee),
-            "Fee collector native currency balance mismatch after second withdrawal"
-          );
-        });
-
         it("It's possible to withdraw same token twice if in total enough available funds", async function () {
           let reduction = ethers.utils.parseUnits("0.01", "ether").toString();
           // Withdraw token
@@ -1309,16 +1157,6 @@ describe("IBosonFundsHandler", function () {
             await expect(
               fundsHandler.connect(feeCollector).withdrawProtocolFees(tokenList, tokenAmounts)
             ).to.revertedWith(RevertReasons.TOKEN_AMOUNT_MISMATCH);
-          });
-
-          it("Caller wants to withdraw more different tokens than allowed", async function () {
-            tokenList = new Array(101).fill(ethers.constants.AddressZero);
-            tokenAmounts = new Array(101).fill("1");
-
-            // Attempt to withdraw the funds, expecting revert
-            await expect(
-              fundsHandler.connect(feeCollector).withdrawProtocolFees(tokenList, tokenAmounts)
-            ).to.revertedWith(RevertReasons.TOO_MANY_TOKENS);
           });
 
           it("Caller tries to withdraw more than they have in the available funds", async function () {

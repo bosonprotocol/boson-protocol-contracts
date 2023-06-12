@@ -1624,16 +1624,6 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
-        it("Completing too many exchanges", async function () {
-          // Try to complete more than 100 exchanges
-          exchangesToComplete = [...Array(101).keys()];
-
-          // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(rando).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
-            RevertReasons.TOO_MANY_EXCHANGES
-          );
-        });
-
         it("exchange id is invalid", async function () {
           // An invalid exchange id
           exchangeId = "666";

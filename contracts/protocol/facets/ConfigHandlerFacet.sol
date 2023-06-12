@@ -38,6 +38,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setBeaconProxyAddress(_addresses.beaconProxy);
         setProtocolFeePercentage(_fees.percentage);
         setProtocolFeeFlatBoson(_fees.flatBoson);
+        setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
         setBuyerEscalationDepositPercentage(_fees.buyerEscalationDepositPercentage);
         setMaxTotalOfferFeePercentage(_limits.maxTotalOfferFeePercentage);
         setMaxRoyaltyPecentage(_limits.maxRoyaltyPecentage);

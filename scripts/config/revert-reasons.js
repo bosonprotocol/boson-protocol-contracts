@@ -54,7 +54,6 @@ exports.RevertReasons = {
   // Group related
   NO_SUCH_GROUP: "No such group",
   OFFER_NOT_IN_GROUP: "Offer not part of the group",
-  TOO_MANY_OFFERS: "Exceeded maximum offers in a single transaction",
   NOTHING_UPDATED: "Nothing updated",
   INVALID_CONDITION_PARAMETERS: "Invalid condition parameters",
 
@@ -76,8 +75,7 @@ exports.RevertReasons = {
   NOT_DISPUTE_RESOLVER_ASSISTANT: "Not dispute resolver's assistant address",
   NO_SUCH_DISPUTE_RESOLVER: "No such dispute resolver",
   INVALID_ESCALATION_PERIOD: "Invalid escalation period",
-  INVALID_AMOUNT_DISPUTE_RESOLVER_FEES:
-    "Dispute resolver fees are not present or exceed maximum dispute resolver fees in a single transaction",
+  INEXISTENT_DISPUTE_RESOLVER_FEES: "Dispute resolver fees are not present",
   DUPLICATE_DISPUTE_RESOLVER_FEES: "Duplicate dispute resolver fee",
   DISPUTE_RESOLVER_FEE_NOT_FOUND: "Dispute resolver fee not found",
   FEE_AMOUNT_NOT_YET_SUPPORTED: "Non-zero dispute resolver fees not yet supported",
@@ -86,8 +84,7 @@ exports.RevertReasons = {
   AUTH_TOKEN_MUST_BE_UNIQUE: "Auth token cannot be assigned to another entity of the same type",
   SELLER_ALREADY_APPROVED: "Seller id is approved already",
   SELLER_NOT_APPROVED: "Seller id is not approved",
-  INVALID_AMOUNT_ALLOWED_SELLERS:
-    "Allowed sellers are not present or exceed maximum allowed sellers in a single transaction",
+  INEXISTENT_ALLOWED_SELLERS_LIST: "Allowed sellers are not present",
   INVALID_AGENT_FEE_PERCENTAGE:
     "Sum of agent fee percentage and protocol fee percentage should be <= max fee percentage limit",
   NO_PENDING_UPDATE_FOR_ACCOUNT: "No pending updates for the given account",
@@ -109,7 +106,6 @@ exports.RevertReasons = {
   NO_SUCH_BUNDLE: "No such bundle",
   TWIN_NOT_IN_BUNDLE: "Twin not part of the bundle",
   OFFER_NOT_IN_BUNDLE: "Offer not part of the bundle",
-  TOO_MANY_TWINS: "Exceeded maximum twins in a single transaction",
   BUNDLE_OFFER_MUST_BE_UNIQUE: "Offer must be unique to a bundle",
   BUNDLE_TWIN_MUST_BE_UNIQUE: "Twin must be unique to a bundle",
   INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS:
@@ -124,7 +120,6 @@ exports.RevertReasons = {
   VOUCHER_EXTENSION_NOT_VALID: "Proposed date is not later than the current one",
   VOUCHER_STILL_VALID: "Voucher still valid",
   VOUCHER_HAS_EXPIRED: "Voucher has expired",
-  TOO_MANY_EXCHANGES: "Exceeded maximum exchanges in a single transaction",
   EXCHANGE_IS_NOT_IN_A_FINAL_STATE: "Exchange is not in a final state",
   INVALID_RANGE_LENGTH: "Range length is too large or zero",
   EXCHANGE_ALREADY_EXISTS: "Exchange already exists",
@@ -136,7 +131,6 @@ exports.RevertReasons = {
   INVALID_RANGE_START: "Range start too low",
   INVALID_AMOUNT_TO_MINT: "Amount to mint is greater than remaining un-minted in range",
   NO_SILENT_MINT_ALLOWED: "Only owner's mappings can be updated without event",
-  TOO_MANY_TO_MINT: "Exceeded maximum amount to mint in a single transaction",
   OFFER_EXPIRED_OR_VOIDED: "Offer expired or voided",
   OFFER_STILL_VALID: "Offer still valid",
   NOTHING_TO_BURN: "Nothing to burn",
@@ -151,7 +145,6 @@ exports.RevertReasons = {
   INSUFFICIENT_VALUE_RECEIVED: "Insufficient value received",
   INSUFFICIENT_AVAILABLE_FUNDS: "Insufficient available funds",
   NATIVE_NOT_ALLOWED: "Transfer of native currency not allowed",
-  TOO_MANY_TOKENS: "Too many tokens",
   TOKEN_AMOUNT_MISMATCH: "Number of amounts should match number of tokens",
   NOTHING_TO_WITHDRAW: "Nothing to withdraw",
   NOT_AUTHORIZED: "Not authorized to withdraw",
@@ -184,7 +177,6 @@ exports.RevertReasons = {
   INVALID_BUYER_PERCENT: "Invalid buyer percent",
   DISPUTE_STILL_VALID: "Dispute still valid",
   INVALID_DISPUTE_TIMEOUT: "Invalid dispute timeout",
-  TOO_MANY_DISPUTES: "Exceeded maximum disputes in a single transaction",
   ESCALATION_NOT_ALLOWED: "Disputes without dispute resolver cannot be escalated",
 
   // Config related

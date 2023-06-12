@@ -359,16 +359,6 @@ describe("IBosonGroupHandler", function () {
           );
         });
 
-        it("Adding too many offers", async function () {
-          // Try to add the more than 100 offers
-          group.offerIds = [...Array(101).keys()];
-
-          // Attempt to create a group, expecting revert
-          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
-            RevertReasons.TOO_MANY_OFFERS
-          );
-        });
-
         context("Condition 'None' has some values in other fields", async function () {
           beforeEach(async function () {
             condition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
@@ -607,26 +597,6 @@ describe("IBosonGroupHandler", function () {
           );
         });
 
-        it("Number of offers to add exceeds max", async function () {
-          // Try to add the more than 100 offers
-          offerIdsToAdd = [...Array(101).keys()];
-
-          // Attempt to add offers to a group, expecting revert
-          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.TOO_MANY_OFFERS
-          );
-        });
-
-        it("Current number of offers plus number of offers to add exceeds max", async function () {
-          // Try to add offers to that total is more than 100. Group currently has 3.
-          offerIdsToAdd = [...Array(98).keys()];
-
-          // Attempt to add offers to a group, expecting revert
-          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.TOO_MANY_OFFERS
-          );
-        });
-
         it("Adding nothing", async function () {
           // Try to add nothing
           offerIdsToAdd = [];
@@ -799,16 +769,6 @@ describe("IBosonGroupHandler", function () {
           await expect(
             groupHandler.connect(assistant).removeOffersFromGroup(group.id, offerIdsToRemove)
           ).to.revertedWith(RevertReasons.OFFER_NOT_IN_GROUP);
-        });
-
-        it("Removing too many offers", async function () {
-          // Try to remove the more than 100 offers
-          offerIdsToRemove = [...Array(101).keys()];
-
-          // Attempt to remove offers from the group, expecting revert
-          await expect(
-            groupHandler.connect(assistant).removeOffersFromGroup(group.id, offerIdsToRemove)
-          ).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
         });
 
         it("Removing nothing", async function () {

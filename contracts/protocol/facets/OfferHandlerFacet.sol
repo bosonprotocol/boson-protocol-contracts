@@ -70,7 +70,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Number of offers exceeds maximum allowed number per batch
      * - Number of elements in offers, offerDates and offerDurations do not match
      * - For any offer:
      *   - Caller is not an assistant
@@ -106,8 +105,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         uint256[] calldata _disputeResolverIds,
         uint256[] calldata _agentIds
     ) external override offersNotPaused nonReentrant {
-        // Limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_offers.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
         // Number of offer dates structs, offer durations structs and _disputeResolverIds must match the number of offers
         require(
             _offers.length == _offerDates.length &&
@@ -182,7 +179,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * Reverts if, for any offer:
      * - The offers region of protocol is paused
-     * - Number of offers exceeds maximum allowed number per batch
      * - Offer id is invalid
      * - Caller is not the assistant of the offer
      * - Offer has already been voided
@@ -190,8 +186,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @param _offerIds - list of ids of offers to void
      */
     function voidOfferBatch(uint256[] calldata _offerIds) external override offersNotPaused {
-        // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_offerIds.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
         for (uint256 i = 0; i < _offerIds.length; i++) {
             voidOffer(_offerIds[i]);
         }
@@ -241,7 +235,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Number of offers exceeds maximum allowed number per batch
      * - For any of the offers:
      *   - Offer does not exist
      *   - Caller is not the assistant of the offer
@@ -252,8 +245,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *  @param _validUntilDate - new valid until date
      */
     function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external override offersNotPaused {
-        // Limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_offerIds.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
         for (uint256 i = 0; i < _offerIds.length; i++) {
             extendOffer(_offerIds[i], _validUntilDate);
         }

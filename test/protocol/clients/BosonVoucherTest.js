@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { assert, expect } = require("chai");
 
 const DisputeResolutionTerms = require("../../../scripts/domain/DisputeResolutionTerms");
 const { getInterfaceIds } = require("../../../scripts/config/supported-interfaces.js");
@@ -7,9 +8,6 @@ const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverF
 const Range = require("../../../scripts/domain/Range");
 const VoucherInitValues = require("../../../scripts/domain/VoucherInitValues");
 const { Funds, FundsList } = require("../../../scripts/domain/Funds");
-
-const { mockOffer, mockExchange, mockVoucher } = require("../../util/mock.js");
-const { assert, expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 const {
   mockDisputeResolver,
@@ -18,6 +16,9 @@ const {
   mockAuthToken,
   mockBuyer,
   accountId,
+  mockVoucher,
+  mockExchange,
+  mockOffer,
 } = require("../../util/mock");
 const {
   applyPercentage,
@@ -275,7 +276,6 @@ describe("IBosonVoucher", function () {
       const mockProtocol = await deployMockProtocol();
       const { offer, offerDates, offerDurations, offerFees } = await mockOffer();
       const disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
-      await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
       await mockProtocol.mock.getOffer.returns(
         true,
         offer,
@@ -314,7 +314,7 @@ describe("IBosonVoucher", function () {
         const mockProtocol = await deployMockProtocol();
         const { offer, offerDates, offerDurations, offerFees } = await mockOffer();
         const disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
-        await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
+
         await mockProtocol.mock.getOffer.returns(
           true,
           offer,
@@ -398,7 +398,6 @@ describe("IBosonVoucher", function () {
       mockProtocol = await deployMockProtocol();
       ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
       disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
-      await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
       await mockProtocol.mock.getOffer.returns(
         true,
         offer,
@@ -601,18 +600,6 @@ describe("IBosonVoucher", function () {
         );
       });
 
-      it("Too many to mint in a single transaction", async function () {
-        await mockProtocol.mock.getMaxPremintedVouchers.returns("100");
-
-        // Set invalid amount
-        amount = "101";
-
-        // Try to premint, it should fail
-        await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWith(
-          RevertReasons.TOO_MANY_TO_MINT
-        );
-      });
-
       it("Offer already expired", async function () {
         // Skip to after offer expiration
         await setNextBlockTimestamp(ethers.BigNumber.from(offerDates.validUntil).add(1).toHexString());
@@ -647,16 +634,13 @@ describe("IBosonVoucher", function () {
     let offerId, start, length, amount;
     let mockProtocol;
     let offer, offerDates, offerDurations, offerFees, disputeResolutionTerms;
-    let maxPremintedVouchers;
 
     beforeEach(async function () {
       offerId = "5";
-      maxPremintedVouchers = "10";
 
       mockProtocol = await deployMockProtocol();
       ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
       disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
-      await mockProtocol.mock.getMaxPremintedVouchers.returns(maxPremintedVouchers);
       await mockProtocol.mock.getOffer
         .withArgs(offerId)
         .returns(true, offer, offerDates, offerDurations, disputeResolutionTerms, offerFees);
@@ -790,7 +774,7 @@ describe("IBosonVoucher", function () {
       });
     });
 
-    it("Should burn all vouchers if there is less than MaxPremintedVouchers to burn", async function () {
+    it("Should burn all vouchers", async function () {
       // Burn tokens, test for event
       let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
 
@@ -803,64 +787,6 @@ describe("IBosonVoucher", function () {
       const range = new Range(tokenIdStart.toString(), length, amount, lastBurnedId.toString(), assistant.address);
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
-
-      // Second call should revert since there's nothing to burn
-      await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId)).to.be.revertedWith(
-        RevertReasons.NOTHING_TO_BURN
-      );
-    });
-
-    it("Should burn only first MaxPremintedVouchers vouchers if there is more than MaxPremintedVouchers to burn", async function () {
-      // make offer not voided so premint is possible
-      offer.voided = false;
-      await mockProtocol.mock.getOffer
-        .withArgs(offerId)
-        .returns(true, offer, offerDates, offerDurations, disputeResolutionTerms, offerFees);
-
-      // Mint another 10 vouchers, so that there are 15 in total
-      await bosonVoucher.connect(assistant).preMint(offerId, 10);
-      amount = `${Number(amount) + 10}`;
-
-      // "void" the offer
-      offer.voided = true;
-      await mockProtocol.mock.getOffer
-        .withArgs(offerId)
-        .returns(true, offer, offerDates, offerDurations, disputeResolutionTerms, offerFees);
-
-      // Burn tokens, test for event
-      let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
-
-      // Number of events emitted should be equal to maxPremintedVouchers
-      assert.equal((await tx.wait()).events.length, Number(maxPremintedVouchers), "Wrong number of events emitted");
-
-      // Last burned id should be updated
-      const tokenIdStart = deriveTokenId(offerId, start);
-      let lastBurnedId = tokenIdStart.add(maxPremintedVouchers - 1);
-      let range = new Range(tokenIdStart.toString(), length, amount, lastBurnedId.toString(), assistant.address);
-      let returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
-      assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
-
-      // Second call should burn the difference
-      tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
-
-      // Number of events emitted should be equal to amount
-      assert.equal(
-        (await tx.wait()).events.length,
-        Number(amount) - maxPremintedVouchers,
-        "Wrong number of events emitted"
-      );
-
-      // Last burned id should be updated
-      lastBurnedId = tokenIdStart.add(amount - 1);
-      range = new Range(tokenIdStart.toString(), length, amount, lastBurnedId.toString(), assistant.address);
-      returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
-      assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
-
-      // All burned tokens should not have an owner
-      for (let i = 0; i < Number(amount); i++) {
-        let tokenId = tokenIdStart.add(i);
-        await expect(bosonVoucher.ownerOf(tokenId)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
-      }
 
       // Second call should revert since there's nothing to burn
       await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId)).to.be.revertedWith(
@@ -999,7 +925,6 @@ describe("IBosonVoucher", function () {
       mockProtocol = await deployMockProtocol();
       ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
       disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
-      await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
       await mockProtocol.mock.getOffer.returns(
         true,
         offer,
@@ -1033,9 +958,6 @@ describe("IBosonVoucher", function () {
     });
 
     it("Range is fully minted", async function () {
-      // Adjust config value
-      await configHandler.connect(deployer).setMaxPremintedVouchers(length);
-
       // Premint tokens
       await bosonVoucher.connect(assistant).preMint(offerId, length);
 
@@ -1098,7 +1020,6 @@ describe("IBosonVoucher", function () {
       const mockProtocol = await deployMockProtocol();
       const { offer, offerDates, offerDurations, offerFees } = await mockOffer();
       const disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
-      await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
       await mockProtocol.mock.getOffer.returns(
         true,
         offer,
@@ -1168,7 +1089,6 @@ describe("IBosonVoucher", function () {
         mockProtocol = await deployMockProtocol();
         ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
         disputeResolutionTerms = new DisputeResolutionTerms("0", "0", "0", "0");
-        await mockProtocol.mock.getMaxPremintedVouchers.returns("1000");
         await mockProtocol.mock.getOffer.returns(
           true,
           offer,
@@ -1228,8 +1148,6 @@ describe("IBosonVoucher", function () {
         // Add five more ranges
         // This tests more getPreMintStatus than ownerOf
         // Might even be put into integration tests
-        // Adjust config value
-        await configHandler.connect(deployer).setMaxPremintedVouchers("10000");
         let previousOfferId = Number(offerId);
         let previousStartId = Number(start);
         let ranges = [new Range(Number(start), length, amount, "0")];
@@ -1895,7 +1813,7 @@ describe("IBosonVoucher", function () {
       );
       expect(disputeResolver.isValid()).is.true;
 
-      //Create DisputeResolverFee array so offer creation will succeed
+      // Create DisputeResolverFee array so offer creation will succeed
       disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
 
       // Make empty seller list, so every seller is allowed

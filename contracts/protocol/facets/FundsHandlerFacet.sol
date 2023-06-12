@@ -199,7 +199,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * Reverts if:
      * - Caller is not associated with the entity id
      * - Token list length does not match amount list length
-     * - Token list length exceeds the maximum allowed number of tokens
      * - Caller tries to withdraw more that they have in available funds
      * - There is nothing to withdraw
      * - Transfer of funds is not successful
@@ -220,10 +219,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
 
         // Make sure that the data is complete
         require(_tokenList.length == _tokenAmounts.length, TOKEN_AMOUNT_MISMATCH);
-
-        // Limit maximum number of tokens to avoid running into block gas limit in a loop
-        uint256 maxTokensPerWithdrawal = protocolLimits().maxTokensPerWithdrawal;
-        require(_tokenList.length <= maxTokensPerWithdrawal, TOO_MANY_TOKENS);
 
         // Two possible options: withdraw all, or withdraw only specified tokens and amounts
         if (_tokenList.length == 0) {

@@ -891,10 +891,6 @@ describe("IBosonConfigHandler", function () {
           maxEscalationResponsePeriod,
           "Invalid max escalatio response period"
         );
-        expect(await configHandler.connect(rando).getMaxAllowedSellers()).to.equal(
-          maxAllowedSellers,
-          "Invalid max allowed sellers"
-        );
         expect(await configHandler.connect(rando).getBuyerEscalationDepositPercentage()).to.equal(
           buyerEscalationDepositPercentage,
           "Invalid buyer escalation deposit"

@@ -2508,16 +2508,6 @@ describe("IBosonDisputeHandler", function () {
               RevertReasons.INVALID_STATE
             );
           });
-
-          it("Expiring too many disputes", async function () {
-            // Try to expire the more than 100 disputes
-            disputesToExpire = [...Array(101).keys()];
-
-            // Attempt to expire the disputes, expecting revert
-            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWith(
-              RevertReasons.TOO_MANY_DISPUTES
-            );
-          });
         });
       });
     });
