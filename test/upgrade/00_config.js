@@ -75,6 +75,7 @@ async function getFacets() {
       "v2.0.0": v2_0_0,
       "v2.1.0": v2_0_0, // same as v2.0.0
       "v2.2.0": v2_2_0,
+      "v2.2.1": v2_2_0, // same as v2.2.0
     },
     upgrade: {
       "v2.1.0": {
@@ -190,6 +191,7 @@ async function getFacets() {
         },
         initializationData: "0x0000000000000000000000000000000000000000000000000000000000002710", // input for initV2_2_0, representing maxPremintedVoucher (0x2710=10000)
       },
+      // POST 2.2.0 upgrade configs are part of respective migration script
     },
   };
 
@@ -210,7 +212,11 @@ const tagsByVersion = {
   },
   "2.2.1": {
     oldVersion: "v2.2.0",
-    newVersion: "v2.2.1-rc.1",
+    newVersion: "v2.2.1",
+  },
+  "2.3.0": {
+    oldVersion: "v2.2.1",
+    newVersion: "v2.3.0",
   },
 };
 

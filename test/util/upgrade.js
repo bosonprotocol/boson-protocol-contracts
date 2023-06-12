@@ -89,6 +89,11 @@ async function deploySuite(deployer, newVersion) {
     shell.exec(`rm -rf scripts/*`);
     shell.exec(`git checkout ${scriptsTag} scripts`);
   }
+  const isOldOZVersion = ["v2.0", "v2.1", "v2.2"].some((v) => tag.startsWith(v));
+  if (isOldOZVersion) {
+    // Temporary install old OZ contracts
+    shell.exec("npm i @openzeppelin/contracts-upgradeable@4.7.1");
+  }
 
   const deployConfig = facets.deploy[tag];
 
@@ -147,6 +152,12 @@ async function deploySuite(deployer, newVersion) {
   const [mockToken, mockConditionalToken, mockTwin721_1, mockTwin721_2, mockTwin20, mockTwin1155] =
     await deployMockTokens(["Foreign20", "Foreign20", "Foreign721", "Foreign721", "Foreign20", "Foreign1155"]);
   const mockTwinTokens = [mockTwin721_1, mockTwin721_2];
+
+  if (isOldOZVersion) {
+    // If reference commit is old version, we need to revert to target version
+    shell.exec(`git checkout ${versionTags.newVersion} package.json package-lock.json`);
+    shell.exec("npm i");
+  }
 
   return {
     protocolDiamondAddress,
