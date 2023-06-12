@@ -6,6 +6,7 @@ const { task } = require("hardhat/config");
 require("@nomicfoundation/hardhat-toolbox");
 require("@nomiclabs/hardhat-web3");
 require("hardhat-contract-sizer");
+require("hardhat-preprocessor");
 
 const lazyImport = async (module) => {
   return await require(module);
