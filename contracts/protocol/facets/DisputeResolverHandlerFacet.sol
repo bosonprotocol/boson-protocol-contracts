@@ -648,6 +648,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     {
         (exists, disputeResolver, disputeResolverFees) = fetchDisputeResolver(_disputeResolverId);
         if (exists) {
+            disputeResolver.clerk = address(0);
             sellerAllowList = protocolLookups().allowedSellers[_disputeResolverId];
         }
     }
