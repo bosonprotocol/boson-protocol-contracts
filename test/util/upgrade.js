@@ -92,8 +92,6 @@ async function deploySuite(deployer, newVersion) {
     shell.exec(`git checkout ${scriptsTag} scripts`);
   }
 
-  shell.exec(`npx hardhat compile`);
-
   const isOldOZVersion = ["v2.0", "v2.1", "v2.2"].some((v) => tag.startsWith(v));
   if (isOldOZVersion) {
     // Temporary install old OZ contracts
@@ -159,8 +157,7 @@ async function deploySuite(deployer, newVersion) {
   const mockTwinTokens = [mockTwin721_1, mockTwin721_2];
 
   if (isOldOZVersion) {
-    // If reference commit is old version, we need to revert to target version
-    shell.exec(`git checkout ${versionTags.newVersion} package.json package-lock.json`);
+    shell.exec(`git checkout ${tag} package.json package-lock.json`);
     shell.exec("npm i");
   }
 
@@ -1826,8 +1823,9 @@ async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buye
 }
 
 function revertState() {
-  shell.exec(`git checkout HEAD`);
-  shell.exec(`git reset HEAD`);
+  shell.exec(`rm -rf contracts/* scripts/*`);
+  shell.exec(`git checkout HEAD contracts scripts`);
+  shell.exec(`git reset HEAD contracts scripts`);
 }
 
 async function getDisputeResolver(accountHandler, value, { getBy }) {

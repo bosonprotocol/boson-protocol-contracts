@@ -211,7 +211,6 @@ const tagsByVersion = {
   "2.2.1": {
     oldVersion: "v2.2.0",
     newVersion: "v2.2.1",
-    deployScript: "v2.2.0",
   },
 };
 
