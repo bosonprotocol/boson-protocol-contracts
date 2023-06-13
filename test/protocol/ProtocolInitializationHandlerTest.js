@@ -1,6 +1,7 @@
 const { expect } = require("chai");
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const { keccak256, toUtf8Bytes } = ethers.utils;
 
 const Role = require("../../scripts/domain/Role");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -12,6 +13,7 @@ const { getFacetAddCut, getFacetReplaceCut } = require("../../scripts/util/diamo
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { getFacetsWithArgs } = require("../util/utils.js");
 const { getV2_2_0DeployConfig } = require("../upgrade/00_config.js");
+const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("ProtocolInitializationHandler", async function () {
   // Common vars
@@ -56,7 +58,7 @@ describe("ProtocolInitializationHandler", async function () {
     version = "2.2.0";
 
     // initialization data for v2.2.0
-    maxPremintedVouchers = "1000";
+    maxPremintedVouchers = "10000";
     initializationData = ethers.utils.defaultAbiCoder.encode(["uint256"], [maxPremintedVouchers]);
   });
 
@@ -466,8 +468,10 @@ describe("ProtocolInitializationHandler", async function () {
         await getFees(maxPriorityFeePerGas)
       );
 
-      // Verify that new value is stored
-      expect(await configHandler.connect(rando).getMaxPremintedVouchers()).to.equal(maxPremintedVouchers);
+      const protocolLimitsSlot = ethers.BigNumber.from(keccak256(toUtf8Bytes("boson.protocol.limits")));
+      const maxPremintedVoucherStorage = await getStorageAt(diamondCutFacet.address, protocolLimitsSlot.add(4));
+
+      expect(ethers.BigNumber.from(maxPremintedVoucherStorage).toString()).to.equal(maxPremintedVouchers);
     });
 
     context("💔 Revert Reasons", async function () {

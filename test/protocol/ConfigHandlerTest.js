@@ -159,44 +159,8 @@ describe("IBosonConfigHandler", function () {
           .withArgs(protocolFeeFlatBoson, deployer.address);
 
         await expect(cutTransaction)
-          .to.emit(configHandler, "MaxExchangesPerBatchChanged")
-          .withArgs(maxExchangesPerBatch, deployer.address);
-
-        await expect(cutTransaction)
-          .to.emit(configHandler, "MaxOffersPerGroupChanged")
-          .withArgs(maxOffersPerGroup, deployer.address);
-
-        await expect(cutTransaction)
-          .to.emit(configHandler, "MaxTwinsPerBundleChanged")
-          .withArgs(maxTwinsPerBundle, deployer.address);
-
-        await expect(cutTransaction)
-          .to.emit(configHandler, "MaxOffersPerBundleChanged")
-          .withArgs(maxOffersPerBundle, deployer.address);
-
-        await expect(cutTransaction)
-          .to.emit(configHandler, "MaxOffersPerBatchChanged")
-          .withArgs(maxOffersPerBatch, deployer.address);
-
-        await expect(cutTransaction)
-          .to.emit(configHandler, "MaxTokensPerWithdrawalChanged")
-          .withArgs(maxTokensPerWithdrawal, deployer.address);
-
-        await expect(cutTransaction)
-          .to.emit(configHandler, "MaxFeesPerDisputeResolverChanged")
-          .withArgs(maxFeesPerDisputeResolver, deployer.address);
-
-        await expect(cutTransaction)
           .to.emit(configHandler, "MaxEscalationResponsePeriodChanged")
           .withArgs(maxEscalationResponsePeriod, deployer.address);
-
-        await expect(cutTransaction)
-          .to.emit(configHandler, "MaxDisputesPerBatchChanged")
-          .withArgs(maxDisputesPerBatch, deployer.address);
-
-        await expect(cutTransaction)
-          .to.emit(configHandler, "MaxAllowedSellersChanged")
-          .withArgs(maxAllowedSellers, deployer.address);
 
         await expect(cutTransaction)
           .to.emit(configHandler, "BuyerEscalationFeePercentageChanged")
@@ -213,10 +177,6 @@ describe("IBosonConfigHandler", function () {
         await expect(cutTransaction)
           .to.emit(configHandler, "MinDisputePeriodChanged")
           .withArgs(minDisputePeriod, deployer.address);
-
-        await expect(cutTransaction)
-          .to.emit(configHandler, "MaxPremintedVouchersChanged")
-          .withArgs(maxPremintedVouchers, deployer.address);
       });
     });
   });

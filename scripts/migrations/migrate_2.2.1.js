@@ -27,7 +27,7 @@ async function migrate(env) {
   console.log(`Migration ${tag} started`);
   try {
     console.log("Removing any local changes before upgrading");
-    shell.exec(`git reset`);
+    shell.exec(`git reset @{u}`);
     const statusOutput = shell.exec("git status -s -uno scripts");
 
     if (statusOutput.stdout) {
@@ -78,7 +78,7 @@ async function migrate(env) {
     await hre.run("upgrade-facets", {
       env,
       facetConfig: JSON.stringify(config),
-      newVersion: tag,
+      newVersion: tag.replace("v", ""),
     });
 
     const selectorsToAdd = await getFunctionHashesClosure();
