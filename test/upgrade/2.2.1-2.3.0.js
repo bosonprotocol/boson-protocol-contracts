@@ -2,9 +2,13 @@ const hre = require("hardhat");
 // const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const ethers = hre.ethers;
 const { getSnapshot, revertToSnapshot } = require("../util/utils");
+const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
+const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
+const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolverUpdateFields");
 
 // const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const { assert, expect } = require("chai");
+const { mockSeller, mockAuthToken, mockVoucherInitValues, mockDisputeResolver } = require("../util/mock");
 
 const { deploySuite, populateProtocolContract, getProtocolContractState, revertState } = require("../util/upgrade");
 const { getGenericContext } = require("./01_generic");
@@ -17,7 +21,8 @@ const { migrate } = require(`../../scripts/migrations/migrate_${version}.js`);
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
-  let deployer;
+  let deployer, rando, clerk;
+  let accountHandler, fundsHandler;
   let snapshot;
   let protocolDiamondAddress, mockContracts;
   let contractsAfter;
@@ -30,7 +35,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   before(async function () {
     try {
       // Make accounts available
-      [deployer] = await ethers.getSigners();
+      [deployer, rando, clerk] = await ethers.getSigners();
 
       let contractsBefore;
 
@@ -49,6 +54,34 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         true
       );
 
+      // Start a seller update (finished in tests)
+      accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
+      const { sellers } = preUpgradeEntities;
+      let { wallet, id, seller, authToken } = sellers[0];
+      seller.clerk = rando.address;
+      await accountHandler.connect(wallet).updateSeller(seller, authToken);
+
+      ({ wallet, id, seller, authToken } = sellers[1]);
+      seller.clerk = rando.address;
+      seller.assistant = rando.address;
+      await accountHandler.connect(wallet).updateSeller(seller, authToken);
+
+      ({ wallet, id, seller, authToken } = sellers[2]);
+      seller.clerk = clerk.address;
+      await accountHandler.connect(wallet).updateSeller(seller, authToken);
+      await accountHandler.connect(clerk).optInToSellerUpdate(id, [SellerUpdateFields.Clerk]);
+
+      const { DRs } = preUpgradeEntities;
+      let disputeResolver;
+      ({ wallet, disputeResolver } = DRs[0]);
+      disputeResolver.clerk = rando.address;
+      await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
+
+      ({ wallet, disputeResolver } = DRs[1]);
+      disputeResolver.clerk = rando.address;
+      disputeResolver.assistant = rando.address;
+      await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
+
       // Get current protocol state, which serves as the reference
       // We assume that this state is a true one, relying on our unit and integration tests
       protocolContractStateBefore = await getProtocolContractState(
@@ -58,6 +91,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         preUpgradeEntities,
         true
       );
+
+      ({ fundsHandler } = contractsBefore);
 
       // ({ accountContractState } = protocolContractStateBefore);
 
@@ -74,7 +109,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Cast to updated interface
       let newHandlers = {
         accountHandler: "IBosonAccountHandler",
-        orchestrationHandler: "IBosonOrchestrationHandler",
       };
 
       contractsAfter = { ...contractsBefore };
@@ -83,7 +117,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
       }
 
-      // ({ accountHandler } = contractsAfter);
+      ({ accountHandler } = contractsAfter);
 
       // addedFunctionHashes = await getFunctionHashesClosure();
 
@@ -214,6 +248,134 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             protocolContractStateBefore.accountContractState.agentsState,
             protocolContractStateAfter.accountContractState.agentsState
           );
+        });
+      });
+
+      context("SellerHandler", async function () {
+        let seller, emptyAuthToken, voucherInitValues;
+
+        beforeEach(async function () {
+          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          emptyAuthToken = mockAuthToken();
+          voucherInitValues = mockVoucherInitValues();
+        });
+
+        it("Cannot create a new seller with non zero clerk", async function () {
+          // Attempt to create a seller with clerk not 0
+          await expect(
+            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
+        });
+
+        it("Cannot update a seller to non zero clerk", async function () {
+          seller.clerk = ethers.constants.AddressZero;
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          // Attempt to update a seller, expecting revert
+          seller.clerk = rando.address;
+          await expect(accountHandler.connect(rando).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+            RevertReasons.CLERK_DEPRECATED
+          );
+        });
+
+        it("Cannot opt-in to non zero clerk  [no other pending update]", async function () {
+          const { sellers } = preUpgradeEntities;
+          const { id } = sellers[0];
+
+          // Attempt to update a seller, expecting revert
+          await expect(
+            accountHandler.connect(rando).optInToSellerUpdate(id, [SellerUpdateFields.Clerk])
+          ).to.revertedWith(RevertReasons.NO_PENDING_UPDATE_FOR_ACCOUNT);
+        });
+
+        it("Cannot opt-in to non zero clerk [other pending updates]", async function () {
+          const { sellers } = preUpgradeEntities;
+          const { id } = sellers[1];
+
+          // Attempt to update a seller, expecting revert
+          await expect(
+            accountHandler.connect(rando).optInToSellerUpdate(id, [SellerUpdateFields.Clerk])
+          ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
+        });
+
+        it("It's possible to create a new account that uses the same address as some old clerk address", async function () {
+          // "clerk" was used as a clerk address for seller[2] before the upgrade
+          seller = mockSeller(clerk.address, clerk.address, ethers.constants.AddressZero, clerk.address);
+          await expect(accountHandler.connect(clerk).createSeller(seller, emptyAuthToken, voucherInitValues)).to.emit(
+            accountHandler,
+            "SellerCreated"
+          );
+        });
+
+        it("It's possible to withdraw funds with assistant address", async function () {
+          const { sellers } = preUpgradeEntities;
+          const { wallet, id } = sellers[2]; // seller 2 assistant was different from clerk
+
+          // Withdraw funds
+          await expect(fundsHandler.connect(wallet).withdrawFunds(id, [], [])).to.emit(fundsHandler, "FundsWithdrawn");
+        });
+      });
+
+      context("DisputeResolverHandler", async function () {
+        let disputeResolver, disputeResolverFees, sellerAllowList;
+
+        beforeEach(async function () {
+          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address);
+          disputeResolverFees = [];
+          sellerAllowList = [];
+        });
+
+        it("Cannot create a new DR with non zero clerk", async function () {
+          // Attempt to create a DR with clerk not 0
+          await expect(
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+          ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
+        });
+
+        it("Cannot update a DR to non zero clerk", async function () {
+          disputeResolver.clerk = ethers.constants.AddressZero;
+          await accountHandler
+            .connect(rando)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+          // Attempt to update a DR, expecting revert
+          disputeResolver.clerk = rando.address;
+          await expect(accountHandler.connect(rando).updateDisputeResolver(disputeResolver)).to.revertedWith(
+            RevertReasons.CLERK_DEPRECATED
+          );
+        });
+
+        it("Cannot opt-in to non zero clerk [no other pending update]", async function () {
+          const { DRs } = preUpgradeEntities;
+          const { id } = DRs[0];
+
+          // Attempt to update a DR, expecting revert
+          await expect(
+            accountHandler.connect(rando).optInToDisputeResolverUpdate(id, [DisputeResolverUpdateFields.Clerk])
+          ).to.revertedWith(RevertReasons.NO_PENDING_UPDATE_FOR_ACCOUNT);
+        });
+
+        it("Cannot opt-in to non zero clerk [other pending updates]", async function () {
+          const { DRs } = preUpgradeEntities;
+          const { id } = DRs[1];
+
+          // Attempt to update a DR, expecting revert
+          await expect(
+            accountHandler.connect(rando).optInToDisputeResolverUpdate(id, [DisputeResolverUpdateFields.Clerk])
+          ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
+        });
+
+        it("It's possible to create a new account that uses the same address as some old clerk address", async function () {
+          // "clerk" was used as a clerk address for DR[2] before the upgrade
+          disputeResolver = mockDisputeResolver(
+            clerk.address,
+            clerk.address,
+            ethers.constants.AddressZero,
+            clerk.address
+          );
+          await expect(
+            accountHandler.connect(clerk).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+          ).to.emit(accountHandler, "DisputeResolverCreated");
         });
       });
     });

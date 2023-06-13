@@ -67,6 +67,7 @@ function getGenericContext(
       let protocolContractStateAfterUpgradeAndActions;
 
       before(async function () {
+        console.log("POPULATING AFTER THE UPGRADE");
         postUpgradeEntities = await populateProtocolContract(
           deployer,
           protocolDiamondAddress,

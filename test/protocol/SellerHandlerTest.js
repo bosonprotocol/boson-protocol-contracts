@@ -742,7 +742,7 @@ describe("SellerHandler", function () {
           seller.assistant = rando.address;
           seller.clerk = rando.address;
 
-          // Attempt to Create a seller with clerk not the same to caller address
+          // Attempt to Create a seller with clerk not 0
           await expect(
             accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
