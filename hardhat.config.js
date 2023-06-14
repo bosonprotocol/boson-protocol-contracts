@@ -104,9 +104,13 @@ task("migrate", "Migrates the protocol to a new version")
   .addParam("env", "The deployment environment")
   .addFlag("dryRun", "Test the migration without deploying")
   .setAction(async ({ newVersion, env, dryRun }) => {
-    const { migrate } = await lazyImport(`./scripts/migrations/migrate_${newVersion}.js`);
+    if (dryRun) {
+      const { setupDryRun } = await lazyImport(`./scripts/migrations/dry-run.js`);
+      env = await setupDryRun(env);
+    }
 
-    await migrate(env, dryRun);
+    const { migrate } = await lazyImport(`./scripts/migrations/migrate_${newVersion}.js`);
+    await migrate(env);
   });
 
 module.exports = {
