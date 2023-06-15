@@ -4,9 +4,7 @@ const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirma
 const FacetCutAction = require("../domain/FacetCutAction");
 const { interfacesWithMultipleArtifacts } = require("./constants");
 const { getFees } = require("./utils");
-const ethers = hre.ethers;
-const keccak256 = ethers.utils.keccak256;
-const toUtf8Bytes = ethers.utils.toUtf8Bytes;
+const { keccak256, toUtf8Bytes } = hre.ethers;;
 
 /**
  * Utilities for testing and interacting with Diamond
@@ -34,14 +32,14 @@ function getSelectors(contract, returnSignatureToNameMapping = false) {
 
 // get interface id
 async function getInterfaceId(contractName, skipBaseCheck = false, isFullPath = false) {
-  const contract = await ethers.getContractAt(contractName, ethers.constants.AddressZero);
+  const contract = await getContractAt(contractName, ZeroAddress);
   const signatures = Object.keys(contract.interface.functions);
   const selectors = signatures.reduce((acc, val) => {
-    acc.push(ethers.BigNumber.from(contract.interface.getSighash(val)));
+    acc.push(BigInt(contract.interface.getSighash(val)));
     return acc;
   }, []);
 
-  let interfaceId = selectors.reduce((pv, cv) => pv.xor(cv), ethers.BigNumber.from("0x00000000"));
+  let interfaceId = selectors.reduce((pv, cv) => pv.xor(cv), BigInt("0x00000000"));
 
   // If contract inherits other contracts, their interfaces must be xor-ed
   if (!skipBaseCheck) {
@@ -63,7 +61,7 @@ async function getInterfaceId(contractName, skipBaseCheck = false, isFullPath = 
 
       isFullPath = interfacesWithMultipleArtifacts.includes(baseName);
 
-      const baseContractInterfaceId = ethers.BigNumber.from(
+      const baseContractInterfaceId = BigNumber.from(
         await getInterfaceId(
           interfacesWithMultipleArtifacts.includes(baseName)
             ? `contracts/interfaces/${baseName}.sol:${baseName}`
@@ -77,13 +75,13 @@ async function getInterfaceId(contractName, skipBaseCheck = false, isFullPath = 
       interfaceId = interfaceId.xor(baseContractInterfaceId);
     }
   }
-  return interfaceId.isZero() ? "0x00000000" : ethers.utils.hexZeroPad(interfaceId.toHexString(), 4);
+  return interfaceId.isZero() ? "0x00000000" : hexZeroPad(interfaceId.toHexString(), 4);
 }
 
 // get function selector from function signature
 function getSelector(func) {
-  const abiInterface = new ethers.utils.Interface([func]);
-  return abiInterface.getSighash(ethers.utils.Fragment.from(func));
+  const abiInterface = new Interface([func]);
+  return abiInterface.getSighash(Fragment.from(func));
 }
 
 // used with getSelectors to remove selectors from an array of selectors
@@ -122,7 +120,7 @@ function get(functionNames) {
 
 // remove selectors using an array of signatures
 function removeSelectors(selectors, signatures) {
-  const iface = new ethers.utils.Interface(signatures.map((v) => "function " + v));
+  const iface = new Interface(signatures.map((v) => "function " + v));
   const removeSelectors = signatures.map((v) => iface.getSighash(v));
   selectors = selectors.filter((v) => !removeSelectors.includes(v));
   return selectors;
@@ -155,7 +153,7 @@ function getFacetRemoveCut(facet, omitFunctions = []) {
 async function getStateModifyingFunctions(facetNames, omitFunctions = [], onlyFunctions = []) {
   let stateModifyingFunctions = [];
   for (const facetName of facetNames) {
-    let FacetContractFactory = await ethers.getContractFactory(facetName);
+    let FacetContractFactory = await getContractFactory(facetName);
     const functions = FacetContractFactory.interface.functions;
     const functionNames = Object.keys(functions);
     const facetStateModifyingFunctions = functionNames.filter((fn) => {
@@ -200,7 +198,7 @@ function getInitializeCalldata(
   interfacesToRemove = [],
   interfacesToAdd = []
 ) {
-  version = ethers.utils.formatBytes32String(version);
+  version = formatBytes32String(version);
   const addresses = facetsToInitialize.map((f) => f.contract.address);
   const calldata = facetsToInitialize.map((f) => f.initialize);
 
@@ -224,7 +222,7 @@ async function cutDiamond(
   initializeCalldata,
   facetsToRemove = []
 ) {
-  const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", diamond);
+  const diamondCutFacet = await getContractAt("DiamondCutFacet", diamond);
 
   const cut = deployedFacets.reduce((acc, val) => {
     val.cut.forEach((c) => acc.push(c));

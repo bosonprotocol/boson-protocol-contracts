@@ -153,7 +153,7 @@ function getGenericContext(
         const offerPrice = offer.price;
         const buyer = preUpgradeEntities.buyers[1];
         let msgValue;
-        if (offer.exchangeToken == ethers.constants.AddressZero) {
+        if (offer.exchangeToken == ZeroAddress) {
           msgValue = offerPrice;
         } else {
           // approve token transfer
@@ -172,7 +172,7 @@ function getGenericContext(
 
         // Get the block timestamp of the confirmed tx
         const blockNumber = tx.blockNumber;
-        const block = await ethers.provider.getBlock(blockNumber);
+        const block = await provider.getBlock(blockNumber);
 
         // Set expected voucher values
         const voucher = mockVoucher({
@@ -270,7 +270,7 @@ function getGenericContext(
 
         // Get the block timestamp of the confirmed tx
         const blockNumber = tx.blockNumber;
-        const block = await ethers.provider.getBlock(blockNumber);
+        const block = await provider.getBlock(blockNumber);
 
         // Set expected voucher values
         const voucher = mockVoucher({

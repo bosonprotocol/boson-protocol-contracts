@@ -25,7 +25,7 @@ const { castProtocolClientProxies } = require("./cast-protocol-client-proxies.js
 async function deployProtocolClients(
   protocolClientArgs,
   maxPriorityFeePerGas,
-  implementationArgs = [ethers.constants.AddressZero]
+  implementationArgs = [ZeroAddress]
 ) {
   // Deploy Protocol Client implementation contracts
   const protocolClientImpls = await deployProtocolClientImpls(implementationArgs, maxPriorityFeePerGas);

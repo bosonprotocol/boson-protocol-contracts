@@ -29,7 +29,7 @@ async function deployProtocolClientProxies(protocolClients, maxPriorityFeePerGas
   [bosonClientBeacon] = protocolClients;
 
   // Deploy the ClientProxy for BosonVoucher
-  const ClientProxy = await ethers.getContractFactory("BeaconClientProxy");
+  const ClientProxy = await getContractFactory("BeaconClientProxy");
   const clientProxy = await ClientProxy.deploy(await getFees(maxPriorityFeePerGas));
   await clientProxy.deployTransaction.wait(confirmations);
 

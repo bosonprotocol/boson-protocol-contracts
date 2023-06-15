@@ -104,7 +104,7 @@ describe("DisputeResolverHandler", function () {
 
     // make all account the same
     assistant = admin;
-    clerk = { address: ethers.constants.AddressZero };
+    clerk = { address: ZeroAddress };
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -127,8 +127,8 @@ describe("DisputeResolverHandler", function () {
 
       // Create two additional sellers and create seller allow list
       seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
-      seller2 = mockSeller(other1.address, other1.address, ethers.constants.AddressZero, other1.address);
-      let seller3 = mockSeller(other2.address, other2.address, ethers.constants.AddressZero, other2.address);
+      seller2 = mockSeller(other1.address, other1.address, ZeroAddress, other1.address);
+      let seller3 = mockSeller(other2.address, other2.address, ZeroAddress, other2.address);
 
       // VoucherInitValues
       voucherInitValues = mockVoucherInitValues();
@@ -150,10 +150,10 @@ describe("DisputeResolverHandler", function () {
 
       disputeResolverPendingUpdate = disputeResolver.clone();
       disputeResolverPendingUpdate.id = "0";
-      disputeResolverPendingUpdate.admin = ethers.constants.AddressZero;
-      disputeResolverPendingUpdate.clerk = ethers.constants.AddressZero;
-      disputeResolverPendingUpdate.treasury = ethers.constants.AddressZero;
-      disputeResolverPendingUpdate.assistant = ethers.constants.AddressZero;
+      disputeResolverPendingUpdate.admin = ZeroAddress;
+      disputeResolverPendingUpdate.clerk = ZeroAddress;
+      disputeResolverPendingUpdate.treasury = ZeroAddress;
+      disputeResolverPendingUpdate.assistant = ZeroAddress;
       disputeResolverPendingUpdate.escalationResponsePeriod = "0";
       disputeResolverPendingUpdate.metadataUri = "";
       disputeResolverPendingUpdate.active = false;
@@ -330,7 +330,7 @@ describe("DisputeResolverHandler", function () {
         disputeResolver2 = mockDisputeResolver(
           other1.address,
           other1.address,
-          ethers.constants.AddressZero,
+          ZeroAddress,
           other1.address,
           true
         );
@@ -414,7 +414,7 @@ describe("DisputeResolverHandler", function () {
         disputeResolver2 = mockDisputeResolver(
           other1.address,
           other1.address,
-          ethers.constants.AddressZero,
+          ZeroAddress,
           treasury.address,
           true
         );
@@ -449,7 +449,7 @@ describe("DisputeResolverHandler", function () {
         });
 
         it("Any address is the zero address", async function () {
-          disputeResolver.assistant = ethers.constants.AddressZero;
+          disputeResolver.assistant = ZeroAddress;
 
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
@@ -457,7 +457,7 @@ describe("DisputeResolverHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
           disputeResolver.assistant = assistant.address;
-          disputeResolver.admin = ethers.constants.AddressZero;
+          disputeResolver.admin = ZeroAddress;
 
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
@@ -465,7 +465,7 @@ describe("DisputeResolverHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
           disputeResolver.admin = admin.address;
-          disputeResolver.treasury = ethers.constants.AddressZero;
+          disputeResolver.treasury = ZeroAddress;
 
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
@@ -486,7 +486,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolver2 = mockDisputeResolver(
             assistant.address,
             assistant.address,
-            ethers.constants.AddressZero,
+            ZeroAddress,
             assistant.address
           );
           expect(disputeResolver2.isValid()).is.true;
@@ -659,7 +659,7 @@ describe("DisputeResolverHandler", function () {
           Array.isArray(returnedSellerAllowList) &&
           returnedSellerAllowList.reduce(
             (previousAllowedSeller, currentAllowedSeller) =>
-              previousAllowedSeller && typeof ethers.BigNumber.from(currentAllowedSeller) === "object",
+              previousAllowedSeller && typeof BigInt(currentAllowedSeller) === "object",
             true
           );
         expect(valid).to.be.true;
@@ -759,7 +759,7 @@ describe("DisputeResolverHandler", function () {
         // Assistant and admin needs owner approval and won't be updated until then
         expectedDisputeResolver.assistant = assistant.address;
         expectedDisputeResolver.admin = admin.address;
-        expectedDisputeResolver.clerk = ethers.constants.AddressZero;
+        expectedDisputeResolver.clerk = ZeroAddress;
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
 
         // Testing for the DisputeResolverUpdateApplied event
@@ -779,7 +779,7 @@ describe("DisputeResolverHandler", function () {
         ).toString();
         disputeResolver.assistant = other1.address;
         disputeResolver.admin = other2.address;
-        disputeResolver.clerk = ethers.constants.AddressZero;
+        disputeResolver.clerk = ZeroAddress;
         disputeResolver.treasury = other4.address;
         disputeResolver.metadataUri = "https://ipfs.io/ipfs/updatedUri";
         disputeResolver.active = true;
@@ -910,7 +910,7 @@ describe("DisputeResolverHandler", function () {
         disputeResolver2 = mockDisputeResolver(
           other1.address,
           other1.address,
-          ethers.constants.AddressZero,
+          ZeroAddress,
           other1.address
         );
         expect(disputeResolver2.isValid()).is.true;
@@ -945,7 +945,7 @@ describe("DisputeResolverHandler", function () {
         ).toString();
         disputeResolver.assistant = rando.address;
         disputeResolver.admin = rando.address;
-        disputeResolver.clerk = ethers.constants.AddressZero;
+        disputeResolver.clerk = ZeroAddress;
         disputeResolver.treasury = rando.address;
         disputeResolver.metadataUri = "https://ipfs.io/ipfs/updatedUri";
         expect(disputeResolver.isValid()).is.true;
@@ -1021,7 +1021,7 @@ describe("DisputeResolverHandler", function () {
           .to.emit(accountHandler, "DisputeResolverUpdatePending")
           .withArgs(disputeResolver.id, disputeResolverPendingUpdateStruct, admin.address);
 
-        disputeResolverPendingUpdate.admin = ethers.constants.AddressZero;
+        disputeResolverPendingUpdate.admin = ZeroAddress;
         disputeResolverPendingUpdateStruct = disputeResolverPendingUpdate.toStruct();
 
         // Approve admin update
@@ -1050,7 +1050,7 @@ describe("DisputeResolverHandler", function () {
           .to.emit(accountHandler, "DisputeResolverUpdatePending")
           .withArgs(disputeResolver.id, disputeResolverPendingUpdateStruct, other2.address);
 
-        disputeResolverPendingUpdate.admin = ethers.constants.AddressZero;
+        disputeResolverPendingUpdate.admin = ZeroAddress;
         disputeResolverPendingUpdateStruct = disputeResolverPendingUpdate.toStruct();
 
         // Approve admin update
@@ -1077,7 +1077,7 @@ describe("DisputeResolverHandler", function () {
         // Update dispute resolver fields
         disputeResolver.assistant = other1.address;
         disputeResolver.admin = other2.address;
-        disputeResolver.clerk = ethers.constants.AddressZero;
+        disputeResolver.clerk = ZeroAddress;
         disputeResolver.active = true;
         expect(disputeResolver.isValid()).is.true;
 
@@ -1085,7 +1085,7 @@ describe("DisputeResolverHandler", function () {
 
         disputeResolverPendingUpdate.assistant = other1.address;
         disputeResolverPendingUpdate.admin = other2.address;
-        disputeResolverPendingUpdate.clerk = ethers.constants.AddressZero;
+        disputeResolverPendingUpdate.clerk = ZeroAddress;
         disputeResolverPendingUpdateStruct = disputeResolverPendingUpdate.toStruct();
 
         // Request to update a dispute resolver, testing for the DisputeResolerUpdatePending event
@@ -1107,7 +1107,7 @@ describe("DisputeResolverHandler", function () {
         disputeResolver2 = mockDisputeResolver(
           rando.address,
           rando.address,
-          ethers.constants.AddressZero,
+          ZeroAddress,
           rando.address
         );
         expect(disputeResolver2.isValid()).is.true;
@@ -1120,9 +1120,9 @@ describe("DisputeResolverHandler", function () {
         disputeResolver2.treasury = treasury.address;
         disputeResolver2Struct = disputeResolver2.toStruct();
 
-        disputeResolverPendingUpdate.admin = ethers.constants.AddressZero;
-        disputeResolverPendingUpdate.assistant = ethers.constants.AddressZero;
-        disputeResolverPendingUpdate.clerk = ethers.constants.AddressZero;
+        disputeResolverPendingUpdate.admin = ZeroAddress;
+        disputeResolverPendingUpdate.assistant = ZeroAddress;
+        disputeResolverPendingUpdate.clerk = ZeroAddress;
         disputeResolverPendingUpdateStruct = disputeResolverPendingUpdate.toStruct();
 
         // Update new dispute resolver with same treasury address, testing for the event
@@ -1135,7 +1135,7 @@ describe("DisputeResolverHandler", function () {
         // Update dispute resolver fields
         disputeResolver.assistant = other1.address;
         disputeResolver.admin = other1.address;
-        disputeResolver.clerk = ethers.constants.AddressZero;
+        disputeResolver.clerk = ZeroAddress;
         disputeResolver.treasury = other1.address;
         expect(disputeResolver.isValid()).is.true;
 
@@ -1143,12 +1143,12 @@ describe("DisputeResolverHandler", function () {
         expectedDisputeResolver = disputeResolver.clone();
         expectedDisputeResolver.assistant = assistant.address;
         expectedDisputeResolver.admin = admin.address;
-        expectedDisputeResolver.clerk = ethers.constants.AddressZero;
+        expectedDisputeResolver.clerk = ZeroAddress;
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
 
         disputeResolverPendingUpdate.assistant = other1.address;
         disputeResolverPendingUpdate.admin = other1.address;
-        disputeResolverPendingUpdate.clerk = ethers.constants.AddressZero;
+        disputeResolverPendingUpdate.clerk = ZeroAddress;
         disputeResolverPendingUpdateStruct = disputeResolverPendingUpdate.toStruct();
 
         // Update a dispute resolver
@@ -1172,9 +1172,9 @@ describe("DisputeResolverHandler", function () {
         expectedDisputeResolver = disputeResolver.clone();
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
 
-        disputeResolverPendingUpdate.assistant = ethers.constants.AddressZero;
-        disputeResolverPendingUpdate.admin = ethers.constants.AddressZero;
-        disputeResolverPendingUpdate.clerk = ethers.constants.AddressZero;
+        disputeResolverPendingUpdate.assistant = ZeroAddress;
+        disputeResolverPendingUpdate.admin = ZeroAddress;
+        disputeResolverPendingUpdate.clerk = ZeroAddress;
         disputeResolverPendingUpdateStruct = disputeResolverPendingUpdate.toStruct();
 
         // Approve assistant update
@@ -1232,7 +1232,7 @@ describe("DisputeResolverHandler", function () {
         });
 
         it("Any address is the zero address", async function () {
-          disputeResolver.assistant = ethers.constants.AddressZero;
+          disputeResolver.assistant = ZeroAddress;
 
           // Attempt to update the disputer resolver, expecting revert
           await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
@@ -1240,7 +1240,7 @@ describe("DisputeResolverHandler", function () {
           );
 
           disputeResolver.assistant = assistant.address;
-          disputeResolver.admin = ethers.constants.AddressZero;
+          disputeResolver.admin = ZeroAddress;
 
           // Attempt to update the disputer resolver, expecting revert
           await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
@@ -1248,7 +1248,7 @@ describe("DisputeResolverHandler", function () {
           );
 
           disputeResolver.admin = admin.address;
-          disputeResolver.treasury = ethers.constants.AddressZero;
+          disputeResolver.treasury = ZeroAddress;
 
           // Attempt to update the disputer resolver, expecting revert
           await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
@@ -1269,7 +1269,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolver2 = mockDisputeResolver(
             other1.address,
             other1.address,
-            ethers.constants.AddressZero,
+            ZeroAddress,
             other1.address
           );
           expect(disputeResolver2.isValid()).is.true;
@@ -1299,7 +1299,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolver2 = mockDisputeResolver(
             other1.address,
             other1.address,
-            ethers.constants.AddressZero,
+            ZeroAddress,
             other1.address
           );
           expect(disputeResolver2.isValid()).is.true;
@@ -1761,7 +1761,7 @@ describe("DisputeResolverHandler", function () {
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // make another seller with id = "5"
-        let seller4 = mockSeller(other3.address, other3.address, ethers.constants.AddressZero, other3.address);
+        let seller4 = mockSeller(other3.address, other3.address, ZeroAddress, other3.address);
 
         await accountHandler.connect(other3).createSeller(seller4, emptyAuthToken, voucherInitValues);
 
@@ -1924,7 +1924,7 @@ describe("DisputeResolverHandler", function () {
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // make another seller with id = "5"
-        const seller4 = mockSeller(other3.address, other3.address, ethers.constants.AddressZero, other3.address);
+        const seller4 = mockSeller(other3.address, other3.address, ZeroAddress, other3.address);
 
         // AuthToken
         emptyAuthToken = mockAuthToken();
@@ -2018,7 +2018,7 @@ describe("DisputeResolverHandler", function () {
         expect(returnedSellerAllowList.toString()).to.eql(expectedSellerAllowList.toString(), "Allowed list wrong");
 
         // make another seller with id = "6"
-        const seller6 = mockSeller(other4.address, other4.address, ethers.constants.AddressZero, other4.address);
+        const seller6 = mockSeller(other4.address, other4.address, ZeroAddress, other4.address);
         await accountHandler.connect(other4).createSeller(seller6, emptyAuthToken, voucherInitValues);
 
         // check that mappings of allowed selleres were updated
@@ -2084,7 +2084,7 @@ describe("DisputeResolverHandler", function () {
 
         it("Seller id is not approved", async function () {
           // make another seller with id = "6"
-          const seller6 = mockSeller(other4.address, other4.address, ethers.constants.AddressZero, other4.address);
+          const seller6 = mockSeller(other4.address, other4.address, ZeroAddress, other4.address);
           await accountHandler.connect(other4).createSeller(seller6, emptyAuthToken, voucherInitValues);
 
           // seller exists, it's not approved
@@ -2159,7 +2159,7 @@ describe("DisputeResolverHandler", function () {
       });
 
       it("Should update admin and assistant in a single call ", async function () {
-        disputeResolver.clerk = expectedDisputeResolver.clerk = ethers.constants.AddressZero;
+        disputeResolver.clerk = expectedDisputeResolver.clerk = ZeroAddress;
         disputeResolver.admin = expectedDisputeResolver.admin = other1.address;
         disputeResolver.assistant = expectedDisputeResolver.assistant = other1.address;
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
@@ -2208,7 +2208,7 @@ describe("DisputeResolverHandler", function () {
             .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Assistant])
         ).to.revertedWith(RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
 
-        disputeResolverPendingUpdate.assistant = ethers.constants.AddressZero;
+        disputeResolverPendingUpdate.assistant = ZeroAddress;
         disputeResolverPendingUpdate2Struct = disputeResolverPendingUpdate.toStruct();
 
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
@@ -2250,7 +2250,7 @@ describe("DisputeResolverHandler", function () {
 
       context("💔 Revert Reasons", async function () {
         it("There are no pending updates", async function () {
-          disputeResolver.clerk = ethers.constants.AddressZero;
+          disputeResolver.clerk = ZeroAddress;
           disputeResolver.admin = other1.address;
           disputeResolver.assistant = other1.address;
           expectedDisputeResolver = disputeResolver.clone();
@@ -2329,7 +2329,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolver2 = mockDisputeResolver(
             other1.address,
             other1.address,
-            ethers.constants.AddressZero,
+            ZeroAddress,
             other1.address
           );
           expect(disputeResolver2.isValid()).is.true;
@@ -2355,7 +2355,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolver2 = mockDisputeResolver(
             other1.address,
             other1.address,
-            ethers.constants.AddressZero,
+            ZeroAddress,
             other1.address
           );
           expect(disputeResolver2.isValid()).is.true;

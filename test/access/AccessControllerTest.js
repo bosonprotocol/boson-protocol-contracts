@@ -21,10 +21,10 @@ describe("AccessController", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, admin, protocol, upgrader, associate, pauser, client, feeCollector, rando] = await ethers.getSigners();
+    [deployer, admin, protocol, upgrader, associate, pauser, client, feeCollector, rando] = await getSigners();
 
     // Deploy the contract
-    AccessController = await ethers.getContractFactory("AccessController");
+    AccessController = await getContractFactory("AccessController");
     accessController = await AccessController.deploy();
     await accessController.deployed();
   });
@@ -77,7 +77,7 @@ describe("AccessController", function () {
 
     it("Deployer should not have any un managed value as role", async function () {
       // Random unknown role
-      let role = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("random"));
+      let role = keccak256(toUtf8Bytes("random"));
 
       // Check role
       expect(await accessController.hasRole(role, deployer.address), "Deployer has a random role").is.false;

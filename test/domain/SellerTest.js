@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getSigners, ZeroAddress } = hre.ethers;
 const { expect } = require("chai");
 const Seller = require("../../scripts/domain/Seller");
 
@@ -13,10 +13,10 @@ describe("Seller", function () {
 
   beforeEach(async function () {
     // Get a list of accounts
-    accounts = await ethers.getSigners();
+    accounts = await getSigners();
     assistant = accounts[0].address;
     admin = accounts[1].address;
-    clerk = ethers.constants.AddressZero;
+    clerk = ZeroAddress;
     treasury = accounts[3].address;
 
     // Required constructor params

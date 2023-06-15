@@ -152,9 +152,9 @@ describe("IBosonMetaTransactionsHandler", function () {
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
-    clerk = clerkDR = { address: ethers.constants.AddressZero };
+    clerk = clerkDR = { address: ZeroAddress };
 
-    [deployer] = await ethers.getSigners();
+    [deployer] = await getSigners();
 
     // Deploy the mock tokens
     [bosonToken, mockToken] = await deployMockTokens(["BosonToken", "Foreign20"]);
@@ -174,10 +174,10 @@ describe("IBosonMetaTransactionsHandler", function () {
   async function upgradeMetaTransactionsHandlerFacet() {
     // Upgrade the ExchangeHandlerFacet functions
     // DiamondCutFacet
-    const cutFacetViaDiamond = await ethers.getContractAt("DiamondCutFacet", protocolDiamondAddress);
+    const cutFacetViaDiamond = await getContractAt("DiamondCutFacet", protocolDiamondAddress);
 
     // Deploy MockMetaTransactionsHandlerFacet
-    const MockMetaTransactionsHandlerFacet = await ethers.getContractFactory("MockMetaTransactionsHandlerFacet");
+    const MockMetaTransactionsHandlerFacet = await getContractFactory("MockMetaTransactionsHandlerFacet");
     const mockMetaTransactionsHandlerFacet = await MockMetaTransactionsHandlerFacet.deploy();
     await mockMetaTransactionsHandlerFacet.deployed();
 
@@ -191,7 +191,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     ];
 
     // Send the DiamondCut transaction
-    const tx = await cutFacetViaDiamond.connect(deployer).diamondCut(facetCuts, ethers.constants.AddressZero, "0x");
+    const tx = await cutFacetViaDiamond.connect(deployer).diamondCut(facetCuts, ZeroAddress, "0x");
 
     // Wait for transaction to confirm
     const receipt = await tx.wait();
@@ -200,7 +200,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
 
     // Cast Diamond to MockMetaTransactionsHandlerFacet
-    mockMetaTransactionsHandler = await ethers.getContractAt(
+    mockMetaTransactionsHandler = await getContractAt(
       "MockMetaTransactionsHandlerFacet",
       protocolDiamondAddress
     );
@@ -222,7 +222,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   // All supported methods
   context("📋 Meta Transactions Handler Methods", async function () {
     beforeEach(async function () {
-      nonce = parseInt(ethers.utils.randomBytes(8));
+      nonce = parseInt(randomBytes(8));
     });
 
     context("👉 isUsedNonce()", async function () {
@@ -246,7 +246,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         assert.equal(result, expectedResult, "Nonce is used");
 
         // Create a valid seller for meta transaction
-        seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
+        seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
@@ -511,7 +511,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       context("👉 AccountHandlerFacet 👉 createSeller()", async function () {
         beforeEach(async function () {
           // Create a valid seller for meta transaction
-          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
+          seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -866,11 +866,11 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Prepare a function, which selector collide with another funtion selector
             // In this case certain bytes are appended to redeemVoucher so it gets the same selector as cancelVoucher
             const fn = `redeemVoucher(uint256)`;
-            const fnBytes = ethers.utils.toUtf8Bytes(fn);
+            const fnBytes = toUtf8Bytes(fn);
             const collisionBytes = "0a7f0f031e";
             const collisionBytesBuffer = Buffer.from(collisionBytes, "hex");
             const fnCollision = Buffer.concat([fnBytes, collisionBytesBuffer]);
-            const sigCollision = ethers.utils.keccak256(fnCollision).slice(0, 10);
+            const sigCollision = keccak256(fnCollision).slice(0, 10);
 
             // Prepare the function signature for the facet function.
             functionSignature = exchangeHandler.interface.encodeFunctionData("cancelVoucher", [1]);
@@ -1025,7 +1025,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 functionSignature,
                 nonce,
                 r,
-                ethers.constants.MaxUint256, // invalid s signature component
+                constants.MaxUint256, // invalid s signature component
                 v
               )
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
@@ -1038,7 +1038,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 functionSignature,
                 nonce,
                 r,
-                ethers.utils.hexZeroPad("0x", 32), // invalid s signature component
+                hexZeroPad("0x", 32), // invalid s signature component
                 v
               )
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
@@ -1050,7 +1050,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                ethers.utils.hexZeroPad("0x", 32), // invalid r signature component
+                hexZeroPad("0x", 32), // invalid r signature component
                 s,
                 v
               )
@@ -1062,7 +1062,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       context("👉TwinHandler 👉 removeTwin()", async function () {
         beforeEach(async function () {
           // Create a valid seller for meta transaction
-          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
+          seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -1146,11 +1146,11 @@ describe("IBosonMetaTransactionsHandler", function () {
           functionSignature = metaTransactionsHandler.interface.encodeFunctionData("executeMetaTransaction", [
             assistant.address,
             "executeMetaTransaction",
-            ethers.constants.HashZero, // hash of zero
+            constants.HashZero, // hash of zero
             nonce,
-            ethers.utils.randomBytes(32), // random bytes32
-            ethers.utils.randomBytes(32), // random bytes32
-            parseInt(ethers.utils.randomBytes(8)), // random uint8
+            randomBytes(32), // random bytes32
+            randomBytes(32), // random bytes32
+            parseInt(randomBytes(8)), // random uint8
           ]);
 
           // Prepare the message
@@ -1183,7 +1183,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         it("Returns default revert reason if called function reverts without a reason", async function () {
           // Create a valid seller for meta transaction
-          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
+          seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
           voucherInitValues = mockVoucherInitValues();
           emptyAuthToken = mockAuthToken();
           await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -1225,7 +1225,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         context("Reentrancy guard", async function () {
           beforeEach(async function () {
             // Create a valid seller for meta transaction
-            seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
+            seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
             expect(seller.isValid()).is.true;
 
             // VoucherInitValues
@@ -1308,7 +1308,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Expected payoffs - they are the same for token and native currency
             // Buyer: price - buyerCancelPenalty
-            buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
+            buyerPayoff = BigInt(offerToken.price)-offerToken.buyerCancelPenalty.toString();
 
             // Prepare validFundDetails
             tokenListBuyer = [maliciousToken.address];
@@ -1454,7 +1454,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           offerId = "1";
 
           // Create a valid seller
-          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
+          seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -1478,7 +1478,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           //Create DisputeResolverFee array so offer creation will succeed
           disputeResolverFees = [
-            new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+            new DisputeResolverFee(ZeroAddress, "Native", "0"),
             new DisputeResolverFee(mockToken.address, "BosonToken", "0"),
           ];
 
@@ -1520,7 +1520,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Deposit native currency to the same seller id
           await fundsHandler
             .connect(rando)
-            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+            .depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit });
         });
 
         afterEach(async function () {
@@ -1586,7 +1586,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Deposit native currency to the same seller id
             await fundsHandler
               .connect(rando)
-              .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+              .depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit });
           });
 
           it("Should emit MetaTransactionExecuted event and update state", async () => {
@@ -3013,7 +3013,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           offerId = "1";
 
           // Create a valid seller
-          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
+          seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -3142,8 +3142,8 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         it("does not modify revert reasons", async function () {
           // Reverse the from and until dates
-          offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
-          offerDates.validUntil = ethers.BigNumber.from(Date.now()).toString(); // now
+          offerDates.validFrom = BigInt(Date.now() + oneMonth * 6).toString(); // 6 months from now
+          offerDates.validUntil = BigInt(Date.now()).toString(); // now
 
           // Prepare the function signature for the facet function.
           functionSignature = offerHandler.interface.encodeFunctionData("createOffer", [
@@ -3275,7 +3275,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           //Create DisputeResolverFee array so offer creation will succeed
           disputeResolverFees = [
-            new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+            new DisputeResolverFee(ZeroAddress, "Native", "0"),
             new DisputeResolverFee(mockToken.address, "mockToken", "0"),
           ];
 
@@ -3324,7 +3324,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // deposit to seller's pool
           await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerDeposit);
-          await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, {
+          await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, sellerDeposit, {
             value: sellerDeposit,
           });
 
@@ -3340,11 +3340,11 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // expected payoffs - they are the same for token and native currency
           // buyer: price - buyerCancelPenalty
-          buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
+          buyerPayoff = BigInt(offerToken.price)-offerToken.buyerCancelPenalty.toString();
 
           // prepare validFundDetails
-          tokenListBuyer = [mockToken.address, ethers.constants.AddressZero];
-          tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("2").toString()];
+          tokenListBuyer = [mockToken.address, ZeroAddress];
+          tokenAmountsBuyer = [buyerPayoff, BigInt(buyerPayoff)/"2".toString()];
           validFundDetails = {
             entityId: buyerId,
             tokenList: tokenListBuyer,
@@ -3395,7 +3395,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Chain state should match the expected available funds before the withdrawal
             expectedBuyerAvailableFunds = new FundsList([
               new Funds(mockToken.address, "Foreign20", buyerPayoff),
-              new Funds(ethers.constants.AddressZero, "Native currency", buyerPayoff),
+              new Funds(ZeroAddress, "Native currency", buyerPayoff),
             ]);
             expect(buyerAvailableFunds).to.eql(
               expectedBuyerAvailableFunds,
@@ -3443,9 +3443,9 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Since all tokens are withdrawn, token should be removed from the list
             expectedBuyerAvailableFunds = new FundsList([
               new Funds(
-                ethers.constants.AddressZero,
+                ZeroAddress,
                 "Native currency",
-                ethers.BigNumber.from(buyerPayoff).div("2").toString()
+                BigInt(buyerPayoff)/"2".toString()
               ),
             ]);
             expect(buyerAvailableFunds).to.eql(
@@ -3454,7 +3454,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Token balance is increased for the buyer payoff
-            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore.add(buyerPayoff), "Buyer token balance mismatch");
+            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore+buyerPayoff, "Buyer token balance mismatch");
 
             // Verify that nonce is used. Expect true.
             let expectedResult = true;
@@ -3516,7 +3516,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Token balance is increased for the buyer payoff
-            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore.add(buyerPayoff), "Buyer token balance mismatch");
+            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore+buyerPayoff, "Buyer token balance mismatch");
 
             // Verify that nonce is used. Expect true.
             let expectedResult = true;

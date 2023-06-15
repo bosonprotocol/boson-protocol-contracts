@@ -172,7 +172,7 @@ describe("AgentHandler", function () {
         });
 
         it("addresses are the zero address", async function () {
-          agent.wallet = ethers.constants.AddressZero;
+          agent.wallet = ZeroAddress;
 
           // Attempt to Create an Agent, expecting revert
           await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
@@ -463,7 +463,7 @@ describe("AgentHandler", function () {
         });
 
         it("wallet address is the zero address", async function () {
-          agent.wallet = ethers.constants.AddressZero;
+          agent.wallet = ZeroAddress;
 
           // Attempt to update the agent, expecting revert
           await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(

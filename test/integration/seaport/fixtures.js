@@ -70,13 +70,13 @@ const seaportFixtures = async (seaport) => {
       .map((x) =>
         x.itemType === 0 ? (x.endAmount.gt(x.startAmount) ? x.endAmount : x.startAmount) : BigNumber.from(0)
       )
-      .reduce((a, b) => a.add(b), BigNumber.from(0))
+      .reduce((a, b) => a+b, BigNumber.from(0))
       .add(
         consideration
           .map((x) =>
             x.itemType === 0 ? (x.endAmount.gt(x.startAmount) ? x.endAmount : x.startAmount) : BigNumber.from(0)
           )
-          .reduce((a, b) => a.add(b), BigNumber.from(0))
+          .reduce((a, b) => a+b, BigNumber.from(0))
       );
 
     return {

@@ -95,7 +95,7 @@ describe("IBosonBundleHandler", function () {
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
-    clerk = clerkDR = { address: ethers.constants.AddressZero };
+    clerk = clerkDR = { address: ZeroAddress };
 
     // Deploy the mock tokens
     [bosonToken] = await deployMockTokens();
@@ -154,7 +154,7 @@ describe("IBosonBundleHandler", function () {
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+      disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
 
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
@@ -201,7 +201,7 @@ describe("IBosonBundleHandler", function () {
       bundleStruct = bundle.toStruct();
 
       // initialize bundleHandler
-      bundleHandlerFacet_Factory = await ethers.getContractFactory("BundleHandlerFacet");
+      bundleHandlerFacet_Factory = await getContractFactory("BundleHandlerFacet");
     });
 
     afterEach(async function () {
@@ -294,7 +294,7 @@ describe("IBosonBundleHandler", function () {
       it("If sum of offers' quantities is more than maxUint256, total quantity is maxUint256", async function () {
         // create two offers with close to unlimited supply
         const newOffer = offer.clone();
-        newOffer.quantityAvailable = ethers.constants.MaxUint256.div(10).mul(9).toString();
+        newOffer.quantityAvailable = constants.MaxUint256/10*9.toString();
         const newOffer2 = newOffer.clone();
         const newOfferId = "6";
         const newOfferId2 = "7";
@@ -309,7 +309,7 @@ describe("IBosonBundleHandler", function () {
 
         // create a twin with almost unlimited supply
         twin = mockTwin(bosonToken.address);
-        twin.supplyAvailable = ethers.constants.MaxUint256.sub(1).toString();
+        twin.supplyAvailable = constants.MaxUint256-1.toString();
         expect(twin.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
@@ -326,7 +326,7 @@ describe("IBosonBundleHandler", function () {
 
         // create a twin with unlimited supply
         twin = mockTwin(bosonToken.address);
-        twin.supplyAvailable = ethers.constants.MaxUint256.toString();
+        twin.supplyAvailable = constants.MaxUint256.toString();
         expect(twin.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
@@ -386,7 +386,7 @@ describe("IBosonBundleHandler", function () {
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
           let expectedNewOfferId = "6";
-          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
+          seller = mockSeller(rando.address, rando.address, ZeroAddress, rando.address);
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           const tx = await offerHandler
@@ -426,7 +426,7 @@ describe("IBosonBundleHandler", function () {
         it("Caller is not the seller of all twins", async function () {
           // create another seller and a twin
           let expectedNewTwinId = "6";
-          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
+          seller = mockSeller(rando.address, rando.address, ZeroAddress, rando.address);
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler
@@ -519,7 +519,7 @@ describe("IBosonBundleHandler", function () {
           // Deposit seller funds so the commit will succeed
           await fundsHandler
             .connect(assistant)
-            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+            .depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit });
 
           // Commit to an offer
           let offerIdToCommit = bundle.offerIds[0];
@@ -564,7 +564,7 @@ describe("IBosonBundleHandler", function () {
 
         it("Offers quantity is unlimited but twin supply is not", async function () {
           const newOffer = offer.clone();
-          newOffer.quantityAvailable = ethers.constants.MaxUint256.toString();
+          newOffer.quantityAvailable = constants.MaxUint256.toString();
           let expectedNewOfferId = "6";
 
           await offerHandler

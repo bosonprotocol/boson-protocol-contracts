@@ -3,7 +3,7 @@ const _ = require("lodash");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { keccak256, formatBytes32String } = ethers.utils;
+const { keccak256, formatBytes32String } = utils;
 const AuthToken = require("../../scripts/domain/AuthToken");
 const { getMetaTransactionsHandlerFacetInitArgs } = require("../../scripts/config/facet-deploy.js");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
@@ -104,12 +104,12 @@ async function deploySuite(deployer, newVersion) {
   });
 
   // Read contract info from file
-  const chainId = (await hre.ethers.provider.getNetwork()).chainId;
+  const chainId = (await hre.provider.getNetwork()).chainId;
   const contractsFile = readContracts(chainId, "hardhat", "upgrade-test");
 
   // Get AccessController abstraction
   const accessControllerInfo = contractsFile.contracts.find((i) => i.name === "AccessController");
-  const accessController = await ethers.getContractAt("AccessController", accessControllerInfo.address);
+  const accessController = await getContractAt("AccessController", accessControllerInfo.address);
 
   // Temporarily grant UPGRADER role to deployer account
   await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -121,20 +121,20 @@ async function deploySuite(deployer, newVersion) {
   await accessController.grantRole(Role.PROTOCOL, protocolDiamondAddress);
 
   // Cast Diamond to interfaces
-  const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
-  const bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamondAddress);
-  const disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamondAddress);
-  const exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamondAddress);
-  const fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamondAddress);
-  const groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamondAddress);
-  const offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamondAddress);
-  const orchestrationHandler = await ethers.getContractAt("IBosonOrchestrationHandler", protocolDiamondAddress);
-  const twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamondAddress);
-  const pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamondAddress);
-  const metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamondAddress);
-  const configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamondAddress);
-  const ERC165Facet = await ethers.getContractAt("ERC165Facet", protocolDiamondAddress);
-  const protocolInitializationHandler = await ethers.getContractAt(
+  const accountHandler = await getContractAt("IBosonAccountHandler", protocolDiamondAddress);
+  const bundleHandler = await getContractAt("IBosonBundleHandler", protocolDiamondAddress);
+  const disputeHandler = await getContractAt("IBosonDisputeHandler", protocolDiamondAddress);
+  const exchangeHandler = await getContractAt("IBosonExchangeHandler", protocolDiamondAddress);
+  const fundsHandler = await getContractAt("IBosonFundsHandler", protocolDiamondAddress);
+  const groupHandler = await getContractAt("IBosonGroupHandler", protocolDiamondAddress);
+  const offerHandler = await getContractAt("IBosonOfferHandler", protocolDiamondAddress);
+  const orchestrationHandler = await getContractAt("IBosonOrchestrationHandler", protocolDiamondAddress);
+  const twinHandler = await getContractAt("IBosonTwinHandler", protocolDiamondAddress);
+  const pauseHandler = await getContractAt("IBosonPauseHandler", protocolDiamondAddress);
+  const metaTransactionsHandler = await getContractAt("IBosonMetaTransactionsHandler", protocolDiamondAddress);
+  const configHandler = await getContractAt("IBosonConfigHandler", protocolDiamondAddress);
+  const ERC165Facet = await getContractAt("ERC165Facet", protocolDiamondAddress);
+  const protocolInitializationHandler = await getContractAt(
     "IBosonProtocolInitializationHandler",
     protocolDiamondAddress
   );
@@ -223,7 +223,7 @@ async function upgradeSuite(protocolDiamondAddress, upgradedInterfaces, override
   // Cast to updated interface
   let newHandlers = {};
   for (const [handlerName, interfaceName] of Object.entries(upgradedInterfaces)) {
-    newHandlers[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
+    newHandlers[handlerName] = await getContractAt(interfaceName, protocolDiamondAddress);
   }
 
   return newHandlers;
@@ -242,7 +242,7 @@ async function upgradeClients() {
 
   await hre.run("compile");
   // Mock forwarder to test metatx
-  const MockForwarder = await ethers.getContractFactory("MockForwarder");
+  const MockForwarder = await getContractFactory("MockForwarder");
 
   const forwarder = await MockForwarder.deploy();
 
@@ -328,13 +328,13 @@ async function populateProtocolContract(
   let voucherIndex = 1;
 
   for (const entity of entities) {
-    const wallet = ethers.Wallet.createRandom();
-    const connectedWallet = wallet.connect(ethers.provider);
+    const wallet = Wallet.createRandom();
+    const connectedWallet = wallet.connect(provider);
     //Fund the new wallet
     let tx = {
       to: connectedWallet.address,
       // Convert currency unit from ether to wei
-      value: ethers.utils.parseEther("10"),
+      value: parseEther("10"),
     };
     await deployer.sendTransaction(tx);
 
@@ -343,7 +343,7 @@ async function populateProtocolContract(
       case entityType.DR: {
         const clerkAddress = versionsWithClerkRole.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)
           ? wallet.address
-          : ethers.constants.AddressZero;
+          : ZeroAddress;
         const disputeResolver = mockDisputeResolver(
           wallet.address,
           wallet.address,
@@ -353,7 +353,7 @@ async function populateProtocolContract(
           true
         );
         const disputeResolverFees = [
-          new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+          new DisputeResolverFee(ZeroAddress, "Native", "0"),
           new DisputeResolverFee(mockToken.address, "MockToken", "0"),
         ];
         const sellerAllowList = [];
@@ -380,7 +380,7 @@ async function populateProtocolContract(
       case entityType.SELLER: {
         const clerkAddress = versionsWithClerkRole.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)
           ? wallet.address
-          : ethers.constants.AddressZero;
+          : ZeroAddress;
         const seller = mockSeller(wallet.address, wallet.address, clerkAddress, wallet.address, true);
         const id = (seller.id = nextAccountId.toString());
 
@@ -392,7 +392,7 @@ async function populateProtocolContract(
           authToken = mockAuthToken();
         } else {
           // use auth token
-          seller.admin = ethers.constants.AddressZero;
+          seller.admin = ZeroAddress;
           await mockAuthERC721Contract.connect(connectedWallet).mint(101 * id, 1);
           authToken = new AuthToken(`${101 * id}`, AuthTokenType.Lens);
         }
@@ -470,11 +470,11 @@ async function populateProtocolContract(
 
       // Set unique offer dates based on offer id
       const now = offerDates.validFrom;
-      offerDates.validFrom = ethers.BigNumber.from(now)
-        .add(oneMonth + offerId * 1000)
+      offerDates.validFrom = BigInt(now)
+        +oneMonth + offerId * 1000
         .toString();
-      offerDates.validUntil = ethers.BigNumber.from(now)
-        .add(oneMonth * 6 * (offerId + 1))
+      offerDates.validUntil = BigInt(now)
+        +oneMonth * 6 * (offerId + 1)
         .toString();
 
       // Set unique offerDurations based on offer id
@@ -495,8 +495,8 @@ async function populateProtocolContract(
       sellers[j].offerIds.push(offerId);
 
       // Deposit seller funds so the commit will succeed
-      const sellerPool = ethers.BigNumber.from(offer.quantityAvailable).mul(offer.price).toString();
-      const msgValue = offer.exchangeToken == ethers.constants.AddressZero ? sellerPool : "0";
+      const sellerPool = BigInt(offer.quantityAvailable)*offer.price.toString();
+      const msgValue = offer.exchangeToken == ZeroAddress ? sellerPool : "0";
       await fundsHandler
         .connect(sellers[j].wallet)
         .depositFunds(sellers[j].seller.id, offer.exchangeToken, sellerPool, { value: msgValue });
@@ -534,7 +534,7 @@ async function populateProtocolContract(
     await mockTwinTokens[1].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
 
     // create multiple ranges
-    const twin721 = mockTwin(ethers.constants.AddressZero, TokenType.NonFungibleToken);
+    const twin721 = mockTwin(ZeroAddress, TokenType.NonFungibleToken);
     twin721.amount = "0";
 
     // min supply available for twin721 is the total amount to cover all offers bundled
@@ -610,7 +610,7 @@ async function populateProtocolContract(
       const offerPrice = offer.price;
       const buyerWallet = buyers[j].wallet;
       let msgValue;
-      if (offer.exchangeToken == ethers.constants.AddressZero) {
+      if (offer.exchangeToken == ZeroAddress) {
         msgValue = offerPrice;
       } else {
         // approve token transfer
@@ -669,7 +669,7 @@ async function getProtocolContractState(
   { mockToken, mockTwinTokens },
   { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins }
 ) {
-  rando = (await ethers.getSigners())[10]; // random account making the calls
+  rando = (await getSigners())[10]; // random account making the calls
 
   const [
     accountContractState,
@@ -1033,18 +1033,18 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
         */
 
   // starting slot
-  const metaTxStorageSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.metaTransactions"));
-  const metaTxStorageSlotNumber = ethers.BigNumber.from(metaTxStorageSlot);
+  const metaTxStorageSlot = keccak256(toUtf8Bytes("boson.protocol.metaTransactions"));
+  const metaTxStorageSlotNumber = BigInt(metaTxStorageSlot);
 
   // current sender address + isMetaTransaction (they are packed since they are shorter than one slot)
   // should be always be 0x
-  const inTransactionInfo = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber.add("0"));
+  const inTransactionInfo = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber+"0");
 
   // domain separator
-  const domainSeparator = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber.add("1"));
+  const domainSeparator = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber+"1");
 
   // cached chain id
-  const cachedChainId = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber.add("3"));
+  const cachedChainId = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber+"3");
 
   // input type
   const inputTypeKeys = [
@@ -1061,7 +1061,7 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
 
   const inputTypesState = [];
   for (const inputTypeKey of inputTypeKeys) {
-    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber.add("4"), inputTypeKey, paddingType.NONE);
+    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber+"4", inputTypeKey, paddingType.NONE);
     inputTypesState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
   }
 
@@ -1077,11 +1077,11 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
 
   const hashInfoState = [];
   for (const hashInfoType of Object.values(hashInfoTypes)) {
-    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber.add("5"), hashInfoType, paddingType.START);
+    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber+"5", hashInfoType, paddingType.START);
     // get also hashFunction
     hashInfoState.push({
       typeHash: await getStorageAt(protocolDiamondAddress, storageSlot),
-      functionPointer: await getStorageAt(protocolDiamondAddress, ethers.BigNumber.from(storageSlot).add(1)),
+      functionPointer: await getStorageAt(protocolDiamondAddress, BigInt(storageSlot)+1),
     });
   }
   const isAllowlistedState = {};
@@ -1108,7 +1108,7 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
   const selectors = await getMetaTransactionsHandlerFacetInitArgs(facets);
 
   for (const selector of Object.values(selectors)) {
-    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber.add("6"), selector, paddingType.START);
+    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber+"6", selector, paddingType.START);
     isAllowlistedState[selector] = await getStorageAt(protocolDiamondAddress, storageSlot);
   }
 
@@ -1127,15 +1127,15 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
         */
 
   // starting slot
-  const protocolStatusStorageSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.initializers"));
-  const protocolStatusStorageSlotNumber = ethers.BigNumber.from(protocolStatusStorageSlot);
+  const protocolStatusStorageSlot = keccak256(toUtf8Bytes("boson.protocol.initializers"));
+  const protocolStatusStorageSlotNumber = BigInt(protocolStatusStorageSlot);
 
   // pause scenario
-  const pauseScenario = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber.add("0"));
+  const pauseScenario = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber+"0");
 
   // reentrancy status
   // default: NOT_ENTERED = 1
-  const reentrancyStatus = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber.add("1"));
+  const reentrancyStatus = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber+"1");
 
   // initializedInterfaces
   if (!preUpgradeInterfaceIds) {
@@ -1146,7 +1146,7 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
   const initializedInterfacesState = [];
   for (const interfaceId of Object.values(preUpgradeInterfaceIds)) {
     const storageSlot = getMappingStoragePosition(
-      protocolStatusStorageSlotNumber.add("2"),
+      protocolStatusStorageSlotNumber+"2",
       interfaceId,
       paddingType.END
     );
@@ -1159,7 +1159,7 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
 
   const initializedVersionsState = [];
   for (const version of preUpgradeVersions) {
-    const storageSlot = getMappingStoragePosition(protocolStatusStorageSlotNumber.add("3"), version, paddingType.END);
+    const storageSlot = getMappingStoragePosition(protocolStatusStorageSlotNumber+"3", version, paddingType.END);
     initializedVersionsState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
   }
 
@@ -1210,8 +1210,8 @@ async function getProtocolLookupsPrivateContractState(
         */
 
   // starting slot
-  const protocolLookupsSlot = keccak256(ethers.utils.toUtf8Bytes("boson.protocol.lookups"));
-  const protocolLookupsSlotNumber = ethers.BigNumber.from(protocolLookupsSlot);
+  const protocolLookupsSlot = keccak256(toUtf8Bytes("boson.protocol.lookups"));
+  const protocolLookupsSlotNumber = BigInt(protocolLookupsSlot);
 
   // exchangeIdsByOffer and groupIdByOffer
   let exchangeIdsByOfferState = [];
@@ -1220,13 +1220,13 @@ async function getProtocolLookupsPrivateContractState(
     const id = Number(offer.offer.id);
     // exchangeIdsByOffer
     let exchangeIdsByOffer = [];
-    const arraySlot = ethers.BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber.add("0"), id, paddingType.START)
+    const arraySlot = BigNumber.from(
+      getMappingStoragePosition(protocolLookupsSlotNumber+"0", id, paddingType.START)
     );
-    const arrayLength = ethers.BigNumber.from(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
-    const arrayStart = ethers.BigNumber.from(keccak256(arraySlot));
+    const arrayLength = BigInt(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
+    const arrayStart = BigInt(keccak256(arraySlot));
     for (let i = 0; i < arrayLength; i++) {
-      exchangeIdsByOffer.push(await getStorageAt(protocolDiamondAddress, arrayStart.add(i)));
+      exchangeIdsByOffer.push(await getStorageAt(protocolDiamondAddress, arrayStart+i));
     }
     exchangeIdsByOfferState.push(exchangeIdsByOffer);
 
@@ -1234,7 +1234,7 @@ async function getProtocolLookupsPrivateContractState(
     groupIdByOfferState.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber.add("3"), id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber+"3", id, paddingType.START)
       )
     );
   }
@@ -1253,7 +1253,7 @@ async function getProtocolLookupsPrivateContractState(
     buyerIdByWallet.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber.add("8"), accountAddress, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber+"8", accountAddress, paddingType.START)
       )
     );
 
@@ -1261,13 +1261,13 @@ async function getProtocolLookupsPrivateContractState(
     agentIdByWallet.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber.add("13"), accountAddress, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber+"13", accountAddress, paddingType.START)
       )
     );
 
     // conditionalCommitsByAddress
-    const firstMappingStorageSlot = ethers.BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber.add("19"), accountAddress, paddingType.START)
+    const firstMappingStorageSlot = BigNumber.from(
+      getMappingStoragePosition(protocolLookupsSlotNumber+"19", accountAddress, paddingType.START)
     );
     let commitsPerGroup = [];
     for (const group of groups) {
@@ -1294,13 +1294,13 @@ async function getProtocolLookupsPrivateContractState(
   // loop over all ids even where no data is expected
   for (const id of accountIds) {
     // disputeResolverFeeTokenIndex
-    let firstMappingStorageSlot = ethers.BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber.add("12"), id, paddingType.START)
+    let firstMappingStorageSlot = BigNumber.from(
+      getMappingStoragePosition(protocolLookupsSlotNumber+"12", id, paddingType.START)
     );
     disputeResolverFeeTokenIndex.push({
       native: await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(firstMappingStorageSlot, ethers.constants.AddressZero, paddingType.START)
+        getMappingStoragePosition(firstMappingStorageSlot, ZeroAddress, paddingType.START)
       ),
       mockToken: await getStorageAt(
         protocolDiamondAddress,
@@ -1309,13 +1309,13 @@ async function getProtocolLookupsPrivateContractState(
     });
 
     // tokenIndexByAccount
-    firstMappingStorageSlot = ethers.BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber.add("16"), id, paddingType.START)
+    firstMappingStorageSlot = BigNumber.from(
+      getMappingStoragePosition(protocolLookupsSlotNumber+"16", id, paddingType.START)
     );
     tokenIndexByAccount.push({
       native: await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(firstMappingStorageSlot, ethers.constants.AddressZero, paddingType.START)
+        getMappingStoragePosition(firstMappingStorageSlot, ZeroAddress, paddingType.START)
       ),
       mockToken: await getStorageAt(
         protocolDiamondAddress,
@@ -1327,7 +1327,7 @@ async function getProtocolLookupsPrivateContractState(
     cloneAddress.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber.add("17"), id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber+"17", id, paddingType.START)
       )
     );
 
@@ -1335,7 +1335,7 @@ async function getProtocolLookupsPrivateContractState(
     voucherCount.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber.add("18"), id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber+"18", id, paddingType.START)
       )
     );
   }
@@ -1343,20 +1343,20 @@ async function getProtocolLookupsPrivateContractState(
   // twinRangesBySeller
   let twinRangesBySeller = [];
   for (const id of accountIds) {
-    const firstMappingStorageSlot = ethers.BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber.add("22"), id, paddingType.START)
+    const firstMappingStorageSlot = BigNumber.from(
+      getMappingStoragePosition(protocolLookupsSlotNumber+"22", id, paddingType.START)
     );
     let ranges = {};
     for (let mockTwin of mockTwinTokens) {
       ranges[mockTwin.address] = [];
       const arraySlot = getMappingStoragePosition(firstMappingStorageSlot, mockTwin.address, paddingType.START);
-      const arrayLength = ethers.BigNumber.from(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
-      const arrayStart = ethers.BigNumber.from(keccak256(arraySlot));
+      const arrayLength = BigInt(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
+      const arrayStart = BigInt(keccak256(arraySlot));
       for (let i = 0; i < arrayLength * 2; i = i + 2) {
         // each BosonTypes.TokenRange has length 2
         ranges[mockTwin.address].push({
-          start: await getStorageAt(protocolDiamondAddress, arrayStart.add(i)),
-          end: await getStorageAt(protocolDiamondAddress, arrayStart.add(i + 1)),
+          start: await getStorageAt(protocolDiamondAddress, arrayStart+i),
+          end: await getStorageAt(protocolDiamondAddress, arrayStart+i + 1),
         });
       }
     }
@@ -1366,17 +1366,17 @@ async function getProtocolLookupsPrivateContractState(
   // twinIdsByTokenAddressAndBySeller
   let twinIdsByTokenAddressAndBySeller = [];
   for (const id of accountIds) {
-    const firstMappingStorageSlot = ethers.BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber.add("23"), id, paddingType.START)
+    const firstMappingStorageSlot = BigNumber.from(
+      getMappingStoragePosition(protocolLookupsSlotNumber+"23", id, paddingType.START)
     );
     let twinIds = {};
     for (let mockTwin of mockTwinTokens) {
       twinIds[mockTwin.address] = [];
       const arraySlot = getMappingStoragePosition(firstMappingStorageSlot, mockTwin.address, paddingType.START);
-      const arrayLength = ethers.BigNumber.from(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
-      const arrayStart = ethers.BigNumber.from(keccak256(arraySlot));
+      const arrayLength = BigInt(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
+      const arrayStart = BigInt(keccak256(arraySlot));
       for (let i = 0; i < arrayLength; i++) {
-        twinIds[mockTwin.address].push(await getStorageAt(protocolDiamondAddress, arrayStart.add(i)));
+        twinIds[mockTwin.address].push(await getStorageAt(protocolDiamondAddress, arrayStart+i));
       }
     }
     twinIdsByTokenAddressAndBySeller.push(twinIds);
@@ -1385,10 +1385,10 @@ async function getProtocolLookupsPrivateContractState(
   // allowedSellerIndex
   let allowedSellerIndex = [];
   for (const DR of DRs) {
-    const firstMappingStorageSlot = ethers.BigNumber.from(
+    const firstMappingStorageSlot = BigNumber.from(
       getMappingStoragePosition(
-        protocolLookupsSlotNumber.add("26"),
-        ethers.BigNumber.from(DR.disputeResolver.id).toHexString(),
+        protocolLookupsSlotNumber+"26",
+        BigInt(DR.disputeResolver.id).toHexString(),
         paddingType.START
       )
     );
@@ -1399,7 +1399,7 @@ async function getProtocolLookupsPrivateContractState(
           protocolDiamondAddress,
           getMappingStoragePosition(
             firstMappingStorageSlot,
-            ethers.BigNumber.from(seller.seller.id).toHexString(),
+            BigInt(seller.seller.id).toHexString(),
             paddingType.START
           )
         )
@@ -1412,8 +1412,8 @@ async function getProtocolLookupsPrivateContractState(
   let offerIdIndexByGroup = [];
   for (const group of groups) {
     const id = group.id;
-    const firstMappingStorageSlot = ethers.BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber.add("28"), id, paddingType.START)
+    const firstMappingStorageSlot = BigNumber.from(
+      getMappingStoragePosition(protocolLookupsSlotNumber+"28", id, paddingType.START)
     );
     let offerInidices = [];
     for (const offer of offers) {
@@ -1436,37 +1436,37 @@ async function getProtocolLookupsPrivateContractState(
   // Although pending address/auth token update is not yet defined in 2.0.0, we can check that storage slots are empty
   for (const id of accountIds) {
     // pendingAddressUpdatesBySeller
-    let structStorageSlot = ethers.BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber.add("29"), id, paddingType.START)
+    let structStorageSlot = BigNumber.from(
+      getMappingStoragePosition(protocolLookupsSlotNumber+"29", id, paddingType.START)
     );
     let structFields = [];
     for (let i = 0; i < 5; i++) {
       // BosonTypes.Seller has 6 fields, but last bool is packed in one slot with previous field
-      structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot.add(i)));
+      structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot+i));
     }
     pendingAddressUpdatesBySeller.push(structFields);
 
     // pendingAuthTokenUpdatesBySeller
-    structStorageSlot = ethers.BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber.add("30"), id, paddingType.START)
+    structStorageSlot = BigNumber.from(
+      getMappingStoragePosition(protocolLookupsSlotNumber+"30", id, paddingType.START)
     );
     structFields = [];
     for (let i = 0; i < 2; i++) {
       // BosonTypes.AuthToken has 2 fields
-      structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot.add(i)));
+      structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot+i));
     }
     pendingAuthTokenUpdatesBySeller.push(structFields);
 
     // pendingAddressUpdatesByDisputeResolver
-    structStorageSlot = ethers.BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber.add("31"), id, paddingType.START)
+    structStorageSlot = BigNumber.from(
+      getMappingStoragePosition(protocolLookupsSlotNumber+"31", id, paddingType.START)
     );
     structFields = [];
     for (let i = 0; i < 8; i++) {
       // BosonTypes.DisputeResolver has 8 fields
-      structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot.add(i)));
+      structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot+i));
     }
-    structFields[6] = await getStorageAt(protocolDiamondAddress, keccak256(structStorageSlot.add(6))); // represents field string metadataUri. Technically this value represents the length of the string, but since it should be 0, we don't do further decoding
+    structFields[6] = await getStorageAt(protocolDiamondAddress, keccak256(structStorageSlot+6)); // represents field string metadataUri. Technically this value represents the length of the string, but since it should be 0, we don't do further decoding
     pendingAddressUpdatesByDisputeResolver.push(structFields);
   }
 
@@ -1571,13 +1571,13 @@ async function populateVoucherContract(
 
     let nextAccountId = await accountHandler.getNextAccountId();
     for (const entity of entities) {
-      const wallet = ethers.Wallet.createRandom();
-      const connectedWallet = wallet.connect(ethers.provider);
+      const wallet = Wallet.createRandom();
+      const connectedWallet = wallet.connect(provider);
       //Fund the new wallet
       let tx = {
         to: connectedWallet.address,
         // Convert currency unit from ether to wei
-        value: ethers.utils.parseEther("10"),
+        value: parseEther("10"),
       };
       await deployer.sendTransaction(tx);
 
@@ -1593,7 +1593,7 @@ async function populateVoucherContract(
             true
           );
           const disputeResolverFees = [
-            new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+            new DisputeResolverFee(ZeroAddress, "Native", "0"),
             new DisputeResolverFee(mockToken.address, "MockToken", "0"),
           ];
           const sellerAllowList = [];
@@ -1630,7 +1630,7 @@ async function populateVoucherContract(
 
           // calculate voucher contract address and cast it to contract instance
           const voucherContractAddress = calculateContractAddress(accountHandler.address, voucherIndex++);
-          const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherContractAddress);
+          const bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
 
           sellers.push({
             wallet: connectedWallet,
@@ -1683,11 +1683,11 @@ async function populateVoucherContract(
 
       // Set unique offer dates based on offer id
       const now = offerDates.validFrom;
-      offerDates.validFrom = ethers.BigNumber.from(now)
-        .add(oneMonth + offerId * 1000)
+      offerDates.validFrom = BigInt(now)
+        +oneMonth + offerId * 1000
         .toString();
-      offerDates.validUntil = ethers.BigNumber.from(now)
-        .add(oneMonth * 6 * (offerId + 1))
+      offerDates.validUntil = BigInt(now)
+        +oneMonth * 6 * (offerId + 1)
         .toString();
 
       // Set unique offerDurations based on offer id
@@ -1708,8 +1708,8 @@ async function populateVoucherContract(
       sellers[j].offerIds.push(offerId);
 
       // Deposit seller funds so the commit will succeed
-      const sellerPool = ethers.BigNumber.from(offer.quantityAvailable).mul(offer.price).toString();
-      const msgValue = offer.exchangeToken == ethers.constants.AddressZero ? sellerPool : "0";
+      const sellerPool = BigInt(offer.quantityAvailable)*offer.price.toString();
+      const msgValue = offer.exchangeToken == ZeroAddress ? sellerPool : "0";
       await fundsHandler
         .connect(sellers[j].wallet)
         .depositFunds(sellers[j].seller.id, offer.exchangeToken, sellerPool, { value: msgValue });
@@ -1727,7 +1727,7 @@ async function populateVoucherContract(
       const offerPrice = offer.price;
       const buyerWallet = buyers[j].wallet;
       let msgValue;
-      if (offer.exchangeToken == ethers.constants.AddressZero) {
+      if (offer.exchangeToken == ZeroAddress) {
         msgValue = offerPrice;
       } else {
         // approve token transfer

@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getSigners } = hre.ethers;
 const { expect } = require("chai");
 const Receipt = require("../../scripts/domain/Receipt.js");
 const { mockReceipt, mockOffer, mockTwinReceipt, mockCondition } = require("../util/mock");
@@ -14,7 +14,7 @@ describe("Receipt", function () {
 
   beforeEach(async function () {
     // Get a list of accounts
-    accounts = await ethers.getSigners();
+    accounts = await getSigners();
   });
 
   context("📋 Constructor", async function () {
@@ -339,7 +339,7 @@ describe("Receipt", function () {
       expect(receipt.isValid()).is.false;
 
       // Valid field value
-      receipt.condition = mockCondition(ethers.constants.AddressZero);
+      receipt.condition = mockCondition(ZeroAddress);
       expect(receipt.conditionIsValid()).is.true;
       expect(receipt.isValid()).is.true;
     });
@@ -545,7 +545,7 @@ describe("Receipt", function () {
       expect(receipt.isValid()).is.false;
 
       // Valid field value
-      receipt.twinReceipts = [mockTwinReceipt(ethers.constants.AddressZero)];
+      receipt.twinReceipts = [mockTwinReceipt(ZeroAddress)];
       expect(receipt.twinReceiptsIsValid()).is.true;
       expect(receipt.isValid()).is.true;
     });

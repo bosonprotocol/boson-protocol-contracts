@@ -57,7 +57,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
-    clerk = clerkDR = { address: ethers.constants.AddressZero };
+    clerk = clerkDR = { address: ZeroAddress };
 
     expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
     emptyAuthToken = mockAuthToken();
@@ -84,7 +84,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     //Create DisputeResolverFee array so offer creation will succeed
     disputeResolverFeeNative = "0";
     const disputeResolverFees = [
-      new DisputeResolverFee(ethers.constants.AddressZero, "Native", disputeResolverFeeNative),
+      new DisputeResolverFee(ZeroAddress, "Native", disputeResolverFeeNative),
     ];
 
     // Make empty seller list, so every seller is allowed
@@ -106,8 +106,8 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
 
     // Deposit seller funds so the commit will succeed
-    const fundsToDeposit = ethers.BigNumber.from(offer.sellerDeposit).mul(offer.quantityAvailable);
-    await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, fundsToDeposit, {
+    const fundsToDeposit = BigInt(offer.sellerDeposit)*offer.quantityAvailable;
+    await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, fundsToDeposit, {
       value: fundsToDeposit,
     });
 
@@ -141,14 +141,14 @@ describe("[@skip-on-coverage] DR removes fee", function () {
   it("Buyer should be able to commit to offer even when DR removes fee", async function () {
     // Removes fee
     await expect(
-      accountHandler.connect(adminDR).removeFeesFromDisputeResolver(disputeResolver.id, [ethers.constants.AddressZero])
+      accountHandler.connect(adminDR).removeFeesFromDisputeResolver(disputeResolver.id, [ZeroAddress])
     )
       .to.emit(accountHandler, "DisputeResolverFeesRemoved")
-      .withArgs(disputeResolver.id, [ethers.constants.AddressZero], adminDR.address);
+      .withArgs(disputeResolver.id, [ZeroAddress], adminDR.address);
 
     // Commit to offer
     const tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
-    const blockTimestamp = (await ethers.provider.getBlock(tx.blockNumber)).timestamp;
+    const blockTimestamp = (await provider.getBlock(tx.blockNumber)).timestamp;
 
     // Mock voucher
     const voucher = mockVoucher({
@@ -188,10 +188,10 @@ describe("[@skip-on-coverage] DR removes fee", function () {
       await expect(
         accountHandler
           .connect(adminDR)
-          .removeFeesFromDisputeResolver(disputeResolver.id, [ethers.constants.AddressZero])
+          .removeFeesFromDisputeResolver(disputeResolver.id, [ZeroAddress])
       )
         .to.emit(accountHandler, "DisputeResolverFeesRemoved")
-        .withArgs(disputeResolver.id, [ethers.constants.AddressZero], adminDR.address);
+        .withArgs(disputeResolver.id, [ZeroAddress], adminDR.address);
 
       // Escalate dispute after removing fee
       exchangeId = "2";
@@ -228,10 +228,10 @@ describe("[@skip-on-coverage] DR removes fee", function () {
         await expect(
           accountHandler
             .connect(adminDR)
-            .removeFeesFromDisputeResolver(disputeResolver.id, [ethers.constants.AddressZero])
+            .removeFeesFromDisputeResolver(disputeResolver.id, [ZeroAddress])
         )
           .to.emit(accountHandler, "DisputeResolverFeesRemoved")
-          .withArgs(disputeResolver.id, [ethers.constants.AddressZero], adminDR.address);
+          .withArgs(disputeResolver.id, [ZeroAddress], adminDR.address);
 
         // Decide the dispute after removing fee
         exchangeId = "2";
@@ -251,10 +251,10 @@ describe("[@skip-on-coverage] DR removes fee", function () {
         await expect(
           accountHandler
             .connect(adminDR)
-            .removeFeesFromDisputeResolver(disputeResolver.id, [ethers.constants.AddressZero])
+            .removeFeesFromDisputeResolver(disputeResolver.id, [ZeroAddress])
         )
           .to.emit(accountHandler, "DisputeResolverFeesRemoved")
-          .withArgs(disputeResolver.id, [ethers.constants.AddressZero], adminDR.address);
+          .withArgs(disputeResolver.id, [ZeroAddress], adminDR.address);
 
         // Refuse to decide the dispute after removing fee
         exchangeId = "2";

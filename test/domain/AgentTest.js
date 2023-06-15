@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getSigners } = hre.ethers;
 const { expect } = require("chai");
 const Agent = require("../../scripts/domain/Agent");
 
@@ -14,7 +14,7 @@ describe("Agent", function () {
   context("📋 Constructor", async function () {
     beforeEach(async function () {
       // Get a list of accounts
-      accounts = await ethers.getSigners();
+      accounts = await getSigners();
       wallet = accounts[1].address;
 
       // Required constructor params
@@ -39,7 +39,7 @@ describe("Agent", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Get a list of accounts
-      accounts = await ethers.getSigners();
+      accounts = await getSigners();
       wallet = accounts[1].address;
 
       // Required constructor params
@@ -159,7 +159,7 @@ describe("Agent", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Get a list of accounts
-      accounts = await ethers.getSigners();
+      accounts = await getSigners();
       wallet = accounts[1].address;
 
       // Required constructor params

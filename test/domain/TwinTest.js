@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getSigners } = hre.ethers;
 const { expect } = require("chai");
 const Twin = require("../../scripts/domain/Twin.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
@@ -15,7 +15,7 @@ describe("Twin", function () {
 
   beforeEach(async function () {
     // Get a list of accounts
-    const accounts = await ethers.getSigners();
+    const accounts = await getSigners();
     tokenAddress = accounts[0].address;
   });
 

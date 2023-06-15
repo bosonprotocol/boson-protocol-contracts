@@ -69,8 +69,8 @@ describe("SellerHandler", function () {
 
     // make all account the same
     authTokenOwner = assistant = admin;
-    clerk = { address: ethers.constants.AddressZero };
-    [deployer] = await ethers.getSigners();
+    clerk = { address: ZeroAddress };
+    [deployer] = await getSigners();
 
     // Deploy mock ERC721 tokens
     [mockAuthERC721Contract, mockAuthERC721Contract2] = await deployMockTokens(["Foreign721", "Foreign721"]);
@@ -149,7 +149,7 @@ describe("SellerHandler", function () {
           .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, admin.address);
 
         // Voucher clone contract
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
 
@@ -161,16 +161,16 @@ describe("SellerHandler", function () {
           .to.emit(bosonVoucher, "VoucherInitialized")
           .withArgs(seller.id, voucherInitValues.royaltyPercentage, contractURI);
 
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         await expect(tx)
           .to.emit(bosonVoucher, "OwnershipTransferred")
-          .withArgs(ethers.constants.AddressZero, assistant.address);
+          .withArgs(ZeroAddress, assistant.address);
       });
 
       it("should emit a SellerCreated event when auth token is not empty", async function () {
         // Create a seller, testing for the event
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
         sellerStruct = seller.toStruct();
         const tx = await accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues);
 
@@ -179,7 +179,7 @@ describe("SellerHandler", function () {
           .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, authTokenOwner.address);
 
         // Voucher clone contract
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
 
@@ -191,11 +191,11 @@ describe("SellerHandler", function () {
           .to.emit(bosonVoucher, "VoucherInitialized")
           .withArgs(seller.id, voucherInitValues.royaltyPercentage, contractURI);
 
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         await expect(tx)
           .to.emit(bosonVoucher, "OwnershipTransferred")
-          .withArgs(ethers.constants.AddressZero, assistant.address);
+          .withArgs(ZeroAddress, assistant.address);
       });
 
       it("should update state when authToken is empty", async function () {
@@ -220,11 +220,11 @@ describe("SellerHandler", function () {
         }
 
         // Voucher clone contract
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -238,7 +238,7 @@ describe("SellerHandler", function () {
         // Create a seller
         await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -257,7 +257,7 @@ describe("SellerHandler", function () {
         [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
-        let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
+        let expectedRecipient = ZeroAddress; //expect zero address when exchange id does not exist
         let expectedRoyaltyAmount = "0"; // Zero Fee when exchange id does not exist
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
@@ -272,7 +272,7 @@ describe("SellerHandler", function () {
         // Create a seller
         await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -291,7 +291,7 @@ describe("SellerHandler", function () {
         [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
-        let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
+        let expectedRecipient = ZeroAddress; //expect zero address when exchange id does not exist
         let expectedRoyaltyAmount = "0"; // Zero Fee when exchange id does not exist
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
@@ -299,7 +299,7 @@ describe("SellerHandler", function () {
       });
 
       it("should update state when authToken is not empty", async function () {
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
 
         // Create a seller
         await accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues);
@@ -322,11 +322,11 @@ describe("SellerHandler", function () {
         }
 
         // Voucher clone contract
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -353,7 +353,7 @@ describe("SellerHandler", function () {
       it("should be possible to use the same address for assistant, admin and treasury", async function () {
         seller.assistant = other1.address;
         seller.admin = other1.address;
-        seller.clerk = ethers.constants.AddressZero;
+        seller.clerk = ZeroAddress;
         seller.treasury = other1.address;
 
         //Create struct again with new addresses
@@ -395,7 +395,7 @@ describe("SellerHandler", function () {
 
         // second seller
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
-        seller = mockSeller(other1.address, other1.address, ethers.constants.AddressZero, other1.address);
+        seller = mockSeller(other1.address, other1.address, ZeroAddress, other1.address);
 
         // Create a seller, testing for the event
         await expect(accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues))
@@ -405,7 +405,7 @@ describe("SellerHandler", function () {
 
       it("should be possible to create a seller with same auth token id but different type", async function () {
         // Set admin == zero address because seller will be created with auth token
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
 
         //Create struct again with new address
         sellerStruct = seller.toStruct();
@@ -421,7 +421,7 @@ describe("SellerHandler", function () {
         const tx = await accountHandler.connect(authTokenOwner).updateSeller(seller, authToken);
 
         pendingSellerUpdate = seller.clone();
-        pendingSellerUpdate.treasury = ethers.constants.AddressZero;
+        pendingSellerUpdate.treasury = ZeroAddress;
         pendingSellerUpdate.active = false;
         pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdate.id = "0";
@@ -440,8 +440,8 @@ describe("SellerHandler", function () {
         sellerStruct = seller.toStruct();
 
         // Nothing pending left
-        pendingSellerUpdate.assistant = ethers.constants.AddressZero;
-        pendingSellerUpdate.clerk = ethers.constants.AddressZero;
+        pendingSellerUpdate.assistant = ZeroAddress;
+        pendingSellerUpdate.clerk = ZeroAddress;
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         // Assistant address owner must approve the update
@@ -482,7 +482,7 @@ describe("SellerHandler", function () {
 
       it("should be possible to create a seller with same auth token type but different id", async function () {
         // Set admin == zero address because seller will be created with auth token
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
 
         //Create struct again with new address
         sellerStruct = seller.toStruct();
@@ -496,7 +496,7 @@ describe("SellerHandler", function () {
 
         pendingSellerUpdate = seller.clone();
         pendingSellerUpdate.id = "0";
-        pendingSellerUpdate.treasury = ethers.constants.AddressZero;
+        pendingSellerUpdate.treasury = ZeroAddress;
         pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdate.active = false;
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
@@ -515,8 +515,8 @@ describe("SellerHandler", function () {
           .withArgs(seller.id, pendingSellerUpdateStruct, pendingAuthTokenStruct, authTokenOwner.address);
 
         // Nothing pending left
-        pendingSellerUpdate.assistant = ethers.constants.AddressZero;
-        pendingSellerUpdate.clerk = ethers.constants.AddressZero;
+        pendingSellerUpdate.assistant = ZeroAddress;
+        pendingSellerUpdate.clerk = ZeroAddress;
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         sellerStruct = seller.toStruct();
@@ -646,8 +646,8 @@ describe("SellerHandler", function () {
 
           seller2 = mockSeller(
             authTokenOwner.address,
-            ethers.constants.AddressZero,
-            ethers.constants.AddressZero,
+            ZeroAddress,
+            ZeroAddress,
             authTokenOwner.address
           );
 
@@ -674,7 +674,7 @@ describe("SellerHandler", function () {
         });
 
         it("admin address is zero address and AuthTokenType is None", async function () {
-          seller.admin = ethers.constants.AddressZero;
+          seller.admin = ZeroAddress;
 
           // Attempt to Create a seller, expecting revert
           await expect(
@@ -684,7 +684,7 @@ describe("SellerHandler", function () {
 
         it("authToken is not unique to this seller", async function () {
           // Set admin == zero address because seller will be created with auth token
-          seller.admin = ethers.constants.AddressZero;
+          seller.admin = ZeroAddress;
           seller.assistant = authTokenOwner.address;
 
           // Create a seller
@@ -698,7 +698,7 @@ describe("SellerHandler", function () {
 
         it("authTokenType is Custom", async function () {
           // Set admin == zero address because seller will be created with auth token
-          seller.admin = ethers.constants.AddressZero;
+          seller.admin = ZeroAddress;
 
           authToken.tokenType = AuthTokenType.Custom;
 
@@ -719,7 +719,7 @@ describe("SellerHandler", function () {
 
         it("Caller does not own supplied auth token", async function () {
           // Set admin == zero address because seller will be created with auth token
-          seller.admin = ethers.constants.AddressZero;
+          seller.admin = ZeroAddress;
           seller.assistant = rando.address;
 
           // Attempt to Create a seller without owning the auth token
@@ -749,8 +749,8 @@ describe("SellerHandler", function () {
         });
 
         it("addresses are the zero address", async function () {
-          seller.assistant = ethers.constants.AddressZero;
-          seller.treasury = ethers.constants.AddressZero;
+          seller.assistant = ZeroAddress;
+          seller.treasury = ZeroAddress;
 
           // Attempt to update a seller, expecting revert
           await expect(
@@ -759,7 +759,7 @@ describe("SellerHandler", function () {
         });
 
         it("Assistant address is zero address", async function () {
-          seller.assistant = ethers.constants.AddressZero;
+          seller.assistant = ZeroAddress;
 
           // Attempt to Create a seller with assistant == zero address
           await expect(
@@ -768,7 +768,7 @@ describe("SellerHandler", function () {
         });
 
         it("Treasury address is zero address", async function () {
-          seller.treasury = ethers.constants.AddressZero;
+          seller.treasury = ZeroAddress;
 
           // Attempt to Create a seller with treasury == zero address
           await expect(
@@ -788,13 +788,13 @@ describe("SellerHandler", function () {
         expect(authToken.isValid()).is.true;
 
         // Seller can have either admin address or auth token
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
 
         // Create a seller
         await accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues);
 
         // Create a another seller
-        seller2 = mockSeller(other1.address, other1.address, ethers.constants.AddressZero, other1.address);
+        seller2 = mockSeller(other1.address, other1.address, ZeroAddress, other1.address);
         expect(seller2.isValid()).is.true;
 
         await accountHandler.connect(other1).createSeller(seller2, emptyAuthToken, voucherInitValues);
@@ -865,13 +865,13 @@ describe("SellerHandler", function () {
         expect(authToken.isValid()).is.true;
 
         // Seller can have either admin address or auth token
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
 
         // Create a seller
         await accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues);
 
         // Create a another seller
-        seller2 = mockSeller(other1.address, other1.address, ethers.constants.AddressZero, other1.address);
+        seller2 = mockSeller(other1.address, other1.address, ZeroAddress, other1.address);
         expect(seller2.isValid()).is.true;
 
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
@@ -942,7 +942,7 @@ describe("SellerHandler", function () {
         // Returned values should be the default value for it's data type
         for ([key, value] of Object.entries(returnedSeller)) {
           if (key != "active") {
-            expect(value == 0).is.true || expect(value === ethers.constants.AddressZero).is.true;
+            expect(value == 0).is.true || expect(value === ZeroAddress).is.true;
           } else {
             expect(value).is.false;
           }
@@ -968,7 +968,7 @@ describe("SellerHandler", function () {
         // Returned values should be the default value for it's data type
         for ([key, value] of Object.entries(returnedSeller)) {
           if (key != "active") {
-            expect(value == 0).is.true || expect(value === ethers.constants.AddressZero).is.true;
+            expect(value == 0).is.true || expect(value === ZeroAddress).is.true;
           } else {
             expect(value).is.false;
           }
@@ -994,7 +994,7 @@ describe("SellerHandler", function () {
         // Returned values should be the default value for it's data type
         for ([key, value] of Object.entries(returnedSeller)) {
           if (key != "active") {
-            expect(value == 0).is.true || expect(value === ethers.constants.AddressZero).is.true;
+            expect(value == 0).is.true || expect(value === ZeroAddress).is.true;
           } else {
             expect(value).is.false;
           }
@@ -1009,7 +1009,7 @@ describe("SellerHandler", function () {
       it("should return exists false and default values when searching on zero address", async function () {
         [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler
           .connect(rando)
-          .getSellerByAddress(ethers.constants.AddressZero);
+          .getSellerByAddress(ZeroAddress);
 
         expect(exists).is.false;
 
@@ -1020,7 +1020,7 @@ describe("SellerHandler", function () {
         // Returned values should be the default value for it's data type
         for ([key, value] of Object.entries(returnedSeller)) {
           if (key != "active") {
-            expect(value == 0).is.true || expect(value === ethers.constants.AddressZero).is.true;
+            expect(value == 0).is.true || expect(value === ZeroAddress).is.true;
           } else {
             expect(value).is.false;
           }
@@ -1046,13 +1046,13 @@ describe("SellerHandler", function () {
         expect(authToken2.isValid()).is.true;
 
         // Seller can have either admin address or auth token
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
 
         // Create a seller
         await accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues);
 
         // Create seller 2
-        seller2 = mockSeller(other1.address, other1.address, ethers.constants.AddressZero, other1.address);
+        seller2 = mockSeller(other1.address, other1.address, ZeroAddress, other1.address);
         expect(seller2.isValid()).is.true;
 
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
@@ -1062,8 +1062,8 @@ describe("SellerHandler", function () {
         // Create seller 3
         seller3 = mockSeller(
           other5.address,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
+          ZeroAddress,
+          ZeroAddress,
           treasury.address
         );
         expect(seller3.isValid()).is.true;
@@ -1127,8 +1127,8 @@ describe("SellerHandler", function () {
         // Create seller 4
         seller4 = mockSeller(
           rando.address,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
+          ZeroAddress,
+          ZeroAddress,
           treasury.address
         );
         expect(seller4.isValid()).is.true;
@@ -1183,8 +1183,8 @@ describe("SellerHandler", function () {
         // Create seller 4
         seller4 = mockSeller(
           rando.address,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
+          ZeroAddress,
+          ZeroAddress,
           treasury.address
         );
         expect(seller4.isValid()).is.true;
@@ -1245,7 +1245,7 @@ describe("SellerHandler", function () {
         // Returned values should be the default value for it's data type
         for ([key, value] of Object.entries(returnedSeller)) {
           if (key != "active") {
-            expect(value == 0).is.true || expect(value === ethers.constants.AddressZero).is.true;
+            expect(value == 0).is.true || expect(value === ZeroAddress).is.true;
           } else {
             expect(value).is.false;
           }
@@ -1262,10 +1262,10 @@ describe("SellerHandler", function () {
       beforeEach(async function () {
         pendingSellerUpdate = seller.clone();
         pendingSellerUpdate.id = "0";
-        pendingSellerUpdate.treasury = ethers.constants.AddressZero;
-        pendingSellerUpdate.clerk = ethers.constants.AddressZero;
-        pendingSellerUpdate.admin = ethers.constants.AddressZero;
-        pendingSellerUpdate.assistant = ethers.constants.AddressZero;
+        pendingSellerUpdate.treasury = ZeroAddress;
+        pendingSellerUpdate.clerk = ZeroAddress;
+        pendingSellerUpdate.admin = ZeroAddress;
+        pendingSellerUpdate.assistant = ZeroAddress;
         pendingSellerUpdate.active = false;
         pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
@@ -1280,13 +1280,13 @@ describe("SellerHandler", function () {
         // Treasury and metadataURI are only values that can be update without address owner authorization
         sellerStruct = seller.toStruct();
 
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
         seller.assistant = other1.address;
         expect(seller.isValid()).is.true;
 
         pendingSellerUpdate = seller.clone();
         pendingSellerUpdate.id = "0";
-        pendingSellerUpdate.treasury = ethers.constants.AddressZero;
+        pendingSellerUpdate.treasury = ZeroAddress;
         pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdate.active = false;
         expect(pendingSellerUpdate.isValid()).is.true;
@@ -1320,11 +1320,11 @@ describe("SellerHandler", function () {
 
         // Voucher clone contract
         const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred").withArgs(assistant.address, other1.address);
 
-        pendingSellerUpdate.assistant = ethers.constants.AddressZero;
+        pendingSellerUpdate.assistant = ZeroAddress;
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
         seller.admin = admin.address;
         sellerStruct = seller.toStruct();
@@ -1348,7 +1348,7 @@ describe("SellerHandler", function () {
 
         pendingAuthToken = emptyAuthToken;
         pendingAuthTokenStruct = pendingAuthToken.toStruct();
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
         sellerStruct = seller.toStruct();
 
         // Check auth token update
@@ -1373,7 +1373,7 @@ describe("SellerHandler", function () {
 
         // Voucher clone contract
         const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
 
         // Since assistant stayed the same yet, clone contract ownership should not be transferred immediately
         await expect(tx).to.not.emit(bosonVoucher, "OwnershipTransferred");
@@ -1384,7 +1384,7 @@ describe("SellerHandler", function () {
 
       it("should update state of all fields except Id and active flag", async function () {
         seller.assistant = other1.address;
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
         seller.treasury = other4.address;
         seller.active = false;
 
@@ -1436,7 +1436,7 @@ describe("SellerHandler", function () {
 
         // Voucher clone contract
         const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
 
         expect(await bosonVoucher.owner()).to.equal(seller.assistant, "Wrong voucher clone owner");
       });
@@ -1444,8 +1444,8 @@ describe("SellerHandler", function () {
       it("should update state from auth token to empty auth token", async function () {
         seller2 = mockSeller(
           other1.address,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
+          ZeroAddress,
+          ZeroAddress,
           other1.address
         );
         expect(seller2.isValid()).is.true;
@@ -1497,7 +1497,7 @@ describe("SellerHandler", function () {
         [exists] = await accountHandler.connect(rando).getSellerByAddress(other1.address);
         expect(exists).to.be.false;
 
-        [exists] = await accountHandler.connect(rando).getSellerByAddress(ethers.constants.AddressZero);
+        [exists] = await accountHandler.connect(rando).getSellerByAddress(ZeroAddress);
         expect(exists).to.be.false;
 
         [exists] = await accountHandler.connect(rando).getSellerByAddress(other3.address);
@@ -1512,7 +1512,7 @@ describe("SellerHandler", function () {
 
         // Voucher clone contract
         const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
 
         expect(await bosonVoucher.owner()).to.equal(seller.assistant, "Wrong voucher clone owner");
       });
@@ -1520,8 +1520,8 @@ describe("SellerHandler", function () {
       it("should update state from auth token to new auth token", async function () {
         seller2 = mockSeller(
           other1.address,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
+          ZeroAddress,
+          ZeroAddress,
           other1.address
         );
         expect(seller2.isValid()).is.true;
@@ -1534,7 +1534,7 @@ describe("SellerHandler", function () {
         await accountHandler.connect(newAuthTokenOwner).createSeller(seller2, authToken, voucherInitValues);
 
         seller2.assistant = other5.address;
-        seller2.admin = ethers.constants.AddressZero;
+        seller2.admin = ZeroAddress;
         seller2.treasury = other7.address;
         seller2.active = false;
 
@@ -1575,7 +1575,7 @@ describe("SellerHandler", function () {
         [exists] = await accountHandler.connect(rando).getSellerByAddress(other1.address);
         expect(exists).to.be.false;
 
-        [exists] = await accountHandler.connect(rando).getSellerByAddress(ethers.constants.AddressZero);
+        [exists] = await accountHandler.connect(rando).getSellerByAddress(ZeroAddress);
         expect(exists).to.be.false;
 
         [exists] = await accountHandler.connect(rando).getSellerByAddress(other3.address);
@@ -1590,7 +1590,7 @@ describe("SellerHandler", function () {
 
         // Voucher clone contract
         const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
 
         expect(await bosonVoucher.owner()).to.equal(seller.assistant, "Wrong voucher clone owner");
       });
@@ -1628,8 +1628,8 @@ describe("SellerHandler", function () {
         // Configure another seller
         seller2 = mockSeller(
           other1.address,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
+          ZeroAddress,
+          ZeroAddress,
           other1.address
         );
         expect(seller2.isValid()).is.true;
@@ -1648,7 +1648,7 @@ describe("SellerHandler", function () {
 
         //Update seller2
         seller2.assistant = rando.address;
-        seller2.admin = ethers.constants.AddressZero;
+        seller2.admin = ZeroAddress;
         seller2.treasury = rando.address;
         seller2.active = false;
 
@@ -1719,7 +1719,7 @@ describe("SellerHandler", function () {
           .to.emit(accountHandler, "SellerUpdatePending")
           .withArgs(seller.id, pendingSellerUpdateStruct, emptyAuthTokenStruct, admin.address);
 
-        pendingSellerUpdate.admin = ethers.constants.AddressZero;
+        pendingSellerUpdate.admin = ZeroAddress;
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         // Approve update
@@ -1747,7 +1747,7 @@ describe("SellerHandler", function () {
           .to.emit(accountHandler, "SellerUpdatePending")
           .withArgs(seller.id, pendingSellerUpdateStruct, emptyAuthTokenStruct, other2.address);
 
-        pendingSellerUpdate.admin = ethers.constants.AddressZero;
+        pendingSellerUpdate.admin = ZeroAddress;
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         // Approve update
@@ -1769,7 +1769,7 @@ describe("SellerHandler", function () {
       });
 
       it("should be able to only update with new auth token", async function () {
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
         sellerStruct = seller.toStruct();
 
         // Update seller, testing for the event
@@ -1808,7 +1808,7 @@ describe("SellerHandler", function () {
           .withArgs(seller.id, pendingSellerUpdateStruct, emptyAuthTokenStruct, newAuthTokenOwner.address);
 
         sellerStruct = seller.toStruct();
-        pendingSellerUpdate.assistant = ethers.constants.AddressZero;
+        pendingSellerUpdate.assistant = ZeroAddress;
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         // Approve update
@@ -1840,7 +1840,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate = seller.clone();
         pendingSellerUpdate.active = false;
         pendingSellerUpdate.id = "0";
-        pendingSellerUpdate.treasury = ethers.constants.AddressZero;
+        pendingSellerUpdate.treasury = ZeroAddress;
         pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
@@ -1893,7 +1893,7 @@ describe("SellerHandler", function () {
         pendingSellerUpdate = seller.clone();
         pendingSellerUpdate.id = "0";
         pendingSellerUpdate.active = false;
-        pendingSellerUpdate.treasury = ethers.constants.AddressZero;
+        pendingSellerUpdate.treasury = ZeroAddress;
         pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
@@ -1916,9 +1916,9 @@ describe("SellerHandler", function () {
 
         sellerStruct = seller.toStruct();
         // Nothing pending left
-        pendingSellerUpdate.admin = ethers.constants.AddressZero;
-        pendingSellerUpdate.clerk = ethers.constants.AddressZero;
-        pendingSellerUpdate.assistant = ethers.constants.AddressZero;
+        pendingSellerUpdate.admin = ZeroAddress;
+        pendingSellerUpdate.clerk = ZeroAddress;
+        pendingSellerUpdate.assistant = ZeroAddress;
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         // Approve update
@@ -1975,8 +1975,8 @@ describe("SellerHandler", function () {
         });
 
         it("addresses are the zero address", async function () {
-          seller.assistant = ethers.constants.AddressZero;
-          seller.treasury = ethers.constants.AddressZero;
+          seller.assistant = ZeroAddress;
+          seller.treasury = ZeroAddress;
 
           // Attempt to update a seller, expecting revert
           await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)).to.revertedWith(
@@ -1985,7 +1985,7 @@ describe("SellerHandler", function () {
         });
 
         it("Assistant is the zero address", async function () {
-          seller.assistant = ethers.constants.AddressZero;
+          seller.assistant = ZeroAddress;
 
           // Attempt to update a seller, expecting revert
           await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)).to.revertedWith(
@@ -2003,7 +2003,7 @@ describe("SellerHandler", function () {
         });
 
         it("Treasury is the zero address", async function () {
-          seller.treasury = ethers.constants.AddressZero;
+          seller.treasury = ZeroAddress;
 
           // Attempt to update a seller, expecting revert
           await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)).to.revertedWith(
@@ -2082,7 +2082,7 @@ describe("SellerHandler", function () {
         });
 
         it("admin address is zero address and AuthTokenType is None", async function () {
-          seller.admin = ethers.constants.AddressZero;
+          seller.admin = ZeroAddress;
 
           // Attempt to Create a seller, expecting revert
           await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWith(
@@ -2092,7 +2092,7 @@ describe("SellerHandler", function () {
 
         it("authToken is not unique to this seller", async function () {
           // Set admin == zero address because seller will be updated with auth token
-          seller.admin = ethers.constants.AddressZero;
+          seller.admin = ZeroAddress;
 
           // Update seller 1 to have auth token
           await accountHandler.connect(admin).updateSeller(seller, authToken);
@@ -2100,13 +2100,13 @@ describe("SellerHandler", function () {
           await accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken]);
 
           //Set seller 2's auth token to empty
-          seller2 = mockSeller(other1.address, other1.address, ethers.constants.AddressZero, other1.address);
+          seller2 = mockSeller(other1.address, other1.address, ZeroAddress, other1.address);
           expect(seller2.isValid()).is.true;
 
           // Create a seller with auth token
           await accountHandler.connect(other1).createSeller(seller2, emptyAuthToken, voucherInitValues);
 
-          seller2.admin = ethers.constants.AddressZero;
+          seller2.admin = ZeroAddress;
 
           // Attempt to update seller2 with non-unique authToken used by seller 1
           await expect(accountHandler.connect(other1).updateSeller(seller2, authToken)).to.revertedWith(
@@ -2116,7 +2116,7 @@ describe("SellerHandler", function () {
 
         it("authTokenType is Custom", async function () {
           // Set admin == zero address because seller will be created with auth token
-          seller.admin = ethers.constants.AddressZero;
+          seller.admin = ZeroAddress;
 
           authToken.tokenType = AuthTokenType.Custom;
 
@@ -2131,8 +2131,8 @@ describe("SellerHandler", function () {
           //Create seller 2 with auth token
           seller2 = mockSeller(
             other1.address,
-            ethers.constants.AddressZero,
-            ethers.constants.AddressZero,
+            ZeroAddress,
+            ZeroAddress,
             other1.address
           );
           expect(seller2.isValid()).is.true;
@@ -2161,8 +2161,8 @@ describe("SellerHandler", function () {
           //Create seller 2 with auth token
           seller2 = mockSeller(
             other1.address,
-            ethers.constants.AddressZero,
-            ethers.constants.AddressZero,
+            ZeroAddress,
+            ZeroAddress,
             other1.address
           );
           expect(seller2.isValid()).is.true;
@@ -2189,10 +2189,10 @@ describe("SellerHandler", function () {
       beforeEach(async function () {
         pendingSellerUpdate = seller.clone();
         pendingSellerUpdate.id = "0";
-        pendingSellerUpdate.treasury = ethers.constants.AddressZero;
-        pendingSellerUpdate.clerk = ethers.constants.AddressZero;
-        pendingSellerUpdate.admin = ethers.constants.AddressZero;
-        pendingSellerUpdate.assistant = ethers.constants.AddressZero;
+        pendingSellerUpdate.treasury = ZeroAddress;
+        pendingSellerUpdate.clerk = ZeroAddress;
+        pendingSellerUpdate.admin = ZeroAddress;
+        pendingSellerUpdate.assistant = ZeroAddress;
         pendingSellerUpdate.active = false;
         pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
@@ -2260,7 +2260,7 @@ describe("SellerHandler", function () {
       });
 
       it("Should update assistant and auth token in a single call when addresses are the same ", async function () {
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
         seller.assistant = authTokenOwner.address;
         sellerStruct = seller.toStruct();
 
@@ -2283,7 +2283,7 @@ describe("SellerHandler", function () {
       });
 
       it("New auth token owner should opt-in to update seller", async function () {
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
         sellerStruct = seller.toStruct();
 
         await accountHandler.connect(admin).updateSeller(seller, authToken);
@@ -2304,7 +2304,7 @@ describe("SellerHandler", function () {
 
       it("Auth token can be used again if it was previously removed", async function () {
         // Update a seller to use auth token
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
         await accountHandler.connect(admin).updateSeller(seller, authToken);
         await accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken]);
 
@@ -2314,7 +2314,7 @@ describe("SellerHandler", function () {
         await accountHandler.connect(other1).optInToSellerUpdate(seller.id, [SellerUpdateFields.Admin]);
 
         // Update back to auth token
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
         sellerStruct = seller.toStruct();
         await accountHandler.connect(other1).updateSeller(seller, authToken);
         await expect(
@@ -2336,9 +2336,9 @@ describe("SellerHandler", function () {
 
         pendingSellerUpdate = seller.clone();
         pendingSellerUpdate.id = "0";
-        pendingSellerUpdate.treasury = ethers.constants.AddressZero;
-        pendingSellerUpdate.clerk = ethers.constants.AddressZero;
-        pendingSellerUpdate.admin = ethers.constants.AddressZero;
+        pendingSellerUpdate.treasury = ZeroAddress;
+        pendingSellerUpdate.clerk = ZeroAddress;
+        pendingSellerUpdate.admin = ZeroAddress;
         pendingSellerUpdate.active = false;
         pendingSellerUpdate.metadataUri = "";
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
@@ -2351,7 +2351,7 @@ describe("SellerHandler", function () {
         sellerStruct = seller.toStruct();
 
         const pendingSellerUpdate2 = pendingSellerUpdate.clone();
-        pendingSellerUpdate2.assistant = ethers.constants.AddressZero;
+        pendingSellerUpdate2.assistant = ZeroAddress;
         const pendingSellerUpdate2Struct = pendingSellerUpdate2.toStruct();
 
         await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
@@ -2372,7 +2372,7 @@ describe("SellerHandler", function () {
           );
 
         // Set admin == zero address because seller will be created with auth token
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
         sellerStruct = seller.toStruct();
 
         await expect(accountHandler.connect(admin).updateSeller(seller, authToken))
@@ -2457,7 +2457,7 @@ describe("SellerHandler", function () {
 
         it("authToken is not unique to this seller", async function () {
           // Set admin == zero address because seller will be created with auth token
-          seller.admin = ethers.constants.AddressZero;
+          seller.admin = ZeroAddress;
 
           // Request auth token update for seller 1
           await accountHandler.connect(admin).updateSeller(seller, authToken);
@@ -2469,8 +2469,8 @@ describe("SellerHandler", function () {
           const newAuthTokenOwner = rando;
           seller2 = mockSeller(
             newAuthTokenOwner.address,
-            ethers.constants.AddressZero,
-            ethers.constants.AddressZero,
+            ZeroAddress,
+            ZeroAddress,
             newAuthTokenOwner.address
           );
           expect(seller2.isValid()).is.true;
@@ -2505,7 +2505,7 @@ describe("SellerHandler", function () {
         });
 
         it("Should revert if the caller is not the new auth token owner", async function () {
-          seller.admin = ethers.constants.AddressZero;
+          seller.admin = ZeroAddress;
 
           await accountHandler.connect(admin).updateSeller(seller, authToken);
 
@@ -2533,7 +2533,7 @@ describe("SellerHandler", function () {
           await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
           // Create seller with same admin
-          seller2 = mockSeller(other1.address, other1.address, ethers.constants.AddressZero, other1.address);
+          seller2 = mockSeller(other1.address, other1.address, ZeroAddress, other1.address);
           expect(seller2.isValid()).is.true;
 
           await accountHandler.connect(other1).createSeller(seller2, emptyAuthToken, voucherInitValues);
@@ -2550,7 +2550,7 @@ describe("SellerHandler", function () {
           await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
           // Create seller with same assistant
-          seller2 = mockSeller(other1.address, other1.address, ethers.constants.AddressZero, other1.address);
+          seller2 = mockSeller(other1.address, other1.address, ZeroAddress, other1.address);
           expect(seller2.isValid()).is.true;
 
           await accountHandler.connect(other1).createSeller(seller2, emptyAuthToken, voucherInitValues);

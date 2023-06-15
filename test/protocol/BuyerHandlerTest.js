@@ -54,7 +54,7 @@ describe("BuyerHandler", function () {
 
     // make all account the same
     assistant = admin;
-    clerk = { address: ethers.constants.AddressZero };
+    clerk = { address: ZeroAddress };
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -140,7 +140,7 @@ describe("BuyerHandler", function () {
         });
 
         it("addresses are the zero address", async function () {
-          buyer.wallet = ethers.constants.AddressZero;
+          buyer.wallet = ZeroAddress;
 
           // Attempt to Create a Buyer, expecting revert
           await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
@@ -349,7 +349,7 @@ describe("BuyerHandler", function () {
             treasury.address,
             true
           );
-          disputeResolver.id = id.add(1).toString();
+          disputeResolver.id = id+1.toString();
           expect(disputeResolver.isValid()).is.true;
 
           //Create DisputeResolverFee array
@@ -357,7 +357,7 @@ describe("BuyerHandler", function () {
             new DisputeResolverFee(other1.address, "MockToken1", "0"),
             new DisputeResolverFee(other2.address, "MockToken2", "0"),
             new DisputeResolverFee(other3.address, "MockToken3", "0"),
-            new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+            new DisputeResolverFee(ZeroAddress, "Native", "0"),
           ];
 
           // Add seller to sellerAllowList
@@ -387,13 +387,13 @@ describe("BuyerHandler", function () {
           // Deposit seller funds so the commit will succeed
           await fundsHandler
             .connect(assistant)
-            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+            .depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit });
 
           //Commit to offer
           await exchangeHandler.connect(other1).commitToOffer(other1.address, offerId, { value: offer.price });
 
           const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
           const balance = await bosonVoucher.connect(rando).balanceOf(other1.address);
           expect(balance).equal(1);
         });
@@ -433,7 +433,7 @@ describe("BuyerHandler", function () {
         });
 
         it("wallet address is the zero address", async function () {
-          buyer.wallet = ethers.constants.AddressZero;
+          buyer.wallet = ZeroAddress;
 
           // Attempt to update the buyer, expecting revert
           await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(

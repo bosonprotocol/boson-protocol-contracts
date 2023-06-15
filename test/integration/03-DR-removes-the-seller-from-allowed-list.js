@@ -56,7 +56,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
-    clerk = clerkDR = { address: ethers.constants.AddressZero };
+    clerk = clerkDR = { address: ZeroAddress };
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -77,7 +77,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
-      const seller2 = mockSeller(other1.address, other1.address, ethers.constants.AddressZero, other1.address);
+      const seller2 = mockSeller(other1.address, other1.address, ZeroAddress, other1.address);
       expect(seller2.isValid()).is.true;
 
       // VoucherInitValues
@@ -106,7 +106,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
 
       // Create DisputeResolverFee array so offer creation will succeed
       const DRFeeNative = "0";
-      const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative)];
+      const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", DRFeeNative)];
 
       // Make a sellerAllowList
       const sellerAllowList = ["2", "1"];
@@ -139,10 +139,10 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       const voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
 
       // Deposit seller funds so the commit will succeed
-      const fundsToDeposit = ethers.BigNumber.from(sellerDeposit).mul(quantityAvailable);
+      const fundsToDeposit = BigInt(sellerDeposit)*quantityAvailable;
       await fundsHandler
         .connect(assistant)
-        .depositFunds(seller.id, ethers.constants.AddressZero, fundsToDeposit, { value: fundsToDeposit });
+        .depositFunds(seller.id, ZeroAddress, fundsToDeposit, { value: fundsToDeposit });
 
       // Set time forward to the offer's voucherRedeemableFrom
       await setNextBlockTimestamp(Number(voucherRedeemableFrom));

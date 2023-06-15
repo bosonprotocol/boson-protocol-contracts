@@ -165,9 +165,9 @@ describe("IBosonOrchestrationHandler", function () {
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
-    clerk = clerkDR = { address: ethers.constants.AddressZero };
+    clerk = clerkDR = { address: ZeroAddress };
 
-    [deployer] = await ethers.getSigners();
+    [deployer] = await getSigners();
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -209,7 +209,7 @@ describe("IBosonOrchestrationHandler", function () {
       DRFeeNative = "0";
       DRFeeToken = "0";
       disputeResolverFees = [
-        new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative),
+        new DisputeResolverFee(ZeroAddress, "Native", DRFeeNative),
         new DisputeResolverFee(bosonToken.address, "Boson", DRFeeToken),
       ];
 
@@ -348,10 +348,10 @@ describe("IBosonOrchestrationHandler", function () {
         escalationPeriod = disputeResolver.escalationResponsePeriod;
 
         // Deposit seller funds so the commit will succeed
-        const fundsToDeposit = ethers.BigNumber.from(sellerDeposit).mul(quantityAvailable);
+        const fundsToDeposit = BigInt(sellerDeposit)*quantityAvailable;
         await fundsHandler
           .connect(assistant)
-          .depositFunds(seller.id, ethers.constants.AddressZero, fundsToDeposit, { value: fundsToDeposit });
+          .depositFunds(seller.id, ZeroAddress, fundsToDeposit, { value: fundsToDeposit });
 
         buyerId = accountId.next().value;
 
@@ -391,7 +391,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should update state", async function () {
         // Protocol balance before
-        const escrowBalanceBefore = await ethers.provider.getBalance(protocolDiamondAddress);
+        const escrowBalanceBefore = await provider.getBalance(protocolDiamondAddress);
 
         // Raise and escalate the dispute
         tx = await orchestrationHandler
@@ -400,9 +400,9 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get the block timestamp of the confirmed tx and set escalatedDate
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
         disputedDate = escalatedDate = block.timestamp.toString();
-        timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
+        timeout = BigInt(escalatedDate)+escalationPeriod.toString();
 
         dispute = new Dispute(exchangeId, DisputeState.Escalated, "0");
         disputeDates = new DisputeDates(disputedDate, escalatedDate, "0", timeout);
@@ -430,8 +430,8 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(response, DisputeState.Escalated, "Dispute state is incorrect");
 
         // Protocol balance should increase for buyer escalation deposit
-        const escrowBalanceAfter = await ethers.provider.getBalance(protocolDiamondAddress);
-        expect(escrowBalanceAfter.sub(escrowBalanceBefore)).to.equal(
+        const escrowBalanceAfter = await provider.getBalance(protocolDiamondAddress);
+        expect(escrowBalanceAfter-escrowBalanceBefore).to.equal(
           buyerEscalationDepositNative,
           "Escrow balance mismatch"
         );
@@ -450,7 +450,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Protocol balance should increase for buyer escalation deposit
         const escrowBalanceAfter = await mockToken.balanceOf(protocolDiamondAddress);
-        expect(escrowBalanceAfter.sub(escrowBalanceBefore)).to.equal(
+        expect(escrowBalanceAfter-escrowBalanceBefore).to.equal(
           buyerEscalationDepositToken,
           "Escrow balance mismatch"
         );
@@ -517,8 +517,8 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("exchange is not in a redeemed state - completed", async function () {
-          const blockNumber = await ethers.provider.getBlockNumber();
-          const block = await ethers.provider.getBlock(blockNumber);
+          const blockNumber = await provider.getBlockNumber();
+          const block = await provider.getBlock(blockNumber);
           const currentTime = block.timestamp;
 
           // Set time forward to run out the dispute period
@@ -559,7 +559,7 @@ describe("IBosonOrchestrationHandler", function () {
           const voucherRedeemedDate = voucherStruct.redeemedDate;
 
           // Set time forward past the dispute period
-          await setNextBlockTimestamp(voucherRedeemedDate.add(disputePeriod).add(1).toNumber());
+          await setNextBlockTimestamp(voucherRedeemedDate+disputePeriod+1.toNumber());
 
           // Attempt to raise a dispute, expecting revert
           await expect(
@@ -607,22 +607,22 @@ describe("IBosonOrchestrationHandler", function () {
           );
 
         // Voucher clone contract
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
         await expect(tx)
           .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
           .withArgs(voucherInitValues.royaltyPercentage);
 
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         await expect(tx)
           .to.emit(bosonVoucher, "OwnershipTransferred")
-          .withArgs(ethers.constants.AddressZero, assistant.address);
+          .withArgs(ZeroAddress, assistant.address);
       });
 
       it("should emit a SellerCreated and OfferCreated events with auth token", async function () {
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
         sellerStruct = seller.toStruct();
 
         // Create a seller and an offer, testing for the event
@@ -660,22 +660,22 @@ describe("IBosonOrchestrationHandler", function () {
           );
 
         // Voucher clone contract
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
         await expect(tx)
           .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
           .withArgs(voucherInitValues.royaltyPercentage);
 
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         await expect(tx)
           .to.emit(bosonVoucher, "OwnershipTransferred")
-          .withArgs(ethers.constants.AddressZero, assistant.address);
+          .withArgs(ZeroAddress, assistant.address);
       });
 
       it("should update state", async function () {
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
         sellerStruct = seller.toStruct();
 
         // Create a seller and an offer
@@ -736,18 +736,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Voucher clone contract
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
       });
 
       it("should update state when voucherInitValues has zero royaltyPercentage and exchangeId does not exist", async function () {
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
 
         // ERC2981 Royalty fee is 0%
         voucherInitValues.royaltyPercentage = "0"; //0%
@@ -768,7 +768,7 @@ describe("IBosonOrchestrationHandler", function () {
           );
 
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -787,7 +787,7 @@ describe("IBosonOrchestrationHandler", function () {
         [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
-        let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
+        let expectedRecipient = ZeroAddress; //expect zero address when exchange id does not exist
         let expectedRoyaltyAmount = "0"; // Zero Fee when exchange id does not exist
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
@@ -795,7 +795,7 @@ describe("IBosonOrchestrationHandler", function () {
       });
 
       it("should update state when voucherInitValues has non zero royaltyPercentage and exchangeId does not exist", async function () {
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
 
         // ERC2981 Royalty fee is 10%
         voucherInitValues.royaltyPercentage = "1000"; //10%
@@ -816,7 +816,7 @@ describe("IBosonOrchestrationHandler", function () {
           );
 
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -835,7 +835,7 @@ describe("IBosonOrchestrationHandler", function () {
         [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
-        let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
+        let expectedRecipient = ZeroAddress; //expect zero address when exchange id does not exist
         let expectedRoyaltyAmount = "0"; // Zero Fee when exchange id does not exist
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
@@ -1047,7 +1047,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("Should allow creation of an offer with unlimited supply", async function () {
         // Prepare an offer with unlimited supply
-        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+        offer.quantityAvailable = constants.MaxUint256.toString();
 
         // Create a seller and an offer, testing for the event
         await expect(
@@ -1108,7 +1108,7 @@ describe("IBosonOrchestrationHandler", function () {
           );
 
         // create another offer, now with bosonToken as exchange token
-        seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
+        seller = mockSeller(rando.address, rando.address, ZeroAddress, rando.address);
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
         offer.exchangeToken = bosonToken.address;
         offer.id = "2";
@@ -1164,7 +1164,7 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("should emit a SellerCreated, OfferCreated and RangeReserved events with auth token", async function () {
-          seller.admin = ethers.constants.AddressZero;
+          seller.admin = ZeroAddress;
           sellerStruct = seller.toStruct();
 
           // Create a seller and a preminted offer, testing for the event
@@ -1208,7 +1208,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(nextOfferId, offer.sellerId, firstTokenId, lastTokenId, assistant.address, assistant.address);
 
           // Voucher clone contract
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
           await expect(tx)
@@ -1217,15 +1217,15 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
 
-          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+          bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
           await expect(tx)
             .to.emit(bosonVoucher, "OwnershipTransferred")
-            .withArgs(ethers.constants.AddressZero, assistant.address);
+            .withArgs(ZeroAddress, assistant.address);
         });
 
         it("should update state", async function () {
-          seller.admin = ethers.constants.AddressZero;
+          seller.admin = ZeroAddress;
           sellerStruct = seller.toStruct();
 
           // Create a seller and a preminted offer
@@ -1291,11 +1291,11 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+          bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
           expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
           expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
           expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -1457,7 +1457,7 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Caller does not own supplied auth token", async function () {
-          seller.admin = ethers.constants.AddressZero;
+          seller.admin = ZeroAddress;
           seller.assistant = rando.address;
 
           // Attempt to create a seller and an offer, expecting revert
@@ -1538,7 +1538,7 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("admin address is zero address and AuthTokenType is None", async function () {
-          seller.admin = ethers.constants.AddressZero;
+          seller.admin = ZeroAddress;
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -1559,7 +1559,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("authToken is not unique to this seller", async function () {
           // Set admin == zero address because seller will be created with auth token
-          seller.admin = ethers.constants.AddressZero;
+          seller.admin = ZeroAddress;
 
           // Create a seller
           await accountHandler.connect(assistant).createSeller(seller, authToken, voucherInitValues);
@@ -1583,8 +1583,8 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Valid from date is greater than valid until date", async function () {
           // Reverse the from and until dates
-          offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
-          offerDates.validUntil = ethers.BigNumber.from(Date.now()).toString(); // now
+          offerDates.validFrom = BigInt(Date.now() + oneMonth * 6).toString(); // 6 months from now
+          offerDates.validUntil = BigInt(Date.now()).toString(); // now
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -1605,12 +1605,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Valid until date is not in the future", async function () {
           // Get the current block info
-          const blockNumber = await ethers.provider.getBlockNumber();
-          const block = await ethers.provider.getBlock(blockNumber);
+          const blockNumber = await provider.getBlockNumber();
+          const block = await provider.getBlock(blockNumber);
 
           // Set until date in the past
-          offerDates.validUntil = ethers.BigNumber.from(block.timestamp)
-            .sub(oneMonth * 6)
+          offerDates.validUntil = BigInt(block.timestamp)
+            -oneMonth * 6
             .toString(); // 6 months ago
 
           // Attempt to create a seller and an offer, expecting revert
@@ -1632,7 +1632,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Buyer cancel penalty is less than item price", async function () {
           // Set buyer cancel penalty higher than offer price
-          offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
+          offer.buyerCancelPenalty = BigInt(offer.price)+10.toString();
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -1763,7 +1763,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Dispute period is less than minimum dispute period", async function () {
           // Set dispute period to less than minDisputePeriod (oneWeek)
-          offerDurations.disputePeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
+          offerDurations.disputePeriod = BigInt(oneWeek)-1000.toString();
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -1872,7 +1872,7 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver = mockDisputeResolver(
             rando.address,
             rando.address,
-            ethers.constants.AddressZero,
+            ZeroAddress,
             rando.address,
             false
           );
@@ -1927,7 +1927,7 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver = mockDisputeResolver(
             rando.address,
             rando.address,
-            ethers.constants.AddressZero,
+            ZeroAddress,
             rando.address,
             false
           );
@@ -1960,7 +1960,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
-          const newSeller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
+          const newSeller = mockSeller(rando.address, rando.address, ZeroAddress, rando.address);
 
           await accountHandler.connect(rando).createSeller(newSeller, emptyAuthToken, voucherInitValues);
 
@@ -2053,7 +2053,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Reserved range length is greater than maximum allowed range length", async function () {
           // Set reserved range length to more than maximum allowed range length
-          let reservedRangeLength = ethers.BigNumber.from(2).pow(64).sub(1);
+          let reservedRangeLength = BigInt(2)**64-1;
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -2093,7 +2093,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Create an agent
           await accountHandler.connect(rando).createAgent(agent);
 
-          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+          agentFee = BigInt(offer.price)*agent.feePercentage/"10000".toString();
           offerFees.agentFee = agentFee;
           offerFeesStruct = offerFees.toStruct();
         });
@@ -2144,7 +2144,7 @@ describe("IBosonOrchestrationHandler", function () {
             let agentId = "16";
 
             // Seller can have admin address OR auth token
-            seller.admin = ethers.constants.AddressZero;
+            seller.admin = ZeroAddress;
 
             // Attempt to Create an offer, expecting revert
             await expect(
@@ -2447,7 +2447,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("Should allow creation of an offer with unlimited supply", async function () {
         // Prepare an absolute zero offer
-        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+        offer.quantityAvailable = constants.MaxUint256.toString();
 
         // Create an offer with condition, testing for the events
         await expect(
@@ -2547,7 +2547,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Create an agent
           await accountHandler.connect(rando).createAgent(agent);
 
-          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+          agentFee = BigInt(offer.price)*agent.feePercentage/"10000".toString();
           offerFees.agentFee = agentFee;
           offerFeesStruct = offerFees.toStruct();
         });
@@ -2600,7 +2600,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
           const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
           range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", bosonVoucher.address);
@@ -2820,7 +2820,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Condition 'Threshold' has zero token contract address", async function () {
           condition.method = EvaluationMethod.Threshold;
-          condition.tokenAddress = ethers.constants.AddressZero;
+          condition.tokenAddress = ZeroAddress;
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
@@ -2832,7 +2832,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Condition 'SpecificToken' has has zero token contract address", async function () {
           condition.method = EvaluationMethod.SpecificToken;
-          condition.tokenAddress = ethers.constants.AddressZero;
+          condition.tokenAddress = ZeroAddress;
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
@@ -2857,14 +2857,14 @@ describe("IBosonOrchestrationHandler", function () {
           // Mock offer, offerDates and offerDurations
           ({ offer, offerDates, offerDurations } = await mockOffer());
           offer.id = `${i + 1}`;
-          offer.price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
-          offer.sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-          offer.buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
+          offer.price = parseUnits(`${1.5 + i * 1}`, "ether").toString();
+          offer.sellerDeposit = parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
+          offer.buyerCancelPenalty = parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
           offer.quantityAvailable = `${(i + 1) * 2}`;
           offer.sellerId = seller.id; // "2" is dispute resolver
 
-          offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
-          offerDates.validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
+          offerDates.validFrom = BigInt(Date.now() + oneMonth * i).toString();
+          offerDates.validUntil = BigInt(Date.now() + oneMonth * 6 * (i + 1)).toString();
 
           disputeResolver.id = "1";
           agentId = "0";
@@ -3137,7 +3137,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("Should allow creation of an offer with unlimited supply", async function () {
         // Prepare an absolute zero offer
-        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+        offer.quantityAvailable = constants.MaxUint256.toString();
 
         // Create an offer, add it to the group, testing for the events
         await expect(
@@ -3237,7 +3237,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Create an agent
           await accountHandler.connect(rando).createAgent(agent);
 
-          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+          agentFee = BigInt(offer.price)*agent.feePercentage/"10000".toString();
           offerFees.agentFee = agentFee;
           offerFeesStruct = offerFees.toStruct();
         });
@@ -3291,7 +3291,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         });
 
         it("should emit an OfferCreated, a GroupUpdated and a RangeReserved events", async function () {
@@ -3806,9 +3806,9 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("Should allow creation of an offer with unlimited supply", async function () {
         // Prepare an offer with unlimited supply
-        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+        offer.quantityAvailable = constants.MaxUint256.toString();
         // Twin supply should be unlimited as well
-        twin.supplyAvailable = ethers.constants.MaxUint256.toString();
+        twin.supplyAvailable = constants.MaxUint256.toString();
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
@@ -3908,7 +3908,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Create an agent
           await accountHandler.connect(rando).createAgent(agent);
 
-          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+          agentFee = BigInt(offer.price)*agent.feePercentage/"10000".toString();
           offerFees.agentFee = agentFee;
           offerFeesStruct = offerFees.toStruct();
         });
@@ -3970,7 +3970,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
           const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
           range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", bosonVoucher.address);
@@ -4220,7 +4220,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         context("Token address is unsupported", async function () {
           it("Token address is a zero address", async function () {
-            twin.tokenAddress = ethers.constants.AddressZero;
+            twin.tokenAddress = ZeroAddress;
 
             await expect(
               orchestrationHandler
@@ -4663,9 +4663,9 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("Should allow creation of an offer with unlimited supply", async function () {
         // Prepare an offer with unlimited supply
-        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+        offer.quantityAvailable = constants.MaxUint256.toString();
         // Twin supply should be unlimited as well
-        twin.supplyAvailable = ethers.constants.MaxUint256.toString();
+        twin.supplyAvailable = constants.MaxUint256.toString();
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
@@ -4798,7 +4798,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Create an agent
           await accountHandler.connect(rando).createAgent(agent);
 
-          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+          agentFee = BigInt(offer.price)*agent.feePercentage/"10000".toString();
           offerFees.agentFee = agentFee;
           offerFeesStruct = offerFees.toStruct();
         });
@@ -4880,7 +4880,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         });
 
         it("should emit an OfferCreated, a GroupCreated, a TwinCreated, a BundleCreated and a RangeReserved events", async function () {
@@ -5247,18 +5247,18 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
 
         // Voucher clone contract
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
         await expect(tx)
           .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
           .withArgs(voucherInitValues.royaltyPercentage);
 
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         await expect(tx)
           .to.emit(bosonVoucher, "OwnershipTransferred")
-          .withArgs(ethers.constants.AddressZero, assistant.address);
+          .withArgs(ZeroAddress, assistant.address);
       });
 
       it("should update state", async function () {
@@ -5340,11 +5340,11 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Voucher clone contract
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -5372,7 +5372,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Voucher clone contract
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -5391,7 +5391,7 @@ describe("IBosonOrchestrationHandler", function () {
         [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
-        let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
+        let expectedRecipient = ZeroAddress; //expect zero address when exchange id does not exist
         let expectedRoyaltyAmount = "0"; // Zero Fee when exchange id does not exist
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
@@ -5420,7 +5420,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Voucher clone contract
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -5439,7 +5439,7 @@ describe("IBosonOrchestrationHandler", function () {
         [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
-        let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
+        let expectedRecipient = ZeroAddress; //expect zero address when exchange id does not exist
         let expectedRoyaltyAmount = "0"; // Zero Fee when exchange id does not exist
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
@@ -5524,7 +5524,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Create an agent
           await accountHandler.connect(rando).createAgent(agent);
 
-          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+          agentFee = BigInt(offer.price)*agent.feePercentage/"10000".toString();
           offerFees.agentFee = agentFee;
           offerFeesStruct = offerFees.toStruct();
         });
@@ -5654,7 +5654,7 @@ describe("IBosonOrchestrationHandler", function () {
           assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
 
           // Voucher clone contract
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
           await expect(tx)
@@ -5663,11 +5663,11 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
 
-          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+          bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
           await expect(tx)
             .to.emit(bosonVoucher, "OwnershipTransferred")
-            .withArgs(ethers.constants.AddressZero, assistant.address);
+            .withArgs(ZeroAddress, assistant.address);
         });
 
         it("should update state", async function () {
@@ -5754,11 +5754,11 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+          bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
           expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
           expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
           expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -5979,18 +5979,18 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
 
         // Voucher clone contract
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
         await expect(tx)
           .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
           .withArgs(voucherInitValues.royaltyPercentage);
 
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         await expect(tx)
           .to.emit(bosonVoucher, "OwnershipTransferred")
-          .withArgs(ethers.constants.AddressZero, assistant.address);
+          .withArgs(ZeroAddress, assistant.address);
       });
 
       it("should update state", async function () {
@@ -6078,11 +6078,11 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Voucher clone contract
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -6113,7 +6113,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Voucher clone contract
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -6132,7 +6132,7 @@ describe("IBosonOrchestrationHandler", function () {
         [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
-        let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
+        let expectedRecipient = ZeroAddress; //expect zero address when exchange id does not exist
         let expectedRoyaltyAmount = "0"; // Zero Fee when exchange id does not exist
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
@@ -6164,7 +6164,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Voucher clone contract
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -6183,7 +6183,7 @@ describe("IBosonOrchestrationHandler", function () {
         [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
-        let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
+        let expectedRecipient = ZeroAddress; //expect zero address when exchange id does not exist
         let expectedRoyaltyAmount = "0"; // Zero Fee when exchange id does not exist
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
@@ -6287,7 +6287,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Create an agent
           await accountHandler.connect(rando).createAgent(agent);
 
-          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+          agentFee = BigInt(offer.price)*agent.feePercentage/"10000".toString();
           offerFees.agentFee = agentFee;
           offerFeesStruct = offerFees.toStruct();
         });
@@ -6447,7 +6447,7 @@ describe("IBosonOrchestrationHandler", function () {
           assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
 
           // Voucher clone contract
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
           await expect(tx)
@@ -6456,11 +6456,11 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
 
-          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+          bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
           await expect(tx)
             .to.emit(bosonVoucher, "OwnershipTransferred")
-            .withArgs(ethers.constants.AddressZero, assistant.address);
+            .withArgs(ZeroAddress, assistant.address);
         });
 
         it("should update state", async function () {
@@ -6553,11 +6553,11 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+          bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
           expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
           expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
           expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -6827,18 +6827,18 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
 
         // Voucher clone contract
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
         await expect(tx)
           .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
           .withArgs(voucherInitValues.royaltyPercentage);
 
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         await expect(tx)
           .to.emit(bosonVoucher, "OwnershipTransferred")
-          .withArgs(ethers.constants.AddressZero, assistant.address);
+          .withArgs(ZeroAddress, assistant.address);
       });
 
       it("should update state", async function () {
@@ -6946,11 +6946,11 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Voucher clone contract
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -6982,7 +6982,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Voucher clone contract
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -7001,7 +7001,7 @@ describe("IBosonOrchestrationHandler", function () {
         [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
-        let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
+        let expectedRecipient = ZeroAddress; //expect zero address when exchange id does not exist
         let expectedRoyaltyAmount = "0"; // Zero Fee when exchange id does not exist
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
@@ -7034,7 +7034,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Voucher clone contract
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
@@ -7053,7 +7053,7 @@ describe("IBosonOrchestrationHandler", function () {
         [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
-        let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
+        let expectedRecipient = ZeroAddress; //expect zero address when exchange id does not exist
         let expectedRoyaltyAmount = "0"; // Zero Fee when exchange id does not exist
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
@@ -7169,7 +7169,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Create an agent
           await accountHandler.connect(rando).createAgent(agent);
 
-          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+          agentFee = BigInt(offer.price)*agent.feePercentage/"10000".toString();
           offerFees.agentFee = agentFee;
           offerFeesStruct = offerFees.toStruct();
         });
@@ -7249,18 +7249,18 @@ describe("IBosonOrchestrationHandler", function () {
           assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
 
           // Voucher clone contract
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
           await expect(tx)
             .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
             .withArgs(voucherInitValues.royaltyPercentage);
 
-          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+          bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
           await expect(tx)
             .to.emit(bosonVoucher, "OwnershipTransferred")
-            .withArgs(ethers.constants.AddressZero, assistant.address);
+            .withArgs(ZeroAddress, assistant.address);
         });
       });
 
@@ -7357,7 +7357,7 @@ describe("IBosonOrchestrationHandler", function () {
           assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
 
           // Voucher clone contract
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
           await expect(tx)
@@ -7366,11 +7366,11 @@ describe("IBosonOrchestrationHandler", function () {
 
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
 
-          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+          bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
           await expect(tx)
             .to.emit(bosonVoucher, "OwnershipTransferred")
-            .withArgs(ethers.constants.AddressZero, assistant.address);
+            .withArgs(ZeroAddress, assistant.address);
         });
 
         it("should update state", async function () {
@@ -7483,11 +7483,11 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Voucher clone contract
           expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
-          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+          bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
           expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
 
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
           expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
           expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");

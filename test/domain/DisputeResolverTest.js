@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getSigners } = hre.ethers;
 const { expect } = require("chai");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { oneMonth } = require("../util/constants");
@@ -14,7 +14,7 @@ describe("DisputeResolver", function () {
 
   beforeEach(async function () {
     // Get a list of accounts
-    accounts = await ethers.getSigners();
+    accounts = await getSigners();
     assistant = accounts[0].address;
     admin = accounts[1].address;
     clerk = accounts[2].address;

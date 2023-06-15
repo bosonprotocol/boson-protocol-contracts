@@ -40,7 +40,7 @@ async function migrate(env) {
       shell.exec(`npm install`);
     }
 
-    const { chainId } = await ethers.provider.getNetwork();
+    const { chainId } = await provider.getNetwork();
     const contractsFile = readContracts(chainId, network, env);
 
     if (contractsFile?.protocolVersion != "2.2.0") {
@@ -86,7 +86,7 @@ async function migrate(env) {
 
     const selectorsToAdd = await getFunctionHashesClosure();
 
-    const metaTransactionHandlerFacet = await ethers.getContractAt("MetaTransactionsHandlerFacet", protocolAddress);
+    const metaTransactionHandlerFacet = await getContractAt("MetaTransactionsHandlerFacet", protocolAddress);
 
     console.log("Removing selectors", selectorsToRemove.join(","));
     await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToRemove, false);

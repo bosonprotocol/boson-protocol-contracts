@@ -11,7 +11,7 @@ describe("BeaconClientProxy", function () {
 
   beforeEach(async function () {
     // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
-    [protocol, rando] = await ethers.getSigners();
+    [protocol, rando] = await getSigners();
 
     // deploy proxy
     const protocolClientArgs = [protocol.address];

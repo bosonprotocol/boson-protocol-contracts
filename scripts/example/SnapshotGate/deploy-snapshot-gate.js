@@ -22,7 +22,7 @@ const { getFees } = require("../../util/utils");
  */
 async function deploySnapshotGateExample(snapshotGateArgs, maxPriorityFeePerGas) {
   // Deploy the SnapshotGate
-  const SnapshotGate = await ethers.getContractFactory("SnapshotGate");
+  const SnapshotGate = await getContractFactory("SnapshotGate");
   const snapshotGate = await SnapshotGate.deploy(...snapshotGateArgs, await getFees(maxPriorityFeePerGas));
   await snapshotGate.deployTransaction.wait(confirmations);
 

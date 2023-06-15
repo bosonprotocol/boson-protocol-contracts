@@ -21,7 +21,7 @@ async function writeContracts(contracts, env, version) {
     fs.mkdirSync(addressesDirPath);
   }
 
-  const chainId = (await hre.ethers.provider.getNetwork()).chainId;
+  const chainId = (await hre.provider.getNetwork()).chainId;
   const network = hre.network.name;
   const path = getAddressesFilePath(chainId, network, env);
   fs.writeFileSync(
@@ -52,7 +52,7 @@ async function getBaseFee() {
     // getBlock("pending") doesn't work with hardhat. This is the value one gets by calling getBlock("0")
     return "1000000000";
   }
-  const { baseFeePerGas } = await ethers.provider.getBlock("pending");
+  const { baseFeePerGas } = await provider.getBlock("pending");
   return baseFeePerGas;
 }
 
@@ -61,10 +61,10 @@ async function getMaxFeePerGas(maxPriorityFeePerGas) {
 }
 
 async function getFees() {
-  // maxPriorityFeePerGas TODO add back as an argument when ethers.js supports 1559 on polygon
-  const { gasPrice } = await ethers.provider.getFeeData();
-  const newGasPrice = gasPrice.mul(ethers.BigNumber.from("2"));
-  //  return { maxPriorityFeePerGas, maxFeePerGas: await getMaxFeePerGas(maxPriorityFeePerGas) }; // TODO use when ethers.js supports 1559 on polygon
+  // maxPriorityFeePerGas TODO add back as an argument when js supports 1559 on polygon
+  const { gasPrice } = await provider.getFeeData();
+  const newGasPrice = gasPrice.mul(BigInt("2"));
+  //  return { maxPriorityFeePerGas, maxFeePerGas: await getMaxFeePerGas(maxPriorityFeePerGas) }; // TODO use when js supports 1559 on polygon
   return { gasPrice: newGasPrice };
 }
 
@@ -77,7 +77,7 @@ async function checkRole(contracts, role, address) {
   }
 
   // Get AccessController abstraction
-  const accessController = await ethers.getContractAt("AccessController", accessControllerAddress);
+  const accessController = await getContractAt("AccessController", accessControllerAddress);
 
   // Check that caller has upgrader role.
   const hasRole = await accessController.hasRole(role, address);

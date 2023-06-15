@@ -51,7 +51,7 @@ describe("IBosonAccountHandler", function () {
 
     // make all account the same
     assistant = admin;
-    clerk = { address: ethers.constants.AddressZero };
+    clerk = { address: ZeroAddress };
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -150,7 +150,7 @@ describe("IBosonAccountHandler", function () {
         //addresses need to be unique to seller Id, so setting them to random addresses here
         seller.assistant = rando.address;
         seller.admin = rando.address;
-        seller.clerk = ethers.constants.AddressZero;
+        seller.clerk = ZeroAddress;
 
         // Create another seller
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);

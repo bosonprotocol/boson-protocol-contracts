@@ -36,7 +36,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   before(async function () {
     try {
       // Make accounts available
-      [deployer, rando] = await ethers.getSigners();
+      [deployer, rando] = await getSigners();
 
       let contractsBefore;
 
@@ -86,7 +86,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       contractsAfter = { ...contractsBefore };
 
       for (const [handlerName, interfaceName] of Object.entries(newHandlers)) {
-        contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
+        contractsAfter[handlerName] = await getContractAt(interfaceName, protocolDiamondAddress);
       }
 
       ({ accountHandler } = contractsAfter);

@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getSigners }= hre.ethers;
 const { expect } = require("chai");
 const Buyer = require("../../scripts/domain/Buyer");
 
@@ -14,7 +14,7 @@ describe("Buyer", function () {
   context("📋 Constructor", async function () {
     beforeEach(async function () {
       // Get a list of accounts
-      accounts = await ethers.getSigners();
+      accounts = await getSigners();
       wallet = accounts[1].address;
 
       // Required constructor params

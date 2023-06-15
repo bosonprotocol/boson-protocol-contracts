@@ -80,12 +80,12 @@ describe("SnapshotGate", function () {
       holder3,
       holder4,
       holder5,
-    ] = await ethers.getSigners();
+    ] = await getSigners();
 
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
-    clerk = clerkDR = { address: ethers.constants.AddressZero };
+    clerk = clerkDR = { address: ZeroAddress };
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -107,7 +107,7 @@ describe("SnapshotGate", function () {
 
     // Set protocolFees
     protocolFeePercentage = "200"; // 2 %
-    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    protocolFeeFlatBoson = parseUnits("0.01", "ether").toString();
     buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
@@ -162,16 +162,16 @@ describe("SnapshotGate", function () {
     await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+    accountHandler = await getContractAt("IBosonAccountHandler", protocolDiamond.address);
 
     // Cast Diamond to IBosonOfferHandler
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
+    offerHandler = await getContractAt("IBosonOfferHandler", protocolDiamond.address);
 
     // Cast Diamond to IGroupHandler
-    groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
+    groupHandler = await getContractAt("IBosonGroupHandler", protocolDiamond.address);
 
     // Cast Diamond to IBosonExchangeHandler
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
+    exchangeHandler = await getContractAt("IBosonExchangeHandler", protocolDiamond.address);
 
     // Deploy the SnapshotGate example
     sellerId = "1";
@@ -190,7 +190,7 @@ describe("SnapshotGate", function () {
     expect(seller.isValid()).is.true;
 
     // Create a second seller
-    seller2 = mockSeller(assistant2.address, assistant2.address, ethers.constants.AddressZero, assistant2.address);
+    seller2 = mockSeller(assistant2.address, assistant2.address, ZeroAddress, assistant2.address);
     expect(seller2.isValid()).is.true;
 
     // AuthToken
@@ -219,7 +219,7 @@ describe("SnapshotGate", function () {
 
     // Create DisputeResolverFee array so offer creation will succeed
     disputeResolverFees = [
-      new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+      new DisputeResolverFee(ZeroAddress, "Native", "0"),
       new DisputeResolverFee(foreign20.address, "Foriegn20", "0"),
     ];
 
@@ -732,7 +732,7 @@ describe("SnapshotGate", function () {
           let holder = holderByAddress[entry.owner];
 
           // Wrong price
-          const halfPrice = ethers.BigNumber.from(price).div(ethers.BigNumber.from(2)).toString();
+          const halfPrice = BigInt(price)/BigInt(2).toString();
 
           // Commit to the offer
           await expect(

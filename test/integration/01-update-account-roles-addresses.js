@@ -56,7 +56,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
-    clerk = clerkDR = { address: ethers.constants.AddressZero };
+    clerk = clerkDR = { address: ZeroAddress };
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -100,7 +100,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       //Create DisputeResolverFee array so offer creation will succeed
       disputeResolverFeeNative = "0";
       const disputeResolverFees = [
-        new DisputeResolverFee(ethers.constants.AddressZero, "Native", disputeResolverFeeNative),
+        new DisputeResolverFee(ZeroAddress, "Native", disputeResolverFeeNative),
       ];
 
       // Make empty seller list, so every seller is allowed
@@ -135,7 +135,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       // Deposit seller funds so the commit will succeed
       await fundsHandler
         .connect(assistant)
-        .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+        .depositFunds(seller.id, ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
 
       // Create a buyer account
       buyerAccount = mockBuyer(buyer.address);
@@ -152,7 +152,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
       exchangeId = "1";
 
-      const addressZero = ethers.constants.AddressZero;
+      const addressZero = ZeroAddress;
       sellerPendingUpdate = mockSeller(addressZero, addressZero, addressZero, addressZero);
       sellerPendingUpdate.id = "0";
       sellerPendingUpdate.active = false;
@@ -173,7 +173,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         .to.emit(accountHandler, "SellerUpdatePending")
         .withArgs(seller.id, sellerPendingUpdate.toStruct(), emptyAuthToken.toStruct(), admin.address);
 
-      sellerPendingUpdate.assistant = ethers.constants.AddressZero;
+      sellerPendingUpdate.assistant = ZeroAddress;
 
       // Approve the update
       await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]))
@@ -203,7 +203,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         .to.emit(accountHandler, "SellerUpdatePending")
         .withArgs(seller.id, sellerPendingUpdate.toStruct(), emptyAuthToken.toStruct(), admin.address);
 
-      sellerPendingUpdate.assistant = ethers.constants.AddressZero;
+      sellerPendingUpdate.assistant = ZeroAddress;
 
       // Approve the update
       await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]))
@@ -231,9 +231,9 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         await exchangeHandler.connect(buyer).cancelVoucher(exchangeId);
 
         // Expected buyer payoff: price - buyerCancelPenalty
-        buyerPayoff = ethers.BigNumber.from(offer.price).sub(offer.buyerCancelPenalty).toString();
+        buyerPayoff = BigInt(offer.price)-offer.buyerCancelPenalty.toString();
         // Expected seller payoff: sellerDeposit + buyerCancelPenalty
-        sellerPayoff = ethers.BigNumber.from(offer.sellerDeposit).add(offer.buyerCancelPenalty).toString();
+        sellerPayoff = BigInt(offer.sellerDeposit)+offer.buyerCancelPenalty.toString();
       });
 
       it("Buyer should be able to withdraw funds after updating wallet address", async function () {
@@ -247,15 +247,15 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
         // Attempt to withdraw funds with old buyer wallet, should fail
         await expect(
-          fundsHandler.connect(buyer).withdrawFunds(buyerAccount.id, [ethers.constants.AddressZero], [buyerPayoff])
+          fundsHandler.connect(buyer).withdrawFunds(buyerAccount.id, [ZeroAddress], [buyerPayoff])
         ).to.revertedWith(RevertReasons.NOT_AUTHORIZED);
 
         // Attempt to withdraw funds with new buyer wallet, should succeed
         await expect(
-          fundsHandler.connect(rando).withdrawFunds(buyerAccount.id, [ethers.constants.AddressZero], [buyerPayoff])
+          fundsHandler.connect(rando).withdrawFunds(buyerAccount.id, [ZeroAddress], [buyerPayoff])
         )
           .to.emit(fundsHandler, "FundsWithdrawn")
-          .withArgs(buyerAccount.id, rando.address, ethers.constants.AddressZero, buyerPayoff, rando.address);
+          .withArgs(buyerAccount.id, rando.address, ZeroAddress, buyerPayoff, rando.address);
       });
 
       it("Seller should be able to withdraw funds after updating assistant address", async function () {
@@ -268,7 +268,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
           .to.emit(accountHandler, "SellerUpdatePending")
           .withArgs(seller.id, sellerPendingUpdate.toStruct(), emptyAuthToken.toStruct(), admin.address);
 
-        sellerPendingUpdate.assistant = ethers.constants.AddressZero;
+        sellerPendingUpdate.assistant = ZeroAddress;
 
         // Approve the update
         await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]))
@@ -284,15 +284,15 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
         // Attempt to withdraw funds with old seller assistant, should fail
         await expect(
-          fundsHandler.connect(assistant).withdrawFunds(seller.id, [ethers.constants.AddressZero], [sellerPayoff])
+          fundsHandler.connect(assistant).withdrawFunds(seller.id, [ZeroAddress], [sellerPayoff])
         ).to.revertedWith(RevertReasons.NOT_AUTHORIZED);
 
         // Attempt to withdraw funds with new seller assistant, should succeed
         await expect(
-          fundsHandler.connect(rando).withdrawFunds(seller.id, [ethers.constants.AddressZero], [sellerPayoff])
+          fundsHandler.connect(rando).withdrawFunds(seller.id, [ZeroAddress], [sellerPayoff])
         )
           .to.emit(fundsHandler, "FundsWithdrawn")
-          .withArgs(seller.id, treasury.address, ethers.constants.AddressZero, sellerPayoff, rando.address);
+          .withArgs(seller.id, treasury.address, ZeroAddress, sellerPayoff, rando.address);
       });
     });
 
@@ -300,8 +300,8 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       beforeEach(async function () {
         // Redeem the voucher so that buyer can update the wallet
         const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-        const block = await ethers.provider.getBlock(tx.blockNumber);
-        redeemedDate = ethers.BigNumber.from(block.timestamp);
+        const block = await provider.getBlock(tx.blockNumber);
+        redeemedDate = BigInt(block.timestamp);
       });
 
       it("Agent should be able to withdraw funds after updating wallet address", async function () {
@@ -320,15 +320,15 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
         // Attempt to withdraw funds with old agent wallet, should fail
         await expect(
-          fundsHandler.connect(agent).withdrawFunds(agentAccount.id, [ethers.constants.AddressZero], [agentPayoff])
+          fundsHandler.connect(agent).withdrawFunds(agentAccount.id, [ZeroAddress], [agentPayoff])
         ).to.revertedWith(RevertReasons.NOT_AUTHORIZED);
 
         // Attempt to withdraw funds with new agent wallet, should fail
         await expect(
-          fundsHandler.connect(rando).withdrawFunds(agentAccount.id, [ethers.constants.AddressZero], [agentPayoff])
+          fundsHandler.connect(rando).withdrawFunds(agentAccount.id, [ZeroAddress], [agentPayoff])
         )
           .to.emit(fundsHandler, "FundsWithdrawn")
-          .withArgs(agentAccount.id, rando.address, ethers.constants.AddressZero, agentPayoff, rando.address);
+          .withArgs(agentAccount.id, rando.address, ZeroAddress, agentPayoff, rando.address);
       });
 
       it("Buyer should be able to raise dispute after updating wallet address", async function () {
@@ -366,8 +366,8 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
           .to.emit(exchangeHandler, "ExchangeCompleted")
           .withArgs(offer.id, buyerAccount.id, exchangeId, rando.address);
 
-        const block = await ethers.provider.getBlock(tx.blockNumber);
-        const disputePeriodEnd = redeemedDate.add(ethers.BigNumber.from(offerDurations.disputePeriod));
+        const block = await provider.getBlock(tx.blockNumber);
+        const disputePeriodEnd = redeemedDate+BigInt(offerDurations.disputePeriod);
 
         // Expect the dispute period to not be over
         expect(block.timestamp).to.be.at.most(disputePeriodEnd);
@@ -407,7 +407,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
             .to.emit(accountHandler, "SellerUpdatePending")
             .withArgs(seller.id, sellerPendingUpdate.toStruct(), emptyAuthToken.toStruct(), admin.address);
 
-          sellerPendingUpdate.assistant = ethers.constants.AddressZero;
+          sellerPendingUpdate.assistant = ZeroAddress;
 
           // Approve the update
           await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]))
@@ -504,7 +504,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
             .to.emit(accountHandler, "SellerUpdatePending")
             .withArgs(seller.id, sellerPendingUpdate.toStruct(), emptyAuthToken.toStruct(), admin.address);
 
-          sellerPendingUpdate.assistant = ethers.constants.AddressZero;
+          sellerPendingUpdate.assistant = ZeroAddress;
 
           // Approve the update
           await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]))

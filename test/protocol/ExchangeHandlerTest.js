@@ -148,12 +148,12 @@ describe("IBosonExchangeHandler", function () {
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts));
 
-    [deployer] = await ethers.getSigners();
+    [deployer] = await getSigners();
 
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
-    clerk = clerkDR = { address: ethers.constants.AddressZero };
+    clerk = clerkDR = { address: ZeroAddress };
 
     // Deploy the mock tokens
     [foreign20, foreign721, foreign1155] = await deployMockTokens(["Foreign20", "Foreign721", "Foreign1155"]);
@@ -170,10 +170,10 @@ describe("IBosonExchangeHandler", function () {
   async function upgradeMetaTransactionsHandlerFacet() {
     // Upgrade the ExchangeHandlerFacet functions
     // DiamondCutFacet
-    const cutFacetViaDiamond = await ethers.getContractAt("DiamondCutFacet", protocolDiamondAddress);
+    const cutFacetViaDiamond = await getContractAt("DiamondCutFacet", protocolDiamondAddress);
 
     // Deploy MockMetaTransactionsHandlerFacet
-    const MockMetaTransactionsHandlerFacet = await ethers.getContractFactory("MockMetaTransactionsHandlerFacet");
+    const MockMetaTransactionsHandlerFacet = await getContractFactory("MockMetaTransactionsHandlerFacet");
     const mockMetaTransactionsHandlerFacet = await MockMetaTransactionsHandlerFacet.deploy();
     await mockMetaTransactionsHandlerFacet.deployed();
 
@@ -187,7 +187,7 @@ describe("IBosonExchangeHandler", function () {
     ];
 
     // Send the DiamondCut transaction
-    const tx = await cutFacetViaDiamond.connect(deployer).diamondCut(facetCuts, ethers.constants.AddressZero, "0x");
+    const tx = await cutFacetViaDiamond.connect(deployer).diamondCut(facetCuts, ZeroAddress, "0x");
 
     // Wait for transaction to confirm
     const receipt = await tx.wait();
@@ -196,7 +196,7 @@ describe("IBosonExchangeHandler", function () {
     assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
 
     // Cast Diamond to MockMetaTransactionsHandlerFacet
-    mockMetaTransactionsHandler = await ethers.getContractAt(
+    mockMetaTransactionsHandler = await getContractAt(
       "MockMetaTransactionsHandlerFacet",
       protocolDiamondAddress
     );
@@ -250,7 +250,7 @@ describe("IBosonExchangeHandler", function () {
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+      disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
 
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
@@ -283,7 +283,7 @@ describe("IBosonExchangeHandler", function () {
       voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
       voucherValid = offerDurations.voucherValid;
       disputePeriod = offerDurations.disputePeriod;
-      sellerPool = ethers.utils.parseUnits("15", "ether").toString();
+      sellerPool = parseUnits("15", "ether").toString();
 
       // Required voucher constructor params
       voucher = mockVoucher();
@@ -299,7 +299,7 @@ describe("IBosonExchangeHandler", function () {
       // Deposit seller funds so the commit will succeed
       await fundsHandler
         .connect(assistant)
-        .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+        .depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
     });
 
     afterEach(async function () {
@@ -316,7 +316,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
         voucher.committedDate = block.timestamp.toString();
@@ -351,17 +351,17 @@ describe("IBosonExchangeHandler", function () {
 
       it("should issue the voucher on the correct clone", async function () {
         // Cast expectedCloneAddress to IBosonVoucher (existing clone)
-        bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         // Create a new seller to get new clone
-        seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
+        seller = mockSeller(rando.address, rando.address, ZeroAddress, rando.address);
         seller.id = "3"; // buyer is created after seller in this test
         expect(seller.isValid()).is.true;
 
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
-        const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        const bosonVoucherClone2 = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         // Create an offer with new seller
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
@@ -372,7 +372,7 @@ describe("IBosonExchangeHandler", function () {
         // Deposit seller funds so the commit will succeed
         await fundsHandler
           .connect(rando)
-          .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+          .depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
 
         const buyer2 = newOwner;
 
@@ -384,10 +384,10 @@ describe("IBosonExchangeHandler", function () {
 
         await expect(tx)
           .to.emit(bosonVoucherClone, "Transfer")
-          .withArgs(ethers.constants.Zero, buyer.address, tokenId1);
+          .withArgs(constants.Zero, buyer.address, tokenId1);
         await expect(tx2)
           .to.emit(bosonVoucherClone2, "Transfer")
-          .withArgs(ethers.constants.Zero, buyer2.address, tokenId2);
+          .withArgs(constants.Zero, buyer2.address, tokenId2);
 
         // buyer should own 1 voucher on the clone1 address and buyer2 should own 1 voucher on clone2
         expect(await bosonVoucherClone.balanceOf(buyer.address)).to.equal("1", "Clone 1: buyer 1 balance should be 1");
@@ -435,10 +435,10 @@ describe("IBosonExchangeHandler", function () {
 
       it("ERC2981: issued voucher should have royalty fees", async function () {
         // Cast expectedCloneAddress to IBosonVoucher (existing clone)
-        bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         // Create a new seller to get new clone
-        seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
+        seller = mockSeller(rando.address, rando.address, ZeroAddress, rando.address);
         seller.id = "3"; // buyer is created after seller in this test
         expect(seller.isValid()).is.true;
 
@@ -448,7 +448,7 @@ describe("IBosonExchangeHandler", function () {
 
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
-        const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        const bosonVoucherClone2 = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         // Create an offer with new seller
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
@@ -459,7 +459,7 @@ describe("IBosonExchangeHandler", function () {
         // Deposit seller funds so the commit will succeed
         await fundsHandler
           .connect(rando)
-          .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+          .depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
 
         const buyer2 = newOwner;
 
@@ -471,10 +471,10 @@ describe("IBosonExchangeHandler", function () {
 
         await expect(tx)
           .to.emit(bosonVoucherClone, "Transfer")
-          .withArgs(ethers.constants.Zero, buyer.address, tokenId1);
+          .withArgs(constants.Zero, buyer.address, tokenId1);
         await expect(tx2)
           .to.emit(bosonVoucherClone2, "Transfer")
-          .withArgs(ethers.constants.Zero, buyer2.address, tokenId2);
+          .withArgs(constants.Zero, buyer2.address, tokenId2);
 
         // buyer should own 1 voucher on the clone1 address and buyer2 should own 1 voucher on clone2
         expect(await bosonVoucherClone.balanceOf(buyer.address)).to.equal("1", "Clone 1: buyer 1 balance should be 1");
@@ -543,7 +543,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
         voucher.committedDate = block.timestamp.toString();
@@ -579,7 +579,7 @@ describe("IBosonExchangeHandler", function () {
       it("Should not decrement quantityAvailable if offer is unlimited", async function () {
         // Create an offer with unlimited quantity
         let { offer, ...details } = await mockOffer();
-        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+        offer.quantityAvailable = constants.MaxUint256.toString();
 
         // Delete unnecessary field
         delete details.offerFees;
@@ -596,7 +596,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Offer qunantityAvailable should not be decremented
         [, offer] = await offerHandler.connect(rando).getOffer(offerId);
-        expect(offer.quantityAvailable).to.equal(ethers.constants.MaxUint256, "Quantity available should be unlimited");
+        expect(offer.quantityAvailable).to.equal(constants.MaxUint256, "Quantity available should be unlimited");
       });
 
       it("Should not decrement seller funds if offer price and sellerDeposit is 0", async function () {
@@ -661,7 +661,7 @@ describe("IBosonExchangeHandler", function () {
         it("buyer address is the zero address", async function () {
           // Attempt to commit, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToOffer(ethers.constants.AddressZero, offerId, { value: price })
+            exchangeHandler.connect(buyer).commitToOffer(ZeroAddress, offerId, { value: price })
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
@@ -688,14 +688,14 @@ describe("IBosonExchangeHandler", function () {
         it("offer is not yet available for commits", async function () {
           // Create an offer with staring date in the future
           // get current block timestamp
-          const block = await ethers.provider.getBlock("latest");
+          const block = await provider.getBlock("latest");
           const now = block.timestamp.toString();
 
           // set validFrom date in the past
-          offerDates.validFrom = ethers.BigNumber.from(now)
-            .add(oneMonth * 6)
+          offerDates.validFrom = BigInt(now)
+            +oneMonth * 6
             .toString(); // 6 months in the future
-          offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom).add(10).toString(); // just after the valid from so it succeeds.
+          offerDates.validUntil = BigInt(offerDates.validFrom)+10.toString(); // just after the valid from so it succeeds.
 
           await offerHandler
             .connect(assistant)
@@ -742,7 +742,7 @@ describe("IBosonExchangeHandler", function () {
 
         // expected address of the first clone
         const voucherCloneAddress = calculateContractAddress(accountHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
+        bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
         await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
         tokenId = "1";
@@ -757,7 +757,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
         voucher.committedDate = block.timestamp.toString();
@@ -814,7 +814,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Before voucher is transferred, it should have zero royalty fee
         let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offer.price);
-        assert.equal(receiver, ethers.constants.AddressZero, "Recipient address is incorrect");
+        assert.equal(receiver, ZeroAddress, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), "0", "Royalty amount is incorrect");
 
         // Commit to preminted offer, creating a new exchange
@@ -862,7 +862,7 @@ describe("IBosonExchangeHandler", function () {
         // Deposit seller funds so the commit will succeed
         await fundsHandler
           .connect(rando)
-          .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+          .depositFunds(seller.id, ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
 
         // reserve half of the offer, so it's still possible to commit directly
         await offerHandler.connect(assistant).reserveRange(offerId, rangeLength, assistant.address);
@@ -906,10 +906,10 @@ describe("IBosonExchangeHandler", function () {
           await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
 
           // impersonate voucher contract and give it some funds
-          const impersonatedBosonVoucher = await ethers.getImpersonatedSigner(bosonVoucher.address);
-          await ethers.provider.send("hardhat_setBalance", [
+          const impersonatedBosonVoucher = await getImpersonatedSigner(bosonVoucher.address);
+          await provider.send("hardhat_setBalance", [
             impersonatedBosonVoucher.address,
-            ethers.utils.parseEther("10").toHexString(),
+            parseEther("10").toHexString(),
           ]);
 
           // Simulate a second commit with the same token id
@@ -931,16 +931,16 @@ describe("IBosonExchangeHandler", function () {
         it("offer is not yet available for commits", async function () {
           // Create an offer with staring date in the future
           // get current block timestamp
-          const block = await ethers.provider.getBlock("latest");
+          const block = await provider.getBlock("latest");
           const now = block.timestamp.toString();
 
           // Get next offer id
           offerId = await offerHandler.getNextOfferId();
           // set validFrom date in the past
-          offerDates.validFrom = ethers.BigNumber.from(now)
-            .add(oneMonth * 6)
+          offerDates.validFrom = BigInt(now)
+            +oneMonth * 6
             .toString(); // 6 months in the future
-          offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom).add(10).toString(); // just after the valid from so it succeeds.
+          offerDates.validUntil = BigInt(offerDates.validFrom)+10.toString(); // just after the valid from so it succeeds.
 
           await offerHandler
             .connect(assistant)
@@ -1350,11 +1350,11 @@ describe("IBosonExchangeHandler", function () {
         await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
         // Get the current block info
-        blockNumber = await ethers.provider.getBlockNumber();
-        block = await ethers.provider.getBlock(blockNumber);
+        blockNumber = await provider.getBlockNumber();
+        block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = ethers.BigNumber.from(block.timestamp).add(disputePeriod).add(1).toNumber();
+        newTime = BigInt(block.timestamp)+disputePeriod+1.toNumber();
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1371,11 +1371,11 @@ describe("IBosonExchangeHandler", function () {
         await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
         // Get the current block info
-        blockNumber = await ethers.provider.getBlockNumber();
-        block = await ethers.provider.getBlock(blockNumber);
+        blockNumber = await provider.getBlockNumber();
+        block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = ethers.BigNumber.from(block.timestamp).add(disputePeriod).add(1).toNumber();
+        newTime = BigInt(block.timestamp)+disputePeriod+1.toNumber();
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1392,11 +1392,11 @@ describe("IBosonExchangeHandler", function () {
         await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
         // Get the current block info
-        blockNumber = await ethers.provider.getBlockNumber();
-        block = await ethers.provider.getBlock(blockNumber);
+        blockNumber = await provider.getBlockNumber();
+        block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = ethers.BigNumber.from(block.timestamp).add(disputePeriod).add(1).toNumber();
+        newTime = BigInt(block.timestamp)+disputePeriod+1.toNumber();
         await setNextBlockTimestamp(newTime);
 
         // Create a rando buyer account
@@ -1551,11 +1551,11 @@ describe("IBosonExchangeHandler", function () {
 
       it("should emit an ExchangeCompleted event if assistant calls after dispute period", async function () {
         // Get the current block info
-        blockNumber = await ethers.provider.getBlockNumber();
-        block = await ethers.provider.getBlock(blockNumber);
+        blockNumber = await provider.getBlockNumber();
+        block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = ethers.BigNumber.from(block.timestamp).add(disputePeriod).add(1).toNumber();
+        newTime = BigInt(block.timestamp)+disputePeriod+1.toNumber();
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1583,11 +1583,11 @@ describe("IBosonExchangeHandler", function () {
 
       it("should emit an ExchangeCompleted event if anyone calls after dispute period", async function () {
         // Get the current block info
-        blockNumber = await ethers.provider.getBlockNumber();
-        block = await ethers.provider.getBlock(blockNumber);
+        blockNumber = await provider.getBlockNumber();
+        block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = ethers.BigNumber.from(block.timestamp).add(disputePeriod).add(1).toNumber();
+        newTime = BigInt(block.timestamp)+disputePeriod+1.toNumber();
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1780,7 +1780,7 @@ describe("IBosonExchangeHandler", function () {
         // Transfer voucher to new owner
         tokenId = deriveTokenId(offerId, exchange.id);
         bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
+        bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
         await bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, tokenId);
 
         // Cancel the voucher, expecting event
@@ -1860,7 +1860,7 @@ describe("IBosonExchangeHandler", function () {
         it("getCurrentSenderAddress() returns zero address and has isMetaTransaction set to true on chain", async function () {
           await upgradeMetaTransactionsHandlerFacet();
 
-          await mockMetaTransactionsHandler.setAsMetaTransactionAndCurrentSenderAs(ethers.constants.AddressZero);
+          await mockMetaTransactionsHandler.setAsMetaTransactionAndCurrentSenderAs(ZeroAddress);
 
           // Attempt to cancel the voucher, expecting revert
           await expect(exchangeHandler.connect(rando).cancelVoucher(exchange.id)).to.revertedWith(
@@ -2156,7 +2156,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("Should not decrease twin supplyAvailable if supply is unlimited", async function () {
           // Change twin supply to unlimited
-          twin20.supplyAvailable = ethers.constants.MaxUint256.toString();
+          twin20.supplyAvailable = constants.MaxUint256.toString();
           twin20.id = "4";
 
           // Create a new twin
@@ -2296,7 +2296,7 @@ describe("IBosonExchangeHandler", function () {
             await foreign20.connect(assistant).approve(protocolDiamondAddress, "0");
 
             // Deploy contract to test redeem called by another contract
-            let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
+            let TestProtocolFunctionsFactory = await getContractFactory("TestProtocolFunctions");
             const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamondAddress);
             await testProtocolFunctions.deployed();
 
@@ -2436,7 +2436,7 @@ describe("IBosonExchangeHandler", function () {
           let other721;
           beforeEach(async function () {
             // Deploy a new ERC721 token
-            let TokenContractFactory = await ethers.getContractFactory("Foreign721");
+            let TokenContractFactory = await getContractFactory("Foreign721");
             other721 = await TokenContractFactory.connect(rando).deploy();
 
             // Mint enough tokens to cover the offer
@@ -2454,7 +2454,7 @@ describe("IBosonExchangeHandler", function () {
               .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
             // Change twin supply to unlimited and token address to the new token
-            twin721.supplyAvailable = ethers.constants.MaxUint256.toString();
+            twin721.supplyAvailable = constants.MaxUint256.toString();
             twin721.tokenAddress = other721.address;
             twin721.id = "4";
 
@@ -2547,7 +2547,7 @@ describe("IBosonExchangeHandler", function () {
 
           it("should raise a dispute when buyer account is a contract", async function () {
             // Deploy contract to test redeem called by another contract
-            let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
+            let TestProtocolFunctionsFactory = await getContractFactory("TestProtocolFunctions");
             const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamondAddress);
             await testProtocolFunctions.deployed();
 
@@ -2616,7 +2616,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("Should not decrease twin supplyAvailable if supply is unlimited", async function () {
           // Change twin supply to unlimited
-          twin1155.supplyAvailable = ethers.constants.MaxUint256.toString();
+          twin1155.supplyAvailable = constants.MaxUint256.toString();
           twin1155.id = "4";
 
           // Create a new twin
@@ -2726,7 +2726,7 @@ describe("IBosonExchangeHandler", function () {
 
           it("should raise a dispute when buyer account is a contract", async function () {
             // Deploy contract to test redeem called by another contract
-            let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
+            let TestProtocolFunctionsFactory = await getContractFactory("TestProtocolFunctions");
             const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamondAddress);
             await testProtocolFunctions.deployed();
 
@@ -2911,7 +2911,7 @@ describe("IBosonExchangeHandler", function () {
 
           beforeEach(async function () {
             // Deploy a new ERC721 token
-            let TokenContractFactory = await ethers.getContractFactory("Foreign721");
+            let TokenContractFactory = await getContractFactory("Foreign721");
             other721 = await TokenContractFactory.connect(rando).deploy();
 
             // Mint enough tokens to cover the offer
@@ -2929,18 +2929,18 @@ describe("IBosonExchangeHandler", function () {
               .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
             // Change twin supply to unlimited and token address to the new token
-            twin721.supplyAvailable = ethers.constants.MaxUint256.toString();
+            twin721.supplyAvailable = constants.MaxUint256.toString();
             twin721.tokenAddress = other721.address;
             twin721.id = "4";
             // Create a new ERC721 twin with the new token address
             await twinHandler.connect(assistant).createTwin(twin721.toStruct());
 
-            twin20.supplyAvailable = ethers.constants.MaxUint256.toString();
+            twin20.supplyAvailable = constants.MaxUint256.toString();
             twin20.id = "5";
             // Create a new ERC20 twin with the new token address
             await twinHandler.connect(assistant).createTwin(twin20.toStruct());
 
-            twin1155.supplyAvailable = ethers.constants.MaxUint256.toString();
+            twin1155.supplyAvailable = constants.MaxUint256.toString();
             twin1155.id = "6";
             // Create a new ERC1155 twin with the new token address
             await twinHandler.connect(assistant).createTwin(twin1155.toStruct());
@@ -3075,7 +3075,7 @@ describe("IBosonExchangeHandler", function () {
             await foreign20.connect(assistant).approve(protocolDiamondAddress, "0");
 
             // Deploy contract to test redeem called by another contract
-            let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
+            let TestProtocolFunctionsFactory = await getContractFactory("TestProtocolFunctions");
             const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamondAddress);
             await testProtocolFunctions.deployed();
 
@@ -3125,7 +3125,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
         voucher.committedDate = block.timestamp.toString();
@@ -3134,7 +3134,7 @@ describe("IBosonExchangeHandler", function () {
         voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // New expiry date for extensions
-        validUntilDate = ethers.BigNumber.from(voucher.validUntilDate).add(oneMonth).toString();
+        validUntilDate = BigInt(voucher.validUntilDate)+oneMonth.toString();
       });
 
       it("should emit an VoucherExtended event when seller's assistant calls", async function () {
@@ -3196,7 +3196,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("new date is not later than the current one", async function () {
           // New expiry date is older than current
-          validUntilDate = ethers.BigNumber.from(voucher.validUntilDate).sub(oneMonth).toString();
+          validUntilDate = BigInt(voucher.validUntilDate)-oneMonth.toString();
 
           // Attempt to extend voucher, expecting revert
           await expect(exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
@@ -3213,7 +3213,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Client used for tests
         bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
+        bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
 
         tokenId = deriveTokenId(offerId, exchange.id);
       });
@@ -3339,12 +3339,12 @@ describe("IBosonExchangeHandler", function () {
 
         it("Caller is not a clone address associated with the seller", async function () {
           // Create a new seller to get new clone
-          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
+          seller = mockSeller(rando.address, rando.address, ZeroAddress, rando.address);
           expect(seller.isValid()).is.true;
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
-          const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          const bosonVoucherClone2 = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
           // For the sake of test, mint token on bv2 with the id of token on bv1
           // Temporarily grant PROTOCOL role to deployer account
@@ -3439,11 +3439,11 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
           // Get the current block info
-          blockNumber = await ethers.provider.getBlockNumber();
-          block = await ethers.provider.getBlock(blockNumber);
+          blockNumber = await provider.getBlockNumber();
+          block = await provider.getBlock(blockNumber);
 
           // Set time forward to run out the dispute period
-          newTime = ethers.BigNumber.from(voucherRedeemableFrom).add(disputePeriod).add(1).toNumber();
+          newTime = BigInt(voucherRedeemableFrom)+disputePeriod+1.toNumber();
           await setNextBlockTimestamp(newTime);
 
           // Complete exchange
@@ -3578,7 +3578,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set escalatedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           const escalatedDate = block.timestamp.toString();
 
           await setNextBlockTimestamp(Number(escalatedDate) + Number(disputeResolver.escalationResponsePeriod));
@@ -3692,7 +3692,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
         voucher.committedDate = block.timestamp.toString();
@@ -3708,7 +3708,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the redeemedDate date in the expected exchange struct
         voucher.redeemedDate = block.timestamp.toString();
@@ -3720,7 +3720,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the finalizedDate date in the expected exchange struct
         exchange.finalizedDate = block.timestamp.toString();
@@ -3799,7 +3799,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
         voucher.committedDate = block.timestamp.toString();
@@ -3815,14 +3815,14 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the redeemedDate date in the expected exchange struct
         voucher.redeemedDate = block.timestamp.toString();
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the redeemedDate date in the expected exchange struct
         voucher.redeemedDate = block.timestamp.toString();
@@ -3832,7 +3832,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the finalizedDate date in the expected exchange struct
         exchange.finalizedDate = block.timestamp.toString();
@@ -3880,7 +3880,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
 
           disputedDate = block.timestamp.toString();
         });
@@ -3891,7 +3891,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
 
           // Update the finalizedDate date in the expected exchange struct
           exchange.finalizedDate = block.timestamp.toString();
@@ -3943,7 +3943,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
 
           const escalatedDate = block.timestamp.toString();
 
@@ -3952,7 +3952,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
 
           // Update the finalizedDate date in the expected exchange struct
           exchange.finalizedDate = block.timestamp.toString();
@@ -4061,7 +4061,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
 
           // Update the committed date in the expected exchange struct with the block timestamp of the tx
           voucher.committedDate = block.timestamp.toString();
@@ -4081,7 +4081,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
 
           // Update the redeemedDate date in the expected exchange struct
           voucher.redeemedDate = block.timestamp.toString();
@@ -4091,7 +4091,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
 
           // Update the finalizedDate date in the expected exchange struct
           exchange.finalizedDate = block.timestamp.toString();
@@ -4159,7 +4159,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
 
           // Update the committed date in the expected exchange struct with the block timestamp of the tx
           voucher.committedDate = block.timestamp.toString();
@@ -4179,7 +4179,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
 
           // Update the redeemedDate date in the expected exchange struct
           voucher.redeemedDate = block.timestamp.toString();
@@ -4189,7 +4189,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
 
           // Update the finalizedDate date in the expected exchange struct
           exchange.finalizedDate = block.timestamp.toString();
@@ -4281,7 +4281,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
         voucher.committedDate = block.timestamp.toString();
@@ -4297,7 +4297,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the redeemedDate date in the expected exchange struct
         voucher.redeemedDate = block.timestamp.toString();
@@ -4307,7 +4307,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the finalizedDate date in the expected exchange struct
         exchange.finalizedDate = block.timestamp.toString();
@@ -4358,7 +4358,7 @@ describe("IBosonExchangeHandler", function () {
         await accountHandler.connect(rando).createAgent(agent);
 
         // Update agentFee
-        const agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+        const agentFee = BigInt(offer.price)*agent.feePercentage/"10000".toString();
         offerFees.agentFee = agentFee;
 
         // Create a new offer
@@ -4393,7 +4393,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
         voucher.committedDate = block.timestamp.toString();
@@ -4409,7 +4409,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the redeemedDate date in the expected exchange struct
         voucher.redeemedDate = block.timestamp.toString();
@@ -4419,7 +4419,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the finalizedDate date in the expected exchange struct
         exchange.finalizedDate = block.timestamp.toString();

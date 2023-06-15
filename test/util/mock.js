@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ZeroAddress, provider, parseUnits } = hre.ethers;
 
 const decache = require("decache");
 const Condition = require("../../scripts/domain/Condition");
@@ -50,14 +50,12 @@ function mockOfferDurations() {
 
 async function mockOfferDates() {
   // Get the current block info
-  const blockNumber = await ethers.provider.getBlockNumber();
-  const block = await ethers.provider.getBlock(blockNumber);
+  const blockNumber = await provider.getBlockNumber();
+  const block = await provider.getBlock(blockNumber);
 
-  const validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-  const validUntil = ethers.BigNumber.from(block.timestamp)
-    .add(oneMonth * 6)
-    .toString(); // until 6 months
-  const voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+  const validFrom = BigInt(block.timestamp).toString(); // valid from now
+  const validUntil = BigInt(block.timestamp) + BigInt(oneMonth) * BigInt(6); // until 6 months
+  const voucherRedeemableFrom = BigInt(block.timestamp)+ BigInt(oneWeek); // redeemable in 1 week
   const voucherRedeemableUntil = "0"; // mocks use voucher valid duration rather than fixed date, override in tests as needed
 
   // Create a valid offerDates, then set fields in tests directly
@@ -68,12 +66,12 @@ async function mockOfferDates() {
 async function mockOffer() {
   const id = "1";
   const sellerId = "1"; // argument sent to contract for createOffer will be ignored
-  const price = ethers.utils.parseUnits("1.5", "ether").toString();
-  const sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
+  const price = parseUnits("1.5", "ether").toString();
+  const sellerDeposit = parseUnits("0.25", "ether").toString();
   const protocolFee = applyPercentage(price, "200");
-  const buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
+  const buyerCancelPenalty = parseUnits("0.05", "ether").toString();
   const quantityAvailable = "1";
-  const exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
+  const exchangeToken = ZeroAddress.toString(); // Zero addy ~ chain base currency
   const metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
   const metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
   const voided = false;
@@ -221,7 +219,7 @@ async function mockReceipt() {
   const buyerId = "1";
   const sellerId = "2";
   const agentId = "3";
-  const twinReceipt = mockTwinReceipt(ethers.constants.AddressZero);
+  const twinReceipt = mockTwinReceipt(ZeroAddress);
 
   return new Receipt(
     exchange.id,
@@ -251,7 +249,7 @@ function mockCondition({ method, tokenType, tokenAddress, tokenId, threshold, ma
   return new Condition(
     method ?? EvaluationMethod.Threshold,
     tokenType ?? TokenType.FungibleToken,
-    tokenAddress ?? ethers.constants.AddressZero,
+    tokenAddress ?? ZeroAddress,
     tokenId ?? "0",
     threshold ?? "1",
     maxCommits ?? "1"

@@ -31,7 +31,7 @@ async function main(env) {
   // Bail now if hardhat network
   if (network === "hardhat") process.exit();
 
-  const chainId = (await hre.ethers.provider.getNetwork()).chainId;
+  const chainId = (await hre.provider.getNetwork()).chainId;
   const contractsFile = readContracts(chainId, network, env);
 
   const divider = "-".repeat(80);
@@ -39,7 +39,7 @@ async function main(env) {
   console.log(`⛓  Network: ${hre.network.name}\n📅 ${new Date()}`);
 
   // Get the accounts
-  const accounts = await ethers.provider.listAccounts();
+  const accounts = await provider.listAccounts();
   const admin = accounts[0];
   console.log("🔱 Admin account: ", admin ? admin : "not found" && process.exit());
   console.log(divider);
@@ -49,7 +49,7 @@ async function main(env) {
   const accessControllerInfo = contractsFile.contracts.find((i) => i.name === "AccessController");
 
   // Get AccessController abstraction
-  const accessController = await ethers.getContractAt("AccessController", accessControllerInfo.address);
+  const accessController = await getContractAt("AccessController", accessControllerInfo.address);
 
   // Loop through assignments for this network
   const assignments = Object.entries(RoleAssignments[network]);

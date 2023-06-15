@@ -42,7 +42,7 @@ describe("IBosonConfigHandler", function () {
     InterfaceIds = await getInterfaceIds();
 
     // Make accounts available
-    accounts = await ethers.getSigners();
+    accounts = await getSigners();
     [deployer, rando, token, treasury, beacon, proxy] = accounts;
 
     // Deploy the Protocol Diamond
@@ -53,7 +53,7 @@ describe("IBosonConfigHandler", function () {
 
     // Set protocol config
     protocolFeePercentage = 12;
-    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    protocolFeeFlatBoson = parseUnits("0.01", "ether").toString();
     maxExchangesPerBatch = 100;
     maxOffersPerGroup = 100;
     maxTwinsPerBundle = 100;
@@ -72,10 +72,10 @@ describe("IBosonConfigHandler", function () {
     maxPremintedVouchers = 10000;
 
     // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
+    erc165 = await getContractAt("ERC165Facet", protocolDiamond.address);
 
     // Cast Diamond to IBosonConfigHandler
-    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+    configHandler = await getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -515,7 +515,7 @@ describe("IBosonConfigHandler", function () {
 
           it("token address is the zero address", async function () {
             // Attempt to set new token address, expecting revert
-            await expect(configHandler.connect(deployer).setTokenAddress(ethers.constants.AddressZero)).to.revertedWith(
+            await expect(configHandler.connect(deployer).setTokenAddress(ZeroAddress)).to.revertedWith(
               RevertReasons.INVALID_ADDRESS
             );
           });
@@ -555,7 +555,7 @@ describe("IBosonConfigHandler", function () {
           it("treasury address is the zero address", async function () {
             // Attempt to set new treasury address, expecting revert
             await expect(
-              configHandler.connect(deployer).setTreasuryAddress(ethers.constants.AddressZero)
+              configHandler.connect(deployer).setTreasuryAddress(ZeroAddress)
             ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
           });
         });
@@ -594,7 +594,7 @@ describe("IBosonConfigHandler", function () {
           it("voucher beacon address is the zero address", async function () {
             // Attempt to set new beacon address, expecting revert
             await expect(
-              configHandler.connect(deployer).setVoucherBeaconAddress(ethers.constants.AddressZero)
+              configHandler.connect(deployer).setVoucherBeaconAddress(ZeroAddress)
             ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
           });
         });
@@ -633,7 +633,7 @@ describe("IBosonConfigHandler", function () {
           it("beacon proxy address is the zero address", async function () {
             // Attempt to set new proxy address, expecting revert
             await expect(
-              configHandler.connect(deployer).setBeaconProxyAddress(ethers.constants.AddressZero)
+              configHandler.connect(deployer).setBeaconProxyAddress(ZeroAddress)
             ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
           });
         });
@@ -683,7 +683,7 @@ describe("IBosonConfigHandler", function () {
         let protocolFeeFlatBoson;
         beforeEach(async function () {
           // set new value for flat boson protocol fee
-          protocolFeeFlatBoson = ethers.utils.parseUnits("0.02", "ether").toString();
+          protocolFeeFlatBoson = parseUnits("0.02", "ether").toString();
         });
 
         it("should emit a ProtocolFeeFlatBosonChanged event", async function () {
@@ -794,7 +794,7 @@ describe("IBosonConfigHandler", function () {
         let maxEscalationResponsePeriod;
         beforeEach(async function () {
           // set new value
-          maxEscalationResponsePeriod = ethers.BigNumber.from(oneMonth).add(oneWeek);
+          maxEscalationResponsePeriod = BigInt(oneMonth)+oneWeek;
         });
 
         it("should emit a MaxEscalationResponsePeriodChanged event", async function () {
@@ -1054,7 +1054,7 @@ describe("IBosonConfigHandler", function () {
           it("_authTokenContract is the zero address", async function () {
             // Attempt to set new auth token contract, expecting revert
             await expect(
-              configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.ENS, ethers.constants.AddressZero)
+              configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.ENS, ZeroAddress)
             ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
           });
         });
@@ -1103,7 +1103,7 @@ describe("IBosonConfigHandler", function () {
         let maxResolutionPeriod;
         beforeEach(async function () {
           // set new value
-          maxResolutionPeriod = ethers.BigNumber.from(oneMonth).add(oneWeek);
+          maxResolutionPeriod = BigInt(oneMonth)+oneWeek;
         });
 
         it("should emit a MaxResolutionPeriodChanged event", async function () {
@@ -1142,7 +1142,7 @@ describe("IBosonConfigHandler", function () {
         let minDisputePeriod;
         beforeEach(async function () {
           // set new value
-          minDisputePeriod = ethers.BigNumber.from(oneMonth).sub(oneWeek);
+          minDisputePeriod = BigInt(oneMonth)-oneWeek;
         });
 
         it("should emit a MinDisputePeriodChanged event", async function () {
@@ -1249,7 +1249,7 @@ describe("IBosonConfigHandler", function () {
           it("_accessControllerAddress is the zero address", async function () {
             // Attempt to set new value, expecting revert
             await expect(
-              configHandler.connect(deployer).setAccessControllerAddress(ethers.constants.AddressZero)
+              configHandler.connect(deployer).setAccessControllerAddress(ZeroAddress)
             ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
           });
         });
@@ -1333,15 +1333,15 @@ describe("IBosonConfigHandler", function () {
         );
         //setAuthTokenContract is not called in the initialize function
         expect(await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.Lens)).to.equal(
-          ethers.constants.AddressZero,
+          ZeroAddress,
           "Invalid auth token contract address"
         );
         expect(await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.ENS)).to.equal(
-          ethers.constants.AddressZero,
+          ZeroAddress,
           "Invalid auth token contract address"
         );
         expect(await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.Custom)).to.equal(
-          ethers.constants.AddressZero,
+          ZeroAddress,
           "Invalid auth token contract address"
         );
         expect(await configHandler.connect(rando).getMaxExchangesPerBatch()).to.equal(

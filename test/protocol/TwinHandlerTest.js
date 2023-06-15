@@ -63,7 +63,7 @@ describe("IBosonTwinHandler", function () {
 
     // make all account the same
     assistant = admin;
-    clerk = { address: ethers.constants.AddressZero };
+    clerk = { address: ZeroAddress };
 
     // Deploy the mock tokens
     [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens();
@@ -252,7 +252,7 @@ describe("IBosonTwinHandler", function () {
       });
 
       it("It is possible to add an ERC721 with unlimited supply if token is not used yet", async function () {
-        twin.supplyAvailable = ethers.constants.MaxUint256.toString();
+        twin.supplyAvailable = constants.MaxUint256.toString();
         twin.amount = "0";
         twin.tokenId = "0";
         twin.tokenAddress = foreign721.address;
@@ -277,7 +277,7 @@ describe("IBosonTwinHandler", function () {
       });
 
       it("It is possible to add ERC721 even if another ERC721 with unlimited supply exists", async function () {
-        twin.supplyAvailable = ethers.constants.MaxUint256.toString();
+        twin.supplyAvailable = constants.MaxUint256.toString();
         twin.amount = "0";
         twin.tokenId = "0";
         twin.tokenAddress = foreign721.address;
@@ -490,7 +490,7 @@ describe("IBosonTwinHandler", function () {
         });
 
         it("token address has been used in another twin with unlimited supply", async function () {
-          twin.supplyAvailable = ethers.constants.MaxUint256;
+          twin.supplyAvailable = constants.MaxUint256;
           twin.tokenType = TokenType.NonFungibleToken;
           twin.tokenAddress = foreign721.address;
           twin.amount = "0";
@@ -508,11 +508,11 @@ describe("IBosonTwinHandler", function () {
         });
 
         it("Supply range overflow", async function () {
-          twin.supplyAvailable = ethers.constants.MaxUint256.div(10).mul(8).toString();
+          twin.supplyAvailable = constants.MaxUint256/10*8.toString();
           twin.tokenType = TokenType.NonFungibleToken;
           twin.tokenAddress = foreign721.address;
           twin.amount = "0";
-          twin.tokenId = ethers.constants.MaxUint256.sub(twin.supplyAvailable).add(1).toString();
+          twin.tokenId = constants.MaxUint256-twin.supplyAvailable+1.toString();
 
           await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
 
@@ -523,11 +523,11 @@ describe("IBosonTwinHandler", function () {
         });
 
         it("Token with unlimited supply with starting tokenId to high", async function () {
-          twin.supplyAvailable = ethers.constants.MaxUint256.toString();
+          twin.supplyAvailable = constants.MaxUint256.toString();
           twin.tokenType = TokenType.NonFungibleToken;
           twin.tokenAddress = foreign721.address;
           twin.amount = "0";
-          twin.tokenId = ethers.constants.MaxUint256.add(1).div(2).add(1).toString();
+          twin.tokenId = constants.MaxUint256+1/2+1.toString();
 
           await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
 
@@ -539,7 +539,7 @@ describe("IBosonTwinHandler", function () {
 
         context("Token address is unsupported", async function () {
           it("Token address is a zero address", async function () {
-            twin.tokenAddress = ethers.constants.AddressZero;
+            twin.tokenAddress = ZeroAddress;
 
             await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
               RevertReasons.UNSUPPORTED_TOKEN
@@ -771,7 +771,7 @@ describe("IBosonTwinHandler", function () {
     context("👉 getNextTwinId()", async function () {
       beforeEach(async function () {
         // Create another valid seller.
-        seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
+        seller = mockSeller(rando.address, rando.address, ZeroAddress, rando.address);
         expect(seller.isValid()).is.true;
 
         // AuthToken

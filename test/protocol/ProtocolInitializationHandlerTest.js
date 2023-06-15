@@ -30,7 +30,7 @@ describe("ProtocolInitializationHandler", async function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, rando] = await ethers.getSigners();
+    [deployer, rando] = await getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -42,13 +42,13 @@ describe("ProtocolInitializationHandler", async function () {
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
     // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
+    erc165 = await getContractAt("ERC165Facet", protocolDiamond.address);
 
     // Cast Diamond to DiamondCutFacet
-    diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", protocolDiamond.address);
+    diamondCutFacet = await getContractAt("DiamondCutFacet", protocolDiamond.address);
 
     // Cast Diamond to ProtocolInitializationHandlerFacet
-    protocolInitializationFacet = await ethers.getContractAt(
+    protocolInitializationFacet = await getContractAt(
       "ProtocolInitializationHandlerFacet",
       protocolDiamond.address
     );
@@ -57,7 +57,7 @@ describe("ProtocolInitializationHandler", async function () {
 
     // initialization data for v2.2.0
     maxPremintedVouchers = "1000";
-    initializationData = ethers.utils.defaultAbiCoder.encode(["uint256"], [maxPremintedVouchers]);
+    initializationData = defaultAbiCoder.encode(["uint256"], [maxPremintedVouchers]);
   });
 
   describe("Deploy tests", async function () {
@@ -76,7 +76,7 @@ describe("ProtocolInitializationHandler", async function () {
         let protocolInitializationFacetDeployed;
 
         beforeEach(async function () {
-          const ProtocolInitilizationContractFactory = await ethers.getContractFactory(
+          const ProtocolInitilizationContractFactory = await getContractFactory(
             "ProtocolInitializationHandlerFacet"
           );
           protocolInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
@@ -87,7 +87,7 @@ describe("ProtocolInitializationHandler", async function () {
         });
 
         it("Addresses and calldata length mismatch", async function () {
-          version = ethers.utils.formatBytes32String("2.2.0");
+          version = formatBytes32String("2.2.0");
 
           const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initialize", [
             version,
@@ -115,7 +115,7 @@ describe("ProtocolInitializationHandler", async function () {
 
         it("Version is empty", async function () {
           const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initialize", [
-            ethers.constants.HashZero,
+            constants.HashZero,
             [],
             [],
             true,
@@ -139,7 +139,7 @@ describe("ProtocolInitializationHandler", async function () {
         });
 
         it("Initialize same version twice", async function () {
-          version = ethers.utils.formatBytes32String("2.2.0");
+          version = formatBytes32String("2.2.0");
 
           const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initialize", [
             version,
@@ -161,7 +161,7 @@ describe("ProtocolInitializationHandler", async function () {
           );
 
           // Mock a new facet to add to diamond so we can call initialize again
-          let FacetTestFactory = await ethers.getContractFactory("Test3Facet");
+          let FacetTestFactory = await getContractFactory("Test3Facet");
           const testFacet = await FacetTestFactory.deploy(await getFees(maxPriorityFeePerGas));
           await testFacet.deployTransaction.wait();
 
@@ -196,23 +196,23 @@ describe("ProtocolInitializationHandler", async function () {
           );
 
           // Get actual deployed protocolInitializationFacet
-          const diamondLoupe = await ethers.getContractAt("DiamondLoupeFacet", protocolDiamond.address);
+          const diamondLoupe = await getContractAt("DiamondLoupeFacet", protocolDiamond.address);
           const signature = protocolInitializationFacet.interface.getSighash("getVersion()");
           const existingFacetAddress = await diamondLoupe.facetAddress(signature);
-          const protocolInitializationFacet2 = await ethers.getContractAt(
+          const protocolInitializationFacet2 = await getContractAt(
             "ProtocolInitializationHandlerFacet",
             existingFacetAddress
           );
 
           // Deploy selfDestruct contract that will be called during initialize
-          const SelfDestructorFactory = await ethers.getContractFactory("SelfDestructor");
+          const SelfDestructorFactory = await getContractFactory("SelfDestructor");
           const selfDestructor = await SelfDestructorFactory.deploy();
           const selfDestructorInitData = selfDestructor.interface.encodeFunctionData("destruct");
 
           // call initialize
           await expect(
             protocolInitializationFacet2.initialize(
-              ethers.utils.formatBytes32String("haha"),
+              formatBytes32String("haha"),
               [selfDestructor.address],
               [selfDestructorInitData],
               false,
@@ -260,7 +260,7 @@ describe("ProtocolInitializationHandler", async function () {
         const configHandlerInterface = InterfaceIds[interfaceImplementers["ConfigHandlerFacet"]];
         const accountInterface = InterfaceIds[interfaceImplementers["AccountHandlerFacet"]];
 
-        version = ethers.utils.formatBytes32String("2.3.0");
+        version = formatBytes32String("2.3.0");
         const calldataProtocolInitialization =
           deployedProtocolInitializationHandlerFacet.contract.interface.encodeFunctionData("initialize", [
             version,
@@ -296,13 +296,13 @@ describe("ProtocolInitializationHandler", async function () {
     });
 
     it("Should call facet initializer internally when _addresses and _calldata are supplied", async function () {
-      let FacetTestFactory = await ethers.getContractFactory("Test3Facet");
+      let FacetTestFactory = await getContractFactory("Test3Facet");
       const testFacet = await FacetTestFactory.deploy(await getFees(maxPriorityFeePerGas));
       await testFacet.deployTransaction.wait();
 
       const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [rando.address]);
 
-      version = ethers.utils.formatBytes32String("2.3.0");
+      version = formatBytes32String("2.3.0");
       const calldataProtocolInitialization =
         deployedProtocolInitializationHandlerFacet.contract.interface.encodeFunctionData("initialize", [
           version,
@@ -323,7 +323,7 @@ describe("ProtocolInitializationHandler", async function () {
         await getFees(maxPriorityFeePerGas)
       );
 
-      const testFacetContract = await ethers.getContractAt("Test3Facet", protocolDiamond.address);
+      const testFacetContract = await getContractAt("Test3Facet", protocolDiamond.address);
 
       expect(await testFacetContract.getTestAddress()).to.equal(rando.address);
     });
@@ -332,11 +332,11 @@ describe("ProtocolInitializationHandler", async function () {
       let testFacet, version;
 
       beforeEach(async function () {
-        let FacetTestFactory = await ethers.getContractFactory("Test3Facet");
+        let FacetTestFactory = await getContractFactory("Test3Facet");
         testFacet = await FacetTestFactory.deploy(await getFees(maxPriorityFeePerGas));
         await testFacet.deployTransaction.wait();
 
-        version = ethers.utils.formatBytes32String("2.3.0");
+        version = formatBytes32String("2.3.0");
       });
 
       it("Delegate call to initialize fails", async function () {
@@ -405,7 +405,7 @@ describe("ProtocolInitializationHandler", async function () {
       version = "2.1.0";
 
       // Deploy mock protocol initialization facet which simulates state before v2.2.0
-      const ProtocolInitilizationContractFactory = await ethers.getContractFactory(
+      const ProtocolInitilizationContractFactory = await getContractFactory(
         "MockProtocolInitializationHandlerFacet"
       );
       const mockInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
@@ -444,7 +444,7 @@ describe("ProtocolInitializationHandler", async function () {
           await getFees(maxPriorityFeePerGas)
         );
 
-      version = ethers.utils.formatBytes32String("2.2.0");
+      version = formatBytes32String("2.2.0");
 
       // Prepare cut data
       facetCut = getFacetAddCut(configHandler);
@@ -488,7 +488,7 @@ describe("ProtocolInitializationHandler", async function () {
       it("Max preminted vouchers is zero", async function () {
         // set invalid maxPremintedVouchers
         maxPremintedVouchers = "0";
-        initializationData = ethers.utils.defaultAbiCoder.encode(["uint256"], [maxPremintedVouchers]);
+        initializationData = defaultAbiCoder.encode(["uint256"], [maxPremintedVouchers]);
 
         calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
           "initialize",
@@ -522,7 +522,7 @@ describe("ProtocolInitializationHandler", async function () {
         );
 
         // Prepare 2.2.0 deployment
-        version = ethers.utils.formatBytes32String("2.2.0");
+        version = formatBytes32String("2.2.0");
 
         // make diamond cut, expect revert
         await expect(
@@ -564,7 +564,7 @@ describe("ProtocolInitializationHandler", async function () {
       // Prepare calldata
       calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
         "initialize",
-        [ethers.utils.formatBytes32String(version), [], [], true, [], [], []]
+        [formatBytes32String(version), [], [], true, [], [], []]
       );
     });
 
@@ -587,7 +587,7 @@ describe("ProtocolInitializationHandler", async function () {
         // Prepare calldata
         const calldataProtocolInitializationWrong =
           deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData("initialize", [
-            ethers.utils.formatBytes32String(wrongVersion),
+            formatBytes32String(wrongVersion),
             [],
             [],
             true,

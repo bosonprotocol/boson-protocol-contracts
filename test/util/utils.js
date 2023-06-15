@@ -1,7 +1,6 @@
 const { ethers } = require("hardhat");
-const { utils, provider, BigNumber } = ethers;
+const { utils, provider, BigNumber, keccak256, RLP } = ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
-const { keccak256, RLP } = utils;
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
 const Role = require("../../scripts/domain/Role");
 const { expect } = require("chai");
@@ -175,7 +174,7 @@ async function prepareDataSignatureParameters(
 
   if (type == "Protocol") {
     //hardhat default chain id is 31337
-    domainData.salt = utils.hexZeroPad(BigNumber.from(31337).toHexString(), 32);
+    domainData.salt = utils.hexZeroPad(BigInt(31337).toHexString(), 32);
   } else {
     const { chainId } = await provider.getNetwork();
     domainData.chainId = chainId;
@@ -210,18 +209,18 @@ async function prepareDataSignatureParameters(
 }
 
 function calculateVoucherExpiry(block, voucherRedeemableFromDate, voucherValidDuration) {
-  const startDate = BigNumber.from(block.timestamp).gte(BigNumber.from(voucherRedeemableFromDate))
-    ? BigNumber.from(block.timestamp)
-    : BigNumber.from(voucherRedeemableFromDate);
-  return startDate.add(BigNumber.from(voucherValidDuration)).toString();
+  const startDate = BigInt(block.timestamp)>BigInt(voucherRedeemableFromDate)
+    ? BigInt(block.timestamp)
+    : BigInt(voucherRedeemableFromDate);
+  return startDate+BigInt(voucherValidDuration).toString();
 }
 
 function applyPercentage(base, percentage) {
-  return BigNumber.from(base).mul(percentage).div("10000").toString();
+return BigInt(base)*BigInt(percentage)/BigInt(10000);
 }
 
 function calculateContractAddress(senderAddress, senderNonce) {
-  const nonce = BigNumber.from(senderNonce);
+  const nonce = BigInt(senderNonce);
   const nonceHex = nonce.eq(0) ? "0x" : nonce.toHexString();
 
   const input_arr = [senderAddress, nonceHex];
@@ -315,7 +314,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
     "MetaTransactionsHandlerFacet",
   ];
 
-  const signers = await ethers.getSigners();
+  const signers = await getSigners();
   const [deployer, protocolTreasury, bosonToken, pauser] = signers;
 
   // Deploy the Protocol Diamond
@@ -344,7 +343,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
 
   // set protocolFees
   const protocolFeePercentage = "200"; // 2 %
-  const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+  const protocolFeeFlatBoson = parseUnits("0.01", "ether").toString();
   const buyerEscalationDepositPercentage = "1000"; // 10%
 
   // Add config Handler, so ids start at 1, and so voucher address can be found
@@ -389,7 +388,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
 
   let contractInstances = {};
   for (const contract of Object.keys(contracts)) {
-    contractInstances[contract] = await ethers.getContractAt(contracts[contract], protocolDiamond.address);
+    contractInstances[contract] = await getContractAt(contracts[contract], protocolDiamond.address);
   }
 
   const extraReturnValues = { accessController, bosonVoucher, voucherImplementation, beacon };
@@ -404,15 +403,15 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
 }
 
 async function getSnapshot() {
-  return await ethers.provider.send("evm_snapshot", []);
+  return await provider.send("evm_snapshot", []);
 }
 
 async function revertToSnapshot(snapshotId) {
-  return await ethers.provider.send("evm_revert", [snapshotId]);
+  return await provider.send("evm_revert", [snapshotId]);
 }
 
 function deriveTokenId(offerId, exchangeId) {
-  return ethers.BigNumber.from(offerId).shl(128).add(exchangeId);
+  return BigInt(offerId).shl(128)+exchangeId;
 }
 
 exports.setNextBlockTimestamp = setNextBlockTimestamp;

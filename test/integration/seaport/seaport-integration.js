@@ -28,7 +28,7 @@ describe("[@skip-on-coverage] Seaport integration", function () {
   before(async function () {
     accountId.next(true);
 
-    seaport = await ethers.getContractAt("Seaport", SEAPORT_ADDRESS);
+    seaport = await getContractAt("Seaport", SEAPORT_ADDRESS);
     seaportFixtures = await seaportFixtures(seaport);
 
     // Specify contracts needed for this test
@@ -44,15 +44,15 @@ describe("[@skip-on-coverage] Seaport integration", function () {
       contractInstances: { accountHandler, offerHandler, fundsHandler },
     } = await setupTestEnvironment(contracts));
 
-    const seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
+    const seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
 
     const emptyAuthToken = mockAuthToken();
     const voucherInitValues = mockVoucherInitValues();
     await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-    const disputeResolver = mockDisputeResolver(DR.address, DR.address, ethers.constants.AddressZero, DR.address, true);
+    const disputeResolver = mockDisputeResolver(DR.address, DR.address, ZeroAddress, DR.address, true);
 
-    const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+    const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
     const sellerAllowList = [];
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -65,11 +65,11 @@ describe("[@skip-on-coverage] Seaport integration", function () {
       .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
 
     const voucherAddress = calculateContractAddress(accountHandler.address, seller.id);
-    bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
+    bosonVoucher = await getContractAt("BosonVoucher", voucherAddress);
 
     // Pool needs to cover both seller deposit and price
-    const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
-    await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, pool, {
+    const pool = BigInt(offer.sellerDeposit)+offer.price;
+    await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, pool, {
       value: pool,
     });
 

@@ -80,7 +80,7 @@ function getGenericContext(
           // loop matches the loop in populateVoucherContract
           for (let j = i; j < buyers.length; j++) {
             const offer = preUpgradeEntities.offers[i + j].offer;
-            const sellerId = ethers.BigNumber.from(offer.sellerId).toHexString();
+            const sellerId = BigInt(offer.sellerId).toHexString();
 
             // Find the voucher data for the seller
             const voucherData = voucherContractStateAfterUpgradeAndActions.find(
@@ -91,7 +91,7 @@ function getGenericContext(
             const buyerIndex = entities.findIndex((e) => e.wallet.address == buyerWallet.address);
 
             // Update the balance of the buyer
-            voucherData.balanceOf[buyerIndex] = voucherData.balanceOf[buyerIndex].sub(1);
+            voucherData.balanceOf[buyerIndex] = voucherData.balanceOf[buyerIndex]-1;
           }
         }
 

@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getSigners } = hre.ethers;
 const { expect } = require("chai");
 const { DisputeResolverFee, DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolverFee");
 
@@ -13,7 +13,7 @@ describe("DisputeResolverFee", function () {
 
   beforeEach(async function () {
     // Get a list of accounts
-    accounts = await ethers.getSigners();
+    accounts = await getSigners();
     tokenAddress = accounts[1].address;
 
     // Required constructor params
@@ -218,7 +218,7 @@ describe("DisputeResolverFeeList", function () {
 
   beforeEach(async function () {
     // Get a list of accounts
-    accounts = await ethers.getSigners();
+    accounts = await getSigners();
 
     // Required constructor params
     disputeResolverFees = [

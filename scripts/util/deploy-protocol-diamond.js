@@ -27,22 +27,22 @@ async function deployProtocolDiamond(maxPriorityFeePerGas) {
   ];
 
   // Deploy the AccessController contract
-  const AccessController = await ethers.getContractFactory("AccessController");
+  const AccessController = await getContractFactory("AccessController");
   const accessController = await AccessController.deploy(await getFees(maxPriorityFeePerGas));
   await accessController.deployTransaction.wait(confirmations);
 
   // Diamond Loupe Facet
-  const DiamondLoupeFacet = await ethers.getContractFactory("DiamondLoupeFacet");
+  const DiamondLoupeFacet = await getContractFactory("DiamondLoupeFacet");
   const dlf = await DiamondLoupeFacet.deploy(await getFees(maxPriorityFeePerGas));
   await dlf.deployTransaction.wait(confirmations);
 
   // Diamond Cut Facet
-  const DiamondCutFacet = await ethers.getContractFactory("DiamondCutFacet");
+  const DiamondCutFacet = await getContractFactory("DiamondCutFacet");
   const dcf = await DiamondCutFacet.deploy(await getFees(maxPriorityFeePerGas));
   await dcf.deployTransaction.wait(confirmations);
 
   // ERC165 Facet
-  const ERC165Facet = await ethers.getContractFactory("ERC165Facet");
+  const ERC165Facet = await getContractFactory("ERC165Facet");
   const erc165f = await ERC165Facet.deploy(await getFees(maxPriorityFeePerGas));
   await erc165f.deployTransaction.wait(confirmations);
 
@@ -54,7 +54,7 @@ async function deployProtocolDiamond(maxPriorityFeePerGas) {
   ];
 
   // Deploy Protocol Diamond
-  const ProtocolDiamond = await ethers.getContractFactory("ProtocolDiamond");
+  const ProtocolDiamond = await getContractFactory("ProtocolDiamond");
   const protocolDiamond = await ProtocolDiamond.deploy(...diamondArgs, await getFees(maxPriorityFeePerGas));
   await protocolDiamond.deployTransaction.wait(confirmations);
 

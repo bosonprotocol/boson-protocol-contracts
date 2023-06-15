@@ -85,16 +85,16 @@ setupEnvironment["maxAllowedSellers"] = async function (sellerCount = 10) {
   const voucherInitValues = mockVoucherInitValues();
 
   for (let i = 0; i < sellerCount; i++) {
-    const wallet = ethers.Wallet.createRandom();
+    const wallet = Wallet.createRandom();
 
     //Random wallet has no provider. Connect wallet to ethers provider. The connected wallet will have no ETH
-    const connectedWallet = wallet.connect(ethers.provider);
+    const connectedWallet = wallet.connect(provider);
 
     //Fund the new wallet
     let tx = {
       to: connectedWallet.address,
       // Convert currency unit from ether to wei
-      value: ethers.utils.parseEther("1"),
+      value: parseEther("1"),
     };
 
     await other1.sendTransaction(tx);
@@ -144,7 +144,7 @@ setupEnvironment["maxFeesPerDisputeResolver"] = async function (feesCount = 10) 
   //Create DisputeResolverFee array
   let disputeResolverFees = [];
   for (let i = 0; i < feesCount; i++) {
-    const wallet = ethers.Wallet.createRandom();
+    const wallet = Wallet.createRandom();
     disputeResolverFees.push(new DisputeResolverFee(wallet.address, `MockToken${i}`, "0"));
   }
 
@@ -215,7 +215,7 @@ setupEnvironment["maxOffersPerBatch"] = async function (offerCount = 10) {
   const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
   await accountHandler
     .connect(dr1)
-    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")], []);
+    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
 
   const { offer, offerDates, offerDurations } = await mockOffer();
   const offers = new Array(offerCount).fill(offer);
@@ -244,7 +244,7 @@ setupEnvironment["maxOffersPerBatch"] = async function (offerCount = 10) {
   const arrayIndex_2 = 0;
 
   // extendOfferBatch
-  const newValidUntilDate = ethers.BigNumber.from(offerDates.validUntil).add("10000").toString();
+  const newValidUntilDate = BigInt(offerDates.validUntil).add("10000").toString();
   const args_3 = [offerIds.map((offerId) => 2 * offerId), newValidUntilDate];
   const arrayIndex_3 = 0;
 
@@ -299,7 +299,7 @@ setupEnvironment["maxOffersPerGroup"] = async function (offerCount = 10) {
   const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
   await accountHandler
     .connect(dr1)
-    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")], []);
+    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
 
   // Mock offer, offerDates and offerDurations
   const { offer, offerDates, offerDurations } = await mockOffer();
@@ -370,7 +370,7 @@ setupEnvironment["maxOffersPerBundle"] = async function (offerCount = 10) {
   const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
   await accountHandler
     .connect(dr1)
-    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")], []);
+    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
 
   // Mock offer, offerDates and offerDurations
   const { offer, offerDates, offerDurations } = await mockOffer();
@@ -385,7 +385,7 @@ setupEnvironment["maxOffersPerBundle"] = async function (offerCount = 10) {
   // Create a valid twin.
   const [bosonToken] = await deployMockTokens();
   const twin = mockTwin(bosonToken.address);
-  twin.supplyAvailable = ethers.BigNumber.from(twin.amount).mul(offerCount);
+  twin.supplyAvailable = BigInt(twin.amount).mul(offerCount);
 
   // Approving the twinHandler contract to transfer seller's tokens
   await bosonToken.connect(sellerWallet1).approve(twinHandler.address, twin.supplyAvailable); // approving the twin handler
@@ -430,7 +430,7 @@ setupEnvironment["maxTwinsPerBundle"] = async function (twinCount = 10) {
   const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
   await accountHandler
     .connect(dr1)
-    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")], []);
+    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
 
   for (let i = 0; i < twinCount; i++) {
     const [twinContract] = await deployMockTokens(["Foreign20"]);
@@ -487,7 +487,7 @@ setupEnvironment["maxExchangesPerBatch"] = async function (exchangesCount = 10) 
   const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
   await accountHandler
     .connect(dr1)
-    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")], []);
+    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
 
   // Create an offer with big enough quantity
   const { offer, offerDates, offerDurations } = await mockOffer();
@@ -496,10 +496,10 @@ setupEnvironment["maxExchangesPerBatch"] = async function (exchangesCount = 10) 
   await offerHandler.connect(sellerWallet1).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
   // Deposit seller funds so the commit will succeed
-  const sellerPool = ethers.BigNumber.from(offer.price).mul(exchangesCount);
+  const sellerPool = BigInt(offer.price).mul(exchangesCount);
   await fundsHandler
     .connect(sellerWallet1)
-    .depositFunds(seller1.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+    .depositFunds(seller1.id, ZeroAddress, sellerPool, { value: sellerPool });
 
   await setNextBlockTimestamp(Number(offerDates.voucherRedeemableFrom));
   for (let i = 1; i < exchangesCount + 1; i++) {
@@ -511,9 +511,9 @@ setupEnvironment["maxExchangesPerBatch"] = async function (exchangesCount = 10) 
   }
 
   // Set time forward to run out the dispute period
-  const blockNumber = await ethers.provider.getBlockNumber();
-  const block = await ethers.provider.getBlock(blockNumber);
-  const newTime = ethers.BigNumber.from(block.timestamp).add(offerDurations.disputePeriod).add(1).toNumber();
+  const blockNumber = await provider.getBlockNumber();
+  const block = await provider.getBlock(blockNumber);
+  const newTime = BigInt(block.timestamp).add(offerDurations.disputePeriod).add(1).toNumber();
   await setNextBlockTimestamp(newTime);
 
   const exchangeIds = [...Array(exchangesCount + 1).keys()].slice(1);
@@ -549,7 +549,7 @@ setupEnvironment["maxDisputesPerBatch"] = async function (exchangesCount = 10) {
   const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
   await accountHandler
     .connect(dr1)
-    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")], []);
+    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
 
   // Create an offer with big enough quantity
   const { offer, offerDates, offerDurations } = await mockOffer();
@@ -558,10 +558,10 @@ setupEnvironment["maxDisputesPerBatch"] = async function (exchangesCount = 10) {
   await offerHandler.connect(sellerWallet1).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
   // Deposit seller funds so the commit will succeed
-  const sellerPool = ethers.BigNumber.from(offer.price).mul(exchangesCount);
+  const sellerPool = BigInt(offer.price).mul(exchangesCount);
   await fundsHandler
     .connect(sellerWallet1)
-    .depositFunds(seller1.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+    .depositFunds(seller1.id, ZeroAddress, sellerPool, { value: sellerPool });
 
   await setNextBlockTimestamp(Number(offerDates.voucherRedeemableFrom));
   for (let i = 1; i < exchangesCount + 1; i++) {
@@ -576,9 +576,9 @@ setupEnvironment["maxDisputesPerBatch"] = async function (exchangesCount = 10) {
   }
 
   // Set time forward to run out the dispute period
-  const blockNumber = await ethers.provider.getBlockNumber();
-  const block = await ethers.provider.getBlock(blockNumber);
-  const newTime = ethers.BigNumber.from(block.timestamp).add(offerDurations.resolutionPeriod).add(1).toNumber();
+  const blockNumber = await provider.getBlockNumber();
+  const block = await provider.getBlock(blockNumber);
+  const newTime = BigInt(block.timestamp).add(offerDurations.resolutionPeriod).add(1).toNumber();
   await setNextBlockTimestamp(newTime);
 
   const exchangeIds = [...Array(exchangesCount + 1).keys()].slice(1);
@@ -615,7 +615,7 @@ setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
   const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
   await accountHandler
     .connect(dr1)
-    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")], []);
+    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
 
   const { offer, offerDates, offerDurations } = await mockOffer();
   offerDates.voucherRedeemableFrom = offerDates.validFrom;
@@ -659,7 +659,7 @@ setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
 
   // protocol fee withdrawal
   await accessController.grantRole(Role.FEE_COLLECTOR, feeCollector.address);
-  const protocolFee = ethers.BigNumber.from(offer.price).mul(protocolFeePercentage).div(10000);
+  const protocolFee = BigInt(offer.price).mul(protocolFeePercentage).div(10000);
   const tokenAmounts_2 = new Array(tokenCount).fill(protocolFee);
   const args_2 = [tokenAddresses, tokenAmounts_2];
   const arrayIndex_2 = [0, 1];
@@ -693,15 +693,15 @@ setupEnvironment["maxPremintedVouchers"] = async function (tokenCount = 10) {
   const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
   await accountHandler
     .connect(dr1)
-    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")], []);
+    .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
 
   // create the offer
   const { offer, offerDates, offerDurations } = await mockOffer();
-  offer.quantityAvailable = ethers.constants.MaxUint256;
+  offer.quantityAvailable = constants.MaxUint256;
   await offerHandler.connect(sellerWallet1).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
   // reserve range
-  let length = ethers.BigNumber.from(2).pow(128).sub(1);
+  let length = BigInt(2).pow(128).sub(1);
   await offerHandler.connect(sellerWallet1).reserveRange(offer.id, length);
 
   // update bosonVoucher address
@@ -842,7 +842,7 @@ async function setupCommonEnvironment() {
     protocolAdmin,
     feeCollector,
     other1,
-  ] = await ethers.getSigners();
+  ] = await getSigners();
 
   // Deploy the Protocol Diamond
   [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -866,7 +866,7 @@ async function setupCommonEnvironment() {
 
   // Set protocolFees
   protocolFeePercentage = "200"; // 2 %
-  protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+  protocolFeeFlatBoson = parseUnits("0.01", "ether").toString();
   buyerEscalationDepositPercentage = "1000"; // 10%
 
   // Add config Handler, so ids start at 1, and so voucher address can be found
@@ -924,14 +924,14 @@ async function setupCommonEnvironment() {
   // Cut the protocol handler facets into the Diamond
   await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, gasLimit);
   // Cast Diamond to handlers
-  accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-  bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
-  disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
-  exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-  fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-  groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
-  offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-  twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
+  accountHandler = await getContractAt("IBosonAccountHandler", protocolDiamond.address);
+  bundleHandler = await getContractAt("IBosonBundleHandler", protocolDiamond.address);
+  disputeHandler = await getContractAt("IBosonDisputeHandler", protocolDiamond.address);
+  exchangeHandler = await getContractAt("IBosonExchangeHandler", protocolDiamond.address);
+  fundsHandler = await getContractAt("IBosonFundsHandler", protocolDiamond.address);
+  groupHandler = await getContractAt("IBosonGroupHandler", protocolDiamond.address);
+  offerHandler = await getContractAt("IBosonOfferHandler", protocolDiamond.address);
+  twinHandler = await getContractAt("IBosonTwinHandler", protocolDiamond.address);
 
   handlers = {
     IBosonAccountHandler: accountHandler,
