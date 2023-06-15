@@ -104,13 +104,23 @@ task("migrate", "Migrates the protocol to a new version")
   .addParam("env", "The deployment environment")
   .addFlag("dryRun", "Test the migration without deploying")
   .setAction(async ({ newVersion, env, dryRun }) => {
+    let balanceBefore, getBalance;
     if (dryRun) {
-      const { setupDryRun } = await lazyImport(`./scripts/migrations/dry-run.js`);
-      env = await setupDryRun(env);
+      let setupDryRun;
+      ({ setupDryRun, getBalance } = await lazyImport(`./scripts/migrations/dry-run.js`));
+      ({ env, upgraderBalance: balanceBefore } = await setupDryRun(env));
     }
 
     const { migrate } = await lazyImport(`./scripts/migrations/migrate_${newVersion}.js`);
     await migrate(env);
+
+    if (dryRun) {
+      const balanceAfter = await getBalance();
+      const etherSpent = balanceBefore.sub(balanceAfter);
+
+      const formatUnits = require("ethers").utils.formatUnits;
+      console.log("Ether spent: ", formatUnits(etherSpent, "ether"));
+    }
   });
 
 module.exports = {

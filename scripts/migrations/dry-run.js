@@ -10,8 +10,7 @@ async function setupDryRun(env) {
   console.warn("This is a dry run. No actual upgrade will be performed");
   ({ chainId: forkedChainId } = await ethers.provider.getNetwork());
   forkedEnv = env;
-  const upgraderAddress = (await ethers.getSigners())[0].address;
-  const upgraderBalance = await ethers.provider.getBalance(upgraderAddress);
+  const upgraderBalance = await getBalance();
 
   // change network to hardhat with forking enabled
   hre.config.networks["hardhat"].forking = {
@@ -32,7 +31,14 @@ async function setupDryRun(env) {
   // copy addresses file
   shell.cp(getAddressesFilePath(forkedChainId, network, forkedEnv), getAddressesFilePath(chainId, "hardhat", env));
 
-  return env;
+  return { env, upgraderBalance };
+}
+
+async function getBalance() {
+  const upgraderAddress = (await ethers.getSigners())[0].address;
+  const upgraderBalance = await ethers.provider.getBalance(upgraderAddress);
+  return upgraderBalance;
 }
 
 exports.setupDryRun = setupDryRun;
+exports.getBalance = getBalance;
