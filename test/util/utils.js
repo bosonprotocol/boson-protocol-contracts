@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { utils, provider, BigNumber, keccak256, RLP } = ethers;
+const { utils, provider, BigNumber, keccak256, RLP, getSigners } = ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
 const Role = require("../../scripts/domain/Role");

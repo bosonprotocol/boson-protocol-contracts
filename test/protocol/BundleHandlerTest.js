@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { MaxUnit256, getContractAt } = ethers;
 const { expect, assert } = require("chai");
 
 const Bundle = require("../../scripts/domain/Bundle");
@@ -294,7 +295,7 @@ describe("IBosonBundleHandler", function () {
       it("If sum of offers' quantities is more than maxUint256, total quantity is maxUint256", async function () {
         // create two offers with close to unlimited supply
         const newOffer = offer.clone();
-        newOffer.quantityAvailable = constants.MaxUint256/10*9.toString();
+        newOffer.quantityAvailable = MaxUint256/10*9;
         const newOffer2 = newOffer.clone();
         const newOfferId = "6";
         const newOfferId2 = "7";
@@ -309,7 +310,7 @@ describe("IBosonBundleHandler", function () {
 
         // create a twin with almost unlimited supply
         twin = mockTwin(bosonToken.address);
-        twin.supplyAvailable = constants.MaxUint256-1.toString();
+        twin.supplyAvailable = MaxUint256-1;
         expect(twin.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
@@ -326,7 +327,7 @@ describe("IBosonBundleHandler", function () {
 
         // create a twin with unlimited supply
         twin = mockTwin(bosonToken.address);
-        twin.supplyAvailable = constants.MaxUint256.toString();
+        twin.supplyAvailable = MaxUint256;
         expect(twin.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
@@ -564,7 +565,7 @@ describe("IBosonBundleHandler", function () {
 
         it("Offers quantity is unlimited but twin supply is not", async function () {
           const newOffer = offer.clone();
-          newOffer.quantityAvailable = constants.MaxUint256.toString();
+          newOffer.quantityAvailable = MaxUint256;
           let expectedNewOfferId = "6";
 
           await offerHandler

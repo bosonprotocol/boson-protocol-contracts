@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { provider } = hre.ethers;
 const fs = require("fs");
 const addressesDirPath = __dirname + `/../../addresses`;
 
@@ -63,7 +63,7 @@ async function getMaxFeePerGas(maxPriorityFeePerGas) {
 async function getFees() {
   // maxPriorityFeePerGas TODO add back as an argument when js supports 1559 on polygon
   const { gasPrice } = await provider.getFeeData();
-  const newGasPrice = gasPrice.mul(BigInt("2"));
+  const newGasPrice = gasPrice * BigInt("2");
   //  return { maxPriorityFeePerGas, maxFeePerGas: await getMaxFeePerGas(maxPriorityFeePerGas) }; // TODO use when js supports 1559 on polygon
   return { gasPrice: newGasPrice };
 }

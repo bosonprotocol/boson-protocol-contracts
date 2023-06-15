@@ -1,10 +1,14 @@
 const hre = require("hardhat");
+const { keccak256, toUtf8Bytes, getContractAt, ZeroAddress } = hre.ethers;;
 const environments = "../../environments.js";
 const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const FacetCutAction = require("../domain/FacetCutAction");
 const { interfacesWithMultipleArtifacts } = require("./constants");
 const { getFees } = require("./utils");
-const { keccak256, toUtf8Bytes } = hre.ethers;;
+
+function removeNativeFunctions(interface) {
+  return Object.keys(interface).filter(key => !["deploy", "fragments", "fallback", "receive"].includes(key));
+}
 
 /**
  * Utilities for testing and interacting with Diamond
@@ -13,7 +17,7 @@ const { keccak256, toUtf8Bytes } = hre.ethers;;
  */
 // get function selectors from ABI
 function getSelectors(contract, returnSignatureToNameMapping = false) {
-  const signatures = Object.keys(contract.interface.functions);
+  const signatures =removeNativeFunctions(contract.interface);
   let signatureToNameMapping = {};
   const selectors = signatures.reduce((acc, val) => {
     if (val !== "init(bytes)") {
@@ -32,14 +36,14 @@ function getSelectors(contract, returnSignatureToNameMapping = false) {
 
 // get interface id
 async function getInterfaceId(contractName, skipBaseCheck = false, isFullPath = false) {
-  const contract = await getContractAt(contractName, ZeroAddress);
-  const signatures = Object.keys(contract.interface.functions);
+ const contract = await getContractAt(contractName, ZeroAddress);
+  const signatures = removeNativeFunctions(contract.interface);
   const selectors = signatures.reduce((acc, val) => {
-    acc.push(BigInt(contract.interface.getSighash(val)));
+    acc.push(BigInt(contract[val].getSighash()));
     return acc;
   }, []);
 
-  let interfaceId = selectors.reduce((pv, cv) => pv.xor(cv), BigInt("0x00000000"));
+  let interfaceId = selectors.reduce((pv, cv) => pv ^ cv, BigInt(0x00000000));
 
   // If contract inherits other contracts, their interfaces must be xor-ed
   if (!skipBaseCheck) {
@@ -61,7 +65,7 @@ async function getInterfaceId(contractName, skipBaseCheck = false, isFullPath = 
 
       isFullPath = interfacesWithMultipleArtifacts.includes(baseName);
 
-      const baseContractInterfaceId = BigNumber.from(
+      const baseContractInterfaceId = BigInt(
         await getInterfaceId(
           interfacesWithMultipleArtifacts.includes(baseName)
             ? `contracts/interfaces/${baseName}.sol:${baseName}`
@@ -72,10 +76,10 @@ async function getInterfaceId(contractName, skipBaseCheck = false, isFullPath = 
       );
 
       // Remove interface id of base contracts
-      interfaceId = interfaceId.xor(baseContractInterfaceId);
+      interfaceId = interfaceId ^baseContractInterfaceId;
     }
   }
-  return interfaceId.isZero() ? "0x00000000" : hexZeroPad(interfaceId.toHexString(), 4);
+  return interfaceId == 0n ? "0x00000000" : hexZeroPad(interfaceId.toHexString(), 4);
 }
 
 // get function selector from function signature

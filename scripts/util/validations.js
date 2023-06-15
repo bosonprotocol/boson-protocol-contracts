@@ -17,8 +17,6 @@ function bigNumberIsValid(bigNumber, { optional, gt, lte, empty } = {}) {
 
   if (optional && (bigNumber == undefined || bigNumber == null)) {
     valid = true;
-  } else if (typeof bigNumber !== "string") {
-    valid = false;
   } else if (empty && bigNumber === "") {
     valid = true;
   } else {
