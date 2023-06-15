@@ -63,6 +63,8 @@ describe("SnapshotGate", function () {
   let snapshot, snapshotTokenSupplies, snapshotTokenCount, holders, holderByAddress;
 
   beforeEach(async function () {
+    accountId.next(true);
+
     // Make accounts available
     [
       deployer,
@@ -175,7 +177,10 @@ describe("SnapshotGate", function () {
 
     // Deploy the SnapshotGate example
     sellerId = "1";
-    [snapshotGate] = await deploySnapshotGateExample(["SnapshotGateToken", "SGT", protocolDiamond.address, sellerId]);
+    [snapshotGate] = await deploySnapshotGateExample(
+      ["SnapshotGateToken", "SGT", protocolDiamond.address, sellerId],
+      maxPriorityFeePerGas
+    );
 
     // Deploy the mock tokens
     [foreign20] = await deployMockTokens(["Foreign20"]);

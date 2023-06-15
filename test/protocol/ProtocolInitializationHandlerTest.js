@@ -433,7 +433,8 @@ describe("ProtocolInitializationHandler", async function () {
         maxPriorityFeePerGas,
         version,
         mockInitializationFacetDeployed,
-        []
+        [],
+        maxPriorityFeePerGas
       );
 
       // Deploy v2.2.0 facets
@@ -441,7 +442,7 @@ describe("ProtocolInitializationHandler", async function () {
         await deployProtocolFacets(
           ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet"],
           {},
-          await getFees(maxPriorityFeePerGas)
+          maxPriorityFeePerGas
         );
 
       version = ethers.utils.formatBytes32String("2.2.0");
@@ -555,7 +556,7 @@ describe("ProtocolInitializationHandler", async function () {
       [{ contract: deployedProtocolInitializationHandlerFacet }] = await deployProtocolFacets(
         ["ProtocolInitializationHandlerFacet", "AccountHandlerFacet"],
         {},
-        await getFees(maxPriorityFeePerGas)
+        maxPriorityFeePerGas
       );
 
       // Prepare cut data
@@ -606,7 +607,7 @@ describe("ProtocolInitializationHandler", async function () {
         const [{ contract: accountHandler }] = await deployProtocolFacets(
           ["AccountHandlerFacet"],
           {},
-          await getFees(maxPriorityFeePerGas)
+          maxPriorityFeePerGas
         );
 
         // Prepare cut data
