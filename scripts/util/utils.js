@@ -47,25 +47,11 @@ function readContracts(chainId, network, env) {
   return JSON.parse(fs.readFileSync(getAddressesFilePath(chainId, network, env), "utf-8"));
 }
 
-async function getBaseFee() {
-  if (hre.network.name == "hardhat" || hre.network.name == "localhost") {
-    // getBlock("pending") doesn't work with hardhat. This is the value one gets by calling getBlock("0")
-    return "1000000000";
-  }
-  const { baseFeePerGas } = await ethers.provider.getBlock("pending");
-  return baseFeePerGas;
-}
-
-async function getMaxFeePerGas(maxPriorityFeePerGas) {
-  return maxPriorityFeePerGas.add(await getBaseFee());
-}
-
-async function getFees() {
-  // maxPriorityFeePerGas TODO add back as an argument when ethers.js supports 1559 on polygon
-  const { gasPrice } = await ethers.provider.getFeeData();
-  const newGasPrice = gasPrice.mul(ethers.BigNumber.from("2"));
-  //  return { maxPriorityFeePerGas, maxFeePerGas: await getMaxFeePerGas(maxPriorityFeePerGas) }; // TODO use when ethers.js supports 1559 on polygon
-  return { gasPrice: newGasPrice };
+async function getFees(maxPriorityFeePerGas) {
+  const { lastBaseFeePerGas } = await ethers.provider.getFeeData();
+  // Set maxFeePerGas so it's likely to be accepted by the network
+  // maxFeePerGas = maxPriorityFeePerGas + 2 * lastBaseFeePerGas
+  return { maxPriorityFeePerGas, maxFeePerGas: maxPriorityFeePerGas.add(lastBaseFeePerGas.mul(2)) };
 }
 
 // Check if account has a role
@@ -96,8 +82,6 @@ exports.writeContracts = writeContracts;
 exports.readContracts = readContracts;
 exports.delay = delay;
 exports.deploymentComplete = deploymentComplete;
-exports.getBaseFee = getBaseFee;
-exports.getMaxFeePerGas = getMaxFeePerGas;
 exports.getFees = getFees;
 exports.checkRole = checkRole;
 exports.addressNotFound = addressNotFound;
