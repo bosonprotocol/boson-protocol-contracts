@@ -115,7 +115,7 @@ To get the examples how to use the admin to perform actions, refer to unit test 
 ### Upgrade facets
 To test the upgrade functionality, you first need to setup an upgrader account as described in previous section.
 
-To perform the upgrade you then
+#### Using the upgrade faces method
 - Update some of the existing facets or create new one.
 - Update config file `scripts/config/facet-upgrade.js`:
   - "addOrUpgrade" is the list of facets that will be upgraded or added,
@@ -124,17 +124,25 @@ To perform the upgrade you then
   - "facetsToInit": list of facets that will be initialized on ProtocolInitializationFacet. 
                   if facet initializer expects arguments, provide them here. For no-arg initializers pass an empty array.
                   You don't have to provide ProtocolInitializationFacet args here because they are generated on cut function.
-- Update `version` in `package.json`. If the version in `package.json` matches the existing version in addresses file, you will have to explicitly confirm that you want to proceed.
-- Run `npm run upgrade-facets:local`. This will deploy new facets and make all necessary diamond cuts. It also updates the existing addresses file `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node) and outputs the upgrade log to the console.
+- Run `npm run upgrade-facets:local --new-version version`. This will deploy new facets and make all necessary diamond cuts. It also updates the existing addresses file `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node) and outputs the upgrade log to the console.
 
 Protocol initialization facet is explained in more detail on a separate page: [Protocol initialization handler facet](protocol-initialization-facet.md).
+
+#### Using the migrations
+If you are testing an upgrade of official release, you can simply run
+```
+npx hardhat migrate version --network local --env ""
+```
+
+If you are testing an unreleased version (potentially including your changes), first prepare a migration script in [migrations](../scripts/migrations/) named `migrate_<version>.js` with all the logic needed for the migration. Then run the migration the same way as for the official releases.
+
 
 ### Upgrade clients
 To test the upgrade functionality, you first need to setup an upgrader account as described in section [Manage roles](local-development.md#optional-manage-roles)
 
 To perform the upgrade you then
 - Update some of the existing clients
-- Run `npm run upgrade-clients:local`. This will deploy new clients and set implementation address on beacon. It also updates the existing addresses file `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node) and outputs the upgrade log to the console.
+- Run `npm run upgrade-clients:local --new-version version`. This will deploy new clients and set implementation address on beacon. It also updates the existing addresses file `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node) and outputs the upgrade log to the console.
 
 ### Using the protocol
 You can find the examples how to use all functions of the protocol in our test files in folder `test/protocol`.

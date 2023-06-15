@@ -59,19 +59,36 @@ Upgrade existing facets, add new facets or remove existing facets. We provide di
 For upgrade to succeed you need an account with UPGRADER role. Refer to [Manage roles](#manage-roles) to see how to grant it.
 
 - **local network**. This upgrades the existing diamond on a independent instance of local network (e.g. `npx hardhat node`). Upgrade process is described [here](local-development.md#upgrade-facets).  
-```npm run upgrade-facets:local```
+```npm run upgrade-facets:local --new-version version```
 - **internal test node**. This upgrades the existing diamond on a custom test network. You need to modifiy `.env` with appropriate values for this to work.  
-```npm run upgrade-facets:test```
+```npm run upgrade-facets:test -- --new-version version```
 - **Polygon Mumbai**. This upgrades the existing diamond on Polygon Mumbai. The Boson Protocol team uses separate sets of contracts on Polygon Mumbai for the test and staging environments.  
-```npm run upgrade-facets:polygon:mumbai-test```  
-```npm run upgrade-facets:polygon:mumbai-staging```
+```npm run upgrade-facets:polygon:mumbai-test --new-version version```  
+```npm run upgrade-facets:polygon:mumbai-staging --new-version version```
 - **Polygon Mainnet**. This upgrades the existing diamond on Polygon Mainnet.  
-```npm run upgrade-facets:polygon:mainnet```
+```npm run upgrade-facets:polygon:mainnet --new-version version```
 - **Ethereum Mainnet**. This upgrades the existing diamond on Ethereum Mainnet.  
-```npm run upgrade-facets:ethereum:mainnet```
+```npm run upgrade-facets:ethereum:mainnet --new-version version```
 
-Each upgrade requires correct config parameters. We provide [correct configurations for all release versions]().  
+Each upgrade requires correct config parameters. 
+- **<= v2.2.0**: Correct configurations for releases up to v2.2.0 are available [here](../test/upgrade/00_config.js).  
+- **>= v2.2.1**: Configurations for releases above v2.2.0 are part of their respective [migration scripts](../scripts/migrations/). For this versions, use of migration script is preferred over the use of upgrade script, since those scripts also take care of any actions that needs to be done right before or after the upgrade. Refer to [migration section](#migrate) for details. 
+  
 If you want to upgrade to any intermediate version (for example to a release candidate), you can use the same config as for the actual release, however it might result in interface clashes, which prevent subsequent upgrades. Workaround for this problem is to temporarily disable `onlyUninitialized` modifier on all contracts that clash. Since this is generally an unsafe operation, you should never do that in the production environment. Production should always be upgraded only to actual releases.
+
+### Migrate
+
+Migration scripts are available from release v2.2.1 on. They are used to migrate to a higher version of the protocol. They include the configuration needed for the upgrade, and they execute all required pre- and post- upgrade actions. The upgrade is done with the same script as in [Upgrade facets](#upgrade-facets) task. The main difference between migration and just plain upgrade script is that migration scripts are easier to use and leave less room for the error. Additionally, they allow to simulate the migration before actually performing it so any problems can be detected in advance.
+
+To use them, execute the following command
+```
+npx hardhat migrate version --network network --env environment [--dry-run]
+```
+
+- **version**: tag to which you want to migrate (e.g. v2.3.0). If the remote tag exists, it will overwrite the local one.
+- **network**: network where migration takes place. Must be defined in hardhat config. Current options are `localhost`, `test`, `mumbai`, `polygon`, `mainnet`.
+- **environment**: custom name for environment, used to distinguish if multiple instances are deployed on the same network. Typically one of `test`, `staging` and `prod`.
+- `--dry-run` is an optional flag. If added, the script locally simulates the migration process as it would happen on the actual network and environment, but none of contracts are really deployed and upgrade. It's recommended to run it before the upgrade.
 
 ### Upgrade clients
 Upgrade existing clients (currently only BosonVoucher). Script deploys new implementation and updates address on beacon.  
@@ -80,16 +97,16 @@ For upgrade to succeed you need an account with UPGRADER role. Refer to [Manage 
 If you are not sure which contracts were changed since last deployment/upgrade, refer to [Detect changed contract](#detect-changed-contract) to see how to get the list of changed contracts.
 
 - **local network**. This upgrades the clients on a independent instance of local network (e.g. `npx hardhat node`). Upgrade process is described [here](local-development.md#upgrade-clients).  
-```npm run upgrade-clients:local```
+```npm run upgrade-clients:local --new-version version```
 - **internal test node**. This upgrades the clients on a custom test network. You need to modifiy `.env` with appropriate values for this to work.  
-```npm run upgrade-clients:test```
+```npm run upgrade-clients:test --new-version version```
 - **Polygon Mumbai**. This upgrades the clients on Polygon Mumbai. The Boson Protocol team uses separate sets of contracts on Polygon Mumbai for the test and staging environments.  
-```npm run upgrade-clients:polygon:mumbai-test```  
-```npm run upgrade-clients:polygon:mumbai-staging```
+```npm run upgrade-clients:polygon:mumbai-test --new-version version```  
+```npm run upgrade-clients:polygon:mumbai-staging --new-version version```
 - **Polygon Mainnet**. This upgrades the clients on Polygon Mainnet.  
-```npm run upgrade-clients:polygon:mainnet```
+```npm run upgrade-clients:polygon:mainnet --new-version version```
 - **Ethereum Mainnet**. This upgrades the clients on Ethereum Mainnet.  
-```npm run upgrade-clients:ethereum:mainnet```
+```npm run upgrade-clients:ethereum:mainnet --new-version version```
 
 ### Deploy mock authentication token
 Boson protocol support LENS and ENS as authentication method for seller's admin account. Public networks have LENS and ENS already deployed, but to use that funcionality on custom local or test nodes, you need to deploy the mock contract first. We provide the scripts for the following networks:
