@@ -89,6 +89,7 @@
     "ethereum-input-data-decoder": "^0.4.2",
     "glob": "^10.2.7",
     "hardhat": "^2.14.1",
+    "hardhat-change-network": "^0.0.7",
     "hardhat-contract-sizer": "^2.7.0",
     "hardhat-preprocessor": "^0.1.5",
     "husky": "^8.0.3",

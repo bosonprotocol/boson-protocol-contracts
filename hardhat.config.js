@@ -6,6 +6,8 @@ const { task } = require("hardhat/config");
 require("@nomicfoundation/hardhat-toolbox");
 require("@nomiclabs/hardhat-web3");
 require("hardhat-contract-sizer");
+require("hardhat-preprocessor");
+require("hardhat-change-network");
 
 const lazyImport = async (module) => {
   return await require(module);
@@ -100,9 +102,14 @@ task("split-unit-tests-into-chunks", "Splits unit tests into chunks")
 task("migrate", "Migrates the protocol to a new version")
   .addPositionalParam("newVersion", "The version to migrate to")
   .addParam("env", "The deployment environment")
-  .setAction(async ({ newVersion, env }) => {
-    const { migrate } = await lazyImport(`./scripts/migrations/migrate_${newVersion}.js`);
+  .addFlag("dryRun", "Test the migration without deploying")
+  .setAction(async ({ newVersion, env, dryRun }) => {
+    if (dryRun) {
+      const { setupDryRun } = await lazyImport(`./scripts/migrations/dry-run.js`);
+      env = await setupDryRun(env);
+    }
 
+    const { migrate } = await lazyImport(`./scripts/migrations/migrate_${newVersion}.js`);
     await migrate(env);
   });
 
@@ -144,6 +151,18 @@ module.exports = {
   },
   solidity: {
     compilers: [
+      {
+        version: "0.8.9",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+            details: {
+              yul: true,
+            },
+          },
+        },
+      },
       {
         version: "0.8.18",
         settings: {
