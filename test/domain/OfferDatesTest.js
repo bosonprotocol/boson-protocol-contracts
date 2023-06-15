@@ -14,10 +14,10 @@ describe("OfferDates", function () {
 
   beforeEach(async function () {
     // Required constructor params
-    validFrom = ethers.BigNumber.from(Date.now()).toString(); // valid from now
-    validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // until 6 months
-    voucherRedeemableFrom = ethers.BigNumber.from(Date.now() + oneWeek).toString(); // redeemable in 1 week
-    voucherRedeemableUntil = ethers.BigNumber.from(Date.now() + oneWeek * 3).toString(); // redeemable for 2 weeks
+    validFrom = BigInt(Date.now()).toString(); // valid from now
+    validUntil = BigInt(Date.now() + oneMonth * 6).toString(); // until 6 months
+    voucherRedeemableFrom = BigInt(Date.now() + oneWeek).toString(); // redeemable in 1 week
+    voucherRedeemableUntil = BigInt(Date.now() + oneWeek * 3).toString(); // redeemable for 2 weeks
   });
 
   context("📋 Constructor", async function () {
