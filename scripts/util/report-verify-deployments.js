@@ -15,12 +15,12 @@ async function verifyOnBlockExplorer(contract) {
     if (contract.name == "BosonVoucher Beacon") {
       await hre.run("verify:verify", {
         contract: "contracts/protocol/clients/proxy/BosonClientBeacon.sol:BosonClientBeacon",
-        address: contract.address,
+        address: await contract.getAddress(),
         constructorArguments: contract.args,
       });
     } else {
       await hre.run("verify:verify", {
-        address: contract.address,
+        address: await contract.getAddress(),
         constructorArguments: contract.args,
       });
     }
@@ -33,7 +33,7 @@ async function verifyOnTestEnv(contracts) {
   for (const contract of contracts) {
     console.log(`\n📋 Verifying on test env ${contract.name}`);
     try {
-      const code = await hre.provider.getCode(contract.address);
+      const code = await hre.provider.getCode(await contract.getAddress());
       if (code === "0x0" || code === "0x") {
         console.log(`❌ Failed to verify ${contract.name} on test env.`);
       }

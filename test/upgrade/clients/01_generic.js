@@ -88,7 +88,7 @@ function getGenericContext(
             );
 
             const buyerWallet = buyers[j].wallet;
-            const buyerIndex = entities.findIndex((e) => e.wallet.address == buyerWallet.address);
+            const buyerIndex = entities.findIndex((e) => e.await wallet.getAddress() == await buyerWallet.getAddress());
 
             // Update the balance of the buyer
             voucherData.balanceOf[buyerIndex] = voucherData.balanceOf[buyerIndex]-1;

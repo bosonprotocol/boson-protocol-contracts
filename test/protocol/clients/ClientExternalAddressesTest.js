@@ -41,14 +41,14 @@ describe("IClientExternalAddresses", function () {
     context("👉 setImplementation()", async function () {
       beforeEach(async function () {
         // set new value for voucher implementation
-        voucherImplementation = other1.address; // random address, just for test
+        voucherImplementation = await other1.getAddress(); // random address, just for test
       });
 
       it("should emit an Upgraded event", async function () {
         // Set new implementation, testing for the event
         await expect(beacon.connect(deployer).setImplementation(voucherImplementation))
           .to.emit(beacon, "Upgraded")
-          .withArgs(voucherImplementation, deployer.address);
+          .withArgs(voucherImplementation, await deployer.getAddress());
       });
 
       it("should update state", async function () {
@@ -79,14 +79,14 @@ describe("IClientExternalAddresses", function () {
     context("👉 setProtocolAddress()", async function () {
       beforeEach(async function () {
         // set new value for protocol address
-        protocolAddress = other3.address; // random address, just for test
+        protocolAddress = await other3.getAddress(); // random address, just for test
       });
 
       it("should emit a ProtocolAddressChanged event", async function () {
         // Set new protocol address, testing for the event
         await expect(beacon.connect(deployer).setProtocolAddress(protocolAddress))
           .to.emit(beacon, "ProtocolAddressChanged")
-          .withArgs(protocolAddress, deployer.address);
+          .withArgs(protocolAddress, await deployer.getAddress());
       });
 
       it("should update state", async function () {

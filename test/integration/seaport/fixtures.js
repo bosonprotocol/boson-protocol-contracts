@@ -40,7 +40,7 @@ const seaportFixtures = async (seaport) => {
     conduitKey = constants.HashZero
   ) {
     const parameters = {
-      offerer: offerer.address,
+      offerer: await offerer.getAddress(),
       zone: zone?.address ?? constants.AddressZero,
       offer,
       consideration,
@@ -53,7 +53,7 @@ const seaportFixtures = async (seaport) => {
       totalOriginalConsiderationItems: BigNumber.from(consideration.length),
     };
 
-    const counter = await seaport.getCounter(offerer.address);
+    const counter = await seaport.getCounter(await offerer.getAddress());
     const orderComponents = { ...parameters, counter };
 
     const orderHash = await getAndVerifyOrderHash(orderComponents);

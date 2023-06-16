@@ -92,38 +92,38 @@ setupEnvironment["maxAllowedSellers"] = async function (sellerCount = 10) {
 
     //Fund the new wallet
     let tx = {
-      to: connectedWallet.address,
+      to: await connectedWallet.getAddress(),
       // Convert currency unit from ether to wei
       value: parseEther("1"),
     };
 
     await other1.sendTransaction(tx);
-    const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address);
+    const seller = mockSeller(await wallet.getAddress(), await wallet.getAddress(), await wallet.getAddress(), await wallet.getAddress());
     await accountHandler.connect(connectedWallet).createSeller(seller, emptyAuthToken, voucherInitValues);
   }
 
   //Create DisputeResolverFee array
   const disputeResolverFees = [
-    new DisputeResolverFee(other1.address, "MockToken1", "0"),
-    new DisputeResolverFee(other2.address, "MockToken2", "0"),
-    new DisputeResolverFee(other3.address, "MockToken3", "0"),
+    new DisputeResolverFee(await other1.getAddress(), "MockToken1", "0"),
+    new DisputeResolverFee(await other2.getAddress(), "MockToken2", "0"),
+    new DisputeResolverFee(await other3.getAddress(), "MockToken3", "0"),
   ];
 
   const sellerAllowList = [...Array(sellerCount + 1).keys()].slice(1);
 
   // Dispute resolver 2 - used in "addSellersToAllowList"
-  const disputeResolver2 = mockDisputeResolver(dr2.address, dr2.address, dr2.address, dr2.address);
+  const disputeResolver2 = mockDisputeResolver(await dr2.getAddress(), await dr2.getAddress(), await dr2.getAddress(), await dr2.getAddress());
   await accountHandler.connect(dr2).createDisputeResolver(disputeResolver2, disputeResolverFees, []);
   const args_2 = [disputeResolver2.id, sellerAllowList];
   const arrayIndex_2 = 1;
 
   // Dispute resolver 3 - used in "removeSellersFromAllowList"
-  const disputeResolver3 = mockDisputeResolver(dr3.address, dr3.address, dr3.address, dr3.address);
+  const disputeResolver3 = mockDisputeResolver(await dr3.getAddress(), await dr3.getAddress(), await dr3.getAddress(), await dr3.getAddress());
   await accountHandler.connect(dr3).createDisputeResolver(disputeResolver3, disputeResolverFees, sellerAllowList);
   const args_3 = [disputeResolver3.id, sellerAllowList];
   const arrayIndex_3 = 1;
 
-  const disputeResolver1 = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address);
+  const disputeResolver1 = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress());
   const args_1 = [disputeResolver1, disputeResolverFees, sellerAllowList];
   const arrayIndex_1 = 2;
 
@@ -145,23 +145,23 @@ setupEnvironment["maxFeesPerDisputeResolver"] = async function (feesCount = 10) 
   let disputeResolverFees = [];
   for (let i = 0; i < feesCount; i++) {
     const wallet = Wallet.createRandom();
-    disputeResolverFees.push(new DisputeResolverFee(wallet.address, `MockToken${i}`, "0"));
+    disputeResolverFees.push(new DisputeResolverFee(await wallet.getAddress(), `MockToken${i}`, "0"));
   }
 
   // Dispute resolver 2 - used in "addFeesToDisputeResolver"
-  const disputeResolver2 = mockDisputeResolver(dr2.address, dr2.address, dr2.address, dr2.address);
+  const disputeResolver2 = mockDisputeResolver(await dr2.getAddress(), await dr2.getAddress(), await dr2.getAddress(), await dr2.getAddress());
   await accountHandler.connect(dr2).createDisputeResolver(disputeResolver2, [], []);
   const args_2 = [disputeResolver2.id, disputeResolverFees];
   const arrayIndex_2 = 1;
 
   // Dispute resolver 3 - used in "removeFeesFromDisputeResolver"
-  const disputeResolver3 = mockDisputeResolver(dr3.address, dr3.address, dr3.address, dr3.address);
+  const disputeResolver3 = mockDisputeResolver(await dr3.getAddress(), await dr3.getAddress(), await dr3.getAddress(), await dr3.getAddress());
   await accountHandler.connect(dr3).createDisputeResolver(disputeResolver3, disputeResolverFees, [], { gasLimit });
   const feeTokenAddressesToRemove = disputeResolverFees.map((DRfee) => DRfee.tokenAddress);
   const args_3 = [disputeResolver3.id, feeTokenAddressesToRemove];
   const arrayIndex_3 = 1;
 
-  const disputeResolver1 = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address);
+  const disputeResolver1 = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress());
   const args_1 = [disputeResolver1, disputeResolverFees, []];
   const arrayIndex_1 = 1;
 
@@ -184,10 +184,10 @@ setupEnvironment["maxOffersPerBatch"] = async function (offerCount = 10) {
   const agentId = "0"; // agent id is optional while creating an offer
 
   const seller1 = mockSeller(
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress()
   );
   const voucherInitValues = mockVoucherInitValues();
   const emptyAuthToken = mockAuthToken();
@@ -196,23 +196,23 @@ setupEnvironment["maxOffersPerBatch"] = async function (offerCount = 10) {
 
   // Seller 2 - used in "voidOfferBatch"
   const seller2 = mockSeller(
-    sellerWallet2.address,
-    sellerWallet2.address,
-    sellerWallet2.address,
-    sellerWallet2.address
+    await sellerWallet2.getAddress(),
+    await sellerWallet2.getAddress(),
+    await sellerWallet2.getAddress(),
+    await sellerWallet2.getAddress()
   );
   await accountHandler.connect(sellerWallet2).createSeller(seller2, emptyAuthToken, voucherInitValues);
 
   // Seller 3 - used in "extendOfferBatch"
   const seller3 = mockSeller(
-    sellerWallet3.address,
-    sellerWallet3.address,
-    sellerWallet3.address,
-    sellerWallet3.address
+    await sellerWallet3.getAddress(),
+    await sellerWallet3.getAddress(),
+    await sellerWallet3.getAddress(),
+    await sellerWallet3.getAddress()
   );
   await accountHandler.connect(sellerWallet3).createSeller(seller3, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
+  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
@@ -268,10 +268,10 @@ setupEnvironment["maxOffersPerGroup"] = async function (offerCount = 10) {
   const agentId = "0"; // agent id is optional while creating an offer
 
   const seller1 = mockSeller(
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress()
   );
   const voucherInitValues = mockVoucherInitValues();
   const emptyAuthToken = mockAuthToken();
@@ -280,23 +280,23 @@ setupEnvironment["maxOffersPerGroup"] = async function (offerCount = 10) {
 
   // Seller 2 - used in "addOffersToGroup"
   const seller2 = mockSeller(
-    sellerWallet2.address,
-    sellerWallet2.address,
-    sellerWallet2.address,
-    sellerWallet2.address
+    await sellerWallet2.getAddress(),
+    await sellerWallet2.getAddress(),
+    await sellerWallet2.getAddress(),
+    await sellerWallet2.getAddress()
   );
   await accountHandler.connect(sellerWallet2).createSeller(seller2, emptyAuthToken, voucherInitValues);
 
   // Seller 3 - used in "removeOffersFromGroup"
   const seller3 = mockSeller(
-    sellerWallet3.address,
-    sellerWallet3.address,
-    sellerWallet3.address,
-    sellerWallet3.address
+    await sellerWallet3.getAddress(),
+    await sellerWallet3.getAddress(),
+    await sellerWallet3.getAddress(),
+    await sellerWallet3.getAddress()
   );
   await accountHandler.connect(sellerWallet3).createSeller(seller3, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
+  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
@@ -357,17 +357,17 @@ setupEnvironment["maxOffersPerBundle"] = async function (offerCount = 10) {
   const agentId = "0"; // agent id is optional while creating an offer
 
   const seller1 = mockSeller(
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress()
   );
   const voucherInitValues = mockVoucherInitValues();
   const emptyAuthToken = mockAuthToken();
 
   await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
+  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
@@ -384,11 +384,11 @@ setupEnvironment["maxOffersPerBundle"] = async function (offerCount = 10) {
 
   // Create a valid twin.
   const [bosonToken] = await deployMockTokens();
-  const twin = mockTwin(bosonToken.address);
+  const twin = mockTwin(await bosonToken.getAddress());
   twin.supplyAvailable = BigInt(twin.amount).mul(offerCount);
 
   // Approving the twinHandler contract to transfer seller's tokens
-  await bosonToken.connect(sellerWallet1).approve(twinHandler.address, twin.supplyAvailable); // approving the twin handler
+  await bosonToken.connect(sellerWallet1).approve(await twinHandler.getAddress(), twin.supplyAvailable); // approving the twin handler
 
   // Create a twin.
   await twinHandler.connect(sellerWallet1).createTwin(twin);
@@ -417,27 +417,27 @@ setupEnvironment["maxTwinsPerBundle"] = async function (twinCount = 10) {
   const agentId = "0"; // agent id is optional while creating an offer
 
   const seller1 = mockSeller(
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress()
   );
   const voucherInitValues = mockVoucherInitValues();
   const emptyAuthToken = mockAuthToken();
 
   await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
+  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
 
   for (let i = 0; i < twinCount; i++) {
     const [twinContract] = await deployMockTokens(["Foreign20"]);
-    const twin = mockTwin(twinContract.address);
+    const twin = mockTwin(await twinContract.getAddress());
 
     // Approving the twinHandler contract to transfer seller's tokens
-    await twinContract.connect(sellerWallet1).approve(twinHandler.address, twin.supplyAvailable); // approving the twin handler
+    await twinContract.connect(sellerWallet1).approve(await twinHandler.getAddress(), twin.supplyAvailable); // approving the twin handler
 
     // Create a twin.
     await twinHandler.connect(sellerWallet1).createTwin(twin);
@@ -474,17 +474,17 @@ setupEnvironment["maxExchangesPerBatch"] = async function (exchangesCount = 10) 
   const agentId = "0"; // agent id is optional while creating an offer
 
   const seller1 = mockSeller(
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress()
   );
   const voucherInitValues = mockVoucherInitValues();
   const emptyAuthToken = mockAuthToken();
 
   await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
+  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
@@ -504,7 +504,7 @@ setupEnvironment["maxExchangesPerBatch"] = async function (exchangesCount = 10) 
   await setNextBlockTimestamp(Number(offerDates.voucherRedeemableFrom));
   for (let i = 1; i < exchangesCount + 1; i++) {
     // Commit to offer, creating a new exchange
-    await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
+    await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id, { value: offer.price });
 
     // Redeem voucher
     await exchangeHandler.connect(buyer).redeemVoucher(i);
@@ -536,17 +536,17 @@ setupEnvironment["maxDisputesPerBatch"] = async function (exchangesCount = 10) {
   const agentId = "0"; // agent id is optional while creating an offer
 
   const seller1 = mockSeller(
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress()
   );
   const voucherInitValues = mockVoucherInitValues();
   const emptyAuthToken = mockAuthToken();
 
   await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
+  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
@@ -566,7 +566,7 @@ setupEnvironment["maxDisputesPerBatch"] = async function (exchangesCount = 10) {
   await setNextBlockTimestamp(Number(offerDates.voucherRedeemableFrom));
   for (let i = 1; i < exchangesCount + 1; i++) {
     // Commit to offer, creating a new exchange
-    await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
+    await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id, { value: offer.price });
 
     // Redeem voucher
     await exchangeHandler.connect(buyer).redeemVoucher(i);
@@ -602,17 +602,17 @@ setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
   const agentId = "0"; // agent id is optional while creating an offer
 
   const seller1 = mockSeller(
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress()
   );
   const voucherInitValues = mockVoucherInitValues();
   const emptyAuthToken = mockAuthToken();
 
   await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
+  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
@@ -623,19 +623,19 @@ setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
   for (let i = 1; i < tokenCount + 1; i++) {
     // create a token
     const [tokenContract] = await deployMockTokens(["Foreign20"]);
-    tokenAddresses.push(tokenContract.address);
+    tokenAddresses.push(await tokenContract.getAddress());
 
-    offer.exchangeToken = tokenContract.address;
-    await tokenContract.mint(sellerWallet1.address, offer.sellerDeposit);
-    await tokenContract.mint(buyer.address, offer.price);
-    await tokenContract.connect(sellerWallet1).approve(protocolDiamond.address, offer.sellerDeposit);
-    await tokenContract.connect(buyer).approve(protocolDiamond.address, offer.price);
-    await fundsHandler.connect(sellerWallet1).depositFunds(seller1.id, tokenContract.address, offer.sellerDeposit);
+    offer.exchangeToken = await tokenContract.getAddress();
+    await tokenContract.mint(await sellerWallet1.getAddress(), offer.sellerDeposit);
+    await tokenContract.mint(await buyer.getAddress(), offer.price);
+    await tokenContract.connect(sellerWallet1).approve(await protocolDiamond.getAddress(), offer.sellerDeposit);
+    await tokenContract.connect(buyer).approve(await protocolDiamond.getAddress(), offer.price);
+    await fundsHandler.connect(sellerWallet1).depositFunds(seller1.id, await tokenContract.getAddress(), offer.sellerDeposit);
 
     // add token to DR accepted tokens
     await accountHandler
       .connect(dr1)
-      .addFeesToDisputeResolver(disputeResolver.id, [new DisputeResolverFee(tokenContract.address, `Token${i}`, "0")]);
+      .addFeesToDisputeResolver(disputeResolver.id, [new DisputeResolverFee(await tokenContract.getAddress(), `Token${i}`, "0")]);
 
     // create the offer
     await offerHandler
@@ -643,7 +643,7 @@ setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
       .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
     // Commit to offer, creating a new exchange
-    await exchangeHandler.connect(buyer).commitToOffer(buyer.address, i);
+    await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), i);
 
     // Redeem voucher
     await exchangeHandler.connect(buyer).redeemVoucher(i);
@@ -658,7 +658,7 @@ setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
   const arrayIndex_1 = [1, 2];
 
   // protocol fee withdrawal
-  await accessController.grantRole(Role.FEE_COLLECTOR, feeCollector.address);
+  await accessController.grantRole(Role.FEE_COLLECTOR, await feeCollector.getAddress());
   const protocolFee = BigInt(offer.price).mul(protocolFeePercentage).div(10000);
   const tokenAmounts_2 = new Array(tokenCount).fill(protocolFee);
   const args_2 = [tokenAddresses, tokenAmounts_2];
@@ -680,17 +680,17 @@ setupEnvironment["maxPremintedVouchers"] = async function (tokenCount = 10) {
   const agentId = "0"; // agent id is optional while creating an offer
 
   const seller1 = mockSeller(
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address,
-    sellerWallet1.address
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress(),
+    await sellerWallet1.getAddress()
   );
   const voucherInitValues = mockVoucherInitValues();
   const emptyAuthToken = mockAuthToken();
 
   await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address, true);
+  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
@@ -705,7 +705,7 @@ setupEnvironment["maxPremintedVouchers"] = async function (tokenCount = 10) {
   await offerHandler.connect(sellerWallet1).reserveRange(offer.id, length);
 
   // update bosonVoucher address
-  handlers.IBosonVoucher = bosonVoucher.attach(calculateContractAddress(accountHandler.address, seller1.id));
+  handlers.IBosonVoucher = bosonVoucher.attach(calculateContractAddress(await accountHandler.getAddress(), seller1.id));
 
   // make an empty array of length tokenCount
   const amounts = new Array(tokenCount);
@@ -848,17 +848,17 @@ async function setupCommonEnvironment() {
   [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
 
   // Temporarily grant UPGRADER role to deployer account
-  await accessController.grantRole(Role.UPGRADER, deployer.address);
+  await accessController.grantRole(Role.UPGRADER, await deployer.getAddress());
 
   // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
-  await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+  await accessController.grantRole(Role.PROTOCOL, await protocolDiamond.getAddress());
 
   // Grant ADMIN role to and address that can call restricted functions.
   // This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
-  await accessController.grantRole(Role.ADMIN, protocolAdmin.address);
+  await accessController.grantRole(Role.ADMIN, await protocolAdmin.getAddress());
 
   // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-  const protocolClientArgs = [protocolDiamond.address];
+  const protocolClientArgs = [await protocolDiamond.getAddress()];
   const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, gasLimit);
   const [beacon] = beacons;
   const [proxy] = proxies;
@@ -873,10 +873,10 @@ async function setupCommonEnvironment() {
   const protocolConfig = [
     // Protocol addresses
     {
-      treasury: rando.address,
-      token: rando.address,
-      voucherBeacon: beacon.address,
-      beaconProxy: proxy.address,
+      treasury: await rando.getAddress(),
+      token: await rando.getAddress(),
+      voucherBeacon: await beacon.getAddress(),
+      beaconProxy: await proxy.getAddress(),
     },
     // Protocol limits
     {
@@ -922,16 +922,16 @@ async function setupCommonEnvironment() {
   const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 
   // Cut the protocol handler facets into the Diamond
-  await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, gasLimit);
+  await deployAndCutFacets(await protocolDiamond.getAddress(), facetsToDeploy, gasLimit);
   // Cast Diamond to handlers
-  accountHandler = await getContractAt("IBosonAccountHandler", protocolDiamond.address);
-  bundleHandler = await getContractAt("IBosonBundleHandler", protocolDiamond.address);
-  disputeHandler = await getContractAt("IBosonDisputeHandler", protocolDiamond.address);
-  exchangeHandler = await getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-  fundsHandler = await getContractAt("IBosonFundsHandler", protocolDiamond.address);
-  groupHandler = await getContractAt("IBosonGroupHandler", protocolDiamond.address);
-  offerHandler = await getContractAt("IBosonOfferHandler", protocolDiamond.address);
-  twinHandler = await getContractAt("IBosonTwinHandler", protocolDiamond.address);
+  accountHandler = await getContractAt("IBosonAccountHandler", await protocolDiamond.getAddress());
+  bundleHandler = await getContractAt("IBosonBundleHandler", await protocolDiamond.getAddress());
+  disputeHandler = await getContractAt("IBosonDisputeHandler", await protocolDiamond.getAddress());
+  exchangeHandler = await getContractAt("IBosonExchangeHandler", await protocolDiamond.getAddress());
+  fundsHandler = await getContractAt("IBosonFundsHandler", await protocolDiamond.getAddress());
+  groupHandler = await getContractAt("IBosonGroupHandler", await protocolDiamond.getAddress());
+  offerHandler = await getContractAt("IBosonOfferHandler", await protocolDiamond.getAddress());
+  twinHandler = await getContractAt("IBosonTwinHandler", await protocolDiamond.getAddress());
 
   handlers = {
     IBosonAccountHandler: accountHandler,

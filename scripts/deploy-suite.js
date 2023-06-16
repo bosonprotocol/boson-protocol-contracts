@@ -73,7 +73,7 @@ async function main(env, facetConfig) {
     process.exit(1);
   }
 
-  console.log("🔱 Deployer account: ", deployer ? deployer.address : "not found" && process.exit());
+  console.log("🔱 Deployer account: ", deployer ? await deployer.getAddress() : "not found" && process.exit());
   console.log(divider);
 
   console.log(`💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...`);
@@ -82,18 +82,18 @@ async function main(env, facetConfig) {
   const [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs] = await deployProtocolDiamond(
     maxPriorityFeePerGas
   );
-  deploymentComplete("AccessController", accessController.address, [], "", contracts);
-  deploymentComplete("DiamondLoupeFacet", dlf.address, [], interfaceIdFromFacetName("DiamondLoupeFacet"), contracts);
-  deploymentComplete("DiamondCutFacet", dcf.address, [], interfaceIdFromFacetName("DiamondCutFacet"), contracts);
-  deploymentComplete("ERC165Facet", erc165f.address, [], interfaceIdFromFacetName("ERC165Facet"), contracts);
-  deploymentComplete("ProtocolDiamond", protocolDiamond.address, diamondArgs, "", contracts);
+  deploymentComplete("AccessController", await accessController.getAddress(), [], "", contracts);
+  deploymentComplete("DiamondLoupeFacet", await dlf.getAddress(), [], interfaceIdFromFacetName("DiamondLoupeFacet"), contracts);
+  deploymentComplete("DiamondCutFacet", await dcf.getAddress(), [], interfaceIdFromFacetName("DiamondCutFacet"), contracts);
+  deploymentComplete("ERC165Facet", await erc165f.getAddress(), [], interfaceIdFromFacetName("ERC165Facet"), contracts);
+  deploymentComplete("ProtocolDiamond", await protocolDiamond.getAddress(), diamondArgs, "", contracts);
 
   console.log(`\n💎 Granting UPGRADER role...`);
 
   // Temporarily grant UPGRADER role to deployer account
   transactionResponse = await accessController.grantRole(
     Role.UPGRADER,
-    deployer.address,
+    await deployer.getAddress(),
     await getFees(maxPriorityFeePerGas)
   );
   await transactionResponse.wait(confirmations);
@@ -113,12 +113,12 @@ async function main(env, facetConfig) {
   }
 
   const { version } = packageFile;
-  let { deployedFacets } = await deployAndCutFacets(protocolDiamond.address, facetData, maxPriorityFeePerGas, version);
+  let { deployedFacets } = await deployAndCutFacets(await protocolDiamond.getAddress(), facetData, maxPriorityFeePerGas, version);
 
   for (const deployedFacet of deployedFacets) {
     deploymentComplete(
       deployedFacet.name,
-      deployedFacet.contract.address,
+      deployedFacet.await contract.getAddress(),
       deployedFacet.constructorArgs,
       interfaceIdFromFacetName(deployedFacet.name),
       contracts
@@ -128,7 +128,7 @@ async function main(env, facetConfig) {
   console.log(`\n⧉ Deploying Protocol Client implementation/proxy pairs...`);
 
   // Deploy the Protocol Client implementation/proxy pairs
-  const protocolClientArgs = [protocolDiamond.address];
+  const protocolClientArgs = [await protocolDiamond.getAddress()];
   const clientImplementationArgs = Object.values(clientConfig).map(
     (config) => process.env.FORWARDER_ADDRESS || config[network]
   );
@@ -142,27 +142,27 @@ async function main(env, facetConfig) {
   const [bosonVoucherProxy] = proxies;
 
   // Gather the complete args that were used to create the proxies
-  const bosonVoucherProxyArgs = [...protocolClientArgs, bosonVoucherImpl.address];
+  const bosonVoucherProxyArgs = [...protocolClientArgs, await bosonVoucherImpl.getAddress()];
 
   // Report and prepare for verification
-  deploymentComplete("BosonVoucher Logic", bosonVoucherImpl.address, [], "", contracts);
-  deploymentComplete("BosonVoucher Beacon", bosonClientBeacon.address, bosonVoucherProxyArgs, "", contracts);
-  deploymentComplete("BosonVoucher Proxy", bosonVoucherProxy.address, [], "", contracts);
+  deploymentComplete("BosonVoucher Logic", await bosonVoucherImpl.getAddress(), [], "", contracts);
+  deploymentComplete("BosonVoucher Beacon", await bosonClientBeacon.getAddress(), bosonVoucherProxyArgs, "", contracts);
+  deploymentComplete("BosonVoucher Proxy", await bosonVoucherProxy.getAddress(), [], "", contracts);
 
   console.log(`\n🌐️Configuring and granting roles...`);
 
   // Cast Diamond to the IBosonConfigHandler interface for further interaction with it
-  const bosonConfigHandler = await getContractAt("IBosonConfigHandler", protocolDiamond.address);
+  const bosonConfigHandler = await getContractAt("IBosonConfigHandler", await protocolDiamond.getAddress());
 
   // Add Voucher addresses to protocol config
   transactionResponse = await bosonConfigHandler.setVoucherBeaconAddress(
-    bosonClientBeacon.address,
+    await bosonClientBeacon.getAddress(),
     await getFees(maxPriorityFeePerGas)
   );
   await transactionResponse.wait(confirmations);
 
   transactionResponse = await bosonConfigHandler.setBeaconProxyAddress(
-    bosonVoucherProxy.address,
+    await bosonVoucherProxy.getAddress(),
     await getFees(maxPriorityFeePerGas)
   );
   await transactionResponse.wait(confirmations);
@@ -192,7 +192,7 @@ async function main(env, facetConfig) {
   // Renounce temporarily granted UPGRADER role for deployer account
   transactionResponse = await accessController.renounceRole(
     Role.UPGRADER,
-    deployer.address,
+    await deployer.getAddress(),
     await getFees(maxPriorityFeePerGas)
   );
   await transactionResponse.wait(confirmations);
@@ -200,12 +200,12 @@ async function main(env, facetConfig) {
   // Grant PROTOCOL role to the ProtocolDiamond contract
   transactionResponse = await accessController.grantRole(
     Role.PROTOCOL,
-    protocolDiamond.address,
+    await protocolDiamond.getAddress(),
     await getFees(maxPriorityFeePerGas)
   );
   await transactionResponse.wait(confirmations);
 
-  if (adminAddress.toLowerCase() != deployer.address.toLowerCase()) {
+  if (adminAddress.toLowerCase() != await deployer.getAddress().toLowerCase()) {
     // Grant ADMIN role to the specified admin address
     // Skip this step if adminAddress is the deployer
     transactionResponse = await accessController.grantRole(

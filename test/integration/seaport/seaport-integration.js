@@ -44,13 +44,13 @@ describe("[@skip-on-coverage] Seaport integration", function () {
       contractInstances: { accountHandler, offerHandler, fundsHandler },
     } = await setupTestEnvironment(contracts));
 
-    const seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
+    const seller = mockSeller(await assistant.getAddress(), await assistant.getAddress(), ZeroAddress, await assistant.getAddress());
 
     const emptyAuthToken = mockAuthToken();
     const voucherInitValues = mockVoucherInitValues();
     await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-    const disputeResolver = mockDisputeResolver(DR.address, DR.address, ZeroAddress, DR.address, true);
+    const disputeResolver = mockDisputeResolver(await DR.getAddress(), await DR.getAddress(), ZeroAddress, await DR.getAddress(), true);
 
     const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
     const sellerAllowList = [];
@@ -64,7 +64,7 @@ describe("[@skip-on-coverage] Seaport integration", function () {
       .connect(assistant)
       .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
 
-    const voucherAddress = calculateContractAddress(accountHandler.address, seller.id);
+    const voucherAddress = calculateContractAddress(await accountHandler.getAddress(), seller.id);
     bosonVoucher = await getContractAt("BosonVoucher", voucherAddress);
 
     // Pool needs to cover both seller deposit and price
@@ -74,13 +74,13 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     });
 
     // Pre mint range
-    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, bosonVoucher.address);
+    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, await bosonVoucher.getAddress());
     await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
     // Create seaport offer which tokenId 1
     const endDate = "0xff00000000000000000000000000";
-    const seaportOffer = seaportFixtures.getTestVoucher(1, bosonVoucher.address, 1, 1);
-    const consideration = seaportFixtures.getTestToken(0, undefined, 1, 2, bosonVoucher.address);
+    const seaportOffer = seaportFixtures.getTestVoucher(1, await bosonVoucher.getAddress(), 1, 1);
+    const consideration = seaportFixtures.getTestToken(0, undefined, 1, 2, await bosonVoucher.getAddress());
     ({ order, orderHash, value } = await seaportFixtures.getOrder(
       bosonVoucher,
       undefined,
@@ -96,7 +96,7 @@ describe("[@skip-on-coverage] Seaport integration", function () {
   });
 
   it("Voucher contract can be used to call seaport validate", async function () {
-    const tx = await bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata);
+    const tx = await bosonVoucher.connect(assistant).callExternalContract(await seaport.getAddress(), calldata);
     const receipt = await tx.wait();
 
     const [, orderParameters] = getEvent(receipt, seaport, "OrderValidated");
@@ -105,8 +105,8 @@ describe("[@skip-on-coverage] Seaport integration", function () {
   });
 
   it("Seaport is allowed to transfer vouchers", async function () {
-    await bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata);
-    await bosonVoucher.connect(assistant).setApprovalForAllToContract(seaport.address, true);
+    await bosonVoucher.connect(assistant).callExternalContract(await seaport.getAddress(), calldata);
+    await bosonVoucher.connect(assistant).setApprovalForAllToContract(await seaport.getAddress(), true);
 
     let totalFilled, isValidated;
 
@@ -131,7 +131,7 @@ describe("[@skip-on-coverage] Seaport integration", function () {
       const orders = [objectToArray(order)];
       calldata = seaport.interface.encodeFunctionData("validate", [orders]);
 
-      await expect(bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata)).to.be.revertedWith(
+      await expect(bosonVoucher.connect(assistant).callExternalContract(await seaport.getAddress(), calldata)).to.be.revertedWith(
         "0x466aa616"
       ); //MissingOriginalConsiderationItems
     });

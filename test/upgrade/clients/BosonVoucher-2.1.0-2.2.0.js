@@ -158,10 +158,10 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       // Create a seller
       sellerId = await accountHandler.getNextAccountId();
       const seller = mockSeller(
-        assistant.address,
-        assistant.address,
+        await assistant.getAddress(),
+        await assistant.getAddress(),
         ZeroAddress,
-        assistant.address,
+        await assistant.getAddress(),
         true
       );
       const voucherInitValues = mockVoucherInitValues();
@@ -173,10 +173,10 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       // Create a valid dispute resolver
       disputeResolverId = await accountHandler.getNextAccountId();
       const disputeResolver = mockDisputeResolver(
-        assistant.address,
-        assistant.address,
-        assistant.address,
-        assistant.address,
+        await assistant.getAddress(),
+        await assistant.getAddress(),
+        await assistant.getAddress(),
+        await assistant.getAddress(),
         true,
         true
       );
@@ -205,7 +205,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
       bosonVoucher = await getContractAt(
         "BosonVoucher",
-        calculateContractAddress(exchangeHandler.address, preUpgradeEntities.sellers.length + 1)
+        calculateContractAddress(await exchangeHandler.getAddress(), preUpgradeEntities.sellers.length + 1)
       );
 
       // Adjust maximum preminted vouchers
@@ -214,7 +214,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
     it("reserveRange()", async function () {
       // Reserve range for the assistant, test for event
-      await expect(offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address)).to.emit(
+      await expect(offerHandler.connect(assistant).reserveRange(offerId, length, await assistant.getAddress())).to.emit(
         bosonVoucher,
         "RangeReserved"
       );
@@ -226,7 +226,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       ++offerId;
 
       // Reserve range for the contract, test for event
-      await expect(offerHandler.connect(assistant).reserveRange(offerId, length, bosonVoucher.address)).to.emit(
+      await expect(offerHandler.connect(assistant).reserveRange(offerId, length, await bosonVoucher.getAddress())).to.emit(
         bosonVoucher,
         "RangeReserved"
       );
@@ -235,7 +235,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
     context("preMint()", async function () {
       it("seller can pre mint vouchers", async function () {
         // Reserve range
-        await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
+        await offerHandler.connect(assistant).reserveRange(offerId, length, await assistant.getAddress());
 
         // Premint tokens, test for event
         await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.emit(bosonVoucher, "Transfer");
@@ -254,20 +254,20 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
         // reassign assistant because signer must be on provider default accounts in order to call eth_signTypedData_v4
         assistant = (await getSigners())[2];
-        seller.assistant = assistant.address;
+        seller.assistant = await assistant.getAddress();
         await accountHandler.connect(wallet).updateSeller(seller, authToken);
         await accountHandler.connect(assistant).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]);
 
         // Reserve range
-        await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
+        await offerHandler.connect(assistant).reserveRange(offerId, length, await assistant.getAddress());
 
         // Get last seller voucher
         bosonVoucher = await getContractAt(
           "BosonVoucher",
-          calculateContractAddress(exchangeHandler.address, sellersLength)
+          calculateContractAddress(await exchangeHandler.getAddress(), sellersLength)
         );
 
-        const nonce = Number(await forwarder.getNonce(assistant.address));
+        const nonce = Number(await forwarder.getNonce(await assistant.getAddress()));
 
         const types = {
           ForwardRequest: [
@@ -281,8 +281,8 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         const functionSignature = bosonVoucher.interface.encodeFunctionData("preMint", [offerId, amount]);
 
         const message = {
-          from: assistant.address,
-          to: bosonVoucher.address,
+          from: await assistant.getAddress(),
+          to: await bosonVoucher.getAddress(),
           nonce: nonce,
           data: functionSignature,
         };
@@ -292,7 +292,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
           types,
           "ForwardRequest",
           message,
-          forwarder.address,
+          await forwarder.getAddress(),
           "MockForwarder",
           "0.0.1",
           "0Z"
@@ -305,7 +305,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
     it("burnPremintedVouchers()", async function () {
       // Reserve range and premint tokens
-      await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
+      await offerHandler.connect(assistant).reserveRange(offerId, length, await assistant.getAddress());
       await bosonVoucher.connect(assistant).preMint(offerId, amount);
 
       // void the offer
@@ -317,10 +317,10 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
     it("getRange()", async function () {
       // Reserve range
-      await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
+      await offerHandler.connect(assistant).reserveRange(offerId, length, await assistant.getAddress());
 
       const startTokenId = deriveTokenId(offerId, start);
-      const range = new Range(startTokenId.toString(), length, "0", "0", assistant.address);
+      const range = new Range(startTokenId.toString(), length, "0", "0", await assistant.getAddress());
 
       // Get range object from contract
       const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
@@ -329,7 +329,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
     it("getAvailablePreMints()", async function () {
       // Reserve range
-      await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
+      await offerHandler.connect(assistant).reserveRange(offerId, length, await assistant.getAddress());
 
       // Get available premints from contract
       const availablePremints = await bosonVoucher.getAvailablePreMints(offerId);
@@ -345,21 +345,21 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       // Generate calldata
       const calldata = mockSimpleContract.interface.encodeFunctionData("testEvent");
 
-      await expect(bosonVoucher.connect(assistant).callExternalContract(mockSimpleContract.address, calldata))
+      await expect(bosonVoucher.connect(assistant).callExternalContract(await mockSimpleContract.getAddress(), calldata))
         .to.emit(mockSimpleContract, "TestEvent")
         .withArgs("1");
     });
 
     it("setApprovalForAllToContract()", async function () {
-      await expect(bosonVoucher.connect(assistant).setApprovalForAllToContract(rando.address, true))
+      await expect(bosonVoucher.connect(assistant).setApprovalForAllToContract(await rando.getAddress(), true))
         .to.emit(bosonVoucher, "ApprovalForAll")
-        .withArgs(bosonVoucher.address, rando.address, true);
+        .withArgs(await bosonVoucher.getAddress(), await rando.getAddress(), true);
     });
 
     context("withdrawToProtocol()", async function () {
       beforeEach(async function () {
         // For some reason, getContractAt and changeEtherBalances don't work together, so we need to explicitly instantiate the contract
-        bosonVoucher = new Contract(bosonVoucher.address, bosonVoucher.interface, deployer);
+        bosonVoucher = new Contract(await bosonVoucher.getAddress(), bosonVoucher.interface, deployer);
       });
 
       it("Can withdraw native token", async function () {
@@ -371,7 +371,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         expect(sellersFundsBefore).to.eql(expectedAvailableFunds);
 
         const amount = parseUnits("1", "ether");
-        await deployer.sendTransaction({ to: bosonVoucher.address, value: amount });
+        await deployer.sendTransaction({ to: await bosonVoucher.getAddress(), value: amount });
 
         await expect(() =>
           bosonVoucher.connect(rando).withdrawToProtocol([ZeroAddress])
@@ -396,17 +396,17 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         const [foreign20] = await deployMockTokens(["Foreign20"]);
 
         const amount = parseUnits("1", "ether");
-        await foreign20.connect(deployer).mint(deployer.address, amount);
-        await foreign20.connect(deployer).transfer(bosonVoucher.address, amount);
+        await foreign20.connect(deployer).mint(await deployer.getAddress(), amount);
+        await foreign20.connect(deployer).transfer(await bosonVoucher.getAddress(), amount);
 
-        await expect(() => bosonVoucher.connect(rando).withdrawToProtocol([foreign20.address])).to.changeTokenBalances(
+        await expect(() => bosonVoucher.connect(rando).withdrawToProtocol([await foreign20.getAddress()])).to.changeTokenBalances(
           foreign20,
           [bosonVoucher, fundsHandler],
           [amount*-1, amount]
         );
 
         // Seller's available balance should increase
-        expectedAvailableFunds.funds.push(new Funds(foreign20.address, "Foreign20", amount.toString()));
+        expectedAvailableFunds.funds.push(new Funds(await foreign20.getAddress(), "Foreign20", amount.toString()));
         const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
         expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
       });

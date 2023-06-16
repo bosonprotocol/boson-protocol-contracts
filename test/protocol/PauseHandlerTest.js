@@ -67,7 +67,7 @@ describe("IBosonPauseHandler", function () {
         // Pause the protocol, testing for the event
         await expect(pauseHandler.connect(pauser).pause(regions))
           .to.emit(pauseHandler, "ProtocolPaused")
-          .withArgs(regions, pauser.address);
+          .withArgs(regions, await pauser.getAddress());
       });
 
       context("💔 Revert Reasons", async function () {
@@ -109,7 +109,7 @@ describe("IBosonPauseHandler", function () {
         // Unpause the protocol, testing for the event
         await expect(pauseHandler.connect(pauser).unpause())
           .to.emit(pauseHandler, "ProtocolUnpaused")
-          .withArgs(pauser.address);
+          .withArgs(await pauser.getAddress());
       });
 
       it("should be possible to pause again after an unpause", async function () {
@@ -123,7 +123,7 @@ describe("IBosonPauseHandler", function () {
         regions = [PausableRegion.Funds];
         await expect(pauseHandler.connect(pauser).pause(regions))
           .to.emit(pauseHandler, "ProtocolPaused")
-          .withArgs(regions, pauser.address);
+          .withArgs(regions, await pauser.getAddress());
       });
 
       context("💔 Revert Reasons", async function () {

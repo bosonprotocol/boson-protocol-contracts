@@ -159,14 +159,14 @@ function getGenericContext(
           // approve token transfer
           msgValue = 0;
           await mockToken.connect(buyer.wallet).approve(protocolDiamondAddress, offerPrice);
-          await mockToken.mint(buyer.wallet.address, offerPrice);
+          await mockToken.mint(buyer.await wallet.getAddress(), offerPrice);
         }
 
         // Commit to offer
         const exchangeId = await exchangeHandler.getNextExchangeId();
         const tx = await exchangeHandler
           .connect(buyer.wallet)
-          .commitToOffer(buyer.wallet.address, offer.id, { value: msgValue });
+          .commitToOffer(buyer.await wallet.getAddress(), offer.id, { value: msgValue });
         const txReceipt = await tx.wait();
         const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
@@ -210,7 +210,7 @@ function getGenericContext(
         const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
         await expect(exchangeHandler.connect(buyerWallet).redeemVoucher(exchange.exchangeId))
           .to.emit(exchangeHandler, "VoucherRedeemed")
-          .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
+          .withArgs(exchange.offerId, exchange.exchangeId, await buyerWallet.getAddress());
       });
 
       it("Cancel old voucher", async function () {
@@ -218,7 +218,7 @@ function getGenericContext(
         const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
         await expect(exchangeHandler.connect(buyerWallet).cancelVoucher(exchange.exchangeId))
           .to.emit(exchangeHandler, "VoucherCanceled")
-          .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
+          .withArgs(exchange.offerId, exchange.exchangeId, await buyerWallet.getAddress());
       });
 
       it("Revoke old voucher", async function () {
@@ -227,7 +227,7 @@ function getGenericContext(
         const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.sellerId);
         await expect(exchangeHandler.connect(seller.wallet).revokeVoucher(exchange.exchangeId))
           .to.emit(exchangeHandler, "VoucherRevoked")
-          .withArgs(exchange.offerId, exchange.exchangeId, seller.wallet.address);
+          .withArgs(exchange.offerId, exchange.exchangeId, seller.await wallet.getAddress());
       });
 
       it("Escalate old dispute", async function () {
@@ -237,7 +237,7 @@ function getGenericContext(
         const offer = preUpgradeEntities.offers.find((o) => o.offer.id == exchange.offerId);
         await expect(disputeHandler.connect(buyerWallet).escalateDispute(exchange.exchangeId))
           .to.emit(disputeHandler, "DisputeEscalated")
-          .withArgs(exchange.exchangeId, offer.disputeResolverId, buyerWallet.address);
+          .withArgs(exchange.exchangeId, offer.disputeResolverId, await buyerWallet.getAddress());
       });
 
       it("Old buyer commits to new offer", async function () {
@@ -264,7 +264,7 @@ function getGenericContext(
         const offerPrice = offer.price;
         const tx = await exchangeHandler
           .connect(buyer.wallet)
-          .commitToOffer(buyer.wallet.address, offer.id, { value: offerPrice });
+          .commitToOffer(buyer.await wallet.getAddress(), offer.id, { value: offerPrice });
         const txReceipt = await tx.wait();
         const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
@@ -309,7 +309,7 @@ function getGenericContext(
 
         await expect(offerHandler.connect(seller.wallet).voidOffer(offerId))
           .to.emit(offerHandler, "OfferVoided")
-          .withArgs(offerId, seller.seller.id, seller.wallet.address);
+          .withArgs(offerId, seller.seller.id, seller.await wallet.getAddress());
       });
     });
   };

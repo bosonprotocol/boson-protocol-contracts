@@ -103,7 +103,7 @@ describe("IBosonGroupHandler", function () {
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
@@ -118,10 +118,10 @@ describe("IBosonGroupHandler", function () {
 
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
-        assistantDR.address,
-        adminDR.address,
-        clerkDR.address,
-        treasuryDR.address,
+        await assistantDR.getAddress(),
+        await adminDR.getAddress(),
+        await clerkDR.getAddress(),
+        await treasuryDR.getAddress(),
         true
       );
       expect(disputeResolver.isValid()).is.true;
@@ -205,7 +205,7 @@ describe("IBosonGroupHandler", function () {
 
         assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
-        assert.equal(event.executedBy.toString(), assistant.address, "Executed by is incorrect");
+        assert.equal(event.executedBy.toString(), await assistant.getAddress(), "Executed by is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
 
@@ -240,7 +240,7 @@ describe("IBosonGroupHandler", function () {
 
         assert.equal(event.groupId.toString(), groupId, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
-        assert.equal(event.executedBy.toString(), assistant.address, "Executed by is incorrect");
+        assert.equal(event.executedBy.toString(), await assistant.getAddress(), "Executed by is incorrect");
         assert.equal(groupInstance.toStruct().toString(), groupStruct.toString(), "Group struct is incorrect");
 
         // wrong group id should not exist
@@ -280,7 +280,7 @@ describe("IBosonGroupHandler", function () {
 
         assert.equal(event.groupId.toString(), groupId, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), seller.id, "Seller Id is incorrect");
-        assert.equal(event.executedBy.toString(), assistant.address, "Executed by is incorrect");
+        assert.equal(event.executedBy.toString(), await assistant.getAddress(), "Executed by is incorrect");
         assert.equal(groupInstance.toStruct().toString(), groupStruct.toString(), "Group struct is incorrect");
       });
 
@@ -304,7 +304,7 @@ describe("IBosonGroupHandler", function () {
 
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
-          seller = mockSeller(rando.address, rando.address, ZeroAddress, rando.address);
+          seller = mockSeller(await rando.getAddress(), await rando.getAddress(), ZeroAddress, await rando.getAddress());
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
@@ -375,7 +375,7 @@ describe("IBosonGroupHandler", function () {
           });
 
           it("Token address is not zero", async function () {
-            condition.tokenAddress = rando.address;
+            condition.tokenAddress = await rando.getAddress();
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
@@ -415,7 +415,7 @@ describe("IBosonGroupHandler", function () {
           beforeEach(async function () {
             condition = mockCondition({
               method: EvaluationMethod.Threshold,
-              tokenAddress: rando.address,
+              tokenAddress: await rando.getAddress(),
               maxCommits: "10",
               threshold: "200",
             });
@@ -453,7 +453,7 @@ describe("IBosonGroupHandler", function () {
           beforeEach(async function () {
             condition = mockCondition({
               method: EvaluationMethod.SpecificToken,
-              tokenAddress: rando.address,
+              tokenAddress: await rando.getAddress(),
               threshold: "0",
               maxCommits: "5",
             });
@@ -514,7 +514,7 @@ describe("IBosonGroupHandler", function () {
 
         assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
-        assert.equal(event.executedBy.toString(), assistant.address, "Executed by is incorrect");
+        assert.equal(event.executedBy.toString(), await assistant.getAddress(), "Executed by is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
 
@@ -572,7 +572,7 @@ describe("IBosonGroupHandler", function () {
 
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
-          seller = mockSeller(rando.address, rando.address, ZeroAddress, rando.address);
+          seller = mockSeller(await rando.getAddress(), await rando.getAddress(), ZeroAddress, await rando.getAddress());
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
@@ -682,7 +682,7 @@ describe("IBosonGroupHandler", function () {
         expect(groupInstance.isValid()).to.be.true;
 
         assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
-        assert.equal(event.executedBy.toString(), assistant.address, "Executed by is incorrect");
+        assert.equal(event.executedBy.toString(), await assistant.getAddress(), "Executed by is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
 
@@ -856,7 +856,7 @@ describe("IBosonGroupHandler", function () {
 
         assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
-        assert.equal(event.executedBy.toString(), assistant.address, "Executed by is incorrect");
+        assert.equal(event.executedBy.toString(), await assistant.getAddress(), "Executed by is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
 

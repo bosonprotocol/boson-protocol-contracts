@@ -105,7 +105,7 @@ function compareArgs(eventArgs, args) {
           disputeResolutionTermsStruct,
           offerFeesStruct,
           agentId,
-          assistant.address,
+          await assistant.getAddress(),
         );
  * 
  * @param {*} returnedOffer 
@@ -195,7 +195,7 @@ async function prepareDataSignatureParameters(
   });
 
   // Sign the data
-  const signature = await provider.send("eth_signTypedData_v4", [user.address, dataToSign]);
+  const signature = await provider.send("eth_signTypedData_v4", [await user.getAddress(), dataToSign]);
 
   // Collect the Signature components
   const { r, s, v } = getSignatureParameters(signature);
@@ -321,16 +321,16 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
   const [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
   // Temporarily grant UPGRADER role to deployer account
-  await accessController.grantRole(Role.UPGRADER, deployer.address);
+  await accessController.grantRole(Role.UPGRADER, await deployer.getAddress());
 
   // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
-  await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+  await accessController.grantRole(Role.PROTOCOL, await protocolDiamond.getAddress());
 
   // Grant PAUSER role to pauser account
-  await accessController.grantRole(Role.PAUSER, pauser.address);
+  await accessController.grantRole(Role.PAUSER, await pauser.getAddress());
 
   // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-  const protocolClientArgs = [protocolDiamond.address];
+  const protocolClientArgs = [await protocolDiamond.getAddress()];
   const [implementations, beacons, proxies, clients] = await deployProtocolClients(
     protocolClientArgs,
     maxPriorityFeePerGas,
@@ -350,10 +350,10 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
   const protocolConfig = [
     // Protocol addresses
     {
-      treasury: protocolTreasury.address,
-      token: bosonTokenAddress || bosonToken.address,
-      voucherBeacon: beacon.address,
-      beaconProxy: proxy.address,
+      treasury: await protocolTreasury.getAddress(),
+      token: bosonTokenAddress || await bosonToken.getAddress(),
+      voucherBeacon: await beacon.getAddress(),
+      beaconProxy: await proxy.getAddress(),
     },
     // Protocol limits
     {
@@ -384,11 +384,11 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
   const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 
   // Cut the protocol handler facets into the Diamond
-  await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+  await deployAndCutFacets(await protocolDiamond.getAddress(), facetsToDeploy, maxPriorityFeePerGas);
 
   let contractInstances = {};
   for (const contract of Object.keys(contracts)) {
-    contractInstances[contract] = await getContractAt(contracts[contract], protocolDiamond.address);
+    contractInstances[contract] = await getContractAt(contracts[contract], await protocolDiamond.getAddress());
   }
 
   const extraReturnValues = { accessController, bosonVoucher, voucherImplementation, beacon };
@@ -397,7 +397,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
     signers: signers.slice(3),
     contractInstances,
     protocolConfig,
-    diamondAddress: protocolDiamond.address,
+    diamondAddress: await protocolDiamond.getAddress(),
     extraReturnValues,
   };
 }

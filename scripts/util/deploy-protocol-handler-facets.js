@@ -58,7 +58,7 @@ async function deployAndCutFacets(
     diamond,
     maxPriorityFeePerGas,
     deployedFacets,
-    initializationFacet.address,
+    await initializationFacet.getAddress(),
     initializeCalldata
   );
 

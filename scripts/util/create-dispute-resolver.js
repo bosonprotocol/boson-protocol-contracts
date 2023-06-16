@@ -84,8 +84,8 @@ const createDisputeResolver = async (path) => {
 
   // create dispute resolver with callers account
   let initialDisputeResolver = { ...disputeResolver };
-  initialDisputeResolver.admin = disputeResolverSigner.address;
-  initialDisputeResolver.assistant = disputeResolverSigner.address;
+  initialDisputeResolver.admin = await disputeResolverSigner.getAddress();
+  initialDisputeResolver.assistant = await disputeResolverSigner.getAddress();
   initialDisputeResolver.clerk = ZeroAddress;
 
   tx = await accountHandler

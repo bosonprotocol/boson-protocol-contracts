@@ -139,19 +139,19 @@ function findAddressPositionInFacets(facetAddress, facets) {
   }
 }
 
-function getFacetAddCut(facet, omitFunctions = []) {
+async function getFacetAddCut(facet, omitFunctions = []) {
   let selectors = omitFunctions.length ? getSelectors(facet).remove(omitFunctions) : getSelectors(facet);
-  return [facet.address, FacetCutAction.Add, selectors];
+  return [await facet.getAddress(), FacetCutAction.Add, selectors];
 }
 
-function getFacetReplaceCut(facet, omitFunctions = []) {
+async function getFacetReplaceCut(facet, omitFunctions = []) {
   let selectors = omitFunctions.length ? getSelectors(facet).remove(omitFunctions) : getSelectors(facet);
-  return [facet.address, FacetCutAction.Replace, selectors];
+  return [await facet.getAddress(), FacetCutAction.Replace, selectors];
 }
 
 function getFacetRemoveCut(facet, omitFunctions = []) {
   let selectors = omitFunctions.length ? getSelectors(facet).remove(omitFunctions) : getSelectors(facet);
-  return [facet.address, FacetCutAction.Remove, selectors];
+  return [await facet.getAddress(), FacetCutAction.Remove, selectors];
 }
 
 async function getStateModifyingFunctions(facetNames, omitFunctions = [], onlyFunctions = []) {
@@ -203,7 +203,7 @@ function getInitializeCalldata(
   interfacesToAdd = []
 ) {
   version = formatBytes32String(version);
-  const addresses = facetsToInitialize.map((f) => f.contract.address);
+  const addresses = facetsToInitialize.map((f) => f.await contract.getAddress());
   const calldata = facetsToInitialize.map((f) => f.initialize);
 
   return initializationFacet.interface.encodeFunctionData("initialize", [

@@ -149,7 +149,7 @@ describe("IBosonDisputeHandler", function () {
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller
-      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
@@ -164,10 +164,10 @@ describe("IBosonDisputeHandler", function () {
 
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
-        assistantDR.address,
-        adminDR.address,
-        clerkDR.address,
-        treasuryDR.address,
+        await assistantDR.getAddress(),
+        await adminDR.getAddress(),
+        await clerkDR.getAddress(),
+        await treasuryDR.getAddress(),
         true
       );
       expect(disputeResolver.isValid()).is.true;
@@ -227,7 +227,7 @@ describe("IBosonDisputeHandler", function () {
         exchangeId = "1";
 
         // Commit to offer, creating a new exchange
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -244,7 +244,7 @@ describe("IBosonDisputeHandler", function () {
           // Raise a dispute, testing for the event
           await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeRaised")
-            .withArgs(exchangeId, buyerId, seller.id, buyer.address);
+            .withArgs(exchangeId, buyerId, seller.id, await buyer.getAddress());
         });
 
         it("should update state", async function () {
@@ -370,7 +370,7 @@ describe("IBosonDisputeHandler", function () {
           // Retract the dispute, testing for the event
           await expect(disputeHandler.connect(buyer).retractDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeRetracted")
-            .withArgs(exchangeId, buyer.address);
+            .withArgs(exchangeId, await buyer.getAddress());
         });
 
         it("should update state", async function () {
@@ -424,7 +424,7 @@ describe("IBosonDisputeHandler", function () {
           // Retract the dispute, testing for the event
           await expect(disputeHandler.connect(buyer).retractDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeRetracted")
-            .withArgs(exchangeId, buyer.address);
+            .withArgs(exchangeId, await buyer.getAddress());
         });
 
         context("💔 Revert Reasons", async function () {
@@ -452,7 +452,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to retract the dispute, expecting revert
             await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWith(
@@ -515,7 +515,7 @@ describe("IBosonDisputeHandler", function () {
           // Extend the dispute timeout, testing for the event
           await expect(disputeHandler.connect(assistant).extendDisputeTimeout(exchangeId, newDisputeTimeout))
             .to.emit(disputeHandler, "DisputeTimeoutExtended")
-            .withArgs(exchangeId, newDisputeTimeout, assistant.address);
+            .withArgs(exchangeId, newDisputeTimeout, await assistant.getAddress());
         });
 
         it("should update state", async function () {
@@ -560,7 +560,7 @@ describe("IBosonDisputeHandler", function () {
           // Extend the dispute timeout, testing for the event
           await expect(disputeHandler.connect(assistant).extendDisputeTimeout(exchangeId, newDisputeTimeout))
             .to.emit(disputeHandler, "DisputeTimeoutExtended")
-            .withArgs(exchangeId, newDisputeTimeout, assistant.address);
+            .withArgs(exchangeId, newDisputeTimeout, await assistant.getAddress());
         });
 
         context("💔 Revert Reasons", async function () {
@@ -588,7 +588,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to extend the dispute timeout, expecting revert
             await expect(
@@ -653,7 +653,7 @@ describe("IBosonDisputeHandler", function () {
           // Expire the dispute, testing for the event
           await expect(disputeHandler.connect(rando).expireDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeExpired")
-            .withArgs(exchangeId, rando.address);
+            .withArgs(exchangeId, await rando.getAddress());
         });
 
         it("should update state", async function () {
@@ -731,7 +731,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to expire the dispute, expecting revert
             await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWith(
@@ -810,7 +810,7 @@ describe("IBosonDisputeHandler", function () {
               customSignatureType,
               "Resolution",
               message,
-              disputeHandler.address
+              await disputeHandler.getAddress()
             ));
           });
 
@@ -818,7 +818,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
 
           it("should update state", async function () {
@@ -867,7 +867,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Buyer can also have a seller account and this will work", async function () {
             // Create a valid seller with buyer's wallet
-            seller = mockSeller(buyer.address, buyer.address, ZeroAddress, buyer.address);
+            seller = mockSeller(await buyer.getAddress(), await buyer.getAddress(), ZeroAddress, await buyer.getAddress());
             expect(seller.isValid()).is.true;
 
             await accountHandler.connect(buyer).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -875,7 +875,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
 
           it("Dispute can be mutually resolved even if it's in escalated state", async function () {
@@ -885,7 +885,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
 
           it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
@@ -905,7 +905,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
 
           it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
@@ -920,7 +920,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
         });
 
@@ -932,7 +932,7 @@ describe("IBosonDisputeHandler", function () {
               customSignatureType,
               "Resolution",
               message,
-              disputeHandler.address
+              await disputeHandler.getAddress()
             ));
           });
 
@@ -940,7 +940,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, assistant.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
 
           it("should update state", async function () {
@@ -989,14 +989,14 @@ describe("IBosonDisputeHandler", function () {
 
           it("Assistant can also have a buyer account and this will work", async function () {
             // Create a valid buyer with assistant's wallet
-            let buyer = mockBuyer(assistant.address);
+            let buyer = mockBuyer(await assistant.getAddress());
             expect(buyer.isValid()).is.true;
             await accountHandler.connect(assistant).createBuyer(buyer);
 
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, assistant.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
 
           it("Dispute can be mutually resolved even if it's in escalated state", async function () {
@@ -1006,7 +1006,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, assistant.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
 
           it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
@@ -1026,7 +1026,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, assistant.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
 
           it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
@@ -1041,7 +1041,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, assistant.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
         });
 
@@ -1053,7 +1053,7 @@ describe("IBosonDisputeHandler", function () {
               customSignatureType,
               "Resolution",
               message,
-              disputeHandler.address
+              await disputeHandler.getAddress()
             ));
           });
 
@@ -1101,7 +1101,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
@@ -1118,7 +1118,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Wallet with seller account, but not the seller in this exchange
             // Create a valid seller
-            seller = mockSeller(other1.address, other1.address, ZeroAddress, other1.address);
+            seller = mockSeller(await other1.getAddress(), await other1.getAddress(), ZeroAddress, await other1.getAddress());
             expect(seller.isValid()).is.true;
 
             await accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -1129,7 +1129,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Wallet with buyer account, but not the buyer in this exchange
             // Create a valid buyer
-            let buyer = mockBuyer(other2.address);
+            let buyer = mockBuyer(await other2.getAddress());
             expect(buyer.isValid()).is.true;
             await accountHandler.connect(other2).createBuyer(buyer);
 
@@ -1146,7 +1146,7 @@ describe("IBosonDisputeHandler", function () {
               customSignatureType,
               "Resolution",
               message,
-              disputeHandler.address
+              await disputeHandler.getAddress()
             ));
 
             // Attempt to resolve the dispute, expecting revert
@@ -1215,11 +1215,11 @@ describe("IBosonDisputeHandler", function () {
           await accountHandler
             .connect(adminDR)
             .addFeesToDisputeResolver(disputeResolverId, [
-              new DisputeResolverFee(mockToken.address, "MockToken", DRFeeToken),
+              new DisputeResolverFee(await mockToken.getAddress(), "MockToken", DRFeeToken),
             ]);
 
           // create an offer with a mock token contract
-          offer.exchangeToken = mockToken.address;
+          offer.exchangeToken = await mockToken.getAddress();
           offer.sellerDeposit = offer.price = offer.buyerCancelPenalty = "0";
           offer.id++;
 
@@ -1230,11 +1230,11 @@ describe("IBosonDisputeHandler", function () {
 
           // mint tokens to buyer and approve the protocol
           buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
-          await mockToken.mint(buyer.address, buyerEscalationDepositToken);
-          await mockToken.connect(buyer).approve(disputeHandler.address, buyerEscalationDepositToken);
+          await mockToken.mint(await buyer.getAddress(), buyerEscalationDepositToken);
+          await mockToken.connect(buyer).approve(await disputeHandler.getAddress(), buyerEscalationDepositToken);
 
           // Commit to offer and put exchange all the way to dispute
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
           await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
           await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -1258,12 +1258,12 @@ describe("IBosonDisputeHandler", function () {
             disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative })
           )
             .to.emit(disputeHandler, "DisputeEscalated")
-            .withArgs(exchangeId, disputeResolverId, buyer.address);
+            .withArgs(exchangeId, disputeResolverId, await buyer.getAddress());
         });
 
         it("should update state", async function () {
           // Protocol balance before
-          const escrowBalanceBefore = await provider.getBalance(disputeHandler.address);
+          const escrowBalanceBefore = await provider.getBalance(await disputeHandler.getAddress());
 
           // Escalate the dispute
           tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
@@ -1299,7 +1299,7 @@ describe("IBosonDisputeHandler", function () {
           assert.equal(response, DisputeState.Escalated, "Dispute state is incorrect");
 
           // Protocol balance should increase for buyer escalation deposit
-          const escrowBalanceAfter = await provider.getBalance(disputeHandler.address);
+          const escrowBalanceAfter = await provider.getBalance(await disputeHandler.getAddress());
           expect(escrowBalanceAfter-escrowBalanceBefore).to.equal(
             buyerEscalationDepositNative,
             "Escrow balance mismatch"
@@ -1310,15 +1310,15 @@ describe("IBosonDisputeHandler", function () {
           const mockToken = await createDisputeExchangeWithToken();
 
           // Protocol balance before
-          const escrowBalanceBefore = await mockToken.balanceOf(disputeHandler.address);
+          const escrowBalanceBefore = await mockToken.balanceOf(await disputeHandler.getAddress());
 
           // Escalate the dispute, testing for the event
           await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeEscalated")
-            .withArgs(exchangeId, disputeResolverId, buyer.address);
+            .withArgs(exchangeId, disputeResolverId, await buyer.getAddress());
 
           // Protocol balance should increase for buyer escalation deposit
-          const escrowBalanceAfter = await mockToken.balanceOf(disputeHandler.address);
+          const escrowBalanceAfter = await mockToken.balanceOf(await disputeHandler.getAddress());
           expect(escrowBalanceAfter-escrowBalanceBefore).to.equal(
             buyerEscalationDepositToken,
             "Escrow balance mismatch"
@@ -1350,7 +1350,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to escalate the dispute, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId), {
@@ -1398,7 +1398,7 @@ describe("IBosonDisputeHandler", function () {
               .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
             // Commit to offer and put exchange all the way to dispute
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
             await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
             await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -1446,7 +1446,7 @@ describe("IBosonDisputeHandler", function () {
             const mockToken = await createDisputeExchangeWithToken();
 
             // get rid of some tokens, so buyer has insufficient funds
-            await mockToken.connect(buyer).transfer(other1.address, buyerEscalationDepositToken);
+            await mockToken.connect(buyer).transfer(await other1.getAddress(), buyerEscalationDepositToken);
 
             // Attempt to commit to an offer, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
@@ -1456,7 +1456,7 @@ describe("IBosonDisputeHandler", function () {
             // not approved
             await mockToken
               .connect(buyer)
-              .approve(protocolDiamond.address, BigInt(buyerEscalationDepositToken)-"1".toString());
+              .approve(await protocolDiamond.getAddress(), BigInt(buyerEscalationDepositToken)-"1".toString());
 
             // Attempt to commit to an offer, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
@@ -1473,12 +1473,12 @@ describe("IBosonDisputeHandler", function () {
             await accountHandler
               .connect(adminDR)
               .addFeesToDisputeResolver(disputeResolverId, [
-                new DisputeResolverFee(Foreign20WithFee.address, "Foreign20WithFee", "0"),
+                new DisputeResolverFee(await Foreign20WithFee.getAddress(), "Foreign20WithFee", "0"),
               ]);
 
             // Create an offer with ERC20 with fees
             // Prepare an absolute zero offer
-            offer.exchangeToken = Foreign20WithFee.address;
+            offer.exchangeToken = await Foreign20WithFee.getAddress();
             offer.sellerDeposit = offer.price = offer.buyerCancelPenalty = "0";
             offer.id++;
 
@@ -1489,11 +1489,11 @@ describe("IBosonDisputeHandler", function () {
 
             // mint tokens and approve
             buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
-            await Foreign20WithFee.mint(buyer.address, buyerEscalationDepositToken);
-            await Foreign20WithFee.connect(buyer).approve(protocolDiamond.address, buyerEscalationDepositToken);
+            await Foreign20WithFee.mint(await buyer.getAddress(), buyerEscalationDepositToken);
+            await Foreign20WithFee.connect(buyer).approve(await protocolDiamond.getAddress(), buyerEscalationDepositToken);
 
             // Commit to offer and put exchange all the way to dispute
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
             await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
             await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -1532,7 +1532,7 @@ describe("IBosonDisputeHandler", function () {
           // Escalate the dispute, testing for the event
           await expect(disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints))
             .to.emit(disputeHandler, "DisputeDecided")
-            .withArgs(exchangeId, buyerPercentBasisPoints, assistantDR.address);
+            .withArgs(exchangeId, buyerPercentBasisPoints, await assistantDR.getAddress());
         });
 
         it("should update state", async function () {
@@ -1604,7 +1604,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to decide the dispute, expecting revert
             await expect(
@@ -1623,7 +1623,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Redeem voucher
             await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -1676,7 +1676,7 @@ describe("IBosonDisputeHandler", function () {
           // Expire the escalated dispute, testing for the event
           await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId))
             .to.emit(disputeHandler, "EscalatedDisputeExpired")
-            .withArgs(exchangeId, rando.address);
+            .withArgs(exchangeId, await rando.getAddress());
         });
 
         it("should update state", async function () {
@@ -1754,7 +1754,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to expire the escalated dispute, expecting revert
             await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWith(
@@ -1773,7 +1773,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Redeem voucher
             await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -1822,7 +1822,7 @@ describe("IBosonDisputeHandler", function () {
           // Refuse the escalated dispute, testing for the event
           await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId))
             .to.emit(disputeHandler, "EscalatedDisputeRefused")
-            .withArgs(exchangeId, assistantDR.address);
+            .withArgs(exchangeId, await assistantDR.getAddress());
         });
 
         it("should update state", async function () {
@@ -1894,7 +1894,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to refuse the escalated dispute, expecting revert
             await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
@@ -1906,7 +1906,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Redeem voucher
             await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -1999,7 +1999,7 @@ describe("IBosonDisputeHandler", function () {
           exchangeId++;
 
           // Commit to offer, creating a new exchange
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
           // Get the exchange
           [exists, response] = await exchangeHandler.connect(rando).getExchange(exchangeId);
@@ -2125,7 +2125,7 @@ describe("IBosonDisputeHandler", function () {
             customSignatureType,
             "Resolution",
             message,
-            disputeHandler.address
+            await disputeHandler.getAddress()
           ));
 
           // Buyer resolves dispute
@@ -2294,7 +2294,7 @@ describe("IBosonDisputeHandler", function () {
               customSignatureType,
               "Resolution",
               message,
-              disputeHandler.address
+              await disputeHandler.getAddress()
             ));
 
             // Retract dispute
@@ -2359,7 +2359,7 @@ describe("IBosonDisputeHandler", function () {
 
         for (exchangeId = 1; exchangeId <= 5; exchangeId++) {
           // Commit to offer, creating a new exchange
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
           // Redeem voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -2396,11 +2396,11 @@ describe("IBosonDisputeHandler", function () {
 
           // Expire the disputes, testing for the event
           const tx = disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire);
-          await expect(tx).to.emit(disputeHandler, "DisputeExpired").withArgs("2", rando.address);
+          await expect(tx).to.emit(disputeHandler, "DisputeExpired").withArgs("2", await rando.getAddress());
 
-          await expect(tx).to.emit(disputeHandler, "DisputeExpired").withArgs("3", rando.address);
+          await expect(tx).to.emit(disputeHandler, "DisputeExpired").withArgs("3", await rando.getAddress());
 
-          await expect(tx).to.emit(disputeHandler, "DisputeExpired").withArgs("4", rando.address);
+          await expect(tx).to.emit(disputeHandler, "DisputeExpired").withArgs("4", await rando.getAddress());
         });
 
         it("should update state", async function () {

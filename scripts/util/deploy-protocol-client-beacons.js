@@ -31,7 +31,7 @@ async function deployProtocolClientBeacons(protocolClients, protocolClientArgs, 
   const ClientBeacon = await getContractFactory("BosonClientBeacon");
   const clientBeacon = await ClientBeacon.deploy(
     ...protocolClientArgs,
-    bosonVoucherImpl.address,
+    await bosonVoucherImpl.getAddress(),
     await getFees(maxPriorityFeePerGas)
   );
   await clientBeacon.deployTransaction.wait(confirmations);

@@ -84,11 +84,11 @@ async function main(env, clientConfig, version) {
   const beacon = await getContractAt("BosonClientBeacon", beaconAddress);
   await beacon
     .connect(adminSigner)
-    .setImplementation(bosonVoucherImplementation.address, await getFees(maxPriorityFeePerGas));
+    .setImplementation(await bosonVoucherImplementation.getAddress(), await getFees(maxPriorityFeePerGas));
 
   // Remove old entry from contracts
   contracts = contracts.filter((i) => i.name !== "BosonVoucher Logic");
-  deploymentComplete("BosonVoucher Logic", bosonVoucherImplementation.address, clientImplementationArgs, "", contracts);
+  deploymentComplete("BosonVoucher Logic", await bosonVoucherImplementation.getAddress(), clientImplementationArgs, "", contracts);
 
   const contractsPath = await writeContracts(contracts, env, version);
   console.log(divider);

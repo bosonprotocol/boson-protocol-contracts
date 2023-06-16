@@ -14,7 +14,7 @@ describe("BeaconClientProxy", function () {
     [protocol, rando] = await getSigners();
 
     // deploy proxy
-    const protocolClientArgs = [protocol.address];
+    const protocolClientArgs = [await protocol.getAddress()];
     const [, , proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
     [proxy] = proxies;
   });
@@ -22,7 +22,7 @@ describe("BeaconClientProxy", function () {
   context("initializable", function () {
     context("💔 Revert Reasons", async function () {
       it("should revert if trying to initialize again", async function () {
-        await expect(proxy.connect(rando).initialize(rando.address)).to.be.revertedWith(
+        await expect(proxy.connect(rando).initialize(await rando.getAddress())).to.be.revertedWith(
           "Initializable: contract is already initialized"
         );
       });

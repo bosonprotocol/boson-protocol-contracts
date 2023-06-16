@@ -85,7 +85,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   beforeEach(async function () {
     // Create a valid seller, then set fields in tests directly
-    seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+    seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
     expect(seller.isValid()).is.true;
 
     // VoucherInitValues
@@ -101,7 +101,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     [mockToken] = await deployMockTokens(["Foreign20"]);
 
     // top up assistants account
-    await mockToken.mint(assistant.address, "1000000");
+    await mockToken.mint(await assistant.getAddress(), "1000000");
 
     // approve protocol to transfer the tokens
     await mockToken.connect(assistant).approve(protocolDiamondAddress, "1000000");
@@ -125,7 +125,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // Define the facet cut
     const facetCuts = [
       {
-        facetAddress: mockExchangeHandlerFacet.address,
+        facetAddress: await mockExchangeHandlerFacet.getAddress(),
         action: FacetCutAction.Replace,
         functionSelectors: getSelectors(mockExchangeHandlerFacet),
       },
@@ -149,10 +149,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     beforeEach(async function () {
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
-        assistantDR.address,
-        adminDR.address,
-        clerkDR.address,
-        treasuryDR.address,
+        await assistantDR.getAddress(),
+        await adminDR.getAddress(),
+        await clerkDR.getAddress(),
+        await treasuryDR.getAddress(),
         true
       );
       expect(disputeResolver.isValid()).is.true;
@@ -214,7 +214,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     context("👉 completeExchange()", async function () {
       beforeEach(async function () {
         // Commit to offer
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Upgrade Exchange handler facet
         await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
@@ -230,7 +230,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         // Complete the exchange, expecting event
         await expect(mockExchangeHandlerUpgrade.connect(buyer).completeExchange(exchange.id))
           .to.emit(mockExchangeHandlerUpgrade, "ExchangeCompleted2")
-          .withArgs(offerId, buyerId, exchange.id, buyer.address);
+          .withArgs(offerId, buyerId, exchange.id, await buyer.getAddress());
       });
     });
 
@@ -241,7 +241,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         for (exchangeId = 1; exchangeId <= 5; exchangeId++) {
           // Commit to offer, creating a new exchange
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
         }
 
         // Upgrade Exchange handler facet
@@ -258,30 +258,30 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         const tx = await mockExchangeHandlerUpgrade.connect(buyer).completeExchangeBatch(exchangesToComplete);
         await expect(tx)
           .to.emit(mockExchangeHandlerUpgrade, "ExchangeCompleted2")
-          .withArgs(offerId, buyerId, exchangesToComplete[0], buyer.address);
+          .withArgs(offerId, buyerId, exchangesToComplete[0], await buyer.getAddress());
 
         await expect(tx)
           .to.emit(mockExchangeHandlerUpgrade, "ExchangeCompleted2")
-          .withArgs(offerId, buyerId, exchangesToComplete[1], buyer.address);
+          .withArgs(offerId, buyerId, exchangesToComplete[1], await buyer.getAddress());
 
         await expect(tx)
           .to.emit(mockExchangeHandlerUpgrade, "ExchangeCompleted2")
-          .withArgs(offerId, buyerId, exchangesToComplete[2], buyer.address);
+          .withArgs(offerId, buyerId, exchangesToComplete[2], await buyer.getAddress());
 
         await expect(tx)
           .to.emit(mockExchangeHandlerUpgrade, "ExchangeCompleted2")
-          .withArgs(offerId, buyerId, exchangesToComplete[3], buyer.address);
+          .withArgs(offerId, buyerId, exchangesToComplete[3], await buyer.getAddress());
 
         await expect(tx)
           .to.emit(mockExchangeHandlerUpgrade, "ExchangeCompleted2")
-          .withArgs(offerId, buyerId, exchangesToComplete[4], buyer.address);
+          .withArgs(offerId, buyerId, exchangesToComplete[4], await buyer.getAddress());
       });
     });
 
     context("👉 revokeVoucher()", async function () {
       it("should emit an VoucherRevoked2 event when seller's assistant calls", async function () {
         // Commit to offer
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Upgrade Exchange handler facet
         await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
@@ -289,14 +289,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         // Revoke the voucher, expecting event
         await expect(mockExchangeHandlerUpgrade.connect(assistant).revokeVoucher(exchange.id))
           .to.emit(mockExchangeHandlerUpgrade, "VoucherRevoked2")
-          .withArgs(offerId, exchange.id, assistant.address);
+          .withArgs(offerId, exchange.id, await assistant.getAddress());
       });
     });
 
     context("👉 cancelVoucher()", async function () {
       it("should emit an VoucherCanceled2 event when original buyer calls", async function () {
         // Commit to offer, retrieving the event
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Upgrade Exchange handler facet
         await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
@@ -304,14 +304,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         // Cancel the voucher, expecting event
         await expect(mockExchangeHandlerUpgrade.connect(buyer).cancelVoucher(exchange.id))
           .to.emit(mockExchangeHandlerUpgrade, "VoucherCanceled2")
-          .withArgs(offerId, exchange.id, buyer.address);
+          .withArgs(offerId, exchange.id, await buyer.getAddress());
       });
     });
 
     context("👉 expireVoucher()", async function () {
       it("should emit an VoucherExpired2 event when anyone calls and voucher has expired", async function () {
         // Commit to offer, retrieving the event
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Upgrade Exchange handler facet
         await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
@@ -322,14 +322,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         // Expire the voucher, expecting event
         await expect(mockExchangeHandlerUpgrade.connect(rando).expireVoucher(exchange.id))
           .to.emit(mockExchangeHandlerUpgrade, "VoucherExpired2")
-          .withArgs(offerId, exchange.id, rando.address);
+          .withArgs(offerId, exchange.id, await rando.getAddress());
       });
     });
 
     context("👉 redeemVoucher()", async function () {
       it("should emit a VoucherRedeemed2 event when buyer calls", async function () {
         // Commit to offer
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Upgrade Exchange handler facet
         await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
@@ -340,14 +340,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         // Redeem the voucher, expecting event
         await expect(mockExchangeHandlerUpgrade.connect(buyer).redeemVoucher(exchange.id))
           .to.emit(mockExchangeHandlerUpgrade, "VoucherRedeemed2")
-          .withArgs(offerId, exchange.id, buyer.address);
+          .withArgs(offerId, exchange.id, await buyer.getAddress());
       });
     });
 
     context("👉 extendVoucher()", async function () {
       it("should emit an VoucherExtended2 event when seller's assistant calls", async function () {
         // Commit to offer
-        const tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        const tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Get the block timestamp of the confirmed tx
         const blockNumber = tx.blockNumber;
@@ -368,7 +368,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         // Extend the voucher, expecting event
         await expect(mockExchangeHandlerUpgrade.connect(assistant).extendVoucher(exchange.id, validUntilDate))
           .to.emit(mockExchangeHandlerUpgrade, "VoucherExtended2")
-          .withArgs(offerId, exchange.id, validUntilDate, assistant.address);
+          .withArgs(offerId, exchange.id, validUntilDate, await assistant.getAddress());
       });
     });
   });
@@ -378,10 +378,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     beforeEach(async function () {
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
-        assistantDR.address,
-        adminDR.address,
-        clerkDR.address,
-        treasuryDR.address,
+        await assistantDR.getAddress(),
+        await adminDR.getAddress(),
+        await clerkDR.getAddress(),
+        await treasuryDR.getAddress(),
         true
       );
       expect(disputeResolver.isValid()).is.true;
@@ -440,7 +440,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         exchangeId = "1";
 
         // Commit to offer, creating a new exchange
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -460,7 +460,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Raise a dispute, testing for the event
           await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeRaised")
-            .withArgs(exchangeId, buyerId, seller.id, buyer.address);
+            .withArgs(exchangeId, buyerId, seller.id, await buyer.getAddress());
         });
       });
 
@@ -472,7 +472,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Retract the dispute, testing for the event
           await expect(disputeHandler.connect(buyer).retractDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeRetracted")
-            .withArgs(exchangeId, buyer.address);
+            .withArgs(exchangeId, await buyer.getAddress());
         });
       });
 
@@ -493,7 +493,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Extend the dispute timeout, testing for the event
           await expect(disputeHandler.connect(assistant).extendDisputeTimeout(exchangeId, newDisputeTimeout))
             .to.emit(disputeHandler, "DisputeTimeoutExtended")
-            .withArgs(exchangeId, newDisputeTimeout, assistant.address);
+            .withArgs(exchangeId, newDisputeTimeout, await assistant.getAddress());
         });
       });
 
@@ -514,7 +514,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Expire the dispute, testing for the event
           await expect(disputeHandler.connect(rando).expireDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeExpired")
-            .withArgs(exchangeId, rando.address);
+            .withArgs(exchangeId, await rando.getAddress());
         });
       });
 
@@ -549,13 +549,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               customSignatureType,
               "Resolution",
               message,
-              disputeHandler.address
+              await disputeHandler.getAddress()
             );
 
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
         });
 
@@ -567,13 +567,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               customSignatureType,
               "Resolution",
               message,
-              disputeHandler.address
+              await disputeHandler.getAddress()
             );
 
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, assistant.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
         });
       });
@@ -588,7 +588,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative })
           )
             .to.emit(disputeHandler, "DisputeEscalated")
-            .withArgs(exchangeId, disputeResolverId, buyer.address);
+            .withArgs(exchangeId, disputeResolverId, await buyer.getAddress());
         });
       });
 
@@ -606,7 +606,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Escalate the dispute, testing for the event
           await expect(disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints))
             .to.emit(disputeHandler, "DisputeDecided")
-            .withArgs(exchangeId, buyerPercentBasisPoints, assistantDR.address);
+            .withArgs(exchangeId, buyerPercentBasisPoints, await assistantDR.getAddress());
         });
       });
 
@@ -631,7 +631,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Expire the escalated dispute, testing for the event
           await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId))
             .to.emit(disputeHandler, "EscalatedDisputeExpired")
-            .withArgs(exchangeId, rando.address);
+            .withArgs(exchangeId, await rando.getAddress());
         });
       });
 
@@ -646,7 +646,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Refuse the escalated dispute, testing for the event
           await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId))
             .to.emit(disputeHandler, "EscalatedDisputeRefused")
-            .withArgs(exchangeId, assistantDR.address);
+            .withArgs(exchangeId, await assistantDR.getAddress());
         });
       });
     });
@@ -666,10 +666,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         // Create a valid dispute resolver
         disputeResolver = mockDisputeResolver(
-          assistantDR.address,
-          adminDR.address,
-          clerkDR.address,
-          treasuryDR.address,
+          await assistantDR.getAddress(),
+          await adminDR.getAddress(),
+          await clerkDR.getAddress(),
+          await treasuryDR.getAddress(),
           true
         );
         expect(disputeResolver.isValid()).is.true;
@@ -677,7 +677,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         //Create DisputeResolverFee array so offer creation will succeed
         const disputeResolverFees = [
           new DisputeResolverFee(ZeroAddress, "Native", "0"),
-          new DisputeResolverFee(mockToken.address, "mockToken", "0"),
+          new DisputeResolverFee(await mockToken.getAddress(), "mockToken", "0"),
         ];
 
         // Make empty seller list, so every seller is allowed
@@ -696,7 +696,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         offerToken = offer.clone();
         offerToken.id = "2";
-        offerToken.exchangeToken = mockToken.address;
+        offerToken.exchangeToken = await mockToken.getAddress();
 
         // Check if domais are valid
         expect(offerNative.isValid()).is.true;
@@ -722,7 +722,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         sellerDeposit = offerToken.sellerDeposit;
 
         // top up seller's and buyer's account
-        await Promise.all([mockToken.mint(assistant.address, sellerDeposit), mockToken.mint(buyer.address, price)]);
+        await Promise.all([mockToken.mint(await assistant.getAddress(), sellerDeposit), mockToken.mint(await buyer.getAddress(), price)]);
 
         // approve protocol to transfer the tokens
         await Promise.all([
@@ -732,15 +732,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         // deposit to seller's pool
         await Promise.all([
-          fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerDeposit),
+          fundsHandler.connect(assistant).depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit),
           fundsHandler
             .connect(assistant)
             .depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit }),
         ]);
 
         // commit to both offers
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: offerNative.price });
+        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerNative.id, { value: offerNative.price });
 
         buyerId = accountId.next().value;
       });
@@ -770,8 +770,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
             // Withdraw funds, testing for the event
             // Withdraw tokens
-            const tokenListSeller = [mockToken.address, ZeroAddress];
-            const tokenListBuyer = [ZeroAddress, mockToken.address];
+            const tokenListSeller = [await mockToken.getAddress(), ZeroAddress];
+            const tokenListBuyer = [ZeroAddress, await mockToken.getAddress()];
 
             // Withdraw amounts
             const tokenAmountsSeller = [sellerPayoff, BigInt(sellerPayoff)/"2".toString()];
@@ -783,33 +783,33 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               .withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
             await expect(tx)
               .to.emit(fundsHandler, "FundsWithdrawn")
-              .withArgs(seller.id, treasury.address, mockToken.address, sellerPayoff, assistant.address);
+              .withArgs(seller.id, await treasury.getAddress(), await mockToken.getAddress(), sellerPayoff, await assistant.getAddress());
 
             await expect(tx)
               .to.emit(fundsHandler, "FundsWithdrawn")
               .withArgs(
                 seller.id,
-                treasury.address,
+                await treasury.getAddress(),
                 constants.Zero,
                 BigInt(sellerPayoff)/"2",
-                assistant.address
+                await assistant.getAddress()
               );
 
             // buyer withdrawal
             const tx2 = await fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer);
             await expect(tx2)
-              .to.emit(fundsHandler, "FundsWithdrawn", buyer.address)
+              .to.emit(fundsHandler, "FundsWithdrawn", await buyer.getAddress())
               .withArgs(
                 buyerId,
-                buyer.address,
-                mockToken.address,
+                await buyer.getAddress(),
+                await mockToken.getAddress(),
                 BigInt(buyerPayoff)/"5",
-                buyer.address
+                await buyer.getAddress()
               );
 
             await expect(tx2)
               .to.emit(fundsHandler, "FundsWithdrawn")
-              .withArgs(buyerId, buyer.address, constants.Zero, buyerPayoff, buyer.address);
+              .withArgs(buyerId, await buyer.getAddress(), constants.Zero, buyerPayoff, await buyer.getAddress());
           });
         });
 
@@ -832,8 +832,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
             // Withdraw funds, testing for the event
             // Withdraw tokens
-            const tokenListSeller = [mockToken.address, ZeroAddress];
-            const tokenListBuyer = [ZeroAddress, mockToken.address];
+            const tokenListSeller = [await mockToken.getAddress(), ZeroAddress];
+            const tokenListBuyer = [ZeroAddress, await mockToken.getAddress()];
 
             // Withdraw amounts
             const tokenAmountsSeller = [sellerPayoff, BigInt(sellerPayoff)/"2".toString()];

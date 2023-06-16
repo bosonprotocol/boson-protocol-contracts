@@ -147,7 +147,7 @@ async function main(env, facetConfig, version) {
     let registeredSelectors;
     if (oldFacet) {
       // Facet exists, so all selectors should be removed
-      registeredSelectors = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
+      registeredSelectors = await diamondLoupe.facetFunctionSelectors(await oldFacet.getAddress());
     } else {
       // Facet does not exist, skip next steps
       continue;
@@ -191,7 +191,7 @@ async function main(env, facetConfig, version) {
     let registeredSelectors;
     if (oldFacet) {
       // Facet already exists and is only upgraded
-      registeredSelectors = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
+      registeredSelectors = await diamondLoupe.facetFunctionSelectors(await oldFacet.getAddress());
     } else {
       // Facet is new
       registeredSelectors = [];
@@ -203,7 +203,7 @@ async function main(env, facetConfig, version) {
     const newFacetInterfaceId = interfaceIdFromFacetName(newFacet.name);
     deploymentComplete(
       newFacet.name,
-      newFacet.contract.address,
+      newFacet.await contract.getAddress(),
       newFacet.constructorArgs,
       newFacetInterfaceId,
       contracts
@@ -262,7 +262,7 @@ async function main(env, facetConfig, version) {
       }
     }
 
-    const newFacetAddress = newFacet.contract.address;
+    const newFacetAddress = newFacet.await contract.getAddress();
     if (selectorsToAdd.length > 0) {
       deployedFacets[index].cut.push([newFacetAddress, FacetCutAction.Add, selectorsToAdd]);
     }
@@ -317,10 +317,10 @@ async function main(env, facetConfig, version) {
   );
 
   await cutDiamond(
-    diamondCutFacet.address,
+    await diamondCutFacet.getAddress(),
     maxPriorityFeePerGas,
     deployedFacets,
-    protocolInitializationFacet.address,
+    await protocolInitializationFacet.getAddress(),
     initializeCalldata,
     facetCutRemove
   );

@@ -36,21 +36,21 @@ describe("ProtocolInitializationHandler", async function () {
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Temporarily grant UPGRADER role to deployer account
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
+    await accessController.grantRole(Role.UPGRADER, await deployer.getAddress());
 
     // Temporarily grant UPGRADER role to deployer 1ccount
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
+    await accessController.grantRole(Role.UPGRADER, await deployer.getAddress());
 
     // Cast Diamond to IERC165
-    erc165 = await getContractAt("ERC165Facet", protocolDiamond.address);
+    erc165 = await getContractAt("ERC165Facet", await protocolDiamond.getAddress());
 
     // Cast Diamond to DiamondCutFacet
-    diamondCutFacet = await getContractAt("DiamondCutFacet", protocolDiamond.address);
+    diamondCutFacet = await getContractAt("DiamondCutFacet", await protocolDiamond.getAddress());
 
     // Cast Diamond to ProtocolInitializationHandlerFacet
     protocolInitializationFacet = await getContractAt(
       "ProtocolInitializationHandlerFacet",
-      protocolDiamond.address
+      await protocolDiamond.getAddress()
     );
 
     version = "2.2.0";
@@ -64,7 +64,7 @@ describe("ProtocolInitializationHandler", async function () {
     context("📋 Initializer", async function () {
       it("Should initialize version 2.2.0 and emit ProtocolInitialized", async function () {
         const { cutTransaction } = await deployAndCutFacets(
-          protocolDiamond.address,
+          await protocolDiamond.getAddress(),
           { ProtocolInitializationHandlerFacet: [] },
           maxPriorityFeePerGas
         );
@@ -91,7 +91,7 @@ describe("ProtocolInitializationHandler", async function () {
 
           const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initialize", [
             version,
-            [rando.address],
+            [await rando.getAddress()],
             [],
             true,
             initializationData,
@@ -103,7 +103,7 @@ describe("ProtocolInitializationHandler", async function () {
 
           const cutArgs = [
             [facetCut],
-            protocolInitializationFacetDeployed.address,
+            await protocolInitializationFacetDeployed.getAddress(),
             callData,
             await getFees(maxPriorityFeePerGas),
           ];
@@ -128,7 +128,7 @@ describe("ProtocolInitializationHandler", async function () {
 
           const cutArgs = [
             [facetCut],
-            protocolInitializationFacetDeployed.address,
+            await protocolInitializationFacetDeployed.getAddress(),
             callData,
             await getFees(maxPriorityFeePerGas),
           ];
@@ -155,7 +155,7 @@ describe("ProtocolInitializationHandler", async function () {
 
           await diamondCutFacet.diamondCut(
             [facetCut],
-            protocolInitializationFacetDeployed.address,
+            await protocolInitializationFacetDeployed.getAddress(),
             callData,
             await getFees(maxPriorityFeePerGas)
           );
@@ -165,18 +165,18 @@ describe("ProtocolInitializationHandler", async function () {
           const testFacet = await FacetTestFactory.deploy(await getFees(maxPriorityFeePerGas));
           await testFacet.deployTransaction.wait();
 
-          const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [rando.address]);
+          const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [await rando.getAddress()]);
 
           facetCut = getFacetAddCut(testFacet, [calldataTestFacet.slice(0, 10)]);
 
           const calldataProtocolInitialization = protocolInitializationFacetDeployed.interface.encodeFunctionData(
             "initialize",
-            [version, [testFacet.address], [calldataTestFacet], true, initializationData, [], []]
+            [version, [await testFacet.getAddress()], [calldataTestFacet], true, initializationData, [], []]
           );
 
           const cutTransaction = diamondCutFacet.diamondCut(
             [facetCut],
-            protocolInitializationFacetDeployed.address,
+            await protocolInitializationFacetDeployed.getAddress(),
             calldataProtocolInitialization,
             await getFees(maxPriorityFeePerGas)
           );
@@ -190,13 +190,13 @@ describe("ProtocolInitializationHandler", async function () {
 
           // Add protocolInitializationFacet to diamond
           await deployAndCutFacets(
-            protocolDiamond.address,
+            await protocolDiamond.getAddress(),
             { ProtocolInitializationHandlerFacet: [] },
             maxPriorityFeePerGas
           );
 
           // Get actual deployed protocolInitializationFacet
-          const diamondLoupe = await getContractAt("DiamondLoupeFacet", protocolDiamond.address);
+          const diamondLoupe = await getContractAt("DiamondLoupeFacet", await protocolDiamond.getAddress());
           const signature = protocolInitializationFacet.interface.getSighash("getVersion()");
           const existingFacetAddress = await diamondLoupe.facetAddress(signature);
           const protocolInitializationFacet2 = await getContractAt(
@@ -213,7 +213,7 @@ describe("ProtocolInitializationHandler", async function () {
           await expect(
             protocolInitializationFacet2.initialize(
               formatBytes32String("haha"),
-              [selfDestructor.address],
+              [await selfDestructor.getAddress()],
               [selfDestructorInitData],
               false,
               "0x",
@@ -234,7 +234,7 @@ describe("ProtocolInitializationHandler", async function () {
       const interfaceId = InterfaceIds[interfaceImplementers["ProtocolInitializationHandlerFacet"]];
 
       const { deployedFacets } = await deployAndCutFacets(
-        protocolDiamond.address,
+        await protocolDiamond.getAddress(),
         { ProtocolInitializationHandlerFacet: [version, [], [], true] },
         maxPriorityFeePerGas,
         version,
@@ -274,7 +274,7 @@ describe("ProtocolInitializationHandler", async function () {
 
         await diamondCutFacet.diamondCut(
           [],
-          deployedProtocolInitializationHandlerFacet.contract.address,
+          deployedProtocolInitializationHandlerFacet.await contract.getAddress(),
           calldataProtocolInitialization,
           await getFees(maxPriorityFeePerGas)
         );
@@ -300,13 +300,13 @@ describe("ProtocolInitializationHandler", async function () {
       const testFacet = await FacetTestFactory.deploy(await getFees(maxPriorityFeePerGas));
       await testFacet.deployTransaction.wait();
 
-      const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [rando.address]);
+      const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [await rando.getAddress()]);
 
       version = formatBytes32String("2.3.0");
       const calldataProtocolInitialization =
         deployedProtocolInitializationHandlerFacet.contract.interface.encodeFunctionData("initialize", [
           version,
-          [testFacet.address],
+          [await testFacet.getAddress()],
           [calldataTestFacet],
           true,
           "0x",
@@ -318,14 +318,14 @@ describe("ProtocolInitializationHandler", async function () {
 
       await diamondCutFacet.diamondCut(
         facetCuts,
-        deployedProtocolInitializationHandlerFacet.contract.address,
+        deployedProtocolInitializationHandlerFacet.await contract.getAddress(),
         calldataProtocolInitialization,
         await getFees(maxPriorityFeePerGas)
       );
 
-      const testFacetContract = await getContractAt("Test3Facet", protocolDiamond.address);
+      const testFacetContract = await getContractAt("Test3Facet", await protocolDiamond.getAddress());
 
-      expect(await testFacetContract.getTestAddress()).to.equal(rando.address);
+      expect(await testFacetContract.getTestAddress()).to.equal(await rando.getAddress());
     });
 
     context("💔 Revert Reasons", async function () {
@@ -340,12 +340,12 @@ describe("ProtocolInitializationHandler", async function () {
       });
 
       it("Delegate call to initialize fails", async function () {
-        const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [testFacet.address]);
+        const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [await testFacet.getAddress()]);
 
         const calldataProtocolInitialization =
           deployedProtocolInitializationHandlerFacet.contract.interface.encodeFunctionData("initialize", [
             version,
-            [testFacet.address],
+            [await testFacet.getAddress()],
             [calldataTestFacet],
             true,
             initializationData,
@@ -358,7 +358,7 @@ describe("ProtocolInitializationHandler", async function () {
         await expect(
           diamondCutFacet.diamondCut(
             facetCuts,
-            deployedProtocolInitializationHandlerFacet.contract.address,
+            deployedProtocolInitializationHandlerFacet.await contract.getAddress(),
             calldataProtocolInitialization,
             await getFees(maxPriorityFeePerGas)
           )
@@ -368,12 +368,12 @@ describe("ProtocolInitializationHandler", async function () {
       it("Default reason if not supplied by implementation", async () => {
         // If the caller's address is supplied Test3Facet's initializer will revert with no reason
         // and so the diamondCut function will supply it's own reason
-        const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [deployer.address]);
+        const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [await deployer.getAddress()]);
 
         const calldataProtocolInitialization =
           deployedProtocolInitializationHandlerFacet.contract.interface.encodeFunctionData("initialize", [
             version,
-            [testFacet.address],
+            [await testFacet.getAddress()],
             [calldataTestFacet],
             true,
             initializationData,
@@ -386,7 +386,7 @@ describe("ProtocolInitializationHandler", async function () {
         await expect(
           diamondCutFacet.diamondCut(
             facetCuts,
-            deployedProtocolInitializationHandlerFacet.contract.address,
+            deployedProtocolInitializationHandlerFacet.await contract.getAddress(),
             calldataProtocolInitialization,
             await getFees(maxPriorityFeePerGas)
           )
@@ -428,7 +428,7 @@ describe("ProtocolInitializationHandler", async function () {
 
       // Make initial deployment (simulate v2.1.0)
       await deployAndCutFacets(
-        protocolDiamond.address,
+        await protocolDiamond.getAddress(),
         facetsToDeploy,
         maxPriorityFeePerGas,
         version,
@@ -449,7 +449,7 @@ describe("ProtocolInitializationHandler", async function () {
       // Prepare cut data
       facetCut = getFacetAddCut(configHandler);
       // Attach correct address to configHandler
-      configHandler = configHandler.attach(protocolDiamond.address);
+      configHandler = configHandler.attach(await protocolDiamond.getAddress());
       // Prepare calldata
       calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
         "initialize",
@@ -462,20 +462,20 @@ describe("ProtocolInitializationHandler", async function () {
       await expect(
         diamondCutFacet.diamondCut(
           [facetCut],
-          deployedProtocolInitializationHandlerFacet.address,
+          await deployedProtocolInitializationHandlerFacet.getAddress(),
           calldataProtocolInitialization,
           await getFees(maxPriorityFeePerGas)
         )
       )
         .to.emit(configHandler, "MaxPremintedVouchersChanged")
-        .withArgs(maxPremintedVouchers, deployer.address);
+        .withArgs(maxPremintedVouchers, await deployer.getAddress());
     });
 
     it("Should update state", async function () {
       // Make the cut, check the event
       await diamondCutFacet.diamondCut(
         [facetCut],
-        deployedProtocolInitializationHandlerFacet.address,
+        await deployedProtocolInitializationHandlerFacet.getAddress(),
         calldataProtocolInitialization,
         await getFees(maxPriorityFeePerGas)
       );
@@ -499,7 +499,7 @@ describe("ProtocolInitializationHandler", async function () {
         await expect(
           diamondCutFacet.diamondCut(
             [facetCut],
-            deployedProtocolInitializationHandlerFacet.address,
+            await deployedProtocolInitializationHandlerFacet.getAddress(),
             calldataProtocolInitialization,
             await getFees(maxPriorityFeePerGas)
           )
@@ -513,7 +513,7 @@ describe("ProtocolInitializationHandler", async function () {
         const {
           deployedFacets: [{ contract: deployedProtocolInitializationHandlerFacet }],
         } = await deployAndCutFacets(
-          protocolDiamond.address,
+          await protocolDiamond.getAddress(),
           { ProtocolInitializationHandlerFacet: [version, [], [], true] },
           maxPriorityFeePerGas,
           version,
@@ -528,7 +528,7 @@ describe("ProtocolInitializationHandler", async function () {
         await expect(
           diamondCutFacet.diamondCut(
             [facetCut],
-            deployedProtocolInitializationHandlerFacet.address,
+            await deployedProtocolInitializationHandlerFacet.getAddress(),
             calldataProtocolInitialization,
             await getFees(maxPriorityFeePerGas)
           )
@@ -547,7 +547,7 @@ describe("ProtocolInitializationHandler", async function () {
       const facetsToDeploy = await getV2_2_0DeployConfig();
 
       // Make initial deployment (simulate v2.2.0)
-      await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas, version);
+      await deployAndCutFacets(await protocolDiamond.getAddress(), facetsToDeploy, maxPriorityFeePerGas, version);
 
       version = "2.2.1";
 
@@ -572,7 +572,7 @@ describe("ProtocolInitializationHandler", async function () {
       // Make the cut, check the event
       const tx = await diamondCutFacet.diamondCut(
         [facetCut],
-        deployedProtocolInitializationHandlerFacet.address,
+        await deployedProtocolInitializationHandlerFacet.getAddress(),
         calldataProtocolInitialization,
         await getFees(maxPriorityFeePerGas)
       );
@@ -598,7 +598,7 @@ describe("ProtocolInitializationHandler", async function () {
 
         await diamondCutFacet.diamondCut(
           [facetCut],
-          deployedProtocolInitializationHandlerFacet.address,
+          await deployedProtocolInitializationHandlerFacet.getAddress(),
           calldataProtocolInitializationWrong,
           await getFees(maxPriorityFeePerGas)
         );
@@ -616,7 +616,7 @@ describe("ProtocolInitializationHandler", async function () {
         await expect(
           diamondCutFacet.diamondCut(
             [facetCut],
-            deployedProtocolInitializationHandlerFacet.address,
+            await deployedProtocolInitializationHandlerFacet.getAddress(),
             calldataProtocolInitialization,
             await getFees(maxPriorityFeePerGas)
           )

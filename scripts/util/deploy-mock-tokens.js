@@ -42,13 +42,13 @@ async function deployAndMintMockNFTAuthTokens() {
   let lensTokenContractFactory = await getContractFactory("MockNFTAuth721");
   const lensTokenContract = await lensTokenContractFactory.deploy();
   await lensTokenContract.deployTransaction.wait(confirmations);
-  console.log(`✅ Mock Lens NFT Token deployed to: ${lensTokenContract.address}`);
+  console.log(`✅ Mock Lens NFT Token deployed to: ${await lensTokenContract.getAddress()}`);
 
   //Deploy a mock NFT to represent the ENS NFT
   let ensTokenContractFactory = await getContractFactory("MockNFTAuth721");
   const ensTokenContract = await ensTokenContractFactory.deploy();
   await ensTokenContract.deployTransaction.wait(confirmations);
-  console.log(`✅ Mock ENS NFT Token deployed to: ${ensTokenContract.address}`);
+  console.log(`✅ Mock ENS NFT Token deployed to: ${await ensTokenContract.getAddress()}`);
 
   if (network == "test" || network == "localhost") {
     //We want to mint auth tokens to specific addresses
@@ -90,7 +90,7 @@ async function deployAndMintMockNFTAuthTokens() {
     ensTokenId++;
   }
   return {
-    addresses: [lensTokenContract.address, ensTokenContract.address],
+    addresses: [await lensTokenContract.getAddress(), await ensTokenContract.getAddress()],
   };
 }
 

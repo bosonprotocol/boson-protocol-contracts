@@ -215,7 +215,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         it("New seller has metadataUri field", async function () {
           const { nextAccountId } = accountContractState;
-          const seller = mockSeller(rando.address, rando.address, rando.address, rando.address, true, "metadata");
+          const seller = mockSeller(await rando.getAddress(), await rando.getAddress(), await rando.getAddress(), await rando.getAddress(), true, "metadata");
           const authToken = mockAuthToken();
           const voucherInitValues = mockVoucherInitValues();
 
@@ -225,9 +225,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             .withArgs(
               nextAccountId,
               seller,
-              calculateContractAddress(accountHandler.address, nextAccountId),
+              calculateContractAddress(await accountHandler.getAddress(), nextAccountId),
               authToken,
-              rando.address
+              await rando.getAddress()
             );
         });
       });

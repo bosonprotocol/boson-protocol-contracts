@@ -35,7 +35,7 @@ async function deployProtocolClientProxies(protocolClients, maxPriorityFeePerGas
 
   // init instead of constructors
   let transactionResponse = await clientProxy.initialize(
-    bosonClientBeacon.address,
+    await bosonClientBeacon.getAddress(),
     await getFees(maxPriorityFeePerGas)
   );
   await transactionResponse.wait(confirmations);
