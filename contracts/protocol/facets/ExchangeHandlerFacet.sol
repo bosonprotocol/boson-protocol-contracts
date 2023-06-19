@@ -751,7 +751,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
                 if (tokenType == TokenType.FungibleToken) {
                     // ERC-20 style transfer
-                    (success, result) = twin.tokenAddress.call(
+                    (success, result) = twin.tokenAddress.call{ gas: TWIN_TRANSFER_GAS_LIMIT }(
                         abi.encodeWithSignature(
                             "transferFrom(address,address,uint256)",
                             seller.assistant,
@@ -768,7 +768,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         tokenId = twin.tokenId + twin.supplyAvailable;
                     }
                     // ERC-721 style transfer
-                    (success, result) = twin.tokenAddress.call(
+                    (success, result) = twin.tokenAddress.call{ gas: TWIN_TRANSFER_GAS_LIMIT }(
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,bytes)",
                             seller.assistant,
@@ -779,7 +779,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     );
                 } else if (twin.tokenType == TokenType.MultiToken) {
                     // ERC-1155 style transfer
-                    (success, result) = twin.tokenAddress.call(
+                    (success, result) = twin.tokenAddress.call{ gas: TWIN_TRANSFER_GAS_LIMIT }(
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
                             seller.assistant,
