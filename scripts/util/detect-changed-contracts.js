@@ -51,12 +51,9 @@ async function detectChangedContract(referenceCommit, targetCommit = "HEAD") {
   shell.exec(`rm -rf contracts`);
   shell.exec(`git checkout ${referenceCommit} contracts`);
 
-  // Protocol versions < 2.3.0 use different OZ contracts. We need to install them
-  const isOldVersion = ["v2.0", "v2.1", "v2.2"].some((v) => referenceCommit.startsWith(v));
-  if (isOldVersion) {
-    // Temporary install old OZ contracts
-    installDependencies(referenceCommit);
-  }
+  // Temporary target install reference version dependencies
+  // - Protocol versions < 2.3.0 use different OZ contracts
+  installDependencies(referenceCommit);
 
   // Compile old version
   await hre.run("clean");
@@ -72,10 +69,8 @@ async function detectChangedContract(referenceCommit, targetCommit = "HEAD") {
   console.log(`Checking out version ${targetCommit}`);
   shell.exec(`git checkout ${targetCommit} contracts`);
 
-  if (isOldVersion) {
-    // If reference commit is old version, we need to revert to target version
-    installDependencies(targetCommit);
-  }
+  // If reference commit is old version, we need to revert to target version dependencies
+  installDependencies(targetCommit);
 
   // Compile new version
   await hre.run("clean");
