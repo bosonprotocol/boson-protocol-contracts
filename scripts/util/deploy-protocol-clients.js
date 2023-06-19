@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ZeroAddress } = hre.ethers;
 
 const { deployProtocolClientImpls } = require("./deploy-protocol-client-impls.js");
 const { deployProtocolClientProxies } = require("./deploy-protocol-client-proxies.js");
@@ -22,11 +22,7 @@ const { castProtocolClientProxies } = require("./cast-protocol-client-proxies.js
  * @param implementationArgs - array of arguments to send to implementation constructor
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolClients(
-  protocolClientArgs,
-  maxPriorityFeePerGas,
-  implementationArgs = [ZeroAddress]
-) {
+async function deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas, implementationArgs = [ZeroAddress]) {
   // Deploy Protocol Client implementation contracts
   const protocolClientImpls = await deployProtocolClientImpls(implementationArgs, maxPriorityFeePerGas);
 

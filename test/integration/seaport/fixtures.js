@@ -35,9 +35,9 @@ const seaportFixtures = async (seaport) => {
     orderType = OrderType.FULL_OPEN,
     startTime,
     endTime,
-    zoneHash = constants.HashZero,
+    zoneHash = ZeroHash,
     salt = 0,
-    conduitKey = constants.HashZero
+    conduitKey = ZeroHash
   ) {
     const parameters = {
       offerer: await offerer.getAddress(),
@@ -58,7 +58,7 @@ const seaportFixtures = async (seaport) => {
 
     const orderHash = await getAndVerifyOrderHash(orderComponents);
 
-    const signature = constants.HashZero;
+    const signature = ZeroHash;
 
     const order = {
       parameters,

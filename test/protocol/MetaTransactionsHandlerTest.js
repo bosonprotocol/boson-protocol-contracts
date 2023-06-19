@@ -1146,7 +1146,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           functionSignature = metaTransactionsHandler.interface.encodeFunctionData("executeMetaTransaction", [
             await assistant.getAddress(),
             "executeMetaTransaction",
-            constants.HashZero, // hash of zero
+            ZeroHash, // hash of zero
             nonce,
             randomBytes(32), // random bytes32
             randomBytes(32), // random bytes32

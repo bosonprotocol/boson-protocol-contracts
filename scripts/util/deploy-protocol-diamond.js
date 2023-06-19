@@ -1,7 +1,7 @@
 const { getFacetAddCut } = require("./diamond-utils.js");
 const { getInterfaceIds } = require("../config/supported-interfaces.js");
 const hre = require("hardhat");
-const { getContractFactory, provider } = hre.ethers;
+const { getContractFactory } = hre.ethers;
 const environments = require("../../environments");
 const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const { getFees } = require("./utils");
@@ -17,6 +17,7 @@ const { getFees } = require("./utils");
 async function deployProtocolDiamond(maxPriorityFeePerGas) {
   // Get interface Ids
   const InterfaceIds = await getInterfaceIds();
+  console.log("interfaceIds", InterfaceIds);
 
   // Core interfaces that will be supported at the Diamond address
   const interfaces = [
@@ -48,8 +49,8 @@ async function deployProtocolDiamond(maxPriorityFeePerGas) {
 
   // Arguments for Diamond constructor
   const diamondArgs = [
-    accessController.getAddress(),
-    [getFacetAddCut(dlf), getFacetAddCut(dcf), getFacetAddCut(erc165f)],
+    await accessController.getAddress(),
+    [await getFacetAddCut(dlf), await getFacetAddCut(dcf), await getFacetAddCut(erc165f)],
     interfaces,
   ];
 

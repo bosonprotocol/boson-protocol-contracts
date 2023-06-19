@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const { provider } = hre.ethers;
+const { provider, getContractAt } = hre.ethers;
 const fs = require("fs");
 const addressesDirPath = __dirname + `/../../addresses`;
 

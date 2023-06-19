@@ -306,7 +306,7 @@ async function main(env, facetConfig, version) {
   // Get ProtocolInitializationHandlerFacet from deployedFacets when added/replaced in this upgrade or get it from contracts if already deployed
   let protocolInitializationFacet = await getInitializationFacet(deployedFacets, contracts);
   const facetsToInit = deployedFacets.filter((facet) => facet.initialize) ?? [];
-  const initializeCalldata = getInitializeCalldata(
+  const initializeCalldata = await getInitializeCalldata(
     facetsToInit,
     version,
     true,

@@ -114,7 +114,7 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     assert(isValidated, "Order is not validated");
     assert.equal(totalFilled.toNumber(), 0);
 
-    const tx = await seaport.connect(buyer).fulfillOrder(order, constants.HashZero, { value });
+    const tx = await seaport.connect(buyer).fulfillOrder(order, ZeroHash, { value });
     const receipt = await tx.wait();
 
     const event = getEvent(receipt, seaport, "OrderFulfilled");

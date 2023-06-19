@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getContractAt, getContractFactory, getSigners, formatBytes32String, defaultAbiCoder, ZeroHash } = hre.ethers;
 
 const Role = require("../../scripts/domain/Role");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -76,9 +76,7 @@ describe("ProtocolInitializationHandler", async function () {
         let protocolInitializationFacetDeployed;
 
         beforeEach(async function () {
-          const ProtocolInitilizationContractFactory = await getContractFactory(
-            "ProtocolInitializationHandlerFacet"
-          );
+          const ProtocolInitilizationContractFactory = await getContractFactory("ProtocolInitializationHandlerFacet");
           protocolInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
             await getFees(maxPriorityFeePerGas)
           );
@@ -115,7 +113,7 @@ describe("ProtocolInitializationHandler", async function () {
 
         it("Version is empty", async function () {
           const callData = protocolInitializationFacetDeployed.interface.encodeFunctionData("initialize", [
-            constants.HashZero,
+            ZeroHash,
             [],
             [],
             true,
@@ -274,7 +272,7 @@ describe("ProtocolInitializationHandler", async function () {
 
         await diamondCutFacet.diamondCut(
           [],
-          deployedProtocolInitializationHandlerFacet.await contract.getAddress(),
+          await deployedProtocolInitializationHandlerFacet.contract.getAddress(),
           calldataProtocolInitialization,
           await getFees(maxPriorityFeePerGas)
         );
@@ -318,7 +316,7 @@ describe("ProtocolInitializationHandler", async function () {
 
       await diamondCutFacet.diamondCut(
         facetCuts,
-        deployedProtocolInitializationHandlerFacet.await contract.getAddress(),
+        await deployedProtocolInitializationHandlerFacet.contract.getAddress(),
         calldataProtocolInitialization,
         await getFees(maxPriorityFeePerGas)
       );
@@ -358,7 +356,7 @@ describe("ProtocolInitializationHandler", async function () {
         await expect(
           diamondCutFacet.diamondCut(
             facetCuts,
-            deployedProtocolInitializationHandlerFacet.await contract.getAddress(),
+            await deployedProtocolInitializationHandlerFacet.contract.getAddress(),
             calldataProtocolInitialization,
             await getFees(maxPriorityFeePerGas)
           )
@@ -386,7 +384,7 @@ describe("ProtocolInitializationHandler", async function () {
         await expect(
           diamondCutFacet.diamondCut(
             facetCuts,
-            deployedProtocolInitializationHandlerFacet.await contract.getAddress(),
+            await deployedProtocolInitializationHandlerFacet.contract.getAddress(),
             calldataProtocolInitialization,
             await getFees(maxPriorityFeePerGas)
           )
@@ -405,9 +403,7 @@ describe("ProtocolInitializationHandler", async function () {
       version = "2.1.0";
 
       // Deploy mock protocol initialization facet which simulates state before v2.2.0
-      const ProtocolInitilizationContractFactory = await getContractFactory(
-        "MockProtocolInitializationHandlerFacet"
-      );
+      const ProtocolInitilizationContractFactory = await getContractFactory("MockProtocolInitializationHandlerFacet");
       const mockInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
         await getFees(maxPriorityFeePerGas)
       );

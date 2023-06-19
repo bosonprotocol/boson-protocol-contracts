@@ -1,3 +1,5 @@
+const hre = require("hardhat");
+const { ZeroAddress } = hre.ethers;
 const { expect } = require("chai");
 
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
@@ -12,7 +14,6 @@ const {
   accountId,
 } = require("../util/mock");
 const { setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util/utils");
-const { ethers } = require("hardhat");
 
 /**
  *  Test the Boson Account Handler interface
@@ -82,7 +83,12 @@ describe("IBosonAccountHandler", function () {
       nextAccountId = "1";
 
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
+      seller = mockSeller(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        await clerk.getAddress(),
+        await treasury.getAddress()
+      );
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
@@ -99,7 +105,12 @@ describe("IBosonAccountHandler", function () {
       expect(buyer.isValid()).is.true;
 
       // Create a valid dispute resolver
-      disputeResolver = mockDisputeResolver(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
+      disputeResolver = mockDisputeResolver(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        await clerk.getAddress(),
+        await treasury.getAddress()
+      );
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array

@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { utils, provider, BigNumber, keccak256, RLP, getSigners } = ethers;
+const { utils, provider, BigNumber, keccak256, RLP, getSigners, parseUnits, getContractAt } = ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
 const Role = require("../../scripts/domain/Role");
@@ -174,7 +174,7 @@ async function prepareDataSignatureParameters(
 
   if (type == "Protocol") {
     //hardhat default chain id is 31337
-    domainData.salt = utils.hexZeroPad(BigInt(31337).toHexString(), 32);
+    domainData.salt = utils.hexZeroPad(BigInt(31337).toString(), 32);
   } else {
     const { chainId } = await provider.getNetwork();
     domainData.chainId = chainId;
@@ -209,19 +209,20 @@ async function prepareDataSignatureParameters(
 }
 
 function calculateVoucherExpiry(block, voucherRedeemableFromDate, voucherValidDuration) {
-  const startDate = BigInt(block.timestamp)>BigInt(voucherRedeemableFromDate)
-    ? BigInt(block.timestamp)
-    : BigInt(voucherRedeemableFromDate);
-  return startDate+BigInt(voucherValidDuration).toString();
+  const startDate =
+    BigInt(block.timestamp) > BigInt(voucherRedeemableFromDate)
+      ? BigInt(block.timestamp)
+      : BigInt(voucherRedeemableFromDate);
+  return startDate + BigInt(voucherValidDuration).toString();
 }
 
 function applyPercentage(base, percentage) {
-return BigInt(base)*BigInt(percentage)/BigInt(10000);
+  return (BigInt(base) * BigInt(percentage)) / BigInt(10000);
 }
 
 function calculateContractAddress(senderAddress, senderNonce) {
   const nonce = BigInt(senderNonce);
-  const nonceHex = nonce.eq(0) ? "0x" : nonce.toHexString();
+  const nonceHex = nonce.eq(0) ? "0x" : nonce.toString();
 
   const input_arr = [senderAddress, nonceHex];
   const rlp_encoded = RLP.encode(input_arr);
@@ -351,7 +352,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
     // Protocol addresses
     {
       treasury: await protocolTreasury.getAddress(),
-      token: bosonTokenAddress || await bosonToken.getAddress(),
+      token: bosonTokenAddress || (await bosonToken.getAddress()),
       voucherBeacon: await beacon.getAddress(),
       beaconProxy: await proxy.getAddress(),
     },
@@ -411,7 +412,7 @@ async function revertToSnapshot(snapshotId) {
 }
 
 function deriveTokenId(offerId, exchangeId) {
-  return BigInt(offerId).shl(128)+exchangeId;
+  return BigInt(offerId).shl(128) + exchangeId;
 }
 
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
