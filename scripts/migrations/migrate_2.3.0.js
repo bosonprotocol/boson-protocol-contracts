@@ -36,10 +36,8 @@ async function migrate(env) {
       throw new Error("Local changes found. Please stash them before upgrading");
     }
 
-    if (env != "upgrade-test") {
-      console.log("Installing dependencies");
-      shell.exec(`npm install`);
-    }
+    console.log("Installing dependencies");
+    shell.exec(`npm install`);
 
     const { chainId } = await ethers.provider.getNetwork();
     const contractsFile = readContracts(chainId, network, env);

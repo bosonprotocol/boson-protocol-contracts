@@ -115,7 +115,7 @@ To get the examples how to use the admin to perform actions, refer to unit test 
 ### Upgrade facets
 To test the upgrade functionality, you first need to setup an upgrader account as described in previous section.
 
-#### Using the upgrade faces method
+#### Using the upgrade facets method
 - Update some of the existing facets or create new one.
 - Update config file `scripts/config/facet-upgrade.js`:
   - "addOrUpgrade" is the list of facets that will be upgraded or added,

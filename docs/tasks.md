@@ -80,7 +80,7 @@ If you want to upgrade to any intermediate version (for example to a release can
 
 ### Migrate
 
-Migration scripts are available from release v2.2.1 on. They are used to migrate to a higher version of the protocol. They include the configuration needed for the upgrade, and they execute all required pre- and post- upgrade actions. The upgrade is done with the same script as in [Upgrade facets](#upgrade-facets) task. The main difference between migration and just plain upgrade script is that migration scripts are easier to use and leave less room for the error. Additionally, they allow to simulate the migration before actually performing it so any problems can be detected in advance.
+Migration scripts are available from release v2.2.1. They are used to migrate to a higher version of the protocol. They include the configuration needed for the upgrade, and they execute all required pre- and post- upgrade actions. The upgrade is done with the same script as in [Upgrade facets](#upgrade-facets) task. The main difference between migration and just plain upgrade script is that migration scripts are easier to use and leave less room for errors. Additionally, they allow to simulate the migration before actually performing it so any problems can be detected in advance.
 
 To use them, execute the following command
 ```
@@ -90,7 +90,7 @@ npx hardhat migrate version --network network --env environment [--dry-run]
 - **version**: tag to which you want to migrate (e.g. v2.3.0). If the remote tag exists, it will overwrite the local one.
 - **network**: network where migration takes place. Must be defined in hardhat config. Current options are `localhost`, `test`, `mumbai`, `polygon`, `mainnet`.
 - **environment**: custom name for environment, used to distinguish if multiple instances are deployed on the same network. Typically one of `test`, `staging` and `prod`.
-- `--dry-run` is an optional flag. If added, the script locally simulates the migration process as it would happen on the actual network and environment, but none of contracts are really deployed and upgrade. It's recommended to run it before the upgrade. This script forks the latest possible block, which can result in performance issues. If you experience them, modify `scripts/migrations/dry-run.js` to use hardhat's default value (~30 less than actual block).
+- `--dry-run` is an optional flag. If added, the script locally simulates the migration process as it would happen on the actual network and environment, but none of contracts is really deployed and upgraded. It's recommended to run it before the upgrade. This script forks the latest possible block, which can result in performance issues. If you experience them, modify `scripts/migrations/dry-run.js` to use hardhat's default value (~30 less than actual block).
 
 ### Upgrade clients
 Upgrade existing clients (currently only BosonVoucher). Script deploys new implementation and updates address on beacon.  

@@ -5,7 +5,8 @@ const ethers = hre.ethers;
 const network = hre.network.name;
 
 async function setupDryRun(env) {
-  let forkedChainId, forkedEnv;
+  let forkedChainId;
+  let forkedEnv = env;
 
   console.warn("This is a dry run. No actual upgrade will be performed");
   ({ chainId: forkedChainId } = await ethers.provider.getNetwork());
