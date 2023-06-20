@@ -455,7 +455,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _exchangeId - the id of the exchange
      */
-    function redeemVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
+    function redeemVoucher(uint256 _exchangeId) external override  {
+
         // Get the exchange, should be in committed state
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
         uint256 offerId = exchange.offerId;
@@ -487,6 +488,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         // Notify watchers of state change
         emit VoucherRedeemed(offerId, _exchangeId, msgSender());
+
+        console.log("Gas left after twin transfers 2: %s", gasleft());
+
     }
 
     /**
@@ -730,10 +734,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             address sender = msgSender();
 
-            uint twinTransferGas = 0;
+            uint256 twinCount = twinIds.length;
+            
+            // Fetch twin: up to 20,000 gas
+            // Handle individual outcome: up to 120,000 gas
+            // Handle overall outcome: up to 200,000 gas
+            uint256 reservedGas = twinCount * SINGLE_TWIN_RESERVED_GAS + MINIMAL_RESIDUAL_GAS;
+            // todo: prevent overflows
+
             // Visit the twins
-            for (uint256 i = 0; i < twinIds.length; i++) {
-                uint256 fetchTwinCost = gasleft();
+            for (uint256 i = 0; i < twinCount; i++) {
                 // Get the twin
                 (, Twin storage twin) = fetchTwin(twinIds[i]);
 
@@ -752,12 +762,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         : twin.supplyAvailable - twin.amount;
                 }
 
-                console.log("fetchTwinCost: %s", fetchTwinCost - gasleft());
-
-                twinTransferGas += gasleft();
                 if (tokenType == TokenType.FungibleToken) {
                     // ERC-20 style transfer
-                    (success, result) = twin.tokenAddress.call{ gas: TWIN_TRANSFER_GAS_LIMIT }(
+                    (success, result) = twin.tokenAddress.call{ gas: gasleft() - reservedGas }(
                         abi.encodeWithSignature(
                             "transferFrom(address,address,uint256)",
                             seller.assistant,
@@ -774,7 +781,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         tokenId = twin.tokenId + twin.supplyAvailable;
                     }
                     // ERC-721 style transfer
-                    (success, result) = twin.tokenAddress.call{ gas: TWIN_TRANSFER_GAS_LIMIT }(
+                    (success, result) = twin.tokenAddress.call{ gas: gasleft() - reservedGas }(
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,bytes)",
                             seller.assistant,
@@ -785,7 +792,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     );
                 } else if (twin.tokenType == TokenType.MultiToken) {
                     // ERC-1155 style transfer
-                    (success, result) = twin.tokenAddress.call{ gas: TWIN_TRANSFER_GAS_LIMIT }(
+                    (success, result) = twin.tokenAddress.call{ gas: gasleft() - reservedGas }(
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
                             seller.assistant,
@@ -796,9 +803,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         )
                     );
                 }
-                twinTransferGas -= gasleft();
 
-                uint256 handleOutcomeCost = gasleft();
+                reservedGas -= SINGLE_TWIN_RESERVED_GAS;
+
                 // If token transfer failed
                 if (!success || (result.length > 0 && !abi.decode(result, (bool)))) {
                     transferFailed = true;
@@ -814,10 +821,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
                     emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, msgSender());
                 }
-                console.log("handleOutcomeCost: %s", handleOutcomeCost - gasleft());
             }
-            console.log("Twin transfer gas: %s", twinTransferGas);
 
+            console.log("Gas left after twin transfers: %s", gasleft());
             if (transferFailed) {
                 // Raise a dispute if caller is a contract
                 if (sender.isContract()) {
