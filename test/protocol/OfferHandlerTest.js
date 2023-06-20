@@ -436,7 +436,7 @@ describe("IBosonOfferHandler", function () {
 
       it("Should allow creation of an offer with unlimited supply", async function () {
         // Prepare an absolute zero offer
-        offer.quantityAvailable = constants.MaxUint256.toString();
+        offer.quantityAvailable = MaxUint256.toString();
 
         // Create a new offer
         await expect(
@@ -1305,7 +1305,7 @@ describe("IBosonOfferHandler", function () {
 
       it("It's possible to reserve a range with maximum allowed length", async function () {
         // Create an unlimited offer
-        offer.quantityAvailable = constants.MaxUint256.toString();
+        offer.quantityAvailable = MaxUint256.toString();
         await offerHandler
           .connect(assistant)
           .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
@@ -1320,7 +1320,7 @@ describe("IBosonOfferHandler", function () {
 
       it("Reserving range of unlimited offer does not decrease quantity available", async function () {
         // Create an unlimited offer
-        offer.quantityAvailable = constants.MaxUint256.toString();
+        offer.quantityAvailable = MaxUint256.toString();
         await offerHandler
           .connect(assistant)
           .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
@@ -1479,7 +1479,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Range length is greater than maximum allowed range length", async function () {
           // Create an unlimited offer
-          offer.quantityAvailable = constants.MaxUint256.toString();
+          offer.quantityAvailable = MaxUint256.toString();
           await offerHandler
             .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
@@ -1794,7 +1794,7 @@ describe("IBosonOfferHandler", function () {
       offers[2].exchangeToken = await bosonToken.getAddress();
       offerFeesList[2].protocolFee = protocolFeeFlatBoson;
       offerFeesStructs[2] = offerFeesList[2].toStruct();
-      offers[2].quantityAvailable = constants.MaxUint256.toString();
+      offers[2].quantityAvailable = MaxUint256.toString();
       offerStructs[2] = offers[2].toStruct();
       disputeResolutionTermsList[2] = new DisputeResolutionTerms(
         disputeResolver.id,

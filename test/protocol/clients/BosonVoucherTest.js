@@ -359,8 +359,8 @@ describe("IBosonVoucher", function () {
 
       it("Range length is too large, i.e., would cause an overflow", async function () {
         // Set such numbers that would cause an overflow
-        start = constants.MaxUint256/2+2;
-        length = constants.MaxUint256/2;
+        start = MaxUint256/2+2;
+        length = MaxUint256/2;
 
         // Try to reserve range, it should fail
         await expect(

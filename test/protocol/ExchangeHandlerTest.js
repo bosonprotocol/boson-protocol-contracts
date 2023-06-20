@@ -9,6 +9,7 @@ const {
   MaxUint256,
   parseEther,
   getImpersonatedSigner,
+  toBeHex,
 } = ethers;
 const { expect, assert } = require("chai");
 
@@ -186,7 +187,7 @@ describe("IBosonExchangeHandler", function () {
     // Deploy MockMetaTransactionsHandlerFacet
     const MockMetaTransactionsHandlerFacet = await getContractFactory("MockMetaTransactionsHandlerFacet");
     const mockMetaTransactionsHandlerFacet = await MockMetaTransactionsHandlerFacet.deploy();
-    await mockMetaTransactionsHandlerFacet.deployed();
+    await mockMetaTransactionsHandlerFacet.waitForDeployment();
 
     // Define the facet cut
     const facetCuts = [
@@ -319,7 +320,7 @@ describe("IBosonExchangeHandler", function () {
     });
 
     context("👉 commitToOffer()", async function () {
-      it.only("should emit a BuyerCommitted event", async function () {
+      it("should emit a BuyerCommitted event", async function () {
         // Commit to offer, retrieving the event
         tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
         txReceipt = await tx.wait();
@@ -730,10 +731,9 @@ describe("IBosonExchangeHandler", function () {
           // Create an offer with staring date in the future
           // get current block timestamp
           const block = await provider.getBlock("latest");
-          const now = block.timestamp.toString();
 
           // set validFrom date in the past
-          offerDates.validFrom = BigInt(now) + oneMonth * (6).toString(); // 6 months in the future
+          offerDates.validFrom = (BigInt(block.timestamp) + oneMonth * 6n).toString(); // 6 months in the future
           offerDates.validUntil = BigInt(offerDates.validFrom + 10).toString(); // just after the valid from so it succeeds.
 
           await offerHandler
@@ -966,7 +966,7 @@ describe("IBosonExchangeHandler", function () {
           const impersonatedBosonVoucher = await getImpersonatedSigner(await bosonVoucher.getAddress());
           await provider.send("hardhat_setBalance", [
             await impersonatedBosonVoucher.getAddress(),
-            parseEther("10").toHexString(),
+            toBeHex(parseEther("10")),
           ]);
 
           // Simulate a second commit with the same token id
@@ -1412,7 +1412,7 @@ describe("IBosonExchangeHandler", function () {
         block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = BigInt(block.timestamp + disputePeriod + 1);
+        newTime = BigInt(block.timestamp + disputePeriod + 1).toString();
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1433,7 +1433,7 @@ describe("IBosonExchangeHandler", function () {
         block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = BigInt(block.timestamp + disputePeriod + 1);
+        newTime = BigInt(block.timestamp + disputePeriod + 1).toString();
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1454,7 +1454,7 @@ describe("IBosonExchangeHandler", function () {
         block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = BigInt(block.timestamp + disputePeriod + 1);
+        newTime = BigInt(block.timestamp + disputePeriod + 1).toString();
         await setNextBlockTimestamp(newTime);
 
         // Create a rando buyer account
@@ -1613,7 +1613,7 @@ describe("IBosonExchangeHandler", function () {
         block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = BigInt(block.timestamp + disputePeriod + 1);
+        newTime = BigInt(block.timestamp + disputePeriod + 1).toString();
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1645,7 +1645,7 @@ describe("IBosonExchangeHandler", function () {
         block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = BigInt(block.timestamp + disputePeriod + 1);
+        newTime = BigInt(block.timestamp + disputePeriod + 1).toString();
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -2372,7 +2372,7 @@ describe("IBosonExchangeHandler", function () {
             // Deploy contract to test redeem called by another contract
             let TestProtocolFunctionsFactory = await getContractFactory("TestProtocolFunctions");
             const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamondAddress);
-            await testProtocolFunctions.deployed();
+            await testProtocolFunctions.waitForDeployment();
 
             await testProtocolFunctions.commit(offerId, { value: price });
 
@@ -2623,7 +2623,7 @@ describe("IBosonExchangeHandler", function () {
             // Deploy contract to test redeem called by another contract
             let TestProtocolFunctionsFactory = await getContractFactory("TestProtocolFunctions");
             const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamondAddress);
-            await testProtocolFunctions.deployed();
+            await testProtocolFunctions.waitForDeployment();
 
             await testProtocolFunctions.commit(offerId, { value: price });
 
@@ -2816,7 +2816,7 @@ describe("IBosonExchangeHandler", function () {
             // Deploy contract to test redeem called by another contract
             let TestProtocolFunctionsFactory = await getContractFactory("TestProtocolFunctions");
             const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamondAddress);
-            await testProtocolFunctions.deployed();
+            await testProtocolFunctions.waitForDeployment();
 
             await testProtocolFunctions.commit(offerId, { value: price });
 
@@ -3186,7 +3186,7 @@ describe("IBosonExchangeHandler", function () {
             // Deploy contract to test redeem called by another contract
             let TestProtocolFunctionsFactory = await getContractFactory("TestProtocolFunctions");
             const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamondAddress);
-            await testProtocolFunctions.deployed();
+            await testProtocolFunctions.waitForDeployment();
 
             await testProtocolFunctions.commit(offerId, { value: price });
 
@@ -3319,7 +3319,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("new date is not later than the current one", async function () {
           // New expiry date is older than current
-          validUntilDate = BigInt(voucher.validUntilDate) - oneMonth.toString();
+          validUntilDate = BigInt(voucher.validUntilDate) - oneMonth;
 
           // Attempt to extend voucher, expecting revert
           await expect(exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
@@ -3577,7 +3577,7 @@ describe("IBosonExchangeHandler", function () {
           block = await provider.getBlock(blockNumber);
 
           // Set time forward to run out the dispute period
-          newTime = BigInt(voucherRedeemableFrom + disputePeriod + 1);
+          newTime = Number(voucherRedeemableFrom + disputePeriod + 1);
           await setNextBlockTimestamp(newTime);
 
           // Complete exchange
@@ -4498,7 +4498,7 @@ describe("IBosonExchangeHandler", function () {
         await accountHandler.connect(rando).createAgent(agent);
 
         // Update agentFee
-        const agentFee = (BigInt(offer.price) * agent.feePercentage) / "10000".toString();
+        const agentFee = ((BigInt(offer.price) * BigInt(agent.feePercentage)) / 10000n).toString();
         offerFees.agentFee = agentFee;
 
         // Create a new offer

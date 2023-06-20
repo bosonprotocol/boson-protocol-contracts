@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { ZeroAddress, getSigners, parseUnits, getContractFactory } = ethers;
 const { assert, expect } = require("chai");
 
 const Group = require("../../scripts/domain/Group");
@@ -103,7 +104,12 @@ describe("IBosonGroupHandler", function () {
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
+      seller = mockSeller(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        clerk.address,
+        await treasury.getAddress()
+      );
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
@@ -120,7 +126,7 @@ describe("IBosonGroupHandler", function () {
       disputeResolver = mockDisputeResolver(
         await assistantDR.getAddress(),
         await adminDR.getAddress(),
-        await clerkDR.getAddress(),
+        clerkDR.address,
         await treasuryDR.getAddress(),
         true
       );
@@ -151,8 +157,8 @@ describe("IBosonGroupHandler", function () {
         offer.sellerDeposit = parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
         offer.buyerCancelPenalty = parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
         offer.quantityAvailable = `${(i + 1) * 2}`;
-        offerDates.validFrom = BigInt(Date.now() + oneMonth * i).toString();
-        offerDates.validUntil = BigInt(Date.now() + oneMonth * 6 * (i + 1)).toString();
+        offerDates.validFrom = (BigInt(Date.now()) + oneMonth * BigInt(i)).toString();
+        offerDates.validUntil = (BigInt(Date.now()) + oneMonth * 6n * BigInt(i + 1)).toString();
 
         // Check if domains are valid
         expect(offer.isValid()).is.true;
@@ -304,7 +310,12 @@ describe("IBosonGroupHandler", function () {
 
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
-          seller = mockSeller(await rando.getAddress(), await rando.getAddress(), ZeroAddress, await rando.getAddress());
+          seller = mockSeller(
+            await rando.getAddress(),
+            await rando.getAddress(),
+            ZeroAddress,
+            await rando.getAddress()
+          );
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
@@ -572,7 +583,12 @@ describe("IBosonGroupHandler", function () {
 
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
-          seller = mockSeller(await rando.getAddress(), await rando.getAddress(), ZeroAddress, await rando.getAddress());
+          seller = mockSeller(
+            await rando.getAddress(),
+            await rando.getAddress(),
+            ZeroAddress,
+            await rando.getAddress()
+          );
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6

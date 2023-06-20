@@ -1196,7 +1196,7 @@ describe("IBosonDisputeHandler", function () {
             await expect(
               disputeHandler
                 .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, constants.MaxUint256, v)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, MaxUint256, v)
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
           });
 

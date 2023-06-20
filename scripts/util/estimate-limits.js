@@ -697,7 +697,7 @@ setupEnvironment["maxPremintedVouchers"] = async function (tokenCount = 10) {
 
   // create the offer
   const { offer, offerDates, offerDurations } = await mockOffer();
-  offer.quantityAvailable = constants.MaxUint256;
+  offer.quantityAvailable = MaxUint256;
   await offerHandler.connect(sellerWallet1).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
   // reserve range

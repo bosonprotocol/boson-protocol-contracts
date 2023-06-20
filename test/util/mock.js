@@ -54,8 +54,8 @@ async function mockOfferDates() {
   const block = await provider.getBlock(blockNumber);
 
   const validFrom = BigInt(block.timestamp).toString(); // valid from now
-  const validUntil = BigInt(block.timestamp) + BigInt(oneMonth) * BigInt(6); // until 6 months
-  const voucherRedeemableFrom = BigInt(block.timestamp)+ BigInt(oneWeek); // redeemable in 1 week
+  const validUntil = (BigInt(block.timestamp) + BigInt(oneMonth) * BigInt(6)).toString(); // until 6 months
+  const voucherRedeemableFrom = (BigInt(block.timestamp) + BigInt(oneWeek)).toString(); // redeemable in 1 week
   const voucherRedeemableUntil = "0"; // mocks use voucher valid duration rather than fixed date, override in tests as needed
 
   // Create a valid offerDates, then set fields in tests directly
@@ -162,7 +162,7 @@ function mockAgent(wallet) {
 }
 
 function mockOfferFees(protocolFee, agentFee) {
-  return new OfferFees(protocolFee, agentFee);
+  return new OfferFees(protocolFee.toString(), agentFee.toString());
 }
 
 function mockVoucherInitValues() {

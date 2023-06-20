@@ -21,9 +21,7 @@ const Offer = require("../../scripts/domain/Offer");
 function getEvent(receipt, factory, eventName) {
   let found = false;
 
-  console.log(eventName);
-  console.log(factory.interface.fragments);
-  const eventFragment = factory.interface.fragments.filter((e) => e !== null && e.name == eventName);
+  const eventFragment = factory.interface.fragments.filter((e) => e.name == eventName);
   const iface = new Interface(eventFragment);
 
   for (const log in receipt.logs) {
@@ -36,8 +34,9 @@ function getEvent(receipt, factory, eventName) {
         // CHECK IF TOPIC CORRESPONDS TO THE EVENT GIVEN TO FN
         const event = iface.getEvent(encodedTopic);
 
-        if (event.name == eventName) {
+        if (event && event.name == eventName) {
           found = true;
+
           const eventArgs = iface.parseLog(receipt.logs[log]).args;
           return eventArgs;
         }
@@ -188,7 +187,7 @@ async function prepareDataSignatureParameters(
 
   if (type == "Protocol") {
     //hardhat default chain id is 31337
-    domainData.salt = zeroPadValue(BigInt(31337), 32);
+    domainData.salt = zeroPadValue("0x" + 31337n.toString(16), 32);
   } else {
     const { chainId } = await provider.getNetwork();
     domainData.chainId = chainId;
@@ -200,6 +199,10 @@ async function prepareDataSignatureParameters(
   };
   metaTxTypes = Object.assign({}, metaTxTypes, customTransactionTypes);
 
+  console.log(metaTxTypes);
+  console.log(domainData);
+  console.log(primaryType);
+  console.log(message);
   // Prepare the data to sign
   let dataToSign = JSON.stringify({
     types: metaTxTypes,
@@ -227,11 +230,11 @@ function calculateVoucherExpiry(block, voucherRedeemableFromDate, voucherValidDu
     BigInt(block.timestamp) > BigInt(voucherRedeemableFromDate)
       ? BigInt(block.timestamp)
       : BigInt(voucherRedeemableFromDate);
-  return startDate + BigInt(voucherValidDuration).toString();
+  return (startDate + BigInt(voucherValidDuration)).toString();
 }
 
 function applyPercentage(base, percentage) {
-  return (BigInt(base) * BigInt(percentage)) / BigInt(10000);
+  return ((BigInt(base) * BigInt(percentage)) / BigInt(10000)).toString();
 }
 
 function calculateContractAddress(senderAddress, senderNonce) {

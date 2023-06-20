@@ -1,6 +1,15 @@
 const { ethers } = require("hardhat");
 const {
-  utils: { keccak256, toUtf8Bytes },
+  keccak256,
+  toUtf8Bytes,
+  ZeroAddress,
+  getContractAt,
+  getContractFactory,
+  getSigners,
+  randomBytes,
+  zeroPadBytes,
+  ZeroHash,
+  MaxUint256,
 } = ethers;
 const { expect, assert } = require("chai");
 
@@ -200,10 +209,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
 
     // Cast Diamond to MockMetaTransactionsHandlerFacet
-    mockMetaTransactionsHandler = await getContractAt(
-      "MockMetaTransactionsHandlerFacet",
-      protocolDiamondAddress
-    );
+    mockMetaTransactionsHandler = await getContractAt("MockMetaTransactionsHandlerFacet", protocolDiamondAddress);
   }
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -246,7 +252,12 @@ describe("IBosonMetaTransactionsHandler", function () {
         assert.equal(result, expectedResult, "Nonce is used");
 
         // Create a valid seller for meta transaction
-        seller = mockSeller(await assistant.getAddress(), await assistant.getAddress(), ZeroAddress, await assistant.getAddress());
+        seller = mockSeller(
+          await assistant.getAddress(),
+          await assistant.getAddress(),
+          ZeroAddress,
+          await assistant.getAddress()
+        );
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
@@ -511,7 +522,12 @@ describe("IBosonMetaTransactionsHandler", function () {
       context("👉 AccountHandlerFacet 👉 createSeller()", async function () {
         beforeEach(async function () {
           // Create a valid seller for meta transaction
-          seller = mockSeller(await assistant.getAddress(), await assistant.getAddress(), ZeroAddress, await assistant.getAddress());
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await assistant.getAddress(),
+            ZeroAddress,
+            await assistant.getAddress()
+          );
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -554,7 +570,15 @@ describe("IBosonMetaTransactionsHandler", function () {
           await expect(
             metaTransactionsHandler
               .connect(deployer)
-              .executeMetaTransaction(await assistant.getAddress(), message.functionName, functionSignature, nonce, r, s, v)
+              .executeMetaTransaction(
+                await assistant.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
             .withArgs(await assistant.getAddress(), await deployer.getAddress(), message.functionName, nonce);
@@ -593,7 +617,15 @@ describe("IBosonMetaTransactionsHandler", function () {
           await expect(
             metaTransactionsHandler
               .connect(deployer)
-              .executeMetaTransaction(await assistant.getAddress(), message.functionName, functionSignature, nonce, r, s, v)
+              .executeMetaTransaction(
+                await assistant.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
             .withArgs(await assistant.getAddress(), await deployer.getAddress(), message.functionName, nonce);
@@ -665,7 +697,15 @@ describe("IBosonMetaTransactionsHandler", function () {
           await expect(
             metaTransactionsHandler
               .connect(deployer)
-              .executeMetaTransaction(await assistant.getAddress(), message.functionName, functionSignature, nonce, r, s, v)
+              .executeMetaTransaction(
+                await assistant.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
             .withArgs(await assistant.getAddress(), await deployer.getAddress(), message.functionName, nonce);
@@ -678,7 +718,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           // send a meta transaction again, check for event
           seller.assistant = await assistantDR.getAddress();
           seller.admin = await adminDR.getAddress();
-          seller.clerk = await clerkDR.getAddress();
+          seller.clerk = clerkDR.address;
           seller.treasury = await treasuryDR.getAddress();
 
           message.from = await adminDR.getAddress();
@@ -704,14 +744,24 @@ describe("IBosonMetaTransactionsHandler", function () {
           await expect(
             metaTransactionsHandler
               .connect(rando)
-              .executeMetaTransaction(await adminDR.getAddress(), message.functionName, functionSignature, nonce, r, s, v)
+              .executeMetaTransaction(
+                await adminDR.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
             .withArgs(await adminDR.getAddress(), await rando.getAddress(), message.functionName, nonce);
 
           // Verify that nonce is used. Expect true.
           expectedResult = true;
-          result = await metaTransactionsHandler.connect(assistantDR).isUsedNonce(await assistantDR.getAddress(), nonce);
+          result = await metaTransactionsHandler
+            .connect(assistantDR)
+            .isUsedNonce(await assistantDR.getAddress(), nonce);
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
@@ -744,7 +794,15 @@ describe("IBosonMetaTransactionsHandler", function () {
             await expect(
               metaTransactionsHandler
                 .connect(deployer)
-                .executeMetaTransaction(await assistant.getAddress(), message.functionName, functionSignature, nonce, r, s, v)
+                .executeMetaTransaction(
+                  await assistant.getAddress(),
+                  message.functionName,
+                  functionSignature,
+                  nonce,
+                  r,
+                  s,
+                  v
+                )
             ).to.revertedWith(RevertReasons.REGION_PAUSED);
           });
 
@@ -1025,7 +1083,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 functionSignature,
                 nonce,
                 r,
-                constants.MaxUint256, // invalid s signature component
+                MaxUint256, // invalid s signature component
                 v
               )
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
@@ -1038,7 +1096,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 functionSignature,
                 nonce,
                 r,
-                hexZeroPad("0x", 32), // invalid s signature component
+                zeroPadBytes("0x", 32), // invalid s signature component
                 v
               )
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
@@ -1050,7 +1108,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                hexZeroPad("0x", 32), // invalid r signature component
+                zeroPadBytes("0x", 32), // invalid r signature component
                 s,
                 v
               )
@@ -1062,7 +1120,12 @@ describe("IBosonMetaTransactionsHandler", function () {
       context("👉TwinHandler 👉 removeTwin()", async function () {
         beforeEach(async function () {
           // Create a valid seller for meta transaction
-          seller = mockSeller(await assistant.getAddress(), await assistant.getAddress(), ZeroAddress, await assistant.getAddress());
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await assistant.getAddress(),
+            ZeroAddress,
+            await assistant.getAddress()
+          );
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -1183,7 +1246,12 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         it("Returns default revert reason if called function reverts without a reason", async function () {
           // Create a valid seller for meta transaction
-          seller = mockSeller(await assistant.getAddress(), await assistant.getAddress(), ZeroAddress, await assistant.getAddress());
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await assistant.getAddress(),
+            ZeroAddress,
+            await assistant.getAddress()
+          );
           voucherInitValues = mockVoucherInitValues();
           emptyAuthToken = mockAuthToken();
           await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -1225,7 +1293,12 @@ describe("IBosonMetaTransactionsHandler", function () {
         context("Reentrancy guard", async function () {
           beforeEach(async function () {
             // Create a valid seller for meta transaction
-            seller = mockSeller(await assistant.getAddress(), await assistant.getAddress(), ZeroAddress, await assistant.getAddress());
+            seller = mockSeller(
+              await assistant.getAddress(),
+              await assistant.getAddress(),
+              ZeroAddress,
+              await assistant.getAddress()
+            );
             expect(seller.isValid()).is.true;
 
             // VoucherInitValues
@@ -1252,7 +1325,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             disputeResolver = mockDisputeResolver(
               await assistantDR.getAddress(),
               await adminDR.getAddress(),
-              await clerkDR.getAddress(),
+              clerkDR.address,
               await treasuryDR.getAddress(),
               true
             );
@@ -1298,7 +1371,9 @@ describe("IBosonMetaTransactionsHandler", function () {
             await maliciousToken.connect(buyer).approve(protocolDiamondAddress, price);
 
             // Deposit to seller's pool
-            await fundsHandler.connect(assistant).depositFunds(seller.id, await maliciousToken.getAddress(), sellerDeposit);
+            await fundsHandler
+              .connect(assistant)
+              .depositFunds(seller.id, await maliciousToken.getAddress(), sellerDeposit);
 
             // Commit to the offer
             await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
@@ -1308,7 +1383,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Expected payoffs - they are the same for token and native currency
             // Buyer: price - buyerCancelPenalty
-            buyerPayoff = BigInt(offerToken.price)-offerToken.buyerCancelPenalty.toString();
+            buyerPayoff = BigInt(offerToken.price) - offerToken.buyerCancelPenalty.toString();
 
             // Prepare validFundDetails
             tokenListBuyer = [await maliciousToken.getAddress()];
@@ -1443,7 +1518,15 @@ describe("IBosonMetaTransactionsHandler", function () {
             await expect(
               metaTransactionsHandler
                 .connect(deployer)
-                .executeMetaTransaction(await rando.getAddress(), message.functionName, functionSignature, nonce, r, s, v)
+                .executeMetaTransaction(
+                  await rando.getAddress(),
+                  message.functionName,
+                  functionSignature,
+                  nonce,
+                  r,
+                  s,
+                  v
+                )
             ).to.revertedWith(RevertReasons.REENTRANCY_GUARD);
           });
         });
@@ -1454,7 +1537,12 @@ describe("IBosonMetaTransactionsHandler", function () {
           offerId = "1";
 
           // Create a valid seller
-          seller = mockSeller(await assistant.getAddress(), await assistant.getAddress(), ZeroAddress, await assistant.getAddress());
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await assistant.getAddress(),
+            ZeroAddress,
+            await assistant.getAddress()
+          );
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -1470,7 +1558,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           disputeResolver = mockDisputeResolver(
             await assistantDR.getAddress(),
             await adminDR.getAddress(),
-            await clerkDR.getAddress(),
+            clerkDR.address,
             await treasuryDR.getAddress(),
             true
           );
@@ -3013,7 +3101,12 @@ describe("IBosonMetaTransactionsHandler", function () {
           offerId = "1";
 
           // Create a valid seller
-          seller = mockSeller(await assistant.getAddress(), await assistant.getAddress(), ZeroAddress, await assistant.getAddress());
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await assistant.getAddress(),
+            ZeroAddress,
+            await assistant.getAddress()
+          );
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -3030,7 +3123,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           disputeResolver = mockDisputeResolver(
             await assistantDR.getAddress(),
             await adminDR.getAddress(),
-            await clerkDR.getAddress(),
+            clerkDR.address,
             await treasuryDR.getAddress(),
             true
           );
@@ -3245,13 +3338,18 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
       });
 
-      context("👉 FundsHandlerFacet 👉 withdrawFunds()", async function () {
+      context.only("👉 FundsHandlerFacet 👉 withdrawFunds()", async function () {
         beforeEach(async function () {
           // Initial ids for all the things
           exchangeId = "1";
 
           // Create a valid seller
-          seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await admin.getAddress(),
+            clerk.address,
+            await treasury.getAddress()
+          );
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -3267,7 +3365,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           disputeResolver = mockDisputeResolver(
             await assistantDR.getAddress(),
             await adminDR.getAddress(),
-            await clerkDR.getAddress(),
+            clerkDR.address,
             await treasuryDR.getAddress(),
             true
           );
@@ -3340,11 +3438,11 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // expected payoffs - they are the same for token and native currency
           // buyer: price - buyerCancelPenalty
-          buyerPayoff = BigInt(offerToken.price)-offerToken.buyerCancelPenalty.toString();
+          buyerPayoff = BigInt(offerToken.price) - BigInt(offerToken.buyerCancelPenalty);
 
           // prepare validFundDetails
           tokenListBuyer = [await mockToken.getAddress(), ZeroAddress];
-          tokenAmountsBuyer = [buyerPayoff, BigInt(buyerPayoff)/"2".toString()];
+          tokenAmountsBuyer = [buyerPayoff, (BigInt(buyerPayoff) / 2n).toString()];
           validFundDetails = {
             entityId: buyerId,
             tokenList: tokenListBuyer,
@@ -3442,11 +3540,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Chain state should match the expected available funds after the withdrawal
             // Since all tokens are withdrawn, token should be removed from the list
             expectedBuyerAvailableFunds = new FundsList([
-              new Funds(
-                ZeroAddress,
-                "Native currency",
-                BigInt(buyerPayoff)/"2".toString()
-              ),
+              new Funds(ZeroAddress, "Native currency", BigInt(buyerPayoff) / "2".toString()),
             ]);
             expect(buyerAvailableFunds).to.eql(
               expectedBuyerAvailableFunds,
@@ -3454,7 +3548,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Token balance is increased for the buyer payoff
-            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore+buyerPayoff, "Buyer token balance mismatch");
+            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore + buyerPayoff, "Buyer token balance mismatch");
 
             // Verify that nonce is used. Expect true.
             let expectedResult = true;
@@ -3516,7 +3610,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Token balance is increased for the buyer payoff
-            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore+buyerPayoff, "Buyer token balance mismatch");
+            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore + buyerPayoff, "Buyer token balance mismatch");
 
             // Verify that nonce is used. Expect true.
             let expectedResult = true;

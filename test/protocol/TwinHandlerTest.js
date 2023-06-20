@@ -252,7 +252,7 @@ describe("IBosonTwinHandler", function () {
       });
 
       it("It is possible to add an ERC721 with unlimited supply if token is not used yet", async function () {
-        twin.supplyAvailable = constants.MaxUint256.toString();
+        twin.supplyAvailable = MaxUint256.toString();
         twin.amount = "0";
         twin.tokenId = "0";
         twin.tokenAddress = await foreign721.getAddress();
@@ -277,7 +277,7 @@ describe("IBosonTwinHandler", function () {
       });
 
       it("It is possible to add ERC721 even if another ERC721 with unlimited supply exists", async function () {
-        twin.supplyAvailable = constants.MaxUint256.toString();
+        twin.supplyAvailable = MaxUint256.toString();
         twin.amount = "0";
         twin.tokenId = "0";
         twin.tokenAddress = await foreign721.getAddress();
@@ -490,7 +490,7 @@ describe("IBosonTwinHandler", function () {
         });
 
         it("token address has been used in another twin with unlimited supply", async function () {
-          twin.supplyAvailable = constants.MaxUint256;
+          twin.supplyAvailable = MaxUint256;
           twin.tokenType = TokenType.NonFungibleToken;
           twin.tokenAddress = await foreign721.getAddress();
           twin.amount = "0";
@@ -508,11 +508,11 @@ describe("IBosonTwinHandler", function () {
         });
 
         it("Supply range overflow", async function () {
-          twin.supplyAvailable = constants.MaxUint256/10*8.toString();
+          twin.supplyAvailable = MaxUint256/10*8.toString();
           twin.tokenType = TokenType.NonFungibleToken;
           twin.tokenAddress = await foreign721.getAddress();
           twin.amount = "0";
-          twin.tokenId = constants.MaxUint256-twin.supplyAvailable+1.toString();
+          twin.tokenId = MaxUint256-twin.supplyAvailable+1.toString();
 
           await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
@@ -523,11 +523,11 @@ describe("IBosonTwinHandler", function () {
         });
 
         it("Token with unlimited supply with starting tokenId to high", async function () {
-          twin.supplyAvailable = constants.MaxUint256.toString();
+          twin.supplyAvailable = MaxUint256.toString();
           twin.tokenType = TokenType.NonFungibleToken;
           twin.tokenAddress = await foreign721.getAddress();
           twin.amount = "0";
-          twin.tokenId = constants.MaxUint256+1/2+1.toString();
+          twin.tokenId = MaxUint256+1/2+1.toString();
 
           await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 

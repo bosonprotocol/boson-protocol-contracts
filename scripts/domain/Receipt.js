@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const { ZeroAddress} = hre.ethers;
+const { ZeroAddress } = hre.ethers;
 const DisputeState = require("./DisputeState");
 const OfferFees = require("./OfferFees.js");
 const TwinReceipt = require("./TwinReceipt.js");
@@ -121,6 +121,7 @@ class Receipt {
       twinReceipts,
     ] = struct;
 
+    console.log(twinReceipts);
     return Receipt.fromObject({
       exchangeId: exchangeId.toString(),
       offerId: offerId.toString(),
@@ -140,7 +141,7 @@ class Receipt {
       disputeResolverId: disputeResolverId.toString(),
       disputedDate: disputedDate.toString(),
       escalatedDate: escalatedDate.toString(),
-      disputeState,
+      disputeState: Number(disputeState),
       twinReceipts: twinReceipts.map((twinReceipt) => TwinReceipt.fromStruct(twinReceipt)),
     });
   }

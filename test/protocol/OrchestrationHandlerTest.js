@@ -1047,7 +1047,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("Should allow creation of an offer with unlimited supply", async function () {
         // Prepare an offer with unlimited supply
-        offer.quantityAvailable = constants.MaxUint256.toString();
+        offer.quantityAvailable = MaxUint256.toString();
 
         // Create a seller and an offer, testing for the event
         await expect(
@@ -2447,7 +2447,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("Should allow creation of an offer with unlimited supply", async function () {
         // Prepare an absolute zero offer
-        offer.quantityAvailable = constants.MaxUint256.toString();
+        offer.quantityAvailable = MaxUint256.toString();
 
         // Create an offer with condition, testing for the events
         await expect(
@@ -3137,7 +3137,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("Should allow creation of an offer with unlimited supply", async function () {
         // Prepare an absolute zero offer
-        offer.quantityAvailable = constants.MaxUint256.toString();
+        offer.quantityAvailable = MaxUint256.toString();
 
         // Create an offer, add it to the group, testing for the events
         await expect(
@@ -3806,9 +3806,9 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("Should allow creation of an offer with unlimited supply", async function () {
         // Prepare an offer with unlimited supply
-        offer.quantityAvailable = constants.MaxUint256.toString();
+        offer.quantityAvailable = MaxUint256.toString();
         // Twin supply should be unlimited as well
-        twin.supplyAvailable = constants.MaxUint256.toString();
+        twin.supplyAvailable = MaxUint256.toString();
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
@@ -4663,9 +4663,9 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("Should allow creation of an offer with unlimited supply", async function () {
         // Prepare an offer with unlimited supply
-        offer.quantityAvailable = constants.MaxUint256.toString();
+        offer.quantityAvailable = MaxUint256.toString();
         // Twin supply should be unlimited as well
-        twin.supplyAvailable = constants.MaxUint256.toString();
+        twin.supplyAvailable = MaxUint256.toString();
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
