@@ -114,7 +114,7 @@ string constant EXCHANGE_ALREADY_EXISTS = "Exchange already exists";
 string constant INVALID_RANGE_LENGTH = "Range length is too large or zero";
 
 // Revert Reasons: Twin related
-uint256 constant TWIN_TRANSFER_GAS_LIMIT = 200000;
+uint256 constant TWIN_TRANSFER_GAS_LIMIT = 0;
 string constant NO_SUCH_TWIN = "No such twin";
 string constant NO_TRANSFER_APPROVED = "No transfer approved";
 string constant TWIN_TRANSFER_FAILED = "Twin could not be transferred";

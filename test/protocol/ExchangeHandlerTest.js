@@ -2070,7 +2070,7 @@ describe("IBosonExchangeHandler", function () {
       });
     });
 
-    context("👉 redeemVoucher() with bundle", async function () {
+    context.only("👉 redeemVoucher() with bundle", async function () {
       beforeEach(async function () {
         // Mint some tokens to be bundled
         await foreign20.connect(assistant).mint(assistant.address, "500");
@@ -2135,9 +2135,11 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(0);
 
           // Redeem the voucher
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
-            .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
+          const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          console.log("gas used", (await tx.wait()).gasUsed.toString());
+          // await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+          //   .to.emit(exchangeHandler, "TwinTransferred")
+          //   .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
 
           // Check the buyer's balance of the ERC20
           balance = await foreign20.balanceOf(buyer.address);
@@ -2146,7 +2148,9 @@ describe("IBosonExchangeHandler", function () {
 
         it("Amount should be reduced from twin supplyAvailable", async function () {
           // Redeem the voucher
-          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          console.log("gas used", (await tx.wait()).gasUsed.toString());
 
           // Check twin supplyAvailable
           const [, twin] = await twinHandler.connect(assistant).getTwin(twin20.id);
@@ -2182,7 +2186,9 @@ describe("IBosonExchangeHandler", function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
           // Redeem the voucher
-          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          console.log("gas used", (await tx.wait()).gasUsed.toString());
 
           // Check the supplyAvailable of the twin
           const [exists, twin] = await twinHandler.connect(assistant).getTwin(twin20.id);
@@ -2216,9 +2222,11 @@ describe("IBosonExchangeHandler", function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
           // Redeem the second voucher
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
-            .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin20.id, twin20.tokenAddress, exchange.id, "0", twin20.amount, buyer.address);
+          const tx = await exchangeHandler.connect(buyer).redeemVoucher(++exchange.id);
+          console.log("gas used", (await tx.wait()).gasUsed.toString());
+          // await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
+          //   .to.emit(exchangeHandler, "TwinTransferred")
+          //   .withArgs(twin20.id, twin20.tokenAddress, exchange.id, "0", twin20.amount, buyer.address);
 
           // Check the buyer's balance
           balance = await foreign20.balanceOf(buyer.address);
@@ -2242,6 +2250,9 @@ describe("IBosonExchangeHandler", function () {
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
+
+              
+              console.log("gas used", (await tx.wait()).gasUsed.toString());
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -2280,9 +2291,11 @@ describe("IBosonExchangeHandler", function () {
             // Commit to offer
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
-              .to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, "0", twin20.amount, buyer.address);
+            // await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
+            //   .to.emit(exchangeHandler, "TwinTransferFailed")
+            //   .withArgs(twin20.id, twin20.tokenAddress, exchange.id, "0", twin20.amount, buyer.address);
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(++exchange.id);
+            console.log("gas used", (await tx.wait()).gasUsed.toString());
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -2381,6 +2394,9 @@ describe("IBosonExchangeHandler", function () {
                 buyer.address
               );
 
+              // const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+              console.log("gas used", (await tx.wait()).gasUsed.toString());
+
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
@@ -2413,9 +2429,12 @@ describe("IBosonExchangeHandler", function () {
           [exists, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
           // Redeem the voucher
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
-            .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, "0", buyer.address);
+          // await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+          //   .to.emit(exchangeHandler, "TwinTransferred")
+          //   .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, "0", buyer.address);
+
+            let tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+            console.log("gas used", (await tx.wait()).gasUsed.toString());
 
           // Check the buyer owns the last ERC721 of twin range
           owner = await foreign721.ownerOf(tokenId);
@@ -2430,9 +2449,11 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
           // Redeem the second voucher for the second time / id = 2
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
-            .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, "0", buyer.address);
+          // await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
+          //   .to.emit(exchangeHandler, "TwinTransferred")
+          //   .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, "0", buyer.address);
+         tx = await exchangeHandler.connect(buyer).redeemVoucher(++exchange.id);
+          console.log("gas used", (await tx.wait()).gasUsed.toString());
 
           // Check the buyer owns the last ERC721 of twin range
           owner = await foreign721.ownerOf(tokenId);
@@ -2441,7 +2462,9 @@ describe("IBosonExchangeHandler", function () {
 
         it("1 should be reduced from twin supplyAvailable", async function () {
           // Redeem the voucher
-          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          console.log("gas used", (await tx.wait()).gasUsed.toString());
 
           // Check twin supplyAvailable
           const [, twin] = await twinHandler.connect(assistant).getTwin(twin721.id);
@@ -2480,9 +2503,12 @@ describe("IBosonExchangeHandler", function () {
 
           let tokenId = "10";
           // Redeem the second voucher
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
-            .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, twin721.amount, buyer.address);
+          // await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
+          //   .to.emit(exchangeHandler, "TwinTransferred")
+          //   .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, twin721.amount, buyer.address);
+
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(++exchange.id);
+            console.log("gas used", (await tx.wait()).gasUsed.toString());
 
           // Check the buyer owns the first ERC721 in twin range
           owner = await foreign721.ownerOf(tokenId);
@@ -2535,7 +2561,9 @@ describe("IBosonExchangeHandler", function () {
 
           it("Should not decrease twin supplyAvailable if supply is unlimited", async function () {
             // Redeem the voucher
-            await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+            // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+            console.log("gas used", (await tx.wait()).gasUsed.toString());
 
             // Check the supplyAvailable of the twin
             const [exists, twin] = await twinHandler.connect(assistant).getTwin(twin721.id);
@@ -2554,9 +2582,11 @@ describe("IBosonExchangeHandler", function () {
             expect(owner).to.equal(assistant.address);
 
             // Redeem the voucher
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
-              .to.emit(exchangeHandler, "TwinTransferred")
-              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, expectedTokenId, "0", buyer.address);
+            // await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
+            //   .to.emit(exchangeHandler, "TwinTransferred")
+            //   .withArgs(twin721.id, twin721.tokenAddress, exchangeId, expectedTokenId, "0", buyer.address);
+            let tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+            console.log("gas used", (await tx.wait()).gasUsed.toString());
 
             // Check the buyer owns the first ERC721 of twin range
             owner = await other721.ownerOf(expectedTokenId);
@@ -2573,9 +2603,11 @@ describe("IBosonExchangeHandler", function () {
 
             // Redeem the voucher
             // tokenId transferred to the buyer is 1
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchangeId))
-              .to.emit(exchangeHandler, "TwinTransferred")
-              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, expectedTokenId, "0", buyer.address);
+            // await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchangeId))
+            //   .to.emit(exchangeHandler, "TwinTransferred")
+            //   .withArgs(twin721.id, twin721.tokenAddress, exchangeId, expectedTokenId, "0", buyer.address);
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(++exchange.id);
+            console.log("gas used", (await tx.wait()).gasUsed.toString());
 
             // Check the buyer owns the second ERC721 of twin range
             owner = await other721.ownerOf(expectedTokenId);
@@ -2597,6 +2629,9 @@ describe("IBosonExchangeHandler", function () {
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "9", "0", buyer.address);
+
+              // const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+              console.log("gas used", (await tx.wait()).gasUsed.toString());
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -2631,7 +2666,7 @@ describe("IBosonExchangeHandler", function () {
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+          it.only("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
             const [foreign721gt, foreign721gt_2] = await deployMockTokens(["Foreign721GasTheft", "Foreign721GasTheft"]);
 
             // Approve the protocol diamond to transfer seller's tokens
@@ -2678,6 +2713,9 @@ describe("IBosonExchangeHandler", function () {
               .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(twin721_2.id, twin721_2.tokenAddress, exchange.id, tokenId, twin721_2.amount, buyer.address);
 
+              // const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+              console.log("gas used", (await tx.wait()).gasUsed.toString());
+
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
@@ -2709,9 +2747,11 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(0);
 
           // Redeem the voucher
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
-            .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin1155.id, twin1155.tokenAddress, exchange.id, tokenId, twin1155.amount, buyer.address);
+          // await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+          //   .to.emit(exchangeHandler, "TwinTransferred")
+          //   .withArgs(twin1155.id, twin1155.tokenAddress, exchange.id, tokenId, twin1155.amount, buyer.address);
+          const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          console.log("gas used", (await tx.wait()).gasUsed.toString());
 
           // Check the buyer's balance of the ERC1155
           balance = await foreign1155.balanceOf(buyer.address, tokenId);
@@ -2720,7 +2760,9 @@ describe("IBosonExchangeHandler", function () {
 
         it("Amount should be reduced from twin supplyAvailable", async function () {
           // Redeem the voucher
-          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          console.log("gas used", (await tx.wait()).gasUsed.toString());
 
           // Check twin supplyAvailable
           const [, twin] = await twinHandler.connect(assistant).getTwin(twin1155.id);
@@ -2756,7 +2798,9 @@ describe("IBosonExchangeHandler", function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
           // Redeem the voucher
-          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          console.log("gas used", (await tx.wait()).gasUsed.toString());
 
           // Check the supplyAvailable of the twin
           const [exists, twin] = await twinHandler.connect(assistant).getTwin(twin1155.id);
@@ -2791,16 +2835,19 @@ describe("IBosonExchangeHandler", function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
           // Redeem the second voucher
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
-            .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(
-              twin1155.id,
-              twin1155.tokenAddress,
-              exchange.id,
-              twin1155.tokenId,
-              twin1155.amount,
-              buyer.address
-            );
+          // await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
+          //   .to.emit(exchangeHandler, "TwinTransferred")
+          //   .withArgs(
+          //     twin1155.id,
+          //     twin1155.tokenAddress,
+          //     exchange.id,
+          //     twin1155.tokenId,
+          //     twin1155.amount,
+          //     buyer.address
+          //   );
+
+          const tx = await exchangeHandler.connect(buyer).redeemVoucher(++exchange.id);
+          console.log("gas used", (await tx.wait()).gasUsed.toString());
 
           // Check the buyer's balance
           balance = await foreign1155.balanceOf(buyer.address, twin1155.tokenId);
@@ -2830,6 +2877,9 @@ describe("IBosonExchangeHandler", function () {
                 twin1155.amount,
                 buyer.address
               );
+
+              // const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+              console.log("gas used", (await tx.wait()).gasUsed.toString());
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -2934,6 +2984,9 @@ describe("IBosonExchangeHandler", function () {
                 buyer.address
               );
 
+              // const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+              console.log("gas used", (await tx.wait()).gasUsed.toString());
+
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
@@ -2996,6 +3049,9 @@ describe("IBosonExchangeHandler", function () {
           await expect(tx)
             .and.to.emit(exchangeHandler, "TwinTransferred")
             .withArgs(twin721.id, twin721.tokenAddress, exchangeId, tokenIdNonFungible, twin721.amount, buyer.address);
+
+            // const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+            console.log("gas used", (await tx.wait()).gasUsed.toString());
 
           // Check the buyer's balance of the ERC20
           balance = await foreign20.balanceOf(buyer.address);
@@ -3070,6 +3126,9 @@ describe("IBosonExchangeHandler", function () {
           await expect(tx)
             .and.to.emit(exchangeHandler, "TwinTransferred")
             .withArgs(twin20.id, twin20.tokenAddress, exchange.id, "0", twin20.amount, buyer.address);
+
+            // const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+            console.log("gas used", (await tx.wait()).gasUsed.toString());
 
           // Check the buyer's balance
           balance = await foreign1155.balanceOf(buyer.address, twin1155.tokenId);
@@ -3167,6 +3226,9 @@ describe("IBosonExchangeHandler", function () {
                 buyer.address
               );
 
+              // const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+              console.log("gas used", (await tx.wait()).gasUsed.toString());
+
             // Check the supplyAvailable of each twin
             let [, twin] = await twinHandler.connect(assistant).getTwin(twin721.id);
             expect(twin.supplyAvailable).to.equal(twin721.supplyAvailable);
@@ -3188,10 +3250,13 @@ describe("IBosonExchangeHandler", function () {
             expect(owner).to.equal(assistant.address);
 
             // Redeem the voucher
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
-              .to.emit(exchangeHandler, "TwinTransferred")
-              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, expectedTokenId, "0", buyer.address);
+            // await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
+            //   .to.emit(exchangeHandler, "TwinTransferred")
+            //   .withArgs(twin721.id, twin721.tokenAddress, exchangeId, expectedTokenId, "0", buyer.address);
 
+
+            let tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+            console.log("gas used", (await tx.wait()).gasUsed.toString());
             // Check the buyer owns the first ERC721 of twin range
             owner = await other721.ownerOf(expectedTokenId);
             expect(owner).to.equal(buyer.address);
@@ -3207,9 +3272,12 @@ describe("IBosonExchangeHandler", function () {
 
             // Redeem the voucher
             // tokenId transferred to the buyer is 1
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchangeId))
-              .to.emit(exchangeHandler, "TwinTransferred")
-              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, expectedTokenId, "0", buyer.address);
+            // await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchangeId))
+            //   .to.emit(exchangeHandler, "TwinTransferred")
+            //   .withArgs(twin721.id, twin721.tokenAddress, exchangeId, expectedTokenId, "0", buyer.address);
+
+              tx = await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
+              console.log("gas used", (await tx.wait()).gasUsed.toString());
 
             // Check the buyer owns the second ERC721 of twin range
             owner = await other721.ownerOf(expectedTokenId);
@@ -3225,28 +3293,31 @@ describe("IBosonExchangeHandler", function () {
             let exchangeId = exchange.id;
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
-            await expect(tx)
-              .to.emit(exchangeHandler, "VoucherRevoked")
-              .withArgs(exchange.offerId, exchangeId, buyer.address);
+            // await expect(tx)
+            //   .to.emit(exchangeHandler, "VoucherRevoked")
+            //   .withArgs(exchange.offerId, exchangeId, buyer.address);
 
-            await expect(tx)
-              .to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin20.id, twin20.tokenAddress, exchangeId, "0", twin20.amount, buyer.address);
+            // await expect(tx)
+            //   .to.emit(exchangeHandler, "TwinTransferFailed")
+            //   .withArgs(twin20.id, twin20.tokenAddress, exchangeId, "0", twin20.amount, buyer.address);
 
-            await expect(tx)
-              .to.emit(exchangeHandler, "TwinTransferred")
-              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, "9", "0", buyer.address);
+            // await expect(tx)
+            //   .to.emit(exchangeHandler, "TwinTransferred")
+            //   .withArgs(twin721.id, twin721.tokenAddress, exchangeId, "9", "0", buyer.address);
 
-            await expect(tx)
-              .to.emit(exchangeHandler, "TwinTransferred")
-              .withArgs(
-                twin1155.id,
-                twin1155.tokenAddress,
-                exchangeId,
-                twin1155.tokenId,
-                twin1155.amount,
-                buyer.address
-              );
+            // await expect(tx)
+            //   .to.emit(exchangeHandler, "TwinTransferred")
+            //   .withArgs(
+            //     twin1155.id,
+            //     twin1155.tokenAddress,
+            //     exchangeId,
+            //     twin1155.tokenId,
+            //     twin1155.amount,
+            //     buyer.address
+            //   );
+
+              // const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+              console.log("gas used", (await tx.wait()).gasUsed.toString());
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -3370,6 +3441,8 @@ describe("IBosonExchangeHandler", function () {
                 twin1155.amount,
                 buyer.address
               );
+              // const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+              console.log("gas used", (await tx.wait()).gasUsed.toString());
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);

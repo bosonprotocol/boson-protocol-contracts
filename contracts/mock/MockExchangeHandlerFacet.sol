@@ -253,54 +253,6 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         emit VoucherExtended2(offerId, _exchangeId, _validUntilDate, sender);
     }
 
-    /**
-     * @notice Redeems a voucher.
-     *
-     * Emits a VoucherRedeemed2 event if successful.
-     *
-     * Reverts if
-     * - The exchanges region of protocol is paused
-     * - Exchange does not exist
-     * - Exchange is not in committed state
-     * - Caller does not own voucher
-     * - Current time is prior to offer.voucherRedeemableFromDate
-     * - Current time is after voucher.validUntilDate
-     *
-     * @param _exchangeId - the id of the exchange
-     */
-    function redeemVoucher(uint256 _exchangeId) external exchangesNotPaused nonReentrant {
-        // Get the exchange, should be in committed state
-        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
-        uint256 offerId = exchange.offerId;
-
-        // Make sure the caller is buyer associated with the exchange
-        checkBuyer(exchange.buyerId);
-
-        // Make sure the voucher is redeemable
-        require(
-            block.timestamp >= fetchOfferDates(offerId).voucherRedeemableFrom &&
-                block.timestamp <= voucher.validUntilDate,
-            VOUCHER_NOT_REDEEMABLE
-        );
-
-        // Store the time the exchange was redeemed
-        voucher.redeemedDate = block.timestamp;
-
-        // Set the exchange state to the Redeemed
-        exchange.state = ExchangeState.Redeemed;
-
-        // Transfer any bundled twins to buyer
-        // N.B.: If voucher was revoked because transfer twin failed, then voucher was already burned
-        bool shouldBurnVoucher = transferTwins(exchange, voucher);
-
-        if (shouldBurnVoucher) {
-            // Burn the voucher
-            burnVoucher(exchange);
-        }
-
-        // Notify watchers of state change
-        emit VoucherRedeemed2(offerId, _exchangeId, msgSender());
-    }
 
     /**
      * @notice Transitions exchange to a "finalized" state

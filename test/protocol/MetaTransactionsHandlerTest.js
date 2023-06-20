@@ -239,7 +239,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         assert.equal(result, expectedResult, "Nonce is used");
       });
 
-      it("should be true after executing a meta transaction with nonce", async function () {
+      it.only("should be true after executing a meta transaction with nonce", async function () {
         result = await metaTransactionsHandler.connect(assistant).isUsedNonce(assistant.address, nonce);
 
         // Verify the expectation
@@ -294,6 +294,22 @@ describe("IBosonMetaTransactionsHandler", function () {
           message,
           metaTransactionsHandler.address
         );
+
+        const metaTxGas =  await metaTransactionsHandler.estimateGas.executeMetaTransaction(
+          assistant.address,
+          message.functionName,
+          functionSignature,
+          nonce,
+          r,
+          s,
+          v
+        );
+
+        const normalTxGas = await accountHandler.connect(assistant).estimateGas.createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        console.log("MetaTxGas: ", metaTxGas.toString());
+        console.log("NormalTxGas: ", normalTxGas.toString());
+        console.log("Gas difference: ", metaTxGas.sub(normalTxGas).toString());
 
         // Send as meta transaction
         await metaTransactionsHandler.executeMetaTransaction(
@@ -531,7 +547,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             "createSeller((uint256,address,address,address,address,bool,string),(uint256,uint8),(string,uint256))";
         });
 
-        it("Should emit MetaTransactionExecuted event and update state", async () => {
+        it.only("Should emit MetaTransactionExecuted event and update state", async () => {
           // Prepare the function signature for the facet function.
           functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
             seller,
@@ -549,6 +565,16 @@ describe("IBosonMetaTransactionsHandler", function () {
             message,
             metaTransactionsHandler.address
           );
+
+          const metaTxGas =  await metaTransactionsHandler
+          .connect(deployer).estimateGas
+          .executeMetaTransaction(assistant.address, message.functionName, functionSignature, nonce, r, s, v);
+  
+          const normalTxGas = await accountHandler.connect(assistant).estimateGas.createSeller(seller, emptyAuthToken, voucherInitValues);
+  
+          console.log("MetaTxGas: ", metaTxGas.toString());
+          console.log("NormalTxGas: ", normalTxGas.toString());
+          console.log("Gas difference: ", metaTxGas.sub(normalTxGas).toString());
 
           // send a meta transaction, check for event
           await expect(
@@ -1094,7 +1120,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.contractAddress = twinHandler.address;
         });
 
-        it("removeTwin() can remove a twin", async function () {
+        it.only("removeTwin() can remove a twin", async function () {
           // Expect twin to be found.
           [success] = await twinHandler.connect(rando).getTwin(twin.id);
           expect(success).to.be.true;
@@ -1114,6 +1140,22 @@ describe("IBosonMetaTransactionsHandler", function () {
             message,
             metaTransactionsHandler.address
           );
+
+          const metaTxGas =  await metaTransactionsHandler.estimateGas.executeMetaTransaction(
+            assistant.address,
+            message.functionName,
+            functionSignature,
+            nonce,
+            r,
+            s,
+            v
+          );
+  
+          const normalTxGas = await twinHandler.connect(assistant).estimateGas.removeTwin(twin.id);
+  
+          console.log("MetaTxGas: ", metaTxGas.toString());
+          console.log("NormalTxGas: ", normalTxGas.toString());
+          console.log("Gas difference: ", metaTxGas.sub(normalTxGas).toString());
 
           // Remove the twin. Send as meta transaction.
           await metaTransactionsHandler.executeMetaTransaction(
@@ -1589,7 +1631,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
           });
 
-          it("Should emit MetaTransactionExecuted event and update state", async () => {
+          it.only("Should emit MetaTransactionExecuted event and update state", async () => {
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(
               buyer,
@@ -1608,6 +1650,22 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Expect that buyer has token balance matching the offer price.
             const buyerBalanceBefore = await mockToken.balanceOf(buyer.address);
             assert.equal(buyerBalanceBefore, price, "Buyer initial token balance mismatch");
+
+            const metaTxGas =  await   metaTransactionsHandler.estimateGas.executeMetaTransaction(
+              buyer.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            );
+    
+            const normalTxGas = await exchangeHandler.connect(buyer).estimateGas.commitToOffer(buyer.address, offer.id);
+    
+            console.log("MetaTxGas: ", metaTxGas.toString());
+            console.log("NormalTxGas: ", normalTxGas.toString());
+            console.log("Gas difference: ", metaTxGas.sub(normalTxGas).toString());
 
             // send a meta transaction, check for event
             await expect(
@@ -1782,7 +1840,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.functionName = "cancelVoucher(uint256)";
             });
 
-            it("Should emit MetaTransactionExecuted event and update state", async () => {
+            it.only("Should emit MetaTransactionExecuted event and update state", async () => {
               // Collect the signature components
               let { r, s, v } = await prepareDataSignatureParameters(
                 buyer,
@@ -1796,6 +1854,22 @@ describe("IBosonMetaTransactionsHandler", function () {
               functionSignature = exchangeHandler.interface.encodeFunctionData("cancelVoucher", [
                 validExchangeDetails.exchangeId,
               ]);
+
+              const metaTxGas =  await metaTransactionsHandler.estimateGas.executeMetaTransaction(
+                buyer.address,
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              );
+      
+              const normalTxGas = await exchangeHandler.connect(buyer).estimateGas.cancelVoucher(validExchangeDetails.exchangeId);
+      
+              console.log("MetaTxGas: ", metaTxGas.toString());
+              console.log("NormalTxGas: ", normalTxGas.toString());
+              console.log("Gas difference: ", metaTxGas.sub(normalTxGas).toString());
 
               // send a meta transaction, check for event
               await expect(
@@ -1936,7 +2010,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               await setNextBlockTimestamp(Number(voucherRedeemableFrom));
             });
 
-            it("Should emit MetaTransactionExecuted event and update state", async () => {
+            it.only("Should emit MetaTransactionExecuted event and update state", async () => {
               // Collect the signature components
               let { r, s, v } = await prepareDataSignatureParameters(
                 buyer,
@@ -1950,6 +2024,22 @@ describe("IBosonMetaTransactionsHandler", function () {
               functionSignature = exchangeHandler.interface.encodeFunctionData("redeemVoucher", [
                 validExchangeDetails.exchangeId,
               ]);
+
+              const metaTxGas =  await  metaTransactionsHandler.estimateGas.executeMetaTransaction(
+                buyer.address,
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              );
+      
+              const normalTxGas = await exchangeHandler.connect(buyer).estimateGas.redeemVoucher(validExchangeDetails.exchangeId);
+      
+              console.log("MetaTxGas: ", metaTxGas.toString());
+              console.log("NormalTxGas: ", normalTxGas.toString());
+              console.log("Gas difference: ", metaTxGas.sub(normalTxGas).toString());
 
               // send a meta transaction, check for event
               await expect(

@@ -15,6 +15,7 @@ import { Address } from "../../ext_libs/Address.sol";
 import { IERC1155 } from "../../interfaces/IERC1155.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
+import "hardhat/console.sol";
 
 /**
  * @title ExchangeHandlerFacet
@@ -729,8 +730,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             address sender = msgSender();
 
+            uint twinTransferGas = 0;
             // Visit the twins
             for (uint256 i = 0; i < twinIds.length; i++) {
+                uint256 fetchTwinCost = gasleft();
                 // Get the twin
                 (, Twin storage twin) = fetchTwin(twinIds[i]);
 
@@ -749,6 +752,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         : twin.supplyAvailable - twin.amount;
                 }
 
+                console.log("fetchTwinCost: %s", fetchTwinCost - gasleft());
+
+                twinTransferGas += gasleft();
                 if (tokenType == TokenType.FungibleToken) {
                     // ERC-20 style transfer
                     (success, result) = twin.tokenAddress.call{ gas: TWIN_TRANSFER_GAS_LIMIT }(
@@ -790,7 +796,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         )
                     );
                 }
+                twinTransferGas -= gasleft();
 
+                uint256 handleOutcomeCost = gasleft();
                 // If token transfer failed
                 if (!success || (result.length > 0 && !abi.decode(result, (bool)))) {
                     transferFailed = true;
@@ -804,9 +812,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     twinReceipt.amount = twin.amount;
                     twinReceipt.tokenType = twin.tokenType;
 
-                    emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
+                    emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, msgSender());
                 }
+                console.log("handleOutcomeCost: %s", handleOutcomeCost - gasleft());
             }
+            console.log("Twin transfer gas: %s", twinTransferGas);
 
             if (transferFailed) {
                 // Raise a dispute if caller is a contract
