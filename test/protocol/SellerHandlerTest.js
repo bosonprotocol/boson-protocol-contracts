@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { ZeroAddress, getContractAt, getSigners } = ethers;
 const { expect, assert } = require("chai");
 const Seller = require("../../scripts/domain/Seller");
 const AuthToken = require("../../scripts/domain/AuthToken");
@@ -76,13 +77,17 @@ describe("SellerHandler", function () {
     [mockAuthERC721Contract, mockAuthERC721Contract2] = await deployMockTokens(["Foreign721", "Foreign721"]);
 
     await expect(
-      configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, await mockAuthERC721Contract.getAddress())
+      configHandler
+        .connect(deployer)
+        .setAuthTokenContract(AuthTokenType.Lens, await mockAuthERC721Contract.getAddress())
     )
       .to.emit(configHandler, "AuthTokenContractChanged")
       .withArgs(AuthTokenType.Lens, await mockAuthERC721Contract.getAddress(), await deployer.getAddress());
 
     await expect(
-      configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.ENS, await mockAuthERC721Contract2.getAddress())
+      configHandler
+        .connect(deployer)
+        .setAuthTokenContract(AuthTokenType.ENS, await mockAuthERC721Contract2.getAddress())
     )
       .to.emit(configHandler, "AuthTokenContractChanged")
       .withArgs(AuthTokenType.ENS, await mockAuthERC721Contract2.getAddress(), await deployer.getAddress());
@@ -106,7 +111,7 @@ describe("SellerHandler", function () {
       seller = mockSeller(
         await assistant.getAddress(),
         await admin.getAddress(),
-        await clerk.getAddress(),
+        clerk.address,
         await treasury.getAddress(),
         true,
         "https://ipfs.io/ipfs/originalUri"
@@ -395,12 +400,23 @@ describe("SellerHandler", function () {
 
         // second seller
         expectedCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
-        seller = mockSeller(await other1.getAddress(), await other1.getAddress(), ZeroAddress, await other1.getAddress());
+        seller = mockSeller(
+          await other1.getAddress(),
+          await other1.getAddress(),
+          ZeroAddress,
+          await other1.getAddress()
+        );
 
         // Create a seller, testing for the event
         await expect(accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, emptyAuthTokenStruct, await other1.getAddress());
+          .withArgs(
+            seller.id,
+            seller.toStruct(),
+            expectedCloneAddress,
+            emptyAuthTokenStruct,
+            await other1.getAddress()
+          );
       });
 
       it("should be possible to create a seller with same auth token id but different type", async function () {
@@ -553,7 +569,13 @@ describe("SellerHandler", function () {
         // Create a seller, testing for the event
         await expect(accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, await newAuthTokenOwner.getAddress());
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            expectedCloneAddress,
+            authTokenStruct,
+            await newAuthTokenOwner.getAddress()
+          );
       });
 
       context("💔 Revert Reasons", async function () {
@@ -794,7 +816,12 @@ describe("SellerHandler", function () {
         await accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues);
 
         // Create a another seller
-        seller2 = mockSeller(await other1.getAddress(), await other1.getAddress(), ZeroAddress, await other1.getAddress());
+        seller2 = mockSeller(
+          await other1.getAddress(),
+          await other1.getAddress(),
+          ZeroAddress,
+          await other1.getAddress()
+        );
         expect(seller2.isValid()).is.true;
 
         await accountHandler.connect(other1).createSeller(seller2, emptyAuthToken, voucherInitValues);
@@ -871,7 +898,12 @@ describe("SellerHandler", function () {
         await accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues);
 
         // Create a another seller
-        seller2 = mockSeller(await other1.getAddress(), await other1.getAddress(), ZeroAddress, await other1.getAddress());
+        seller2 = mockSeller(
+          await other1.getAddress(),
+          await other1.getAddress(),
+          ZeroAddress,
+          await other1.getAddress()
+        );
         expect(seller2.isValid()).is.true;
 
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
@@ -1052,7 +1084,12 @@ describe("SellerHandler", function () {
         await accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues);
 
         // Create seller 2
-        seller2 = mockSeller(await other1.getAddress(), await other1.getAddress(), ZeroAddress, await other1.getAddress());
+        seller2 = mockSeller(
+          await other1.getAddress(),
+          await other1.getAddress(),
+          ZeroAddress,
+          await other1.getAddress()
+        );
         expect(seller2.isValid()).is.true;
 
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
@@ -1060,12 +1097,7 @@ describe("SellerHandler", function () {
         await accountHandler.connect(other1).createSeller(seller2, emptyAuthToken, voucherInitValues);
 
         // Create seller 3
-        seller3 = mockSeller(
-          await other5.getAddress(),
-          ZeroAddress,
-          ZeroAddress,
-          await treasury.getAddress()
-        );
+        seller3 = mockSeller(await other5.getAddress(), ZeroAddress, ZeroAddress, await treasury.getAddress());
         expect(seller3.isValid()).is.true;
 
         contractURI = `https://ipfs.io/ipfs/QmPChd2hVbrJ6bfo3WBcTW4iZnpHm8TEzWkLHmLpXhF68A`;
@@ -1125,12 +1157,7 @@ describe("SellerHandler", function () {
         expect(authToken3.isValid()).is.true;
 
         // Create seller 4
-        seller4 = mockSeller(
-          await rando.getAddress(),
-          ZeroAddress,
-          ZeroAddress,
-          await treasury.getAddress()
-        );
+        seller4 = mockSeller(await rando.getAddress(), ZeroAddress, ZeroAddress, await treasury.getAddress());
         expect(seller4.isValid()).is.true;
 
         await mockAuthERC721Contract2.connect(rando).mint(authToken3.tokenId, 1);
@@ -1181,12 +1208,7 @@ describe("SellerHandler", function () {
         expect(authToken3.isValid()).is.true;
 
         // Create seller 4
-        seller4 = mockSeller(
-          await rando.getAddress(),
-          ZeroAddress,
-          ZeroAddress,
-          await treasury.getAddress()
-        );
+        seller4 = mockSeller(await rando.getAddress(), ZeroAddress, ZeroAddress, await treasury.getAddress());
         expect(seller4.isValid()).is.true;
 
         await mockAuthERC721Contract.connect(rando).mint(authToken3.tokenId, 1);
@@ -1322,7 +1344,9 @@ describe("SellerHandler", function () {
         const bosonVoucherCloneAddress = calculateContractAddress(await exchangeHandler.getAddress(), "1");
         bosonVoucher = await getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
 
-        await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred").withArgs(await assistant.getAddress(), await other1.getAddress());
+        await expect(tx)
+          .to.emit(bosonVoucher, "OwnershipTransferred")
+          .withArgs(await assistant.getAddress(), await other1.getAddress());
 
         pendingSellerUpdate.assistant = ZeroAddress;
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
@@ -1442,16 +1466,13 @@ describe("SellerHandler", function () {
       });
 
       it("should update state from auth token to empty auth token", async function () {
-        seller2 = mockSeller(
-          await other1.getAddress(),
-          ZeroAddress,
-          ZeroAddress,
-          await other1.getAddress()
-        );
+        seller2 = mockSeller(await other1.getAddress(), ZeroAddress, ZeroAddress, await other1.getAddress());
         expect(seller2.isValid()).is.true;
 
         // msg.sender must be equal to seller's assistant
-        await mockAuthERC721Contract.connect(authTokenOwner).transferFrom(await authTokenOwner.getAddress(), await other1.getAddress(), 8400);
+        await mockAuthERC721Contract
+          .connect(authTokenOwner)
+          .transferFrom(await authTokenOwner.getAddress(), await other1.getAddress(), 8400);
         const newAuthTokenOwner = other1;
 
         // Create a seller with auth token
@@ -1518,16 +1539,13 @@ describe("SellerHandler", function () {
       });
 
       it("should update state from auth token to new auth token", async function () {
-        seller2 = mockSeller(
-          await other1.getAddress(),
-          ZeroAddress,
-          ZeroAddress,
-          await other1.getAddress()
-        );
+        seller2 = mockSeller(await other1.getAddress(), ZeroAddress, ZeroAddress, await other1.getAddress());
         expect(seller2.isValid()).is.true;
 
         // msg.sender must be equal to seller's assistant
-        await mockAuthERC721Contract.connect(authTokenOwner).transferFrom(await authTokenOwner.getAddress(), await other1.getAddress(), 8400);
+        await mockAuthERC721Contract
+          .connect(authTokenOwner)
+          .transferFrom(await authTokenOwner.getAddress(), await other1.getAddress(), 8400);
         const newAuthTokenOwner = other1;
 
         // Create a seller with auth token
@@ -1626,12 +1644,7 @@ describe("SellerHandler", function () {
 
       it("should update the correct seller", async function () {
         // Configure another seller
-        seller2 = mockSeller(
-          await other1.getAddress(),
-          ZeroAddress,
-          ZeroAddress,
-          await other1.getAddress()
-        );
+        seller2 = mockSeller(await other1.getAddress(), ZeroAddress, ZeroAddress, await other1.getAddress());
         expect(seller2.isValid()).is.true;
 
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
@@ -1796,7 +1809,9 @@ describe("SellerHandler", function () {
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         // Transfer ownership of auth token because owner must be different from old admin
-        await mockAuthERC721Contract.connect(authTokenOwner).transferFrom(await authTokenOwner.getAddress(), await other1.getAddress(), 8400);
+        await mockAuthERC721Contract
+          .connect(authTokenOwner)
+          .transferFrom(await authTokenOwner.getAddress(), await other1.getAddress(), 8400);
         const newAuthTokenOwner = other1;
 
         // Update seller
@@ -2100,7 +2115,12 @@ describe("SellerHandler", function () {
           await accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken]);
 
           //Set seller 2's auth token to empty
-          seller2 = mockSeller(await other1.getAddress(), await other1.getAddress(), ZeroAddress, await other1.getAddress());
+          seller2 = mockSeller(
+            await other1.getAddress(),
+            await other1.getAddress(),
+            ZeroAddress,
+            await other1.getAddress()
+          );
           expect(seller2.isValid()).is.true;
 
           // Create a seller with auth token
@@ -2129,12 +2149,7 @@ describe("SellerHandler", function () {
         it("seller is not owner of auth token currently stored for seller", async function () {
           const authTokenOwner = other1;
           //Create seller 2 with auth token
-          seller2 = mockSeller(
-            await other1.getAddress(),
-            ZeroAddress,
-            ZeroAddress,
-            await other1.getAddress()
-          );
+          seller2 = mockSeller(await other1.getAddress(), ZeroAddress, ZeroAddress, await other1.getAddress());
           expect(seller2.isValid()).is.true;
 
           //Create auth token for token Id that seller does not own
@@ -2147,7 +2162,9 @@ describe("SellerHandler", function () {
           await accountHandler.connect(authTokenOwner).createSeller(seller2, authToken2, voucherInitValues);
 
           //Transfer the token to a different address
-          await mockAuthERC721Contract2.connect(authTokenOwner).transferFrom(await authTokenOwner.getAddress(), await other7.getAddress(), 0);
+          await mockAuthERC721Contract2
+            .connect(authTokenOwner)
+            .transferFrom(await authTokenOwner.getAddress(), await other7.getAddress(), 0);
 
           // Attempt to update seller2 for token that seller doesn't own
           await expect(accountHandler.connect(authTokenOwner).updateSeller(seller2, authToken2)).to.revertedWith(
@@ -2159,12 +2176,7 @@ describe("SellerHandler", function () {
           const authTokenOwner = other1;
 
           //Create seller 2 with auth token
-          seller2 = mockSeller(
-            await other1.getAddress(),
-            ZeroAddress,
-            ZeroAddress,
-            await other1.getAddress()
-          );
+          seller2 = mockSeller(await other1.getAddress(), ZeroAddress, ZeroAddress, await other1.getAddress());
           expect(seller2.isValid()).is.true;
 
           //Create auth token for token Id that seller does not own
@@ -2533,7 +2545,12 @@ describe("SellerHandler", function () {
           await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
           // Create seller with same admin
-          seller2 = mockSeller(await other1.getAddress(), await other1.getAddress(), ZeroAddress, await other1.getAddress());
+          seller2 = mockSeller(
+            await other1.getAddress(),
+            await other1.getAddress(),
+            ZeroAddress,
+            await other1.getAddress()
+          );
           expect(seller2.isValid()).is.true;
 
           await accountHandler.connect(other1).createSeller(seller2, emptyAuthToken, voucherInitValues);
@@ -2550,7 +2567,12 @@ describe("SellerHandler", function () {
           await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
           // Create seller with same assistant
-          seller2 = mockSeller(await other1.getAddress(), await other1.getAddress(), ZeroAddress, await other1.getAddress());
+          seller2 = mockSeller(
+            await other1.getAddress(),
+            await other1.getAddress(),
+            ZeroAddress,
+            await other1.getAddress()
+          );
           expect(seller2.isValid()).is.true;
 
           await accountHandler.connect(other1).createSeller(seller2, emptyAuthToken, voucherInitValues);

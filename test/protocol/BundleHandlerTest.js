@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { MaxUnit256, getContractAt } = ethers;
+const { ZeroAddress, getContractFactory, MaxUint256 } = ethers;
 const { expect, assert } = require("chai");
 
 const Bundle = require("../../scripts/domain/Bundle");
@@ -131,7 +131,12 @@ describe("IBosonBundleHandler", function () {
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
+      seller = mockSeller(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        clerk.address,
+        await treasury.getAddress()
+      );
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
@@ -148,7 +153,7 @@ describe("IBosonBundleHandler", function () {
       disputeResolver = mockDisputeResolver(
         await assistantDR.getAddress(),
         await adminDR.getAddress(),
-        await clerkDR.getAddress(),
+        clerkDR.address,
         await treasuryDR.getAddress(),
         true
       );
@@ -295,7 +300,7 @@ describe("IBosonBundleHandler", function () {
       it("If sum of offers' quantities is more than maxUint256, total quantity is maxUint256", async function () {
         // create two offers with close to unlimited supply
         const newOffer = offer.clone();
-        newOffer.quantityAvailable = MaxUint256/10*9;
+        newOffer.quantityAvailable = ((MaxUint256 / 10n) * 9n).toString();
         const newOffer2 = newOffer.clone();
         const newOfferId = "6";
         const newOfferId2 = "7";
@@ -310,7 +315,7 @@ describe("IBosonBundleHandler", function () {
 
         // create a twin with almost unlimited supply
         twin = mockTwin(await bosonToken.getAddress());
-        twin.supplyAvailable = MaxUint256-1;
+        twin.supplyAvailable = MaxUint256 - 1n;
         expect(twin.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
@@ -387,7 +392,12 @@ describe("IBosonBundleHandler", function () {
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
           let expectedNewOfferId = "6";
-          seller = mockSeller(await rando.getAddress(), await rando.getAddress(), ZeroAddress, await rando.getAddress());
+          seller = mockSeller(
+            await rando.getAddress(),
+            await rando.getAddress(),
+            ZeroAddress,
+            await rando.getAddress()
+          );
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           const tx = await offerHandler
@@ -427,7 +437,12 @@ describe("IBosonBundleHandler", function () {
         it("Caller is not the seller of all twins", async function () {
           // create another seller and a twin
           let expectedNewTwinId = "6";
-          seller = mockSeller(await rando.getAddress(), await rando.getAddress(), ZeroAddress, await rando.getAddress());
+          seller = mockSeller(
+            await rando.getAddress(),
+            await rando.getAddress(),
+            ZeroAddress,
+            await rando.getAddress()
+          );
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await bosonToken.connect(rando).approve(await twinHandler.getAddress(), 1); // approving the twin handler
@@ -524,7 +539,9 @@ describe("IBosonBundleHandler", function () {
 
           // Commit to an offer
           let offerIdToCommit = bundle.offerIds[0];
-          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerIdToCommit, { value: price });
+          await exchangeHandler
+            .connect(buyer)
+            .commitToOffer(await buyer.getAddress(), offerIdToCommit, { value: price });
 
           // Attempt to Create a bundle, expecting revert
           await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(

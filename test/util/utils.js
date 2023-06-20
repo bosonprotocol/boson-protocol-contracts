@@ -1,5 +1,17 @@
 const { ethers } = require("hardhat");
-const { utils, provider, BigNumber, keccak256, RLP, getSigners, parseUnits, getContractAt } = ethers;
+const {
+  getAddress,
+  provider,
+  keccak256,
+  encodeRlp,
+  getSigners,
+  parseUnits,
+  getContractAt,
+  toBeArray,
+  isHexString,
+  zeroPadValue,
+  Interface,
+} = ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
 const Role = require("../../scripts/domain/Role");
@@ -9,8 +21,10 @@ const Offer = require("../../scripts/domain/Offer");
 function getEvent(receipt, factory, eventName) {
   let found = false;
 
-  const eventFragment = factory.interface.fragments.filter((e) => e.name == eventName);
-  const iface = new utils.Interface(eventFragment);
+  console.log(eventName);
+  console.log(factory.interface.fragments);
+  const eventFragment = factory.interface.fragments.filter((e) => e !== null && e.name == eventName);
+  const iface = new Interface(eventFragment);
 
   for (const log in receipt.logs) {
     const topics = receipt.logs[log].topics;
@@ -45,7 +59,7 @@ function eventEmittedWithArgs(receipt, factory, eventName, args) {
   let match = false;
 
   const eventFragment = factory.interface.fragments.filter((e) => e.name == eventName);
-  const iface = new utils.Interface(eventFragment);
+  const iface = new Interface(eventFragment);
 
   for (const log in receipt.logs) {
     const topics = receipt.logs[log].topics;
@@ -124,7 +138,7 @@ async function setNextBlockTimestamp(timestamp) {
 }
 
 function getSignatureParameters(signature) {
-  if (!utils.isHexString(signature)) {
+  if (!isHexString(signature)) {
     throw new Error('Given value "'.concat(signature, '" is not a valid hex string.'));
   }
 
@@ -174,7 +188,7 @@ async function prepareDataSignatureParameters(
 
   if (type == "Protocol") {
     //hardhat default chain id is 31337
-    domainData.salt = utils.hexZeroPad(BigInt(31337).toString(), 32);
+    domainData.salt = zeroPadValue(BigInt(31337), 32);
   } else {
     const { chainId } = await provider.getNetwork();
     domainData.chainId = chainId;
@@ -222,16 +236,16 @@ function applyPercentage(base, percentage) {
 
 function calculateContractAddress(senderAddress, senderNonce) {
   const nonce = BigInt(senderNonce);
-  const nonceHex = nonce.eq(0) ? "0x" : nonce.toString();
+  const nonceHex = nonce == 0n ? "0x" : toBeArray(nonce);
 
   const input_arr = [senderAddress, nonceHex];
-  const rlp_encoded = RLP.encode(input_arr);
+  const rlp_encoded = encodeRlp(input_arr);
 
   const contract_address_long = keccak256(rlp_encoded);
 
   const contract_address = "0x" + contract_address_long.substring(26); //Trim the first 24 characters.
 
-  return utils.getAddress(contract_address);
+  return getAddress(contract_address);
 }
 
 const paddingType = {
@@ -412,7 +426,7 @@ async function revertToSnapshot(snapshotId) {
 }
 
 function deriveTokenId(offerId, exchangeId) {
-  return BigInt(offerId).shl(128) + exchangeId;
+  return BigInt(offerId) * BigInt(2) ** BigInt(128) + BigInt(exchangeId);
 }
 
 exports.setNextBlockTimestamp = setNextBlockTimestamp;

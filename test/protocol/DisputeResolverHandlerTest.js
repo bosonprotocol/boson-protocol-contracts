@@ -1,5 +1,6 @@
 const { ethers } = require("hardhat");
 const { expect, assert } = require("chai");
+const { ZeroAddress } = ethers;
 
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { DisputeResolverFee, DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolverFee");
@@ -126,9 +127,24 @@ describe("DisputeResolverHandler", function () {
       expect(emptyAuthToken.isValid()).is.true;
 
       // Create two additional sellers and create seller allow list
-      seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
-      seller2 = mockSeller(await other1.getAddress(), await other1.getAddress(), ZeroAddress, await other1.getAddress());
-      let seller3 = mockSeller(await other2.getAddress(), await other2.getAddress(), ZeroAddress, await other2.getAddress());
+      seller = mockSeller(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        await clerk.getAddress(),
+        await treasury.getAddress()
+      );
+      seller2 = mockSeller(
+        await other1.getAddress(),
+        await other1.getAddress(),
+        ZeroAddress,
+        await other1.getAddress()
+      );
+      let seller3 = mockSeller(
+        await other2.getAddress(),
+        await other2.getAddress(),
+        ZeroAddress,
+        await other2.getAddress()
+      );
 
       // VoucherInitValues
       voucherInitValues = mockVoucherInitValues();
@@ -142,7 +158,12 @@ describe("DisputeResolverHandler", function () {
       sellerAllowList = ["3", "1"];
 
       // Create a valid dispute resolver, then set fields in tests directly
-      disputeResolver = mockDisputeResolver(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
+      disputeResolver = mockDisputeResolver(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        await clerk.getAddress(),
+        await treasury.getAddress()
+      );
       expect(disputeResolver.isValid()).is.true;
 
       // How that dispute resolver looks as a returned struct
@@ -1128,7 +1149,12 @@ describe("DisputeResolverHandler", function () {
         // Update new dispute resolver with same treasury address, testing for the event
         await expect(accountHandler.connect(rando).updateDisputeResolver(disputeResolver2))
           .to.emit(accountHandler, "DisputeResolverUpdateApplied")
-          .withArgs(disputeResolver2.id, disputeResolver2Struct, disputeResolverPendingUpdateStruct, await rando.getAddress());
+          .withArgs(
+            disputeResolver2.id,
+            disputeResolver2Struct,
+            disputeResolverPendingUpdateStruct,
+            await rando.getAddress()
+          );
       });
 
       it("should be possible to use the same address for assistant, admin and treasury", async function () {
@@ -1650,7 +1676,11 @@ describe("DisputeResolverHandler", function () {
       });
 
       it("should update DisputeResolverFee state only if all DisputeResolverFees are removed", async function () {
-        const feeTokenAddressesToRemove = [await other1.getAddress(), await other2.getAddress(), await other3.getAddress()];
+        const feeTokenAddressesToRemove = [
+          await other1.getAddress(),
+          await other2.getAddress(),
+          await other3.getAddress(),
+        ];
 
         // Remove fees from dispute resolver
         await accountHandler
@@ -1761,7 +1791,12 @@ describe("DisputeResolverHandler", function () {
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // make another seller with id = "5"
-        let seller4 = mockSeller(await other3.getAddress(), await other3.getAddress(), ZeroAddress, await other3.getAddress());
+        let seller4 = mockSeller(
+          await other3.getAddress(),
+          await other3.getAddress(),
+          ZeroAddress,
+          await other3.getAddress()
+        );
 
         await accountHandler.connect(other3).createSeller(seller4, emptyAuthToken, voucherInitValues);
 
@@ -1924,7 +1959,12 @@ describe("DisputeResolverHandler", function () {
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // make another seller with id = "5"
-        const seller4 = mockSeller(await other3.getAddress(), await other3.getAddress(), ZeroAddress, await other3.getAddress());
+        const seller4 = mockSeller(
+          await other3.getAddress(),
+          await other3.getAddress(),
+          ZeroAddress,
+          await other3.getAddress()
+        );
 
         // AuthToken
         emptyAuthToken = mockAuthToken();
@@ -2018,7 +2058,12 @@ describe("DisputeResolverHandler", function () {
         expect(returnedSellerAllowList.toString()).to.eql(expectedSellerAllowList.toString(), "Allowed list wrong");
 
         // make another seller with id = "6"
-        const seller6 = mockSeller(await other4.getAddress(), await other4.getAddress(), ZeroAddress, await other4.getAddress());
+        const seller6 = mockSeller(
+          await other4.getAddress(),
+          await other4.getAddress(),
+          ZeroAddress,
+          await other4.getAddress()
+        );
         await accountHandler.connect(other4).createSeller(seller6, emptyAuthToken, voucherInitValues);
 
         // check that mappings of allowed selleres were updated
@@ -2084,7 +2129,12 @@ describe("DisputeResolverHandler", function () {
 
         it("Seller id is not approved", async function () {
           // make another seller with id = "6"
-          const seller6 = mockSeller(await other4.getAddress(), await other4.getAddress(), ZeroAddress, await other4.getAddress());
+          const seller6 = mockSeller(
+            await other4.getAddress(),
+            await other4.getAddress(),
+            ZeroAddress,
+            await other4.getAddress()
+          );
           await accountHandler.connect(other4).createSeller(seller6, emptyAuthToken, voucherInitValues);
 
           // seller exists, it's not approved

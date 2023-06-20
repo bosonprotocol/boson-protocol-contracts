@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 const { expect } = require("chai");
 const environments = require("../../environments");
-const ethers = hre.ethers;
+const { getContractFactory, provider, ZeroAddress, getAddress } = hre.ethers;
 const network = hre.network.name;
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
 
@@ -20,7 +20,7 @@ async function deployMockTokens(tokens = ["BosonToken", "Foreign721", "Foreign11
     let token = tokens.shift();
     let TokenContractFactory = await getContractFactory(token);
     const tokenContract = await TokenContractFactory.deploy();
-    await tokenContract.deployed();
+    await tokenContract.waitForDeployment();
     deployedTokens.push(tokenContract);
   }
 
@@ -72,13 +72,9 @@ async function deployAndMintMockNFTAuthTokens() {
     tx1 = await lensTokenContract.mint(to, BigInt(lensTokenId));
     tx2 = await ensTokenContract.mint(to, BigInt(ensTokenId));
 
-    await expect(tx1)
-      .to.emit(lensTokenContract, "Transfer")
-      .withArgs(ZeroAddress, getAddress(to), lensTokenId);
+    await expect(tx1).to.emit(lensTokenContract, "Transfer").withArgs(ZeroAddress, getAddress(to), lensTokenId);
 
-    await expect(tx2)
-      .to.emit(ensTokenContract, "Transfer")
-      .withArgs(ZeroAddress, getAddress(to), ensTokenId);
+    await expect(tx2).to.emit(ensTokenContract, "Transfer").withArgs(ZeroAddress, getAddress(to), ensTokenId);
 
     let lensOwner = await lensTokenContract.ownerOf(BigInt(lensTokenId));
     let ensOwner = await ensTokenContract.ownerOf(BigInt(ensTokenId));

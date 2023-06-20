@@ -1,4 +1,5 @@
-const { ZeroAddress, getContractAt } = require("hardhat");
+const { ethers } = require("hardhat");
+const { getContractAt, ZeroAddress } = ethers;
 const { expect } = require("chai");
 
 const Buyer = require("../../scripts/domain/Buyer");
@@ -315,7 +316,7 @@ describe("BuyerHandler", function () {
         await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NOT_BUYER_WALLET);
       });
 
-      context("💔 Revert Reasons", async function () {
+      context.only("💔 Revert Reasons", async function () {
         beforeEach(async function () {
           // Initial ids for all the things
           id = await accountHandler.connect(rando).getNextAccountId();
@@ -326,7 +327,7 @@ describe("BuyerHandler", function () {
           seller = mockSeller(
             await assistant.getAddress(),
             await admin.getAddress(),
-            await clerk.getAddress(),
+            clerk.address,
             await treasury.getAddress()
           );
           seller.id = id.toString();
@@ -350,11 +351,11 @@ describe("BuyerHandler", function () {
           disputeResolver = mockDisputeResolver(
             await assistant.getAddress(),
             await admin.getAddress(),
-            await clerk.getAddress(),
+            clerk.address,
             await treasury.getAddress(),
             true
           );
-          disputeResolver.id = (id + 1).toString();
+          disputeResolver.id = id + 1n;
           expect(disputeResolver.isValid()).is.true;
 
           //Create DisputeResolverFee array

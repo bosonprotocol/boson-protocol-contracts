@@ -1,4 +1,15 @@
 const { ethers } = require("hardhat");
+const {
+  ZeroAddress,
+  getSigners,
+  getContractAt,
+  provider,
+  parseUnits,
+  getContractFactory,
+  MaxUint256,
+  parseEther,
+  getImpersonatedSigner,
+} = ethers;
 const { expect, assert } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
@@ -196,10 +207,7 @@ describe("IBosonExchangeHandler", function () {
     assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
 
     // Cast Diamond to MockMetaTransactionsHandlerFacet
-    mockMetaTransactionsHandler = await getContractAt(
-      "MockMetaTransactionsHandlerFacet",
-      protocolDiamondAddress
-    );
+    mockMetaTransactionsHandler = await getContractAt("MockMetaTransactionsHandlerFacet", protocolDiamondAddress);
   }
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -223,7 +231,12 @@ describe("IBosonExchangeHandler", function () {
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller
-      seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
+      seller = mockSeller(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        clerk.address,
+        await treasury.getAddress()
+      );
       expect(seller.isValid()).is.true;
 
       // AuthToken
@@ -243,7 +256,7 @@ describe("IBosonExchangeHandler", function () {
       disputeResolver = mockDisputeResolver(
         await assistantDR.getAddress(),
         await adminDR.getAddress(),
-        await clerkDR.getAddress(),
+        clerkDR.address,
         await treasuryDR.getAddress(),
         true
       );
@@ -297,9 +310,7 @@ describe("IBosonExchangeHandler", function () {
       exchange.finalizedDate = "0";
 
       // Deposit seller funds so the commit will succeed
-      await fundsHandler
-        .connect(assistant)
-        .depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
+      await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
     });
 
     afterEach(async function () {
@@ -308,7 +319,7 @@ describe("IBosonExchangeHandler", function () {
     });
 
     context("👉 commitToOffer()", async function () {
-      it("should emit a BuyerCommitted event", async function () {
+      it.only("should emit a BuyerCommitted event", async function () {
         // Commit to offer, retrieving the event
         tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
         txReceipt = await tx.wait();
@@ -370,38 +381,53 @@ describe("IBosonExchangeHandler", function () {
         await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
         // Deposit seller funds so the commit will succeed
-        await fundsHandler
-          .connect(rando)
-          .depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
+        await fundsHandler.connect(rando).depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
 
         const buyer2 = newOwner;
 
         // Commit to offer, creating a new exchange
         tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
         const tokenId1 = deriveTokenId(offerId, "1");
-        const tx2 = await exchangeHandler.connect(deployer).commitToOffer(await buyer2.getAddress(), ++offerId, { value: price });
+        const tx2 = await exchangeHandler
+          .connect(deployer)
+          .commitToOffer(await buyer2.getAddress(), ++offerId, { value: price });
         const tokenId2 = deriveTokenId(offerId, "2");
 
         await expect(tx)
           .to.emit(bosonVoucherClone, "Transfer")
-          .withArgs(constants.Zero, await buyer.getAddress(), tokenId1);
+          .withArgs(0n, await buyer.getAddress(), tokenId1);
         await expect(tx2)
           .to.emit(bosonVoucherClone2, "Transfer")
-          .withArgs(constants.Zero, await buyer2.getAddress(), tokenId2);
+          .withArgs(0n, await buyer2.getAddress(), tokenId2);
 
         // buyer should own 1 voucher on the clone1 address and buyer2 should own 1 voucher on clone2
-        expect(await bosonVoucherClone.balanceOf(await buyer.getAddress())).to.equal("1", "Clone 1: buyer 1 balance should be 1");
-        expect(await bosonVoucherClone.balanceOf(await buyer2.getAddress())).to.equal("0", "Clone 1: buyer 2 balance should be 0");
-        expect(await bosonVoucherClone2.balanceOf(await buyer.getAddress())).to.equal("0", "Clone 2: buyer 1 balance should be 0");
+        expect(await bosonVoucherClone.balanceOf(await buyer.getAddress())).to.equal(
+          "1",
+          "Clone 1: buyer 1 balance should be 1"
+        );
+        expect(await bosonVoucherClone.balanceOf(await buyer2.getAddress())).to.equal(
+          "0",
+          "Clone 1: buyer 2 balance should be 0"
+        );
+        expect(await bosonVoucherClone2.balanceOf(await buyer.getAddress())).to.equal(
+          "0",
+          "Clone 2: buyer 1 balance should be 0"
+        );
         expect(await bosonVoucherClone2.balanceOf(await buyer2.getAddress())).to.equal(
           "1",
           "Clone 2: buyer 2 balance should be 1"
         );
 
         // Make sure that vouchers belong to correct buyers and that exist on the correct clone
-        expect(await bosonVoucherClone.ownerOf(tokenId1)).to.equal(await buyer.getAddress(), "Voucher 1: Wrong buyer address");
+        expect(await bosonVoucherClone.ownerOf(tokenId1)).to.equal(
+          await buyer.getAddress(),
+          "Voucher 1: Wrong buyer address"
+        );
         await expect(bosonVoucherClone.ownerOf(tokenId2)).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
-        expect(await bosonVoucherClone2.ownerOf(tokenId2)).to.equal(await buyer2.getAddress(), "Voucher 2: Wrong buyer address");
+        expect(await bosonVoucherClone2.ownerOf(tokenId2)).to.equal(
+          await buyer2.getAddress(),
+          "Voucher 2: Wrong buyer address"
+        );
         await expect(bosonVoucherClone2.ownerOf(tokenId1)).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
 
         // reference boson voucher proxy should not have any vouchers
@@ -457,38 +483,53 @@ describe("IBosonExchangeHandler", function () {
         await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
         // Deposit seller funds so the commit will succeed
-        await fundsHandler
-          .connect(rando)
-          .depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
+        await fundsHandler.connect(rando).depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
 
         const buyer2 = newOwner;
 
         // Commit to offer, creating a new exchange
         tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
         const tokenId1 = deriveTokenId(offerId, "1");
-        const tx2 = await exchangeHandler.connect(deployer).commitToOffer(await buyer2.getAddress(), ++offerId, { value: price });
+        const tx2 = await exchangeHandler
+          .connect(deployer)
+          .commitToOffer(await buyer2.getAddress(), ++offerId, { value: price });
         const tokenId2 = deriveTokenId(offerId, "2");
 
         await expect(tx)
           .to.emit(bosonVoucherClone, "Transfer")
-          .withArgs(constants.Zero, await buyer.getAddress(), tokenId1);
+          .withArgs(0n, await buyer.getAddress(), tokenId1);
         await expect(tx2)
           .to.emit(bosonVoucherClone2, "Transfer")
-          .withArgs(constants.Zero, await buyer2.getAddress(), tokenId2);
+          .withArgs(0n, await buyer2.getAddress(), tokenId2);
 
         // buyer should own 1 voucher on the clone1 address and buyer2 should own 1 voucher on clone2
-        expect(await bosonVoucherClone.balanceOf(await buyer.getAddress())).to.equal("1", "Clone 1: buyer 1 balance should be 1");
-        expect(await bosonVoucherClone.balanceOf(await buyer2.getAddress())).to.equal("0", "Clone 1: buyer 2 balance should be 0");
-        expect(await bosonVoucherClone2.balanceOf(await buyer.getAddress())).to.equal("0", "Clone 2: buyer 1 balance should be 0");
+        expect(await bosonVoucherClone.balanceOf(await buyer.getAddress())).to.equal(
+          "1",
+          "Clone 1: buyer 1 balance should be 1"
+        );
+        expect(await bosonVoucherClone.balanceOf(await buyer2.getAddress())).to.equal(
+          "0",
+          "Clone 1: buyer 2 balance should be 0"
+        );
+        expect(await bosonVoucherClone2.balanceOf(await buyer.getAddress())).to.equal(
+          "0",
+          "Clone 2: buyer 1 balance should be 0"
+        );
         expect(await bosonVoucherClone2.balanceOf(await buyer2.getAddress())).to.equal(
           "1",
           "Clone 2: buyer 2 balance should be 1"
         );
 
         // Make sure that vouchers belong to correct buyers and that exist on the correct clone
-        expect(await bosonVoucherClone.ownerOf(tokenId1)).to.equal(await buyer.getAddress(), "Voucher 1: Wrong buyer address");
+        expect(await bosonVoucherClone.ownerOf(tokenId1)).to.equal(
+          await buyer.getAddress(),
+          "Voucher 1: Wrong buyer address"
+        );
         await expect(bosonVoucherClone.ownerOf(tokenId2)).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
-        expect(await bosonVoucherClone2.ownerOf(tokenId2)).to.equal(await buyer2.getAddress(), "Voucher 2: Wrong buyer address");
+        expect(await bosonVoucherClone2.ownerOf(tokenId2)).to.equal(
+          await buyer2.getAddress(),
+          "Voucher 2: Wrong buyer address"
+        );
         await expect(bosonVoucherClone2.ownerOf(tokenId1)).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
 
         // Make sure that vouchers have correct royalty fee for exchangeId 1
@@ -579,7 +620,7 @@ describe("IBosonExchangeHandler", function () {
       it("Should not decrement quantityAvailable if offer is unlimited", async function () {
         // Create an offer with unlimited quantity
         let { offer, ...details } = await mockOffer();
-        offer.quantityAvailable = constants.MaxUint256.toString();
+        offer.quantityAvailable = MaxUint256.toString();
 
         // Delete unnecessary field
         delete details.offerFees;
@@ -596,7 +637,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Offer qunantityAvailable should not be decremented
         [, offer] = await offerHandler.connect(rando).getOffer(offerId);
-        expect(offer.quantityAvailable).to.equal(constants.MaxUint256, "Quantity available should be unlimited");
+        expect(offer.quantityAvailable).to.equal(MaxUint256, "Quantity available should be unlimited");
       });
 
       it("Should not decrement seller funds if offer price and sellerDeposit is 0", async function () {
@@ -692,10 +733,8 @@ describe("IBosonExchangeHandler", function () {
           const now = block.timestamp.toString();
 
           // set validFrom date in the past
-          offerDates.validFrom = BigInt(now)
-            +oneMonth * 6
-            .toString(); // 6 months in the future
-          offerDates.validUntil = BigInt(offerDates.validFrom)+10.toString(); // just after the valid from so it succeeds.
+          offerDates.validFrom = BigInt(now) + oneMonth * (6).toString(); // 6 months in the future
+          offerDates.validUntil = BigInt(offerDates.validFrom + 10).toString(); // just after the valid from so it succeeds.
 
           await offerHandler
             .connect(assistant)
@@ -738,7 +777,9 @@ describe("IBosonExchangeHandler", function () {
       let tokenId;
       beforeEach(async function () {
         // Reserve range
-        await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, await assistant.getAddress());
+        await offerHandler
+          .connect(assistant)
+          .reserveRange(offer.id, offer.quantityAvailable, await assistant.getAddress());
 
         // expected address of the first clone
         const voucherCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "1");
@@ -751,7 +792,9 @@ describe("IBosonExchangeHandler", function () {
 
       it("should emit a BuyerCommitted event", async function () {
         // Commit to preminted offer, retrieving the event
-        tx = await bosonVoucher.connect(assistant).transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+        tx = await bosonVoucher
+          .connect(assistant)
+          .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
         txReceipt = await tx.wait();
         event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
@@ -786,7 +829,9 @@ describe("IBosonExchangeHandler", function () {
         let nextExchangeIdBefore = await exchangeHandler.connect(rando).getNextExchangeId();
 
         // Commit to preminted offer, creating a new exchange
-        await bosonVoucher.connect(assistant).transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+        await bosonVoucher
+          .connect(assistant)
+          .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
 
         // Get the next exchange id and ensure it was incremented by the creation of the offer
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
@@ -801,7 +846,9 @@ describe("IBosonExchangeHandler", function () {
         await expect(bosonVoucher.ownerOf(nextExchangeId)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
 
         // Commit to preminted offer, creating a new exchange
-        await bosonVoucher.connect(assistant).transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+        await bosonVoucher
+          .connect(assistant)
+          .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
 
         // Voucher with nextExchangeId still should not exist
         await expect(bosonVoucher.ownerOf(nextExchangeId)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
@@ -818,7 +865,9 @@ describe("IBosonExchangeHandler", function () {
         assert.equal(royaltyAmount.toString(), "0", "Royalty amount is incorrect");
 
         // Commit to preminted offer, creating a new exchange
-        await bosonVoucher.connect(assistant).transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+        await bosonVoucher
+          .connect(assistant)
+          .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
 
         // After voucher is transferred, it should have royalty fee
         [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offer.price);
@@ -836,7 +885,9 @@ describe("IBosonExchangeHandler", function () {
         const quantityAvailableBefore = offer.quantityAvailable;
 
         // Commit to preminted offer
-        await bosonVoucher.connect(assistant).transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+        await bosonVoucher
+          .connect(assistant)
+          .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
 
         // Offer qunantityAvailable should be decremented
         [, offer] = await offerHandler.connect(rando).getOffer(offerId);
@@ -880,7 +931,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to create an exchange, expecting revert
           await expect(
-            bosonVoucher.connect(assistant).transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -890,7 +943,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to create a buyer, expecting revert
           await expect(
-            bosonVoucher.connect(assistant).transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -903,7 +958,9 @@ describe("IBosonExchangeHandler", function () {
 
         it("Exchange exists already", async function () {
           // Commit to preminted offer, creating a new exchange
-          await bosonVoucher.connect(assistant).transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+          await bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
 
           // impersonate voucher contract and give it some funds
           const impersonatedBosonVoucher = await getImpersonatedSigner(await bosonVoucher.getAddress());
@@ -914,7 +971,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Simulate a second commit with the same token id
           await expect(
-            exchangeHandler.connect(impersonatedBosonVoucher).commitToPreMintedOffer(await buyer.getAddress(), offerId, exchangeId)
+            exchangeHandler
+              .connect(impersonatedBosonVoucher)
+              .commitToPreMintedOffer(await buyer.getAddress(), offerId, exchangeId)
           ).to.revertedWith(RevertReasons.EXCHANGE_ALREADY_EXISTS);
         });
 
@@ -924,7 +983,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to commit to the voided offer, expecting revert
           await expect(
-            bosonVoucher.connect(assistant).transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
         });
 
@@ -937,10 +998,8 @@ describe("IBosonExchangeHandler", function () {
           // Get next offer id
           offerId = await offerHandler.getNextOfferId();
           // set validFrom date in the past
-          offerDates.validFrom = BigInt(now)
-            +oneMonth * 6
-            .toString(); // 6 months in the future
-          offerDates.validUntil = BigInt(offerDates.validFrom)+10.toString(); // just after the valid from so it succeeds.
+          offerDates.validFrom = BigInt(now + oneMonth * 6n).toString(); // 6 months in the future
+          offerDates.validUntil = BigInt(offerDates.validFrom + 10n).toString(); // just after the valid from so it succeeds.
 
           await offerHandler
             .connect(assistant)
@@ -955,7 +1014,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to commit to the not available offer, expecting revert
           await expect(
-            bosonVoucher.connect(assistant).transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
         });
 
@@ -965,7 +1026,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to commit to the expired offer, expecting revert
           await expect(
-            bosonVoucher.connect(assistant).transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
         });
 
@@ -1009,10 +1072,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
-          await expect(exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })).to.emit(
-            exchangeHandler,
-            "BuyerCommitted"
-          );
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
+          ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
@@ -1080,10 +1142,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
-          await expect(exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })).to.emit(
-            exchangeHandler,
-            "BuyerCommitted"
-          );
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
+          ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
@@ -1152,10 +1213,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
-          await expect(exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })).to.emit(
-            exchangeHandler,
-            "BuyerCommitted"
-          );
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
+          ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
@@ -1225,10 +1285,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
-          await expect(exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })).to.emit(
-            exchangeHandler,
-            "BuyerCommitted"
-          );
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
+          ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
@@ -1298,10 +1357,9 @@ describe("IBosonExchangeHandler", function () {
         it("should emit a BuyerCommitted event", async function () {
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
-          await expect(exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })).to.emit(
-            exchangeHandler,
-            "BuyerCommitted"
-          );
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
+          ).to.emit(exchangeHandler, "BuyerCommitted");
         });
       });
     });
@@ -1354,7 +1412,7 @@ describe("IBosonExchangeHandler", function () {
         block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = BigInt(block.timestamp)+disputePeriod+1.toNumber();
+        newTime = BigInt(block.timestamp + disputePeriod + 1);
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1375,7 +1433,7 @@ describe("IBosonExchangeHandler", function () {
         block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = BigInt(block.timestamp)+disputePeriod+1.toNumber();
+        newTime = BigInt(block.timestamp + disputePeriod + 1);
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1396,7 +1454,7 @@ describe("IBosonExchangeHandler", function () {
         block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = BigInt(block.timestamp)+disputePeriod+1.toNumber();
+        newTime = BigInt(block.timestamp + disputePeriod + 1);
         await setNextBlockTimestamp(newTime);
 
         // Create a rando buyer account
@@ -1555,7 +1613,7 @@ describe("IBosonExchangeHandler", function () {
         block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = BigInt(block.timestamp)+disputePeriod+1.toNumber();
+        newTime = BigInt(block.timestamp + disputePeriod + 1);
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1587,7 +1645,7 @@ describe("IBosonExchangeHandler", function () {
         block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = BigInt(block.timestamp)+disputePeriod+1.toNumber();
+        newTime = BigInt(block.timestamp + disputePeriod + 1);
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1781,7 +1839,9 @@ describe("IBosonExchangeHandler", function () {
         tokenId = deriveTokenId(offerId, exchange.id);
         bosonVoucherCloneAddress = calculateContractAddress(await exchangeHandler.getAddress(), "1");
         bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
-        await bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId);
+        await bosonVoucherClone
+          .connect(buyer)
+          .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId);
 
         // Cancel the voucher, expecting event
         await expect(exchangeHandler.connect(newOwner).cancelVoucher(exchange.id))
@@ -2137,7 +2197,14 @@ describe("IBosonExchangeHandler", function () {
           // Redeem the voucher
           await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
             .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, await buyer.getAddress());
+            .withArgs(
+              twin20.id,
+              twin20.tokenAddress,
+              exchange.id,
+              twin20.tokenId,
+              twin20.amount,
+              await buyer.getAddress()
+            );
 
           // Check the buyer's balance of the ERC20
           balance = await foreign20.balanceOf(await buyer.getAddress());
@@ -2156,7 +2223,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("Should not decrease twin supplyAvailable if supply is unlimited", async function () {
           // Change twin supply to unlimited
-          twin20.supplyAvailable = constants.MaxUint256.toString();
+          twin20.supplyAvailable = MaxUint256.toString();
           twin20.id = "4";
 
           // Create a new twin
@@ -2241,7 +2308,14 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, await buyer.getAddress());
+              .withArgs(
+                twin20.id,
+                twin20.tokenAddress,
+                exchange.id,
+                twin20.tokenId,
+                twin20.amount,
+                await buyer.getAddress()
+              );
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -2454,7 +2528,7 @@ describe("IBosonExchangeHandler", function () {
               .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
             // Change twin supply to unlimited and token address to the new token
-            twin721.supplyAvailable = constants.MaxUint256.toString();
+            twin721.supplyAvailable = MaxUint256.toString();
             twin721.tokenAddress = await other721.getAddress();
             twin721.id = "4";
 
@@ -2562,7 +2636,14 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "9", "0", await testProtocolFunctions.getAddress());
+              .withArgs(
+                twin721.id,
+                twin721.tokenAddress,
+                exchange.id,
+                "9",
+                "0",
+                await testProtocolFunctions.getAddress()
+              );
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -2597,7 +2678,14 @@ describe("IBosonExchangeHandler", function () {
           // Redeem the voucher
           await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
             .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin1155.id, twin1155.tokenAddress, exchange.id, tokenId, twin1155.amount, await buyer.getAddress());
+            .withArgs(
+              twin1155.id,
+              twin1155.tokenAddress,
+              exchange.id,
+              tokenId,
+              twin1155.amount,
+              await buyer.getAddress()
+            );
 
           // Check the buyer's balance of the ERC1155
           balance = await foreign1155.balanceOf(await buyer.getAddress(), tokenId);
@@ -2616,7 +2704,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("Should not decrease twin supplyAvailable if supply is unlimited", async function () {
           // Change twin supply to unlimited
-          twin1155.supplyAvailable = constants.MaxUint256.toString();
+          twin1155.supplyAvailable = MaxUint256.toString();
           twin1155.id = "4";
 
           // Create a new twin
@@ -2810,7 +2898,14 @@ describe("IBosonExchangeHandler", function () {
 
           await expect(tx)
             .and.to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin721.id, twin721.tokenAddress, exchangeId, tokenIdNonFungible, twin721.amount, await buyer.getAddress());
+            .withArgs(
+              twin721.id,
+              twin721.tokenAddress,
+              exchangeId,
+              tokenIdNonFungible,
+              twin721.amount,
+              await buyer.getAddress()
+            );
 
           // Check the buyer's balance of the ERC20
           balance = await foreign20.balanceOf(await buyer.getAddress());
@@ -2880,7 +2975,14 @@ describe("IBosonExchangeHandler", function () {
 
           await expect(tx)
             .and.to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin721.id, twin721.tokenAddress, exchange.id, twin721.tokenId, twin721.amount, await buyer.getAddress());
+            .withArgs(
+              twin721.id,
+              twin721.tokenAddress,
+              exchange.id,
+              twin721.tokenId,
+              twin721.amount,
+              await buyer.getAddress()
+            );
 
           await expect(tx)
             .and.to.emit(exchangeHandler, "TwinTransferred")
@@ -2929,18 +3031,18 @@ describe("IBosonExchangeHandler", function () {
               .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
             // Change twin supply to unlimited and token address to the new token
-            twin721.supplyAvailable = constants.MaxUint256.toString();
+            twin721.supplyAvailable = MaxUint256.toString();
             twin721.tokenAddress = await other721.getAddress();
             twin721.id = "4";
             // Create a new ERC721 twin with the new token address
             await twinHandler.connect(assistant).createTwin(twin721.toStruct());
 
-            twin20.supplyAvailable = constants.MaxUint256.toString();
+            twin20.supplyAvailable = MaxUint256.toString();
             twin20.id = "5";
             // Create a new ERC20 twin with the new token address
             await twinHandler.connect(assistant).createTwin(twin20.toStruct());
 
-            twin1155.supplyAvailable = constants.MaxUint256.toString();
+            twin1155.supplyAvailable = MaxUint256.toString();
             twin1155.id = "6";
             // Create a new ERC1155 twin with the new token address
             await twinHandler.connect(assistant).createTwin(twin1155.toStruct());
@@ -2969,7 +3071,14 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferred")
-              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, await buyer.getAddress());
+              .withArgs(
+                twin20.id,
+                twin20.tokenAddress,
+                exchange.id,
+                twin20.tokenId,
+                twin20.amount,
+                await buyer.getAddress()
+              );
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferred")
@@ -3091,11 +3200,25 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin20.id, twin20.tokenAddress, exchangeId, "0", twin20.amount, await testProtocolFunctions.getAddress());
+              .withArgs(
+                twin20.id,
+                twin20.tokenAddress,
+                exchangeId,
+                "0",
+                twin20.amount,
+                await testProtocolFunctions.getAddress()
+              );
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, "9", "0", await testProtocolFunctions.getAddress());
+              .withArgs(
+                twin721.id,
+                twin721.tokenAddress,
+                exchangeId,
+                "9",
+                "0",
+                await testProtocolFunctions.getAddress()
+              );
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -3134,7 +3257,7 @@ describe("IBosonExchangeHandler", function () {
         voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // New expiry date for extensions
-        validUntilDate = BigInt(voucher.validUntilDate)+oneMonth.toString();
+        validUntilDate = BigInt(voucher.validUntilDate) + oneMonth.toString();
       });
 
       it("should emit an VoucherExtended event when seller's assistant calls", async function () {
@@ -3196,7 +3319,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("new date is not later than the current one", async function () {
           // New expiry date is older than current
-          validUntilDate = BigInt(voucher.validUntilDate)-oneMonth.toString();
+          validUntilDate = BigInt(voucher.validUntilDate) - oneMonth.toString();
 
           // Attempt to extend voucher, expecting revert
           await expect(exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
@@ -3223,7 +3346,9 @@ describe("IBosonExchangeHandler", function () {
         nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
         // Call onVoucherTransferred, expecting event
-        await expect(bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId))
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
+        )
           .to.emit(exchangeHandler, "VoucherTransferred")
           .withArgs(offerId, exchange.id, nextAccountId, await bosonVoucherClone.getAddress());
       });
@@ -3236,7 +3361,9 @@ describe("IBosonExchangeHandler", function () {
         await accountHandler.connect(newOwner).createBuyer(mockBuyer(await newOwner.getAddress()));
 
         // Call onVoucherTransferred
-        await bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId);
+        await bosonVoucherClone
+          .connect(buyer)
+          .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId);
 
         // Get the exchange
         [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
@@ -3254,7 +3381,9 @@ describe("IBosonExchangeHandler", function () {
         nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
         // Call onVoucherTransferred
-        await bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId);
+        await bosonVoucherClone
+          .connect(buyer)
+          .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId);
 
         // Get the exchange
         [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
@@ -3269,10 +3398,9 @@ describe("IBosonExchangeHandler", function () {
 
       it("should be triggered when a voucher is transferred", async function () {
         // Transfer voucher, expecting event
-        await expect(bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)).to.emit(
-          exchangeHandler,
-          "VoucherTransferred"
-        );
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
+        ).to.emit(exchangeHandler, "VoucherTransferred");
       });
 
       it("should not be triggered when a voucher is issued", async function () {
@@ -3286,10 +3414,9 @@ describe("IBosonExchangeHandler", function () {
         await accessController.grantRole(Role.PROTOCOL, await rando.getAddress());
 
         // Issue voucher, expecting no event
-        await expect(bosonVoucherClone.connect(rando).issueVoucher(nextExchangeId, await buyer.getAddress())).to.not.emit(
-          exchangeHandler,
-          "VoucherTransferred"
-        );
+        await expect(
+          bosonVoucherClone.connect(rando).issueVoucher(nextExchangeId, await buyer.getAddress())
+        ).to.not.emit(exchangeHandler, "VoucherTransferred");
       });
 
       it("should not be triggered when a voucher is burned", async function () {
@@ -3305,18 +3432,16 @@ describe("IBosonExchangeHandler", function () {
 
       it("Should not be triggered when from and to addresses are the same", async function () {
         // Transfer voucher, expecting event
-        await expect(bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await buyer.getAddress(), tokenId)).to.not.emit(
-          exchangeHandler,
-          "VoucherTransferred"
-        );
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await buyer.getAddress(), tokenId)
+        ).to.not.emit(exchangeHandler, "VoucherTransferred");
       });
 
       it("Should not be triggered when first transfer of preminted voucher happens", async function () {
         // Transfer voucher, expecting event
-        await expect(bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await buyer.getAddress(), tokenId)).to.not.emit(
-          exchangeHandler,
-          "VoucherTransferred"
-        );
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await buyer.getAddress(), tokenId)
+        ).to.not.emit(exchangeHandler, "VoucherTransferred");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -3326,7 +3451,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to create a buyer, expecting revert
           await expect(
-            bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
+            bosonVoucherClone
+              .connect(buyer)
+              .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -3339,7 +3466,12 @@ describe("IBosonExchangeHandler", function () {
 
         it("Caller is not a clone address associated with the seller", async function () {
           // Create a new seller to get new clone
-          seller = mockSeller(await rando.getAddress(), await rando.getAddress(), ZeroAddress, await rando.getAddress());
+          seller = mockSeller(
+            await rando.getAddress(),
+            await rando.getAddress(),
+            ZeroAddress,
+            await rando.getAddress()
+          );
           expect(seller.isValid()).is.true;
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -3356,7 +3488,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(
-            bosonVoucherClone2.connect(buyer).transferFrom(await buyer.getAddress(), await newOwner.getAddress(), exchange.id)
+            bosonVoucherClone2
+              .connect(buyer)
+              .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), exchange.id)
           ).to.revertedWith(RevertReasons.ACCESS_DENIED);
         });
 
@@ -3443,7 +3577,7 @@ describe("IBosonExchangeHandler", function () {
           block = await provider.getBlock(blockNumber);
 
           // Set time forward to run out the dispute period
-          newTime = BigInt(voucherRedeemableFrom)+disputePeriod+1.toNumber();
+          newTime = BigInt(voucherRedeemableFrom + disputePeriod + 1);
           await setNextBlockTimestamp(newTime);
 
           // Complete exchange
@@ -4057,7 +4191,9 @@ describe("IBosonExchangeHandler", function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
           // Commit to offer
-          let tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+          let tx = await exchangeHandler
+            .connect(buyer)
+            .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
@@ -4155,7 +4291,9 @@ describe("IBosonExchangeHandler", function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
           // Commit to offer
-          let tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+          let tx = await exchangeHandler
+            .connect(buyer)
+            .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
@@ -4270,7 +4408,9 @@ describe("IBosonExchangeHandler", function () {
         await foreign20.connect(buyer).mint(await buyer.getAddress(), condition.threshold);
 
         // Commit to offer
-        let tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+        let tx = await exchangeHandler
+          .connect(buyer)
+          .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Decrease offer quantityAvailable
         offer.quantityAvailable = "9";
@@ -4358,7 +4498,7 @@ describe("IBosonExchangeHandler", function () {
         await accountHandler.connect(rando).createAgent(agent);
 
         // Update agentFee
-        const agentFee = BigInt(offer.price)*agent.feePercentage/"10000".toString();
+        const agentFee = (BigInt(offer.price) * agent.feePercentage) / "10000".toString();
         offerFees.agentFee = agentFee;
 
         // Create a new offer
@@ -4382,7 +4522,9 @@ describe("IBosonExchangeHandler", function () {
           .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
         // Commit to offer
-        let tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+        let tx = await exchangeHandler
+          .connect(buyer)
+          .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Decrease offer quantityAvailable
         offer.quantityAvailable = "0";
