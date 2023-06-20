@@ -17,7 +17,6 @@ const { getFees } = require("./utils");
 async function deployProtocolDiamond(maxPriorityFeePerGas) {
   // Get interface Ids
   const InterfaceIds = await getInterfaceIds();
-  console.log("interfaceIds", InterfaceIds);
 
   // Core interfaces that will be supported at the Diamond address
   const interfaces = [

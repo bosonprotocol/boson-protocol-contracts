@@ -148,7 +148,7 @@ describe("ProtocolDiamond", async function () {
         // Deploy TestFacet256
         const TestFacet256 = await getContractFactory("TestFacet256");
         const testFacet256 = await TestFacet256.deploy();
-        await testFacet256.deploymentTransaction();
+        await testFacet256.waitForDeployment();
 
         // Get the TestFacet256 function selectors from the abi
         selectors = getSelectors(testFacet256);
@@ -193,7 +193,7 @@ describe("ProtocolDiamond", async function () {
         // Deploy Test1Facet to have more selectors
         Test1Facet = await getContractFactory("Test1Facet");
         test1Facet = await Test1Facet.deploy();
-        await test1Facet.deploymentTransaction();
+        await test1Facet.waitForDeployment();
 
         // Get the Test1Facet function selectors from the abi
         selectors = getSelectors(test1Facet);
@@ -223,17 +223,16 @@ describe("ProtocolDiamond", async function () {
 
     context("👉 facetFunctionSelectors() ", async () => {
       it("should return the correct function selectors for the DiamondCutFacet", async () => {
-        // Test cutFacetViaDiamond selectors
         selectors = getSelectors(cutFacetViaDiamond);
         result = await loupeFacetViaDiamond.facetFunctionSelectors(await diamondCut.getAddress());
-        assert.sameMembers(result, selectors);
+        assert.sameMembers([...result], selectors);
       });
 
       it("should return the correct function selectors for the DiamondLoupeFacet", async () => {
         // Test DiamondLoupeFacet selectors
         selectors = getSelectors(loupeFacetViaDiamond);
         result = await loupeFacetViaDiamond.facetFunctionSelectors(await diamondLoupe.getAddress());
-        assert.sameMembers(result, selectors);
+        assert.sameMembers([...result], selectors);
       });
     });
 
@@ -261,17 +260,17 @@ describe("ProtocolDiamond", async function () {
       // Deploy Test1Facet
       Test1Facet = await getContractFactory("Test1Facet");
       test1Facet = await Test1Facet.deploy();
-      await test1Facet.deploymentTransaction();
+      await test1Facet.waitForDeployment();
 
       // Deploy Test2Facet
       Test2Facet = await getContractFactory("Test2Facet");
       test2Facet = await Test2Facet.deploy();
-      await test2Facet.deploymentTransaction();
+      await test2Facet.waitForDeployment();
 
       // Deploy Test3Facet
       Test3Facet = await getContractFactory("Test3Facet");
       test3Facet = await Test3Facet.deploy();
-      await test3Facet.deploymentTransaction();
+      await test3Facet.waitForDeployment();
 
       // N.B. The facets are not yet connected to the diamond in any way,
       // but following handles prepare us for accessing the diamond via
@@ -342,7 +341,7 @@ describe("ProtocolDiamond", async function () {
 
         // Make sure function selectors for the facet are correct
         result = await loupeFacetViaDiamond.facetFunctionSelectors(await test1Facet.getAddress());
-        assert.sameMembers(result, selectors);
+        assert.sameMembers([...result], selectors);
       });
 
       it("should add functions from Test2Facet", async () => {
@@ -369,7 +368,7 @@ describe("ProtocolDiamond", async function () {
 
         // Make sure function selectors for the facet are correct
         result = await loupeFacetViaDiamond.facetFunctionSelectors(await test2Facet.getAddress());
-        assert.sameMembers(result, selectors);
+        assert.sameMembers([...result], selectors);
       });
 
       it("should allow functions from different facets to be added in one transaction", async () => {
@@ -861,7 +860,7 @@ describe("ProtocolDiamond", async function () {
       it("Should call an initializer function if supplied", async () => {
         // Make sure function selectors for the facet are correct
         result = await loupeFacetViaDiamond.facetFunctionSelectors(await test3Facet.getAddress());
-        assert.sameMembers(result, selectors);
+        assert.sameMembers([...result], selectors);
       });
 
       it("Should store initializer state in diamond storage slot when modifier runs", async () => {
@@ -885,14 +884,14 @@ describe("ProtocolDiamond", async function () {
         // Arguments for Diamond constructor
         const diamondArgs = [
           await accessController.getAddress(),
-          [getFacetAddCut(diamondLoupe), getFacetAddCut(diamondCut), getFacetAddCut(erc165)],
+          [await getFacetAddCut(diamondLoupe), await getFacetAddCut(diamondCut), await getFacetAddCut(erc165)],
           interfaces,
         ];
 
         // Deploy Protocol Diamond
         const ProtocolDiamond = await getContractFactory("TestInitializableDiamond");
         const protocolDiamond = await ProtocolDiamond.deploy(...diamondArgs);
-        await protocolDiamond.deployTransaction.wait();
+        await protocolDiamond.waitForDeployment();
 
         // Cast new Diamond to DiamondCutFacet
         cutFacetViaDiamond = await getContractAt("DiamondCutFacet", await protocolDiamond.getAddress());
@@ -1048,7 +1047,7 @@ describe("ProtocolDiamond", async function () {
         // Arguments for Diamond constructor
         const diamondArgs = [
           ZeroAddress,
-          [getFacetAddCut(diamondLoupe), getFacetAddCut(diamondCut), getFacetAddCut(erc165)],
+          [await getFacetAddCut(diamondLoupe), await getFacetAddCut(diamondCut), await getFacetAddCut(erc165)],
           interfaces,
         ];
 

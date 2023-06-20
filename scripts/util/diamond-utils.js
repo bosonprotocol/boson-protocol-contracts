@@ -96,8 +96,7 @@ function remove(selectorsToRemove) {
 // used with getSelectors to get selectors from an array of selectors
 // functionNames argument is an array of function signatures
 function get(functionNames) {
-  const selectors = this.contract.interface
-    .fragments(functionNames)
+  const selectors = this.contract.interface.fragments
     .filter((f) => f.type == "function")
     .filter((f) => functionNames.includes(f.name))
     .map((f) => f.selector);
@@ -111,8 +110,7 @@ function get(functionNames) {
 // remove selectors using an array of signatures
 function removeSelectors(selectors, signatures) {
   const iface = new Interface(signatures.map((v) => "function " + v));
-  console.log("iface", iface);
-  const removeSelectors = signatures.map((v) => iface.getSighash(v));
+  const removeSelectors = iface.fragments.map((f) => f.selector);
   selectors = selectors.filter((v) => !removeSelectors.includes(v));
   return selectors;
 }
