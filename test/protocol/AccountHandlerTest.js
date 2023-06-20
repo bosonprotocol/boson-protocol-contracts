@@ -86,7 +86,7 @@ describe("IBosonAccountHandler", function () {
       seller = mockSeller(
         await assistant.getAddress(),
         await admin.getAddress(),
-        await clerk.getAddress(),
+        clerk.address,
         await treasury.getAddress()
       );
       expect(seller.isValid()).is.true;
@@ -108,7 +108,7 @@ describe("IBosonAccountHandler", function () {
       disputeResolver = mockDisputeResolver(
         await assistant.getAddress(),
         await admin.getAddress(),
-        await clerk.getAddress(),
+        clerk.address,
         await treasury.getAddress()
       );
       expect(disputeResolver.isValid()).is.true;

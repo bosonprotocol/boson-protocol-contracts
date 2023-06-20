@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getContractAt } = hre.ethers;
 
 /**
  * Cast the Protocol Client Proxy contracts to their implementation interfaces

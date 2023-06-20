@@ -1,4 +1,4 @@
-const { ethers } = require("hardhat");
+const { ZeroAddress, getContractAt } = require("hardhat");
 const { expect } = require("chai");
 
 const Buyer = require("../../scripts/domain/Buyer");
@@ -323,7 +323,12 @@ describe("BuyerHandler", function () {
           let agentId = "0"; // agent id is optional while creating an offer
 
           // Create a valid seller
-          seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await admin.getAddress(),
+            await clerk.getAddress(),
+            await treasury.getAddress()
+          );
           seller.id = id.toString();
           expect(seller.isValid()).is.true;
 
@@ -349,7 +354,7 @@ describe("BuyerHandler", function () {
             await treasury.getAddress(),
             true
           );
-          disputeResolver.id = id+1.toString();
+          disputeResolver.id = (id + 1).toString();
           expect(disputeResolver.isValid()).is.true;
 
           //Create DisputeResolverFee array
@@ -390,7 +395,9 @@ describe("BuyerHandler", function () {
             .depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit });
 
           //Commit to offer
-          await exchangeHandler.connect(other1).commitToOffer(await other1.getAddress(), offerId, { value: offer.price });
+          await exchangeHandler
+            .connect(other1)
+            .commitToOffer(await other1.getAddress(), offerId, { value: offer.price });
 
           const bosonVoucherCloneAddress = calculateContractAddress(await exchangeHandler.getAddress(), "1");
           bosonVoucher = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);

@@ -41,13 +41,13 @@ async function deployAndMintMockNFTAuthTokens() {
   //Deploy a mock NFT to represent the Lens Protocol profile NFT
   let lensTokenContractFactory = await getContractFactory("MockNFTAuth721");
   const lensTokenContract = await lensTokenContractFactory.deploy();
-  await lensTokenContract.deployTransaction.wait(confirmations);
+  await lensTokenContract.waitForDeployment(confirmations);
   console.log(`✅ Mock Lens NFT Token deployed to: ${await lensTokenContract.getAddress()}`);
 
   //Deploy a mock NFT to represent the ENS NFT
   let ensTokenContractFactory = await getContractFactory("MockNFTAuth721");
   const ensTokenContract = await ensTokenContractFactory.deploy();
-  await ensTokenContract.deployTransaction.wait(confirmations);
+  await ensTokenContract.waitForDeployment(confirmations);
   console.log(`✅ Mock ENS NFT Token deployed to: ${await ensTokenContract.getAddress()}`);
 
   if (network == "test" || network == "localhost") {

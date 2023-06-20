@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const { keccak256, toUtf8Bytes, getContractAt, ZeroAddress, Interface, getContractFactory, formatBytes32String } =
+const { keccak256, toUtf8Bytes, getContractAt, ZeroAddress, Interface, getContractFactory, encodeBytes32String } =
   hre.ethers;
 const environments = "../../environments.js";
 const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
@@ -146,7 +146,7 @@ async function getStateModifyingFunctions(facetNames, omitFunctions = [], onlyFu
   let stateModifyingFunctions = [];
   for (const facetName of facetNames) {
     let FacetContractFactory = await getContractFactory(facetName);
-    const functions = FacetContractFactory.interface.functions;
+    const functions = FacetContractFactory.interface.fragments;
     const functionNames = Object.keys(functions);
     const facetStateModifyingFunctions = functionNames.filter((fn) => {
       if (functions[fn].stateMutability !== "view" && !omitFunctions.includes(fn)) {
@@ -190,8 +190,8 @@ async function getInitializeCalldata(
   interfacesToRemove = [],
   interfacesToAdd = []
 ) {
-  version = formatBytes32String(version);
-  const addresses = await facetsToInitialize.map(async (f) => await f.contract.getAddress());
+  version = encodeBytes32String(version);
+  const addresses = await facetsToInitialize.map((f) => f.contract.target);
 
   const calldata = facetsToInitialize.map((f) => f.initialize);
 

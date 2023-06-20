@@ -81,7 +81,7 @@ describe("ProtocolInitializationHandler", async function () {
             await getFees(maxPriorityFeePerGas)
           );
 
-          await protocolInitializationFacetDeployed.deployTransaction.wait();
+          await protocolInitializationFacetDeployed.waitForDeployment();
         });
 
         it("Addresses and calldata length mismatch", async function () {
@@ -161,7 +161,7 @@ describe("ProtocolInitializationHandler", async function () {
           // Mock a new facet to add to diamond so we can call initialize again
           let FacetTestFactory = await getContractFactory("Test3Facet");
           const testFacet = await FacetTestFactory.deploy(await getFees(maxPriorityFeePerGas));
-          await testFacet.deployTransaction.wait();
+          await testFacet.waitForDeployment();
 
           const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [await rando.getAddress()]);
 
@@ -296,7 +296,7 @@ describe("ProtocolInitializationHandler", async function () {
     it("Should call facet initializer internally when _addresses and _calldata are supplied", async function () {
       let FacetTestFactory = await getContractFactory("Test3Facet");
       const testFacet = await FacetTestFactory.deploy(await getFees(maxPriorityFeePerGas));
-      await testFacet.deployTransaction.wait();
+      await testFacet.waitForDeployment();
 
       const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [await rando.getAddress()]);
 
@@ -332,7 +332,7 @@ describe("ProtocolInitializationHandler", async function () {
       beforeEach(async function () {
         let FacetTestFactory = await getContractFactory("Test3Facet");
         testFacet = await FacetTestFactory.deploy(await getFees(maxPriorityFeePerGas));
-        await testFacet.deployTransaction.wait();
+        await testFacet.waitForDeployment();
 
         version = formatBytes32String("2.3.0");
       });
@@ -408,7 +408,7 @@ describe("ProtocolInitializationHandler", async function () {
         await getFees(maxPriorityFeePerGas)
       );
 
-      await mockInitializationFacetDeployed.deployTransaction.wait();
+      await mockInitializationFacetDeployed.waitForDeployment();
 
       const facetNames = [
         "SellerHandlerFacet",
