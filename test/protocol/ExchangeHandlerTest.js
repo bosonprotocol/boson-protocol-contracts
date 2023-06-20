@@ -2135,7 +2135,7 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(0);
 
           // Redeem the voucher
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 600000 }))
             .to.emit(exchangeHandler, "TwinTransferred")
             .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
 

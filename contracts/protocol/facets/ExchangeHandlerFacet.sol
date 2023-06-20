@@ -729,8 +729,17 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             address sender = msgSender();
 
+            uint256 twinCount = twinIds.length;
+
+            // Fetch twin: up to 20,000 gas
+            // Handle individual outcome: up to 120,000 gas
+            // Handle overall outcome: up to 200,000 gas
+            // Next line would overflow if twinCount > (type(uint256).max - MINIMAL_RESIDUAL_GAS)/SINGLE_TWIN_RESERVED_GAS
+            // Oveflow happens for twinCount ~ 9.6x10^71, which is impossible to achieve
+            uint256 reservedGas = twinCount * SINGLE_TWIN_RESERVED_GAS + MINIMAL_RESIDUAL_GAS;
+
             // Visit the twins
-            for (uint256 i = 0; i < twinIds.length; i++) {
+            for (uint256 i = 0; i < twinCount; i++) {
                 // Get the twin
                 (, Twin storage twin) = fetchTwin(twinIds[i]);
 
@@ -751,7 +760,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
                 if (tokenType == TokenType.FungibleToken) {
                     // ERC-20 style transfer
-                    (success, result) = twin.tokenAddress.call{ gas: TWIN_TRANSFER_GAS_LIMIT }(
+                    (success, result) = twin.tokenAddress.call{ gas: gasleft() - reservedGas }(
                         abi.encodeWithSignature(
                             "transferFrom(address,address,uint256)",
                             seller.assistant,
@@ -768,7 +777,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         tokenId = twin.tokenId + twin.supplyAvailable;
                     }
                     // ERC-721 style transfer
-                    (success, result) = twin.tokenAddress.call{ gas: TWIN_TRANSFER_GAS_LIMIT }(
+                    (success, result) = twin.tokenAddress.call{ gas: gasleft() - reservedGas }(
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,bytes)",
                             seller.assistant,
@@ -779,7 +788,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     );
                 } else if (twin.tokenType == TokenType.MultiToken) {
                     // ERC-1155 style transfer
-                    (success, result) = twin.tokenAddress.call{ gas: TWIN_TRANSFER_GAS_LIMIT }(
+                    (success, result) = twin.tokenAddress.call{ gas: gasleft() - reservedGas }(
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
                             seller.assistant,
@@ -790,6 +799,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         )
                     );
                 }
+
+                // Reduce minimum gas required for succesful execution
+                reservedGas -= SINGLE_TWIN_RESERVED_GAS;
 
                 // If token transfer failed
                 if (!success || (result.length > 0 && !abi.decode(result, (bool)))) {
@@ -804,7 +816,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     twinReceipt.amount = twin.amount;
                     twinReceipt.tokenType = twin.tokenType;
 
-                    emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
+                    emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, msgSender());
                 }
             }
 
