@@ -690,7 +690,7 @@ describe("ProtocolDiamond", async function () {
         // Deploy Test2FacetUpgrade
         Test2FacetUpgrade = await getContractFactory("Test2FacetUpgrade");
         test2FacetUpgrade = await Test2FacetUpgrade.deploy();
-        await test2FacetUpgrade.deploymentTransaction();
+        await test2FacetUpgrade.waitForDeployment();
 
         // Define the facet cut
         facetCuts = [
@@ -816,7 +816,7 @@ describe("ProtocolDiamond", async function () {
       // Deploy Test3Facet
       Test3Facet = await getContractFactory("Test3Facet");
       test3Facet = await Test3Facet.deploy();
-      await test3Facet.deploymentTransaction();
+      await test3Facet.waitForDeployment();
 
       // N.B. The facets are not yet connected to the diamond in any way,
       // but following handles prepare us for accessing the diamond via

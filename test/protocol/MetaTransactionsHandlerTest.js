@@ -3338,7 +3338,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
       });
 
-      context.only("👉 FundsHandlerFacet 👉 withdrawFunds()", async function () {
+      context("👉 FundsHandlerFacet 👉 withdrawFunds()", async function () {
         beforeEach(async function () {
           // Initial ids for all the things
           exchangeId = "1";
