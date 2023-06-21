@@ -81,7 +81,7 @@
     "@openzeppelin/test-helpers": "^0.5.16",
     "coveralls": "^3.1.1",
     "decache": "^4.6.1",
-    "dotenv": "^16.1.4",
+    "dotenv": "^16.3.0",
     "eip55": "^2.1.0",
     "eslint": "^8.42.0",
     "eslint-config-prettier": "^8.6.0",
