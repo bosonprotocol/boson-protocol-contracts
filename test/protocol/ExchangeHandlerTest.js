@@ -2361,7 +2361,7 @@ describe("IBosonExchangeHandler", function () {
             exchange.id = Number(exchange.id) + 1;
 
             // Redeem the voucher
-            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
             // Voucher should be revoked and both transfers should fail
             await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyer.address);
@@ -2664,7 +2664,7 @@ describe("IBosonExchangeHandler", function () {
             exchange.id = Number(exchange.id) + 1;
 
             // Redeem the voucher
-            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
             // Voucher should be revoked and both transfers should fail
             await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyer.address);
@@ -2907,7 +2907,7 @@ describe("IBosonExchangeHandler", function () {
             exchange.id = Number(exchange.id) + 1;
 
             // Redeem the voucher
-            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
             // Voucher should be revoked and both transfers should fail
             await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyer.address);
@@ -3346,7 +3346,7 @@ describe("IBosonExchangeHandler", function () {
             exchange.id = Number(exchange.id) + 1;
 
             // Redeem the voucher
-            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
             // Voucher should be revoked and both transfers should fail
             await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyer.address);
