@@ -382,7 +382,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Make sure that the voucher has expired
-        require(block.timestamp >= voucher.validUntilDate, VOUCHER_STILL_VALID);
+        require(block.timestamp > voucher.validUntilDate, VOUCHER_STILL_VALID);
 
         // Finalize the exchange, burning the voucher
         finalizeExchange(exchange, ExchangeState.Canceled);

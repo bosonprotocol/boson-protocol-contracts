@@ -1071,8 +1071,8 @@ describe("IBosonVoucher", function () {
     });
 
     it("Should be 0 if offer is expired", async function () {
-      // Skip to after offer expiry
-      await setNextBlockTimestamp(ethers.BigNumber.from(offerDates.validUntil).add(1).toHexString());
+      // Skip to offer expiry
+      await setNextBlockTimestamp(ethers.BigNumber.from(offerDates.validUntil).toHexString(), true);
 
       // Get available premints from contract
       let availablePremints = await bosonVoucher.getAvailablePreMints(offerId);
