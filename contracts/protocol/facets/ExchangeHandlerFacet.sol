@@ -168,7 +168,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         OfferDates storage offerDates = fetchOfferDates(_offerId);
         require(block.timestamp >= offerDates.validFrom, OFFER_NOT_AVAILABLE);
         require(!_offer.voided, OFFER_HAS_BEEN_VOIDED);
-        require(block.timestamp < offerDates.validUntil, OFFER_HAS_EXPIRED);
+        require(block.timestamp <= offerDates.validUntil, OFFER_HAS_EXPIRED);
 
         if (!_isPreminted) {
             // For non-preminted offers, quantityAvailable must be greater than zero, since it gets decremented

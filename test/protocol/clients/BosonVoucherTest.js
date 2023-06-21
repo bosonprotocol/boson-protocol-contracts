@@ -1072,7 +1072,7 @@ describe("IBosonVoucher", function () {
 
     it("Should be 0 if offer is expired", async function () {
       // Skip to offer expiry
-      await setNextBlockTimestamp(ethers.BigNumber.from(offerDates.validUntil).toHexString(), true);
+      await setNextBlockTimestamp(ethers.BigNumber.from(offerDates.validUntil).add(1).toHexString(), true);
 
       // Get available premints from contract
       let availablePremints = await bosonVoucher.getAvailablePreMints(offerId);
@@ -1747,7 +1747,7 @@ describe("IBosonVoucher", function () {
 
             it("Transfer preminted voucher, where offer has expired", async function () {
               // Skip past offer expiry
-              await setNextBlockTimestamp(ethers.BigNumber.from(offerValid).toHexString());
+              await setNextBlockTimestamp(ethers.BigNumber.from(offerValid).add(1).toHexString());
 
               // Transfer should fail, since protocol reverts
               await expect(
