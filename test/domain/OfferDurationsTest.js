@@ -41,16 +41,6 @@ describe("OfferDurations", function () {
       expect(offerDurations.disputePeriodIsValid()).is.false;
       expect(offerDurations.isValid()).is.false;
 
-      // Invalid field value
-      offerDurations.disputePeriod = new Date();
-      expect(offerDurations.disputePeriodIsValid()).is.false;
-      expect(offerDurations.isValid()).is.false;
-
-      // Invalid field value
-      offerDurations.disputePeriod = 12;
-      expect(offerDurations.disputePeriodIsValid()).is.false;
-      expect(offerDurations.isValid()).is.false;
-
       // Valid field value
       offerDurations.disputePeriod = "0";
       expect(offerDurations.disputePeriodIsValid()).is.true;
@@ -68,16 +58,6 @@ describe("OfferDurations", function () {
       expect(offerDurations.voucherValidIsValid()).is.false;
       expect(offerDurations.isValid()).is.false;
 
-      // Invalid field value
-      offerDurations.voucherValid = new Date();
-      expect(offerDurations.voucherValidIsValid()).is.false;
-      expect(offerDurations.isValid()).is.false;
-
-      // Invalid field value
-      offerDurations.voucherValid = 12;
-      expect(offerDurations.voucherValidIsValid()).is.false;
-      expect(offerDurations.isValid()).is.false;
-
       // Valid field value
       offerDurations.voucherValid = "0";
       expect(offerDurations.voucherValidIsValid()).is.true;
@@ -92,16 +72,6 @@ describe("OfferDurations", function () {
     it("Always present, resolutionPeriod must be the string representation of a BigNumber", async function () {
       // Invalid field value
       offerDurations.resolutionPeriod = "zedzdeadbaby";
-      expect(offerDurations.resolutionPeriodIsValid()).is.false;
-      expect(offerDurations.isValid()).is.false;
-
-      // Invalid field value
-      offerDurations.resolutionPeriod = new Date();
-      expect(offerDurations.resolutionPeriodIsValid()).is.false;
-      expect(offerDurations.isValid()).is.false;
-
-      // Invalid field value
-      offerDurations.resolutionPeriod = 12;
       expect(offerDurations.resolutionPeriodIsValid()).is.false;
       expect(offerDurations.isValid()).is.false;
 

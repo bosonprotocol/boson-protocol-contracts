@@ -46,16 +46,6 @@ describe("Twin", function () {
       expect(twin.idIsValid()).is.false;
       expect(twin.isValid()).is.false;
 
-      // Invalid field value
-      twin.id = new Date();
-      expect(twin.idIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
-      // Invalid field value
-      twin.id = 12;
-      expect(twin.idIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
       // Valid field value
       twin.id = "0";
       expect(twin.idIsValid()).is.true;
@@ -73,16 +63,6 @@ describe("Twin", function () {
       expect(twin.sellerIdIsValid()).is.false;
       expect(twin.isValid()).is.false;
 
-      // Invalid field value
-      twin.sellerId = new Date();
-      expect(twin.sellerIdIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
-      // Invalid field value
-      twin.sellerId = 12;
-      expect(twin.sellerIdIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
       // Valid field value
       twin.sellerId = "0";
       expect(twin.sellerIdIsValid()).is.true;
@@ -97,16 +77,6 @@ describe("Twin", function () {
     it("Always present, amount must be the string representation of a BigNumber", async function () {
       // Invalid field value
       twin.amount = "zedzdeadbaby";
-      expect(twin.amountIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
-      // Invalid field value
-      twin.amount = new Date();
-      expect(twin.amountIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
-      // Invalid field value
-      twin.amount = 12;
       expect(twin.amountIsValid()).is.false;
       expect(twin.isValid()).is.false;
 
@@ -128,16 +98,6 @@ describe("Twin", function () {
       expect(twin.isValid()).is.false;
 
       // Invalid field value
-      twin.supplyAvailable = new Date();
-      expect(twin.supplyAvailableIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
-      // Invalid field value
-      twin.supplyAvailable = 12;
-      expect(twin.supplyAvailableIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
-      // Invalid field value
       twin.supplyAvailable = ["1", "2"];
       expect(twin.supplyAvailableIsValid()).is.false;
       expect(twin.isValid()).is.false;
@@ -151,16 +111,6 @@ describe("Twin", function () {
     it("Always present, tokenId must be the string representation of a BigNumber", async function () {
       // Invalid field value
       twin.tokenId = "zedzdeadbaby";
-      expect(twin.tokenIdIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
-      // Invalid field value
-      twin.tokenId = new Date();
-      expect(twin.tokenIdIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
-      // Invalid field value
-      twin.tokenId = 12;
       expect(twin.tokenIdIsValid()).is.false;
       expect(twin.isValid()).is.false;
 

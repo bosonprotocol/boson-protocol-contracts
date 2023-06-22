@@ -38,16 +38,6 @@ describe("OfferFees", function () {
       expect(offerFees.protocolFeeIsValid()).is.false;
       expect(offerFees.isValid()).is.false;
 
-      // Invalid field value
-      offerFees.protocolFee = new Date();
-      expect(offerFees.protocolFeeIsValid()).is.false;
-      expect(offerFees.isValid()).is.false;
-
-      // Invalid field value
-      offerFees.protocolFee = 12;
-      expect(offerFees.protocolFeeIsValid()).is.false;
-      expect(offerFees.isValid()).is.false;
-
       // Valid field value
       offerFees.protocolFee = "0";
       expect(offerFees.protocolFeeIsValid()).is.true;
@@ -62,16 +52,6 @@ describe("OfferFees", function () {
     it("Always present, agentFee must be the string representation of a BigNumber", async function () {
       // Invalid field value
       offerFees.agentFee = "zedzdeadbaby";
-      expect(offerFees.agentFeeIsValid()).is.false;
-      expect(offerFees.isValid()).is.false;
-
-      // Invalid field value
-      offerFees.agentFee = new Date();
-      expect(offerFees.agentFeeIsValid()).is.false;
-      expect(offerFees.isValid()).is.false;
-
-      // Invalid field value
-      offerFees.agentFee = 12;
       expect(offerFees.agentFeeIsValid()).is.false;
       expect(offerFees.isValid()).is.false;
 

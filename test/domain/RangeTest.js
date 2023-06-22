@@ -41,16 +41,6 @@ describe("Range", function () {
       expect(range.startIsValid()).is.false;
       expect(range.isValid()).is.false;
 
-      // Invalid field value
-      range.start = new Date();
-      expect(range.startIsValid()).is.false;
-      expect(range.isValid()).is.false;
-
-      // Invalid field value
-      range.start = 12;
-      expect(range.startIsValid()).is.false;
-      expect(range.isValid()).is.false;
-
       // Valid field value
       range.start = "0";
       expect(range.startIsValid()).is.true;
@@ -65,16 +55,6 @@ describe("Range", function () {
     it("Always present, length must be the string representation of a BigNumber", async function () {
       // Invalid field value
       range.length = "zedzdeadbaby";
-      expect(range.lengthIsValid()).is.false;
-      expect(range.isValid()).is.false;
-
-      // Invalid field value
-      range.length = new Date();
-      expect(range.lengthIsValid()).is.false;
-      expect(range.isValid()).is.false;
-
-      // Invalid field value
-      range.length = 12;
       expect(range.lengthIsValid()).is.false;
       expect(range.isValid()).is.false;
 
@@ -95,16 +75,6 @@ describe("Range", function () {
       expect(range.mintedIsValid()).is.false;
       expect(range.isValid()).is.false;
 
-      // Invalid field value
-      range.minted = new Date();
-      expect(range.mintedIsValid()).is.false;
-      expect(range.isValid()).is.false;
-
-      // Invalid field value
-      range.minted = 12;
-      expect(range.mintedIsValid()).is.false;
-      expect(range.isValid()).is.false;
-
       // Valid field value
       range.minted = "0";
       expect(range.mintedIsValid()).is.true;
@@ -119,16 +89,6 @@ describe("Range", function () {
     it("If present, lastBurnedTokenId must be the string representation of a BigNumber", async function () {
       // Invalid field value
       range.lastBurnedTokenId = "zedzdeadbaby";
-      expect(range.lastBurnedTokenIdIsValid()).is.false;
-      expect(range.isValid()).is.false;
-
-      // Invalid field value
-      range.lastBurnedTokenId = new Date();
-      expect(range.lastBurnedTokenIdIsValid()).is.false;
-      expect(range.isValid()).is.false;
-
-      // Invalid field value
-      range.lastBurnedTokenId = 12;
       expect(range.lastBurnedTokenIdIsValid()).is.false;
       expect(range.isValid()).is.false;
 

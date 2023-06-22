@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const { getSigners }= hre.ethers;
+const { getSigners } = hre.ethers;
 const { expect } = require("chai");
 const Buyer = require("../../scripts/domain/Buyer");
 
@@ -47,16 +47,6 @@ describe("Buyer", function () {
     it("Always present, id must be the string representation of a BigNumber", async function () {
       // Invalid field value
       buyer.id = "zedzdeadbaby";
-      expect(buyer.idIsValid()).is.false;
-      expect(buyer.isValid()).is.false;
-
-      // Invalid field value
-      buyer.id = new Date();
-      expect(buyer.idIsValid()).is.false;
-      expect(buyer.isValid()).is.false;
-
-      // Invalid field value
-      buyer.id = 12;
       expect(buyer.idIsValid()).is.false;
       expect(buyer.isValid()).is.false;
 

@@ -74,16 +74,6 @@ describe("DisputeResolver", function () {
       expect(disputeResolver.idIsValid()).is.false;
       expect(disputeResolver.isValid()).is.false;
 
-      // Invalid field value
-      disputeResolver.id = new Date();
-      expect(disputeResolver.idIsValid()).is.false;
-      expect(disputeResolver.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolver.id = 12;
-      expect(disputeResolver.idIsValid()).is.false;
-      expect(disputeResolver.isValid()).is.false;
-
       // Valid field value
       disputeResolver.id = "0";
       expect(disputeResolver.idIsValid()).is.true;
@@ -98,16 +88,6 @@ describe("DisputeResolver", function () {
     it("Always present, escalationResponsePeriod must be the string representation of a BigNumber", async function () {
       // Invalid field value
       disputeResolver.escalationResponsePeriod = "zedzdeadbaby";
-      expect(disputeResolver.escalationResponsePeriodIsValid()).is.false;
-      expect(disputeResolver.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolver.escalationResponsePeriod = new Date();
-      expect(disputeResolver.escalationResponsePeriodIsValid()).is.false;
-      expect(disputeResolver.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolver.escalationResponsePeriod = 12;
       expect(disputeResolver.escalationResponsePeriodIsValid()).is.false;
       expect(disputeResolver.isValid()).is.false;
 

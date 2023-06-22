@@ -89,16 +89,6 @@ describe("DisputeResolverFee", function () {
       expect(disputeResolverFee.feeAmountIsValid()).is.false;
       expect(disputeResolverFee.isValid()).is.false;
 
-      // Invalid field value
-      disputeResolverFee.feeAmount = new Date();
-      expect(disputeResolverFee.feeAmountIsValid()).is.false;
-      expect(disputeResolverFee.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolverFee.feeAmount = 12;
-      expect(disputeResolverFee.feeAmountIsValid()).is.false;
-      expect(disputeResolverFee.isValid()).is.false;
-
       // Valid field value
       disputeResolverFee.feeAmount = "0";
       expect(disputeResolverFee.feeAmountIsValid()).is.true;

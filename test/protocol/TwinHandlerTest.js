@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { ZeroAddress, MaxUint256 } = ethers;
 const { expect, assert } = require("chai");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
@@ -98,7 +99,12 @@ describe("IBosonTwinHandler", function () {
       id = "1"; // argument sent to contract for createSeller will be ignored
 
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
+      seller = mockSeller(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        clerk.address,
+        await treasury.getAddress()
+      );
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
@@ -489,7 +495,7 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
-        it.only("token address has been used in another twin with unlimited supply", async function () {
+        it("token address has been used in another twin with unlimited supply", async function () {
           twin.supplyAvailable = MaxUint256;
           twin.tokenType = TokenType.NonFungibleToken;
           twin.tokenAddress = await foreign721.getAddress();
@@ -507,12 +513,12 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
-        it.only("Supply range overflow", async function () {
-          twin.supplyAvailable = MaxUint256/10*8.toString();
+        it("Supply range overflow", async function () {
+          twin.supplyAvailable = ((MaxUint256 / 10n) * 8n).toString();
           twin.tokenType = TokenType.NonFungibleToken;
           twin.tokenAddress = await foreign721.getAddress();
           twin.amount = "0";
-          twin.tokenId = MaxUint256-twin.supplyAvailable+1.toString();
+          twin.tokenId = MaxUint256 - BigInt(twin.supplyAvailable) + 1n.toString();
 
           await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
@@ -522,7 +528,7 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
-        it.only("Token with unlimited supply with starting tokenId to high", async function () {
+        it("Token with unlimited supply with starting tokenId to high", async function () {
           twin.supplyAvailable = MaxUint256.toString();
           twin.tokenType = TokenType.NonFungibleToken;
           twin.tokenAddress = await foreign721.getAddress();

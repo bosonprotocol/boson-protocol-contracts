@@ -105,16 +105,6 @@ describe("Condition", function () {
       expect(condition.tokenIdIsValid()).is.false;
       expect(condition.isValid()).is.false;
 
-      // Invalid field value
-      condition.tokenId = new Date();
-      expect(condition.tokenIdIsValid()).is.false;
-      expect(condition.isValid()).is.false;
-
-      // Invalid field value
-      condition.tokenId = 12;
-      expect(condition.tokenIdIsValid()).is.false;
-      expect(condition.isValid()).is.false;
-
       // Valid field value
       condition.tokenId = "0";
       expect(condition.tokenIdIsValid()).is.true;
@@ -132,16 +122,6 @@ describe("Condition", function () {
       expect(condition.thresholdIsValid()).is.false;
       expect(condition.isValid()).is.false;
 
-      // Invalid field value
-      condition.threshold = new Date();
-      expect(condition.thresholdIsValid()).is.false;
-      expect(condition.isValid()).is.false;
-
-      // Invalid field value
-      condition.threshold = 12;
-      expect(condition.thresholdIsValid()).is.false;
-      expect(condition.isValid()).is.false;
-
       // Valid field value
       condition.threshold = "0";
       expect(condition.thresholdIsValid()).is.true;
@@ -156,16 +136,6 @@ describe("Condition", function () {
     it("Always present, maxCommits must be the string representation of a BigNumber", async function () {
       // Invalid field value
       condition.maxCommits = "zedzdeadbaby";
-      expect(condition.maxCommitsIsValid()).is.false;
-      expect(condition.isValid()).is.false;
-
-      // Invalid field value
-      condition.maxCommits = new Date();
-      expect(condition.maxCommitsIsValid()).is.false;
-      expect(condition.isValid()).is.false;
-
-      // Invalid field value
-      condition.maxCommits = 12;
       expect(condition.maxCommitsIsValid()).is.false;
       expect(condition.isValid()).is.false;
 

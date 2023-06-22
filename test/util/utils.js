@@ -199,10 +199,6 @@ async function prepareDataSignatureParameters(
   };
   metaTxTypes = Object.assign({}, metaTxTypes, customTransactionTypes);
 
-  console.log(metaTxTypes);
-  console.log(domainData);
-  console.log(primaryType);
-  console.log(message);
   // Prepare the data to sign
   let dataToSign = JSON.stringify({
     types: metaTxTypes,

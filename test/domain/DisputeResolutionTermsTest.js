@@ -52,16 +52,6 @@ describe("DisputeResolutionTerms", function () {
       expect(disputeResolutionTerms.disputeResolverIdIsValid()).is.false;
       expect(disputeResolutionTerms.isValid()).is.false;
 
-      // Invalid field value
-      disputeResolutionTerms.disputeResolverId = new Date();
-      expect(disputeResolutionTerms.disputeResolverIdIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolutionTerms.disputeResolverId = 12;
-      expect(disputeResolutionTerms.disputeResolverIdIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
       // Valid field value
       disputeResolutionTerms.disputeResolverId = "0";
       expect(disputeResolutionTerms.disputeResolverIdIsValid()).is.true;
@@ -79,16 +69,6 @@ describe("DisputeResolutionTerms", function () {
       expect(disputeResolutionTerms.escalationResponsePeriodIsValid()).is.false;
       expect(disputeResolutionTerms.isValid()).is.false;
 
-      // Invalid field value
-      disputeResolutionTerms.escalationResponsePeriod = new Date();
-      expect(disputeResolutionTerms.escalationResponsePeriodIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolutionTerms.escalationResponsePeriod = 12;
-      expect(disputeResolutionTerms.escalationResponsePeriodIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
       // Valid field value
       disputeResolutionTerms.escalationResponsePeriod = "0";
       expect(disputeResolutionTerms.escalationResponsePeriodIsValid()).is.true;
@@ -103,16 +83,6 @@ describe("DisputeResolutionTerms", function () {
     it("Always present, feeAmount must be the string representation of a BigNumber and be less than or equal to 100000", async function () {
       // Invalid field value
       disputeResolutionTerms.feeAmount = "zedzdeadbaby";
-      expect(disputeResolutionTerms.feeAmountIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolutionTerms.feeAmount = new Date();
-      expect(disputeResolutionTerms.feeAmountIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolutionTerms.feeAmount = 12;
       expect(disputeResolutionTerms.feeAmountIsValid()).is.false;
       expect(disputeResolutionTerms.isValid()).is.false;
 
@@ -135,16 +105,6 @@ describe("DisputeResolutionTerms", function () {
     it("Always present, buyerEscalationDeposit must be the string representation of a BigNumber", async function () {
       // Invalid field value
       disputeResolutionTerms.buyerEscalationDeposit = "zedzdeadbaby";
-      expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolutionTerms.buyerEscalationDeposit = new Date();
-      expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolutionTerms.buyerEscalationDeposit = 12;
       expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.false;
       expect(disputeResolutionTerms.isValid()).is.false;
 

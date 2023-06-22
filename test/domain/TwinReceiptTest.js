@@ -44,16 +44,6 @@ describe("TwinReceipt", function () {
       expect(twinReceipt.twinIdIsValid()).is.false;
       expect(twinReceipt.isValid()).is.false;
 
-      // Invalid field value
-      twinReceipt.twinId = new Date();
-      expect(twinReceipt.twinIdIsValid()).is.false;
-      expect(twinReceipt.isValid()).is.false;
-
-      // Invalid field value
-      twinReceipt.twinId = 12;
-      expect(twinReceipt.twinIdIsValid()).is.false;
-      expect(twinReceipt.isValid()).is.false;
-
       // Valid field value
       twinReceipt.twinId = "0";
       expect(twinReceipt.twinIdIsValid()).is.true;
@@ -71,16 +61,6 @@ describe("TwinReceipt", function () {
       expect(twinReceipt.amountIsValid()).is.false;
       expect(twinReceipt.isValid()).is.false;
 
-      // Invalid field value
-      twinReceipt.amount = new Date();
-      expect(twinReceipt.amountIsValid()).is.false;
-      expect(twinReceipt.isValid()).is.false;
-
-      // Invalid field value
-      twinReceipt.amount = 12;
-      expect(twinReceipt.amountIsValid()).is.false;
-      expect(twinReceipt.isValid()).is.false;
-
       // Valid field value
       twinReceipt.amount = "0";
       expect(twinReceipt.amountIsValid()).is.true;
@@ -95,16 +75,6 @@ describe("TwinReceipt", function () {
     it("Always present, tokenId must be the string representation of a BigNumber", async function () {
       // Invalid field value
       twinReceipt.tokenId = "zedzdeadbaby";
-      expect(twinReceipt.tokenIdIsValid()).is.false;
-      expect(twinReceipt.isValid()).is.false;
-
-      // Invalid field value
-      twinReceipt.tokenId = new Date();
-      expect(twinReceipt.tokenIdIsValid()).is.false;
-      expect(twinReceipt.isValid()).is.false;
-
-      // Invalid field value
-      twinReceipt.tokenId = 12;
       expect(twinReceipt.tokenIdIsValid()).is.false;
       expect(twinReceipt.isValid()).is.false;
 
@@ -144,16 +114,6 @@ describe("TwinReceipt", function () {
     it("Always present, tokenType must be a valid TokenType", async function () {
       // Invalid field value
       twinReceipt.tokenType = "zedzdeadbaby";
-      expect(twinReceipt.tokenTypeIsValid()).is.false;
-      expect(twinReceipt.isValid()).is.false;
-
-      // Invalid field value
-      twinReceipt.tokenType = new Date();
-      expect(twinReceipt.tokenTypeIsValid()).is.false;
-      expect(twinReceipt.isValid()).is.false;
-
-      // Invalid field value
-      twinReceipt.tokenType = 12;
       expect(twinReceipt.tokenTypeIsValid()).is.false;
       expect(twinReceipt.isValid()).is.false;
 

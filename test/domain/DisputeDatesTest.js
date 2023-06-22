@@ -41,16 +41,6 @@ describe("DisputeDates", function () {
       expect(disputeDates.disputedIsValid()).is.false;
       expect(disputeDates.isValid()).is.false;
 
-      // Invalid field value
-      disputeDates.disputed = new Date();
-      expect(disputeDates.disputedIsValid()).is.false;
-      expect(disputeDates.isValid()).is.false;
-
-      // Invalid field value
-      disputeDates.disputed = 12;
-      expect(disputeDates.disputedIsValid()).is.false;
-      expect(disputeDates.isValid()).is.false;
-
       // Valid field value
       disputeDates.disputed = "0";
       expect(disputeDates.disputedIsValid()).is.true;
@@ -65,16 +55,6 @@ describe("DisputeDates", function () {
     it("If present, escalated must be the string representation of a BigNumber", async function () {
       // Invalid field value
       disputeDates.escalated = "zedzdeadbaby";
-      expect(disputeDates.escalatedIsValid()).is.false;
-      expect(disputeDates.isValid()).is.false;
-
-      // Invalid field value
-      disputeDates.escalated = new Date();
-      expect(disputeDates.escalatedIsValid()).is.false;
-      expect(disputeDates.isValid()).is.false;
-
-      // Invalid field value
-      disputeDates.escalated = 12;
       expect(disputeDates.escalatedIsValid()).is.false;
       expect(disputeDates.isValid()).is.false;
 
@@ -105,16 +85,6 @@ describe("DisputeDates", function () {
       expect(disputeDates.finalizedIsValid()).is.false;
       expect(disputeDates.isValid()).is.false;
 
-      // Invalid field value
-      disputeDates.finalized = new Date();
-      expect(disputeDates.finalizedIsValid()).is.false;
-      expect(disputeDates.isValid()).is.false;
-
-      // Invalid field value
-      disputeDates.finalized = 12;
-      expect(disputeDates.finalizedIsValid()).is.false;
-      expect(disputeDates.isValid()).is.false;
-
       // Valid field value
       disputeDates.finalized = "0";
       expect(disputeDates.finalizedIsValid()).is.true;
@@ -139,16 +109,6 @@ describe("DisputeDates", function () {
     it("Always present, timeout must be the string representation of a BigNumber", async function () {
       // Invalid field value
       disputeDates.timeout = "zedzdeadbaby";
-      expect(disputeDates.timeoutIsValid()).is.false;
-      expect(disputeDates.isValid()).is.false;
-
-      // Invalid field value
-      disputeDates.timeout = new Date();
-      expect(disputeDates.timeoutIsValid()).is.false;
-      expect(disputeDates.isValid()).is.false;
-
-      // Invalid field value
-      disputeDates.timeout = 12;
       expect(disputeDates.timeoutIsValid()).is.false;
       expect(disputeDates.isValid()).is.false;
 

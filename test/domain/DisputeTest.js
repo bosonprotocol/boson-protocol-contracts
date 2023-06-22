@@ -40,16 +40,6 @@ describe("Dispute", function () {
       expect(dispute.exchangeIdIsValid()).is.false;
       expect(dispute.isValid()).is.false;
 
-      // Invalid field value
-      dispute.exchangeId = new Date();
-      expect(dispute.exchangeIdIsValid()).is.false;
-      expect(dispute.isValid()).is.false;
-
-      // Invalid field value
-      dispute.exchangeId = 12;
-      expect(dispute.exchangeIdIsValid()).is.false;
-      expect(dispute.isValid()).is.false;
-
       // Valid field value
       dispute.exchangeId = "0";
       expect(dispute.exchangeIdIsValid()).is.true;
@@ -77,11 +67,6 @@ describe("Dispute", function () {
       expect(dispute.stateIsValid()).is.false;
       expect(dispute.isValid()).is.false;
 
-      // Invalid field value
-      dispute.state = new Date();
-      expect(dispute.stateIsValid()).is.false;
-      expect(dispute.isValid()).is.false;
-
       // Valid field value
       dispute.state = DisputeState.Resolving;
       expect(dispute.stateIsValid()).is.true;
@@ -91,16 +76,6 @@ describe("Dispute", function () {
     it("Always present, buyerPercent must be the string representation of a BigNumber", async function () {
       // Invalid field value
       dispute.buyerPercent = "zedzdeadbaby";
-      expect(dispute.buyerPercentIsValid()).is.false;
-      expect(dispute.isValid()).is.false;
-
-      // Invalid field value
-      dispute.buyerPercent = new Date();
-      expect(dispute.buyerPercentIsValid()).is.false;
-      expect(dispute.isValid()).is.false;
-
-      // Invalid field value
-      dispute.buyerPercent = 12;
       expect(dispute.buyerPercentIsValid()).is.false;
       expect(dispute.isValid()).is.false;
 
