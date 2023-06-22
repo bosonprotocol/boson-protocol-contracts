@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getSigners } = hre.ethers;
 
 const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { expect } = require("chai");

@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ZeroAddress, getContractAt, getSigner, Wallet } = hre.ethers;
 const fs = require("fs").promises;
 const environments = require("../../environments");
 const network = hre.network.name;

@@ -2996,9 +2996,6 @@ describe("IBosonOfferHandler", function () {
           // Make the valid until date the same as the existing offer
           newValidUntilDate = (BigInt(offers[4].validUntilDate) - 10000n).toString(); // same as that validUntilDate of offer 5
 
-          console.log(offers[4].validUntilDate);
-          console.log(newValidUntilDate);
-
           await expect(
             offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);

@@ -132,7 +132,7 @@ describe("IBosonPauseHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to unpause without PAUSER role, expecting revert
-          await expect(pauseHandler.connect(rando).unpause([])).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          await expect(pauseHandler.connect(rando).unpause()).to.revertedWith(RevertReasons.ACCESS_DENIED);
         });
 
         it("Protocol is not currently paused", async function () {
