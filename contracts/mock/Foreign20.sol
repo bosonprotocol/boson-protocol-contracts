@@ -170,14 +170,12 @@ contract Foreign20Malicious2 is Foreign20 {
  */
 contract Foreign20MaliciousName is Foreign20 {
     function name() public pure override returns (string memory) {
-        // simulate the contract without "name" implementation.
-        // while (true) {}
+        // name consumes all gas
         unchecked {
             uint256 i = 0;
             while (true) {
                 i++;
             }
-            // uint256 j = 1/i;
         }
         return "nothing";
     }

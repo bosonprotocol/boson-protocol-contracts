@@ -10,7 +10,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles custody and withdrawal of buyer and seller funds within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x18834247
+ * The ERC-165 identifier for this interface is: 0xa30c55a8
  */
 interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
     /**
@@ -74,11 +74,28 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      */
     function withdrawProtocolFees(address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external;
 
+    function getTokenList(uint256 _entityId) external view returns (address[] memory tokenList);
+
     /**
      * @notice Returns the information about the funds that an entity can use as a sellerDeposit and/or withdraw from the protocol.
+     * It tries to get information about all tokens that the entity has in availableFunds storage.
+     * If the token list is too long, this call may run out of gas. In this case, the caller should use the function `getAvailableFunds` and pass the token list.
      *
      * @param _entityId - id of entity for which availability of funds should be checked
      * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
      */
-    function getAvailableFunds(uint256 _entityId) external view returns (BosonTypes.Funds[] memory availableFunds);
+    function getAllAvailableFunds(uint256 _entityId) external view returns (BosonTypes.Funds[] memory availableFunds);
+
+    /**
+     * @notice Returns the information about the funds that an entity can use as a sellerDeposit and/or withdraw from the protocol.
+     * To get a list of tokens that the entity has in availableFunds storage, use the function `getTokenList`.
+     *
+     * @param _entityId - id of entity for which availability of funds should be checked
+     * @param _tokenList - list of token addresses to check
+     * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
+     */
+    function getAvailableFunds(
+        uint256 _entityId,
+        address[] memory _tokenList
+    ) external view returns (BosonTypes.Funds[] memory availableFunds);
 }

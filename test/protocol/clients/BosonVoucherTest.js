@@ -2434,7 +2434,7 @@ describe("IBosonVoucher", function () {
 
     it("Can withdraw native token", async function () {
       // Sellers available funds should be empty
-      const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+      const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
       let expectedAvailableFunds = new FundsList([]);
       expect(sellersFundsBefore).to.eql(expectedAvailableFunds);
 
@@ -2448,7 +2448,7 @@ describe("IBosonVoucher", function () {
 
     it("Can withdraw ERC20", async function () {
       // Sellers available funds should be empty
-      const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+      const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
       let expectedAvailableFunds = new FundsList([]);
       expect(sellersFundsBefore).to.eql(expectedAvailableFunds);
 
@@ -2464,13 +2464,13 @@ describe("IBosonVoucher", function () {
 
       // Seller's available balance should increase
       expectedAvailableFunds = new FundsList([new Funds(foreign20.address, "Foreign20", amount.toString())]);
-      const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+      const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
       expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
     });
 
     it("Should withdraw all tokens when list length > 1", async function () {
       // Sellers available funds should be empty
-      const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+      const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
       let expectedAvailableFunds = new FundsList([]);
       expect(sellersFundsBefore).to.eql(expectedAvailableFunds);
 

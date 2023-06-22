@@ -364,7 +364,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
       it("Can withdraw native token", async function () {
         // Sellers initial available funds
-        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(sellerId));
         let expectedAvailableFunds = new FundsList([
           new Funds(ethers.constants.AddressZero, "Native currency", offer.sellerDeposit),
         ]);
@@ -381,13 +381,13 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         expectedAvailableFunds = new FundsList([
           new Funds(ethers.constants.AddressZero, "Native currency", amount.add(offer.sellerDeposit).toString()),
         ]);
-        const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(sellerId));
         expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
       });
 
       it("Can withdraw ERC20", async function () {
         // Sellers initial available funds
-        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(sellerId));
         let expectedAvailableFunds = new FundsList([
           new Funds(ethers.constants.AddressZero, "Native currency", offer.sellerDeposit),
         ]);
@@ -407,7 +407,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
         // Seller's available balance should increase
         expectedAvailableFunds.funds.push(new Funds(foreign20.address, "Foreign20", amount.toString()));
-        const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(sellerId));
         expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
       });
     });

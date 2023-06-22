@@ -992,7 +992,7 @@ async function getFundsContractState(fundsHandler, { DRs, sellers, buyers, agent
 
   // Query even the ids where it's not expected to get the entity
   const accountIds = [...DRs, ...sellers, ...buyers, ...agents].map((account) => account.id);
-  const groupsState = await Promise.all(accountIds.map((id) => fundsHandlerRando.getAvailableFunds(id)));
+  const groupsState = await Promise.all(accountIds.map((id) => fundsHandlerRando.getAllAvailableFunds(id)));
 
   return { groupsState };
 }

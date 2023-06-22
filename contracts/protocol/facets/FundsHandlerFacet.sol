@@ -151,33 +151,52 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         withdrawFundsInternal(protocolAddresses().treasury, 0, _tokenList, _tokenAmounts);
     }
 
+    function getTokenList(uint256 _entityId) external view override returns (address[] memory tokenList) {
+        // what is the lareget possible size of the array?
+        return protocolLookups().tokenList[_entityId];
+    }
+
     /**
      * @notice Returns the information about the funds that an entity can use as a sellerDeposit and/or withdraw from the protocol.
+     * It tries to get information about all tokens that the entity has in availableFunds storage.
+     * If the token list is too long, this call may run out of gas. In this case, the caller should use the function `getAvailableFunds` and pass the token list.
      *
      * @param _entityId - id of entity for which availability of funds should be checked
      * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
      */
-    function getAvailableFunds(uint256 _entityId) external view override returns (Funds[] memory availableFunds) {
-        // Cache protocol lookups for reference
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
+    function getAllAvailableFunds(uint256 _entityId) external view override returns (Funds[] memory availableFunds) {
         // get list of token addresses for the entity
-        address[] storage tokenList = lookups.tokenList[_entityId];
-        availableFunds = new Funds[](tokenList.length);
+        address[] memory tokenList = protocolLookups().tokenList[_entityId];
+        return getAvailableFunds(_entityId, tokenList);
+    }
+
+    /**
+     * @notice Returns the information about the funds that an entity can use as a sellerDeposit and/or withdraw from the protocol.
+     * To get a list of tokens that the entity has in availableFunds storage, use the function `getTokenList`.
+     *
+     * @param _entityId - id of entity for which availability of funds should be checked
+     * @param _tokenList - list of token addresses to check
+     * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
+     */
+    function getAvailableFunds(
+        uint256 _entityId,
+        address[] memory _tokenList
+    ) public view override returns (Funds[] memory availableFunds) {
+        availableFunds = new Funds[](_tokenList.length);
 
         // Get entity's availableFunds storage pointer
-        mapping(address => uint256) storage entityFunds = lookups.availableFunds[_entityId];
+        mapping(address => uint256) storage entityFunds = protocolLookups().availableFunds[_entityId];
 
-        for (uint256 i = 0; i < tokenList.length; i++) {
-            address tokenAddress = tokenList[i];
+        for (uint256 i = 0; i < _tokenList.length; i++) {
+            address tokenAddress = _tokenList[i];
             string memory tokenName;
 
             if (tokenAddress == address(0)) {
                 // If tokenAddress is 0, it represents the native currency
                 tokenName = NATIVE_CURRENCY;
             } else {
-                // Try to get token name
-                try IERC20Metadata(tokenAddress).name{ gas: 100000 }() returns (string memory name) {
+                // Try to get token name. Typically, name consumes less than 30,000 gas, but we leave some extra gas just in case
+                try IERC20Metadata(tokenAddress).name{ gas: 40000 }() returns (string memory name) {
                     tokenName = name;
                 } catch {
                     tokenName = TOKEN_NAME_UNSPECIFIED;
