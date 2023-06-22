@@ -88,7 +88,7 @@
     "eslint-plugin-no-only-tests": "^3.1.0",
     "ethereum-input-data-decoder": "^0.4.2",
     "glob": "^10.2.7",
-    "hardhat": "^2.14.1",
+    "hardhat": "^2.16.0",
     "hardhat-contract-sizer": "^2.7.0",
     "hardhat-preprocessor": "^0.1.5",
     "husky": "^8.0.3",
