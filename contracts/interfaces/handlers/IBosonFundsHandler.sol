@@ -10,7 +10,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles custody and withdrawal of buyer and seller funds within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xa30c55a8
+ * The ERC-165 identifier for this interface is: 0x2f4a64d7
  */
 interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
     /**
@@ -74,7 +74,26 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      */
     function withdrawProtocolFees(address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external;
 
+    /**
+     * @notice Returns list of addresses for which the entity has funds available.
+     * If the list is too long, it can be retrieved in chunks by using `getTokenListPaginated` and specifying _limit and _offset.
+     *
+     * @param _entityId - id of entity for which availability of funds should be checked
+     * @return tokenList - list of token addresses
+     */
     function getTokenList(uint256 _entityId) external view returns (address[] memory tokenList);
+
+    /**
+     * @notice Returns list of addresses for which the entity has funds available.
+     *
+     * @param _entityId - id of entity for which availability of funds should be checked
+     * @return tokenList - list of token addresses
+     */
+    function getTokenListPaginated(
+        uint256 _entityId,
+        uint256 _limit,
+        uint256 _offset
+    ) external view returns (address[] memory tokenList);
 
     /**
      * @notice Returns the information about the funds that an entity can use as a sellerDeposit and/or withdraw from the protocol.

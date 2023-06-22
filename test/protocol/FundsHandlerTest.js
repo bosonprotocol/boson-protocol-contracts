@@ -1467,7 +1467,7 @@ describe("IBosonFundsHandler", function () {
         await fundsHandler.connect(rando).depositFunds(seller.id, mockToken2.address, depositAmount);
         await fundsHandler.connect(rando).depositFunds(seller.id, mockToken3.address, depositAmount);
 
-        // Read on chain state:
+        // Read on chain state
         let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
 
         let expectedAvailableFunds = new FundsList([
@@ -1502,7 +1502,7 @@ describe("IBosonFundsHandler", function () {
           .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount, { value: depositAmount });
         await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken2.address, depositAmount);
 
-        // Read on chain state:
+        // Read on chain state
         const tokenList = [ethers.constants.AddressZero, mockToken3.address, mockToken.address];
         const returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, tokenList));
 
@@ -1512,6 +1512,93 @@ describe("IBosonFundsHandler", function () {
           new Funds(mockToken.address, "Foreign20", depositAmount),
         ]);
         expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
+      });
+    });
+
+    context("👉 getTokenList()", async function () {
+      it("Returns list of tokens", async function () {
+        // Deploy the mock token that consumes all gas in the name getter
+        const [mockToken, mockToken2, mockToken3] = await deployMockTokens(["Foreign20", "Foreign20", "Foreign20"]);
+
+        // top up assistants account
+        await mockToken.mint(assistant.address, "1000000");
+        await mockToken2.mint(assistant.address, "1000000");
+        await mockToken3.mint(assistant.address, "1000000");
+
+        // approve protocol to transfer the tokens
+        await mockToken.connect(assistant).approve(protocolDiamondAddress, "1000000");
+        await mockToken2.connect(assistant).approve(protocolDiamondAddress, "1000000");
+        await mockToken3.connect(assistant).approve(protocolDiamondAddress, "1000000");
+
+        // Deposit token - seller
+        await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, depositAmount);
+        await fundsHandler
+          .connect(assistant)
+          .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount, { value: depositAmount });
+        await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken2.address, depositAmount);
+        await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken3.address, depositAmount);
+
+        // Read on chain state
+        const returnedTokenList = await fundsHandler.getTokenList(seller.id);
+        const expectedAvailableFunds = [
+          mockToken.address,
+          ethers.constants.AddressZero,
+          mockToken2.address,
+          mockToken3.address,
+        ];
+        expect(returnedTokenList).to.eql(expectedAvailableFunds);
+      });
+    });
+
+    context("👉 getTokenListPaginated()", async function () {
+      let mockTokens;
+      beforeEach(async function () {
+        // Deploy the mock token that consumes all gas in the name getter
+        mockTokens = await deployMockTokens(["Foreign20", "Foreign20", "Foreign20", "Foreign20", "Foreign20"]);
+
+        // top up assistants account
+        for (const mockToken of mockTokens) {
+          await mockToken.mint(assistant.address, "1000000");
+          await mockToken.connect(assistant).approve(protocolDiamondAddress, "1000000");
+          await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, depositAmount);
+        }
+
+        // Deposit token - seller
+        await fundsHandler
+          .connect(assistant)
+          .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount, { value: depositAmount });
+      });
+
+      it("Returns list of tokens", async function () {
+        const limit = 3;
+        const offset = 1;
+        // Read on chain state
+        console.log(await fundsHandler.estimateGas.getTokenListPaginated(seller.id, limit, offset));
+
+        const returnedTokenList = await fundsHandler.getTokenListPaginated(seller.id, limit, offset);
+        const expectedAvailableFunds = mockTokens.slice(offset, offset + limit).map((token) => token.address);
+        expect(returnedTokenList).to.eql(expectedAvailableFunds);
+      });
+
+      it("Offset is more than number of tokens", async function () {
+        const limit = 2;
+        const offset = 8;
+        // Read on chain state
+        const returnedTokenList = await fundsHandler.getTokenListPaginated(seller.id, limit, offset);
+        const expectedAvailableFunds = [];
+        expect(returnedTokenList).to.eql(expectedAvailableFunds);
+      });
+
+      it("Limit + offset is more than number of tokens", async function () {
+        const limit = 7;
+        const offset = 2;
+        // Read on chain state
+        const returnedTokenList = await fundsHandler.getTokenListPaginated(seller.id, limit, offset);
+        const expectedAvailableFunds = [
+          ...mockTokens.slice(offset).map((token) => token.address),
+          ethers.constants.AddressZero,
+        ];
+        expect(returnedTokenList).to.eql(expectedAvailableFunds);
       });
     });
   });

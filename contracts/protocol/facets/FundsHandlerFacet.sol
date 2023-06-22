@@ -151,9 +151,43 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         withdrawFundsInternal(protocolAddresses().treasury, 0, _tokenList, _tokenAmounts);
     }
 
+    /**
+     * @notice Returns list of addresses for which the entity has funds available.
+     * If the list is too long, it can be retrieved in chunks by using `getTokenListPaginated` and specifying _limit and _offset.
+     *
+     * @param _entityId - id of entity for which availability of funds should be checked
+     * @return tokenList - list of token addresses
+     */
     function getTokenList(uint256 _entityId) external view override returns (address[] memory tokenList) {
-        // what is the lareget possible size of the array?
         return protocolLookups().tokenList[_entityId];
+    }
+
+    /**
+     * @notice Returns list of addresses for which the entity has funds available.
+     *
+     * @param _entityId - id of entity for which availability of funds should be checked
+     * @return tokenList - list of token addresses
+     */
+    function getTokenListPaginated(
+        uint256 _entityId,
+        uint256 _limit,
+        uint256 _offset
+    ) external view override returns (address[] memory tokenList) {
+        address[] storage tokens = protocolLookups().tokenList[_entityId];
+
+        if (_offset >= tokens.length) {
+            return new address[](0);
+        } else if (_offset + _limit > tokens.length) {
+            _limit = tokens.length - _offset;
+        }
+
+        tokenList = new address[](_limit);
+
+        for (uint i = 0; i < _limit; i++) {
+            tokenList[i] = tokens[_offset++];
+        }
+
+        return tokenList;
     }
 
     /**
@@ -208,6 +242,8 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             availableFunds[i].tokenName = tokenName;
             availableFunds[i].availableAmount = entityFunds[tokenAddress];
         }
+
+        return availableFunds;
     }
 
     /**
