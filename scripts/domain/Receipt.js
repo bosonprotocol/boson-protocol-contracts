@@ -121,7 +121,6 @@ class Receipt {
       twinReceipts,
     ] = struct;
 
-    console.log(twinReceipts);
     return Receipt.fromObject({
       exchangeId: exchangeId.toString(),
       offerId: offerId.toString(),

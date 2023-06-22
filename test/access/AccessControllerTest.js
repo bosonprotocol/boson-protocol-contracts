@@ -1,5 +1,5 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
+const { getContractFactory, getSigners, keccak256, toUtf8Bytes } = ethers;
 const { expect } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -26,7 +26,7 @@ describe("AccessController", function () {
     // Deploy the contract
     AccessController = await getContractFactory("AccessController");
     accessController = await AccessController.deploy();
-    await accessController.deployed();
+    await accessController.waitForDeployment();
   });
 
   context("📋 Interfaces", async function () {
@@ -44,27 +44,42 @@ describe("AccessController", function () {
   context("📋 Deployer is limited to initial ADMIN role", async function () {
     it("Deployer should have ADMIN role", async function () {
       // Check role
-      expect(await accessController.hasRole(Role.ADMIN, await deployer.getAddress()), "Deployer doesn't have ADMIN role").is.true;
+      expect(
+        await accessController.hasRole(Role.ADMIN, await deployer.getAddress()),
+        "Deployer doesn't have ADMIN role"
+      ).is.true;
     });
 
     it("Deployer should not have PROTOCOL role", async function () {
       // Check role
-      expect(await accessController.hasRole(Role.PROTOCOL, await deployer.getAddress()), "Deployer has PROTOCOL role").is.false;
+      expect(
+        await accessController.hasRole(Role.PROTOCOL, await deployer.getAddress()),
+        "Deployer has PROTOCOL role"
+      ).is.false;
     });
 
     it("Deployer should not have UPGRADER role", async function () {
       // Check role
-      expect(await accessController.hasRole(Role.UPGRADER, await deployer.getAddress()), "Deployer has UPGRADER role").is.false;
+      expect(
+        await accessController.hasRole(Role.UPGRADER, await deployer.getAddress()),
+        "Deployer has UPGRADER role"
+      ).is.false;
     });
 
     it("Deployer should not have PAUSER role", async function () {
       // Check role
-      expect(await accessController.hasRole(Role.PAUSER, await deployer.getAddress()), "Deployer has PAUSER role").is.false;
+      expect(
+        await accessController.hasRole(Role.PAUSER, await deployer.getAddress()),
+        "Deployer has PAUSER role"
+      ).is.false;
     });
 
     it("Deployer should not have CLIENT role", async function () {
       // Check role
-      expect(await accessController.hasRole(Role.CLIENT, await deployer.getAddress()), "Deployer has CLIENT role").is.false;
+      expect(
+        await accessController.hasRole(Role.CLIENT, await deployer.getAddress()),
+        "Deployer has CLIENT role"
+      ).is.false;
     });
 
     it("Deployer should not have FEE_COLLECTOR role", async function () {
@@ -187,7 +202,10 @@ describe("AccessController", function () {
         .withArgs(Role.PAUSER, await pauser.getAddress(), await admin.getAddress());
 
       // Test
-      expect(await accessController.hasRole(Role.PAUSER, await pauser.getAddress()), "ADMIN role can't grant PAUSER role").is.true;
+      expect(
+        await accessController.hasRole(Role.PAUSER, await pauser.getAddress()),
+        "ADMIN role can't grant PAUSER role"
+      ).is.true;
     });
 
     it("ADMIN role should be able to grant CLIENT role", async function () {
@@ -197,7 +215,10 @@ describe("AccessController", function () {
         .withArgs(Role.CLIENT, await client.getAddress(), await admin.getAddress());
 
       // Test
-      expect(await accessController.hasRole(Role.CLIENT, await client.getAddress()), "ADMIN role can't grant CLIENT role").is.true;
+      expect(
+        await accessController.hasRole(Role.CLIENT, await client.getAddress()),
+        "ADMIN role can't grant CLIENT role"
+      ).is.true;
     });
 
     it("ADMIN role should be able to grant FEE_COLLECTOR role", async function () {
@@ -393,7 +414,9 @@ describe("AccessController", function () {
 
     it("FEE_COLLECTOR role should be able to renounce FEE_COLLECTOR role", async function () {
       // Renounce Role, expecting the event
-      await expect(accessController.connect(feeCollector).renounceRole(Role.FEE_COLLECTOR, await feeCollector.getAddress()))
+      await expect(
+        accessController.connect(feeCollector).renounceRole(Role.FEE_COLLECTOR, await feeCollector.getAddress())
+      )
         .to.emit(accessController, "RoleRevoked")
         .withArgs(Role.FEE_COLLECTOR, await feeCollector.getAddress(), await feeCollector.getAddress());
 
@@ -446,15 +469,15 @@ describe("AccessController", function () {
   context("💔 Revert Reasons", async function () {
     it("Caller is different from account to be renounced", async function () {
       // Renounce Role, expecting revert
-      await expect(accessController.connect(admin).renounceRole(Role.ADMIN, await deployer.getAddress())).to.be.revertedWith(
-        RevertReasons.CAN_ONLY_REVOKE_SELF
-      );
+      await expect(
+        accessController.connect(admin).renounceRole(Role.ADMIN, await deployer.getAddress())
+      ).to.be.revertedWith(RevertReasons.CAN_ONLY_REVOKE_SELF);
     });
 
     it("Should revert if caller tries to grantRole but doesn't have ADMIN role", async function () {
       // Grant Role, expecting revert
       await expect(accessController.connect(rando).grantRole(Role.ADMIN, await rando.getAddress())).to.be.revertedWith(
-        `AccessControl: account ${await rando.getAddress().toLowerCase()} is missing role ${Role.ADMIN}`
+        `AccessControl: account ${(await rando.getAddress()).toLowerCase()} is missing role ${Role.ADMIN}`
       );
     });
 
@@ -463,8 +486,10 @@ describe("AccessController", function () {
       await accessController.connect(deployer).grantRole(Role.PAUSER, await pauser.getAddress());
 
       // Revoke Role, expecting revert
-      await expect(accessController.connect(rando).revokeRole(Role.PAUSER, await pauser.getAddress())).to.be.revertedWith(
-        `AccessControl: account ${await rando.getAddress().toLowerCase()} is missing role ${Role.ADMIN}`
+      await expect(
+        accessController.connect(rando).revokeRole(Role.PAUSER, await pauser.getAddress())
+      ).to.be.revertedWith(
+        `AccessControl: account ${(await rando.getAddress()).toLowerCase()} is missing role ${Role.ADMIN}`
       );
     });
   });

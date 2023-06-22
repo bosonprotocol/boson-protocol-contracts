@@ -186,7 +186,7 @@ async function getInitializeCalldata(
   version,
   isUpgrade,
   initializationData,
-  initializationFacet,
+  initializationFacet = "0x",
   interfacesToRemove = [],
   interfacesToAdd = []
 ) {

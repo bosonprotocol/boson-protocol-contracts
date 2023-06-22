@@ -261,7 +261,6 @@ describe("IBosonDisputeHandler", function () {
           block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp;
           timeout = disputedDate + resolutionPeriod;
-          console.log(timeout);
 
           // expected values
           dispute = new Dispute(exchangeId, DisputeState.Resolving, buyerPercentBasisPoints);
@@ -1194,9 +1193,7 @@ describe("IBosonDisputeHandler", function () {
                 .resolveDispute(exchangeId, buyerPercentBasisPoints, hexZeroPad("0x", 32), s, v)
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
             await expect(
-              disputeHandler
-                .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, MaxUint256, v)
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, MaxUint256, v)
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
           });
 
@@ -2395,7 +2392,6 @@ describe("IBosonDisputeHandler", function () {
             block = await provider.getBlock(blockNumber);
             disputedDate = block.timestamp;
             timeout = disputedDate + resolutionPeriod;
-            console.log("before each itmeout", timeout);
 
             dispute[exchangeId] = new Dispute(exchangeId, DisputeState.Retracted, buyerPercentBasisPoints);
             disputeDates[exchangeId] = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
@@ -2446,13 +2442,9 @@ describe("IBosonDisputeHandler", function () {
 
             // Returned values should match the expected dispute and dispute dates
             for (const [key, value] of Object.entries(dispute[exchangeId])) {
-              console.log(key, value);
-              console.log(returnedDisputeDates[key]);
               expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
             }
             for (const [key, value] of Object.entries(disputeDates[exchangeId])) {
-              console.log(key, value);
-              console.log(returnedDisputeDates[key]);
               expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
             }
 

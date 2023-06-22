@@ -3055,7 +3055,6 @@ describe("IBosonFundsHandler", function () {
 
             // seller: (price + sellerDeposit)*(1-buyerPercentage)
             sellerPayoff = BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit) - buyerPayoff;
-            console.log(sellerPayoff);
 
             // protocol: 0
             protocolPayoff = 0;
@@ -3248,8 +3247,6 @@ describe("IBosonFundsHandler", function () {
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
 
-              console.log(sellersAvailableFunds);
-              console.log(expectedSellerAvailableFunds);
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
