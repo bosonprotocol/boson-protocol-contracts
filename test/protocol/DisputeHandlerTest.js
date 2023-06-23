@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, provider } = ethers;
+const { ZeroAddress, provider, zeroPadBytes, MaxUint256 } = ethers;
 const { expect, assert } = require("chai");
 const Exchange = require("../../scripts/domain/Exchange");
 const Dispute = require("../../scripts/domain/Dispute");
@@ -252,7 +252,7 @@ describe("IBosonDisputeHandler", function () {
             .withArgs(exchangeId, buyerId, seller.id, await buyer.getAddress());
         });
 
-        it.only("should update state", async function () {
+        it("should update state", async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -260,11 +260,11 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp;
-          timeout = disputedDate + resolutionPeriod;
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
 
           // expected values
           dispute = new Dispute(exchangeId, DisputeState.Resolving, buyerPercentBasisPoints);
-          disputeDates = new DisputeDates(disputedDate, "0", "0", timeout);
+          disputeDates = new DisputeDates(disputedDate.toString(), "0", "0", timeout.toString());
 
           // Get the dispute as a struct
           [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchangeId);
@@ -349,7 +349,7 @@ describe("IBosonDisputeHandler", function () {
             const voucherRedeemedDate = voucherStruct.redeemedDate;
 
             // Set time forward past the dispute period
-            await setNextBlockTimestamp((voucherRedeemedDate + disputePeriod + 1).toNumber());
+            await setNextBlockTimestamp(Number(voucherRedeemedDate + BigInt(disputePeriod) + 1n));
 
             // Attempt to raise a dispute, expecting revert
             await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWith(
@@ -368,7 +368,7 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = BigInt(disputedDate) + resolutionPeriod.toString();
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
         });
 
         it("should emit a DisputeRetracted event", async function () {
@@ -510,10 +510,10 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = BigInt(disputedDate) + resolutionPeriod.toString();
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
 
           // extend timeout for a month
-          newDisputeTimeout = BigInt(timeout) + oneMonth.toString();
+          newDisputeTimeout = BigInt(timeout) + oneMonth;
         });
 
         it("should emit a DisputeTimeoutExtended event", async function () {
@@ -560,7 +560,7 @@ describe("IBosonDisputeHandler", function () {
           await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
           // extend for another week
-          newDisputeTimeout = BigInt(newDisputeTimeout) + oneWeek.toString();
+          newDisputeTimeout = BigInt(newDisputeTimeout) + oneWeek;
 
           // Extend the dispute timeout, testing for the event
           await expect(disputeHandler.connect(assistant).extendDisputeTimeout(exchangeId, newDisputeTimeout))
@@ -619,7 +619,7 @@ describe("IBosonDisputeHandler", function () {
           });
 
           it("new dispute timeout is before the current dispute timeout", async function () {
-            newDisputeTimeout = BigInt(timeout) - oneWeek.toString();
+            newDisputeTimeout = BigInt(timeout) - oneWeek;
 
             // Attempt to extend the dispute timeout, expecting revert
             await expect(
@@ -648,7 +648,7 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = BigInt(disputedDate) + resolutionPeriod.toString();
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
         });
 
         it("should emit a DisputeExpired event", async function () {
@@ -787,7 +787,7 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = BigInt(disputedDate) + resolutionPeriod.toString();
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
 
           buyerPercentBasisPoints = "1234";
 
@@ -900,7 +900,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
             // Set time forward before the dispute original expiration date
-            await setNextBlockTimestamp(BigInt(disputedDate) + resolutionPeriod / (2).toNumber());
+            await setNextBlockTimestamp(Number(BigInt(disputedDate) + BigInt(resolutionPeriod) / 2n));
 
             // escalate dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
@@ -1017,7 +1017,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
             // Set time forward before the dispute original expiration date
-            await setNextBlockTimestamp(BigInt(disputedDate) + resolutionPeriod / (2).toNumber());
+            await setNextBlockTimestamp(Number(BigInt(disputedDate) + BigInt(resolutionPeriod) / 2n));
 
             // escalate dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
@@ -1185,15 +1185,17 @@ describe("IBosonDisputeHandler", function () {
             await expect(
               disputeHandler
                 .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, hexZeroPad("0x", 32), v)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, zeroPadBytes("0x", 32), v)
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
             await expect(
               disputeHandler
                 .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, hexZeroPad("0x", 32), s, v)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, zeroPadBytes("0x", 32), s, v)
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
             await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, MaxUint256, v)
+              disputeHandler
+                .connect(assistant)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, "0x" + MaxUint256.toString(16), v)
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
           });
 
@@ -1277,7 +1279,7 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           escalatedDate = block.timestamp.toString();
-          timeout = BigInt(escalatedDate) + escalationPeriod.toString();
+          timeout = BigInt(escalatedDate) + BigInt(escalationPeriod);
 
           dispute = new Dispute(exchangeId, DisputeState.Escalated, "0");
           disputeDates = new DisputeDates(disputedDate, escalatedDate, "0", timeout);
@@ -1372,7 +1374,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Dispute has expired", async function () {
             // Set time forward past the dispute resolution period
-            await setNextBlockTimestamp(Number(timeout) + oneWeek);
+            await setNextBlockTimestamp(Number(timeout + oneWeek));
 
             // Attempt to escalate the dispute, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId), {
@@ -1530,7 +1532,7 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           escalatedDate = block.timestamp.toString();
-          timeout = BigInt(escalatedDate) + escalationPeriod.toString();
+          timeout = BigInt(escalatedDate) + BigInt(escalationPeriod);
 
           // buyer percent used in tests
           buyerPercentBasisPoints = "4321";
@@ -1674,7 +1676,7 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           escalatedDate = block.timestamp.toString();
-          timeout = BigInt(escalatedDate) + escalationPeriod.toString();
+          timeout = BigInt(escalatedDate) + BigInt(escalationPeriod);
         });
 
         it("should emit a EscalatedDisputeExpired event", async function () {
@@ -1823,7 +1825,7 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           escalatedDate = block.timestamp.toString();
-          timeout = BigInt(escalatedDate) + escalationPeriod.toString();
+          timeout = BigInt(escalatedDate) + BigInt(escalationPeriod);
         });
 
         it("should emit a EscalatedDisputeRefused event", async function () {
@@ -1965,7 +1967,7 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = BigInt(disputedDate) + resolutionPeriod.toString();
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
 
           // Expected value for dispute
           dispute = new Dispute(exchangeId, DisputeState.Resolving, buyerPercentBasisPoints);
@@ -2204,7 +2206,7 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = BigInt(disputedDate) + resolutionPeriod.toString();
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
         });
 
         it("should return true for exists if exchange id is valid", async function () {
@@ -2391,7 +2393,7 @@ describe("IBosonDisputeHandler", function () {
             blockNumber = tx.blockNumber;
             block = await provider.getBlock(blockNumber);
             disputedDate = block.timestamp;
-            timeout = disputedDate + resolutionPeriod;
+            timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
 
             dispute[exchangeId] = new Dispute(exchangeId, DisputeState.Retracted, buyerPercentBasisPoints);
             disputeDates[exchangeId] = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
@@ -2417,9 +2419,9 @@ describe("IBosonDisputeHandler", function () {
             .withArgs("4", await rando.getAddress());
         });
 
-        it.only("should update state", async function () {
+        it("should update state", async function () {
           // Set time forward past the dispute resolution period
-          await setNextBlockTimestamp(timeout + oneWeek);
+          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
           // Expire the dispute
           tx = await disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire);
