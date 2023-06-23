@@ -12,7 +12,6 @@ const { getFacetAddCut, getFacetReplaceCut } = require("../../scripts/util/diamo
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { getFacetsWithArgs } = require("../util/utils.js");
 const { getV2_2_0DeployConfig } = require("../upgrade/00_config.js");
-const { ZeroAddress } = require("ethers");
 
 describe("ProtocolInitializationHandler", async function () {
   // Common vars

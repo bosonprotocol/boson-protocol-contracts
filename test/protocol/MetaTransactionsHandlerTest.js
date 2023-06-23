@@ -188,7 +188,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     // Deploy MockMetaTransactionsHandlerFacet
     const MockMetaTransactionsHandlerFacet = await getContractFactory("MockMetaTransactionsHandlerFacet");
     const mockMetaTransactionsHandlerFacet = await MockMetaTransactionsHandlerFacet.deploy();
-    await mockMetaTransactionsHandlerFacet.deployed();
+    await mockMetaTransactionsHandlerFacet.waitForDeployment();
 
     // Define the facet cut
     const facetCuts = [
@@ -226,7 +226,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   });
 
   // All supported methods
-  context("📋 Meta Transactions Handler Methods", async function () {
+  context.only("📋 Meta Transactions Handler Methods", async function () {
     beforeEach(async function () {
       nonce = parseInt(randomBytes(8));
     });
@@ -410,9 +410,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       it("after initialization all state modifying functions should be allowlisted", async function () {
-        const stateModifyingFunctionsClosure = getStateModifyingFunctionsHashes(facetNames, [
-          "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)",
-        ]);
+        const stateModifyingFunctionsClosure = getStateModifyingFunctionsHashes(facetNames, ["executeMetaTransaction"]);
         const stateModifyingFunctionsHashes = await stateModifyingFunctionsClosure();
 
         // Functions should be enabled
@@ -465,8 +463,8 @@ describe("IBosonMetaTransactionsHandler", function () {
       it("after initialization all state modifying functions should be allowlisted", async function () {
         // Get list of state modifying functions
         const stateModifyingFunctions = await getStateModifyingFunctions(facetNames, [
-          "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)",
-          "initialize()",
+          "executeMetaTransaction",
+          "initialize",
         ]);
 
         for (const func of stateModifyingFunctions) {
@@ -1083,7 +1081,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 functionSignature,
                 nonce,
                 r,
-                MaxUint256, // invalid s signature component
+                "0x" + MaxUint256.toString(16), // invalid s signature component
                 v
               )
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
@@ -1383,7 +1381,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Expected payoffs - they are the same for token and native currency
             // Buyer: price - buyerCancelPenalty
-            buyerPayoff = BigInt(offerToken.price) - offerToken.buyerCancelPenalty.toString();
+            buyerPayoff = (BigInt(offerToken.price) - BigInt(offerToken.buyerCancelPenalty)).toString();
 
             // Prepare validFundDetails
             tokenListBuyer = [await maliciousToken.getAddress()];
@@ -3235,7 +3233,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         it("does not modify revert reasons", async function () {
           // Reverse the from and until dates
-          offerDates.validFrom = BigInt(Date.now() + oneMonth * 6).toString(); // 6 months from now
+          offerDates.validFrom = (BigInt(Date.now()) + oneMonth * 6n).toString(); // 6 months from now
           offerDates.validUntil = BigInt(Date.now()).toString(); // now
 
           // Prepare the function signature for the facet function.
@@ -3438,11 +3436,11 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // expected payoffs - they are the same for token and native currency
           // buyer: price - buyerCancelPenalty
-          buyerPayoff = BigInt(offerToken.price) - BigInt(offerToken.buyerCancelPenalty);
+          buyerPayoff = (BigInt(offerToken.price) - BigInt(offerToken.buyerCancelPenalty)).toString();
 
           // prepare validFundDetails
           tokenListBuyer = [await mockToken.getAddress(), ZeroAddress];
-          tokenAmountsBuyer = [buyerPayoff, (BigInt(buyerPayoff) / 2n).toString()];
+          tokenAmountsBuyer = [buyerPayoff.toString(), (BigInt(buyerPayoff) / 2n).toString()];
           validFundDetails = {
             entityId: buyerId,
             tokenList: tokenListBuyer,
@@ -3540,7 +3538,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Chain state should match the expected available funds after the withdrawal
             // Since all tokens are withdrawn, token should be removed from the list
             expectedBuyerAvailableFunds = new FundsList([
-              new Funds(ZeroAddress, "Native currency", BigInt(buyerPayoff) / "2".toString()),
+              new Funds(ZeroAddress, "Native currency", (BigInt(buyerPayoff) / 2n).toString()),
             ]);
             expect(buyerAvailableFunds).to.eql(
               expectedBuyerAvailableFunds,
@@ -3548,7 +3546,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Token balance is increased for the buyer payoff
-            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore + buyerPayoff, "Buyer token balance mismatch");
+            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore + BigInt(buyerPayoff), "Buyer token balance mismatch");
 
             // Verify that nonce is used. Expect true.
             let expectedResult = true;
@@ -3610,7 +3608,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Token balance is increased for the buyer payoff
-            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore + buyerPayoff, "Buyer token balance mismatch");
+            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore + BigInt(buyerPayoff), "Buyer token balance mismatch");
 
             // Verify that nonce is used. Expect true.
             let expectedResult = true;

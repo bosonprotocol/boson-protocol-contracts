@@ -147,20 +147,19 @@ async function getStateModifyingFunctions(facetNames, omitFunctions = [], onlyFu
   for (const facetName of facetNames) {
     let FacetContractFactory = await getContractFactory(facetName);
     const functions = FacetContractFactory.interface.fragments;
-    const functionNames = Object.keys(functions);
-    const facetStateModifyingFunctions = functionNames.filter((fn) => {
-      if (functions[fn].stateMutability !== "view" && !omitFunctions.includes(fn)) {
-        if (onlyFunctions.length === 0) {
-          return true;
-        }
-        for (const func of onlyFunctions) {
-          if (fn.includes(func)) {
+    const facetStateModifyingFunctions = functions
+      .filter((fn) => {
+        if (fn.type == "function" && fn.stateMutability !== "view" && !omitFunctions.includes(fn.name)) {
+          if (onlyFunctions.length === 0) {
+            return true;
+          }
+          if (onlyFunctions.includes(fn.name)) {
             return true;
           }
         }
-      }
-      return false;
-    });
+        return false;
+      })
+      .map((fn) => fn.format("sighash"));
 
     stateModifyingFunctions = stateModifyingFunctions.concat(facetStateModifyingFunctions);
   }
@@ -173,7 +172,7 @@ function getStateModifyingFunctionsHashes(facetNames, omitFunctions = [], onlyFu
     //  Allowlist contract methods
     const stateModifyingFunctions = await getStateModifyingFunctions(
       facetNames,
-      [...omitFunctions, "initialize()"],
+      [...omitFunctions, "initialize"],
       onlyFunctions
     );
     return stateModifyingFunctions.map((smf) => keccak256(toUtf8Bytes(smf)));
