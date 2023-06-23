@@ -226,7 +226,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   });
 
   // All supported methods
-  context.only("📋 Meta Transactions Handler Methods", async function () {
+  context("📋 Meta Transactions Handler Methods", async function () {
     beforeEach(async function () {
       nonce = parseInt(randomBytes(8));
     });

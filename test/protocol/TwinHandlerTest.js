@@ -518,7 +518,7 @@ describe("IBosonTwinHandler", function () {
           twin.tokenType = TokenType.NonFungibleToken;
           twin.tokenAddress = await foreign721.getAddress();
           twin.amount = "0";
-          twin.tokenId = MaxUint256 - BigInt(twin.supplyAvailable) + 1n.toString();
+          twin.tokenId = (MaxUint256 - BigInt(twin.supplyAvailable) + 1n).toString();
 
           await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
@@ -533,7 +533,7 @@ describe("IBosonTwinHandler", function () {
           twin.tokenType = TokenType.NonFungibleToken;
           twin.tokenAddress = await foreign721.getAddress();
           twin.amount = "0";
-          twin.tokenId = MaxUint256 + 1n / 2n + 1n.toString();
+          twin.tokenId = ((MaxUint256 + 1n) / 2n + 1n).toString();
 
           await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 

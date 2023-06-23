@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-
+const { getSigners, ZeroAddress, getContractFactory } = ethers;
 const { gasLimit } = require("../../../environments");
 const { deployProtocolClientImpls } = require("../../../scripts/util/deploy-protocol-client-impls.js");
 const { deployProtocolClientBeacons } = require("../../../scripts/util/deploy-protocol-client-beacons.js");
@@ -118,10 +118,7 @@ describe("IClientExternalAddresses", function () {
       context("💔 Revert Reasons", async function () {
         it("_protocolAddress address is the zero address", async function () {
           // Deploy Protocol Client implementation contracts
-          const protocolClientImpls = await deployProtocolClientImpls(
-            [ZeroAddress],
-            maxPriorityFeePerGas
-          );
+          const protocolClientImpls = await deployProtocolClientImpls([ZeroAddress], maxPriorityFeePerGas);
 
           // Deploy Protocol Client beacon contracts
           const protocolClientArgs = [ZeroAddress];
@@ -136,9 +133,9 @@ describe("IClientExternalAddresses", function () {
 
           // Deploy the ClientBeacon for BosonVoucher
           const ClientBeacon = await getContractFactory("BosonClientBeacon");
-          await expect(
-            ClientBeacon.deploy(...protocolClientArgs, ZeroAddress, { gasLimit })
-          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          await expect(ClientBeacon.deploy(...protocolClientArgs, ZeroAddress, { gasLimit })).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
         });
       });
     });

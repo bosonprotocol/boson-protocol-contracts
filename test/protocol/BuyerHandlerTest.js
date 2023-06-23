@@ -316,7 +316,7 @@ describe("BuyerHandler", function () {
         await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NOT_BUYER_WALLET);
       });
 
-      context.only("💔 Revert Reasons", async function () {
+      context("💔 Revert Reasons", async function () {
         beforeEach(async function () {
           // Initial ids for all the things
           id = await accountHandler.connect(rando).getNextAccountId();

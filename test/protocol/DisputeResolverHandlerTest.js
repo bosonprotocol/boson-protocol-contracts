@@ -130,7 +130,7 @@ describe("DisputeResolverHandler", function () {
       seller = mockSeller(
         await assistant.getAddress(),
         await admin.getAddress(),
-        await clerk.getAddress(),
+        clerk.address,
         await treasury.getAddress()
       );
       seller2 = mockSeller(
@@ -161,7 +161,7 @@ describe("DisputeResolverHandler", function () {
       disputeResolver = mockDisputeResolver(
         await assistant.getAddress(),
         await admin.getAddress(),
-        await clerk.getAddress(),
+        clerk.address,
         await treasury.getAddress()
       );
       expect(disputeResolver.isValid()).is.true;
@@ -680,7 +680,7 @@ describe("DisputeResolverHandler", function () {
           Array.isArray(returnedSellerAllowList) &&
           returnedSellerAllowList.reduce(
             (previousAllowedSeller, currentAllowedSeller) =>
-              previousAllowedSeller && typeof BigInt(currentAllowedSeller) === "object",
+              previousAllowedSeller && typeof BigInt(currentAllowedSeller) === "bigint",
             true
           );
         expect(valid).to.be.true;
@@ -755,8 +755,8 @@ describe("DisputeResolverHandler", function () {
       });
 
       it("should emit a DisputeResolverUpdatePending event with correct values if values change", async function () {
-        disputeResolver.escalationResponsePeriod = Number(
-          Number(disputeResolver.escalationResponsePeriod) - oneWeek
+        disputeResolver.escalationResponsePeriod = (
+          BigInt(disputeResolver.escalationResponsePeriod) - oneWeek
         ).toString();
         disputeResolver.assistant = disputeResolverPendingUpdate.assistant = await other1.getAddress();
         disputeResolver.admin = disputeResolverPendingUpdate.admin = await other2.getAddress();
@@ -795,8 +795,8 @@ describe("DisputeResolverHandler", function () {
       });
 
       it("should update state of all fields except Id and active flag and fees", async function () {
-        disputeResolver.escalationResponsePeriod = Number(
-          Number(disputeResolver.escalationResponsePeriod) - oneWeek
+        disputeResolver.escalationResponsePeriod = (
+          BigInt(disputeResolver.escalationResponsePeriod) - oneWeek
         ).toString();
         disputeResolver.assistant = await other1.getAddress();
         disputeResolver.admin = await other2.getAddress();
@@ -849,7 +849,7 @@ describe("DisputeResolverHandler", function () {
         [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(await admin.getAddress());
         expect(exists).to.be.false;
 
-        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(await clerk.getAddress());
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(clerk.address);
         expect(exists).to.be.false;
 
         //Check that new addresses are mapped. We don't map the treasury address.
@@ -961,8 +961,8 @@ describe("DisputeResolverHandler", function () {
         expect(valid).is.true;
 
         //Update first dispute resolver values
-        disputeResolver.escalationResponsePeriod = Number(
-          Number(disputeResolver.escalationResponsePeriod) - oneWeek
+        disputeResolver.escalationResponsePeriod = (
+          BigInt(disputeResolver.escalationResponsePeriod) - oneWeek
         ).toString();
         disputeResolver.assistant = await rando.getAddress();
         disputeResolver.admin = await rando.getAddress();
@@ -1356,7 +1356,7 @@ describe("DisputeResolverHandler", function () {
           await configHandler.setMaxEscalationResponsePeriod(oneWeek);
 
           // New escalation period has to be different from the current escalation period
-          disputeResolver.escalationResponsePeriod = oneWeek + 1;
+          disputeResolver.escalationResponsePeriod = oneWeek + 1n;
 
           // Attempt to update a DisputeResolver, expecting revert
           await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(

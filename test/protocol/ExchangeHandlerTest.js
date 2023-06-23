@@ -1412,7 +1412,7 @@ describe("IBosonExchangeHandler", function () {
         block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = BigInt(block.timestamp + disputePeriod + 1).toString();
+        newTime = Number(BigInt(block.timestamp) + BigInt(disputePeriod) + 1n);
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1433,7 +1433,7 @@ describe("IBosonExchangeHandler", function () {
         block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = BigInt(block.timestamp + disputePeriod + 1).toString();
+        newTime = Number(BigInt(block.timestamp) + BigInt(disputePeriod) + 1n);
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1454,7 +1454,7 @@ describe("IBosonExchangeHandler", function () {
         block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = BigInt(block.timestamp + disputePeriod + 1).toString();
+        newTime = Number(BigInt(block.timestamp) + BigInt(disputePeriod) + 1n);
         await setNextBlockTimestamp(newTime);
 
         // Create a rando buyer account
@@ -1613,7 +1613,7 @@ describe("IBosonExchangeHandler", function () {
         block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = BigInt(block.timestamp + disputePeriod + 1).toString();
+        newTime = Number(BigInt(block.timestamp) + BigInt(disputePeriod) + 1n);
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -1645,7 +1645,7 @@ describe("IBosonExchangeHandler", function () {
         block = await provider.getBlock(blockNumber);
 
         // Set time forward to run out the dispute period
-        newTime = BigInt(block.timestamp + disputePeriod + 1).toString();
+        newTime = Number(BigInt(block.timestamp) + BigInt(disputePeriod) + 1n);
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
