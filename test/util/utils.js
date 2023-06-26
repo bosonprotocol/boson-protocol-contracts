@@ -190,7 +190,7 @@ async function prepareDataSignatureParameters(
     domainData.salt = zeroPadValue("0x" + 31337n.toString(16), 32);
   } else {
     const { chainId } = await provider.getNetwork();
-    domainData.chainId = chainId;
+    domainData.chainId = chainId.toString();
   }
 
   // Prepare the types
@@ -425,7 +425,7 @@ async function revertToSnapshot(snapshotId) {
 }
 
 function deriveTokenId(offerId, exchangeId) {
-  return BigInt(offerId) * BigInt(2) ** BigInt(128) + BigInt(exchangeId);
+  return BigInt(offerId) * 2n ** 128n + BigInt(exchangeId);
 }
 
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
