@@ -5,6 +5,8 @@ const { getSnapshot, revertToSnapshot } = require("../util/utils");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
 const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolverUpdateFields");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
+const Role = require("../../scripts/domain/Role");
 
 // const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const { assert, expect } = require("chai");
@@ -21,8 +23,9 @@ const { migrate } = require(`../../scripts/migrations/migrate_${version}.js`);
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
-  let deployer, rando, clerk;
-  let accountHandler, fundsHandler;
+  let deployer, rando, clerk, pauser;
+  let accessController;
+  let accountHandler, fundsHandler, pauseHandler;
   let snapshot;
   let protocolDiamondAddress, mockContracts;
   let contractsAfter;
@@ -35,7 +38,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   before(async function () {
     try {
       // Make accounts available
-      [deployer, rando, clerk] = await ethers.getSigners();
+      [deployer, rando, clerk, pauser] = await ethers.getSigners();
 
       let contractsBefore;
 
@@ -43,6 +46,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         protocolDiamondAddress,
         protocolContracts: contractsBefore,
         mockContracts,
+        accessController,
       } = await deploySuite(deployer, version));
 
       // Populate protocol with data
@@ -109,6 +113,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Cast to updated interface
       let newHandlers = {
         accountHandler: "IBosonAccountHandler",
+        pauseHandler: "IBosonPauseHandler",
       };
 
       contractsAfter = { ...contractsBefore };
@@ -376,6 +381,23 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           await expect(
             accountHandler.connect(clerk).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.emit(accountHandler, "DisputeResolverCreated");
+        });
+      });
+
+      context("PauseHandler", async function () {
+        it("should emit a ProtocolUnpaused event", async function () {
+          // Grant PAUSER role to pauser account
+          await accessController.grantRole(Role.PAUSER, pauser.address);
+
+          const regions = [PausableRegion.Sellers, PausableRegion.DisputeResolvers];
+
+          // Pause protocol
+          await pauseHandler.connect(pauser).pause(regions);
+
+          // Unpause the protocol, testing for the event
+          await expect(pauseHandler.connect(pauser).unpause(regions))
+            .to.emit(pauseHandler, "ProtocolUnpaused")
+            .withArgs(regions, pauser.address);
         });
       });
     });

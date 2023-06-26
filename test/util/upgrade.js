@@ -185,6 +185,7 @@ async function deploySuite(deployer, newVersion) {
       mockTwin20,
       mockTwin1155,
     },
+    accessController,
   };
 }
 
