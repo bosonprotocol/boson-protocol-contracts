@@ -211,13 +211,6 @@ describe("IBosonVoucher", function () {
       snapshotId = await getSnapshot();
     });
 
-    after;
-
-    ///    afterEach(async function () {
-    ///      // Reset
-    ///      accountId.next(true);
-    ///    });
-
     context("issueVoucher()", function () {
       let buyerStruct;
       let buyerWallet;
@@ -226,11 +219,6 @@ describe("IBosonVoucher", function () {
         buyerStruct = mockBuyer(await buyer.getAddress()).toStruct();
         buyerWallet = buyerStruct[1];
       });
-
-      //  after(async function () {
-      //    // Reset the accountId iterator
-      //    accountId.next(true);
-      //  });
 
       it("should issue a voucher with success", async function () {
         const balanceBefore = await bosonVoucher.balanceOf(await buyer.getAddress());
@@ -1070,31 +1058,34 @@ describe("IBosonVoucher", function () {
           }
         });
 
-        it.skip("Multiple ranges", async function () {
+        it("Multiple ranges", async function () {
           // Add five more ranges
           // This tests more getPreMintStatus than ownerOf
           // Might even be put into integration tests
-          // Adjust config value
-          await configHandler.connect(deployer).setMaxPremintedVouchers("10000");
           let previousOfferId = Number(offerId);
           let previousStartId = Number(start);
           let ranges = [new Range(Number(start), length, amount, "0")];
           length = Number(length);
 
-          for (let i = 0; i < 5; i++) {
-            offerId = previousOfferId + (i + 1) * 6;
+          offerId = ++previousOfferId;
+
+          while (offerId <= 6) {
             start = previousStartId + length + 100;
+
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
 
             // reserve length
             await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress());
 
             // amount to premint
-            amount = length - i * 30;
+            amount = length - (offerId - 2) * 30;
             await bosonVoucher.connect(assistant).preMint(offerId, amount);
             ranges.push(new Range(start, length, amount, "0"));
 
             previousStartId = start;
-            previousOfferId = offerId;
+            offerId++;
           }
 
           let endTokenId = previousStartId + length; // last range end
@@ -1102,8 +1093,8 @@ describe("IBosonVoucher", function () {
           let currentRange = ranges[rangeIndex];
           let currentRangeMintEndId = currentRange.start + currentRange.minted - 1;
           let currentRangeEndId = currentRange.start + length - 1;
+          offerId = 1;
 
-          offerId = "5";
           for (let i = 0; i < endTokenId; i++) {
             const tokenId = deriveTokenId(offerId, i);
             if (i < currentRange.start) {
@@ -1127,7 +1118,7 @@ describe("IBosonVoucher", function () {
                 currentRange = ranges[++rangeIndex];
                 currentRangeMintEndId = currentRange.start + currentRange.minted - 1;
                 currentRangeEndId = currentRange.start + currentRange.length - 1;
-                offerId = Number(offerId) + rangeIndex * 6;
+                offerId++;
               }
               // Technically, next range could be consecutive and next call should return seller's address
               // But range construction in this test ensures gaps between ranges
@@ -1138,12 +1129,14 @@ describe("IBosonVoucher", function () {
           }
         });
 
-        it.skip("Consecutive ranges", async function () {
+        it("Consecutive ranges", async function () {
           // Make two consecutive ranges
           let nextOfferId = Number(offerId) + 1;
           let nextStartId = Number(start) + Number(length);
           let nextLength = "10";
           let nextAmount = "5";
+
+          await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
 
           // reserve length
           await bosonVoucher
@@ -1155,33 +1148,39 @@ describe("IBosonVoucher", function () {
 
           // First range - preminted tokens
           let startTokenId = deriveTokenId(offerId, start);
-          let endTokenId = startTokenId + amount;
-          for (let i = startTokenId; i.lt(endTokenId); i = i + 1) {
+          let endTokenId = startTokenId + BigInt(amount);
+
+          for (let i = startTokenId; i < endTokenId; i = i + 1n) {
             let tokenOwner = await bosonVoucher.ownerOf(i);
             assert.equal(tokenOwner, await assistant.getAddress(), `Token owner mismatch ${i.toString()}`);
           }
 
           // First range - not preminted tokens
           startTokenId = endTokenId;
+
           let endExchangeId = Number(start) + Number(length);
           endTokenId = deriveTokenId(offerId, endExchangeId);
-          for (let i = startTokenId; i.lt(endTokenId); i = i + 1) {
+
+          for (let i = startTokenId; i < endTokenId; i = i + 1n) {
             await expect(bosonVoucher.connect(rando).ownerOf(i)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
           }
 
           // Second range - preminted tokens
           startTokenId = deriveTokenId(nextOfferId, endExchangeId);
-          endTokenId = startTokenId + nextAmount;
-          for (let i = startTokenId; i.lt(endTokenId); i = i + 1) {
+
+          endTokenId = startTokenId + BigInt(nextAmount);
+          for (let i = startTokenId; i < endTokenId; i = i + 1n) {
             let tokenOwner = await bosonVoucher.ownerOf(i);
             assert.equal(tokenOwner, await assistant.getAddress(), `Token owner mismatch ${i.toString()}`);
           }
 
           // Second range - not preminted tokens
           startTokenId = endTokenId;
+
           endExchangeId += Number(nextLength);
           endTokenId = deriveTokenId(nextOfferId, endExchangeId);
-          for (let i = startTokenId; i.lt(endTokenId); i = i + 1) {
+
+          for (let i = startTokenId; i < endTokenId; i = i + 1n) {
             await expect(bosonVoucher.connect(rando).ownerOf(i)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
           }
         });
@@ -1610,7 +1609,6 @@ describe("IBosonVoucher", function () {
         await exchangeHandler.connect(buyer).commitToOffer(buyerAddress, offerId, { value: offer.price });
 
         const tokenId = deriveTokenId(offerId, 1);
-        console.log(tokenId);
         const tokenURI = await bosonVoucher.tokenURI(tokenId);
         expect(tokenURI).eq(metadataUri);
       });
@@ -1829,7 +1827,6 @@ describe("IBosonVoucher", function () {
     });
     context("withdrawToProtocol", function () {
       it("Can withdraw native token", async function () {
-        // Sellers available funds should be empty
         const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
         const amount = parseUnits("1", "ether");
@@ -1840,7 +1837,6 @@ describe("IBosonVoucher", function () {
           [amount * -1n, amount]
         );
 
-        console.log(sellersFundsBefore);
         const { availableAmount } = sellersFundsBefore.funds.find((fund) => fund.tokenAddress == ZeroAddress);
 
         // Seller's available balance should increase
@@ -1874,10 +1870,9 @@ describe("IBosonVoucher", function () {
       });
 
       it("Should withdraw all tokens when list length > 1", async function () {
-        // Sellers available funds should be empty
-        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-        let expectedAvailableFunds = new FundsList([]);
-        expect(sellersFundsBefore).to.eql(expectedAvailableFunds);
+        const { funds: sellerFundsBefore } = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+
+        sellerFundsBefore[1] = new Funds(await foreign20.getAddress(), "Foreign20", "0");
 
         const amount = parseUnits("1", "ether");
         await admin.sendTransaction({ to: await bosonVoucher.getAddress(), value: amount });
@@ -1891,6 +1886,14 @@ describe("IBosonVoucher", function () {
           return tx;
         }).to.changeTokenBalances(foreign20, [bosonVoucher, fundsHandler], [amount * -1n, amount]);
         await expect(() => tx).to.changeEtherBalances([bosonVoucher, fundsHandler], [amount * -1n, amount]);
+
+        const { funds: sellerFundsAfter } = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+
+        expect(
+          sellerFundsBefore.map((f) => {
+            return { ...f, availableAmount: (BigInt(f.availableAmount) + amount).toString() };
+          })
+        ).to.eql(sellerFundsAfter);
       });
     });
 
@@ -2161,7 +2164,7 @@ describe("IBosonVoucher", function () {
   context("onERC721Received", function () {
     it("Should return correct selector value", async function () {
       const expectedSelector = bosonVoucher.interface.fragments.find((f) => f.name == "onERC721Received").selector;
-      const returnedSelector = await bosonVoucher.callStatic.onERC721Received(
+      const returnedSelector = await bosonVoucher.onERC721Received.staticCall(
         await assistant.getAddress(),
         await rando.getAddress(),
         "1",
