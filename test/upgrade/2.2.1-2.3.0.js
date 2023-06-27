@@ -1,6 +1,7 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { getSnapshot, revertToSnapshot } = require("../util/utils");
+const { assert, expect } = require("chai");
+
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
 const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolverUpdateFields");
@@ -12,7 +13,6 @@ const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
-const { assert, expect } = require("chai");
 const {
   mockSeller,
   mockAuthToken,
@@ -21,6 +21,7 @@ const {
   mockOffer,
   mockTwin,
 } = require("../util/mock");
+const { getSnapshot, revertToSnapshot, setNextBlockTimestamp } = require("../util/utils");
 
 const { deploySuite, populateProtocolContract, getProtocolContractState, revertState } = require("../util/upgrade");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -542,7 +543,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             id: sellerId,
             offerIds: [offerId],
           } = sellers[0];
-          const { price } = offers[offerId - 1];
+          const {
+            offer: { price },
+          } = offers[offerId - 1];
 
           const [foreign20gt, foreign20gt_2] = await deployMockTokens(["Foreign20GasTheft", "Foreign20GasTheft"]);
 
@@ -590,6 +593,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
           // It should match ExchangeState.Revoked
           assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+        });
+
+        it("commit exactly at offer expiration timestamp", async function () {
+          const { offers } = preUpgradeEntities;
+          const { offer, offerDates } = offers[0];
+
+          await setNextBlockTimestamp(Number(offerDates.validUntil) + 1);
+
+          // Commit to offer, retrieving the event
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price })
+          ).to.emit(exchangeHandler, "BuyerCommitted");
         });
       });
 
