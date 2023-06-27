@@ -1,5 +1,4 @@
 const hre = require("hardhat");
-// const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const ethers = hre.ethers;
 const { getSnapshot, revertToSnapshot } = require("../util/utils");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -7,15 +6,24 @@ const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
 const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolverUpdateFields");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const Role = require("../../scripts/domain/Role");
-const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
+const Bundle = require("../../scripts/domain/Bundle");
+const ExchangeState = require("../../scripts/domain/ExchangeState");
 
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const { assert, expect } = require("chai");
-const { mockSeller, mockAuthToken, mockVoucherInitValues, mockDisputeResolver, mockOffer } = require("../util/mock");
+const {
+  mockSeller,
+  mockAuthToken,
+  mockVoucherInitValues,
+  mockDisputeResolver,
+  mockOffer,
+  mockTwin,
+} = require("../util/mock");
 
 const { deploySuite, populateProtocolContract, getProtocolContractState, revertState } = require("../util/upgrade");
+const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { getGenericContext } = require("./01_generic");
 const { oneWeek, oneMonth } = require("../util/constants");
 
@@ -27,9 +35,16 @@ const { migrate } = require(`../../scripts/migrations/migrate_${version}.js`);
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
-  let deployer, rando, clerk, pauser, assistant, assistantDR;
+  let deployer, rando, clerk, pauser, assistant, buyer;
   let accessController;
-  let accountHandler, fundsHandler, pauseHandler, configHandler, offerHandler;
+  let accountHandler,
+    fundsHandler,
+    pauseHandler,
+    configHandler,
+    offerHandler,
+    bundleHandler,
+    exchangeHandler,
+    twinHandler;
   let snapshot;
   let protocolDiamondAddress, mockContracts;
   let contractsAfter;
@@ -42,7 +57,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   before(async function () {
     try {
       // Make accounts available
-      [deployer, rando, clerk, pauser, assistant, assistantDR] = await ethers.getSigners();
+      [deployer, rando, clerk, pauser, assistant, buyer] = await ethers.getSigners();
 
       let contractsBefore;
 
@@ -100,9 +115,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         true
       );
 
-      ({ fundsHandler } = contractsBefore);
-
-      // ({ accountContractState } = protocolContractStateBefore);
+      ({ bundleHandler, fundsHandler, exchangeHandler, twinHandler } = contractsBefore);
 
       const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
         ["ConfigHandlerFacet", "PauseHandlerFacet"],
@@ -489,42 +502,17 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       });
 
       context("OfferHandler", async function () {
-        let offer, offerDates, offerDurations, disputeResolver, agentId;
-
-        beforeEach(async function () {
-          // Create a seller
-          const seller = mockSeller(
-            assistant.address,
-            assistant.address,
-            ethers.constants.AddressZero,
-            assistant.address
-          );
-          const voucherInitValues = mockVoucherInitValues();
-          const emptyAuthToken = mockAuthToken();
-          await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
-
-          // Create a valid resolver
-          disputeResolver = mockDisputeResolver(
-            assistantDR.address,
-            assistantDR.address,
-            ethers.constants.AddressZero,
-            assistantDR.address,
-            true
-          );
-          const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
-          await accountHandler.connect(assistantDR).createDisputeResolver(disputeResolver, disputeResolverFees, []);
-
-          // Mock offer
-          ({ offer, offerDates, offerDurations } = await mockOffer());
-        });
-
         it("Cannot make an offer with too short resolution period", async function () {
+          const { sellers, DRs } = preUpgradeEntities;
+          const { wallet } = sellers[0];
+
           // Set dispute duration period to 0
+          const { offer, offerDates, offerDurations } = await mockOffer();
           offerDurations.resolutionPeriod = ethers.BigNumber.from(oneWeek).sub(10).toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(
-            offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+            offerHandler.connect(wallet).createOffer(offer, offerDates, offerDurations, DRs[0].id, "0")
           ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
@@ -543,6 +531,65 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           expect(protocolContractStateAfter.configContractState).to.deep.equal(
             protocolContractStateBefore.configContractState
           );
+        });
+      });
+
+      context("ExchangeHandler", async function () {
+        it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+          const { sellers, offers } = preUpgradeEntities;
+          const {
+            wallet,
+            id: sellerId,
+            offerIds: [offerId],
+          } = sellers[0];
+          const { price } = offers[offerId - 1];
+
+          const [foreign20gt, foreign20gt_2] = await deployMockTokens(["Foreign20GasTheft", "Foreign20GasTheft"]);
+
+          // Approve the protocol diamond to transfer seller's tokens
+          await foreign20gt.connect(wallet).approve(protocolDiamondAddress, "100");
+          await foreign20gt_2.connect(wallet).approve(protocolDiamondAddress, "100");
+
+          // Create two ERC20 twins that will consume all available gas
+          const twin20 = mockTwin(foreign20gt.address);
+          twin20.amount = "1";
+          twin20.supplyAvailable = "100";
+          twin20.id = "1";
+
+          await twinHandler.connect(wallet).createTwin(twin20.toStruct());
+
+          const twin20_2 = twin20.clone();
+          twin20_2.id = "5";
+          twin20_2.tokenAddress = foreign20gt_2.address;
+          await twinHandler.connect(wallet).createTwin(twin20_2.toStruct());
+
+          // Create a new bundle
+          const bundle = new Bundle("2", sellerId, [offerId], [twin20.id, twin20_2.id]);
+          await bundleHandler.connect(wallet).createBundle(bundle.toStruct());
+
+          // Commit to offer
+          const exchangeId = await exchangeHandler.getNextExchangeId();
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Redeem the voucher
+          const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId, { gasLimit: 1000000 }); // limit gas to speed up test
+
+          // Voucher should be revoked and both transfers should fail
+          await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchangeId, buyer.address);
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "TwinTransferFailed")
+            .withArgs(twin20.id, twin20.tokenAddress, exchangeId, twin20.tokenId, twin20.amount, buyer.address);
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "TwinTransferFailed")
+            .withArgs(twin20_2.id, twin20_2.tokenAddress, exchangeId, twin20_2.tokenId, twin20_2.amount, buyer.address);
+
+          // Get the exchange state
+          const [, response] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
+
+          // It should match ExchangeState.Revoked
+          assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
         });
       });
 
