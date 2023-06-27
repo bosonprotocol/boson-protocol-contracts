@@ -713,7 +713,7 @@ async function getProtocolContractState(
     getProtocolLookupsPrivateContractState(
       protocolDiamondAddress,
       { mockToken, mockTwinTokens },
-      { sellers, DRs, agents, buyers, offers, groups }
+      { sellers, DRs, agents, buyers, offers, groups, twins }
     ),
   ]);
 
@@ -1188,7 +1188,7 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
 async function getProtocolLookupsPrivateContractState(
   protocolDiamondAddress,
   { mockToken, mockTwinTokens },
-  { sellers, DRs, agents, buyers, offers, groups }
+  { sellers, DRs, agents, buyers, offers, groups, twins }
 ) {
   /*
         ProtocolLookups storage layout
@@ -1226,6 +1226,8 @@ async function getProtocolLookupsPrivateContractState(
         #29 [ ] // placeholder for pendingAddressUpdatesBySeller
         #30 [ ] // placeholder for pendingAuthTokenUpdatesBySeller
         #31 [ ] // placeholder for pendingAddressUpdatesByDisputeResolver
+        #32 [ ] // placeholder for additionalCollections // ToDo
+        #33 [ ] // placeholder for rangeIdByTwin
         */
 
   // starting slot
@@ -1489,6 +1491,18 @@ async function getProtocolLookupsPrivateContractState(
     pendingAddressUpdatesByDisputeResolver.push(structFields);
   }
 
+  // offerIdIndexByGroup
+  let rangeIdByTwin = [];
+  for (const twin of twins) {
+    const { id } = twin;
+    rangeIdByTwin.push(
+      await getStorageAt(
+        protocolDiamondAddress,
+        getMappingStoragePosition(protocolLookupsSlotNumber.add("33"), id, paddingType.START)
+      )
+    );
+  }
+
   return {
     exchangeIdsByOfferState,
     groupIdByOfferState,
@@ -1506,6 +1520,7 @@ async function getProtocolLookupsPrivateContractState(
     pendingAddressUpdatesBySeller,
     pendingAuthTokenUpdatesBySeller,
     pendingAddressUpdatesByDisputeResolver,
+    rangeIdByTwin,
   };
 }
 
