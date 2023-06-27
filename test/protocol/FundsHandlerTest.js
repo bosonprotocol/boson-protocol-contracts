@@ -2742,7 +2742,7 @@ describe("IBosonFundsHandler", function () {
             expectedSellerAvailableFunds.funds[0] = new Funds(
               await mockToken.getAddress(),
               "Foreign20",
-              BigInt(sellerDeposit) + sellerPayoff.toString()
+              (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
             );
             expectedProtocolAvailableFunds.funds[0] = new Funds(
               await mockToken.getAddress(),
@@ -2766,12 +2766,16 @@ describe("IBosonFundsHandler", function () {
               buyerPayoff = 0;
 
               // agentPayoff: agentFee
-              agentFee = (BigInt(agentOffer.price) * agentFeePercentage) / "10000".toString();
+              agentFee = ((BigInt(agentOffer.price) * BigInt(agentFeePercentage)) / 10000n).toString();
               agentPayoff = agentFee;
 
               // seller: sellerDeposit + price - protocolFee - agentFee
-              sellerPayoff =
-                BigInt(agentOffer.sellerDeposit) + agentOffer.price - agentOfferProtocolFee - agentFee.toString();
+              sellerPayoff = (
+                BigInt(agentOffer.sellerDeposit) +
+                BigInt(agentOffer.price) -
+                BigInt(agentOfferProtocolFee) -
+                BigInt(agentFee)
+              ).toString();
 
               // protocol: 0
               protocolPayoff = agentOfferProtocolFee;
@@ -2862,7 +2866,11 @@ describe("IBosonFundsHandler", function () {
             buyerPayoff = 0;
 
             // seller: sellerDeposit + price - protocolFee
-            sellerPayoff = BigInt(offerToken.sellerDeposit) + offerToken.price - offerTokenProtocolFee.toString();
+            sellerPayoff = (
+              BigInt(offerToken.sellerDeposit) +
+              BigInt(offerToken.price) -
+              BigInt(offerTokenProtocolFee)
+            ).toString();
 
             // protocol: protocolFee
             protocolPayoff = offerTokenProtocolFee;
@@ -2924,7 +2932,7 @@ describe("IBosonFundsHandler", function () {
             expectedSellerAvailableFunds.funds[0] = new Funds(
               await mockToken.getAddress(),
               "Foreign20",
-              BigInt(sellerDeposit) + sellerPayoff.toString()
+              (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
             );
             expectedProtocolAvailableFunds.funds[0] = new Funds(
               await mockToken.getAddress(),
@@ -2956,12 +2964,16 @@ describe("IBosonFundsHandler", function () {
               buyerPayoff = 0;
 
               // agentPayoff: agentFee
-              agentFee = (BigInt(agentOffer.price) * agentFeePercentage) / "10000".toString();
+              agentFee = ((BigInt(agentOffer.price) * BigInt(agentFeePercentage)) / 10000n).toString();
               agentPayoff = agentFee;
 
               // seller: sellerDeposit + price - protocolFee - agent fee
-              sellerPayoff =
-                BigInt(agentOffer.sellerDeposit) + agentOffer.price - agentOfferProtocolFee - agentFee.toString();
+              sellerPayoff = (
+                BigInt(agentOffer.sellerDeposit) +
+                BigInt(agentOffer.price) -
+                BigInt(agentOfferProtocolFee) -
+                BigInt(agentFee)
+              ).toString();
 
               // protocol: protocolFee
               protocolPayoff = agentOfferProtocolFee;
@@ -3059,7 +3071,8 @@ describe("IBosonFundsHandler", function () {
             // expected payoffs
             // buyer: (price + sellerDeposit)*buyerPercentage
             buyerPayoff =
-              BigInt(offerToken.price) + (BigInt(offerToken.sellerDeposit) * BigInt(buyerPercentBasisPoints)) / 10000n;
+              ((BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit)) * BigInt(buyerPercentBasisPoints)) /
+              10000n;
 
             // seller: (price + sellerDeposit)*(1-buyerPercentage)
             sellerPayoff = BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit) - buyerPayoff;
@@ -3118,7 +3131,7 @@ describe("IBosonFundsHandler", function () {
             // Chain state should match the expected available funds
             expectedSellerAvailableFunds = new FundsList([
               new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
-              new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+              new Funds(ZeroAddress, "Native currency", (2n * BigInt(sellerDeposit)).toString()),
             ]);
             expectedBuyerAvailableFunds = new FundsList([]);
             expectedProtocolAvailableFunds = new FundsList([]);
@@ -3139,7 +3152,7 @@ describe("IBosonFundsHandler", function () {
             expectedSellerAvailableFunds.funds[0] = new Funds(
               await mockToken.getAddress(),
               "Foreign20",
-              BigInt(sellerDeposit) + sellerPayoff.toString()
+              (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
             );
             expectedBuyerAvailableFunds = new FundsList([
               new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
@@ -3178,8 +3191,8 @@ describe("IBosonFundsHandler", function () {
               // expected payoffs
               // buyer: (price + sellerDeposit)*buyerPercentage
               buyerPayoff = (
-                BigInt(agentOffer.price) +
-                (BigInt(agentOffer.sellerDeposit) * BigInt(buyerPercentBasisPoints)) / 10000n
+                ((BigInt(agentOffer.price) + BigInt(agentOffer.sellerDeposit)) * BigInt(buyerPercentBasisPoints)) /
+                10000n
               ).toString();
 
               // seller: (price + sellerDeposit)*(1-buyerPercentage)
@@ -3270,11 +3283,12 @@ describe("IBosonFundsHandler", function () {
             buyerPayoff = 0;
 
             // seller: sellerDeposit + price - protocolFee + buyerEscalationDeposit
-            sellerPayoff =
+            sellerPayoff = (
               BigInt(offerToken.sellerDeposit) +
-              offerToken.price -
-              offerTokenProtocolFee +
-              buyerEscalationDeposit.toString();
+              BigInt(offerToken.price) -
+              BigInt(offerTokenProtocolFee) +
+              BigInt(buyerEscalationDeposit)
+            ).toString();
 
             // protocol: 0
             protocolPayoff = offerTokenProtocolFee;
@@ -3338,7 +3352,7 @@ describe("IBosonFundsHandler", function () {
             expectedSellerAvailableFunds.funds[0] = new Funds(
               await mockToken.getAddress(),
               "Foreign20",
-              BigInt(sellerDeposit) + sellerPayoff.toString()
+              (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
             );
             expectedProtocolAvailableFunds.funds[0] = new Funds(
               await mockToken.getAddress(),
@@ -3362,16 +3376,17 @@ describe("IBosonFundsHandler", function () {
               buyerPayoff = 0;
 
               // agentPayoff: agentFee
-              agentFee = (BigInt(agentOffer.price) * agentFeePercentage) / "10000".toString();
+              agentFee = ((BigInt(agentOffer.price) * BigInt(agentFeePercentage)) / 10000n).toString();
               agentPayoff = agentFee;
 
               // seller: sellerDeposit + price - protocolFee - agentFee + buyerEscalationDeposit
-              sellerPayoff =
+              sellerPayoff = (
                 BigInt(agentOffer.sellerDeposit) +
-                agentOffer.price -
-                agentOfferProtocolFee -
-                agentFee +
-                buyerEscalationDeposit.toString();
+                BigInt(agentOffer.price) -
+                BigInt(agentOfferProtocolFee) -
+                BigInt(agentFee) +
+                BigInt(buyerEscalationDeposit)
+              ).toString();
 
               // protocol: 0
               protocolPayoff = agentOfferProtocolFee;
@@ -3453,14 +3468,19 @@ describe("IBosonFundsHandler", function () {
 
             // expected payoffs
             // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-            buyerPayoff =
-              BigInt(offerToken.price) +
-              offerToken.sellerDeposit +
-              (buyerEscalationDeposit * buyerPercentBasisPoints) / "10000".toString();
+            buyerPayoff = (
+              ((BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit) + BigInt(buyerEscalationDeposit)) *
+                BigInt(buyerPercentBasisPoints)) /
+              10000n
+            ).toString();
 
             // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
-            sellerPayoff =
-              BigInt(offerToken.price) + offerToken.sellerDeposit + buyerEscalationDeposit - buyerPayoff.toString();
+            sellerPayoff = (
+              BigInt(offerToken.price) +
+              BigInt(offerToken.sellerDeposit) +
+              BigInt(buyerEscalationDeposit) -
+              BigInt(buyerPayoff)
+            ).toString();
 
             // protocol: 0
             protocolPayoff = 0;
@@ -3541,7 +3561,7 @@ describe("IBosonFundsHandler", function () {
             expectedSellerAvailableFunds.funds[0] = new Funds(
               await mockToken.getAddress(),
               "Foreign20",
-              BigInt(sellerDeposit) + sellerPayoff.toString()
+              (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
             );
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
@@ -3579,14 +3599,19 @@ describe("IBosonFundsHandler", function () {
 
               // expected payoffs
               // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-              buyerPayoff =
-                BigInt(agentOffer.price) +
-                agentOffer.sellerDeposit +
-                (buyerEscalationDeposit * buyerPercentBasisPoints) / "10000".toString();
+              buyerPayoff = (
+                ((BigInt(agentOffer.price) + BigInt(agentOffer.sellerDeposit) + BigInt(buyerEscalationDeposit)) *
+                  BigInt(buyerPercentBasisPoints)) /
+                10000n
+              ).toString();
 
               // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
-              sellerPayoff =
-                BigInt(agentOffer.price) + agentOffer.sellerDeposit + buyerEscalationDeposit - buyerPayoff.toString();
+              sellerPayoff = (
+                BigInt(agentOffer.price) +
+                BigInt(agentOffer.sellerDeposit) +
+                BigInt(buyerEscalationDeposit) -
+                BigInt(buyerPayoff)
+              ).toString();
 
               // protocol: 0
               protocolPayoff = 0;
@@ -3673,14 +3698,19 @@ describe("IBosonFundsHandler", function () {
 
             // expected payoffs
             // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-            buyerPayoff =
-              BigInt(offerToken.price) +
-              offerToken.sellerDeposit +
-              (buyerEscalationDeposit * buyerPercentBasisPoints) / "10000".toString();
+            buyerPayoff = (
+              ((BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit) + BigInt(buyerEscalationDeposit)) *
+                BigInt(buyerPercentBasisPoints)) /
+              10000n
+            ).toString();
 
             // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
-            sellerPayoff =
-              BigInt(offerToken.price) + offerToken.sellerDeposit + buyerEscalationDeposit - buyerPayoff.toString();
+            sellerPayoff = (
+              BigInt(offerToken.price) +
+              BigInt(offerToken.sellerDeposit) +
+              BigInt(buyerEscalationDeposit) -
+              BigInt(buyerPayoff)
+            ).toString();
 
             // protocol: 0
             protocolPayoff = 0;
@@ -3735,7 +3765,7 @@ describe("IBosonFundsHandler", function () {
             expectedSellerAvailableFunds.funds[0] = new Funds(
               await mockToken.getAddress(),
               "Foreign20",
-              BigInt(sellerDeposit) + sellerPayoff.toString()
+              (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
             );
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
@@ -3773,20 +3803,25 @@ describe("IBosonFundsHandler", function () {
               blockNumber = tx.blockNumber;
               block = await provider.getBlock(blockNumber);
               disputedDate = block.timestamp.toString();
-              timeout = BigInt(disputedDate) + resolutionPeriod.toString();
+              timeout = (BigInt(disputedDate) + BigInt(resolutionPeriod)).toString();
 
               buyerPercentBasisPoints = "5566"; // 55.66%
 
               // expected payoffs
               // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-              buyerPayoff =
-                BigInt(agentOffer.price) +
-                agentOffer.sellerDeposit +
-                (buyerEscalationDeposit * buyerPercentBasisPoints) / "10000".toString();
+              buyerPayoff = (
+                ((BigInt(agentOffer.price) + BigInt(agentOffer.sellerDeposit) + BigInt(buyerEscalationDeposit)) *
+                  BigInt(buyerPercentBasisPoints)) /
+                10000n
+              ).toString();
 
               // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
-              sellerPayoff =
-                BigInt(agentOffer.price) + agentOffer.sellerDeposit + buyerEscalationDeposit - buyerPayoff.toString();
+              sellerPayoff = (
+                BigInt(agentOffer.price) +
+                BigInt(agentOffer.sellerDeposit) +
+                BigInt(buyerEscalationDeposit) -
+                BigInt(buyerPayoff)
+              ).toString();
 
               // protocol: 0
               protocolPayoff = 0;
@@ -3825,7 +3860,7 @@ describe("IBosonFundsHandler", function () {
               // protocol: 0
               // agent: 0
               expectedSellerAvailableFunds.funds.push(
-                new Funds(await mockToken.getAddress(), "Foreign20", BigInt(sellerPayoff).toString())
+                new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff)
               );
               expectedBuyerAvailableFunds = new FundsList([
                 new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
@@ -3848,7 +3883,7 @@ describe("IBosonFundsHandler", function () {
             beforeEach(async function () {
               // expected payoffs
               // buyer: price + buyerEscalationDeposit
-              buyerPayoff = BigInt(offerToken.price) + buyerEscalationDeposit.toString();
+              buyerPayoff = (BigInt(offerToken.price) + BigInt(buyerEscalationDeposit)).toString();
 
               // seller: sellerDeposit
               sellerPayoff = offerToken.sellerDeposit;
@@ -3912,7 +3947,7 @@ describe("IBosonFundsHandler", function () {
               expectedSellerAvailableFunds.funds[0] = new Funds(
                 await mockToken.getAddress(),
                 "Foreign20",
-                BigInt(sellerDeposit) + sellerPayoff.toString()
+                (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
               );
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
@@ -3948,7 +3983,7 @@ describe("IBosonFundsHandler", function () {
 
                 // expected payoffs
                 // buyer: price + buyerEscalationDeposit
-                buyerPayoff = BigInt(offerToken.price) + buyerEscalationDeposit.toString();
+                buyerPayoff = (BigInt(offerToken.price) + BigInt(buyerEscalationDeposit)).toString();
 
                 // seller: sellerDeposit
                 sellerPayoff = offerToken.sellerDeposit;
@@ -4023,7 +4058,7 @@ describe("IBosonFundsHandler", function () {
             beforeEach(async function () {
               // expected payoffs
               // buyer: price + buyerEscalationDeposit
-              buyerPayoff = BigInt(offerToken.price) + buyerEscalationDeposit.toString();
+              buyerPayoff = (BigInt(offerToken.price) + BigInt(buyerEscalationDeposit)).toString();
 
               // seller: sellerDeposit
               sellerPayoff = offerToken.sellerDeposit;
@@ -4077,7 +4112,7 @@ describe("IBosonFundsHandler", function () {
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
                 new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
-                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+                new Funds(ZeroAddress, "Native currency", (2n * BigInt(sellerDeposit)).toString()),
               ]);
               expectedBuyerAvailableFunds = new FundsList([]);
               expectedProtocolAvailableFunds = new FundsList([]);
@@ -4099,7 +4134,7 @@ describe("IBosonFundsHandler", function () {
               expectedSellerAvailableFunds.funds[0] = new Funds(
                 await mockToken.getAddress(),
                 "Foreign20",
-                BigInt(sellerDeposit) + sellerPayoff.toString()
+                (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
               );
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
@@ -4135,7 +4170,7 @@ describe("IBosonFundsHandler", function () {
 
                 // expected payoffs
                 // buyer: price + buyerEscalationDeposit
-                buyerPayoff = BigInt(offerToken.price) + buyerEscalationDeposit.toString();
+                buyerPayoff = (BigInt(offerToken.price) + BigInt(buyerEscalationDeposit)).toString();
 
                 // seller: sellerDeposit
                 sellerPayoff = offerToken.sellerDeposit;
