@@ -189,8 +189,9 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable, IERC7
      * - There is nothing to burn
      *
      * @param _offerId - the id of the offer
+     * @param _amount - amount to burn
      */
-    function burnPremintedVouchers(uint256 _offerId) external;
+    function burnPremintedVouchers(uint256 _offerId, uint256 _amount) external;
 
     /**
      * @notice Gets the number of vouchers available to be pre-minted for an offer.

@@ -263,8 +263,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * - There is nothing to burn
      *
      * @param _offerId - the id of the offer
+     * @param _amount - amount to burn
      */
-    function burnPremintedVouchers(uint256 _offerId) external override onlyOwner {
+    function burnPremintedVouchers(uint256 _offerId, uint256 _amount) external override onlyOwner {
         // Get the offer's range
         Range storage range = _rangeByOfferId[_offerId];
 
@@ -279,7 +280,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         uint256 start = (range.lastBurnedTokenId == 0) ? range.start : (range.lastBurnedTokenId + 1);
 
         // Get the last token to burn
-        uint256 end = range.start + range.minted;
+        uint256 end = range.start + _amount;
 
         // End should be greater than start
         require(end > start, NOTHING_TO_BURN);

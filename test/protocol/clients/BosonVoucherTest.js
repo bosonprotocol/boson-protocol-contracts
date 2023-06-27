@@ -663,7 +663,7 @@ describe("IBosonVoucher", function () {
 
     it("Should emit Transfer events", async function () {
       // Burn tokens, test for event
-      const tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+      const tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
       // Number of events emitted should be equal to amount
       assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
@@ -681,7 +681,7 @@ describe("IBosonVoucher", function () {
       let sellerBalanceBefore = await bosonVoucher.balanceOf(assistant.address);
 
       // Burn tokens
-      await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+      await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
       // All burned tokens should not have an owner
       const startId = deriveTokenId(offerId, start);
@@ -714,7 +714,7 @@ describe("IBosonVoucher", function () {
         // Burn tokens, test for event
         let tx;
         await expect(() => {
-          tx = bosonVoucher.connect(rando).burnPremintedVouchers(offerId);
+          tx = bosonVoucher.connect(rando).burnPremintedVouchers(offerId, amount);
           return tx;
         }).to.changeTokenBalance(bosonVoucher, assistant, Number(amount) * -1);
 
@@ -756,7 +756,7 @@ describe("IBosonVoucher", function () {
         // Burn tokens, test for event
         let tx;
         await expect(() => {
-          tx = bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+          tx = bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
           return tx;
         }).to.changeTokenBalance(bosonVoucher, bosonVoucher, Number(amount) * -1);
 
@@ -776,7 +776,7 @@ describe("IBosonVoucher", function () {
 
     it("Should burn all vouchers", async function () {
       // Burn tokens, test for event
-      let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+      let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
       // Number of events emitted should be equal to amount
       assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
@@ -789,7 +789,7 @@ describe("IBosonVoucher", function () {
       assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
 
       // Second call should revert since there's nothing to burn
-      await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId)).to.be.revertedWith(
+      await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
         RevertReasons.NOTHING_TO_BURN
       );
     });
@@ -806,7 +806,7 @@ describe("IBosonVoucher", function () {
       );
 
       // Burn tokens, test for event
-      let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+      let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
       // Number of events emitted should be equal to amount of preminted vouchers decreased by length of committed vouchers
       // We test this to indirectly verify that no events were emitted for committed vouchers
@@ -850,7 +850,7 @@ describe("IBosonVoucher", function () {
       await setNextBlockTimestamp(ethers.BigNumber.from(offerDates.validUntil).add(1).toHexString());
 
       // Burn tokens, test for event
-      const tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+      const tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
       // Number of events emitted should be equal to amount
       assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
@@ -866,7 +866,7 @@ describe("IBosonVoucher", function () {
 
     context("💔 Revert Reasons", async function () {
       it("Caller is not the owner", async function () {
-        await expect(bosonVoucher.connect(rando).burnPremintedVouchers(offerId)).to.be.revertedWith(
+        await expect(bosonVoucher.connect(rando).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
           RevertReasons.OWNABLE_NOT_OWNER
         );
       });
@@ -876,7 +876,7 @@ describe("IBosonVoucher", function () {
         offerId = 15;
 
         // Try to burn, it should fail
-        await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId)).to.be.revertedWith(
+        await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
           RevertReasons.NO_RESERVED_RANGE_FOR_OFFER
         );
       });
@@ -889,17 +889,17 @@ describe("IBosonVoucher", function () {
           .returns(true, offer, offerDates, offerDurations, disputeResolutionTerms, offerFees);
 
         // Try to burn, it should fail
-        await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId)).to.be.revertedWith(
+        await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
           RevertReasons.OFFER_STILL_VALID
         );
       });
 
       it("Nothing to burn", async function () {
         // Burn tokens
-        await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+        await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
         // Try to burn, it should fail
-        await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId)).to.be.revertedWith(
+        await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
           RevertReasons.NOTHING_TO_BURN
         );
       });
@@ -1324,7 +1324,7 @@ describe("IBosonVoucher", function () {
           );
 
           // Burn preminted voucher
-          await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+          await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
           // Token should have no owner
           await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
@@ -1645,7 +1645,7 @@ describe("IBosonVoucher", function () {
               await offerHandler.connect(assistant).voidOffer(offerId);
 
               // Burn preminted vouchers
-              await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+              await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, "1");
 
               // None of reserved but not preminted tokens should have an owner
               await expect(
