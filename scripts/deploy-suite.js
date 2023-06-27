@@ -4,8 +4,8 @@ const { ZeroAddress, getContractAt, getSigners } = hre.ethers;
 const network = hre.network.name;
 const confirmations = network == "hardhat" ? 1 : environments.confirmations;
 const tipMultiplier = BigInt(environments.tipMultiplier);
-const tipSuggestion = "1500000000"; // js always returns this constant, it does not vary per block
-const maxPriorityFeePerGas = BigInt(tipSuggestion).mul(tipMultiplier);
+const tipSuggestion = "1500000000"; // ethers.js always returns this constant, it does not vary per block
+const maxPriorityFeePerGas = BigInt(tipSuggestion) * tipMultiplier;
 
 const packageFile = require("../package.json");
 const authTokenAddresses = require("./config/auth-token-addresses");
@@ -135,7 +135,7 @@ async function main(env, facetConfig) {
   for (const deployedFacet of deployedFacets) {
     deploymentComplete(
       deployedFacet.name,
-      deployedFacet.contract,
+      deployedFacet.contract.target,
       deployedFacet.constructorArgs,
       interfaceIdFromFacetName(deployedFacet.name),
       contracts
@@ -222,7 +222,7 @@ async function main(env, facetConfig) {
   );
   await transactionResponse.wait(confirmations);
 
-  if (adminAddress.toLowerCase() != (await deployer.getAddress().toLowerCase())) {
+  if (adminAddress.toLowerCase() != (await deployer.getAddress()).toLowerCase()) {
     // Grant ADMIN role to the specified admin address
     // Skip this step if adminAddress is the deployer
     transactionResponse = await accessController.grantRole(

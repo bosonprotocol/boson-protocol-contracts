@@ -116,7 +116,7 @@ async function deploySuite(deployer, newVersion) {
   });
 
   // Read contract info from file
-  const chainId = (await hre.provider.getNetwork()).chainId;
+  const chainId = (await provider.getNetwork()).chainId;
   const contractsFile = readContracts(chainId, "hardhat", "upgrade-test");
 
   // Get AccessController abstraction
@@ -489,7 +489,7 @@ async function populateProtocolContract(
       // Set unique offer dates based on offer id
       const now = offerDates.validFrom;
       offerDates.validFrom = BigInt(now) + oneMonth + offerId * (1000).toString();
-      offerDates.validUntil = BigInt(now) + oneMonth * 6 * (offerId + 1).toString();
+      offerDates.validUntil = (BigInt(now) + oneMonth * 6n * BigInt(offerId + 1)).toString();
 
       // Set unique offerDurations based on offer id
       offerDurations.disputePeriod = `${(offerId + 1) * oneMonth}`;
@@ -509,7 +509,7 @@ async function populateProtocolContract(
       sellers[j].offerIds.push(offerId);
 
       // Deposit seller funds so the commit will succeed
-      const sellerPool = BigInt(offer.quantityAvailable) * offer.price.toString();
+      const sellerPool = BigInt(offer.quantityAvailable) * BigInt(offer.price);
       const msgValue = offer.exchangeToken == ZeroAddress ? sellerPool : "0";
       await fundsHandler
         .connect(sellers[j].wallet)
@@ -1699,8 +1699,8 @@ async function populateVoucherContract(
 
       // Set unique offer dates based on offer id
       const now = offerDates.validFrom;
-      offerDates.validFrom = BigInt(now) + oneMonth + offerId * (1000).toString();
-      offerDates.validUntil = BigInt(now) + oneMonth * 6 * (offerId + 1).toString();
+      offerDates.validFrom = (BigInt(now) + oneMonth + BigInt(offerId) * 1000n).toString();
+      offerDates.validUntil = (BigInt(now) + oneMonth * 6n * BigInt(offerId + 1)).toString();
 
       // Set unique offerDurations based on offer id
       offerDurations.disputePeriod = `${(offerId + 1) * oneMonth}`;
@@ -1720,7 +1720,7 @@ async function populateVoucherContract(
       sellers[j].offerIds.push(offerId);
 
       // Deposit seller funds so the commit will succeed
-      const sellerPool = BigInt(offer.quantityAvailable) * offer.price.toString();
+      const sellerPool = BigInt(offer.quantityAvailable) * BigInt(offer.price);
       const msgValue = offer.exchangeToken == ZeroAddress ? sellerPool : "0";
       await fundsHandler
         .connect(sellers[j].wallet)

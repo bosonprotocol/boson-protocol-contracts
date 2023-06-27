@@ -12,6 +12,7 @@ function delay(ms) {
 }
 
 function deploymentComplete(name, address, args, interfaceId, contracts) {
+  console.log("address", address);
   contracts.push({ name, address, args, interfaceId });
   console.log(`✅ ${name} deployed to: ${address}`);
 }
@@ -21,7 +22,7 @@ async function writeContracts(contracts, env, version) {
     fs.mkdirSync(addressesDirPath);
   }
 
-  const chainId = (await hre.provider.getNetwork()).chainId;
+  const chainId = Number((await provider.getNetwork()).chainId);
   const network = hre.network.name;
   const path = getAddressesFilePath(chainId, network, env);
   fs.writeFileSync(

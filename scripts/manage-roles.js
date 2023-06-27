@@ -31,7 +31,7 @@ async function main(env) {
   // Bail now if hardhat network
   if (network === "hardhat") process.exit();
 
-  const chainId = (await hre.provider.getNetwork()).chainId;
+  const chainId = (await provider.getNetwork()).chainId;
   const contractsFile = readContracts(chainId, network, env);
 
   const divider = "-".repeat(80);

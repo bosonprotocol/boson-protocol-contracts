@@ -16,10 +16,10 @@ class DisputeDates {
   */
 
   constructor(disputed, escalated, finalized, timeout) {
-    this.disputed = disputed && disputed.toString();
-    this.escalated = escalated && escalated.toString();
-    this.finalized = finalized && finalized.toString();
-    this.timeout = timeout && timeout.toString();
+    this.disputed = disputed?.toString();
+    this.escalated = escalated?.toString();
+    this.finalized = finalized?.toString();
+    this.timeout = timeout?.toString();
   }
 
   /**

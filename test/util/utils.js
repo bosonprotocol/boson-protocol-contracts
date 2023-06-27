@@ -427,7 +427,7 @@ async function revertToSnapshot(snapshotId) {
 }
 
 function deriveTokenId(offerId, exchangeId) {
-  return BigInt(offerId) * 2n ** 128n + BigInt(exchangeId);
+  return (BigInt(offerId) << 128n) + BigInt(exchangeId);
 }
 
 exports.setNextBlockTimestamp = setNextBlockTimestamp;

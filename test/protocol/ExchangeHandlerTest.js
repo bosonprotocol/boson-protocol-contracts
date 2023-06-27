@@ -786,7 +786,6 @@ describe("IBosonExchangeHandler", function () {
         bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
         await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
-        tokenId = "1";
         tokenId = deriveTokenId(offer.id, exchangeId);
       });
 
@@ -3577,7 +3576,7 @@ describe("IBosonExchangeHandler", function () {
           block = await provider.getBlock(blockNumber);
 
           // Set time forward to run out the dispute period
-          newTime = Number(voucherRedeemableFrom + disputePeriod + 1);
+          newTime = Number(BigInt(voucherRedeemableFrom) + BigInt(disputePeriod) + 1n);
           await setNextBlockTimestamp(newTime);
 
           // Complete exchange

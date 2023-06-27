@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const { ZeroAddress, getContractAt, getSigner, Wallet } = hre.ethers;
+const { ZeroAddress, getContractAt, getSigner, Wallet, provider } = hre.ethers;
 const fs = require("fs").promises;
 const environments = require("../../environments");
 const network = hre.network.name;
@@ -53,7 +53,7 @@ const createDisputeResolver = async (path) => {
   }
 
   // Find protocol diamond and accessController addresses
-  const chainId = (await hre.provider.getNetwork()).chainId;
+  const chainId = (await provider.getNetwork()).chainId;
   const addressList = require(`../../addresses/${chainId}-${network}.json`).contracts;
   const protocolAddress = addressList.find((c) => c.name === "ProtocolDiamond").address;
   const accessControllerAddress = addressList.find((c) => c.name === "AccessController").address;

@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const { ZeroAddress, getContractAt, getSigners, provider, randomBytes } = hre.ethers;
+const { ZeroAddress, getContractAt, getSigners, provider, randomBytes, keccak256, toUtf8Bytes } = hre.ethers;
 const { assert, expect } = require("chai");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const {
@@ -21,7 +21,6 @@ const {
   revertState,
 } = require("../util/upgrade");
 const { getGenericContext } = require("./01_generic");
-const { keccak256, toUtf8Bytes } = require("ethers/lib/utils");
 const TokenType = require("../../scripts/domain/TokenType");
 const Twin = require("../../scripts/domain/Twin");
 const {

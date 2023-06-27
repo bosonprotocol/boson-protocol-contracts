@@ -43,6 +43,11 @@ describe("AuthToken", function () {
       expect(authToken.tokenIdIsValid()).is.false;
       expect(authToken.isValid()).is.false;
 
+      // Invalid field value
+      authToken.tokenId = new Date();
+      expect(authToken.tokenIdIsValid()).is.false;
+      expect(authToken.isValid()).is.false;
+
       // Valid field value
       authToken.tokenId = "0";
       expect(authToken.tokenIdIsValid()).is.true;

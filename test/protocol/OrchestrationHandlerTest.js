@@ -567,7 +567,7 @@ describe("IBosonOrchestrationHandler", function () {
           const voucherRedeemedDate = voucherStruct.redeemedDate;
 
           // Set time forward past the dispute period
-          await setNextBlockTimestamp(Number(voucherRedeemedDate + disputePeriod + 1));
+          await setNextBlockTimestamp(Number(voucherRedeemedDate + BigInt(disputePeriod) + 1n));
 
           // Attempt to raise a dispute, expecting revert
           await expect(

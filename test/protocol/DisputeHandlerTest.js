@@ -1419,7 +1419,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to escalate the dispute, expecting revert
             await expect(
               disputeHandler.connect(buyer).escalateDispute(exchangeId, {
-                value: BigInt(buyerEscalationDepositNative) - "1".toString(),
+                value: BigInt(buyerEscalationDepositNative) - 1n,
               })
             ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
           });
@@ -1430,7 +1430,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to escalate the dispute, expecting revert
             await expect(
               disputeHandler.connect(buyer).escalateDispute(exchangeId, {
-                value: BigInt("1").toString(),
+                value: 1n,
               })
             ).to.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
           });
@@ -2053,7 +2053,7 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = BigInt(disputedDate) + resolutionPeriod.toString();
+          timeout = (BigInt(disputedDate) + BigInt(resolutionPeriod)).toString();
         });
 
         it("should return true for exists if exchange id is valid", async function () {
@@ -2110,7 +2110,7 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = BigInt(disputedDate) + resolutionPeriod.toString();
+          timeout = (BigInt(disputedDate) + BigInt(resolutionPeriod)).toString();
 
           buyerPercentBasisPoints = "1234";
 
@@ -2167,7 +2167,7 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           escalatedDate = block.timestamp.toString();
-          timeout = BigInt(escalatedDate) + escalationPeriod.toString();
+          timeout = (BigInt(escalatedDate) + BigInt(escalationPeriod)).toString();
 
           // buyer percent used in tests
           buyerPercentBasisPoints = "4321";

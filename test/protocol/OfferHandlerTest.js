@@ -581,7 +581,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Buyer cancel penalty is greater than price", async function () {
           // Set buyer cancel penalty higher than offer price
-          offer.buyerCancelPenalty = BigInt(offer.price) + "10".toString();
+          offer.buyerCancelPenalty = (BigInt(offer.price) + 10n).toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -1190,7 +1190,7 @@ describe("IBosonOfferHandler", function () {
 
       context("Offers with fixed voucher expiration date", async function () {
         beforeEach(async function () {
-          offerDates.voucherRedeemableUntil = BigInt(offerDates.validUntil) + oneMonth.toString();
+          offerDates.voucherRedeemableUntil = (BigInt(offerDates.validUntil) + oneMonth).toString();
           offerDurations.voucherValid = "0"; // only one of voucherRedeemableUntil and voucherValid can be non zero
 
           // Create an offer
@@ -1202,7 +1202,7 @@ describe("IBosonOfferHandler", function () {
           id = nextOfferId++;
 
           // update the values
-          offerDates.validUntil = BigInt(offerDates.validUntil) + "10000".toString();
+          offerDates.validUntil = (BigInt(offerDates.validUntil) + 10000n).toString();
           offerStruct = offer.toStruct();
         });
 
@@ -2233,7 +2233,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Buyer cancel penalty is greater than price", async function () {
           // Set buyer cancel penalty higher than offer price
-          offers[0].buyerCancelPenalty = BigInt(offers[0].price) + "10".toString();
+          offers[0].buyerCancelPenalty = (BigInt(offers[0].price) + 10n).toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(
