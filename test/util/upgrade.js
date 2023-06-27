@@ -916,6 +916,8 @@ async function getConfigContractState(configHandler) {
     maxResolutionPeriod,
     minDisputePeriod,
     accessControllerAddress,
+    maxPremintedVouchers,
+    minResolutionPeriod,
   ] = await Promise.all([
     configHandlerRando.getTokenAddress(),
     configHandlerRando.getTreasuryAddress(),
@@ -943,6 +945,8 @@ async function getConfigContractState(configHandler) {
     configHandlerRando.getMaxResolutionPeriod(),
     configHandlerRando.getMinDisputePeriod(),
     configHandlerRando.getAccessControllerAddress(),
+    configHandlerRando.getMaxPremintedVouchers(),
+    configHandlerRando.getMinResolutionPeriod(),
   ]);
 
   return {
@@ -972,6 +976,8 @@ async function getConfigContractState(configHandler) {
     maxResolutionPeriod: maxResolutionPeriod.toString(),
     minDisputePeriod: minDisputePeriod.toString(),
     accessControllerAddress,
+    maxPremintedVouchers: maxPremintedVouchers.toString(),
+    minResolutionPeriod: minResolutionPeriod.toString(),
   };
 }
 

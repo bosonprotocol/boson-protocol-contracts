@@ -7,13 +7,15 @@ const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
 const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolverUpdateFields");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const Role = require("../../scripts/domain/Role");
+const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 
-// const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
+const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const { assert, expect } = require("chai");
-const { mockSeller, mockAuthToken, mockVoucherInitValues, mockDisputeResolver } = require("../util/mock");
+const { mockSeller, mockAuthToken, mockVoucherInitValues, mockDisputeResolver, mockOffer } = require("../util/mock");
 
 const { deploySuite, populateProtocolContract, getProtocolContractState, revertState } = require("../util/upgrade");
 const { getGenericContext } = require("./01_generic");
+const { oneWeek, oneMonth } = require("../util/constants");
 
 const version = "2.3.0";
 const { migrate } = require(`../../scripts/migrations/migrate_${version}.js`);
@@ -23,14 +25,14 @@ const { migrate } = require(`../../scripts/migrations/migrate_${version}.js`);
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
-  let deployer, rando, clerk, pauser;
+  let deployer, rando, clerk, pauser, assistant, assistantDR;
   let accessController;
-  let accountHandler, fundsHandler, pauseHandler;
+  let accountHandler, fundsHandler, pauseHandler, configHandler, offerHandler;
   let snapshot;
   let protocolDiamondAddress, mockContracts;
   let contractsAfter;
   let protocolContractStateBefore, protocolContractStateAfter;
-  // let removedFunctionHashes, addedFunctionHashes;
+  let removedFunctionHashes, addedFunctionHashes;
 
   // reference protocol state
   let preUpgradeEntities;
@@ -38,7 +40,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   before(async function () {
     try {
       // Make accounts available
-      [deployer, rando, clerk, pauser] = await ethers.getSigners();
+      [deployer, rando, clerk, pauser, assistant, assistantDR] = await ethers.getSigners();
 
       let contractsBefore;
 
@@ -100,13 +102,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       // ({ accountContractState } = protocolContractStateBefore);
 
-      // const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
-      //   ["SellerHandlerFacet", "OrchestrationHandlerFacet1"],
-      //   undefined,
-      //   ["createSeller", "updateSeller"]
-      // );
+      const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
+        ["ConfigHandlerFacet", "PauseHandlerFacet"],
+        undefined,
+        ["setMinResolutionPeriod", "unpause"]
+      );
 
-      // removedFunctionHashes = await getFunctionHashesClosure();
+      removedFunctionHashes = await getFunctionHashesClosure();
 
       await migrate("upgrade-test");
 
@@ -114,6 +116,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       let newHandlers = {
         accountHandler: "IBosonAccountHandler",
         pauseHandler: "IBosonPauseHandler",
+        configHandler: "IBosonConfigHandler",
+        offerHandler: "IBosonOfferHandler",
       };
 
       contractsAfter = { ...contractsBefore };
@@ -122,9 +126,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
       }
 
-      ({ accountHandler } = contractsAfter);
+      ({ accountHandler, pauseHandler, configHandler, offerHandler } = contractsAfter);
 
-      // addedFunctionHashes = await getFunctionHashesClosure();
+      addedFunctionHashes = await getFunctionHashesClosure();
 
       snapshot = await getSnapshot();
 
@@ -133,12 +137,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         "offerContractState",
         "exchangeContractState",
         "bundleContractState",
-        "configContractState",
+        // "configContractState", // minResolutionPeriod changed
         "disputeContractState",
         "fundsContractState",
         "groupContractState",
         "twinContractState",
-        "metaTxPrivateContractState",
+        // "metaTxPrivateContractState", // isAllowlisted changed
         "protocolStatusPrivateContractState",
         "protocolLookupsPrivateContractState",
       ];
@@ -398,6 +402,127 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           await expect(pauseHandler.connect(pauser).unpause(regions))
             .to.emit(pauseHandler, "ProtocolUnpaused")
             .withArgs(regions, pauser.address);
+        });
+      });
+
+      context("ConfigHandler", async function () {
+        it("After the upgrade, minimal resolution period is set", async function () {
+          // Minimal resolution period should be set to 1 week
+          const minResolutionPeriod = await configHandler.connect(rando).getMinResolutionPeriod();
+          expect(minResolutionPeriod).to.equal(oneWeek);
+        });
+
+        it("It is possible to change minimal resolution period", async function () {
+          const minResolutionPeriod = oneMonth;
+          // Set new resolution period
+          await expect(configHandler.connect(deployer).setMinResolutionPeriod(minResolutionPeriod))
+            .to.emit(configHandler, "MinResolutionPeriodChanged")
+            .withArgs(minResolutionPeriod, deployer.address);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMinResolutionPeriod()).to.equal(minResolutionPeriod);
+        });
+      });
+
+      context("OfferHandler", async function () {
+        let offer, offerDates, offerDurations, disputeResolver, agentId;
+
+        beforeEach(async function () {
+          // Create a seller
+          const seller = mockSeller(
+            assistant.address,
+            assistant.address,
+            ethers.constants.AddressZero,
+            assistant.address
+          );
+          const voucherInitValues = mockVoucherInitValues();
+          const emptyAuthToken = mockAuthToken();
+          await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          // Create a valid resolver
+          disputeResolver = mockDisputeResolver(
+            assistantDR.address,
+            assistantDR.address,
+            ethers.constants.AddressZero,
+            assistantDR.address,
+            true
+          );
+          const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+          await accountHandler.connect(assistantDR).createDisputeResolver(disputeResolver, disputeResolverFees, []);
+
+          // Mock offer
+          ({ offer, offerDates, offerDurations } = await mockOffer());
+        });
+
+        it("Cannot make an offer with too short resolution period", async function () {
+          // Set dispute duration period to 0
+          offerDurations.resolutionPeriod = ethers.BigNumber.from(oneWeek).sub(10).toString();
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
+        });
+
+        it("State of configContractState is not affected apart from minResolutionPeriod", async function () {
+          // make a shallow copy to not modify original protocolContractState as it's used on getGenericContext
+          const configContractStateBefore = { ...protocolContractStateBefore.configContractState };
+          const configContractStateAfter = { ...protocolContractStateAfter.configContractState };
+
+          const { minResolutionPeriod: minResolutionPeriodBefore } = configContractStateBefore;
+          const { minResolutionPeriod: minResolutionPeriodAfter } = configContractStateAfter;
+
+          delete configContractStateBefore.minResolutionPeriod;
+          delete configContractStateAfter.minResolutionPeriod;
+
+          expect(minResolutionPeriodAfter).to.deep.equal(minResolutionPeriodBefore);
+          expect(protocolContractStateAfter.configContractState).to.deep.equal(
+            protocolContractStateBefore.configContractState
+          );
+        });
+      });
+
+      context("MetaTransactionHandler", async function () {
+        it("Function hashes from removedFunctionsHashes list should not be allowlisted", async function () {
+          for (const hash of removedFunctionHashes) {
+            const [isAllowed] = await contractsAfter.metaTransactionsHandler.functions[
+              "isFunctionAllowlisted(bytes32)"
+            ](hash);
+            expect(isAllowed).to.be.false;
+          }
+        });
+
+        it("Function hashes from from addedFunctionsHashes list should be allowlisted", async function () {
+          for (const hash of addedFunctionHashes) {
+            const [isAllowed] = await contractsAfter.metaTransactionsHandler.functions[
+              "isFunctionAllowlisted(bytes32)"
+            ](hash);
+            expect(isAllowed).to.be.true;
+          }
+        });
+
+        it("State of metaTxPrivateContractState is not affected apart from isAllowlistedState mapping", async function () {
+          // make a shallow copy to not modify original protocolContractState as it's used on getGenericContext
+          const metaTxPrivateContractStateBefore = { ...protocolContractStateBefore.metaTxPrivateContractState };
+          const metaTxPrivateContractStateAfter = { ...protocolContractStateAfter.metaTxPrivateContractState };
+
+          const { isAllowlistedState: isAllowlistedStateBefore } = metaTxPrivateContractStateBefore;
+          removedFunctionHashes.forEach((hash) => {
+            delete isAllowlistedStateBefore[hash];
+          });
+
+          const { isAllowlistedState: isAllowlistedStateAfter } = metaTxPrivateContractStateAfter;
+          addedFunctionHashes.forEach((hash) => {
+            delete isAllowlistedStateAfter[hash];
+          });
+
+          delete metaTxPrivateContractStateBefore.isAllowlistedState;
+          delete metaTxPrivateContractStateAfter.isAllowlistedState;
+
+          expect(isAllowlistedStateAfter).to.deep.equal(isAllowlistedStateBefore);
+          expect(protocolContractStateAfter.metaTxPrivateContractState).to.deep.equal(
+            protocolContractStateBefore.metaTxPrivateContractState
+          );
         });
       });
     });

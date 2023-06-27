@@ -1,8 +1,10 @@
 const shell = require("shelljs");
 const { readContracts } = require("../util/utils.js");
 const hre = require("hardhat");
+const { oneWeek } = require("../../test/util/constants.js");
 const ethers = hre.ethers;
 const network = hre.network.name;
+const abiCoder = ethers.utils.defaultAbiCoder;
 // const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const tag = "HEAD";
 const version = "2.3.0";
@@ -10,11 +12,13 @@ const version = "2.3.0";
 const config = {
   // status at 451dc3d. ToDo: update this to the latest commit
   addOrUpgrade: [
+    "ConfigHandlerFacet",
     "DisputeResolverHandlerFacet",
     "FundsHandlerFacet",
     "MetaTransactionsHandlerFacet",
     "OfferHandlerFacet",
     "OrchestrationHandlerFacet1",
+    "PauseHandlerFacet",
     "ProtocolInitializationHandlerFacet",
     "SellerHandlerFacet",
     "TwinHandlerFacet",
@@ -22,7 +26,7 @@ const config = {
   remove: [],
   skipSelectors: {},
   facetsToInit: {},
-  initializationData: "0x",
+  initializationData: abiCoder.encode(["uint256"], [oneWeek]), // min resolution period
 };
 
 async function migrate(env) {
