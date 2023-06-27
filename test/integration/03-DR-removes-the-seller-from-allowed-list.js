@@ -78,7 +78,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       seller = mockSeller(
         await assistant.getAddress(),
         await admin.getAddress(),
-        await clerk.getAddress(),
+        clerk.address,
         await treasury.getAddress()
       );
       expect(seller.isValid()).is.true;
@@ -109,7 +109,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       disputeResolver = mockDisputeResolver(
         await assistantDR.getAddress(),
         await adminDR.getAddress(),
-        await clerkDR.getAddress(),
+        clerkDR.address,
         await treasuryDR.getAddress(),
         true
       );
@@ -150,7 +150,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       const voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
 
       // Deposit seller funds so the commit will succeed
-      const fundsToDeposit = BigInt(sellerDeposit) * quantityAvailable;
+      const fundsToDeposit = BigInt(sellerDeposit) * BigInt(quantityAvailable);
       await fundsHandler
         .connect(assistant)
         .depositFunds(seller.id, ZeroAddress, fundsToDeposit, { value: fundsToDeposit });

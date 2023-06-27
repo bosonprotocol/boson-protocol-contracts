@@ -69,7 +69,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     seller = mockSeller(
       await assistant.getAddress(),
       await admin.getAddress(),
-      await clerk.getAddress(),
+      clerk.address,
       await treasury.getAddress()
     );
     expect(await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues))
@@ -86,7 +86,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     disputeResolver = mockDisputeResolver(
       await assistantDR.getAddress(),
       await adminDR.getAddress(),
-      await clerkDR.getAddress(),
+      clerkDR.address,
       await treasuryDR.getAddress(),
       true
     );
@@ -115,7 +115,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
 
     // Deposit seller funds so the commit will succeed
-    const fundsToDeposit = BigInt(offer.sellerDeposit) * offer.quantityAvailable;
+    const fundsToDeposit = BigInt(offer.sellerDeposit) * BigInt(offer.quantityAvailable);
     await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, fundsToDeposit, {
       value: fundsToDeposit,
     });

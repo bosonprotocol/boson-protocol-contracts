@@ -86,7 +86,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       seller = mockSeller(
         await assistant.getAddress(),
         await admin.getAddress(),
-        await clerk.getAddress(),
+        clerk.address,
         await treasury.getAddress()
       );
       await expect(accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues))
@@ -103,7 +103,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       disputeResolver = mockDisputeResolver(
         await assistantDR.getAddress(),
         await adminDR.getAddress(),
-        await clerkDR.getAddress(),
+        clerkDR.address,
         await treasuryDR.getAddress(),
         true
       );
@@ -130,7 +130,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       // Create an offer
       ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
 
-      offerDurations.disputePeriod = (oneMonth * 6).toString();
+      offerDurations.disputePeriod = (oneMonth * 6n).toString();
 
       // Check if domains are valid
       expect(offer.isValid()).is.true;
@@ -241,9 +241,9 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         await exchangeHandler.connect(buyer).cancelVoucher(exchangeId);
 
         // Expected buyer payoff: price - buyerCancelPenalty
-        buyerPayoff = BigInt(offer.price) - offer.buyerCancelPenalty.toString();
+        buyerPayoff = (BigInt(offer.price) - BigInt(offer.buyerCancelPenalty)).toString();
         // Expected seller payoff: sellerDeposit + buyerCancelPenalty
-        sellerPayoff = BigInt(offer.sellerDeposit) + offer.buyerCancelPenalty.toString();
+        sellerPayoff = (BigInt(offer.sellerDeposit) + BigInt(offer.buyerCancelPenalty)).toString();
       });
 
       it("Buyer should be able to withdraw funds after updating wallet address", async function () {

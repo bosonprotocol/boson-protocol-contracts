@@ -173,6 +173,8 @@ describe("SnapshotGate", function () {
     // Cast Diamond to IBosonExchangeHandler
     exchangeHandler = await getContractAt("IBosonExchangeHandler", await protocolDiamond.getAddress());
 
+    accountId.next(true);
+
     // Deploy the SnapshotGate example
     sellerId = "1";
     [snapshotGate] = await deploySnapshotGateExample([
@@ -194,7 +196,7 @@ describe("SnapshotGate", function () {
     seller = mockSeller(
       await assistant.getAddress(),
       await admin.getAddress(),
-      await clerk.getAddress(),
+      clerk.address,
       await treasury.getAddress()
     );
     expect(seller.isValid()).is.true;
@@ -226,10 +228,11 @@ describe("SnapshotGate", function () {
     disputeResolver = mockDisputeResolver(
       await assistantDR.getAddress(),
       await adminDR.getAddress(),
-      await clerkDR.getAddress(),
+      clerkDR.address,
       await treasuryDR.getAddress(),
       true
     );
+
     expect(disputeResolver.isValid()).is.true;
 
     // Create DisputeResolverFee array so offer creation will succeed
@@ -402,7 +405,7 @@ describe("SnapshotGate", function () {
         const event = getEvent(txReceipt, snapshotGate, "SnapshotAppended");
 
         // Check executedBy
-        expect(event.executedBy.toString()).to.equal(await deployer.getAddress().toString());
+        expect(event.executedBy.toString()).to.equal((await deployer.getAddress()).toString());
 
         // Verify batch contents emitted match what was sent
         for (let i = 0; i < batch.length; i++) {
@@ -425,7 +428,7 @@ describe("SnapshotGate", function () {
         let event = getEvent(txReceipt, snapshotGate, "SnapshotAppended");
 
         // Check executedBy
-        expect(event.executedBy.toString()).to.equal(await deployer.getAddress().toString());
+        expect(event.executedBy.toString()).to.equal((await deployer.getAddress()).toString());
 
         // Verify batch contents emitted match what was sent
         for (let i = 0; i < batch1.length; i++) {
@@ -441,7 +444,7 @@ describe("SnapshotGate", function () {
         event = getEvent(txReceipt, snapshotGate, "SnapshotAppended");
 
         // Check executedBy
-        expect(event.executedBy.toString()).to.equal(await deployer.getAddress().toString());
+        expect(event.executedBy.toString()).to.equal((await deployer.getAddress()).toString());
 
         // Verify batch contents emitted match what was sent
         for (let i = 0; i < batch2.length; i++) {
@@ -753,7 +756,7 @@ describe("SnapshotGate", function () {
           let holder = holderByAddress[entry.owner];
 
           // Wrong price
-          const halfPrice = BigInt(price) / BigInt(2).toString();
+          const halfPrice = (BigInt(price) / BigInt(2)).toString();
 
           // Commit to the offer
           await expect(
