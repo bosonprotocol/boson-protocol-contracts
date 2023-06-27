@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { ZeroAddress, getSigners } = ethers;
 const { assert, expect } = require("chai");
 const Seller = require("../../scripts/domain/Seller");
 const AuthToken = require("../../scripts/domain/AuthToken");
@@ -269,13 +270,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             pendingSellerUpdate.toStruct(),
             oldSellerAuthToken,
             pendingAuthTokenStruct,
-            oldSeller.await wallet.getAddress()
+            oldSeller.wallet
           );
 
         // Testing for the SellerUpdatePending event
         await expect(tx)
           .to.emit(accountHandler, "SellerUpdatePending")
-          .withArgs(seller.id, pendingSellerUpdate.toStruct(), pendingAuthTokenStruct, oldSeller.await wallet.getAddress());
+          .withArgs(seller.id, pendingSellerUpdate.toStruct(), pendingAuthTokenStruct, oldSeller.wallet);
 
         // Update seller assistant
         tx = await accountHandler.connect(assistant).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]);
@@ -362,7 +363,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         // Update dispute resolver
         await expect(accountHandler.connect(oldDisputeResolver.wallet).updateDisputeResolver(disputeResolver))
           .to.emit(accountHandler, "DisputeResolverUpdatePending")
-          .withArgs(disputeResolver.id, disputeResolverPendingUpdate.toStruct(), oldDisputeResolver.await wallet.getAddress());
+          .withArgs(disputeResolver.id, disputeResolverPendingUpdate.toStruct(), oldDisputeResolver.wallet);
 
         // Approve assistant update
         expectedDisputeResolver.assistant = disputeResolver.assistant;

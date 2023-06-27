@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getContractAt, parseUnits, ZeroAddress, getSigners } = hre.ethers;
 const { expect } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
@@ -175,7 +175,12 @@ describe("SnapshotGate", function () {
 
     // Deploy the SnapshotGate example
     sellerId = "1";
-    [snapshotGate] = await deploySnapshotGateExample(["SnapshotGateToken", "SGT", await protocolDiamond.getAddress(), sellerId]);
+    [snapshotGate] = await deploySnapshotGateExample([
+      "SnapshotGateToken",
+      "SGT",
+      await protocolDiamond.getAddress(),
+      sellerId,
+    ]);
 
     // Deploy the mock tokens
     [foreign20] = await deployMockTokens(["Foreign20"]);
@@ -186,11 +191,21 @@ describe("SnapshotGate", function () {
     agentId = "0"; // agent id is optional while creating an offer
 
     // Create a valid seller
-    seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
+    seller = mockSeller(
+      await assistant.getAddress(),
+      await admin.getAddress(),
+      await clerk.getAddress(),
+      await treasury.getAddress()
+    );
     expect(seller.isValid()).is.true;
 
     // Create a second seller
-    seller2 = mockSeller(await assistant2.getAddress(), await assistant2.getAddress(), ZeroAddress, await assistant2.getAddress());
+    seller2 = mockSeller(
+      await assistant2.getAddress(),
+      await assistant2.getAddress(),
+      ZeroAddress,
+      await assistant2.getAddress()
+    );
     expect(seller2.isValid()).is.true;
 
     // AuthToken
@@ -592,7 +607,9 @@ describe("SnapshotGate", function () {
 
           // Commit to the offer
           await expect(
-            snapshotGate.connect(caller).commitToGatedOffer(await caller.getAddress(), offerId, entry.tokenId, { value: price })
+            snapshotGate
+              .connect(caller)
+              .commitToGatedOffer(await caller.getAddress(), offerId, entry.tokenId, { value: price })
           ).to.revertedWith("Invalid offer id");
         });
 
@@ -611,7 +628,9 @@ describe("SnapshotGate", function () {
 
           // Commit to the offer
           await expect(
-            snapshotGate.connect(caller).commitToGatedOffer(await caller.getAddress(), offerId, entry.tokenId, { value: price })
+            snapshotGate
+              .connect(caller)
+              .commitToGatedOffer(await caller.getAddress(), offerId, entry.tokenId, { value: price })
           ).to.revertedWith("Snapshot is not frozen");
         });
 
@@ -633,7 +652,9 @@ describe("SnapshotGate", function () {
 
           // Commit to the offer
           await expect(
-            snapshotGate.connect(caller).commitToGatedOffer(await caller.getAddress(), offerId, entry.tokenId, { value: price })
+            snapshotGate
+              .connect(caller)
+              .commitToGatedOffer(await caller.getAddress(), offerId, entry.tokenId, { value: price })
           ).to.revertedWith("Buyer held no balance of the given token id at time of snapshot");
         });
 
@@ -732,7 +753,7 @@ describe("SnapshotGate", function () {
           let holder = holderByAddress[entry.owner];
 
           // Wrong price
-          const halfPrice = BigInt(price)/BigInt(2).toString();
+          const halfPrice = BigInt(price) / BigInt(2).toString();
 
           // Commit to the offer
           await expect(
@@ -890,9 +911,9 @@ describe("SnapshotGate", function () {
           let holder = holderByAddress[entry.owner];
 
           // Check that holder cannot commit directly to the offer on the protocol itself
-          await expect(exchangeHandler.connect(holder).commitToOffer(await holder.getAddress(), offerId)).to.revertedWith(
-            "Caller cannot commit"
-          );
+          await expect(
+            exchangeHandler.connect(holder).commitToOffer(await holder.getAddress(), offerId)
+          ).to.revertedWith("Caller cannot commit");
         });
       });
     });

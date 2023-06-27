@@ -1,6 +1,7 @@
 const hre = require("hardhat");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const ethers = hre.ethers;
+const { getSigners, getContractAt } = hre.ethers;
+
 const { getSnapshot, revertToSnapshot } = require("../util/utils");
 
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
@@ -215,7 +216,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         it("New seller has metadataUri field", async function () {
           const { nextAccountId } = accountContractState;
-          const seller = mockSeller(await rando.getAddress(), await rando.getAddress(), await rando.getAddress(), await rando.getAddress(), true, "metadata");
+          const seller = mockSeller(
+            await rando.getAddress(),
+            await rando.getAddress(),
+            await rando.getAddress(),
+            await rando.getAddress(),
+            true,
+            "metadata"
+          );
           const authToken = mockAuthToken();
           const voucherInitValues = mockVoucherInitValues();
 

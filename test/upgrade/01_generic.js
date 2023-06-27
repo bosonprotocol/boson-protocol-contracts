@@ -1,6 +1,6 @@
 const shell = require("shelljs");
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ZeroAddress, provider } = hre.ethers;
 const { assert, expect } = require("chai");
 const { mockOffer, mockVoucher, mockExchange } = require("../util/mock");
 const { getEvent, calculateVoucherExpiry, getSnapshot, revertToSnapshot } = require("../util/utils.js");
@@ -159,14 +159,14 @@ function getGenericContext(
           // approve token transfer
           msgValue = 0;
           await mockToken.connect(buyer.wallet).approve(protocolDiamondAddress, offerPrice);
-          await mockToken.mint(buyer.await wallet.getAddress(), offerPrice);
+          await mockToken.mint(buyer.wallet, offerPrice);
         }
 
         // Commit to offer
         const exchangeId = await exchangeHandler.getNextExchangeId();
         const tx = await exchangeHandler
           .connect(buyer.wallet)
-          .commitToOffer(buyer.await wallet.getAddress(), offer.id, { value: msgValue });
+          .commitToOffer(buyer.wallet, offer.id, { value: msgValue });
         const txReceipt = await tx.wait();
         const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
@@ -227,7 +227,7 @@ function getGenericContext(
         const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.sellerId);
         await expect(exchangeHandler.connect(seller.wallet).revokeVoucher(exchange.exchangeId))
           .to.emit(exchangeHandler, "VoucherRevoked")
-          .withArgs(exchange.offerId, exchange.exchangeId, seller.await wallet.getAddress());
+          .withArgs(exchange.offerId, exchange.exchangeId, seller.wallet);
       });
 
       it("Escalate old dispute", async function () {
@@ -264,7 +264,7 @@ function getGenericContext(
         const offerPrice = offer.price;
         const tx = await exchangeHandler
           .connect(buyer.wallet)
-          .commitToOffer(buyer.await wallet.getAddress(), offer.id, { value: offerPrice });
+          .commitToOffer(buyer.wallet, offer.id, { value: offerPrice });
         const txReceipt = await tx.wait();
         const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
@@ -309,7 +309,7 @@ function getGenericContext(
 
         await expect(offerHandler.connect(seller.wallet).voidOffer(offerId))
           .to.emit(offerHandler, "OfferVoided")
-          .withArgs(offerId, seller.seller.id, seller.await wallet.getAddress());
+          .withArgs(offerId, seller.seller.id, seller.wallet);
       });
     });
   };

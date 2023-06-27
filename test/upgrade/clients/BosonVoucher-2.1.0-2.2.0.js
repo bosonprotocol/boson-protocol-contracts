@@ -1,5 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const { parseUnits, ZeroAddress, getSigners, Contract, getContractAt, getContractFactory } = ethers;
 const { assert, expect } = require("chai");
 const {
   deploySuite,
@@ -226,10 +227,9 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       ++offerId;
 
       // Reserve range for the contract, test for event
-      await expect(offerHandler.connect(assistant).reserveRange(offerId, length, await bosonVoucher.getAddress())).to.emit(
-        bosonVoucher,
-        "RangeReserved"
-      );
+      await expect(
+        offerHandler.connect(assistant).reserveRange(offerId, length, await bosonVoucher.getAddress())
+      ).to.emit(bosonVoucher, "RangeReserved");
     });
 
     context("preMint()", async function () {
@@ -345,7 +345,9 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       // Generate calldata
       const calldata = mockSimpleContract.interface.encodeFunctionData("testEvent");
 
-      await expect(bosonVoucher.connect(assistant).callExternalContract(await mockSimpleContract.getAddress(), calldata))
+      await expect(
+        bosonVoucher.connect(assistant).callExternalContract(await mockSimpleContract.getAddress(), calldata)
+      )
         .to.emit(mockSimpleContract, "TestEvent")
         .withArgs("1");
     });
@@ -365,21 +367,20 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       it("Can withdraw native token", async function () {
         // Sellers initial available funds
         const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
-        let expectedAvailableFunds = new FundsList([
-          new Funds(ZeroAddress, "Native currency", offer.sellerDeposit),
-        ]);
+        let expectedAvailableFunds = new FundsList([new Funds(ZeroAddress, "Native currency", offer.sellerDeposit)]);
         expect(sellersFundsBefore).to.eql(expectedAvailableFunds);
 
         const amount = parseUnits("1", "ether");
         await deployer.sendTransaction({ to: await bosonVoucher.getAddress(), value: amount });
 
-        await expect(() =>
-          bosonVoucher.connect(rando).withdrawToProtocol([ZeroAddress])
-        ).to.changeEtherBalances([bosonVoucher, fundsHandler], [amount*-1, amount]);
+        await expect(() => bosonVoucher.connect(rando).withdrawToProtocol([ZeroAddress])).to.changeEtherBalances(
+          [bosonVoucher, fundsHandler],
+          [amount * -1, amount]
+        );
 
         // Seller's available balance should increase
         expectedAvailableFunds = new FundsList([
-          new Funds(ZeroAddress, "Native currency", amount+offer.sellerDeposit.toString()),
+          new Funds(ZeroAddress, "Native currency", amount + offer.sellerDeposit.toString()),
         ]);
         const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
         expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
@@ -388,9 +389,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       it("Can withdraw ERC20", async function () {
         // Sellers initial available funds
         const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
-        let expectedAvailableFunds = new FundsList([
-          new Funds(ZeroAddress, "Native currency", offer.sellerDeposit),
-        ]);
+        let expectedAvailableFunds = new FundsList([new Funds(ZeroAddress, "Native currency", offer.sellerDeposit)]);
         expect(sellersFundsBefore).to.eql(expectedAvailableFunds);
 
         const [foreign20] = await deployMockTokens(["Foreign20"]);
@@ -399,10 +398,11 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         await foreign20.connect(deployer).mint(await deployer.getAddress(), amount);
         await foreign20.connect(deployer).transfer(await bosonVoucher.getAddress(), amount);
 
-        await expect(() => bosonVoucher.connect(rando).withdrawToProtocol([await foreign20.getAddress()])).to.changeTokenBalances(
+        const foreign20Address = await foreign20.getAddress();
+        await expect(() => bosonVoucher.connect(rando).withdrawToProtocol([foreign20Address])).to.changeTokenBalances(
           foreign20,
           [bosonVoucher, fundsHandler],
-          [amount*-1, amount]
+          [amount * -1, amount]
         );
 
         // Seller's available balance should increase

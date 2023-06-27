@@ -2674,7 +2674,7 @@ describe("IBosonFundsHandler", function () {
           timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
         });
 
-        contex.only("Final state DISPUTED - RETRACTED", async function () {
+        context("Final state DISPUTED - RETRACTED", async function () {
           beforeEach(async function () {
             // expected payoffs
             // buyer: 0
@@ -4310,7 +4310,6 @@ describe("IBosonFundsHandler", function () {
 
             // Complete the exchange, expecting event
             const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
-            const result = await tx.wait();
 
             await expect(tx)
               .to.emit(exchangeHandler, "FundsReleased")

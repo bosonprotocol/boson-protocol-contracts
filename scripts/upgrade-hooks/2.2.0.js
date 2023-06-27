@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { getContractAt } = ethers;
 const environments = require("../../environments");
 const tipMultiplier = BigInt(environments.tipMultiplier);
 const tipSuggestion = "1500000000"; // js always returns this constant, it does not vary per block

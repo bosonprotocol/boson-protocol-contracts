@@ -54,7 +54,6 @@ describe("IBosonVoucher", function () {
     foreign20;
   let disputeResolver, disputeResolverFees;
   let emptyAuthToken;
-  let agentId;
   let voucherInitValues, contractURI, royaltyPercentage, exchangeId, offerPrice;
   let forwarder;
   let snapshotId;

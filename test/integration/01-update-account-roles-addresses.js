@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { ZeroAddress, provider } = ethers;
 const { expect } = require("chai");
 
 const {
@@ -82,10 +83,21 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       expect(voucherInitValues.isValid()).is.true;
 
       // Create a seller account
-      seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
+      seller = mockSeller(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        await clerk.getAddress(),
+        await treasury.getAddress()
+      );
       await expect(accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues))
         .to.emit(accountHandler, "SellerCreated")
-        .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, emptyAuthToken.toStruct(), await admin.getAddress());
+        .withArgs(
+          seller.id,
+          seller.toStruct(),
+          expectedCloneAddress,
+          emptyAuthToken.toStruct(),
+          await admin.getAddress()
+        );
 
       // Create a dispute resolver
       disputeResolver = mockDisputeResolver(
@@ -99,9 +111,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
       //Create DisputeResolverFee array so offer creation will succeed
       disputeResolverFeeNative = "0";
-      const disputeResolverFees = [
-        new DisputeResolverFee(ZeroAddress, "Native", disputeResolverFeeNative),
-      ];
+      const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", disputeResolverFeeNative)];
 
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
@@ -231,9 +241,9 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         await exchangeHandler.connect(buyer).cancelVoucher(exchangeId);
 
         // Expected buyer payoff: price - buyerCancelPenalty
-        buyerPayoff = BigInt(offer.price)-offer.buyerCancelPenalty.toString();
+        buyerPayoff = BigInt(offer.price) - offer.buyerCancelPenalty.toString();
         // Expected seller payoff: sellerDeposit + buyerCancelPenalty
-        sellerPayoff = BigInt(offer.sellerDeposit)+offer.buyerCancelPenalty.toString();
+        sellerPayoff = BigInt(offer.sellerDeposit) + offer.buyerCancelPenalty.toString();
       });
 
       it("Buyer should be able to withdraw funds after updating wallet address", async function () {
@@ -251,9 +261,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         ).to.revertedWith(RevertReasons.NOT_AUTHORIZED);
 
         // Attempt to withdraw funds with new buyer wallet, should succeed
-        await expect(
-          fundsHandler.connect(rando).withdrawFunds(buyerAccount.id, [ZeroAddress], [buyerPayoff])
-        )
+        await expect(fundsHandler.connect(rando).withdrawFunds(buyerAccount.id, [ZeroAddress], [buyerPayoff]))
           .to.emit(fundsHandler, "FundsWithdrawn")
           .withArgs(buyerAccount.id, await rando.getAddress(), ZeroAddress, buyerPayoff, await rando.getAddress());
       });
@@ -288,9 +296,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         ).to.revertedWith(RevertReasons.NOT_AUTHORIZED);
 
         // Attempt to withdraw funds with new seller assistant, should succeed
-        await expect(
-          fundsHandler.connect(rando).withdrawFunds(seller.id, [ZeroAddress], [sellerPayoff])
-        )
+        await expect(fundsHandler.connect(rando).withdrawFunds(seller.id, [ZeroAddress], [sellerPayoff]))
           .to.emit(fundsHandler, "FundsWithdrawn")
           .withArgs(seller.id, await treasury.getAddress(), ZeroAddress, sellerPayoff, await rando.getAddress());
       });
@@ -324,9 +330,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         ).to.revertedWith(RevertReasons.NOT_AUTHORIZED);
 
         // Attempt to withdraw funds with new agent wallet, should fail
-        await expect(
-          fundsHandler.connect(rando).withdrawFunds(agentAccount.id, [ZeroAddress], [agentPayoff])
-        )
+        await expect(fundsHandler.connect(rando).withdrawFunds(agentAccount.id, [ZeroAddress], [agentPayoff]))
           .to.emit(fundsHandler, "FundsWithdrawn")
           .withArgs(agentAccount.id, await rando.getAddress(), ZeroAddress, agentPayoff, await rando.getAddress());
       });
@@ -367,7 +371,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
           .withArgs(offer.id, buyerAccount.id, exchangeId, await rando.getAddress());
 
         const block = await provider.getBlock(tx.blockNumber);
-        const disputePeriodEnd = redeemedDate+BigInt(offerDurations.disputePeriod);
+        const disputePeriodEnd = redeemedDate + BigInt(offerDurations.disputePeriod);
 
         // Expect the dispute period to not be over
         expect(block.timestamp).to.be.at.most(disputePeriodEnd);

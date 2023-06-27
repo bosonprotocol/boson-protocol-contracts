@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { Wallet, provider, ZeroAddress, parseEther, MaxUint256, getContractAt, getSigners, parseUnits } = hre.ethers;
 const simpleStatistic = require("simple-statistics");
 const fs = require("fs");
 
@@ -98,7 +98,12 @@ setupEnvironment["maxAllowedSellers"] = async function (sellerCount = 10) {
     };
 
     await other1.sendTransaction(tx);
-    const seller = mockSeller(await wallet.getAddress(), await wallet.getAddress(), await wallet.getAddress(), await wallet.getAddress());
+    const seller = mockSeller(
+      await wallet.getAddress(),
+      await wallet.getAddress(),
+      await wallet.getAddress(),
+      await wallet.getAddress()
+    );
     await accountHandler.connect(connectedWallet).createSeller(seller, emptyAuthToken, voucherInitValues);
   }
 
@@ -112,18 +117,33 @@ setupEnvironment["maxAllowedSellers"] = async function (sellerCount = 10) {
   const sellerAllowList = [...Array(sellerCount + 1).keys()].slice(1);
 
   // Dispute resolver 2 - used in "addSellersToAllowList"
-  const disputeResolver2 = mockDisputeResolver(await dr2.getAddress(), await dr2.getAddress(), await dr2.getAddress(), await dr2.getAddress());
+  const disputeResolver2 = mockDisputeResolver(
+    await dr2.getAddress(),
+    await dr2.getAddress(),
+    await dr2.getAddress(),
+    await dr2.getAddress()
+  );
   await accountHandler.connect(dr2).createDisputeResolver(disputeResolver2, disputeResolverFees, []);
   const args_2 = [disputeResolver2.id, sellerAllowList];
   const arrayIndex_2 = 1;
 
   // Dispute resolver 3 - used in "removeSellersFromAllowList"
-  const disputeResolver3 = mockDisputeResolver(await dr3.getAddress(), await dr3.getAddress(), await dr3.getAddress(), await dr3.getAddress());
+  const disputeResolver3 = mockDisputeResolver(
+    await dr3.getAddress(),
+    await dr3.getAddress(),
+    await dr3.getAddress(),
+    await dr3.getAddress()
+  );
   await accountHandler.connect(dr3).createDisputeResolver(disputeResolver3, disputeResolverFees, sellerAllowList);
   const args_3 = [disputeResolver3.id, sellerAllowList];
   const arrayIndex_3 = 1;
 
-  const disputeResolver1 = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress());
+  const disputeResolver1 = mockDisputeResolver(
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress()
+  );
   const args_1 = [disputeResolver1, disputeResolverFees, sellerAllowList];
   const arrayIndex_1 = 2;
 
@@ -149,19 +169,34 @@ setupEnvironment["maxFeesPerDisputeResolver"] = async function (feesCount = 10) 
   }
 
   // Dispute resolver 2 - used in "addFeesToDisputeResolver"
-  const disputeResolver2 = mockDisputeResolver(await dr2.getAddress(), await dr2.getAddress(), await dr2.getAddress(), await dr2.getAddress());
+  const disputeResolver2 = mockDisputeResolver(
+    await dr2.getAddress(),
+    await dr2.getAddress(),
+    await dr2.getAddress(),
+    await dr2.getAddress()
+  );
   await accountHandler.connect(dr2).createDisputeResolver(disputeResolver2, [], []);
   const args_2 = [disputeResolver2.id, disputeResolverFees];
   const arrayIndex_2 = 1;
 
   // Dispute resolver 3 - used in "removeFeesFromDisputeResolver"
-  const disputeResolver3 = mockDisputeResolver(await dr3.getAddress(), await dr3.getAddress(), await dr3.getAddress(), await dr3.getAddress());
+  const disputeResolver3 = mockDisputeResolver(
+    await dr3.getAddress(),
+    await dr3.getAddress(),
+    await dr3.getAddress(),
+    await dr3.getAddress()
+  );
   await accountHandler.connect(dr3).createDisputeResolver(disputeResolver3, disputeResolverFees, [], { gasLimit });
   const feeTokenAddressesToRemove = disputeResolverFees.map((DRfee) => DRfee.tokenAddress);
   const args_3 = [disputeResolver3.id, feeTokenAddressesToRemove];
   const arrayIndex_3 = 1;
 
-  const disputeResolver1 = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress());
+  const disputeResolver1 = mockDisputeResolver(
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress()
+  );
   const args_1 = [disputeResolver1, disputeResolverFees, []];
   const arrayIndex_1 = 1;
 
@@ -212,7 +247,13 @@ setupEnvironment["maxOffersPerBatch"] = async function (offerCount = 10) {
   );
   await accountHandler.connect(sellerWallet3).createSeller(seller3, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
+  const disputeResolver = mockDisputeResolver(
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    true
+  );
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
@@ -296,7 +337,13 @@ setupEnvironment["maxOffersPerGroup"] = async function (offerCount = 10) {
   );
   await accountHandler.connect(sellerWallet3).createSeller(seller3, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
+  const disputeResolver = mockDisputeResolver(
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    true
+  );
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
@@ -367,7 +414,13 @@ setupEnvironment["maxOffersPerBundle"] = async function (offerCount = 10) {
 
   await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
+  const disputeResolver = mockDisputeResolver(
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    true
+  );
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
@@ -427,7 +480,13 @@ setupEnvironment["maxTwinsPerBundle"] = async function (twinCount = 10) {
 
   await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
+  const disputeResolver = mockDisputeResolver(
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    true
+  );
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
@@ -484,7 +543,13 @@ setupEnvironment["maxExchangesPerBatch"] = async function (exchangesCount = 10) 
 
   await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
+  const disputeResolver = mockDisputeResolver(
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    true
+  );
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
@@ -497,9 +562,7 @@ setupEnvironment["maxExchangesPerBatch"] = async function (exchangesCount = 10) 
 
   // Deposit seller funds so the commit will succeed
   const sellerPool = BigInt(offer.price).mul(exchangesCount);
-  await fundsHandler
-    .connect(sellerWallet1)
-    .depositFunds(seller1.id, ZeroAddress, sellerPool, { value: sellerPool });
+  await fundsHandler.connect(sellerWallet1).depositFunds(seller1.id, ZeroAddress, sellerPool, { value: sellerPool });
 
   await setNextBlockTimestamp(Number(offerDates.voucherRedeemableFrom));
   for (let i = 1; i < exchangesCount + 1; i++) {
@@ -546,7 +609,13 @@ setupEnvironment["maxDisputesPerBatch"] = async function (exchangesCount = 10) {
 
   await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
+  const disputeResolver = mockDisputeResolver(
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    true
+  );
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
@@ -559,9 +628,7 @@ setupEnvironment["maxDisputesPerBatch"] = async function (exchangesCount = 10) {
 
   // Deposit seller funds so the commit will succeed
   const sellerPool = BigInt(offer.price).mul(exchangesCount);
-  await fundsHandler
-    .connect(sellerWallet1)
-    .depositFunds(seller1.id, ZeroAddress, sellerPool, { value: sellerPool });
+  await fundsHandler.connect(sellerWallet1).depositFunds(seller1.id, ZeroAddress, sellerPool, { value: sellerPool });
 
   await setNextBlockTimestamp(Number(offerDates.voucherRedeemableFrom));
   for (let i = 1; i < exchangesCount + 1; i++) {
@@ -612,7 +679,13 @@ setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
 
   await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
+  const disputeResolver = mockDisputeResolver(
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    true
+  );
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);
@@ -630,12 +703,16 @@ setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
     await tokenContract.mint(await buyer.getAddress(), offer.price);
     await tokenContract.connect(sellerWallet1).approve(await protocolDiamond.getAddress(), offer.sellerDeposit);
     await tokenContract.connect(buyer).approve(await protocolDiamond.getAddress(), offer.price);
-    await fundsHandler.connect(sellerWallet1).depositFunds(seller1.id, await tokenContract.getAddress(), offer.sellerDeposit);
+    await fundsHandler
+      .connect(sellerWallet1)
+      .depositFunds(seller1.id, await tokenContract.getAddress(), offer.sellerDeposit);
 
     // add token to DR accepted tokens
     await accountHandler
       .connect(dr1)
-      .addFeesToDisputeResolver(disputeResolver.id, [new DisputeResolverFee(await tokenContract.getAddress(), `Token${i}`, "0")]);
+      .addFeesToDisputeResolver(disputeResolver.id, [
+        new DisputeResolverFee(await tokenContract.getAddress(), `Token${i}`, "0"),
+      ]);
 
     // create the offer
     await offerHandler
@@ -690,7 +767,13 @@ setupEnvironment["maxPremintedVouchers"] = async function (tokenCount = 10) {
 
   await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
 
-  const disputeResolver = mockDisputeResolver(await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), await dr1.getAddress(), true);
+  const disputeResolver = mockDisputeResolver(
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    await dr1.getAddress(),
+    true
+  );
   await accountHandler
     .connect(dr1)
     .createDisputeResolver(disputeResolver, [new DisputeResolverFee(ZeroAddress, "Native", "0")], []);

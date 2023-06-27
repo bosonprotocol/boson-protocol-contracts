@@ -3,7 +3,19 @@ const _ = require("lodash");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { keccak256, formatBytes32String } = utils;
+
+const {
+  keccak256,
+  formatBytes32String,
+  ZeroAddress,
+  getContractAt,
+  Wallet,
+  provider,
+  parseEther,
+  toUtf8Bytes,
+  getContractFactory,
+  getSigners,
+} = ethers;
 const AuthToken = require("../../scripts/domain/AuthToken");
 const { getMetaTransactionsHandlerFacetInitArgs } = require("../../scripts/config/facet-deploy.js");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
@@ -381,7 +393,13 @@ async function populateProtocolContract(
         const clerkAddress = versionsWithClerkRole.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)
           ? await wallet.getAddress()
           : ZeroAddress;
-        const seller = mockSeller(await wallet.getAddress(), await wallet.getAddress(), clerkAddress, await wallet.getAddress(), true);
+        const seller = mockSeller(
+          await wallet.getAddress(),
+          await wallet.getAddress(),
+          clerkAddress,
+          await wallet.getAddress(),
+          true
+        );
         const id = (seller.id = nextAccountId.toString());
 
         let authToken;
@@ -470,12 +488,8 @@ async function populateProtocolContract(
 
       // Set unique offer dates based on offer id
       const now = offerDates.validFrom;
-      offerDates.validFrom = BigInt(now)
-        +oneMonth + offerId * 1000
-        .toString();
-      offerDates.validUntil = BigInt(now)
-        +oneMonth * 6 * (offerId + 1)
-        .toString();
+      offerDates.validFrom = BigInt(now) + oneMonth + offerId * (1000).toString();
+      offerDates.validUntil = BigInt(now) + oneMonth * 6 * (offerId + 1).toString();
 
       // Set unique offerDurations based on offer id
       offerDurations.disputePeriod = `${(offerId + 1) * oneMonth}`;
@@ -495,7 +509,7 @@ async function populateProtocolContract(
       sellers[j].offerIds.push(offerId);
 
       // Deposit seller funds so the commit will succeed
-      const sellerPool = BigInt(offer.quantityAvailable)*offer.price.toString();
+      const sellerPool = BigInt(offer.quantityAvailable) * offer.price.toString();
       const msgValue = offer.exchangeToken == ZeroAddress ? sellerPool : "0";
       await fundsHandler
         .connect(sellers[j].wallet)
@@ -569,7 +583,7 @@ async function populateProtocolContract(
     await mockTwin20.connect(seller.wallet).approve(protocolDiamondAddress, twin20.supplyAvailable);
 
     // mint tokens to be transferred on redeem
-    await mockTwin20.connect(seller.wallet).mint(seller.await wallet.getAddress(), twin20.supplyAvailable * twin20.amount);
+    await mockTwin20.connect(seller.wallet).mint(seller.wallet, twin20.supplyAvailable * twin20.amount);
     await twinHandler.connect(seller.wallet).createTwin(twin20);
 
     twins.push(twin20);
@@ -618,7 +632,9 @@ async function populateProtocolContract(
         await mockToken.connect(buyerWallet).approve(protocolDiamondAddress, offerPrice);
         await mockToken.mint(await buyerWallet.getAddress(), offerPrice);
       }
-      await exchangeHandler.connect(buyerWallet).commitToOffer(await buyerWallet.getAddress(), offer.id, { value: msgValue });
+      await exchangeHandler
+        .connect(buyerWallet)
+        .commitToOffer(await buyerWallet.getAddress(), offer.id, { value: msgValue });
       exchanges.push({ exchangeId: exchangeId, offerId: offer.id, buyerIndex: j });
       exchangeId++;
     }
@@ -756,7 +772,7 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
   }
 
   for (const seller of sellers) {
-    const sellerAddress = seller.await wallet.getAddress();
+    const sellerAddress = seller.wallet;
     const sellerAuthToken = seller.authToken;
 
     sellerByAddressState.push(await getSeller(accountHandlerRando, sellerAddress, { getBy: "address" }));
@@ -767,7 +783,7 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
   const otherAccounts = [...DRs, ...agents, ...buyers];
 
   for (const account of otherAccounts) {
-    const accountAddress = account.await wallet.getAddress();
+    const accountAddress = account.wallet;
 
     sellerByAddressState.push(await getSeller(accountHandlerRando, accountAddress, { getBy: "address" }));
     DRbyAddressState.push(await getDisputeResolver(accountHandlerRando, accountAddress, { getBy: "address" }));
@@ -1038,13 +1054,13 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
 
   // current sender address + isMetaTransaction (they are packed since they are shorter than one slot)
   // should be always be 0x
-  const inTransactionInfo = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber+"0");
+  const inTransactionInfo = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber + "0");
 
   // domain separator
-  const domainSeparator = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber+"1");
+  const domainSeparator = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber + "1");
 
   // cached chain id
-  const cachedChainId = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber+"3");
+  const cachedChainId = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber + "3");
 
   // input type
   const inputTypeKeys = [
@@ -1061,7 +1077,7 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
 
   const inputTypesState = [];
   for (const inputTypeKey of inputTypeKeys) {
-    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber+"4", inputTypeKey, paddingType.NONE);
+    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber + "4", inputTypeKey, paddingType.NONE);
     inputTypesState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
   }
 
@@ -1077,11 +1093,11 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
 
   const hashInfoState = [];
   for (const hashInfoType of Object.values(hashInfoTypes)) {
-    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber+"5", hashInfoType, paddingType.START);
+    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber + "5", hashInfoType, paddingType.START);
     // get also hashFunction
     hashInfoState.push({
       typeHash: await getStorageAt(protocolDiamondAddress, storageSlot),
-      functionPointer: await getStorageAt(protocolDiamondAddress, BigInt(storageSlot)+1),
+      functionPointer: await getStorageAt(protocolDiamondAddress, BigInt(storageSlot) + 1),
     });
   }
   const isAllowlistedState = {};
@@ -1108,7 +1124,7 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
   const selectors = await getMetaTransactionsHandlerFacetInitArgs(facets);
 
   for (const selector of Object.values(selectors)) {
-    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber+"6", selector, paddingType.START);
+    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber + "6", selector, paddingType.START);
     isAllowlistedState[selector] = await getStorageAt(protocolDiamondAddress, storageSlot);
   }
 
@@ -1131,11 +1147,11 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
   const protocolStatusStorageSlotNumber = BigInt(protocolStatusStorageSlot);
 
   // pause scenario
-  const pauseScenario = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber+"0");
+  const pauseScenario = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber + "0");
 
   // reentrancy status
   // default: NOT_ENTERED = 1
-  const reentrancyStatus = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber+"1");
+  const reentrancyStatus = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber + "1");
 
   // initializedInterfaces
   if (!preUpgradeInterfaceIds) {
@@ -1145,11 +1161,7 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
 
   const initializedInterfacesState = [];
   for (const interfaceId of Object.values(preUpgradeInterfaceIds)) {
-    const storageSlot = getMappingStoragePosition(
-      protocolStatusStorageSlotNumber+"2",
-      interfaceId,
-      paddingType.END
-    );
+    const storageSlot = getMappingStoragePosition(protocolStatusStorageSlotNumber + "2", interfaceId, paddingType.END);
     initializedInterfacesState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
   }
 
@@ -1159,7 +1171,7 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
 
   const initializedVersionsState = [];
   for (const version of preUpgradeVersions) {
-    const storageSlot = getMappingStoragePosition(protocolStatusStorageSlotNumber+"3", version, paddingType.END);
+    const storageSlot = getMappingStoragePosition(protocolStatusStorageSlotNumber + "3", version, paddingType.END);
     initializedVersionsState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
   }
 
@@ -1220,13 +1232,11 @@ async function getProtocolLookupsPrivateContractState(
     const id = Number(offer.offer.id);
     // exchangeIdsByOffer
     let exchangeIdsByOffer = [];
-    const arraySlot = BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber+"0", id, paddingType.START)
-    );
+    const arraySlot = BigInt.from(getMappingStoragePosition(protocolLookupsSlotNumber + "0", id, paddingType.START));
     const arrayLength = BigInt(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
     const arrayStart = BigInt(keccak256(arraySlot));
     for (let i = 0; i < arrayLength; i++) {
-      exchangeIdsByOffer.push(await getStorageAt(protocolDiamondAddress, arrayStart+i));
+      exchangeIdsByOffer.push(await getStorageAt(protocolDiamondAddress, arrayStart + i));
     }
     exchangeIdsByOfferState.push(exchangeIdsByOffer);
 
@@ -1234,7 +1244,7 @@ async function getProtocolLookupsPrivateContractState(
     groupIdByOfferState.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber+"3", id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber + "3", id, paddingType.START)
       )
     );
   }
@@ -1247,13 +1257,13 @@ async function getProtocolLookupsPrivateContractState(
   const accounts = [...sellers, ...DRs, ...agents, ...buyers];
 
   for (const account of accounts) {
-    const accountAddress = account.await wallet.getAddress();
+    const accountAddress = account.wallet;
 
     // buyerIdByWallet
     buyerIdByWallet.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber+"8", accountAddress, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber + "8", accountAddress, paddingType.START)
       )
     );
 
@@ -1261,13 +1271,13 @@ async function getProtocolLookupsPrivateContractState(
     agentIdByWallet.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber+"13", accountAddress, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber + "13", accountAddress, paddingType.START)
       )
     );
 
     // conditionalCommitsByAddress
-    const firstMappingStorageSlot = BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber+"19", accountAddress, paddingType.START)
+    const firstMappingStorageSlot = BigInt(
+      getMappingStoragePosition(protocolLookupsSlotNumber + "19", accountAddress, paddingType.START)
     );
     let commitsPerGroup = [];
     for (const group of groups) {
@@ -1294,8 +1304,8 @@ async function getProtocolLookupsPrivateContractState(
   // loop over all ids even where no data is expected
   for (const id of accountIds) {
     // disputeResolverFeeTokenIndex
-    let firstMappingStorageSlot = BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber+"12", id, paddingType.START)
+    let firstMappingStorageSlot = BigInt(
+      getMappingStoragePosition(protocolLookupsSlotNumber + "12", id, paddingType.START)
     );
     disputeResolverFeeTokenIndex.push({
       native: await getStorageAt(
@@ -1309,8 +1319,8 @@ async function getProtocolLookupsPrivateContractState(
     });
 
     // tokenIndexByAccount
-    firstMappingStorageSlot = BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber+"16", id, paddingType.START)
+    firstMappingStorageSlot = BigInt(
+      getMappingStoragePosition(protocolLookupsSlotNumber + "16", id, paddingType.START)
     );
     tokenIndexByAccount.push({
       native: await getStorageAt(
@@ -1327,7 +1337,7 @@ async function getProtocolLookupsPrivateContractState(
     cloneAddress.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber+"17", id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber + "17", id, paddingType.START)
       )
     );
 
@@ -1335,7 +1345,7 @@ async function getProtocolLookupsPrivateContractState(
     voucherCount.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber+"18", id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber + "18", id, paddingType.START)
       )
     );
   }
@@ -1343,20 +1353,24 @@ async function getProtocolLookupsPrivateContractState(
   // twinRangesBySeller
   let twinRangesBySeller = [];
   for (const id of accountIds) {
-    const firstMappingStorageSlot = BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber+"22", id, paddingType.START)
+    const firstMappingStorageSlot = BigInt(
+      getMappingStoragePosition(protocolLookupsSlotNumber + "22", id, paddingType.START)
     );
     let ranges = {};
     for (let mockTwin of mockTwinTokens) {
       ranges[await mockTwin.getAddress()] = [];
-      const arraySlot = getMappingStoragePosition(firstMappingStorageSlot, await mockTwin.getAddress(), paddingType.START);
+      const arraySlot = getMappingStoragePosition(
+        firstMappingStorageSlot,
+        await mockTwin.getAddress(),
+        paddingType.START
+      );
       const arrayLength = BigInt(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
       const arrayStart = BigInt(keccak256(arraySlot));
       for (let i = 0; i < arrayLength * 2; i = i + 2) {
         // each BosonTypes.TokenRange has length 2
         ranges[await mockTwin.getAddress()].push({
-          start: await getStorageAt(protocolDiamondAddress, arrayStart+i),
-          end: await getStorageAt(protocolDiamondAddress, arrayStart+i + 1),
+          start: await getStorageAt(protocolDiamondAddress, arrayStart + i),
+          end: await getStorageAt(protocolDiamondAddress, arrayStart + i + 1),
         });
       }
     }
@@ -1366,17 +1380,21 @@ async function getProtocolLookupsPrivateContractState(
   // twinIdsByTokenAddressAndBySeller
   let twinIdsByTokenAddressAndBySeller = [];
   for (const id of accountIds) {
-    const firstMappingStorageSlot = BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber+"23", id, paddingType.START)
+    const firstMappingStorageSlot = BigInt(
+      getMappingStoragePosition(protocolLookupsSlotNumber + "23", id, paddingType.START)
     );
     let twinIds = {};
     for (let mockTwin of mockTwinTokens) {
       twinIds[await mockTwin.getAddress()] = [];
-      const arraySlot = getMappingStoragePosition(firstMappingStorageSlot, await mockTwin.getAddress(), paddingType.START);
+      const arraySlot = getMappingStoragePosition(
+        firstMappingStorageSlot,
+        await mockTwin.getAddress(),
+        paddingType.START
+      );
       const arrayLength = BigInt(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
       const arrayStart = BigInt(keccak256(arraySlot));
       for (let i = 0; i < arrayLength; i++) {
-        twinIds[await mockTwin.getAddress()].push(await getStorageAt(protocolDiamondAddress, arrayStart+i));
+        twinIds[await mockTwin.getAddress()].push(await getStorageAt(protocolDiamondAddress, arrayStart + i));
       }
     }
     twinIdsByTokenAddressAndBySeller.push(twinIds);
@@ -1385,9 +1403,9 @@ async function getProtocolLookupsPrivateContractState(
   // allowedSellerIndex
   let allowedSellerIndex = [];
   for (const DR of DRs) {
-    const firstMappingStorageSlot = BigNumber.from(
+    const firstMappingStorageSlot = BigInt(
       getMappingStoragePosition(
-        protocolLookupsSlotNumber+"26",
+        protocolLookupsSlotNumber + "26",
         BigInt(DR.disputeResolver.id).toHexString(),
         paddingType.START
       )
@@ -1397,11 +1415,7 @@ async function getProtocolLookupsPrivateContractState(
       sellerStatus.push(
         await getStorageAt(
           protocolDiamondAddress,
-          getMappingStoragePosition(
-            firstMappingStorageSlot,
-            BigInt(seller.seller.id).toHexString(),
-            paddingType.START
-          )
+          getMappingStoragePosition(firstMappingStorageSlot, BigInt(seller.seller.id).toHexString(), paddingType.START)
         )
       );
     }
@@ -1412,8 +1426,8 @@ async function getProtocolLookupsPrivateContractState(
   let offerIdIndexByGroup = [];
   for (const group of groups) {
     const id = group.id;
-    const firstMappingStorageSlot = BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber+"28", id, paddingType.START)
+    const firstMappingStorageSlot = BigInt(
+      getMappingStoragePosition(protocolLookupsSlotNumber + "28", id, paddingType.START)
     );
     let offerInidices = [];
     for (const offer of offers) {
@@ -1436,37 +1450,31 @@ async function getProtocolLookupsPrivateContractState(
   // Although pending address/auth token update is not yet defined in 2.0.0, we can check that storage slots are empty
   for (const id of accountIds) {
     // pendingAddressUpdatesBySeller
-    let structStorageSlot = BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber+"29", id, paddingType.START)
-    );
+    let structStorageSlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + "29", id, paddingType.START));
     let structFields = [];
     for (let i = 0; i < 5; i++) {
       // BosonTypes.Seller has 6 fields, but last bool is packed in one slot with previous field
-      structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot+i));
+      structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot + i));
     }
     pendingAddressUpdatesBySeller.push(structFields);
 
     // pendingAuthTokenUpdatesBySeller
-    structStorageSlot = BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber+"30", id, paddingType.START)
-    );
+    structStorageSlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + "30", id, paddingType.START));
     structFields = [];
     for (let i = 0; i < 2; i++) {
       // BosonTypes.AuthToken has 2 fields
-      structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot+i));
+      structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot + i));
     }
     pendingAuthTokenUpdatesBySeller.push(structFields);
 
     // pendingAddressUpdatesByDisputeResolver
-    structStorageSlot = BigNumber.from(
-      getMappingStoragePosition(protocolLookupsSlotNumber+"31", id, paddingType.START)
-    );
+    structStorageSlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + "31", id, paddingType.START));
     structFields = [];
     for (let i = 0; i < 8; i++) {
       // BosonTypes.DisputeResolver has 8 fields
-      structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot+i));
+      structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot + i));
     }
-    structFields[6] = await getStorageAt(protocolDiamondAddress, keccak256(structStorageSlot+6)); // represents field string metadataUri. Technically this value represents the length of the string, but since it should be 0, we don't do further decoding
+    structFields[6] = await getStorageAt(protocolDiamondAddress, keccak256(structStorageSlot + 6)); // represents field string metadataUri. Technically this value represents the length of the string, but since it should be 0, we don't do further decoding
     pendingAddressUpdatesByDisputeResolver.push(structFields);
   }
 
@@ -1618,9 +1626,17 @@ async function populateVoucherContract(
           break;
         }
         case entityType.SELLER: {
-          const seller = mockSeller(await wallet.getAddress(), await wallet.getAddress(), await wallet.getAddress(), await wallet.getAddress(), true, undefined, {
-            refreshModule: true,
-          });
+          const seller = mockSeller(
+            await wallet.getAddress(),
+            await wallet.getAddress(),
+            await wallet.getAddress(),
+            await wallet.getAddress(),
+            true,
+            undefined,
+            {
+              refreshModule: true,
+            }
+          );
           const id = (seller.id = nextAccountId.toString());
           let authToken = mockAuthToken();
 
@@ -1683,12 +1699,8 @@ async function populateVoucherContract(
 
       // Set unique offer dates based on offer id
       const now = offerDates.validFrom;
-      offerDates.validFrom = BigInt(now)
-        +oneMonth + offerId * 1000
-        .toString();
-      offerDates.validUntil = BigInt(now)
-        +oneMonth * 6 * (offerId + 1)
-        .toString();
+      offerDates.validFrom = BigInt(now) + oneMonth + offerId * (1000).toString();
+      offerDates.validUntil = BigInt(now) + oneMonth * 6 * (offerId + 1).toString();
 
       // Set unique offerDurations based on offer id
       offerDurations.disputePeriod = `${(offerId + 1) * oneMonth}`;
@@ -1708,7 +1720,7 @@ async function populateVoucherContract(
       sellers[j].offerIds.push(offerId);
 
       // Deposit seller funds so the commit will succeed
-      const sellerPool = BigInt(offer.quantityAvailable)*offer.price.toString();
+      const sellerPool = BigInt(offer.quantityAvailable) * offer.price.toString();
       const msgValue = offer.exchangeToken == ZeroAddress ? sellerPool : "0";
       await fundsHandler
         .connect(sellers[j].wallet)
@@ -1735,7 +1747,9 @@ async function populateVoucherContract(
         await mockToken.connect(buyerWallet).approve(protocolDiamondAddress, offerPrice);
         await mockToken.mint(await buyerWallet.getAddress(), offerPrice);
       }
-      await exchangeHandler.connect(buyerWallet).commitToOffer(await buyerWallet.getAddress(), offer.id, { value: msgValue });
+      await exchangeHandler
+        .connect(buyerWallet)
+        .commitToOffer(await buyerWallet.getAddress(), offer.id, { value: msgValue });
       exchanges.push({ exchangeId: exchangeId, offerId: offer.id, buyerIndex: j });
       exchangeId++;
     }
@@ -1782,7 +1796,7 @@ async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buye
 
     // balanceOf(address owner)
     // isApprovedForAll(address owner, address assistant)
-    const addresses = [...sellers, ...buyers].map((acc) => acc.await wallet.getAddress());
+    const addresses = [...sellers, ...buyers].map((acc) => acc.wallet);
     const balanceOf = await Promise.all(addresses.map((address) => bosonVoucher.balanceOf(address)));
     const isApprovedForAll = await Promise.all(
       addresses.map((address1) =>

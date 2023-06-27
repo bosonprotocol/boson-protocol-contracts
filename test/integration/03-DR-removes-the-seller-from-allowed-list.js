@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { ZeroAddress } = ethers;
 const { expect } = require("chai");
 
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
@@ -74,10 +75,20 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       const agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller
-      seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
+      seller = mockSeller(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        await clerk.getAddress(),
+        await treasury.getAddress()
+      );
       expect(seller.isValid()).is.true;
 
-      const seller2 = mockSeller(await other1.getAddress(), await other1.getAddress(), ZeroAddress, await other1.getAddress());
+      const seller2 = mockSeller(
+        await other1.getAddress(),
+        await other1.getAddress(),
+        ZeroAddress,
+        await other1.getAddress()
+      );
       expect(seller2.isValid()).is.true;
 
       // VoucherInitValues
@@ -139,7 +150,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       const voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
 
       // Deposit seller funds so the commit will succeed
-      const fundsToDeposit = BigInt(sellerDeposit)*quantityAvailable;
+      const fundsToDeposit = BigInt(sellerDeposit) * quantityAvailable;
       await fundsHandler
         .connect(assistant)
         .depositFunds(seller.id, ZeroAddress, fundsToDeposit, { value: fundsToDeposit });

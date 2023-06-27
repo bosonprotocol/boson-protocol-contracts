@@ -11,12 +11,14 @@ const {
   isHexString,
   zeroPadValue,
   Interface,
+  toUtf8Bytes,
 } = ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
 const Role = require("../../scripts/domain/Role");
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
+const { zeroPadBytes } = require("ethers");
 
 function getEvent(receipt, factory, eventName) {
   let found = false;
@@ -257,10 +259,10 @@ function getMappingStoragePosition(slot, key, padding = paddingType.NONE) {
   let keyBuffer;
   switch (padding) {
     case paddingType.NONE:
-      keyBuffer = utils.toUtf8Bytes(key);
+      keyBuffer = toUtf8Bytes(key);
       break;
     case paddingType.START:
-      keyBuffer = Buffer.from(utils.hexZeroPad(key, 32).toString().slice(2), "hex");
+      keyBuffer = Buffer.from(zeroPadBytes(key, 32).toString().slice(2), "hex");
       break;
     case paddingType.END:
       keyBuffer = Buffer.from(key.slice(2).padEnd(64, "0"), "hex"); // assume key is prefixed with 0x
@@ -281,7 +283,7 @@ async function getFacetsWithArgs(facetNames, config) {
 
 function objectToArray(input) {
   // If the input is not an object, return it as-is
-  if (BigNumber.isBigNumber(input) || typeof input !== "object" || input === null) {
+  if (typeof input !== "object" || input === null) {
     return input;
   }
 

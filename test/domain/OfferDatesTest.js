@@ -1,4 +1,3 @@
-const hre = require("hardhat");
 const { expect } = require("chai");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const { oneWeek, oneMonth } = require("../util/constants");

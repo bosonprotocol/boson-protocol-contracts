@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getContractAt, provider } = hre.ethers;
 const network = hre.network.name;
 const { RoleAssignments } = require("./config/role-assignments");
 const { readContracts } = require("./util/utils");
@@ -63,7 +63,7 @@ async function main(env) {
 
     let contractInfo;
     contractInfo = contractsFile.contracts.find((i) => i.name === name);
-    await config.getAddress() = name === "AdminAddress" ? environments[network].adminAddress : await contractInfo.getAddress();
+    config.address = name === "AdminAddress" ? environments[network].adminAddress : await contractInfo.getAddress();
 
     console.log(`   👉 ${await config.getAddress()}`);
 

@@ -1,4 +1,4 @@
-const { ethers } = require("hardhat");
+const { ZeroAddress, provider } = require("hardhat");
 const { expect } = require("chai");
 
 const {
@@ -66,10 +66,21 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     expect(voucherInitValues.isValid()).is.true;
 
     // Create a seller account
-    seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
+    seller = mockSeller(
+      await assistant.getAddress(),
+      await admin.getAddress(),
+      await clerk.getAddress(),
+      await treasury.getAddress()
+    );
     expect(await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues))
       .to.emit(accountHandler, "SellerCreated")
-      .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, emptyAuthToken.toStruct(), await admin.getAddress());
+      .withArgs(
+        seller.id,
+        seller.toStruct(),
+        expectedCloneAddress,
+        emptyAuthToken.toStruct(),
+        await admin.getAddress()
+      );
 
     // Create a dispute resolver
     disputeResolver = mockDisputeResolver(
@@ -83,9 +94,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
 
     //Create DisputeResolverFee array so offer creation will succeed
     disputeResolverFeeNative = "0";
-    const disputeResolverFees = [
-      new DisputeResolverFee(ZeroAddress, "Native", disputeResolverFeeNative),
-    ];
+    const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", disputeResolverFeeNative)];
 
     // Make empty seller list, so every seller is allowed
     const sellerAllowList = [];
@@ -106,7 +115,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
 
     // Deposit seller funds so the commit will succeed
-    const fundsToDeposit = BigInt(offer.sellerDeposit)*offer.quantityAvailable;
+    const fundsToDeposit = BigInt(offer.sellerDeposit) * offer.quantityAvailable;
     await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, fundsToDeposit, {
       value: fundsToDeposit,
     });
@@ -140,14 +149,14 @@ describe("[@skip-on-coverage] DR removes fee", function () {
 
   it("Buyer should be able to commit to offer even when DR removes fee", async function () {
     // Removes fee
-    await expect(
-      accountHandler.connect(adminDR).removeFeesFromDisputeResolver(disputeResolver.id, [ZeroAddress])
-    )
+    await expect(accountHandler.connect(adminDR).removeFeesFromDisputeResolver(disputeResolver.id, [ZeroAddress]))
       .to.emit(accountHandler, "DisputeResolverFeesRemoved")
       .withArgs(disputeResolver.id, [ZeroAddress], await adminDR.getAddress());
 
     // Commit to offer
-    const tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id, { value: offer.price });
+    const tx = await exchangeHandler
+      .connect(buyer)
+      .commitToOffer(await buyer.getAddress(), offer.id, { value: offer.price });
     const blockTimestamp = (await provider.getBlock(tx.blockNumber)).timestamp;
 
     // Mock voucher
@@ -164,7 +173,14 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     // Check if offer was committed
     await expect(tx)
       .to.emit(exchangeHandler, "BuyerCommitted")
-      .withArgs(offer.id, buyerAccount.id, exchangeId, exchange.toStruct(), voucher.toStruct(), await buyer.getAddress());
+      .withArgs(
+        offer.id,
+        buyerAccount.id,
+        exchangeId,
+        exchange.toStruct(),
+        voucher.toStruct(),
+        await buyer.getAddress()
+      );
   });
 
   context("👉 After raise dispute actions", async function () {
@@ -185,11 +201,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
         .withArgs(exchangeId, disputeResolver.id, await buyer.getAddress());
 
       // Removes fee
-      await expect(
-        accountHandler
-          .connect(adminDR)
-          .removeFeesFromDisputeResolver(disputeResolver.id, [ZeroAddress])
-      )
+      await expect(accountHandler.connect(adminDR).removeFeesFromDisputeResolver(disputeResolver.id, [ZeroAddress]))
         .to.emit(accountHandler, "DisputeResolverFeesRemoved")
         .withArgs(disputeResolver.id, [ZeroAddress], await adminDR.getAddress());
 
@@ -225,11 +237,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
           .withArgs(exchangeId, buyerPercentBasisPoints, await assistantDR.getAddress());
 
         // Removes fee
-        await expect(
-          accountHandler
-            .connect(adminDR)
-            .removeFeesFromDisputeResolver(disputeResolver.id, [ZeroAddress])
-        )
+        await expect(accountHandler.connect(adminDR).removeFeesFromDisputeResolver(disputeResolver.id, [ZeroAddress]))
           .to.emit(accountHandler, "DisputeResolverFeesRemoved")
           .withArgs(disputeResolver.id, [ZeroAddress], await adminDR.getAddress());
 
@@ -248,11 +256,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
           .withArgs(exchangeId, await assistantDR.getAddress());
 
         // Removes fee
-        await expect(
-          accountHandler
-            .connect(adminDR)
-            .removeFeesFromDisputeResolver(disputeResolver.id, [ZeroAddress])
-        )
+        await expect(accountHandler.connect(adminDR).removeFeesFromDisputeResolver(disputeResolver.id, [ZeroAddress]))
           .to.emit(accountHandler, "DisputeResolverFeesRemoved")
           .withArgs(disputeResolver.id, [ZeroAddress], await adminDR.getAddress());
 

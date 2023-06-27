@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getContractFactory } = hre.ethers;
 const environments = require("../../../environments");
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
 const { getFees } = require("../../util/utils");

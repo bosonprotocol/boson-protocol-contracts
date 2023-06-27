@@ -1,7 +1,7 @@
 const shell = require("shelljs");
 const { readContracts } = require("../util/utils.js");
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { provider, getContractAt } = hre.ethers;
 const network = hre.network.name;
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const tag = "v2.2.1";

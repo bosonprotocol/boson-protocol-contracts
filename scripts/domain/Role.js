@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const { keccak256, toUtf8Bytes } = hre.ethers; 
+const { keccak256, toUtf8Bytes } = hre.ethers;
 
 /**
  * Boson Protocol Domain Enum: Role

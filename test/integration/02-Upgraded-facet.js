@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { ZeroAddress, getContractAt, getContractFactory, provider, parseUnits, getSigners } = ethers;
 const { expect, assert } = require("chai");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -85,7 +86,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
   beforeEach(async function () {
     // Create a valid seller, then set fields in tests directly
-    seller = mockSeller(await assistant.getAddress(), await admin.getAddress(), await clerk.getAddress(), await treasury.getAddress());
+    seller = mockSeller(
+      await assistant.getAddress(),
+      await admin.getAddress(),
+      await clerk.getAddress(),
+      await treasury.getAddress()
+    );
     expect(seller.isValid()).is.true;
 
     // VoucherInitValues
@@ -201,9 +207,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       exchange.finalizedDate = "0";
 
       // Deposit seller funds so the commit will succeed
-      await fundsHandler
-        .connect(assistant)
-        .depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
+      await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
     });
 
     afterEach(async function () {
@@ -347,7 +351,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     context("👉 extendVoucher()", async function () {
       it("should emit an VoucherExtended2 event when seller's assistant calls", async function () {
         // Commit to offer
-        const tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+        const tx = await exchangeHandler
+          .connect(buyer)
+          .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Get the block timestamp of the confirmed tx
         const blockNumber = tx.blockNumber;
@@ -360,7 +366,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // New expiry date for extensions
-        const validUntilDate = BigInt(voucher.validUntilDate)+oneMonth.toString();
+        const validUntilDate = BigInt(voucher.validUntilDate) + oneMonth.toString();
 
         // Upgrade Exchange handler facet
         await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
@@ -422,7 +428,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       escalationPeriod = disputeResolver.escalationResponsePeriod;
 
       // Deposit seller funds so the commit will succeed
-      const fundsToDeposit = BigInt(sellerDeposit)*quantityAvailable;
+      const fundsToDeposit = BigInt(sellerDeposit) * quantityAvailable;
       await fundsHandler
         .connect(assistant)
         .depositFunds(seller.id, ZeroAddress, fundsToDeposit, { value: fundsToDeposit });
@@ -485,10 +491,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const blockNumber = tx.blockNumber;
           const block = await provider.getBlock(blockNumber);
           const disputedDate = block.timestamp.toString();
-          const timeout = BigInt(disputedDate)+resolutionPeriod.toString();
+          const timeout = BigInt(disputedDate) + resolutionPeriod.toString();
 
           // extend timeout for a month
-          const newDisputeTimeout = BigInt(timeout)+oneMonth.toString();
+          const newDisputeTimeout = BigInt(timeout) + oneMonth.toString();
 
           // Extend the dispute timeout, testing for the event
           await expect(disputeHandler.connect(assistant).extendDisputeTimeout(exchangeId, newDisputeTimeout))
@@ -506,7 +512,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const blockNumber = tx.blockNumber;
           const block = await provider.getBlock(blockNumber);
           const disputedDate = block.timestamp.toString();
-          const timeout = BigInt(disputedDate)+resolutionPeriod.toString();
+          const timeout = BigInt(disputedDate) + resolutionPeriod.toString();
 
           // Set time forward past the dispute resolution period
           await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
@@ -722,7 +728,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         sellerDeposit = offerToken.sellerDeposit;
 
         // top up seller's and buyer's account
-        await Promise.all([mockToken.mint(await assistant.getAddress(), sellerDeposit), mockToken.mint(await buyer.getAddress(), price)]);
+        await Promise.all([
+          mockToken.mint(await assistant.getAddress(), sellerDeposit),
+          mockToken.mint(await buyer.getAddress(), price),
+        ]);
 
         // approve protocol to transfer the tokens
         await Promise.all([
@@ -733,14 +742,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         // deposit to seller's pool
         await Promise.all([
           fundsHandler.connect(assistant).depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit),
-          fundsHandler
-            .connect(assistant)
-            .depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit }),
+          fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit }),
         ]);
 
         // commit to both offers
         await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerNative.id, { value: offerNative.price });
+        await exchangeHandler
+          .connect(buyer)
+          .commitToOffer(await buyer.getAddress(), offerNative.id, { value: offerNative.price });
 
         buyerId = accountId.next().value;
       });
@@ -761,12 +770,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
             // expected payoffs - they are the same for token and native currency
             // buyer: price - buyerCancelPenalty
-            const buyerPayoff = BigInt(offerToken.price)-offerToken.buyerCancelPenalty.toString();
+            const buyerPayoff = BigInt(offerToken.price) - offerToken.buyerCancelPenalty.toString();
 
             // seller: sellerDeposit + buyerCancelPenalty
-            const sellerPayoff = BigInt(offerToken.sellerDeposit)
-              +offerToken.buyerCancelPenalty
-              .toString();
+            const sellerPayoff = BigInt(offerToken.sellerDeposit) + offerToken.buyerCancelPenalty.toString();
 
             // Withdraw funds, testing for the event
             // Withdraw tokens
@@ -774,8 +781,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             const tokenListBuyer = [ZeroAddress, await mockToken.getAddress()];
 
             // Withdraw amounts
-            const tokenAmountsSeller = [sellerPayoff, BigInt(sellerPayoff)/"2".toString()];
-            const tokenAmountsBuyer = [buyerPayoff, BigInt(buyerPayoff)/"5".toString()];
+            const tokenAmountsSeller = [sellerPayoff, BigInt(sellerPayoff) / "2".toString()];
+            const tokenAmountsBuyer = [buyerPayoff, BigInt(buyerPayoff) / "5".toString()];
 
             // seller withdrawal
             const tx = await fundsHandler
@@ -783,15 +790,21 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               .withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
             await expect(tx)
               .to.emit(fundsHandler, "FundsWithdrawn")
-              .withArgs(seller.id, await treasury.getAddress(), await mockToken.getAddress(), sellerPayoff, await assistant.getAddress());
+              .withArgs(
+                seller.id,
+                await treasury.getAddress(),
+                await mockToken.getAddress(),
+                sellerPayoff,
+                await assistant.getAddress()
+              );
 
             await expect(tx)
               .to.emit(fundsHandler, "FundsWithdrawn")
               .withArgs(
                 seller.id,
                 await treasury.getAddress(),
-                constants.Zero,
-                BigInt(sellerPayoff)/"2",
+                0n,
+                BigInt(sellerPayoff) / "2",
                 await assistant.getAddress()
               );
 
@@ -803,13 +816,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 buyerId,
                 await buyer.getAddress(),
                 await mockToken.getAddress(),
-                BigInt(buyerPayoff)/"5",
+                BigInt(buyerPayoff) / "5",
                 await buyer.getAddress()
               );
 
             await expect(tx2)
               .to.emit(fundsHandler, "FundsWithdrawn")
-              .withArgs(buyerId, await buyer.getAddress(), constants.Zero, buyerPayoff, await buyer.getAddress());
+              .withArgs(buyerId, await buyer.getAddress(), 0n, buyerPayoff, await buyer.getAddress());
           });
         });
 
@@ -823,12 +836,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
             // expected payoffs - they are the same for token and native currency
             // buyer: price - buyerCancelPenalty
-            const buyerPayoff = BigInt(offerToken.price)-offerToken.buyerCancelPenalty.toString();
+            const buyerPayoff = BigInt(offerToken.price) - offerToken.buyerCancelPenalty.toString();
 
             // seller: sellerDeposit + buyerCancelPenalty
-            const sellerPayoff = BigInt(offerToken.sellerDeposit)
-              +offerToken.buyerCancelPenalty
-              .toString();
+            const sellerPayoff = BigInt(offerToken.sellerDeposit) + offerToken.buyerCancelPenalty.toString();
 
             // Withdraw funds, testing for the event
             // Withdraw tokens
@@ -836,8 +847,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             const tokenListBuyer = [ZeroAddress, await mockToken.getAddress()];
 
             // Withdraw amounts
-            const tokenAmountsSeller = [sellerPayoff, BigInt(sellerPayoff)/"2".toString()];
-            const tokenAmountsBuyer = [buyerPayoff, BigInt(buyerPayoff)/"5".toString()];
+            const tokenAmountsSeller = [sellerPayoff, BigInt(sellerPayoff) / "2".toString()];
+            const tokenAmountsBuyer = [buyerPayoff, BigInt(buyerPayoff) / "5".toString()];
 
             // seller withdrawal
             // Attempt to withdraw the funds, expecting revert

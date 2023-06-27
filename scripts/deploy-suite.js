@@ -1,6 +1,6 @@
 const environments = require("../environments");
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ZeroAddress, getContractAt, getSigners } = hre.ethers;
 const network = hre.network.name;
 const confirmations = network == "hardhat" ? 1 : environments.confirmations;
 const tipMultiplier = BigInt(environments.tipMultiplier);
@@ -83,8 +83,20 @@ async function main(env, facetConfig) {
     maxPriorityFeePerGas
   );
   deploymentComplete("AccessController", await accessController.getAddress(), [], "", contracts);
-  deploymentComplete("DiamondLoupeFacet", await dlf.getAddress(), [], interfaceIdFromFacetName("DiamondLoupeFacet"), contracts);
-  deploymentComplete("DiamondCutFacet", await dcf.getAddress(), [], interfaceIdFromFacetName("DiamondCutFacet"), contracts);
+  deploymentComplete(
+    "DiamondLoupeFacet",
+    await dlf.getAddress(),
+    [],
+    interfaceIdFromFacetName("DiamondLoupeFacet"),
+    contracts
+  );
+  deploymentComplete(
+    "DiamondCutFacet",
+    await dcf.getAddress(),
+    [],
+    interfaceIdFromFacetName("DiamondCutFacet"),
+    contracts
+  );
   deploymentComplete("ERC165Facet", await erc165f.getAddress(), [], interfaceIdFromFacetName("ERC165Facet"), contracts);
   deploymentComplete("ProtocolDiamond", await protocolDiamond.getAddress(), diamondArgs, "", contracts);
 
@@ -113,12 +125,17 @@ async function main(env, facetConfig) {
   }
 
   const { version } = packageFile;
-  let { deployedFacets } = await deployAndCutFacets(await protocolDiamond.getAddress(), facetData, maxPriorityFeePerGas, version);
+  let { deployedFacets } = await deployAndCutFacets(
+    await protocolDiamond.getAddress(),
+    facetData,
+    maxPriorityFeePerGas,
+    version
+  );
 
   for (const deployedFacet of deployedFacets) {
     deploymentComplete(
       deployedFacet.name,
-      deployedFacet.await contract.getAddress(),
+      deployedFacet.contract,
       deployedFacet.constructorArgs,
       interfaceIdFromFacetName(deployedFacet.name),
       contracts
@@ -205,7 +222,7 @@ async function main(env, facetConfig) {
   );
   await transactionResponse.wait(confirmations);
 
-  if (adminAddress.toLowerCase() != await deployer.getAddress().toLowerCase()) {
+  if (adminAddress.toLowerCase() != (await deployer.getAddress().toLowerCase())) {
     // Grant ADMIN role to the specified admin address
     // Skip this step if adminAddress is the deployer
     transactionResponse = await accessController.grantRole(

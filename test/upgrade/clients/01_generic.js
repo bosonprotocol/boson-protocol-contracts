@@ -1,5 +1,4 @@
 const shell = require("shelljs");
-const { ethers } = require("hardhat");
 const { assert } = require("chai");
 const {
   getStorageLayout,
@@ -88,10 +87,10 @@ function getGenericContext(
             );
 
             const buyerWallet = buyers[j].wallet;
-            const buyerIndex = entities.findIndex((e) => e.await wallet.getAddress() == await buyerWallet.getAddress());
+            const buyerIndex = entities.findIndex((e) => e.wallet == buyerWallet);
 
             // Update the balance of the buyer
-            voucherData.balanceOf[buyerIndex] = voucherData.balanceOf[buyerIndex]-1;
+            voucherData.balanceOf[buyerIndex] = voucherData.balanceOf[buyerIndex] - 1;
           }
         }
 

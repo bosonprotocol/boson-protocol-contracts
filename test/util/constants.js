@@ -1,6 +1,4 @@
 const environments = require("../../environments");
-const hre = require("hardhat");
-const ethers = hre.ethers;
 
 // Some periods in seconds
 const oneDay = 86400n; //  1 day in seconds

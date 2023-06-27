@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, provider, zeroPadBytes, MaxUint256 } = ethers;
+const { ZeroAddress, provider, zeroPadBytes, MaxUint256, parseUnits } = ethers;
 const { expect, assert } = require("chai");
 const Exchange = require("../../scripts/domain/Exchange");
 const Dispute = require("../../scripts/domain/Dispute");
