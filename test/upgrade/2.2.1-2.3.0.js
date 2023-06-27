@@ -8,6 +8,8 @@ const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolve
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const Role = require("../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
+const AuthToken = require("../../scripts/domain/AuthToken");
+const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const { assert, expect } = require("chai");
@@ -276,52 +278,114 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
         });
 
-        it("Cannot update a seller to non zero clerk", async function () {
-          seller.clerk = ethers.constants.AddressZero;
-          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+        context("Deprecate clerk", async function () {
+          it("Cannot update a seller to non zero clerk", async function () {
+            seller.clerk = ethers.constants.AddressZero;
+            await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-          // Attempt to update a seller, expecting revert
-          seller.clerk = rando.address;
-          await expect(accountHandler.connect(rando).updateSeller(seller, emptyAuthToken)).to.revertedWith(
-            RevertReasons.CLERK_DEPRECATED
-          );
+            // Attempt to update a seller, expecting revert
+            seller.clerk = rando.address;
+            await expect(accountHandler.connect(rando).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+              RevertReasons.CLERK_DEPRECATED
+            );
+          });
+
+          it("Cannot opt-in to non zero clerk  [no other pending update]", async function () {
+            const { sellers } = preUpgradeEntities;
+            const { id } = sellers[0];
+
+            // Attempt to update a seller, expecting revert
+            await expect(
+              accountHandler.connect(rando).optInToSellerUpdate(id, [SellerUpdateFields.Clerk])
+            ).to.revertedWith(RevertReasons.NO_PENDING_UPDATE_FOR_ACCOUNT);
+          });
+
+          it("Cannot opt-in to non zero clerk [other pending updates]", async function () {
+            const { sellers } = preUpgradeEntities;
+            const { id } = sellers[1];
+
+            // Attempt to update a seller, expecting revert
+            await expect(
+              accountHandler.connect(rando).optInToSellerUpdate(id, [SellerUpdateFields.Clerk])
+            ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
+          });
+
+          it("It's possible to create a new account that uses the same address as some old clerk address", async function () {
+            // "clerk" was used as a clerk address for seller[2] before the upgrade
+            seller = mockSeller(clerk.address, clerk.address, ethers.constants.AddressZero, clerk.address);
+            await expect(accountHandler.connect(clerk).createSeller(seller, emptyAuthToken, voucherInitValues)).to.emit(
+              accountHandler,
+              "SellerCreated"
+            );
+          });
+
+          it("It's possible to withdraw funds with assistant address", async function () {
+            const { sellers } = preUpgradeEntities;
+            const { wallet, id } = sellers[2]; // seller 2 assistant was different from clerk
+
+            // Withdraw funds
+            await expect(fundsHandler.connect(wallet).withdrawFunds(id, [], [])).to.emit(
+              fundsHandler,
+              "FundsWithdrawn"
+            );
+          });
         });
 
-        it("Cannot opt-in to non zero clerk  [no other pending update]", async function () {
-          const { sellers } = preUpgradeEntities;
-          const { id } = sellers[0];
+        context("Clear pending updates", async function () {
+          let pendingSellerUpdate, authToken;
+          beforeEach(async function () {
+            authToken = new AuthToken("8400", AuthTokenType.Lens);
 
-          // Attempt to update a seller, expecting revert
-          await expect(
-            accountHandler.connect(rando).optInToSellerUpdate(id, [SellerUpdateFields.Clerk])
-          ).to.revertedWith(RevertReasons.NO_PENDING_UPDATE_FOR_ACCOUNT);
-        });
+            pendingSellerUpdate = mockSeller(
+              ethers.constants.AddressZero,
+              ethers.constants.AddressZero,
+              ethers.constants.AddressZero,
+              ethers.constants.AddressZero,
+              false
+            );
+            pendingSellerUpdate.id = "0";
+          });
 
-        it("Cannot opt-in to non zero clerk [other pending updates]", async function () {
-          const { sellers } = preUpgradeEntities;
-          const { id } = sellers[1];
+          it("should clean pending addresses update when calling updateSeller again", async function () {
+            // create a seller with auth token
+            seller.admin = ethers.constants.AddressZero;
+            authToken = new AuthToken("8400", AuthTokenType.Lens);
+            await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-          // Attempt to update a seller, expecting revert
-          await expect(
-            accountHandler.connect(rando).optInToSellerUpdate(id, [SellerUpdateFields.Clerk])
-          ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
-        });
+            // Start replacing auth token with admin address, but don't complete it
+            seller.admin = pendingSellerUpdate.admin = assistant.address;
+            await expect(accountHandler.connect(assistant).updateSeller(seller, emptyAuthToken))
+              .to.emit(accountHandler, "SellerUpdatePending")
+              .withArgs(seller.id, pendingSellerUpdate.toStruct(), emptyAuthToken.toStruct(), assistant.address);
 
-        it("It's possible to create a new account that uses the same address as some old clerk address", async function () {
-          // "clerk" was used as a clerk address for seller[2] before the upgrade
-          seller = mockSeller(clerk.address, clerk.address, ethers.constants.AddressZero, clerk.address);
-          await expect(accountHandler.connect(clerk).createSeller(seller, emptyAuthToken, voucherInitValues)).to.emit(
-            accountHandler,
-            "SellerCreated"
-          );
-        });
+            // Replace admin address with auth token
+            seller.admin = pendingSellerUpdate.admin = ethers.constants.AddressZero;
+            authToken.tokenId = "123";
 
-        it("It's possible to withdraw funds with assistant address", async function () {
-          const { sellers } = preUpgradeEntities;
-          const { wallet, id } = sellers[2]; // seller 2 assistant was different from clerk
+            // Calling updateSeller again, request to replace admin with an auth token
+            await expect(accountHandler.connect(assistant).updateSeller(seller, authToken))
+              .to.emit(accountHandler, "SellerUpdatePending")
+              .withArgs(seller.id, pendingSellerUpdate.toStruct(), authToken.toStruct(), assistant.address);
+          });
 
-          // Withdraw funds
-          await expect(fundsHandler.connect(wallet).withdrawFunds(id, [], [])).to.emit(fundsHandler, "FundsWithdrawn");
+          it("should clean pending auth token update when calling updateSeller again", async function () {
+            await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+            // Start replacing admin address with auth token, but don't complete it
+            seller.admin = ethers.constants.AddressZero;
+            authToken = new AuthToken("8400", AuthTokenType.Lens);
+            await expect(accountHandler.connect(assistant).updateSeller(seller, authToken))
+              .to.emit(accountHandler, "SellerUpdatePending")
+              .withArgs(seller.id, pendingSellerUpdate.toStruct(), authToken.toStruct(), assistant.address);
+
+            // Replace auth token with admin address
+            seller.admin = pendingSellerUpdate.admin = rando.address;
+
+            // Calling updateSeller for the second time, request to replace auth token with admin
+            await expect(accountHandler.connect(assistant).updateSeller(seller, emptyAuthToken))
+              .to.emit(accountHandler, "SellerUpdatePending")
+              .withArgs(seller.id, pendingSellerUpdate.toStruct(), emptyAuthToken.toStruct(), assistant.address);
+          });
         });
       });
 
