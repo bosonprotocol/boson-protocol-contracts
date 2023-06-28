@@ -790,8 +790,32 @@ describe("IBosonVoucher", function () {
 
       // Second call should revert since there's nothing to burn
       await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
-        RevertReasons.NOTHING_TO_BURN
+        RevertReasons.AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN
       );
+    });
+
+    it("Should respect amount parameter", async function () {
+      // amout minted = 5
+      // burn = 3
+      const amountMinted = amount;
+      amount = 3;
+
+      // Burn tokens, test for event
+       await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
+
+      // Last burned id should be updated
+      const tokenIdStart = deriveTokenId(offerId, start);
+      const lastBurnedId = tokenIdStart.add(amount - 1);
+      let range = new Range(tokenIdStart.toString(), length, amountMinted, lastBurnedId.toString(), assistant.address);
+      let returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
+      assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+
+      // burn remaining vouchers
+      amount = 2;
+      await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
+      range.lastBurnedTokenId = tokenIdStart.add(amountMinted - 1).toString();
+      returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
+      assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
     });
 
     it("Should skip all vouchers were already committed", async function () {
@@ -846,7 +870,6 @@ describe("IBosonVoucher", function () {
       await mockProtocol.mock.getOffer
         .withArgs(offerId)
         .returns(true, offer, offerDates, offerDurations, disputeResolutionTerms, offerFees);
-      // skip to after offer expiration
       await setNextBlockTimestamp(ethers.BigNumber.from(offerDates.validUntil).add(1).toHexString());
 
       // Burn tokens, test for event
@@ -900,7 +923,15 @@ describe("IBosonVoucher", function () {
 
         // Try to burn, it should fail
         await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
-          RevertReasons.NOTHING_TO_BURN
+          RevertReasons.AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN
+        );
+      });
+
+      it("Amounts overflows minted range", async function () {
+        const amount = 6;
+
+        await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
+         RevertReasons.AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN
         );
       });
     });

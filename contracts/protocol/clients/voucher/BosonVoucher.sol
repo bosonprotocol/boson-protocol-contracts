@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.18;
+
+import "hardhat/console.sol";
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
@@ -280,10 +282,10 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         uint256 start = (range.lastBurnedTokenId == 0) ? range.start : (range.lastBurnedTokenId + 1);
 
         // Get the last token to burn
-        uint256 end = range.start + _amount;
+        uint256 end = start + _amount;
 
         // End should be greater than start
-        require(end > start, NOTHING_TO_BURN);
+        require(end > start && end <= range.start + range.minted, AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN);
 
         // Burn the range
         address rangeOwner = range.owner;
@@ -291,6 +293,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         for (uint256 tokenId = start; tokenId < end; tokenId++) {
             // Burn only if not already _committed
             if (!_committed[tokenId]) {
+                console.log('burning', tokenId);
                 emit Transfer(rangeOwner, address(0), tokenId);
                 burned++;
             }

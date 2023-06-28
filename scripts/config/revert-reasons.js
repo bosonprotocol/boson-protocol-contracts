@@ -133,7 +133,7 @@ exports.RevertReasons = {
   NO_SILENT_MINT_ALLOWED: "Only owner's mappings can be updated without event",
   OFFER_EXPIRED_OR_VOIDED: "Offer expired or voided",
   OFFER_STILL_VALID: "Offer still valid",
-  NOTHING_TO_BURN: "Nothing to burn",
+  AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN: "Amount exceeds the range or there is nothing to burn",
   NOT_COMMITTABLE: "Token not committable",
   INVALID_TO_ADDRESS: "Tokens can only be pre-mined to the contract or contract owner address",
   EXTERNAL_CALL_FAILED: "External call failed",
