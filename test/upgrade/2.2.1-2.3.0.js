@@ -15,6 +15,7 @@ const ExchangeState = require("../../scripts/domain/ExchangeState");
 const Group = require("../../scripts/domain/Group");
 const TokenType = require("../../scripts/domain/TokenType.js");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
+const { Collection, CollectionList } = require("../../scripts/domain/Collection");
 
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const {
@@ -26,12 +27,19 @@ const {
   mockTwin,
   mockCondition,
 } = require("../util/mock");
-const { getSnapshot, revertToSnapshot, setNextBlockTimestamp, getEvent } = require("../util/utils");
+const {
+  getSnapshot,
+  revertToSnapshot,
+  setNextBlockTimestamp,
+  getEvent,
+  calculateContractAddress,
+  deriveTokenId,
+} = require("../util/utils");
 
 const { deploySuite, populateProtocolContract, getProtocolContractState, revertState } = require("../util/upgrade");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { getGenericContext } = require("./01_generic");
-const { oneWeek, oneMonth } = require("../util/constants");
+const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
 
 const version = "2.3.0";
 const { migrate } = require(`../../scripts/migrations/migrate_${version}.js`);
@@ -52,7 +60,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     exchangeHandler,
     twinHandler,
     disputeHandler,
-    groupHandler;
+    groupHandler,
+    orchestrationHandler;
   let snapshot;
   let protocolDiamondAddress, mockContracts;
   let contractsAfter;
@@ -126,9 +135,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       ({ bundleHandler, fundsHandler, exchangeHandler, twinHandler, disputeHandler } = contractsBefore);
 
       const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
-        ["ConfigHandlerFacet", "PauseHandlerFacet", "GroupHandlerFacet"],
+        [
+          "ConfigHandlerFacet",
+          "PauseHandlerFacet",
+          "GroupHandlerFacet",
+          "OfferHandlerFacet",
+          "OrchestrationHandlerFacet",
+        ],
         undefined,
-        ["setMinResolutionPeriod", "unpause", "createGroup"] //ToDo: revise
+        ["setMinResolutionPeriod", "unpause", "createGroup", "createSellerAnd", "createOffer", "createPremintedOffer"] //ToDo: revise
       );
 
       removedFunctionHashes = await getFunctionHashesClosure();
@@ -142,6 +157,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         configHandler: "IBosonConfigHandler",
         offerHandler: "IBosonOfferHandler",
         groupHandler: "IBosonGroupHandler",
+        orchestrationHandler: "IBosonOrchestrationHandler",
       };
 
       contractsAfter = { ...contractsBefore };
@@ -150,7 +166,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
       }
 
-      ({ accountHandler, pauseHandler, configHandler, offerHandler, groupHandler } = contractsAfter);
+      ({ accountHandler, pauseHandler, configHandler, offerHandler, groupHandler, orchestrationHandler } =
+        contractsAfter);
 
       addedFunctionHashes = await getFunctionHashesClosure();
 
@@ -288,26 +305,26 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         let seller, emptyAuthToken, voucherInitValues;
 
         beforeEach(async function () {
-          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
           emptyAuthToken = mockAuthToken();
           voucherInitValues = mockVoucherInitValues();
         });
 
-        it("Cannot create a new seller with non zero clerk", async function () {
-          // Attempt to create a seller with clerk not 0
-          await expect(
-            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
-        });
-
         context("Deprecate clerk", async function () {
+          it("Cannot create a new seller with non zero clerk", async function () {
+            // Attempt to create a seller with clerk not 0
+            await expect(
+              accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues)
+            ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
+          });
+
           it("Cannot update a seller to non zero clerk", async function () {
             seller.clerk = ethers.constants.AddressZero;
-            await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+            await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
             // Attempt to update a seller, expecting revert
-            seller.clerk = rando.address;
-            await expect(accountHandler.connect(rando).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+            seller.clerk = assistant.address;
+            await expect(accountHandler.connect(assistant).updateSeller(seller, emptyAuthToken)).to.revertedWith(
               RevertReasons.CLERK_DEPRECATED
             );
           });
@@ -372,7 +389,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             // create a seller with auth token
             seller.admin = ethers.constants.AddressZero;
             authToken = new AuthToken("8400", AuthTokenType.Lens);
-            await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+            await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
             // Start replacing auth token with admin address, but don't complete it
             seller.admin = pendingSellerUpdate.admin = assistant.address;
@@ -391,7 +408,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           });
 
           it("should clean pending auth token update when calling updateSeller again", async function () {
-            await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+            await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
             // Start replacing admin address with auth token, but don't complete it
             seller.admin = ethers.constants.AddressZero;
@@ -407,6 +424,94 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             await expect(accountHandler.connect(assistant).updateSeller(seller, emptyAuthToken))
               .to.emit(accountHandler, "SellerUpdatePending")
               .withArgs(seller.id, pendingSellerUpdate.toStruct(), emptyAuthToken.toStruct(), assistant.address);
+          });
+        });
+
+        context("Create new collection", async function () {
+          it("New seller can create a new collection", async function () {
+            const { sellers } = preUpgradeEntities;
+            // const { wallet: sellerWallet, id: sellerId, voucherInitValues } = sellers[0];
+            await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+            const externalId = "new-collection";
+
+            const expectedCollectionAddress = calculateContractAddress(
+              accountHandler.address,
+              (sellers.length + 1).toString()
+            );
+            const expectedDefaultAddress = calculateContractAddress(accountHandler.address, "1");
+
+            await expect(accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues))
+              .to.emit(accountHandler, "CollectionCreated")
+              .withArgs(seller.Id, 1, expectedCollectionAddress, externalId, assistant.address);
+
+            const expectedCollections = new CollectionList([new Collection(expectedCollectionAddress, externalId)]);
+
+            // Get the collections information
+            const [defaultVoucherAddress, collections] = await accountHandler
+              .connect(rando)
+              .getSellersCollections(seller.id);
+            const additionalCollections = CollectionList.fromStruct(collections);
+            expect(defaultVoucherAddress).to.equal(expectedDefaultAddress, "Wrong default voucher address");
+            expect(additionalCollections).to.deep.equal(expectedCollections, "Wrong additional collections");
+
+            // Voucher clone contract
+            let bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCollectionAddress);
+
+            expect(await bosonVoucher.owner()).to.equal(assistant.address, "Wrong voucher clone owner");
+
+            bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCollectionAddress);
+            expect(await bosonVoucher.contractURI()).to.equal(voucherInitValues.contractURI, "Wrong contract URI");
+            expect(await bosonVoucher.name()).to.equal(
+              VOUCHER_NAME + " " + seller.id + "_1",
+              "Wrong voucher client name"
+            );
+            expect(await bosonVoucher.symbol()).to.equal(
+              VOUCHER_SYMBOL + "_" + seller.id + "_1",
+              "Wrong voucher client symbol"
+            );
+          });
+
+          it("Old seller can create a new collection", async function () {
+            const { sellers } = preUpgradeEntities;
+            const { wallet: sellerWallet, id: sellerId, voucherInitValues } = sellers[0];
+            const externalId = "new-collection";
+
+            const expectedCollectionAddress = calculateContractAddress(
+              accountHandler.address,
+              (sellers.length + 1).toString()
+            );
+            const expectedDefaultAddress = calculateContractAddress(accountHandler.address, "1");
+
+            await expect(accountHandler.connect(sellerWallet).createNewCollection(externalId, voucherInitValues))
+              .to.emit(accountHandler, "CollectionCreated")
+              .withArgs(sellerId, 1, expectedCollectionAddress, externalId, sellerWallet.address);
+
+            const expectedCollections = new CollectionList([new Collection(expectedCollectionAddress, externalId)]);
+
+            // Get the collections information
+            const [defaultVoucherAddress, collections] = await accountHandler
+              .connect(rando)
+              .getSellersCollections(sellerId);
+            const additionalCollections = CollectionList.fromStruct(collections);
+            expect(defaultVoucherAddress).to.equal(expectedDefaultAddress, "Wrong default voucher address");
+            expect(additionalCollections).to.deep.equal(expectedCollections, "Wrong additional collections");
+
+            // Voucher clone contract
+            let bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCollectionAddress);
+
+            expect(await bosonVoucher.owner()).to.equal(sellerWallet.address, "Wrong voucher clone owner");
+
+            bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCollectionAddress);
+            expect(await bosonVoucher.contractURI()).to.equal(voucherInitValues.contractURI, "Wrong contract URI");
+            expect(await bosonVoucher.name()).to.equal(
+              VOUCHER_NAME + " " + sellerId + "_1",
+              "Wrong voucher client name"
+            );
+            expect(await bosonVoucher.symbol()).to.equal(
+              VOUCHER_SYMBOL + "_" + sellerId + "_1",
+              "Wrong voucher client symbol"
+            );
           });
         });
       });
@@ -540,6 +645,47 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           expect(protocolContractStateAfter.configContractState).to.deep.equal(
             protocolContractStateBefore.configContractState
           );
+        });
+
+        context("Create an offer with a new collection", async function () {
+          it("Create an offer with a new collection", async function () {
+            const { sellers, DRs, buyers } = preUpgradeEntities;
+            const { wallet: sellerWallet, voucherInitValues } = sellers[0];
+            const { disputeResolver } = DRs[0];
+            const { wallet: buyerWallet } = buyers[0];
+            const externalId = "new-collection";
+
+            // Get next ids
+            const offerId = await offerHandler.getNextOfferId();
+            const exchangeId = await exchangeHandler.getNextExchangeId();
+            const tokenId = deriveTokenId(offerId, exchangeId);
+
+            // Create a new collection
+            await accountHandler.connect(sellerWallet).createNewCollection(externalId, voucherInitValues);
+
+            const { offer, offerDates, offerDurations } = await mockOffer();
+            offer.collectionIndex = "1";
+
+            await expect(
+              offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, "0")
+            ).to.emit(offerHandler, "OfferCreated");
+
+            // Collection voucher contract
+            const expectedCollectionAddress = calculateContractAddress(
+              accountHandler.address,
+              (sellers.length + 1).toString()
+            );
+            const bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCollectionAddress);
+
+            const tx = await exchangeHandler
+              .connect(buyerWallet)
+              .commitToOffer(buyerWallet.address, offerId, { value: offer.price });
+
+            // Voucher should be minted on a new collection contract
+            await expect(tx)
+              .to.emit(bosonVoucher, "Transfer")
+              .withArgs(ethers.constants.Zero, buyerWallet.address, tokenId);
+          });
         });
       });
 
@@ -737,6 +883,52 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             groupHandler,
             "GroupCreated"
           );
+        });
+      });
+
+      context("Orchestration", async function () {
+        // NB: testing only 1 method to confirm that orchestration is upgraded
+        // The rest of the method are tested in the unit tests
+        it("should emit a SellerCreated and OfferCreated events with empty auth token", async function () {
+          const { DRs, sellers } = preUpgradeEntities;
+          const { disputeResolver } = DRs[0];
+          const seller = mockSeller(
+            assistant.address,
+            assistant.address,
+            ethers.constants.AddressZero,
+            assistant.address
+          );
+          const emptyAuthToken = mockAuthToken();
+          const voucherInitValues = mockVoucherInitValues();
+          const { offer, offerDates, offerDurations } = await mockOffer();
+
+          // Create a seller and an offer, testing for the event
+          const tx = await orchestrationHandler
+            .connect(assistant)
+            .createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              emptyAuthToken,
+              voucherInitValues,
+              "0"
+            );
+
+          await expect(tx).to.emit(orchestrationHandler, "SellerCreated");
+          await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+
+          // Voucher clone contract
+          const expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, sellers.length + 1);
+          let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+          await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
+          await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
+
+          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+          await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
         });
       });
 

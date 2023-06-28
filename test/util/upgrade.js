@@ -50,6 +50,7 @@ const { tagsByVersion } = require("../upgrade/00_config");
 // Common vars
 const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
 const versionsWithClerkRole = ["v2.0.0", "v2.1.0", "v2.2.0", "v2.2.1"];
+const versionsWithoutCollections = versionsWithClerkRole;
 let rando;
 let preUpgradeInterfaceIds, preUpgradeVersions;
 let facets, versionTags;
@@ -679,7 +680,8 @@ async function getProtocolContractState(
     configHandler,
   },
   { mockToken, mockTwinTokens },
-  { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins }
+  { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins },
+  isBefore = false
 ) {
   rando = (await ethers.getSigners())[10]; // random account making the calls
 
@@ -698,7 +700,7 @@ async function getProtocolContractState(
     protocolStatusPrivateContractState,
     protocolLookupsPrivateContractState,
   ] = await Promise.all([
-    getAccountContractState(accountHandler, { DRs, sellers, buyers, agents }),
+    getAccountContractState(accountHandler, { DRs, sellers, buyers, agents }, isBefore),
     getOfferContractState(offerHandler, offers),
     getExchangeContractState(exchangeHandler, exchanges),
     getBundleContractState(bundleHandler, bundles),
@@ -734,7 +736,7 @@ async function getProtocolContractState(
   };
 }
 
-async function getAccountContractState(accountHandler, { DRs, sellers, buyers, agents }) {
+async function getAccountContractState(accountHandler, { DRs, sellers, buyers, agents }, isBefore = false) {
   const accountHandlerRando = accountHandler.connect(rando);
   // all accounts
   const accounts = [...sellers, ...DRs, ...buyers, ...agents];
@@ -747,6 +749,7 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
   let sellerByAuthTokenState = [];
   let DRbyAddressState = [];
   let nextAccountId;
+  let sellersCollections = [];
 
   // Query even the ids where it's not expected to get the entity
   for (const account of accounts) {
@@ -760,6 +763,11 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
     }
     agentsState.push(await getAgent(accountHandlerRando, id));
     buyersState.push(await getBuyer(accountHandlerRando, id));
+    if (versionsWithoutCollections.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
+      sellersCollections.push(await accountHandlerRando.getSellersCollections(id));
+    } else {
+      sellersCollections.push([ethers.constants.AddressZero, []]);
+    }
 
     for (const account2 of accounts) {
       const id2 = account2.id;
@@ -796,6 +804,7 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
     agentsState,
     DRbyAddressState,
     nextAccountId,
+    sellersCollections,
   };
 }
 
@@ -1211,7 +1220,7 @@ async function getProtocolLookupsPrivateContractState(
         #14 [X] // placeholder for availableFunds
         #15 [X] // placeholder for tokenList
         #16 [ ] // placeholder for tokenIndexByAccount
-        #17 [ ] // placeholder for cloneAddress
+        #17 [X] // placeholder for cloneAddress
         #18 [ ] // placeholder for voucherCount
         #19 [ ] // placeholder for conditionalCommitsByAddress
         #20 [X] // placeholder for authTokenContracts
@@ -1226,7 +1235,7 @@ async function getProtocolLookupsPrivateContractState(
         #29 [ ] // placeholder for pendingAddressUpdatesBySeller
         #30 [ ] // placeholder for pendingAuthTokenUpdatesBySeller
         #31 [ ] // placeholder for pendingAddressUpdatesByDisputeResolver
-        #32 [ ] // placeholder for additionalCollections // ToDo
+        #32 [X] // placeholder for additionalCollections
         #33 [ ] // placeholder for rangeIdByTwin
         */
 
@@ -1303,10 +1312,9 @@ async function getProtocolLookupsPrivateContractState(
     conditionalCommitsByAddress.push(commitsPerGroup);
   }
 
-  // disputeResolverFeeTokenIndex, tokenIndexByAccount, cloneAddress, voucherCount
+  // disputeResolverFeeTokenIndex, tokenIndexByAccount, voucherCount
   let disputeResolverFeeTokenIndex = [];
   let tokenIndexByAccount = [];
-  let cloneAddress = [];
   let voucherCount = [];
 
   // all account ids
@@ -1343,14 +1351,6 @@ async function getProtocolLookupsPrivateContractState(
         getMappingStoragePosition(firstMappingStorageSlot, mockToken.address, paddingType.START)
       ),
     });
-
-    // cloneAddress
-    cloneAddress.push(
-      await getStorageAt(
-        protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber.add("17"), id, paddingType.START)
-      )
-    );
 
     // voucherCount
     voucherCount.push(
@@ -1491,7 +1491,7 @@ async function getProtocolLookupsPrivateContractState(
     pendingAddressUpdatesByDisputeResolver.push(structFields);
   }
 
-  // offerIdIndexByGroup
+  // rangeIdByTwin
   let rangeIdByTwin = [];
   for (const twin of twins) {
     const { id } = twin;
@@ -1510,7 +1510,6 @@ async function getProtocolLookupsPrivateContractState(
     disputeResolverFeeTokenIndex,
     agentIdByWallet,
     tokenIndexByAccount,
-    cloneAddress,
     voucherCount,
     conditionalCommitsByAddress,
     twinRangesBySeller,
