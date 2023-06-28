@@ -2,8 +2,6 @@ const shell = require("shelljs");
 const _ = require("lodash");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
-const ethers = hre.ethers;
-
 const {
   keccak256,
   formatBytes32String,
@@ -15,7 +13,7 @@ const {
   toUtf8Bytes,
   getContractFactory,
   getSigners,
-} = ethers;
+} = hre.ethers;
 const AuthToken = require("../../scripts/domain/AuthToken");
 const { getMetaTransactionsHandlerFacetInitArgs } = require("../../scripts/config/facet-deploy.js");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
@@ -95,7 +93,8 @@ async function deploySuite(deployer, newVersion) {
   shell.exec(`git fetch --force --tags origin`);
   console.log(`Checking out version ${tag}`);
   shell.exec(`rm -rf contracts/*`);
-  shell.exec(`git checkout ${tag} contracts`);
+  shell.exec(`git checkout ${tag} -- "contracts/**`);
+
   if (scriptsTag) {
     console.log(`Checking out scripts on version ${scriptsTag}`);
     shell.exec(`rm -rf scripts/*`);
@@ -121,7 +120,7 @@ async function deploySuite(deployer, newVersion) {
 
   // Get AccessController abstraction
   const accessControllerInfo = contractsFile.contracts.find((i) => i.name === "AccessController");
-  const accessController = await getContractAt("AccessController", await accessControllerInfo.getAddress());
+  const accessController = await getContractAt("AccessController", accessControllerInfo.address);
 
   // Temporarily grant UPGRADER role to deployer account
   await accessController.grantRole(Role.UPGRADER, await deployer.getAddress());
@@ -374,6 +373,7 @@ async function populateProtocolContract(
         await accountHandler
           .connect(connectedWallet)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+        console.log("after");
         DRs.push({
           wallet: connectedWallet,
           id: disputeResolver.id,
