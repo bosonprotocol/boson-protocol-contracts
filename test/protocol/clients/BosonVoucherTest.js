@@ -801,7 +801,7 @@ describe("IBosonVoucher", function () {
       amount = 3;
 
       // Burn tokens, test for event
-       await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
+      await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
       // Last burned id should be updated
       const tokenIdStart = deriveTokenId(offerId, start);
@@ -931,7 +931,7 @@ describe("IBosonVoucher", function () {
         const amount = 6;
 
         await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
-         RevertReasons.AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN
+          RevertReasons.AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN
         );
       });
     });
