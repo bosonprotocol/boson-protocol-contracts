@@ -132,7 +132,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         true
       );
 
-      ({ bundleHandler, fundsHandler, exchangeHandler, twinHandler, disputeHandler } = contractsBefore);
+      ({ bundleHandler, exchangeHandler, twinHandler, disputeHandler } = contractsBefore);
 
       const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
         [
@@ -158,6 +158,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         offerHandler: "IBosonOfferHandler",
         groupHandler: "IBosonGroupHandler",
         orchestrationHandler: "IBosonOrchestrationHandler",
+        fundsHandler: "IBosonFundsHandler",
       };
 
       contractsAfter = { ...contractsBefore };
@@ -886,7 +887,34 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
       });
 
-      context("Orchestration", async function () {
+      context("FundsHandler", async function () {
+        it("new methods to get funds work", async function () {
+          // just check the consistency of the return values
+          const { sellers } = preUpgradeEntities;
+          const { mockToken } = mockContracts;
+
+          const expectedTokenListSet = new Set([mockToken.address, ethers.constants.AddressZero]);
+          for (const seller of sellers) {
+            const { id } = seller;
+
+            const tokenList = await fundsHandler.getTokenList(id);
+            const tokenListSet = new Set(tokenList);
+            expect(tokenListSet).to.deep.equal(expectedTokenListSet);
+
+            const tokenListPaginated = await fundsHandler.getTokenListPaginated(id, tokenList.length, "0");
+            expect(tokenListPaginated).to.deep.equal(tokenList);
+
+            const allAvailableFunds = await fundsHandler.getAllAvailableFunds(id);
+            const tokenListFromAvailableFunds = allAvailableFunds.map((f) => f.tokenAddress);
+            expect(tokenListFromAvailableFunds).to.deep.equal(tokenList);
+
+            const availableFunds = await fundsHandler.getAvailableFunds(id, tokenList);
+            expect(availableFunds).to.deep.equal(allAvailableFunds);
+          }
+        });
+      });
+
+      context("OrchestrationHandler", async function () {
         // NB: testing only 1 method to confirm that orchestration is upgraded
         // The rest of the method are tested in the unit tests
         it("should emit a SellerCreated and OfferCreated events with empty auth token", async function () {

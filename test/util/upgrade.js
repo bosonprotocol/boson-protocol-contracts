@@ -49,8 +49,7 @@ const { tagsByVersion } = require("../upgrade/00_config");
 
 // Common vars
 const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
-const versionsWithClerkRole = ["v2.0.0", "v2.1.0", "v2.2.0", "v2.2.1"];
-const versionsWithoutCollections = versionsWithClerkRole;
+const versionsBelowV2_3 = ["v2.0.0", "v2.1.0", "v2.2.0", "v2.2.1"]; // have clerk role, don't have collections, different way to get available funds
 let rando;
 let preUpgradeInterfaceIds, preUpgradeVersions;
 let facets, versionTags;
@@ -354,7 +353,7 @@ async function populateProtocolContract(
     // create entities
     switch (entity) {
       case entityType.DR: {
-        const clerkAddress = versionsWithClerkRole.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)
+        const clerkAddress = versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)
           ? wallet.address
           : ethers.constants.AddressZero;
         const disputeResolver = mockDisputeResolver(
@@ -391,7 +390,7 @@ async function populateProtocolContract(
       }
 
       case entityType.SELLER: {
-        const clerkAddress = versionsWithClerkRole.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)
+        const clerkAddress = versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)
           ? wallet.address
           : ethers.constants.AddressZero;
         const seller = mockSeller(wallet.address, wallet.address, clerkAddress, wallet.address, true);
@@ -706,7 +705,7 @@ async function getProtocolContractState(
     getBundleContractState(bundleHandler, bundles),
     getConfigContractState(configHandler),
     getDisputeContractState(disputeHandler, exchanges),
-    getFundsContractState(fundsHandler, { DRs, sellers, buyers, agents }),
+    getFundsContractState(fundsHandler, { DRs, sellers, buyers, agents }, isBefore),
     getGroupContractState(groupHandler, groups),
     getTwinContractState(twinHandler, twins),
     getMetaTxContractState(),
@@ -763,7 +762,7 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
     }
     agentsState.push(await getAgent(accountHandlerRando, id));
     buyersState.push(await getBuyer(accountHandlerRando, id));
-    if (versionsWithoutCollections.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
+    if (versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
       sellersCollections.push(await accountHandlerRando.getSellersCollections(id));
     } else {
       sellersCollections.push([ethers.constants.AddressZero, []]);
@@ -1015,14 +1014,19 @@ async function getDisputeContractState(disputeHandler, exchanges) {
   return { disputesState, disputesStatesState, disputeTimeoutState, isDisputeFinalizedState };
 }
 
-async function getFundsContractState(fundsHandler, { DRs, sellers, buyers, agents }) {
+async function getFundsContractState(fundsHandler, { DRs, sellers, buyers, agents }, isBefore = false) {
   const fundsHandlerRando = fundsHandler.connect(rando);
 
   // Query even the ids where it's not expected to get the entity
   const accountIds = [...DRs, ...sellers, ...buyers, ...agents].map((account) => account.id);
-  const groupsState = await Promise.all(accountIds.map((id) => fundsHandlerRando.getAvailableFunds(id)));
+  let fundsState = [];
+  if (versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
+    fundsState = await Promise.all(accountIds.map((id) => fundsHandlerRando.getAvailableFunds(id)));
+  } else {
+    fundsState = await Promise.all(accountIds.map((id) => fundsHandlerRando.getAllAvailableFunds(id)));
+  }
 
-  return { groupsState };
+  return { fundsState };
 }
 
 async function getGroupContractState(groupHandler, groups) {
