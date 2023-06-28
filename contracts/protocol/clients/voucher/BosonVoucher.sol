@@ -297,11 +297,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         // End should be greater than start
         require(end > start, NOTHING_TO_BURN);
 
-        // If amount to burn is more than maxPremintedVouchers, burn only maxPremintedVouchers
-        if (end > start + maxPremintedVouchers) {
-            end = start + maxPremintedVouchers;
-        }
-
         // Burn the range
         address rangeOwner = range.owner;
         uint256 burned;
