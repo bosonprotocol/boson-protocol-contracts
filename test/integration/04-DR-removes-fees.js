@@ -1,4 +1,5 @@
-const { ZeroAddress, provider } = require("hardhat");
+const { ethers } = require("hardhat");
+const { ZeroAddress, provider } = ethers;
 const { expect } = require("chai");
 
 const {
@@ -72,6 +73,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
       clerk.address,
       await treasury.getAddress()
     );
+
     expect(await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues))
       .to.emit(accountHandler, "SellerCreated")
       .withArgs(
