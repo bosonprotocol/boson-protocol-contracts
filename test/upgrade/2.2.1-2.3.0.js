@@ -12,6 +12,9 @@ const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
+const Group = require("../../scripts/domain/Group");
+const TokenType = require("../../scripts/domain/TokenType.js");
+const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const {
@@ -21,6 +24,7 @@ const {
   mockDisputeResolver,
   mockOffer,
   mockTwin,
+  mockCondition,
 } = require("../util/mock");
 const { getSnapshot, revertToSnapshot, setNextBlockTimestamp, getEvent } = require("../util/utils");
 
@@ -47,7 +51,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     bundleHandler,
     exchangeHandler,
     twinHandler,
-    disputeHandler;
+    disputeHandler,
+    groupHandler;
   let snapshot;
   let protocolDiamondAddress, mockContracts;
   let contractsAfter;
@@ -121,9 +126,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       ({ bundleHandler, fundsHandler, exchangeHandler, twinHandler, disputeHandler } = contractsBefore);
 
       const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
-        ["ConfigHandlerFacet", "PauseHandlerFacet"],
+        ["ConfigHandlerFacet", "PauseHandlerFacet", "GroupHandlerFacet"],
         undefined,
-        ["setMinResolutionPeriod", "unpause"]
+        ["setMinResolutionPeriod", "unpause", "createGroup"] //ToDo: revise
       );
 
       removedFunctionHashes = await getFunctionHashesClosure();
@@ -136,6 +141,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         pauseHandler: "IBosonPauseHandler",
         configHandler: "IBosonConfigHandler",
         offerHandler: "IBosonOfferHandler",
+        groupHandler: "IBosonGroupHandler",
       };
 
       contractsAfter = { ...contractsBefore };
@@ -144,7 +150,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
       }
 
-      ({ accountHandler, pauseHandler, configHandler, offerHandler } = contractsAfter);
+      ({ accountHandler, pauseHandler, configHandler, offerHandler, groupHandler } = contractsAfter);
 
       addedFunctionHashes = await getFunctionHashesClosure();
 
@@ -538,142 +544,151 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       });
 
       context("ExchangeHandler", async function () {
-        let mockTwin721Contract, twin721;
-        let buyer, buyerId;
-        let exchangeId;
-        let seller;
-
         context("Twin transfers", async function () {
-          const {
-            bundles: [bundle],
-            buyers,
-            twins,
-            offers,
-            sellers,
-          } = preUpgradeEntities;
-          const {
-            sellerId,
-            offerIds: [offerId],
-            twinIds,
-          } = bundle;
-          seller = sellers.find((s) => s.id == sellerId);
-          ({ wallet: buyer, id: buyerId } = buyers[0]);
-          const twin721id = twinIds[0]; // bundle has 3 twins, we want the first one (ERC721)
-          twin721 = twins[twin721id - 1];
-          const {
-            offer: { exchangeToken, price: offerPrice },
-          } = offers[offerId - 1];
+          let mockTwin721Contract, twin721;
+          let buyer, buyerId;
+          let exchangeId;
+          let seller;
 
-          const { mockTwinTokens, mockToken } = mockContracts;
-          mockTwin721Contract = mockTwinTokens.find((twinContract) => twinContract.address == twin721.address);
+          beforeEach(async function () {
+            const {
+              bundles: [bundle],
+              buyers,
+              twins,
+              offers,
+              sellers,
+            } = preUpgradeEntities;
+            const {
+              sellerId,
+              offerIds: [offerId],
+              twinIds,
+            } = bundle;
+            seller = sellers.find((s) => s.id == sellerId);
+            ({ wallet: buyer, id: buyerId } = buyers[0]);
+            const twin721id = twinIds[0]; // bundle has 3 twins, we want the first one (ERC721)
+            twin721 = twins[twin721id - 1];
+            const {
+              offer: { exchangeToken, price: offerPrice },
+            } = offers[offerId - 1];
 
-          exchangeId = (await exchangeHandler.getNextExchangeId()).toNumber();
-          let msgValue;
-          if (exchangeToken == ethers.constants.AddressZero) {
-            msgValue = offerPrice;
-          } else {
-            // approve token transfer
-            msgValue = 0;
-            await mockToken.connect(buyer).approve(protocolDiamondAddress, offerPrice);
-            await mockToken.mint(buyer.address, offerPrice);
-          }
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: msgValue });
-        });
+            const { mockTwinTokens, mockToken } = mockContracts;
+            mockTwin721Contract = mockTwinTokens.find((twinContract) => twinContract.address == twin721.address);
 
-        it("If a twin is transferred it could be used in a new twin", async function () {
-          const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-          const event = getEvent(await tx.wait(), exchangeHandler, "TwinTransferred");
-          const { tokenId } = event;
-          const { wallet: sellerWallet } = seller;
+            exchangeId = (await exchangeHandler.getNextExchangeId()).toNumber();
+            let msgValue;
+            if (exchangeToken == ethers.constants.AddressZero) {
+              msgValue = offerPrice;
+            } else {
+              // approve token transfer
+              msgValue = 0;
+              await mockToken.connect(buyer).approve(protocolDiamondAddress, offerPrice);
+              await mockToken.mint(buyer.address, offerPrice);
+            }
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: msgValue });
+          });
 
-          // transfer the twin to the original seller
-          await mockTwin721Contract.connect(buyer).safeTransferFrom(buyer.address, sellerWallet.address, tokenId);
+          it("If a twin is transferred it could be used in a new twin", async function () {
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+            const event = getEvent(await tx.wait(), exchangeHandler, "TwinTransferred");
+            const { tokenId } = event;
+            const { wallet: sellerWallet } = seller;
 
-          // create a new twin with the transferred token
-          twin721.id = tokenId;
-          twin721.supplyAvailable = 1;
-          await expect(twinHandler.connect(sellerWallet).createTwin(twin721)).to.emit(twinHandler, "TwinCreated");
-        });
+            // transfer the twin to the original seller
+            await mockTwin721Contract.connect(buyer).safeTransferFrom(buyer.address, sellerWallet.address, tokenId);
 
-        it("if twin transfer fail, dispute is raised even when buyer is EOA", async function () {
-          // Remove the approval for the protocol to transfer the seller's tokens
-          await mockTwin721Contract.connect(assistant).setApprovalForAll(protocolDiamondAddress, false);
+            // create a new twin with the transferred token
+            twin721.id = tokenId;
+            twin721.supplyAvailable = 1;
+            await expect(twinHandler.connect(sellerWallet).createTwin(twin721)).to.emit(twinHandler, "TwinCreated");
+          });
 
-          const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+          it("if twin transfer fail, dispute is raised even when buyer is EOA", async function () {
+            // Remove the approval for the protocol to transfer the seller's tokens
+            await mockTwin721Contract.connect(assistant).setApprovalForAll(protocolDiamondAddress, false);
 
-          await expect(tx)
-            .to.emit(disputeHandler, "DisputeRaised")
-            .withArgs(exchangeId, buyerId, seller.id, buyer.address);
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
-          await expect(tx)
-            .to.emit(exchangeHandler, "TwinTransferFailed")
-            .withArgs(twin721.id, twin721.tokenAddress, exchangeId, anyValue, twin721.amount, buyer.address);
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchangeId, buyerId, seller.id, buyer.address);
 
-          // Get the exchange state
-          const [, response] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, anyValue, twin721.amount, buyer.address);
 
-          // It should match ExchangeState.Disputed
-          assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
-        });
+            // Get the exchange state
+            const [, response] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
 
-        it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
-          const { sellers, offers, buyers } = preUpgradeEntities;
-          const {
-            wallet,
-            id: sellerId,
-            offerIds: [offerId],
-          } = sellers[0];
-          const {
-            offer: { price },
-          } = offers[offerId - 1];
-          const { wallet: buyer } = buyers[0];
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
 
-          const [foreign20gt, foreign20gt_2] = await deployMockTokens(["Foreign20GasTheft", "Foreign20GasTheft"]);
+          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+            const { sellers, offers, buyers } = preUpgradeEntities;
+            const {
+              wallet,
+              id: sellerId,
+              offerIds: [offerId],
+            } = sellers[0];
+            const {
+              offer: { price },
+            } = offers[offerId - 1];
+            const { wallet: buyer } = buyers[0];
 
-          // Approve the protocol diamond to transfer seller's tokens
-          await foreign20gt.connect(wallet).approve(protocolDiamondAddress, "100");
-          await foreign20gt_2.connect(wallet).approve(protocolDiamondAddress, "100");
+            const [foreign20gt, foreign20gt_2] = await deployMockTokens(["Foreign20GasTheft", "Foreign20GasTheft"]);
 
-          // Create two ERC20 twins that will consume all available gas
-          const twin20 = mockTwin(foreign20gt.address);
-          twin20.amount = "1";
-          twin20.supplyAvailable = "100";
-          twin20.id = "1";
+            // Approve the protocol diamond to transfer seller's tokens
+            await foreign20gt.connect(wallet).approve(protocolDiamondAddress, "100");
+            await foreign20gt_2.connect(wallet).approve(protocolDiamondAddress, "100");
 
-          await twinHandler.connect(wallet).createTwin(twin20.toStruct());
+            // Create two ERC20 twins that will consume all available gas
+            const twin20 = mockTwin(foreign20gt.address);
+            twin20.amount = "1";
+            twin20.supplyAvailable = "100";
+            twin20.id = "1";
 
-          const twin20_2 = twin20.clone();
-          twin20_2.id = "5";
-          twin20_2.tokenAddress = foreign20gt_2.address;
-          await twinHandler.connect(wallet).createTwin(twin20_2.toStruct());
+            await twinHandler.connect(wallet).createTwin(twin20.toStruct());
 
-          // Create a new bundle
-          const bundle = new Bundle("2", sellerId, [offerId], [twin20.id, twin20_2.id]);
-          await bundleHandler.connect(wallet).createBundle(bundle.toStruct());
+            const twin20_2 = twin20.clone();
+            twin20_2.id = "5";
+            twin20_2.tokenAddress = foreign20gt_2.address;
+            await twinHandler.connect(wallet).createTwin(twin20_2.toStruct());
 
-          // Commit to offer
-          const exchangeId = await exchangeHandler.getNextExchangeId();
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            // Create a new bundle
+            const bundle = new Bundle("2", sellerId, [offerId], [twin20.id, twin20_2.id]);
+            await bundleHandler.connect(wallet).createBundle(bundle.toStruct());
 
-          // Redeem the voucher
-          const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId, { gasLimit: 1000000 }); // limit gas to speed up test
+            // Commit to offer
+            const exchangeId = await exchangeHandler.getNextExchangeId();
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
-          // Voucher should be revoked and both transfers should fail
-          await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchangeId, buyer.address);
+            // Redeem the voucher
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId, { gasLimit: 1000000 }); // limit gas to speed up test
 
-          await expect(tx)
-            .to.emit(exchangeHandler, "TwinTransferFailed")
-            .withArgs(twin20.id, twin20.tokenAddress, exchangeId, twin20.tokenId, twin20.amount, buyer.address);
+            // Voucher should be revoked and both transfers should fail
+            await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchangeId, buyer.address);
 
-          await expect(tx)
-            .to.emit(exchangeHandler, "TwinTransferFailed")
-            .withArgs(twin20_2.id, twin20_2.tokenAddress, exchangeId, twin20_2.tokenId, twin20_2.amount, buyer.address);
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin20.id, twin20.tokenAddress, exchangeId, twin20.tokenId, twin20.amount, buyer.address);
 
-          // Get the exchange state
-          const [, response] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(
+                twin20_2.id,
+                twin20_2.tokenAddress,
+                exchangeId,
+                twin20_2.tokenId,
+                twin20_2.amount,
+                buyer.address
+              );
 
-          // It should match ExchangeState.Revoked
-          assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+            // Get the exchange state
+            const [, response] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
+
+            // It should match ExchangeState.Revoked
+            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+          });
         });
 
         it("commit exactly at offer expiration timestamp", async function () {
@@ -681,12 +696,47 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const { offer, offerDates } = offers[0];
           const { wallet: buyer } = buyers[0];
 
-          await setNextBlockTimestamp(Number(offerDates.validUntil) + 1);
+          await setNextBlockTimestamp(Number(offerDates.validUntil));
 
           // Commit to offer, retrieving the event
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price })
           ).to.emit(exchangeHandler, "BuyerCommitted");
+        });
+
+        it("old gated offers work ok with new token gating", async function () {
+          const { groups, buyers, offers } = preUpgradeEntities;
+          const { wallet: buyer } = buyers[0];
+          const { offerIds } = groups[0];
+          const offer = offers[offerIds[0]];
+
+          // Commit to offer, retrieving the event
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price })
+          ).to.emit(exchangeHandler, "BuyerCommitted");
+        });
+      });
+
+      context("GroupHandler", async function () {
+        it("it's possible to create a group with new token gating", async function () {
+          const [conditionToken1155] = await deployMockTokens(["Foreign1155"]);
+          // create a condition that was not possible before
+          const condition = mockCondition({
+            tokenType: TokenType.MultiToken,
+            tokenAddress: conditionToken1155.address,
+            length: "10",
+            tokenId: "5",
+            method: EvaluationMethod.SpecificToken,
+            threshold: "2",
+          });
+
+          const seller = preUpgradeEntities.sellers[1]; // seller does not have any group
+          const group = new Group(1, seller.seller.id, seller.offerIds); // group all seller's offers
+
+          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.emit(
+            groupHandler,
+            "GroupCreated"
+          );
         });
       });
 
