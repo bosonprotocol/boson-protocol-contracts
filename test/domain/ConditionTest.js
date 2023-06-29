@@ -12,21 +12,20 @@ describe("Condition", function () {
   // Suite-wide scope
   let condition, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
   let accounts, method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
+  beforeEach(async function () {
+    // Get a list of accounts
+    accounts = await getSigners();
+    tokenAddress = accounts[1].address;
+
+    // Required constructor params
+    method = EvaluationMethod.None;
+    tokenType = TokenType.MultiToken;
+    tokenId = "1";
+    threshold = "1";
+    maxCommits = "3";
+  });
 
   context("📋 Constructor", async function () {
-    beforeEach(async function () {
-      // Get a list of accounts
-      accounts = await getSigners();
-      tokenAddress = accounts[1].address;
-
-      // Required constructor params
-      method = EvaluationMethod.None;
-      tokenType = TokenType.MultiToken;
-      tokenId = "1";
-      threshold = "1";
-      maxCommits = "3";
-    });
-
     it("Should allow creation of valid, fully populated Condition instance", async function () {
       // Create a valid condition
       condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
@@ -58,6 +57,11 @@ describe("Condition", function () {
 
       // Invalid field value
       condition.method = "0";
+      expect(condition.methodIsValid()).is.false;
+      expect(condition.isValid()).is.false;
+
+      // Invalid field value
+      condition.method = new Date();
       expect(condition.methodIsValid()).is.false;
       expect(condition.isValid()).is.false;
 
@@ -127,6 +131,11 @@ describe("Condition", function () {
       expect(condition.thresholdIsValid()).is.true;
       expect(condition.isValid()).is.true;
 
+      // Invalid field value
+      condition.threshold = new Date();
+      expect(condition.thresholdIsValid()).is.false;
+      expect(condition.isValid()).is.false;
+
       // Valid field value
       condition.threshold = "126";
       expect(condition.thresholdIsValid()).is.true;
@@ -148,6 +157,11 @@ describe("Condition", function () {
       condition.maxCommits = "126";
       expect(condition.maxCommitsIsValid()).is.true;
       expect(condition.isValid()).is.true;
+
+      // Invalid field value
+      condition.maxCommits = new Date();
+      expect(condition.maxCommitsIsValid()).is.false;
+      expect(condition.isValid()).is.false;
     });
   });
 

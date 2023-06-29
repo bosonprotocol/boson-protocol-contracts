@@ -62,6 +62,11 @@ describe("Seller", function () {
       seller.id = "126";
       expect(seller.idIsValid()).is.true;
       expect(seller.isValid()).is.true;
+
+      // Invalid field value
+      seller.id = new Date();
+      expect(seller.idIsValid()).is.false;
+      expect(seller.isValid()).is.false;
     });
 
     it("Always present, assistant must be a string representation of an EIP-55 compliant address", async function () {

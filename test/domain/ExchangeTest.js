@@ -47,6 +47,11 @@ describe("Exchange", function () {
       expect(exchange.isValid()).is.false;
 
       // Invalid field value
+      exchange.id = new Date();
+      expect(exchange.idIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Invalid field value
       exchange.id = "0";
       expect(exchange.idIsValid()).is.false;
       expect(exchange.isValid()).is.false;
@@ -65,6 +70,11 @@ describe("Exchange", function () {
 
       // Valid field value
       exchange.offerId = "0";
+      expect(exchange.offerIdIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Invalid field value
+      exchange.offerId = new Date();
       expect(exchange.offerIdIsValid()).is.false;
       expect(exchange.isValid()).is.false;
 
@@ -89,6 +99,11 @@ describe("Exchange", function () {
       exchange.buyerId = "126";
       expect(exchange.buyerIdIsValid()).is.true;
       expect(exchange.isValid()).is.true;
+
+      // Invalid field value
+      exchange.buyerId = new Date();
+      expect(exchange.buyerIdIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
     });
 
     it("If present, finalizedDate must be the string representation of a non-zero BigNumber", async function () {
@@ -111,6 +126,11 @@ describe("Exchange", function () {
       exchange.finalizedDate = null;
       expect(exchange.finalizedDateIsValid()).is.true;
       expect(exchange.isValid()).is.true;
+
+      // Invalid field value
+      exchange.finalizedDate = new Date();
+      expect(exchange.finalizedDateIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
 
       // Valid field value
       exchange.finalizedDate = undefined;

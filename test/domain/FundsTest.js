@@ -89,6 +89,11 @@ describe("Funds", function () {
       expect(funds.availableAmountIsValid()).is.false;
       expect(funds.isValid()).is.false;
 
+      // Invalid field value
+      funds.availableAmount = new Date();
+      expect(funds.availableAmountIsValid()).is.false;
+      expect(funds.isValid()).is.false;
+
       // Valid field value
       funds.availableAmount = "0";
       expect(funds.availableAmountIsValid()).is.true;

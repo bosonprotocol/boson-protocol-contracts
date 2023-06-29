@@ -44,6 +44,11 @@ describe("TwinReceipt", function () {
       expect(twinReceipt.twinIdIsValid()).is.false;
       expect(twinReceipt.isValid()).is.false;
 
+      // Invalid field value
+      twinReceipt.twinId = new Date();
+      expect(twinReceipt.twinIdIsValid()).is.false;
+      expect(twinReceipt.isValid()).is.false;
+
       // Valid field value
       twinReceipt.twinId = "0";
       expect(twinReceipt.twinIdIsValid()).is.true;
@@ -66,6 +71,11 @@ describe("TwinReceipt", function () {
       expect(twinReceipt.amountIsValid()).is.true;
       expect(twinReceipt.isValid()).is.true;
 
+      // Invalid field value
+      twinReceipt.amount = new Date();
+      expect(twinReceipt.amountIsValid()).is.false;
+      expect(twinReceipt.isValid()).is.false;
+
       // Valid field value
       twinReceipt.amount = "126";
       expect(twinReceipt.amountIsValid()).is.true;
@@ -82,6 +92,10 @@ describe("TwinReceipt", function () {
       twinReceipt.tokenId = "0";
       expect(twinReceipt.tokenIdIsValid()).is.true;
       expect(twinReceipt.isValid()).is.true;
+
+      // Invalid field value
+      twinReceipt.tokenId = new Date();
+      expect(twinReceipt.tokenIdIsValid()).is.false;
 
       // Valid field value
       twinReceipt.tokenId = "126";
@@ -119,6 +133,11 @@ describe("TwinReceipt", function () {
 
       // Invalid field value
       twinReceipt.tokenType = "0";
+      expect(twinReceipt.tokenTypeIsValid()).is.false;
+      expect(twinReceipt.isValid()).is.false;
+
+      // Invalid field value
+      twinReceipt.tokenType = new Date();
       expect(twinReceipt.tokenTypeIsValid()).is.false;
       expect(twinReceipt.isValid()).is.false;
 

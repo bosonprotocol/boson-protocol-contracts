@@ -58,6 +58,11 @@ describe("Receipt", function () {
       expect(receipt.isValid()).is.false;
 
       // Invalid field value
+      receipt.exchangeId = new Date();
+      expect(receipt.exchangeIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
       receipt.exchangeId = "0";
       expect(receipt.exchangeIdIsValid()).is.false;
       expect(receipt.isValid()).is.false;
@@ -76,6 +81,11 @@ describe("Receipt", function () {
 
       // Invalid field value
       receipt.offerId = "0";
+      expect(receipt.offerIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.offerId = new Date();
       expect(receipt.offerIdIsValid()).is.false;
       expect(receipt.isValid()).is.false;
 
@@ -100,6 +110,11 @@ describe("Receipt", function () {
       receipt.buyerId = "126";
       expect(receipt.buyerIdIsValid()).is.true;
       expect(receipt.isValid()).is.true;
+
+      // Invalid field value
+      receipt.buyerId = new Date();
+      expect(receipt.buyerIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
     });
 
     it("Always present, price must be the string representation of BigNumber", async function () {
@@ -117,6 +132,11 @@ describe("Receipt", function () {
       receipt.price = "126";
       expect(receipt.priceIsValid()).is.true;
       expect(receipt.isValid()).is.true;
+
+      // Invalid field value
+      receipt.price = new Date();
+      expect(receipt.priceIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
     });
 
     it("Always present, sellerDeposit must be the string representation of BigNumber", async function () {
@@ -134,6 +154,11 @@ describe("Receipt", function () {
       receipt.sellerDeposit = "126";
       expect(receipt.sellerDepositIsValid()).is.true;
       expect(receipt.isValid()).is.true;
+
+      // Invalid field value
+      receipt.sellerDeposit = new Date();
+      expect(receipt.sellerDepositIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
     });
 
     it("Always present, buyerCancelPenalty must be the string representation of BigNumber", async function () {
@@ -151,6 +176,11 @@ describe("Receipt", function () {
       receipt.buyerCancelPenalty = "126";
       expect(receipt.buyerCancelPenaltyIsValid()).is.true;
       expect(receipt.isValid()).is.true;
+
+      // Invalid field value
+      receipt.buyerCancelPenalty = new Date();
+      expect(receipt.buyerCancelPenaltyIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
     });
 
     it("Always present, offerFees must be a valid OfferFees instance", async function () {
@@ -174,6 +204,11 @@ describe("Receipt", function () {
       receipt.offerFees = mo.offerFees;
       expect(receipt.offerFeesIsValid()).is.true;
       expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.offerFees = new Date();
+      expect(receipt.offerFeesIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
     });
 
     it("If present, agentId must be the string representation of BigNumber", async function () {
@@ -191,6 +226,11 @@ describe("Receipt", function () {
       receipt.agentId = "126";
       expect(receipt.agentIdIsValid()).is.true;
       expect(receipt.isValid()).is.true;
+
+      // Invalid field value
+      receipt.agentId = new Date();
+      expect(receipt.agentIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
     });
 
     it("Always present, exchangeToken must be a string representation of an EIP-55 compliant address", async function () {
@@ -230,6 +270,11 @@ describe("Receipt", function () {
       receipt.finalizedDate = "126";
       expect(receipt.finalizedDateIsValid()).is.true;
       expect(receipt.isValid()).is.true;
+
+      // Invalid field value
+      receipt.finalizedDate = new Date();
+      expect(receipt.finalizedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
     });
 
     it("If present, condition must be a valid Condition instance", async function () {
@@ -247,6 +292,11 @@ describe("Receipt", function () {
       receipt.condition = mockCondition(ZeroAddress);
       expect(receipt.conditionIsValid()).is.true;
       expect(receipt.isValid()).is.true;
+
+      // Invalid field value
+      receipt.condition = new Date();
+      expect(receipt.conditionIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
     });
 
     it("Always present, committedDate must be the string representation of BigNumber", async function () {
@@ -259,6 +309,11 @@ describe("Receipt", function () {
       receipt.committedDate = "126";
       expect(receipt.committedDateIsValid()).is.true;
       expect(receipt.isValid()).is.true;
+
+      // Invalid field value
+      receipt.committedDate = new Date();
+      expect(receipt.committedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
     });
 
     it("If present, redeemedDate must be the string representation of BigNumber", async function () {
@@ -276,6 +331,11 @@ describe("Receipt", function () {
       receipt.redeemedDate = "126";
       expect(receipt.redeemedDateIsValid()).is.true;
       expect(receipt.isValid()).is.true;
+
+      // Invalid field value
+      receipt.redeemedDate = new Date();
+      expect(receipt.redeemedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
     });
 
     it("Always present, voucherExpired must be a boolean", async function () {
@@ -315,6 +375,11 @@ describe("Receipt", function () {
       receipt.disputeResolverId = "126";
       expect(receipt.disputeResolverIdIsValid()).is.true;
       expect(receipt.isValid()).is.true;
+
+      // Invalid field value
+      receipt.disputeResolverId = new Date();
+      expect(receipt.disputeResolverIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
     });
 
     it("If present, disputedDate must be the string representation of BigNumber", async function () {
@@ -332,6 +397,11 @@ describe("Receipt", function () {
       receipt.disputedDate = "126";
       expect(receipt.disputedDateIsValid()).is.true;
       expect(receipt.isValid()).is.true;
+
+      // Invalid field value
+      receipt.disputedDate = new Date();
+      expect(receipt.disputedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
     });
 
     it("If present, escalatedDate must be the string representation of BigNumber", async function () {
@@ -349,6 +419,11 @@ describe("Receipt", function () {
       receipt.escalatedDate = "126";
       expect(receipt.escalatedDateIsValid()).is.true;
       expect(receipt.isValid()).is.true;
+
+      // Invalid field value
+      receipt.escalatedDate = new Date();
+      expect(receipt.escalatedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
     });
 
     it("If present, disputeState must be the string representation of a BigNumber", async function () {

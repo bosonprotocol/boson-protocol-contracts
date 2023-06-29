@@ -20,7 +20,10 @@ function bigNumberIsValid(bigNumber, { optional, gt, lte, empty } = {}) {
   } else {
     try {
       const bigNumberValue = BigInt(bigNumber);
-      valid = (gt == undefined || bigNumberValue > BigInt(gt)) && (lte == undefined || bigNumberValue <= BigInt(lte));
+      valid =
+        typeof bigNumber === "string" &&
+        (gt == undefined || bigNumberValue > BigInt(gt)) &&
+        (lte == undefined || bigNumberValue <= BigInt(lte));
     } catch (e) {
       valid = false;
     }

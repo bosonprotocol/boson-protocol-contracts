@@ -41,6 +41,11 @@ describe("DisputeDates", function () {
       expect(disputeDates.disputedIsValid()).is.false;
       expect(disputeDates.isValid()).is.false;
 
+      // Invalid field value
+      disputeDates.disputed = new Date();
+      expect(disputeDates.disputedIsValid()).is.false;
+      expect(disputeDates.isValid()).is.false;
+
       // Valid field value
       disputeDates.disputed = "0";
       expect(disputeDates.disputedIsValid()).is.true;
@@ -67,6 +72,11 @@ describe("DisputeDates", function () {
       disputeDates.escalated = "126";
       expect(disputeDates.escalatedIsValid()).is.true;
       expect(disputeDates.isValid()).is.true;
+
+      // Invalid field value
+      disputeDates.escalated = new Date();
+      expect(disputeDates.escalatedIsValid()).is.false;
+      expect(disputeDates.isValid()).is.false;
 
       // Valid field value
       disputeDates.escalated = null;
@@ -95,6 +105,11 @@ describe("DisputeDates", function () {
       expect(disputeDates.finalizedIsValid()).is.true;
       expect(disputeDates.isValid()).is.true;
 
+      // Invalid field value
+      disputeDates.finalized = new Date();
+      expect(disputeDates.finalizedIsValid()).is.false;
+      expect(disputeDates.isValid()).is.false;
+
       // Valid field value
       disputeDates.finalized = null;
       expect(disputeDates.finalizedIsValid()).is.true;
@@ -121,6 +136,11 @@ describe("DisputeDates", function () {
       disputeDates.timeout = "126";
       expect(disputeDates.timeoutIsValid()).is.true;
       expect(disputeDates.isValid()).is.true;
+
+      // Invalid field value
+      disputeDates.timeout = new Date();
+      expect(disputeDates.timeoutIsValid()).is.false;
+      expect(disputeDates.isValid()).is.false;
     });
   });
 

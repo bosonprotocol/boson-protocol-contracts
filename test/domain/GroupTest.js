@@ -49,6 +49,11 @@ describe("Group", function () {
       expect(group.idIsValid()).is.true;
       expect(group.isValid()).is.true;
 
+      // Invalid field value
+      group.id = new Date();
+      expect(group.idIsValid()).is.false;
+      expect(group.isValid()).is.false;
+
       // Valid field value
       group.id = "126";
       expect(group.idIsValid()).is.true;
@@ -65,6 +70,11 @@ describe("Group", function () {
       group.sellerId = "0";
       expect(group.sellerIdIsValid()).is.true;
       expect(group.isValid()).is.true;
+
+      // Invalid field value
+      group.sellerId = new Date();
+      expect(group.sellerIdIsValid()).is.false;
+      expect(group.isValid()).is.false;
 
       // Valid field value
       group.sellerId = "126";
@@ -87,6 +97,10 @@ describe("Group", function () {
       group.offerIds = ["126"];
       expect(group.offerIdsIsValid()).is.true;
       expect(group.isValid()).is.true;
+
+      // Invalid field value
+      group.offerIds = new Date();
+      expect(group.offerIdsIsValid()).is.false;
     });
   });
 

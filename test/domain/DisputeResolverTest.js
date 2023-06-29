@@ -74,6 +74,11 @@ describe("DisputeResolver", function () {
       expect(disputeResolver.idIsValid()).is.false;
       expect(disputeResolver.isValid()).is.false;
 
+      // Invalid field value
+      disputeResolver.id = new Date();
+      expect(disputeResolver.idIsValid()).is.false;
+      expect(disputeResolver.isValid()).is.false;
+
       // Valid field value
       disputeResolver.id = "0";
       expect(disputeResolver.idIsValid()).is.true;
@@ -95,6 +100,11 @@ describe("DisputeResolver", function () {
       disputeResolver.escalationResponsePeriod = "0";
       expect(disputeResolver.escalationResponsePeriodIsValid()).is.true;
       expect(disputeResolver.isValid()).is.true;
+
+      // Invalid field value
+      disputeResolver.escalationResponsePeriod = new Date();
+      expect(disputeResolver.escalationResponsePeriodIsValid()).is.false;
+      expect(disputeResolver.isValid()).is.false;
 
       // Valid field value
       disputeResolver.escalationResponsePeriod = "126";

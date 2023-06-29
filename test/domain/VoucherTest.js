@@ -50,6 +50,11 @@ describe("Voucher", function () {
       expect(voucher.committedDateIsValid()).is.false;
       expect(voucher.isValid()).is.false;
 
+      // Invalid field value
+      voucher.committedDate = new Date();
+      expect(voucher.committedDateIsValid()).is.false;
+      expect(voucher.isValid()).is.false;
+
       // Valid field value
       voucher.committedDate = "0";
       expect(voucher.committedDateIsValid()).is.false;
@@ -67,6 +72,11 @@ describe("Voucher", function () {
       expect(voucher.validUntilDateIsValid()).is.false;
       expect(voucher.isValid()).is.false;
 
+      // Invalid field value
+      voucher.validUntilDate = new Date();
+      expect(voucher.validUntilDateIsValid()).is.false;
+      expect(voucher.isValid()).is.false;
+
       // Valid field value
       voucher.validUntilDate = "0";
       expect(voucher.validUntilDateIsValid()).is.false;
@@ -81,6 +91,11 @@ describe("Voucher", function () {
     it("If present, redeemedDate must be the string representation of a positive BigNumber", async function () {
       // Invalid field value
       voucher.redeemedDate = "zedzdeadbaby";
+      expect(voucher.redeemedDateIsValid()).is.false;
+      expect(voucher.isValid()).is.false;
+
+      // Invalid field value
+      voucher.redeemedDate = new Date();
       expect(voucher.redeemedDateIsValid()).is.false;
       expect(voucher.isValid()).is.false;
 

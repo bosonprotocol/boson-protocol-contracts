@@ -41,6 +41,11 @@ describe("Range", function () {
       expect(range.startIsValid()).is.false;
       expect(range.isValid()).is.false;
 
+      // Invalid field value
+      range.start = new Date();
+      expect(range.startIsValid()).is.false;
+      expect(range.isValid()).is.false;
+
       // Valid field value
       range.start = "0";
       expect(range.startIsValid()).is.true;
@@ -67,6 +72,11 @@ describe("Range", function () {
       range.length = "126";
       expect(range.lengthIsValid()).is.true;
       expect(range.isValid()).is.true;
+
+      // Invalid field value
+      range.length = new Date();
+      expect(range.lengthIsValid()).is.false;
+      expect(range.isValid()).is.false;
     });
 
     it("If present, minted must be the string representation of a BigNumber", async function () {
@@ -84,6 +94,11 @@ describe("Range", function () {
       range.minted = "126";
       expect(range.mintedIsValid()).is.true;
       expect(range.isValid()).is.true;
+
+      // Invalid field value
+      range.minted = new Date();
+      expect(range.mintedIsValid()).is.false;
+      expect(range.isValid()).is.false;
     });
 
     it("If present, lastBurnedTokenId must be the string representation of a BigNumber", async function () {
@@ -101,6 +116,11 @@ describe("Range", function () {
       range.lastBurnedTokenId = "126";
       expect(range.lastBurnedTokenIdIsValid()).is.true;
       expect(range.isValid()).is.true;
+
+      // Invalid field value
+      range.lastBurnedTokenId = new Date();
+      expect(range.lastBurnedTokenIdIsValid()).is.false;
+      expect(range.isValid()).is.false;
     });
   });
 

@@ -48,6 +48,11 @@ describe("OfferDates", function () {
       expect(offerDates.validFromIsValid()).is.true;
       expect(offerDates.isValid()).is.true;
 
+      // Invalid field value
+      offerDates.validFrom = new Date();
+      expect(offerDates.validFromIsValid()).is.false;
+      expect(offerDates.isValid()).is.false;
+
       // Valid field value
       offerDates.validFrom = "126";
       expect(offerDates.validFromIsValid()).is.true;
@@ -69,6 +74,11 @@ describe("OfferDates", function () {
       offerDates.validUntil = "126";
       expect(offerDates.validUntilIsValid()).is.true;
       expect(offerDates.isValid()).is.true;
+
+      // Invalid field value
+      offerDates.validUntil = new Date();
+      expect(offerDates.validUntilIsValid()).is.false;
+      expect(offerDates.isValid()).is.false;
     });
 
     it("Always present, voucherRedeemableFrom must be the string representation of a BigNumber", async function () {
@@ -94,6 +104,11 @@ describe("OfferDates", function () {
       expect(offerDates.voucherRedeemableUntilIsValid()).is.false;
       expect(offerDates.isValid()).is.false;
 
+      // Invalid field value
+      offerDates.voucherRedeemableUntil = new Date();
+      expect(offerDates.voucherRedeemableUntilIsValid()).is.false;
+      expect(offerDates.isValid()).is.false;
+
       // Valid field value
       offerDates.voucherRedeemableUntil = "0";
       expect(offerDates.voucherRedeemableUntilIsValid()).is.true;
@@ -103,6 +118,11 @@ describe("OfferDates", function () {
       offerDates.voucherRedeemableUntil = "126";
       expect(offerDates.voucherRedeemableUntilIsValid()).is.true;
       expect(offerDates.isValid()).is.true;
+
+      // Invalid field value
+      offerDates.voucherRedeemableUntil = new Date();
+      expect(offerDates.voucherRedeemableUntilIsValid()).is.false;
+      expect(offerDates.isValid()).is.false;
     });
   });
 

@@ -57,6 +57,11 @@ describe("DisputeResolutionTerms", function () {
       expect(disputeResolutionTerms.disputeResolverIdIsValid()).is.true;
       expect(disputeResolutionTerms.isValid()).is.true;
 
+      // Invalid field value
+      disputeResolutionTerms.disputeResolverId = new Date();
+      expect(disputeResolutionTerms.disputeResolverIdIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
+
       // Valid field value
       disputeResolutionTerms.disputeResolverId = "126";
       expect(disputeResolutionTerms.disputeResolverIdIsValid()).is.true;
@@ -73,6 +78,11 @@ describe("DisputeResolutionTerms", function () {
       disputeResolutionTerms.escalationResponsePeriod = "0";
       expect(disputeResolutionTerms.escalationResponsePeriodIsValid()).is.true;
       expect(disputeResolutionTerms.isValid()).is.true;
+
+      // Invalid field value
+      disputeResolutionTerms.escalationResponsePeriod = new Date();
+      expect(disputeResolutionTerms.escalationResponsePeriodIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
 
       // Valid field value
       disputeResolutionTerms.escalationResponsePeriod = "126";
@@ -96,6 +106,11 @@ describe("DisputeResolutionTerms", function () {
       expect(disputeResolutionTerms.feeAmountIsValid()).is.true;
       expect(disputeResolutionTerms.isValid()).is.true;
 
+      // Invalid field value
+      disputeResolutionTerms.feeAmount = new Date();
+      expect(disputeResolutionTerms.feeAmountIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
+
       // Valid field value
       disputeResolutionTerms.feeAmount = "126";
       expect(disputeResolutionTerms.feeAmountIsValid()).is.true;
@@ -117,6 +132,11 @@ describe("DisputeResolutionTerms", function () {
       disputeResolutionTerms.buyerEscalationDeposit = "126";
       expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.true;
       expect(disputeResolutionTerms.isValid()).is.true;
+
+      // Invalid field value
+      disputeResolutionTerms.buyerEscalationDeposit = new Date();
+      expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
     });
   });
 

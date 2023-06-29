@@ -46,6 +46,11 @@ describe("Twin", function () {
       expect(twin.idIsValid()).is.false;
       expect(twin.isValid()).is.false;
 
+      // Invalid field value
+      twin.id = new Date();
+      expect(twin.idIsValid()).is.false;
+      expect(twin.isValid()).is.false;
+
       // Valid field value
       twin.id = "0";
       expect(twin.idIsValid()).is.true;
@@ -68,6 +73,11 @@ describe("Twin", function () {
       expect(twin.sellerIdIsValid()).is.true;
       expect(twin.isValid()).is.true;
 
+      // Invalid field value
+      twin.sellerId = new Date();
+      expect(twin.sellerIdIsValid()).is.false;
+      expect(twin.isValid()).is.false;
+
       // Valid field value
       twin.sellerId = "126";
       expect(twin.sellerIdIsValid()).is.true;
@@ -85,6 +95,11 @@ describe("Twin", function () {
       expect(twin.amountIsValid()).is.true;
       expect(twin.isValid()).is.true;
 
+      // Invalid field value
+      twin.amount = new Date();
+      expect(twin.amountIsValid()).is.false;
+      expect(twin.isValid()).is.false;
+
       // Valid field value
       twin.amount = "126";
       expect(twin.amountIsValid()).is.true;
@@ -99,6 +114,11 @@ describe("Twin", function () {
 
       // Invalid field value
       twin.supplyAvailable = ["1", "2"];
+      expect(twin.supplyAvailableIsValid()).is.false;
+      expect(twin.isValid()).is.false;
+
+      // Invalid field value
+      twin.supplyAvailable = new Date();
       expect(twin.supplyAvailableIsValid()).is.false;
       expect(twin.isValid()).is.false;
 
@@ -123,6 +143,11 @@ describe("Twin", function () {
       twin.tokenId = "126";
       expect(twin.tokenIdIsValid()).is.true;
       expect(twin.isValid()).is.true;
+
+      // Invalid field value
+      twin.tokenId = new Date();
+      expect(twin.tokenIdIsValid()).is.false;
+      expect(twin.isValid()).is.false;
     });
 
     it("Always present, tokenAddress must be a string representation of an EIP-55 compliant address", async function () {

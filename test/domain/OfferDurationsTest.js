@@ -41,6 +41,11 @@ describe("OfferDurations", function () {
       expect(offerDurations.disputePeriodIsValid()).is.false;
       expect(offerDurations.isValid()).is.false;
 
+      // Invalid field value
+      offerDurations.disputePeriod = new Date();
+      expect(offerDurations.disputePeriodIsValid()).is.false;
+      expect(offerDurations.isValid()).is.false;
+
       // Valid field value
       offerDurations.disputePeriod = "0";
       expect(offerDurations.disputePeriodIsValid()).is.true;
@@ -63,6 +68,11 @@ describe("OfferDurations", function () {
       expect(offerDurations.voucherValidIsValid()).is.true;
       expect(offerDurations.isValid()).is.true;
 
+      // Invalid field value
+      offerDurations.voucherValid = new Date();
+      expect(offerDurations.voucherValidIsValid()).is.false;
+      expect(offerDurations.isValid()).is.false;
+
       // Valid field value
       offerDurations.voucherValid = "126";
       expect(offerDurations.voucherValidIsValid()).is.true;
@@ -84,6 +94,11 @@ describe("OfferDurations", function () {
       offerDurations.resolutionPeriod = "126";
       expect(offerDurations.resolutionPeriodIsValid()).is.true;
       expect(offerDurations.isValid()).is.true;
+
+      // Invalid field value
+      offerDurations.resolutionPeriod = new Date();
+      expect(offerDurations.resolutionPeriodIsValid()).is.false;
+      expect(offerDurations.isValid()).is.false;
     });
   });
 

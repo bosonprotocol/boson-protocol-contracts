@@ -55,6 +55,11 @@ describe("Buyer", function () {
       expect(buyer.idIsValid()).is.true;
       expect(buyer.isValid()).is.true;
 
+      // Invalid field value
+      buyer.id = new Date();
+      expect(buyer.idIsValid()).is.false;
+      expect(buyer.isValid()).is.false;
+
       // Valid field value
       buyer.id = "126";
       expect(buyer.idIsValid()).is.true;

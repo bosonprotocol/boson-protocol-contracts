@@ -90,6 +90,11 @@ describe("Offer", function () {
       expect(offer.idIsValid()).is.false;
       expect(offer.isValid()).is.false;
 
+      // Invalid field value
+      offer.id = new Date();
+      expect(offer.idIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
       // Valid field value
       offer.id = "0";
       expect(offer.idIsValid()).is.true;
@@ -112,6 +117,11 @@ describe("Offer", function () {
       expect(offer.priceIsValid()).is.true;
       expect(offer.isValid()).is.true;
 
+      // Invalid field value
+      offer.price = new Date();
+      expect(offer.priceIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
       // Valid field value
       offer.price = "126";
       expect(offer.priceIsValid()).is.true;
@@ -133,6 +143,11 @@ describe("Offer", function () {
       offer.sellerDeposit = "126";
       expect(offer.sellerDepositIsValid()).is.true;
       expect(offer.isValid()).is.true;
+
+      // Invalid field value
+      offer.sellerDeposit = new Date();
+      expect(offer.sellerDepositIsValid()).is.false;
+      expect(offer.isValid()).is.false;
     });
 
     it("Always present, buyerCancelPenalty must be the string representation of a BigNumber", async function () {
@@ -150,6 +165,11 @@ describe("Offer", function () {
       offer.buyerCancelPenalty = "126";
       expect(offer.buyerCancelPenaltyIsValid()).is.true;
       expect(offer.isValid()).is.true;
+
+      // Invalid field value
+      offer.buyerCancelPenalty = new Date();
+      expect(offer.buyerCancelPenaltyIsValid()).is.false;
+      expect(offer.isValid()).is.false;
     });
 
     it("Always present, quantityAvailable must be the string representation of a BigNumber", async function () {
@@ -167,6 +187,11 @@ describe("Offer", function () {
       offer.quantityAvailable = "126";
       expect(offer.quantityAvailableIsValid()).is.true;
       expect(offer.isValid()).is.true;
+
+      // Invalid field value
+      offer.quantityAvailable = new Date();
+      expect(offer.quantityAvailableIsValid()).is.false;
+      expect(offer.isValid()).is.false;
     });
 
     it("Always present, sellerId must be the string representation of a BigNumber", async function () {
@@ -184,6 +209,11 @@ describe("Offer", function () {
       offer.sellerId = "126";
       expect(offer.sellerIdIsValid()).is.true;
       expect(offer.isValid()).is.true;
+
+      // Invalid field value
+      offer.sellerId = new Date();
+      expect(offer.sellerIdIsValid()).is.false;
+      expect(offer.isValid()).is.false;
     });
 
     it("Always present, exchangeToken must be a string representation of an EIP-55 compliant address", async function () {

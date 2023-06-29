@@ -40,6 +40,11 @@ describe("Bundle", function () {
       expect(bundle.idIsValid()).is.false;
       expect(bundle.isValid()).is.false;
 
+      // Invalid field value
+      bundle.id = new Date();
+      expect(bundle.idIsValid()).is.false;
+      expect(bundle.isValid()).is.false;
+
       // Valid field value
       bundle.id = "0";
       expect(bundle.idIsValid()).is.true;

@@ -58,6 +58,11 @@ describe("Agent", function () {
       expect(agent.idIsValid()).is.false;
       expect(agent.isValid()).is.false;
 
+      // Invalid field value
+      agent.id = new Date();
+      expect(agent.idIsValid()).is.false;
+      expect(agent.isValid()).is.false;
+
       // Valid field value
       agent.id = "0";
       expect(agent.idIsValid()).is.true;
