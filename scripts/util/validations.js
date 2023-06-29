@@ -21,7 +21,7 @@ function bigNumberIsValid(bigNumber, { optional, gt, lte, empty } = {}) {
     try {
       const bigNumberValue = BigInt(bigNumber);
       valid =
-        typeof bigNumber === "string" &&
+        (typeof bigNumber === "string" || typeof bigNumber === "bigint") &&
         (gt == undefined || bigNumberValue > BigInt(gt)) &&
         (lte == undefined || bigNumberValue <= BigInt(lte));
     } catch (e) {

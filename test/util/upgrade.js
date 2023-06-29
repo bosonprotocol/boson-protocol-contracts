@@ -93,12 +93,12 @@ async function deploySuite(deployer, newVersion) {
   shell.exec(`git fetch --force --tags origin`);
   console.log(`Checking out version ${tag}`);
   shell.exec(`rm -rf contracts/*`);
-  shell.exec(`git checkout ${tag} -- "contracts/**`);
+  shell.exec(`find contracts -type f | xargs git checkout ${tag} --`);
 
   if (scriptsTag) {
     console.log(`Checking out scripts on version ${scriptsTag}`);
     shell.exec(`rm -rf scripts/*`);
-    shell.exec(`git checkout ${scriptsTag} scripts`);
+    shell.exec(`git checkout ${scriptsTag} scripts/**`);
   }
 
   const deployConfig = facets.deploy[tag];
@@ -107,6 +107,7 @@ async function deploySuite(deployer, newVersion) {
     throw new Error(`No deploy config found for tag ${tag}`);
   }
 
+  await hre.run("compile");
   // run deploy suite, which automatically compiles the contracts
   await hre.run("deploy-suite", {
     env: "upgrade-test",
@@ -373,7 +374,6 @@ async function populateProtocolContract(
         await accountHandler
           .connect(connectedWallet)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-        console.log("after");
         DRs.push({
           wallet: connectedWallet,
           id: disputeResolver.id,
@@ -488,8 +488,8 @@ async function populateProtocolContract(
 
       // Set unique offer dates based on offer id
       const now = offerDates.validFrom;
-      offerDates.validFrom = BigInt(now) + oneMonth + offerId * (1000).toString();
-      offerDates.validUntil = (BigInt(now) + oneMonth * 6n * BigInt(offerId + 1)).toString();
+      offerDates.validFrom = (BigInt(now) + oneMonth + BigInt(offerId) * 1000n).toString();
+      offerDates.validUntil = (BigInt(now) + oneMonth * 6n * BigInt(offerId) + 1n).toString();
 
       // Set unique offerDurations based on offer id
       offerDurations.disputePeriod = `${(offerId + 1) * oneMonth}`;
@@ -1054,13 +1054,13 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
 
   // current sender address + isMetaTransaction (they are packed since they are shorter than one slot)
   // should be always be 0x
-  const inTransactionInfo = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber + "0");
+  const inTransactionInfo = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber + 0n);
 
   // domain separator
-  const domainSeparator = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber + "1");
+  const domainSeparator = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber + 1n);
 
   // cached chain id
-  const cachedChainId = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber + "3");
+  const cachedChainId = await getStorageAt(protocolDiamondAddress, metaTxStorageSlotNumber + 3n);
 
   // input type
   const inputTypeKeys = [
@@ -1077,7 +1077,7 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
 
   const inputTypesState = [];
   for (const inputTypeKey of inputTypeKeys) {
-    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber + "4", inputTypeKey, paddingType.NONE);
+    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber + 4n, inputTypeKey, paddingType.NONE);
     inputTypesState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
   }
 
@@ -1093,7 +1093,7 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
 
   const hashInfoState = [];
   for (const hashInfoType of Object.values(hashInfoTypes)) {
-    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber + "5", hashInfoType, paddingType.START);
+    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber + 5n, hashInfoType, paddingType.START);
     // get also hashFunction
     hashInfoState.push({
       typeHash: await getStorageAt(protocolDiamondAddress, storageSlot),
@@ -1124,7 +1124,7 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
   const selectors = await getMetaTransactionsHandlerFacetInitArgs(facets);
 
   for (const selector of Object.values(selectors)) {
-    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber + "6", selector, paddingType.START);
+    const storageSlot = getMappingStoragePosition(metaTxStorageSlotNumber + 6n, selector, paddingType.START);
     isAllowlistedState[selector] = await getStorageAt(protocolDiamondAddress, storageSlot);
   }
 
@@ -1147,11 +1147,11 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
   const protocolStatusStorageSlotNumber = BigInt(protocolStatusStorageSlot);
 
   // pause scenario
-  const pauseScenario = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber + "0");
+  const pauseScenario = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber + 0n);
 
   // reentrancy status
   // default: NOT_ENTERED = 1
-  const reentrancyStatus = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber + "1");
+  const reentrancyStatus = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber + 1n);
 
   // initializedInterfaces
   if (!preUpgradeInterfaceIds) {
@@ -1161,7 +1161,7 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
 
   const initializedInterfacesState = [];
   for (const interfaceId of Object.values(preUpgradeInterfaceIds)) {
-    const storageSlot = getMappingStoragePosition(protocolStatusStorageSlotNumber + "2", interfaceId, paddingType.END);
+    const storageSlot = getMappingStoragePosition(protocolStatusStorageSlotNumber + 2n, interfaceId, paddingType.END);
     initializedInterfacesState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
   }
 
@@ -1171,7 +1171,7 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
 
   const initializedVersionsState = [];
   for (const version of preUpgradeVersions) {
-    const storageSlot = getMappingStoragePosition(protocolStatusStorageSlotNumber + "3", version, paddingType.END);
+    const storageSlot = getMappingStoragePosition(protocolStatusStorageSlotNumber + 3n, version, paddingType.END);
     initializedVersionsState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
   }
 
@@ -1232,7 +1232,7 @@ async function getProtocolLookupsPrivateContractState(
     const id = Number(offer.offer.id);
     // exchangeIdsByOffer
     let exchangeIdsByOffer = [];
-    const arraySlot = BigInt.from(getMappingStoragePosition(protocolLookupsSlotNumber + "0", id, paddingType.START));
+    const arraySlot = BigInt.from(getMappingStoragePosition(protocolLookupsSlotNumber + 0n, id, paddingType.START));
     const arrayLength = BigInt(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
     const arrayStart = BigInt(keccak256(arraySlot));
     for (let i = 0; i < arrayLength; i++) {
@@ -1244,7 +1244,7 @@ async function getProtocolLookupsPrivateContractState(
     groupIdByOfferState.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber + "3", id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber + 3n, id, paddingType.START)
       )
     );
   }
@@ -1263,7 +1263,7 @@ async function getProtocolLookupsPrivateContractState(
     buyerIdByWallet.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber + "8", accountAddress, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber + 8n, accountAddress, paddingType.START)
       )
     );
 
@@ -1271,13 +1271,13 @@ async function getProtocolLookupsPrivateContractState(
     agentIdByWallet.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber + "13", accountAddress, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber + 13n, accountAddress, paddingType.START)
       )
     );
 
     // conditionalCommitsByAddress
     const firstMappingStorageSlot = BigInt(
-      getMappingStoragePosition(protocolLookupsSlotNumber + "19", accountAddress, paddingType.START)
+      getMappingStoragePosition(protocolLookupsSlotNumber + 19n, accountAddress, paddingType.START)
     );
     let commitsPerGroup = [];
     for (const group of groups) {
@@ -1305,7 +1305,7 @@ async function getProtocolLookupsPrivateContractState(
   for (const id of accountIds) {
     // disputeResolverFeeTokenIndex
     let firstMappingStorageSlot = BigInt(
-      getMappingStoragePosition(protocolLookupsSlotNumber + "12", id, paddingType.START)
+      getMappingStoragePosition(protocolLookupsSlotNumber + 12n, id, paddingType.START)
     );
     disputeResolverFeeTokenIndex.push({
       native: await getStorageAt(
@@ -1319,9 +1319,7 @@ async function getProtocolLookupsPrivateContractState(
     });
 
     // tokenIndexByAccount
-    firstMappingStorageSlot = BigInt(
-      getMappingStoragePosition(protocolLookupsSlotNumber + "16", id, paddingType.START)
-    );
+    firstMappingStorageSlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + 16n, id, paddingType.START));
     tokenIndexByAccount.push({
       native: await getStorageAt(
         protocolDiamondAddress,
@@ -1337,7 +1335,7 @@ async function getProtocolLookupsPrivateContractState(
     cloneAddress.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber + "17", id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber + 17n, id, paddingType.START)
       )
     );
 
@@ -1345,7 +1343,7 @@ async function getProtocolLookupsPrivateContractState(
     voucherCount.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber + "18", id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber + 18n, id, paddingType.START)
       )
     );
   }
@@ -1354,7 +1352,7 @@ async function getProtocolLookupsPrivateContractState(
   let twinRangesBySeller = [];
   for (const id of accountIds) {
     const firstMappingStorageSlot = BigInt(
-      getMappingStoragePosition(protocolLookupsSlotNumber + "22", id, paddingType.START)
+      getMappingStoragePosition(protocolLookupsSlotNumber + 22n, id, paddingType.START)
     );
     let ranges = {};
     for (let mockTwin of mockTwinTokens) {
@@ -1381,7 +1379,7 @@ async function getProtocolLookupsPrivateContractState(
   let twinIdsByTokenAddressAndBySeller = [];
   for (const id of accountIds) {
     const firstMappingStorageSlot = BigInt(
-      getMappingStoragePosition(protocolLookupsSlotNumber + "23", id, paddingType.START)
+      getMappingStoragePosition(protocolLookupsSlotNumber + 23n, id, paddingType.START)
     );
     let twinIds = {};
     for (let mockTwin of mockTwinTokens) {
@@ -1405,7 +1403,7 @@ async function getProtocolLookupsPrivateContractState(
   for (const DR of DRs) {
     const firstMappingStorageSlot = BigInt(
       getMappingStoragePosition(
-        protocolLookupsSlotNumber + "26",
+        protocolLookupsSlotNumber + 26n,
         BigInt(DR.disputeResolver.id).toHexString(),
         paddingType.START
       )
@@ -1427,7 +1425,7 @@ async function getProtocolLookupsPrivateContractState(
   for (const group of groups) {
     const id = group.id;
     const firstMappingStorageSlot = BigInt(
-      getMappingStoragePosition(protocolLookupsSlotNumber + "28", id, paddingType.START)
+      getMappingStoragePosition(protocolLookupsSlotNumber + 28n, id, paddingType.START)
     );
     let offerInidices = [];
     for (const offer of offers) {
@@ -1450,7 +1448,7 @@ async function getProtocolLookupsPrivateContractState(
   // Although pending address/auth token update is not yet defined in 2.0.0, we can check that storage slots are empty
   for (const id of accountIds) {
     // pendingAddressUpdatesBySeller
-    let structStorageSlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + "29", id, paddingType.START));
+    let structStorageSlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + 29n, id, paddingType.START));
     let structFields = [];
     for (let i = 0; i < 5; i++) {
       // BosonTypes.Seller has 6 fields, but last bool is packed in one slot with previous field
@@ -1459,7 +1457,7 @@ async function getProtocolLookupsPrivateContractState(
     pendingAddressUpdatesBySeller.push(structFields);
 
     // pendingAuthTokenUpdatesBySeller
-    structStorageSlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + "30", id, paddingType.START));
+    structStorageSlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + 30n, id, paddingType.START));
     structFields = [];
     for (let i = 0; i < 2; i++) {
       // BosonTypes.AuthToken has 2 fields
@@ -1468,7 +1466,7 @@ async function getProtocolLookupsPrivateContractState(
     pendingAuthTokenUpdatesBySeller.push(structFields);
 
     // pendingAddressUpdatesByDisputeResolver
-    structStorageSlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + "31", id, paddingType.START));
+    structStorageSlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + 31n, id, paddingType.START));
     structFields = [];
     for (let i = 0; i < 8; i++) {
       // BosonTypes.DisputeResolver has 8 fields
