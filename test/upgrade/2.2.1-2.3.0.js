@@ -16,6 +16,7 @@ const Group = require("../../scripts/domain/Group");
 const TokenType = require("../../scripts/domain/TokenType.js");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const { Collection, CollectionList } = require("../../scripts/domain/Collection");
+const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const {
@@ -35,6 +36,7 @@ const {
   calculateContractAddress,
   deriveTokenId,
 } = require("../util/utils");
+const { limits: protocolLimits } = require("../../scripts/config/protocol-parameters.js");
 
 const { deploySuite, populateProtocolContract, getProtocolContractState, revertState } = require("../util/upgrade");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -299,6 +301,298 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             protocolContractStateBefore.accountContractState.agentsState,
             protocolContractStateAfter.accountContractState.agentsState
           );
+        });
+      });
+
+      context("Protocol limits", async function () {
+        let wallets;
+        let sellers, DRs, sellerWallet;
+
+        before(async function () {
+          wallets = new Array(10000).fill(ethers.Wallet.createRandom());
+          await Promise.all(
+            wallets.map((w) =>
+              ethers.provider.send("hardhat_setBalance", [w.address, ethers.utils.parseEther("10").toHexString()])
+            )
+          );
+        });
+
+        beforeEach(async function () {
+          ({ sellers, DRs } = preUpgradeEntities);
+          ({ wallet: sellerWallet } = sellers[0]);
+        });
+
+        it("can complete more exchanges than maxExchangesPerBatch", async function () {
+          const { maxExchangesPerBatch } = protocolLimits;
+          const exchangesCount = Number(maxExchangesPerBatch) + 1;
+          const startingExchangeId = await exchangeHandler.getNextExchangeId();
+          const exchangesToComplete = [...Array(exchangesCount).keys()].map((i) => startingExchangeId.add(i));
+
+          // Create offer with maxExchangesPerBatch+1 items
+          const { offer, offerDates, offerDurations } = await mockOffer();
+          offer.quantityAvailable = exchangesCount;
+          offer.price = offer.buyerCancelPenalty = offer.sellerDeposit = 0;
+          const offerId = await offerHandler.getNextOfferId();
+          await offerHandler.connect(sellerWallet).createOffer(offer, offerDates, offerDurations, DRs[0].id, "0");
+
+          // Commit to offer and redeem voucher
+          // Use unique wallets to avoid nonce issues
+          const walletSet = wallets.slice(0, exchangesCount);
+          await Promise.all(
+            walletSet.map(async (wallet) => {
+              const tx = offerHandler.connect(wallet).commitToOffer(wallet.address, offerId);
+              const { exchangeId } = getEvent(await tx.wait(), exchangeHandler, "BuyerCommitted");
+              return exchangeHandler.connect(wallet).redeemVoucher(exchangeId);
+            })
+          );
+
+          const { timestamp } = await ethers.provider.getBlock();
+          setNextBlockTimestamp(timestamp + Number(offerDurations.disputePeriod) + 1);
+
+          await expect(
+            exchangeHandler.connect(sellerWallet).completeExchangeBatch(exchangesToComplete)
+          ).to.not.be.reverted;
+        });
+
+        it("can create/extend/void more offers than maxOffersPerBatch", async function () {
+          const { maxOffersPerBatch } = protocolLimits;
+          const offerCount = Number(maxOffersPerBatch) + 1;
+
+          const { offer, offerDates, offerDurations } = await mockOffer();
+          const offers = new Array(offerCount).fill(offer);
+          const offerDatesList = new Array(offerCount).fill(offerDates);
+          const offerDurationsList = new Array(offerCount).fill(offerDurations);
+          const disputeResolverIds = new Array(offerCount).fill(DRs[0].id);
+          const agentIds = new Array(offerCount).fill("0");
+          const startingOfferId = await offerHandler.getNextOfferId();
+
+          // Create offers in batch
+          await expect(
+            offerHandler
+              .connect(sellerWallet)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+          ).to.not.be.reverted;
+
+          // Extend offers validity
+          const newValidUntilDate = ethers.BigNumber.from(offerDates.validUntil).add("10000").toString();
+          const offerIds = [...Array(offerCount).keys()].map((i) => startingOfferId.add(i));
+          await expect(
+            offerHandler.connect(sellerWallet).extendOfferBatch(offerIds, newValidUntilDate)
+          ).to.not.be.reverted;
+
+          // Void offers
+          await expect(offerHandler.connect(sellerWallet).voidOfferBatch(offerIds)).to.not.be.reverted;
+        });
+
+        it("can create a bundle with more twins than maxTwinsPerBundle", async function () {
+          const { maxTwinsPerBundle } = protocolLimits;
+          const twinCount = Number(maxTwinsPerBundle) + 1;
+          const startingTwinId = await twinHandler.getNextTwinId();
+          const twinIds = [...Array(twinCount).keys()].map((i) => startingTwinId.add(i));
+
+          const [twinContract] = await deployMockTokens(["Foreign721"]);
+          await twinContract.connect(sellerWallet).setApprovalForAll(twinHandler.address, true);
+
+          // Create all twins
+          const twin721 = mockTwin(twinContract.address, TokenType.NonFungibleToken);
+          twin721.amount = "0";
+          twin721.supplyAvailable = "1";
+          for (let i = 0; i < twinCount; i++) {
+            twin721.tokenId = i;
+            await twinHandler.connect(sellerWallet).createTwin(twin721);
+          }
+
+          // create an offer with only 1 item, so twins' supply available is enough
+          const { offer, offerDates, offerDurations } = await mockOffer();
+          offer.quantityAvailable = 1;
+          const offerId = await offerHandler.getNextOfferId();
+          await offerHandler.connect(sellerWallet).createOffer(offer, offerDates, offerDurations, DRs[0].id, "0");
+
+          // Create a bundle with more twins than maxTwinsPerBundle
+          const bundle = new Bundle("1", sellers[0].seller.id, [offerId], twinIds);
+          await expect(bundleHandler.connect(sellerWallet).createBundle(bundle)).to.not.be.reverted;
+        });
+
+        it("can create a bundle with more offers than maxOffersPerBundle", async function () {
+          const { maxOffersPerBundle } = protocolLimits;
+          const offerCount = Number(maxOffersPerBundle) + 1;
+          const twinId = await twinHandler.getNextTwinId();
+          const startingOfferId = await offerHandler.getNextOfferId();
+          const offerIds = [...Array(offerCount).keys()].map((i) => startingOfferId.add(i));
+
+          const { offer, offerDates, offerDurations } = await mockOffer();
+          const offers = new Array(offerCount).fill(offer);
+          const offerDatesList = new Array(offerCount).fill(offerDates);
+          const offerDurationsList = new Array(offerCount).fill(offerDurations);
+          const disputeResolverIds = new Array(offerCount).fill(DRs[0].id);
+          const agentIds = new Array(offerCount).fill("0");
+
+          // Create offers in batch
+          await offerHandler
+            .connect(sellerWallet)
+            .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds);
+
+          // At list one twin is needed to create a bundle
+          const [twinContract] = await deployMockTokens(["Foreign721"]);
+          await twinContract.connect(sellerWallet).setApprovalForAll(twinHandler.address, true);
+          const twin721 = mockTwin(twinContract.address, TokenType.NonFungibleToken);
+          twin721.amount = "0";
+          await twinHandler.connect(sellerWallet).createTwin(twin721);
+
+          // Create a bundle with more twins than maxTwinsPerBundle
+          const bundle = new Bundle("1", sellers[0].seller.id, offerIds, [twinId]);
+          await expect(bundleHandler.connect(sellerWallet).createBundle(bundle)).to.not.be.reverted;
+        });
+
+        it("can add more offers to a group than maxOffersPerGroup", async function () {
+          const { maxOffersPerBundle } = protocolLimits;
+          const offerCount = Number(maxOffersPerBundle) + 1;
+          const startingOfferId = await offerHandler.getNextOfferId();
+          const offerIds = [...Array(offerCount).keys()].map((i) => startingOfferId.add(i));
+
+          const { offer, offerDates, offerDurations } = await mockOffer();
+          const offers = new Array(offerCount).fill(offer);
+          const offerDatesList = new Array(offerCount).fill(offerDates);
+          const offerDurationsList = new Array(offerCount).fill(offerDurations);
+          const disputeResolverIds = new Array(offerCount).fill(DRs[0].id);
+          const agentIds = new Array(offerCount).fill("0");
+
+          // Create offers in batch
+          await offerHandler
+            .connect(sellerWallet)
+            .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds);
+
+          // Create a group with more offers than maxOffersPerGroup
+          const group = new Group("1", sellers[0].seller.id, offerIds);
+          const { mockConditionalToken } = mockContracts;
+          const condition = mockCondition({
+            tokenAddress: mockConditionalToken.address,
+            maxCommits: "10",
+          });
+          await expect(bundleHandler.connect(sellerWallet).createGroup(group, condition)).to.not.be.reverted;
+        });
+
+        it("can withdraw more tokens than maxTokensPerWithdrawal", async function () {
+          const { maxTokensPerWithdrawal } = protocolLimits;
+          const tokenCount = Number(maxTokensPerWithdrawal) + 1;
+          const sellerId = sellers[0].seller.id;
+
+          const tokens = await deployMockTokens(new Array(tokenCount).fill("Foreign20"));
+
+          // Mint tokens and deposit them to the seller
+          await Promise.all(
+            wallets.slice(0, tokenCount).map(async (wallet, i) => {
+              const token = tokens[i];
+              await token.mint(wallet.address, "1000");
+              await token.connect(wallet).approve(accountHandler.address, "1000");
+              return fundsHandler.connect(wallet).depositFunds(sellerId, token.address, "1000");
+            })
+          );
+
+          // Withdraw more tokens than maxTokensPerWithdrawal
+          const tokenAddresses = tokens.map((token) => token.address);
+          const amounts = new Array(tokenCount).fill("1000");
+          await expect(
+            fundsHandler.connect(sellerWallet).withdrawFunds(sellerId, tokenAddresses, amounts)
+          ).to.not.be.reverted;
+        });
+
+        it("can create a DR with more fees than maxFeesPerDisputeResolver", async function () {
+          const { maxFeesPerDisputeResolver } = protocolLimits;
+          const feeCount = Number(maxFeesPerDisputeResolver) + 1;
+
+          // we just need some address, so we just use "wallets"
+          const disputeResolverFees = wallets.slice(0, feeCount).map((wallet) => {
+            return new DisputeResolverFee(wallet.address, "Token", "0");
+          });
+          const sellerAllowList = [];
+          const disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address);
+
+          // Create a DR with more fees than maxFeesPerDisputeResolver
+          await expect(
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+          ).to.not.be.reverted;
+        });
+
+        it("can create a DR with more allowed sellers than maxAllowedSellers", async function () {
+          const { maxAllowedSellers } = protocolLimits;
+          const sellerCount = Number(maxAllowedSellers) + 1;
+          const startingSellerId = await accountHandler.getNextSellerId();
+          const sellerAllowList = [...Array(sellerCount).keys()].map((i) => startingSellerId.add(i));
+
+          // create new sellers
+          const emptyAuthToken = mockAuthToken();
+          const voucherInitValues = mockVoucherInitValues();
+          await Promise.all(
+            wallets.slice(0, sellerCount).map((wallet) => {
+              const seller = mockSeller(
+                wallet.address,
+                wallet.address,
+                ethers.constants.AddressZero,
+                wallet.address,
+                true
+              );
+              return accountHandler.connect(wallet).createSeller(seller, emptyAuthToken, voucherInitValues);
+            })
+          );
+
+          const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+          const disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address);
+
+          await expect(
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+          ).to.not.be.reverted;
+        });
+
+        it("can expire more disputes than maxDisputesPerBatch", async function () {
+          const { maxDisputesPerBatch } = protocolLimits;
+          const disputesCount = Number(maxDisputesPerBatch) + 1;
+          const startingExchangeId = await exchangeHandler.getNextExchangeId();
+          const disputesToExpire = [...Array(disputesCount).keys()].map((i) => startingExchangeId.add(i));
+
+          // Create offer with maxDisputesPerBatch+1 items
+          const { offer, offerDates, offerDurations } = await mockOffer();
+          offer.quantityAvailable = disputesCount;
+          offer.price = offer.buyerCancelPenalty = offer.sellerDeposit = 0;
+          const offerId = await offerHandler.getNextOfferId();
+          await offerHandler.connect(sellerWallet).createOffer(offer, offerDates, offerDurations, DRs[0].id, "0");
+
+          // Commit to offer and redeem voucher
+          // Use unique wallets to avoid nonce issues
+          const walletSet = wallets.slice(0, disputesCount);
+          await Promise.all(
+            walletSet.map(async (wallet) => {
+              const tx = offerHandler.connect(wallet).commitToOffer(wallet.address, offerId);
+              const { exchangeId } = getEvent(await tx.wait(), exchangeHandler, "BuyerCommitted");
+              await exchangeHandler.connect(wallet).redeemVoucher(exchangeId);
+              return fundsHandler.connect(wallet).raiseDispute(exchangeId);
+            })
+          );
+
+          const { timestamp } = await ethers.provider.getBlock();
+          setNextBlockTimestamp(timestamp + Number(offerDurations.resolutionPeriod) + 1);
+
+          // Expire more disputes than maxDisputesPerBatch
+          await expect(disputeHandler.connect(sellerWallet).expireDisputeBatch(disputesToExpire)).to.not.be.reverted;
+        });
+
+        it("can premint more vouchers than maxPremintedVouchers", async function () {
+          const { maxPremintedVouchers } = protocolLimits;
+          const voucherCount = Number(maxPremintedVouchers) + 1;
+          const offerId = await offerHandler.getNextOfferId();
+
+          // Create offer with maxDisputesPerBatch+1 items
+          const { offer, offerDates, offerDurations } = await mockOffer();
+          await offerHandler.connect(sellerWallet).createOffer(offer, offerDates, offerDurations, DRs[0].id, "0");
+
+          // reserve a range
+          const start = 1;
+          const length = voucherCount * 2;
+          await offerHandler.connect(sellerWallet).reserveRange(offerId, start, length, sellerWallet.address);
+
+          // Premint more vouchers than maxPremintedVouchers
+          const { bosonVoucher } = sellers[0];
+          await expect(bosonVoucher.connect(sellerWallet).preMint(offerId, voucherCount)).to.not.be.reverted;
         });
       });
 
