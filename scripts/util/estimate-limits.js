@@ -576,7 +576,7 @@ setupEnvironment["maxExchangesPerBatch"] = async function (exchangesCount = 10) 
   // Set time forward to run out the dispute period
   const blockNumber = await provider.getBlockNumber();
   const block = await provider.getBlock(blockNumber);
-  const newTime = BigInt(block.timestamp).add(offerDurations.disputePeriod).add(1).toNumber();
+  const newTime = Number(BigInt(block.timestamp) + BigInt(offerDurations.disputePeriod) + 1n);
   await setNextBlockTimestamp(newTime);
 
   const exchangeIds = [...Array(exchangesCount + 1).keys()].slice(1);
@@ -645,7 +645,7 @@ setupEnvironment["maxDisputesPerBatch"] = async function (exchangesCount = 10) {
   // Set time forward to run out the dispute period
   const blockNumber = await provider.getBlockNumber();
   const block = await provider.getBlock(blockNumber);
-  const newTime = BigInt(block.timestamp).add(offerDurations.resolutionPeriod).add(1).toNumber();
+  const newTime = Number(BigInt(block.timestamp) + BigInt(offerDurations.resolutionPeriod) + 1n);
   await setNextBlockTimestamp(newTime);
 
   const exchangeIds = [...Array(exchangesCount + 1).keys()].slice(1);
@@ -874,8 +874,8 @@ async function estimateLimit(limit, inputs, safeGasLimitPercent) {
           const gasEstimate = await handlers[handler]
             .connect(methodInputs.account)
             .estimateGas[method](...adjustedArgs, { gasLimit });
-          console.log("Length:", arrayLength, "Gas:", gasEstimate.toNumber());
-          gasEstimates.push([gasEstimate.toNumber(), arrayLength]);
+          console.log("Length:", arrayLength, "Gas:", Number(gasEstimate));
+          gasEstimates.push([Number(gasEstimate), arrayLength]);
         } catch (e) {
           // console.log(e)
           console.log("Block gas limit already hit");

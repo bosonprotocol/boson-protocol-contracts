@@ -92,6 +92,10 @@ const addressNotFound = (address) => {
   process.exit(1);
 };
 
+function toHexString(bigNumber, { startPad } = { startPad: 8 }) {
+  return "0x" + (startPad ? bigNumber.toString(16).padStart(startPad, "0") : bigNumber.toString(16));
+}
+
 exports.getAddressesFilePath = getAddressesFilePath;
 exports.writeContracts = writeContracts;
 exports.readContracts = readContracts;
@@ -102,3 +106,4 @@ exports.getMaxFeePerGas = getMaxFeePerGas;
 exports.getFees = getFees;
 exports.checkRole = checkRole;
 exports.addressNotFound = addressNotFound;
+exports.toHexString = toHexString;

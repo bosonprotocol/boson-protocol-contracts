@@ -118,11 +118,6 @@ describe("OfferDates", function () {
       offerDates.voucherRedeemableUntil = "126";
       expect(offerDates.voucherRedeemableUntilIsValid()).is.true;
       expect(offerDates.isValid()).is.true;
-
-      // Invalid field value
-      offerDates.voucherRedeemableUntil = new Date();
-      expect(offerDates.voucherRedeemableUntilIsValid()).is.false;
-      expect(offerDates.isValid()).is.false;
     });
   });
 

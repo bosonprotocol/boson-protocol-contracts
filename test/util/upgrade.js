@@ -468,7 +468,7 @@ async function populateProtocolContract(
   }
 
   // create offers - first seller has 5 offers, second 4, third 3 etc
-  let offerId = (await offerHandler.getNextOfferId()).toNumber();
+  let offerId = Number(await offerHandler.getNextOfferId());
   for (let i = 0; i < sellers.length; i++) {
     for (let j = i; j >= 0; j--) {
       // Mock offer, offerDates and offerDurations
@@ -521,7 +521,7 @@ async function populateProtocolContract(
   }
 
   // group some offers
-  let groupId = (await groupHandler.getNextGroupId()).toNumber();
+  let groupId = Number(await groupHandler.getNextGroupId());
   for (let i = 0; i < sellers.length; i = i + 2) {
     const seller = sellers[i];
     const group = new Group(groupId, seller.seller.id, seller.offerIds); // group all seller's offers
@@ -537,8 +537,8 @@ async function populateProtocolContract(
   }
 
   // create some twins and bundles
-  let twinId = (await twinHandler.getNextTwinId()).toNumber();
-  let bundleId = (await bundleHandler.getNextBundleId()).toNumber();
+  let twinId = Number(await twinHandler.getNextTwinId());
+  let bundleId = Number(await bundleHandler.getNextBundleId());
   for (let i = 1; i < sellers.length; i = i + 2) {
     const seller = sellers[i];
     const sellerId = seller.id;
@@ -618,7 +618,7 @@ async function populateProtocolContract(
 
   // commit to some offers: first buyer commit to 1 offer, second to 2, third to 3 etc
   await setNextBlockTimestamp(Number(offers[offers.length - 1].offerDates.validFrom)); // When latest offer is valid, also other offers are valid
-  let exchangeId = (await exchangeHandler.getNextExchangeId()).toNumber();
+  let exchangeId = Number(await exchangeHandler.getNextExchangeId());
   for (let i = 0; i < buyers.length; i++) {
     for (let j = i; j < buyers.length; j++) {
       const offer = offers[i + j].offer; // some offers will be picked multiple times, some never.
@@ -1233,10 +1233,10 @@ async function getProtocolLookupsPrivateContractState(
     const id = Number(offer.offer.id);
     // exchangeIdsByOffer
     let exchangeIdsByOffer = [];
-    const arraySlot = BigInt.from(getMappingStoragePosition(protocolLookupsSlotNumber + 0n, id, paddingType.START));
-    const arrayLength = BigInt(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
-    const arrayStart = BigInt(keccak256(arraySlot));
-    for (let i = 0; i < arrayLength; i++) {
+    const arraySlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + 0n, id, paddingType.START));
+    const arrayLength = await getStorageAt(protocolDiamondAddress, arraySlot);
+    const arrayStart = keccak256(arraySlot);
+    for (let i = 0n; i < arrayLength; i++) {
       exchangeIdsByOffer.push(await getStorageAt(protocolDiamondAddress, arrayStart + i));
     }
     exchangeIdsByOfferState.push(exchangeIdsByOffer);
@@ -1363,13 +1363,13 @@ async function getProtocolLookupsPrivateContractState(
         await mockTwin.getAddress(),
         paddingType.START
       );
-      const arrayLength = BigInt(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
-      const arrayStart = BigInt(keccak256(arraySlot));
-      for (let i = 0; i < arrayLength * 2; i = i + 2) {
+      const arrayLength = await getStorageAt(protocolDiamondAddress, arraySlot);
+      const arrayStart = keccak256(arraySlot);
+      for (let i = 0; i < arrayLength * 2n; i = i + 2n) {
         // each BosonTypes.TokenRange has length 2
         ranges[await mockTwin.getAddress()].push({
           start: await getStorageAt(protocolDiamondAddress, arrayStart + i),
-          end: await getStorageAt(protocolDiamondAddress, arrayStart + i + 1),
+          end: await getStorageAt(protocolDiamondAddress, arrayStart + i + 1n),
         });
       }
     }
@@ -1390,8 +1390,8 @@ async function getProtocolLookupsPrivateContractState(
         await mockTwin.getAddress(),
         paddingType.START
       );
-      const arrayLength = BigInt(await getStorageAt(protocolDiamondAddress, arraySlot)).toNumber();
-      const arrayStart = BigInt(keccak256(arraySlot));
+      const arrayLength = await getStorageAt(protocolDiamondAddress, arraySlot);
+      const arrayStart = keccak256(arraySlot);
       for (let i = 0; i < arrayLength; i++) {
         twinIds[await mockTwin.getAddress()].push(await getStorageAt(protocolDiamondAddress, arrayStart + i));
       }
@@ -1445,7 +1445,7 @@ async function getProtocolLookupsPrivateContractState(
     // pendingAddressUpdatesBySeller
     let structStorageSlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + 29n, id, paddingType.START));
     let structFields = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0n; i < 5n; i++) {
       // BosonTypes.Seller has 6 fields, but last bool is packed in one slot with previous field
       structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot + i));
     }
@@ -1454,7 +1454,7 @@ async function getProtocolLookupsPrivateContractState(
     // pendingAuthTokenUpdatesBySeller
     structStorageSlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + 30n, id, paddingType.START));
     structFields = [];
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0n; i < 2n; i++) {
       // BosonTypes.AuthToken has 2 fields
       structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot + i));
     }
@@ -1463,11 +1463,11 @@ async function getProtocolLookupsPrivateContractState(
     // pendingAddressUpdatesByDisputeResolver
     structStorageSlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + 31n, id, paddingType.START));
     structFields = [];
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0n; i < 8n; i++) {
       // BosonTypes.DisputeResolver has 8 fields
       structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot + i));
     }
-    structFields[6] = await getStorageAt(protocolDiamondAddress, keccak256(structStorageSlot + 6)); // represents field string metadataUri. Technically this value represents the length of the string, but since it should be 0, we don't do further decoding
+    structFields[6] = await getStorageAt(protocolDiamondAddress, keccak256(structStorageSlot + 6n)); // represents field string metadataUri. Technically this value represents the length of the string, but since it should be 0, we don't do further decoding
     pendingAddressUpdatesByDisputeResolver.push(structFields);
   }
 
@@ -1671,7 +1671,7 @@ async function populateVoucherContract(
   }
 
   // create offers - first seller has 5 offers, second 4, third 3 etc
-  let offerId = (await offerHandler.getNextOfferId()).toNumber();
+  let offerId = Number(await offerHandler.getNextOfferId());
   for (let i = 0; i < sellers.length; i++) {
     for (let j = i; j >= 0; j--) {
       // Mock offer, offerDates and offerDurations
@@ -1725,7 +1725,7 @@ async function populateVoucherContract(
 
   // commit to some offers: first buyer commit to 1 offer, second to 2, third to 3 etc
   await setNextBlockTimestamp(Number(offers[offers.length - 1].offerDates.validFrom)); // When latest offer is valid, also other offers are valid
-  let exchangeId = (await exchangeHandler.getNextExchangeId()).toNumber();
+  let exchangeId = Number(await exchangeHandler.getNextExchangeId());
   for (let i = 0; i < buyers.length; i++) {
     for (let j = i; j < buyers.length; j++) {
       const offer = offers[i + j].offer; // some offers will be picked multiple times, some never.
