@@ -74,7 +74,7 @@ async function getInterfaceId(contractName, skipBaseCheck = false, isFullPath = 
       interfaceId = interfaceId ^ baseContractInterfaceId;
     }
   }
-  return interfaceId == 0n ? "0x00000000" : "0x" + interfaceId.toString(16).padStart(8, "0");
+  return interfaceId == 0n ? "0x00000000" : toHexString(interfaceId, { startPad: 8 });
 }
 
 // used with getSelectors to remove selectors from an array of selectors

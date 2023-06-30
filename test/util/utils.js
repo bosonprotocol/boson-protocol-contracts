@@ -16,6 +16,7 @@ const {
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
 const Role = require("../../scripts/domain/Role");
+const { toHexString } = require("../../scripts/util/utils.js");
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
 const { zeroPadBytes } = require("ethers");
@@ -189,7 +190,7 @@ async function prepareDataSignatureParameters(
 
   if (type == "Protocol") {
     //hardhat default chain id is 31337
-    domainData.salt = zeroPadValue("0x" + 31337n.toString(16), 32);
+    domainData.salt = zeroPadValue(toHexString(31337n), 32);
   } else {
     const { chainId } = await provider.getNetwork();
     domainData.chainId = chainId.toString();
@@ -268,7 +269,7 @@ function getMappingStoragePosition(slot, key, padding = paddingType.NONE) {
       keyBuffer = Buffer.from(key.slice(2).padEnd(64, "0"), "hex"); // assume key is prefixed with 0x
       break;
   }
-  const pBuffer = Buffer.from(slot.toHexString().slice(2), "hex");
+  const pBuffer = Buffer.from(toHexString(slot).slice(2), "hex");
   return keccak256(Buffer.concat([keyBuffer, pBuffer]));
 }
 

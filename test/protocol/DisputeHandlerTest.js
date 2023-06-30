@@ -9,6 +9,7 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
+const { toHexString } = require('../../scripts/util/utils.js')
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   setNextBlockTimestamp,
@@ -1195,7 +1196,7 @@ describe("IBosonDisputeHandler", function () {
             await expect(
               disputeHandler
                 .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, "0x" + MaxUint256.toString(16), v)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, toHexString(MaxUint256), v)
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
           });
 

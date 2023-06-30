@@ -88,6 +88,7 @@ async function deploySuite(deployer, newVersion) {
 
   // checkout old version
   const { oldVersion: tag, deployScript: scriptsTag } = versionTags;
+  console.log("only",versionTags);
 
   console.log(`Fetching tags`);
   shell.exec(`git fetch --force --tags origin`);
@@ -1402,18 +1403,14 @@ async function getProtocolLookupsPrivateContractState(
   let allowedSellerIndex = [];
   for (const DR of DRs) {
     const firstMappingStorageSlot = BigInt(
-      getMappingStoragePosition(
-        protocolLookupsSlotNumber + 26n,
-        BigInt(DR.disputeResolver.id).toHexString(),
-        paddingType.START
-      )
+      getMappingStoragePosition(protocolLookupsSlotNumber + 26n, BigInt(DR.disputeResolver.id), paddingType.START)
     );
     let sellerStatus = [];
     for (const seller of sellers) {
       sellerStatus.push(
         await getStorageAt(
           protocolDiamondAddress,
-          getMappingStoragePosition(firstMappingStorageSlot, BigInt(seller.seller.id).toHexString(), paddingType.START)
+          getMappingStoragePosition(firstMappingStorageSlot, BigInt(seller.seller.id), paddingType.START)
         )
       );
     }
@@ -1424,9 +1421,7 @@ async function getProtocolLookupsPrivateContractState(
   let offerIdIndexByGroup = [];
   for (const group of groups) {
     const id = group.id;
-    const firstMappingStorageSlot = BigInt(
-      getMappingStoragePosition(protocolLookupsSlotNumber + 28n, id, paddingType.START)
-    );
+    const firstMappingStorageSlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber, id, paddingType.START));
     let offerInidices = [];
     for (const offer of offers) {
       const id2 = Number(offer.offer.id);

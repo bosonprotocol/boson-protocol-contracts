@@ -23,6 +23,7 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
+const { toHexString } = require('../../scripts/util/utils.js')
 const {
   prepareDataSignatureParameters,
   setNextBlockTimestamp,
@@ -1081,7 +1082,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 functionSignature,
                 nonce,
                 r,
-                "0x" + MaxUint256.toString(16), // invalid s signature component
+                toHexString(MaxUint256), // invalid s signature component
                 v
               )
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
