@@ -6,14 +6,10 @@ const environments = "../../environments.js";
 const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const FacetCutAction = require("../domain/FacetCutAction");
 const { interfacesWithMultipleArtifacts } = require("./constants");
-const { getFees } = require("./utils");
+const { getFees, toHexString } = require("./utils");
 
 /**
  * Utilities for testing and interacting with Diamond
-
-
-
-
  *
  * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
  */
@@ -236,10 +232,6 @@ async function cutDiamond(
   await transactionResponse.wait(confirmations);
 
   return transactionResponse;
-}
-
-function toHexString(bigNumber, { startPad }) {
-  return "0x" + (startPad ? bigNumber.toString(16).padStart(startPad, "0") : bigNumber.toString(16));
 }
 
 exports.getSelectors = getSelectors;

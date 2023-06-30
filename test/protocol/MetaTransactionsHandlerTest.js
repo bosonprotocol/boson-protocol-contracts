@@ -23,7 +23,7 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { toHexString } = require('../../scripts/util/utils.js')
+const { toHexString } = require("../../scripts/util/utils.js");
 const {
   prepareDataSignatureParameters,
   setNextBlockTimestamp,
