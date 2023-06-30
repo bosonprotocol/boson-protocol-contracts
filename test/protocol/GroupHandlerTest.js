@@ -66,8 +66,9 @@ describe("IBosonGroupHandler", function () {
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ethers.constants.AddressZero };
 
     accounts = await ethers.getSigners();
 
@@ -303,7 +304,7 @@ describe("IBosonGroupHandler", function () {
 
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
-          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
@@ -571,7 +572,7 @@ describe("IBosonGroupHandler", function () {
 
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
-          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6

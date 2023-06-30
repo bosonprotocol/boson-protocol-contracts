@@ -93,8 +93,9 @@ describe("IBosonBundleHandler", function () {
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ethers.constants.AddressZero };
 
     // Deploy the mock tokens
     [bosonToken] = await deployMockTokens();
@@ -385,7 +386,7 @@ describe("IBosonBundleHandler", function () {
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
           let expectedNewOfferId = "6";
-          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           const tx = await offerHandler
@@ -425,7 +426,7 @@ describe("IBosonBundleHandler", function () {
         it("Caller is not the seller of all twins", async function () {
           // create another seller and a twin
           let expectedNewTwinId = "6";
-          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler

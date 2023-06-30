@@ -12,5 +12,5 @@ module.exports = {
     grep: "@skip-on-coverage", // Find everything with this tag
     invert: true, // Run the grep's inverse set.
   },
-  istanbulReporter: ["html", "json-summary"],
+  istanbulReporter: ["html", "json-summary", "lcov"],
 };

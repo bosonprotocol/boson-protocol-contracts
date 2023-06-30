@@ -49,6 +49,7 @@ const { tagsByVersion } = require("../upgrade/00_config");
 
 // Common vars
 const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
+const versionsWithClerkRole = ["v2.0.0", "v2.1.0", "v2.2.0", "v2.2.1"];
 let rando;
 let preUpgradeInterfaceIds, preUpgradeVersions;
 let facets, versionTags;
@@ -340,10 +341,13 @@ async function populateProtocolContract(
     // create entities
     switch (entity) {
       case entityType.DR: {
+        const clerkAddress = versionsWithClerkRole.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)
+          ? wallet.address
+          : ethers.constants.AddressZero;
         const disputeResolver = mockDisputeResolver(
           wallet.address,
           wallet.address,
-          wallet.address,
+          clerkAddress,
           wallet.address,
           true,
           true
@@ -374,7 +378,10 @@ async function populateProtocolContract(
       }
 
       case entityType.SELLER: {
-        const seller = mockSeller(wallet.address, wallet.address, wallet.address, wallet.address, true);
+        const clerkAddress = versionsWithClerkRole.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)
+          ? wallet.address
+          : ethers.constants.AddressZero;
+        const seller = mockSeller(wallet.address, wallet.address, clerkAddress, wallet.address, true);
         const id = (seller.id = nextAccountId.toString());
 
         let authToken;

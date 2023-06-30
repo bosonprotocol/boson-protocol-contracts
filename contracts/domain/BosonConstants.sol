@@ -1,7 +1,7 @@
 import "./BosonTypes.sol";
 
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 // Access Control Roles
 bytes32 constant ADMIN = keccak256("ADMIN"); // Role Admin
@@ -39,8 +39,8 @@ string constant DIRECT_INITIALIZATION_NOT_ALLOWED = "Direct initializtion is not
 string constant ACCESS_DENIED = "Access denied, caller doesn't have role";
 string constant NOT_ASSISTANT = "Not seller's assistant";
 string constant NOT_ADMIN = "Not admin";
-string constant NOT_ASSISTANT_AND_CLERK = "Not assistant and clerk";
-string constant NOT_ADMIN_ASSISTANT_AND_CLERK = "Not admin, assistant and clerk";
+string constant CLERK_DEPRECATED = "Clerk is deprecated and must be set to address 0";
+string constant NOT_ADMIN_AND_ASSISTANT = "Not admin and assistant";
 string constant NOT_BUYER_OR_SELLER = "Not buyer or seller";
 string constant NOT_VOUCHER_HOLDER = "Not current voucher holder";
 string constant NOT_BUYER_WALLET = "Not buyer's wallet address";
