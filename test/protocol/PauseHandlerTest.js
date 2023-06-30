@@ -21,6 +21,8 @@ describe("IBosonPauseHandler", function () {
   let pauser, rando;
   let erc165, pauseHandler, support, regions;
   let snapshotId;
+  // uint256 constant ALL_REGIONS_MASK = (1 << (uint256(type(BosonTypes.PausableRegion).max) + 1)) - 1;
+  const ALL_REGIONS_MASK = (1 << PausableRegion.Regions.length) - 1;
 
   before(async function () {
     // get interface Ids
@@ -63,10 +65,18 @@ describe("IBosonPauseHandler", function () {
   context("📋 Pause Handler Methods", async function () {
     let protocolStatusStorageSlotNumber;
 
-    function regionsToScenario(regions) {
-      return regions.reduce((acc, region) => {
-        return acc + Math.pow(2, region);
-      }, 0);
+    function scenarioToRegions(scenario) {
+      const regions = [];
+      let region = 0;
+      while (scenario > 1) {
+        if (scenario % 2 === 1) {
+          console.log(region, scenario);
+          regions.push(region);
+        }
+        scenario = Math.floor(scenario / 2);
+        region++;
+      }
+      return regions;
     }
 
     before(async function () {
@@ -93,7 +103,11 @@ describe("IBosonPauseHandler", function () {
 
         // Check that all regions are paused
         const pauseScenario = await getStorageAt(pauseHandler.address, protocolStatusStorageSlotNumber);
-        expect(BigNumber.from(pauseScenario).toNumber(), "Protocol not paused").to.equal(8191);
+        expect(BigNumber.from(pauseScenario).toNumber(), "Protocol not paused").to.equal(ALL_REGIONS_MASK);
+
+        // Check that all regions are paused
+        const pausedRegions = await pauseHandler.getPauseStatus();
+        await expect(pausedRegions).to.deep.equal(scenarioToRegions(ALL_REGIONS_MASK));
       });
 
       it("Can incrementally pause regions", async function () {
@@ -106,16 +120,14 @@ describe("IBosonPauseHandler", function () {
         const oldRegions = regions;
         regions = [PausableRegion.Sellers, PausableRegion.DisputeResolvers];
 
-        const expectedScenario = regionsToScenario([...oldRegions, ...regions]);
-
         // Pause the protocol, testing for the events
         await expect(pauseHandler.connect(pauser).pause(regions))
           .to.emit(pauseHandler, "ProtocolPaused")
           .withArgs(regions, pauser.address);
 
         // Check that both old and news regions are pause
-        const pauseScenario = await getStorageAt(pauseHandler.address, protocolStatusStorageSlotNumber);
-        expect(BigNumber.from(pauseScenario).toNumber(), "Protocol not paused").to.equal(expectedScenario);
+        const pausedRegions = await pauseHandler.getPauseStatus();
+        await expect(pausedRegions).to.deep.equal([...oldRegions, ...regions]);
       });
 
       it("If region is already paused, shouldn't increment", async function () {
@@ -125,16 +137,12 @@ describe("IBosonPauseHandler", function () {
         // Pause protocol
         await pauseHandler.connect(pauser).pause(regions);
 
-        const pauseScenario = await getStorageAt(pauseHandler.address, protocolStatusStorageSlotNumber);
-
-        regions = [PausableRegion.Twins];
-
         // Pause protocol again
-        await pauseHandler.connect(pauser).pause(regions);
+        await pauseHandler.connect(pauser).pause([PausableRegion.Twins]);
 
-        // Check that pauseScenario remains the sam
-        const newPauseScenario = await getStorageAt(pauseHandler.address, protocolStatusStorageSlotNumber);
-        expect(newPauseScenario, "Protocol not paused").to.equal(pauseScenario);
+        // Check that regions remains the same
+        const pausedRegions = await pauseHandler.getPauseStatus();
+        await expect(pausedRegions).to.deep.equal(regions);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -185,12 +193,9 @@ describe("IBosonPauseHandler", function () {
         // Unpause protocol
         await pauseHandler.connect(pauser).unpause([PausableRegion.Offers]);
 
-        const expectedScenario = regionsToScenario([PausableRegion.Twins, PausableRegion.Bundles]);
-
-        // Check that only Offers is paused
-        const pauseScenario = await getStorageAt(pauseHandler.address, protocolStatusStorageSlotNumber);
-
-        expect(BigNumber.from(pauseScenario).toNumber(), "Protocol not paused").to.equal(expectedScenario);
+        // Check that Offer is not in the paused regions anymore
+        const pausedRegions = await pauseHandler.getPausedRegions();
+        expect(pausedRegions).to.deep.equal([PausableRegion.Twins, PausableRegion.Bundles]);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -206,6 +211,19 @@ describe("IBosonPauseHandler", function () {
           // Attempt to unpause while not paused, expecting revert
           await expect(pauseHandler.connect(pauser).unpause([])).to.revertedWith(RevertReasons.NOT_PAUSED);
         });
+      });
+    });
+
+    context("getPausedRegions()", async function () {
+      it("should return the correct pause status", async function () {
+        // Regions to paused
+        regions = [PausableRegion.Offers, PausableRegion.Buyers, PausableRegion.Orchestration];
+
+        await pauseHandler.connect(pauser).pause(regions);
+
+        const pausedRegions = await pauseHandler.getPausedRegions();
+
+        expect(pausedRegions, "Protocol not paused").to.deep.equal(regions);
       });
     });
   });

@@ -65,6 +65,46 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
     }
 
     /**
+     * @notice Returns the regions paused
+     *
+     * @return an array of regions that are currently paused. See: {BosonTypes.PausableRegion}
+     */
+    function getPausedRegions() external view returns (BosonTypes.PausableRegion[] memory) {
+        // Cache protocol status for reference
+        ProtocolLib.ProtocolStatus storage status = protocolStatus();
+        uint256 totalRegions = uint256(type(BosonTypes.PausableRegion).max);
+
+        BosonTypes.PausableRegion[] memory regions = new BosonTypes.PausableRegion[](totalRegions);
+
+        // Return all regions if all are paused.
+        if (status.pauseScenario == ALL_REGIONS_MASK) {
+            for (uint256 i = 0; i < totalRegions; i++) {
+                regions[i] = BosonTypes.PausableRegion(i);
+            }
+            return regions;
+        }
+
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < totalRegions; i++) {
+            // Check if the region is paused by bitwise AND operation with shifted 1
+            if ((status.pauseScenario & (1 << i)) != 0) {
+                regions[count] = BosonTypes.PausableRegion(i);
+
+                count++;
+            }
+        }
+
+        // Create a new array with the correct size
+        BosonTypes.PausableRegion[] memory pausedRegions = new BosonTypes.PausableRegion[](count);
+        for (uint256 i = 0; i < count; i++) {
+            pausedRegions[i] = regions[i];
+        }
+
+        return pausedRegions;
+    }
+
+    /**
      * @notice Toggles pause/unpause for some or all of the protocol.
      *
      * Toggle all regions if none are specified.

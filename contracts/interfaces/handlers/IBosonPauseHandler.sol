@@ -9,7 +9,7 @@ import { IBosonPauseEvents } from "../events/IBosonPauseEvents.sol";
  *
  * @notice Handles pausing all or part of the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x2903f9ff
+ * The ERC-165 identifier for this interface is: 0x770b96d0
  */
 interface IBosonPauseHandler is IBosonPauseEvents {
     /**
@@ -38,4 +38,11 @@ interface IBosonPauseHandler is IBosonPauseEvents {
      * @param _regions - an array of regions to pause. See: {BosonTypes.PausableRegion}
      */
     function unpause(BosonTypes.PausableRegion[] calldata _regions) external;
+
+    /**
+     * @notice Returns the regions paused
+     *
+     * @return an array of regions that are currently paused. See: {BosonTypes.PausableRegion}
+     */
+    function getPausedRegions() external view returns (BosonTypes.PausableRegion[] memory);
 }
