@@ -155,21 +155,20 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @notice Returns the information about the funds that an entity can use as a sellerDeposit and/or withdraw from the protocol.
      *
      * @param _entityId - id of entity for which availability of funds should be checked
+     * @param _tokenList - list of tokens addresses to get available funds
      * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
      */
-    function getAvailableFunds(uint256 _entityId) external view override returns (Funds[] memory availableFunds) {
+    function getAvailableFunds(uint256 _entityId, address[] calldata _tokenList) external view override returns (Funds[] memory availableFunds) {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        // get list of token addresses for the entity
-        address[] storage tokenList = lookups.tokenList[_entityId];
-        availableFunds = new Funds[](tokenList.length);
+        availableFunds = new Funds[](_tokenList.length);
 
         // Get entity's availableFunds storage pointer
         mapping(address => uint256) storage entityFunds = lookups.availableFunds[_entityId];
 
-        for (uint256 i = 0; i < tokenList.length; i++) {
-            address tokenAddress = tokenList[i];
+        for (uint256 i = 0; i < _tokenList.length; i++) {
+            address tokenAddress = _tokenList[i];
             string memory tokenName;
 
             if (tokenAddress == address(0)) {

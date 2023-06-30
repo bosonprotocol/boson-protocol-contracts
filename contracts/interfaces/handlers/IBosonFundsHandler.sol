@@ -78,7 +78,8 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      * @notice Returns the information about the funds that an entity can use as a sellerDeposit and/or withdraw from the protocol.
      *
      * @param _entityId - id of entity for which availability of funds should be checked
+     * @param _tokenList - list of tokens addresses to get available funds
      * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
      */
-    function getAvailableFunds(uint256 _entityId) external view returns (BosonTypes.Funds[] memory availableFunds);
+    function getAvailableFunds(uint256 _entityId, address[] calldata _tokenList) external view returns (BosonTypes.Funds[] memory availableFunds);
 }
