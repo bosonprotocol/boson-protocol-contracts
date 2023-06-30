@@ -70,7 +70,6 @@ describe("IBosonPauseHandler", function () {
       let region = 0;
       while (scenario > 1) {
         if (scenario % 2 === 1) {
-          console.log(region, scenario);
           regions.push(region);
         }
         scenario = Math.floor(scenario / 2);
@@ -106,7 +105,7 @@ describe("IBosonPauseHandler", function () {
         expect(BigNumber.from(pauseScenario).toNumber(), "Protocol not paused").to.equal(ALL_REGIONS_MASK);
 
         // Check that all regions are paused
-        const pausedRegions = await pauseHandler.getPauseStatus();
+        const pausedRegions = await pauseHandler.getPausedRegions();
         await expect(pausedRegions).to.deep.equal(scenarioToRegions(ALL_REGIONS_MASK));
       });
 
@@ -126,7 +125,7 @@ describe("IBosonPauseHandler", function () {
           .withArgs(regions, pauser.address);
 
         // Check that both old and news regions are pause
-        const pausedRegions = await pauseHandler.getPauseStatus();
+        const pausedRegions = await pauseHandler.getPausedRegions();
         await expect(pausedRegions).to.deep.equal([...oldRegions, ...regions]);
       });
 
@@ -141,7 +140,7 @@ describe("IBosonPauseHandler", function () {
         await pauseHandler.connect(pauser).pause([PausableRegion.Twins]);
 
         // Check that regions remains the same
-        const pausedRegions = await pauseHandler.getPauseStatus();
+        const pausedRegions = await pauseHandler.getPausedRegions();
         await expect(pausedRegions).to.deep.equal(regions);
       });
 

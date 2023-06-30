@@ -67,14 +67,14 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
     /**
      * @notice Returns the regions paused
      *
-     * @return an array of regions that are currently paused. See: {BosonTypes.PausableRegion}
+     * @return regions - an array of regions that are currently paused. See: {BosonTypes.PausableRegion}
      */
-    function getPausedRegions() external view returns (BosonTypes.PausableRegion[] memory) {
+    function getPausedRegions() external view returns (BosonTypes.PausableRegion[] memory regions) {
         // Cache protocol status for reference
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
         uint256 totalRegions = uint256(type(BosonTypes.PausableRegion).max);
 
-        BosonTypes.PausableRegion[] memory regions = new BosonTypes.PausableRegion[](totalRegions);
+        regions = new BosonTypes.PausableRegion[](totalRegions);
 
         // Return all regions if all are paused.
         if (status.pauseScenario == ALL_REGIONS_MASK) {
@@ -95,13 +95,12 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
             }
         }
 
-        // Create a new array with the correct size
-        BosonTypes.PausableRegion[] memory pausedRegions = new BosonTypes.PausableRegion[](count);
-        for (uint256 i = 0; i < count; i++) {
-            pausedRegions[i] = regions[i];
+        // setting the correct number of regions
+        assembly {
+            mstore(regions, count)
         }
 
-        return pausedRegions;
+        return regions;
     }
 
     /**

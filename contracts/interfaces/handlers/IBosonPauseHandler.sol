@@ -42,7 +42,7 @@ interface IBosonPauseHandler is IBosonPauseEvents {
     /**
      * @notice Returns the regions paused
      *
-     * @return an array of regions that are currently paused. See: {BosonTypes.PausableRegion}
+     * @return regions - an array of regions that are currently paused. See: {BosonTypes.PausableRegion}
      */
-    function getPausedRegions() external view returns (BosonTypes.PausableRegion[] memory);
+    function getPausedRegions() external view returns (BosonTypes.PausableRegion[] memory regions);
 }
