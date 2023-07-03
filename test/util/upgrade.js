@@ -1440,17 +1440,17 @@ async function getProtocolLookupsPrivateContractState(
     const firstMappingStorageSlot = ethers.BigNumber.from(
       getMappingStoragePosition(protocolLookupsSlotNumber.add("28"), id, paddingType.START)
     );
-    let offerInidices = [];
+    let offerIndices = [];
     for (const offer of offers) {
       const id2 = Number(offer.offer.id);
-      offerInidices.push(
+      offerIndices.push(
         await getStorageAt(
           protocolDiamondAddress,
           getMappingStoragePosition(firstMappingStorageSlot, id2, paddingType.START)
         )
       );
     }
-    offerIdIndexByGroup.push(offerInidices);
+    offerIdIndexByGroup.push(offerIndices);
   }
 
   // pendingAddressUpdatesBySeller, pendingAuthTokenUpdatesBySeller, pendingAddressUpdatesByDisputeResolver
@@ -1465,10 +1465,20 @@ async function getProtocolLookupsPrivateContractState(
       getMappingStoragePosition(protocolLookupsSlotNumber.add("29"), id, paddingType.START)
     );
     let structFields = [];
-    for (let i = 0; i < 5; i++) {
-      // BosonTypes.Seller has 6 fields, but last bool is packed in one slot with previous field
+    for (let i = 0; i < 6; i++) {
+      // BosonTypes.Seller has 7 fields, but `address payable treasury` and `bool active` are packed into one slot
       structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot.add(i)));
     }
+    // ToDo: make sure this gets the corrects slots
+    const metadataUriLength = await getStorageAt(protocolDiamondAddress, structStorageSlot.add(6));
+    const metadataUriSlot = ethers.BigNumber.from(keccak256(structStorageSlot.add(6)));
+    const occupiedSlots = metadataUriLength.div(32).add(1);
+    const metadataUri = [];
+    for (let i = 0n; i < occupiedSlots; i++) {
+      metadataUri.push(await getStorageAt(protocolDiamondAddress, metadataUriSlot.add(i)));
+    }
+    structFields.push(metadataUri);
+
     pendingAddressUpdatesBySeller.push(structFields);
 
     // pendingAuthTokenUpdatesBySeller
