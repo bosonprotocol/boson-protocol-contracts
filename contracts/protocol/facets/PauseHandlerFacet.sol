@@ -99,8 +99,6 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
         assembly {
             mstore(regions, count)
         }
-
-        return regions;
     }
 
     /**
