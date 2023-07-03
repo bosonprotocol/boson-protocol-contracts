@@ -81,23 +81,22 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
             for (uint256 i = 0; i < totalRegions; i++) {
                 regions[i] = BosonTypes.PausableRegion(i);
             }
-            return regions;
-        }
+        } else {
+            uint256 count = 0;
 
-        uint256 count = 0;
+            for (uint256 i = 0; i < totalRegions; i++) {
+                // Check if the region is paused by bitwise AND operation with shifted 1
+                if ((status.pauseScenario & (1 << i)) != 0) {
+                    regions[count] = BosonTypes.PausableRegion(i);
 
-        for (uint256 i = 0; i < totalRegions; i++) {
-            // Check if the region is paused by bitwise AND operation with shifted 1
-            if ((status.pauseScenario & (1 << i)) != 0) {
-                regions[count] = BosonTypes.PausableRegion(i);
-
-                count++;
+                    count++;
+                }
             }
-        }
 
-        // setting the correct number of regions
-        assembly {
-            mstore(regions, count)
+            // setting the correct number of regions
+            assembly {
+                mstore(regions, count)
+            }
         }
     }
 
