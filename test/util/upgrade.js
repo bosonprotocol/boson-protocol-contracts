@@ -419,7 +419,7 @@ async function populateProtocolContract(
         const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
         await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
 
-        const voucherContractAddress = calculateContractAddress(await accountHandler.getAddress(), voucherIndex++);
+        const voucherContractAddress = calculateContractAddress(await accountHandler.getAddress(), voucherIndex++); // ToDo: make version based calculation
         sellers.push({
           wallet: connectedWallet,
           id,

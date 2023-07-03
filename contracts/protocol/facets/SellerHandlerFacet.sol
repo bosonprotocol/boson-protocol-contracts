@@ -361,7 +361,13 @@ contract SellerHandlerFacet is SellerBase {
         uint256 collectionIndex = sellersAdditionalCollections.length + 1; // 0 is reserved for the original collection
 
         // Create clone and store its address to additionalCollections
-        address voucherCloneAddress = cloneBosonVoucher(sellerId, collectionIndex, assistant, _voucherInitValues);
+        address voucherCloneAddress = cloneBosonVoucher(
+            sellerId,
+            collectionIndex,
+            assistant,
+            _voucherInitValues,
+            _externalId
+        );
 
         // Store collection details
         Collection storage newCollection = sellersAdditionalCollections.push();

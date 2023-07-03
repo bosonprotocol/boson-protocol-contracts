@@ -16,7 +16,7 @@ const {
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const {
   setNextBlockTimestamp,
-  calculateContractAddress,
+  calculateCloneAddress,
   applyPercentage,
   setupTestEnvironment,
   getSnapshot,
@@ -36,6 +36,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
   let exchangeId;
   let disputeResolverFeeNative;
   let snapshotId;
+  let beaconProxyAddress;
 
   before(async function () {
     accountId.next(true);
@@ -53,6 +54,9 @@ describe("[@skip-on-coverage] DR removes fee", function () {
       signers: [admin, treasury, buyer, adminDR, treasuryDR],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
       protocolConfig: [, , { buyerEscalationDepositPercentage }],
+      extraReturnValues: {
+        proxy: { address: beaconProxyAddress },
+      },
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
@@ -60,7 +64,12 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     assistantDR = adminDR;
     clerk = clerkDR = { address: ZeroAddress };
 
-    expectedCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "1");
+    expectedCloneAddress = calculateCloneAddress(
+      await accountHandler.getAddress(),
+      beaconProxyAddress,
+      admin.address,
+      ""
+    );
     emptyAuthToken = mockAuthToken();
     expect(emptyAuthToken.isValid()).is.true;
     voucherInitValues = mockVoucherInitValues();

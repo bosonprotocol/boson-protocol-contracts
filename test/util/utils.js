@@ -12,6 +12,7 @@ const {
   zeroPadValue,
   Interface,
   toUtf8Bytes,
+  solidityPackedKeccak256,
 } = ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
@@ -250,6 +251,33 @@ function calculateContractAddress(senderAddress, senderNonce) {
   return getAddress(contract_address);
 }
 
+function calculateContractAddress2(senderAddress, cloneByteCodeHash, salt) {
+  const contract_address_long = solidityPackedKeccak256(
+    ["bytes1", "address", "bytes32", "bytes32"],
+    ["0xFF", senderAddress, salt, cloneByteCodeHash]
+  );
+
+  const contract_address = "0x" + contract_address_long.substring(26); //Trim the first 24 characters.
+
+  return getAddress(contract_address);
+}
+
+function getCloneByteCodeHash(beaconProxyAddress) {
+  return keccak256(
+    `0x3d602d80600a3d3981f3363d3d373d3d3d363d73${beaconProxyAddress.slice(2)}5af43d82803e903d91602b57fd5bf3`
+  );
+}
+
+function getCloneSalt(sellerAddress, externalId) {
+  return solidityPackedKeccak256(["address", "string"], [sellerAddress, externalId]);
+}
+
+function calculateCloneAddress(voucherCreator, beaconProxyAddress, sellerAddress, externalId) {
+  const salt = getCloneSalt(sellerAddress, externalId);
+  const cloneByteCodeHash = getCloneByteCodeHash(beaconProxyAddress);
+  return calculateContractAddress2(voucherCreator, cloneByteCodeHash, salt);
+}
+
 const paddingType = {
   NONE: 0,
   START: 1,
@@ -408,7 +436,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
     contractInstances[contract] = await getContractAt(contracts[contract], await protocolDiamond.getAddress());
   }
 
-  const extraReturnValues = { accessController, bosonVoucher, voucherImplementation, beacon };
+  const extraReturnValues = { accessController, bosonVoucher, voucherImplementation, beacon, proxy };
 
   return {
     signers: signers.slice(3),
@@ -437,6 +465,7 @@ exports.eventEmittedWithArgs = eventEmittedWithArgs;
 exports.prepareDataSignatureParameters = prepareDataSignatureParameters;
 exports.calculateVoucherExpiry = calculateVoucherExpiry;
 exports.calculateContractAddress = calculateContractAddress;
+exports.calculateCloneAddress = calculateCloneAddress;
 exports.applyPercentage = applyPercentage;
 exports.getMappingStoragePosition = getMappingStoragePosition;
 exports.paddingType = paddingType;

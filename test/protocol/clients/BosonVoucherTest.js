@@ -21,7 +21,7 @@ const {
 } = require("../../util/mock");
 const {
   applyPercentage,
-  calculateContractAddress,
+  calculateCloneAddress,
   calculateVoucherExpiry,
   setNextBlockTimestamp,
   setupTestEnvironment,
@@ -57,6 +57,7 @@ describe("IBosonVoucher", function () {
   let voucherInitValues, contractURI, royaltyPercentage, exchangeId, offerPrice;
   let forwarder;
   let snapshotId;
+  let beaconProxyAddress;
 
   before(async function () {
     accountId.next(true);
@@ -82,7 +83,11 @@ describe("IBosonVoucher", function () {
     ({
       signers: [protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, configHandler },
-      extraReturnValues: { bosonVoucher, accessController },
+      extraReturnValues: {
+        bosonVoucher,
+        accessController,
+        proxy: { address: beaconProxyAddress },
+      },
     } = await setupTestEnvironment(contracts, {
       forwarderAddress: [await forwarder.getAddress()],
     }));
@@ -165,7 +170,12 @@ describe("IBosonVoucher", function () {
     let offer, offerDates, offerDurations, disputeResolverId;
 
     before(async function () {
-      const bosonVoucherCloneAddress = calculateContractAddress(await exchangeHandler.getAddress(), "1");
+      const bosonVoucherCloneAddress = calculateCloneAddress(
+        await accountHandler.address,
+        beaconProxyAddress,
+        admin.address,
+        ""
+      );
       bosonVoucher = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
 
       seller = mockSeller(
