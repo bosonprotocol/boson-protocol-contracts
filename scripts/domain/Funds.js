@@ -17,7 +17,7 @@ class Funds {
   constructor(tokenAddress, tokenName, availableAmount) {
     this.tokenAddress = tokenAddress;
     this.tokenName = tokenName;
-    this.availableAmount = availableAmount;
+    this.availableAmount = availableAmount.toString();
   }
 
   /**

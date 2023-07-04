@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.18;
+
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
@@ -295,11 +296,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // End should be greater than start
         require(end > start, NOTHING_TO_BURN);
-
-        // If amount to burn is more than maxPremintedVouchers, burn only maxPremintedVouchers
-        if (end > start + maxPremintedVouchers) {
-            end = start + maxPremintedVouchers;
-        }
 
         // Burn the range
         address rangeOwner = range.owner;
