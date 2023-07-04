@@ -124,7 +124,7 @@ describe("IBosonFundsHandler", function () {
         offerHandler,
         exchangeHandler,
         fundsHandler,
-
+        configHandler,
         pauseHandler,
         disputeHandler,
       },
@@ -143,7 +143,6 @@ describe("IBosonFundsHandler", function () {
     // Deploy the mock token
     [mockToken] = await deployMockTokens(["Foreign20"]);
 
-    availableFundsAddresses = [mockToken.address];
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -195,6 +194,8 @@ describe("IBosonFundsHandler", function () {
 
       // Set agent id as zero as it is optional for createOffer().
       agentId = "0";
+
+      availableFundsAddresses = [mockToken.address, ethers.constants.AddressZero];
     });
 
     afterEach(async function () {
@@ -224,6 +225,8 @@ describe("IBosonFundsHandler", function () {
         // Deposit token
         await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, depositAmount);
 
+        availableFundsAddresses = [mockToken.address]
+
         // Read on chain state
         let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
 
@@ -245,6 +248,8 @@ describe("IBosonFundsHandler", function () {
       });
 
       it("should be possible to top up the account", async function () {
+        availableFundsAddresses = [mockToken.address];
+
         // Deposit token
         await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, depositAmount);
 
@@ -516,8 +521,6 @@ describe("IBosonFundsHandler", function () {
 
         it("should update state", async function () {
           // WITHDRAW ONE TOKEN PARTIALLY
-
-          availableFundsAddresses = [...availableFundsAddresses, ethers.constants.AddressZero];
 
           // Read on chain state
           sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
@@ -1043,6 +1046,7 @@ describe("IBosonFundsHandler", function () {
           // Native currency available funds are reduced for the withdrawal amount
           // Mock token is fully withdrawn
           expectedProtocolAvailableFunds = new FundsList([
+            new Funds(mockToken.address, "Foreign20", "0"),
             new Funds(
               ethers.constants.AddressZero,
               "Native currency",
@@ -1096,7 +1100,7 @@ describe("IBosonFundsHandler", function () {
 
           // Chain state should match the expected available funds after the withdrawal
           // Funds available should be an empty list
-          expectedProtocolAvailableFunds = new FundsList([]);
+          expectedProtocolAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
           expect(protocolAvailableFunds).to.eql(
             expectedProtocolAvailableFunds,
             "Protocol available funds mismatch after withdrawal"
@@ -1270,6 +1274,7 @@ describe("IBosonFundsHandler", function () {
       it("Returns info also for ERC20 tokens without the name", async function () {
         // Deploy the mock token with no name
         const [mockToken] = await deployMockTokens(["Foreign20NoName"]);
+
         // top up assistants account
         await mockToken.mint(assistant.address, "1000000");
         // approve protocol to transfer the tokens
@@ -1279,7 +1284,7 @@ describe("IBosonFundsHandler", function () {
         await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, depositAmount);
 
         // Read on chain state
-        let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
+        let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, [mockToken.address]));
 
         // Chain state should match the expected available funds
         let expectedAvailableFunds = new FundsList([
@@ -1399,6 +1404,9 @@ describe("IBosonFundsHandler", function () {
       agentOfferProtocolFee = mo.offerFees.protocolFee;
 
       randoBuyerId = "4"; // 1: seller, 2: disputeResolver, 3: agent, 4: rando
+
+
+      availableFundsAddresses = [mockToken.address, ethers.constants.AddressZero];
     });
 
     afterEach(async function () {
@@ -1480,98 +1488,6 @@ describe("IBosonFundsHandler", function () {
             .sub(ethers.BigNumber.from(sellersAvailableFundsAfter.funds[1].availableAmount))
             .toString()
         ).to.eql(sellerDeposit, "Native currency seller available funds mismatch");
-      });
-
-      context("seller's available funds drop to 0", async function () {
-        it("token should be removed from the tokenList", async function () {
-          // seller's available funds
-          let sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
-          expect(sellersAvailableFunds.funds.length).to.eql(2, "Funds length mismatch");
-          expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
-            mockToken.address,
-            "Token contract address mismatch"
-          );
-          expect(sellersAvailableFunds.funds[1].tokenAddress).to.eql(
-            ethers.constants.AddressZero,
-            "Native currency address mismatch"
-          );
-
-          // Commit to offer with token twice to empty the seller's pool
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
-
-          // Token address should be removed and have only native currency in the list
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
-          expect(sellersAvailableFunds.funds.length).to.eql(1, "Funds length mismatch");
-          expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
-            ethers.constants.AddressZero,
-            "Native currency address mismatch"
-          );
-
-          // Commit to offer with token twice to empty the seller's pool
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
-
-          // Seller available funds must be empty
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
-          expect(sellersAvailableFunds.funds.length).to.eql(0, "Funds length mismatch");
-        });
-
-        it("token should be removed from the token list even when list length - 1 is different from index", async function () {
-          // length - 1 is different from index when index isn't the first or last element in the list
-          // Deploy a new mock token
-          let TokenContractFactory = await ethers.getContractFactory("Foreign20");
-          const otherToken = await TokenContractFactory.deploy();
-          await otherToken.deployed();
-
-          // Add otherToken to DR fees
-          await accountHandler
-            .connect(adminDR)
-            .addFeesToDisputeResolver(disputeResolver.id, [
-              new DisputeResolverFee(otherToken.address, "Other Token", "0"),
-            ]);
-
-          // top up seller's and buyer's account
-          await otherToken.mint(assistant.address, sellerDeposit);
-
-          // approve protocol to transfer the tokens
-          await otherToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
-
-          // deposit to seller's pool
-          await fundsHandler.connect(assistant).depositFunds(seller.id, otherToken.address, sellerDeposit);
-
-          // seller's available funds
-          let sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
-          expect(sellersAvailableFunds.funds.length).to.eql(3, "Funds length mismatch");
-          expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
-            mockToken.address,
-            "Token contract address mismatch"
-          );
-          expect(sellersAvailableFunds.funds[1].tokenAddress).to.eql(
-            ethers.constants.AddressZero,
-            "Native currency address mismatch"
-          );
-          expect(sellersAvailableFunds.funds[2].tokenAddress).to.eql(
-            otherToken.address,
-            "Boson token address mismatch"
-          );
-
-          // Commit to offer with token twice to empty the seller's pool
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
-
-          // Native currency address should be removed and have only mock token and other token in the list
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
-          expect(sellersAvailableFunds.funds.length).to.eql(2, "Funds length mismatch");
-          expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
-            mockToken.address,
-            "Token contract address mismatch"
-          );
-          expect(sellersAvailableFunds.funds[1].tokenAddress).to.eql(
-            otherToken.address,
-            "Other token address mismatch"
-          );
-        });
       });
 
       it("when someone else deposits on buyer's behalf, callers funds are transferred", async function () {
@@ -1901,7 +1817,6 @@ describe("IBosonFundsHandler", function () {
           );
         });
       });
-    });
 
     context("👉 releaseFunds()", async function () {
       beforeEach(async function () {
@@ -1961,11 +1876,13 @@ describe("IBosonFundsHandler", function () {
 
           // Chain state should match the expected available funds
           expectedSellerAvailableFunds = new FundsList([
+            new Funds(mockToken.address, "Foreign20", "0"),
             new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
           ]);
-          expectedBuyerAvailableFunds = new FundsList([]);
-          expectedProtocolAvailableFunds = new FundsList([]);
-          expectedAgentAvailableFunds = new FundsList([]);
+
+          const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+          expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
           expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
           expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
           expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -1979,8 +1896,8 @@ describe("IBosonFundsHandler", function () {
           // seller: sellerDeposit + price - protocolFee - agentFee
           // protocol: protocolFee
           // agent: 0
-          expectedSellerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", sellerPayoff));
-          expectedProtocolAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", offerTokenProtocolFee));
+          expectedSellerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", sellerPayoff);
+          expectedProtocolAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", offerTokenProtocolFee),                 new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
           sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
           protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
@@ -1998,7 +1915,7 @@ describe("IBosonFundsHandler", function () {
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
           protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
           agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses));
-          expectedSellerAvailableFunds.funds[1] = new Funds(
+          expectedSellerAvailableFunds.funds[0] = new Funds(
             mockToken.address,
             "Foreign20",
             ethers.BigNumber.from(sellerPayoff).mul(2).toString()
@@ -2074,11 +1991,12 @@ describe("IBosonFundsHandler", function () {
 
             // Chain state should match the expected available funds
             expectedSellerAvailableFunds = new FundsList([
+                new Funds(mockToken.address, "Foreign20", "0"),
               new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
             ]);
-            expectedBuyerAvailableFunds = new FundsList([]);
-            expectedProtocolAvailableFunds = new FundsList([]);
-            expectedAgentAvailableFunds = new FundsList([]);
+            const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+            expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
             expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
             expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -2092,9 +2010,9 @@ describe("IBosonFundsHandler", function () {
             // seller: sellerDeposit + price - protocolFee - agentFee
             // protocol: protocolFee
             // agent: agentFee
-            expectedSellerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", sellerPayoff));
-            expectedProtocolAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", agentOfferProtocolFee));
-            expectedAgentAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", agentPayoff));
+            expectedSellerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", sellerPayoff);
+            expectedProtocolAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", agentOfferProtocolFee),                 new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
+            expectedAgentAvailableFunds= new FundsList([new Funds(mockToken.address, "Foreign20", agentPayoff),                 new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
@@ -2139,9 +2057,9 @@ describe("IBosonFundsHandler", function () {
             new Funds(mockToken.address, "Foreign20", sellerDeposit),
             new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
           ]);
-          expectedBuyerAvailableFunds = new FundsList([]);
-          expectedProtocolAvailableFunds = new FundsList([]);
-          expectedAgentAvailableFunds = new FundsList([]);
+          const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+          expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
           expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
           expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
           expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -2155,7 +2073,7 @@ describe("IBosonFundsHandler", function () {
           // seller: 0
           // protocol: 0
           // agent: 0
-          expectedBuyerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", buyerPayoff));
+          expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff),                 new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
           sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
           protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
@@ -2183,6 +2101,7 @@ describe("IBosonFundsHandler", function () {
             ethers.BigNumber.from(buyerPayoff).mul(2).toString()
           );
           expectedSellerAvailableFunds = new FundsList([
+            new Funds(mockToken.address, "Foreign20", "0"),
             new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
           ]);
           sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
@@ -2244,9 +2163,9 @@ describe("IBosonFundsHandler", function () {
               new Funds(mockToken.address, "Foreign20", `${2 * sellerDeposit}`),
               new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
             ]);
-            expectedBuyerAvailableFunds = new FundsList([]);
-            expectedProtocolAvailableFunds = new FundsList([]);
-            expectedAgentAvailableFunds = new FundsList([]);
+            const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+            expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
             expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
             expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -2260,7 +2179,7 @@ describe("IBosonFundsHandler", function () {
             // seller: 0
             // protocol: 0
             // agent: 0
-            expectedBuyerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", buyerPayoff));
+            expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
@@ -2342,9 +2261,9 @@ describe("IBosonFundsHandler", function () {
             new Funds(mockToken.address, "Foreign20", sellerDeposit),
             new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
           ]);
-          expectedBuyerAvailableFunds = new FundsList([]);
-          expectedProtocolAvailableFunds = new FundsList([]);
-          expectedAgentAvailableFunds = new FundsList([]);
+          const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+          expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
           expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
           expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
           expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -2363,7 +2282,7 @@ describe("IBosonFundsHandler", function () {
             "Foreign20",
             ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
           );
-          expectedBuyerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", buyerPayoff));
+          expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
           sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
           protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
@@ -2425,9 +2344,9 @@ describe("IBosonFundsHandler", function () {
               new Funds(mockToken.address, "Foreign20", sellerDeposit),
               new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
             ]);
-            expectedBuyerAvailableFunds = new FundsList([]);
-            expectedProtocolAvailableFunds = new FundsList([]);
-            expectedAgentAvailableFunds = new FundsList([]);
+            const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+            expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
             expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
             expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -2446,7 +2365,8 @@ describe("IBosonFundsHandler", function () {
               "Foreign20",
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
-            expectedBuyerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", buyerPayoff));
+            expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff),                 new Funds(ethers.constants.AddressZero, "Native currency", "0")
+                                                        ]);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
@@ -2529,9 +2449,9 @@ describe("IBosonFundsHandler", function () {
               new Funds(mockToken.address, "Foreign20", sellerDeposit),
               new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
             ]);
-            expectedBuyerAvailableFunds = new FundsList([]);
-            expectedProtocolAvailableFunds = new FundsList([]);
-            expectedAgentAvailableFunds = new FundsList([]);
+            const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+            expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
             expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
             expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -2550,7 +2470,7 @@ describe("IBosonFundsHandler", function () {
               "Foreign20",
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
-            expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
+            expectedProtocolAvailableFunds= new FundsList([new Funds(mockToken.address, "Foreign20", protocolPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
@@ -2621,11 +2541,12 @@ describe("IBosonFundsHandler", function () {
 
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
+                new Funds(mockToken.address, "Foreign20", "0"),
                 new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
               ]);
-              expectedBuyerAvailableFunds = new FundsList([]);
-              expectedProtocolAvailableFunds = new FundsList([]);
-              expectedAgentAvailableFunds = new FundsList([]);
+              const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+              expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -2639,11 +2560,9 @@ describe("IBosonFundsHandler", function () {
               // seller: sellerDeposit + price - protocol fee - agentFee;
               // protocol: protocolFee
               // agent: agentFee
-              expectedSellerAvailableFunds.funds.push(
-                new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
-              );
-              expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
-              expectedAgentAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", agentPayoff));
+              expectedSellerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString());
+              expectedProtocolAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", protocolPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
+              expectedAgentAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", agentPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
@@ -2709,9 +2628,9 @@ describe("IBosonFundsHandler", function () {
               new Funds(mockToken.address, "Foreign20", sellerDeposit),
               new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
             ]);
-            expectedBuyerAvailableFunds = new FundsList([]);
-            expectedProtocolAvailableFunds = new FundsList([]);
-            expectedAgentAvailableFunds = new FundsList([]);
+            const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+            expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
             expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
             expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -2730,7 +2649,7 @@ describe("IBosonFundsHandler", function () {
               "Foreign20",
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
-            expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
+            expectedProtocolAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", protocolPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
@@ -2814,11 +2733,12 @@ describe("IBosonFundsHandler", function () {
 
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
+                new Funds(mockToken.address, "Foreign20", "0"),
                 new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
               ]);
-              expectedBuyerAvailableFunds = new FundsList([]);
-              expectedProtocolAvailableFunds = new FundsList([]);
-              expectedAgentAvailableFunds = new FundsList([]);
+              const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+              expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -2833,12 +2753,12 @@ describe("IBosonFundsHandler", function () {
               // protocol: protocolFee
               // agent: agent fee
               expectedSellerAvailableFunds = new FundsList([
-                new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
                 new Funds(mockToken.address, "Foreign20", sellerPayoff),
+                new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
               ]);
 
-              expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
-              expectedAgentAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", agentPayoff);
+              expectedProtocolAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", protocolPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
+              expectedAgentAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", agentPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
@@ -2925,9 +2845,9 @@ describe("IBosonFundsHandler", function () {
               new Funds(mockToken.address, "Foreign20", sellerDeposit),
               new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
             ]);
-            expectedBuyerAvailableFunds = new FundsList([]);
-            expectedProtocolAvailableFunds = new FundsList([]);
-            expectedAgentAvailableFunds = new FundsList([]);
+            const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+            expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
             expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
             expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -2946,7 +2866,7 @@ describe("IBosonFundsHandler", function () {
               "Foreign20",
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
-            expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
+            expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
@@ -3029,11 +2949,12 @@ describe("IBosonFundsHandler", function () {
 
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
+                new Funds(mockToken.address, "Foreign20", "0"),
                 new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
               ]);
-              expectedBuyerAvailableFunds = new FundsList([]);
-              expectedProtocolAvailableFunds = new FundsList([]);
-              expectedAgentAvailableFunds = new FundsList([]);
+              const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+              expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3047,10 +2968,9 @@ describe("IBosonFundsHandler", function () {
               // seller: (price + sellerDeposit)*(1-buyerPercentage);
               // protocol: 0
               // agent: 0
-              expectedSellerAvailableFunds.funds.push(
-                new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
-              );
-              expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
+              expectedSellerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString());
+              expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
+
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
@@ -3120,9 +3040,10 @@ describe("IBosonFundsHandler", function () {
               new Funds(mockToken.address, "Foreign20", sellerDeposit),
               new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
             ]);
-            expectedBuyerAvailableFunds = new FundsList([]);
-            expectedProtocolAvailableFunds = new FundsList([]);
-            expectedAgentAvailableFunds = new FundsList([]);
+
+            const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+            expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
             expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
             expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3141,11 +3062,13 @@ describe("IBosonFundsHandler", function () {
               "Foreign20",
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
-            expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
+            expectedProtocolAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", protocolPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
+
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses));
+
             expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
             expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3205,11 +3128,12 @@ describe("IBosonFundsHandler", function () {
 
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
+                new Funds(mockToken.address, "Foreign20", "0"),
                 new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
               ]);
-              expectedBuyerAvailableFunds = new FundsList([]);
-              expectedProtocolAvailableFunds = new FundsList([]);
-              expectedAgentAvailableFunds = new FundsList([]);
+
+              const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+              expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3223,15 +3147,15 @@ describe("IBosonFundsHandler", function () {
               // seller: sellerDeposit + price - protocol fee - agentFee  + buyerEscalationDeposit;
               // protocol: protocolFee
               // agent: agentFee
-              expectedSellerAvailableFunds.funds.push(
-                new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
-              );
-              expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
-              expectedAgentAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", agentPayoff));
+              expectedSellerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
+              expectedProtocolAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", protocolPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
+              expectedAgentAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", agentPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
+
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses));
+
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3319,9 +3243,9 @@ describe("IBosonFundsHandler", function () {
               new Funds(mockToken.address, "Foreign20", sellerDeposit),
               new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
             ]);
-            expectedBuyerAvailableFunds = new FundsList([]);
-            expectedProtocolAvailableFunds = new FundsList([]);
-            expectedAgentAvailableFunds = new FundsList([]);
+
+            const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+            expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
             expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
             expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3335,7 +3259,7 @@ describe("IBosonFundsHandler", function () {
             // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage); note that seller has sellerDeposit in availableFunds from before
             // protocol: 0
             // agent: 0
-            expectedBuyerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", buyerPayoff);
+            expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
             expectedSellerAvailableFunds.funds[0] = new Funds(
               mockToken.address,
               "Foreign20",
@@ -3433,11 +3357,12 @@ describe("IBosonFundsHandler", function () {
 
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
+                new Funds(mockToken.address, "Foreign20", "0"),
                 new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
               ]);
-              expectedBuyerAvailableFunds = new FundsList([]);
-              expectedProtocolAvailableFunds = new FundsList([]);
-              expectedAgentAvailableFunds = new FundsList([]);
+              const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+              expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3451,10 +3376,12 @@ describe("IBosonFundsHandler", function () {
               // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage);
               // protocol: 0
               // agent: 0
-              expectedSellerAvailableFunds.funds.push(
-                new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
+              expectedSellerAvailableFunds = new FundsList([
+                new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString()),
+                new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`)]
               );
-              expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
+              expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff),
+                                                           new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
@@ -3521,9 +3448,9 @@ describe("IBosonFundsHandler", function () {
               new Funds(mockToken.address, "Foreign20", sellerDeposit),
               new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
             ]);
-            expectedBuyerAvailableFunds = new FundsList([]);
-            expectedProtocolAvailableFunds = new FundsList([]);
-            expectedAgentAvailableFunds = new FundsList([]);
+            const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+            expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
             expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
             expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3537,7 +3464,7 @@ describe("IBosonFundsHandler", function () {
             // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage); note that seller has sellerDeposit in availableFunds from before
             // protocol: 0
             // agent: 0
-            expectedBuyerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", buyerPayoff);
+            expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
             expectedSellerAvailableFunds.funds[0] = new Funds(
               mockToken.address,
               "Foreign20",
@@ -3617,11 +3544,12 @@ describe("IBosonFundsHandler", function () {
 
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
+                new Funds(mockToken.address, "Foreign20", "0"),
                 new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
               ]);
-              expectedBuyerAvailableFunds = new FundsList([]);
-              expectedProtocolAvailableFunds = new FundsList([]);
-              expectedAgentAvailableFunds = new FundsList([]);
+              const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+              expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3635,14 +3563,15 @@ describe("IBosonFundsHandler", function () {
               // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage);
               // protocol: 0
               // agent: 0
-              expectedSellerAvailableFunds.funds.push(
-                new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
-              );
-              expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
+              expectedSellerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
+              expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff),
+                                                           new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
+
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses));
+
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3701,9 +3630,8 @@ describe("IBosonFundsHandler", function () {
                 new Funds(mockToken.address, "Foreign20", sellerDeposit),
                 new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
               ]);
-              expectedBuyerAvailableFunds = new FundsList([]);
-              expectedProtocolAvailableFunds = new FundsList([]);
-              expectedAgentAvailableFunds = new FundsList([]);
+              const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+              expectedBuyerAvailableFunds = expectedAgentAvailableFunds = expectedProtocolAvailableFunds = emptyFundsList;
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3717,16 +3645,16 @@ describe("IBosonFundsHandler", function () {
               // seller: sellerDeposit; note that seller has sellerDeposit in availableFunds from before
               // protocol: 0
               // agent: 0
-              expectedBuyerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", buyerPayoff);
+              expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
               expectedSellerAvailableFunds.funds[0] = new Funds(
                 mockToken.address,
                 "Foreign20",
                 ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
               );
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-              buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-              protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-              agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
+              buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
+              protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
+              agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses));
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3780,18 +3708,18 @@ describe("IBosonFundsHandler", function () {
 
               it("should update state", async function () {
                 // Read on chain state
-                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-                buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-                protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-                agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
+                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
+                buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
+                protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
+                agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses));
 
                 // Chain state should match the expected available funds
                 expectedSellerAvailableFunds = new FundsList([
+                  new Funds(mockToken.address, "Foreign20", "0"),
                   new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
                 ]);
-                expectedBuyerAvailableFunds = new FundsList([]);
-                expectedProtocolAvailableFunds = new FundsList([]);
-                expectedAgentAvailableFunds = new FundsList([]);
+                const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+                expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
                 expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                 expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                 expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3805,14 +3733,12 @@ describe("IBosonFundsHandler", function () {
                 // seller: sellerDeposit;
                 // protocol: 0
                 // agent: 0
-                expectedBuyerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", buyerPayoff);
-                expectedSellerAvailableFunds.funds.push(
-                  new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
-                );
-                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-                buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-                protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-                agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
+                expectedBuyerAvailableFunds=  new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff),                 new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
+                expectedSellerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString());
+                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
+                buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
+                protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
+                agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses));
                 expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                 expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                 expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3878,9 +3804,10 @@ describe("IBosonFundsHandler", function () {
                 new Funds(mockToken.address, "Foreign20", sellerDeposit),
                 new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
               ]);
-              expectedBuyerAvailableFunds = new FundsList([]);
-              expectedProtocolAvailableFunds = new FundsList([]);
-              expectedAgentAvailableFunds = new FundsList([]);
+              const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+              expectedBuyerAvailableFunds = emptyFundsList;
+              expectedProtocolAvailableFunds = emptyFundsList;
+              expectedAgentAvailableFunds = emptyFundsList;
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3894,12 +3821,10 @@ describe("IBosonFundsHandler", function () {
               // seller: sellerDeposit; note that seller has sellerDeposit in availableFunds from before
               // protocol: 0
               // agent: 0
-              expectedBuyerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", buyerPayoff);
-              expectedSellerAvailableFunds.funds[0] = new Funds(
-                mockToken.address,
-                "Foreign20",
-                ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
-              );
+              expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff),
+                                                           new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
+              expectedSellerAvailableFunds= new FundsList([new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()),
+                                                           new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),]);
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
@@ -3949,7 +3874,6 @@ describe("IBosonFundsHandler", function () {
               });
 
               it("should update state", async function () {
-                availableFundsAddresses.push(ethers.constants.AddressZero)
                 // Read on chain state
                 sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
                 buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
@@ -4174,4 +4098,5 @@ describe("IBosonFundsHandler", function () {
       });
     });
   });
+});
 });
