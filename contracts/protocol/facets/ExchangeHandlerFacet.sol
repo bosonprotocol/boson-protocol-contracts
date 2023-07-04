@@ -14,6 +14,7 @@ import "../../domain/BosonConstants.sol";
 import { IERC1155 } from "../../interfaces/IERC1155.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
+import { Address } from "../../ext_libs/Address.sol";
 
 /**
  * @title ExchangeHandlerFacet
@@ -21,6 +22,8 @@ import { IERC20 } from "../../interfaces/IERC20.sol";
  * @notice Handles exchanges associated with offers within the protocol.
  */
 contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
+    using Address for address;
+
     uint256 private immutable EXCHANGE_ID_2_2_0; // solhint-disable-line
 
     /**
@@ -718,46 +721,46 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         : twin.supplyAvailable - twin.amount;
                 }
 
-                if (tokenType == TokenType.FungibleToken) {
-                    // ERC-20 style transfer
-                    (success, result) = twin.tokenAddress.call(
-                        abi.encodeWithSignature(
-                            "transferFrom(address,address,uint256)",
-                            seller.assistant,
-                            sender,
-                            twin.amount
-                        )
-                    );
-                } else if (tokenType == TokenType.NonFungibleToken) {
-                    // Token transfer order is ascending to avoid overflow when twin supply is unlimited
-                    if (twin.supplyAvailable == type(uint256).max) {
-                        twin.tokenId++;
-                    } else {
-                        // Token transfer order is descending
-                        tokenId = twin.tokenId + twin.supplyAvailable;
-                    }
-                    // ERC-721 style transfer
-                    (success, result) = twin.tokenAddress.call(
-                        abi.encodeWithSignature(
+                // Calldata to transfer the twin
+                {
+                    bytes memory data;
+
+                    if (tokenType == TokenType.FungibleToken) {
+                        // ERC-20 style transfer
+                        data = abi.encodeCall(IERC20.transferFrom, (seller.assistant, sender, twin.amount));
+                    } else if (tokenType == TokenType.NonFungibleToken) {
+                        // Token transfer order is ascending to avoid overflow when twin supply is unlimited
+                        if (twin.supplyAvailable == type(uint256).max) {
+                            twin.tokenId++;
+                        } else {
+                            // Token transfer order is descending
+                            tokenId += twin.supplyAvailable;
+                        }
+
+                        // ERC-721 style transfer
+                        data = abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,bytes)",
                             seller.assistant,
                             sender,
                             tokenId,
                             ""
-                        )
-                    );
-                } else if (twin.tokenType == TokenType.MultiToken) {
-                    // ERC-1155 style transfer
-                    (success, result) = twin.tokenAddress.call(
-                        abi.encodeWithSignature(
+                        );
+                    } else if (twin.tokenType == TokenType.MultiToken) {
+                        // ERC-1155 style transfer
+                        data = abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
                             seller.assistant,
                             sender,
                             tokenId,
                             twin.amount,
                             ""
-                        )
-                    );
+                        );
+                    }
+
+                    // Make call only if code at address exists
+                    if (twin.tokenAddress.isContract()) {
+                        (success, result) = twin.tokenAddress.call(data);
+                    }
                 }
 
                 // If token transfer failed

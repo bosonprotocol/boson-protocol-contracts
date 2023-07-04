@@ -2400,6 +2400,27 @@ describe("IBosonExchangeHandler", function () {
             // It should match ExchangeState.Revoked
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
+
+          it("should raise a dispute if ERC20 does not exist anymore", async function () {
+            // Destruct the ERC20
+            await foreign20.destruct();
+
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchangeId, exchange.buyerId, seller.id, buyer.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
         });
       });
 
@@ -2650,6 +2671,27 @@ describe("IBosonExchangeHandler", function () {
             // It should match ExchangeState.Revoked
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
+
+          it("should raise a dispute if erc721 contract does not exist anymore", async function () {
+            // Destruct the ERC721
+            await foreign721.destruct();
+
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, buyer.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "9", "0", buyer.address);
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
         });
       });
 
@@ -2840,6 +2882,33 @@ describe("IBosonExchangeHandler", function () {
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
             // It should match ExchangeState.Revoked
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
+
+          it("should raise a dispute if erc1155 contract does not exist anymore", async function () {
+            // Destruct the ERC1155 contract
+            await foreign1155.destruct();
+
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, buyer.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(
+                twin1155.id,
+                twin1155.tokenAddress,
+                exchange.id,
+                twin1155.tokenId,
+                twin1155.amount,
+                buyer.address
+              );
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Disputed
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
         });
