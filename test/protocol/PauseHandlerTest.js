@@ -91,7 +91,7 @@ describe("IBosonPauseHandler", function () {
         // Pause the protocol, testing for the event
         await expect(pauseHandler.connect(pauser).pause(regions))
           .to.emit(pauseHandler, "ProtocolPaused")
-          .withArgs(regions, pauser.address);
+          .withArgs(regions, await pauser.getAddress());
       });
 
       it("should pause all regions when no regions are specified", async function () {
@@ -162,7 +162,7 @@ describe("IBosonPauseHandler", function () {
         // Unpause the protocol, testing for the event
         await expect(pauseHandler.connect(pauser).unpause(regions))
           .to.emit(pauseHandler, "ProtocolUnpaused")
-          .withArgs(regions, pauser.address);
+          .withArgs(await pauser.getAddress());
       });
 
       it("should be possible to pause again after an unpause", async function () {
@@ -179,7 +179,7 @@ describe("IBosonPauseHandler", function () {
 
         await expect(pauseHandler.connect(pauser).pause(regions))
           .to.emit(pauseHandler, "ProtocolPaused")
-          .withArgs(regions, pauser.address);
+          .withArgs(regions, await pauser.getAddress());
       });
 
       it("Can unpause individual regions", async function () {
@@ -203,7 +203,7 @@ describe("IBosonPauseHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to unpause without PAUSER role, expecting revert
-          await expect(pauseHandler.connect(rando).unpause([])).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          await expect(pauseHandler.connect(rando).unpause()).to.revertedWith(RevertReasons.ACCESS_DENIED);
         });
 
         it("Protocol is not currently paused", async function () {

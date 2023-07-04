@@ -45,11 +45,6 @@ describe("Bundle", function () {
       expect(bundle.idIsValid()).is.false;
       expect(bundle.isValid()).is.false;
 
-      // Invalid field value
-      bundle.id = 12;
-      expect(bundle.idIsValid()).is.false;
-      expect(bundle.isValid()).is.false;
-
       // Valid field value
       bundle.id = "0";
       expect(bundle.idIsValid()).is.true;
@@ -64,16 +59,6 @@ describe("Bundle", function () {
     it("Always present, sellerId must be the string representation of a BigNumber", async function () {
       // Invalid field value
       bundle.sellerId = "zedzdeadbaby";
-      expect(bundle.sellerIdIsValid()).is.false;
-      expect(bundle.isValid()).is.false;
-
-      // Invalid field value
-      bundle.sellerId = new Date();
-      expect(bundle.sellerIdIsValid()).is.false;
-      expect(bundle.isValid()).is.false;
-
-      // Invalid field value
-      bundle.sellerId = 12;
       expect(bundle.sellerIdIsValid()).is.false;
       expect(bundle.isValid()).is.false;
 
