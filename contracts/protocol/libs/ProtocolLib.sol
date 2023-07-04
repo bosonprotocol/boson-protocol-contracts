@@ -187,6 +187,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.DisputeResolver) pendingAddressUpdatesByDisputeResolver;
         // seller id => list of additional collections (address + external id)
         mapping(uint256 => BosonTypes.Collection[]) additionalCollections;
+        // seller id => address that was used to create it
+        mapping(uint256 => address) sellerCreator;
     }
 
     // Incrementing id counters

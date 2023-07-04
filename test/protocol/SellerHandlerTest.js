@@ -2824,6 +2824,46 @@ describe("SellerHandler", function () {
         }
       });
 
+      it("if seller addresses are changed, the original admin address is used to determine the collection address", async function () {
+        // update seller addresses
+        seller.admin = other1.address;
+        seller.assistant = other1.address;
+        await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+        await accountHandler
+          .connect(other1)
+          .optInToSellerUpdate(seller.id, [SellerUpdateFields.Admin, SellerUpdateFields.Assistant]);
+
+        externalId = "newSellerBrand";
+        expectedCollectionAddress = calculateCloneAddress(
+          accountHandler.address,
+          beaconProxyAddress,
+          admin.address, // original admin address
+          externalId
+        );
+
+        // Create a new collection, testing for the event
+        const tx = await accountHandler.connect(other1).createNewCollection(externalId, voucherInitValues);
+
+        await expect(tx)
+          .to.emit(accountHandler, "CollectionCreated")
+          .withArgs(seller.id, 1, expectedCollectionAddress, externalId, other1.address);
+
+        // Voucher clone contract
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCollectionAddress);
+
+        await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+        await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged").withArgs(royaltyPercentage);
+        await expect(tx)
+          .to.emit(bosonVoucher, "VoucherInitialized")
+          .withArgs(seller.id, royaltyPercentage, contractURI);
+
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCollectionAddress);
+
+        await expect(tx)
+          .to.emit(bosonVoucher, "OwnershipTransferred")
+          .withArgs(ethers.constants.AddressZero, other1.address);
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The sellers region of protocol is paused", async function () {
           // Pause the sellers region of the protocol

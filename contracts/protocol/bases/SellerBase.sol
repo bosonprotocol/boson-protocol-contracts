@@ -96,7 +96,14 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         storeSeller(_seller, _authToken, lookups);
 
         // Create clone and store its address cloneAddress
-        address voucherCloneAddress = cloneBosonVoucher(sellerId, 0, _seller.assistant, _voucherInitValues, "");
+        address voucherCloneAddress = cloneBosonVoucher(
+            sellerId,
+            0,
+            _seller.admin,
+            _seller.assistant,
+            _voucherInitValues,
+            ""
+        );
         lookups.cloneAddress[sellerId] = voucherCloneAddress;
 
         // Notify watchers of state change
@@ -142,6 +149,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Map the seller's other addresses to the seller id. It's not necessary to map the treasury address, as it only receives funds
         _lookups.sellerIdByAssistant[_seller.assistant] = _seller.id;
+        _lookups.sellerCreator[_seller.id] = msgSender();
     }
 
     /**
@@ -149,6 +157,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      *
      * @param _sellerId - id of the seller
      * @param _collectionIndex - index of the collection.
+     * @param _creator - address of the seller creator
      * @param _assistant - address of the assistant
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _externalId - external collection id ("" for the default collection)
@@ -157,6 +166,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
     function cloneBosonVoucher(
         uint256 _sellerId,
         uint256 _collectionIndex,
+        address _creator,
         address _assistant,
         VoucherInitValues calldata _voucherInitValues,
         string memory _externalId
@@ -166,7 +176,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Load beacon proxy contract address
         bytes20 targetBytes = bytes20(pa.beaconProxy);
-        bytes32 salt = keccak256(abi.encodePacked(_assistant, _externalId));
+        bytes32 salt = keccak256(abi.encodePacked(_creator, _externalId));
 
         // create a minimal clone
         assembly {
