@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { ZeroAddress, MaxUint256 } = ethers;
 const { expect, assert } = require("chai");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
@@ -63,7 +64,7 @@ describe("IBosonTwinHandler", function () {
 
     // make all account the same
     assistant = admin;
-    clerk = { address: ethers.constants.AddressZero };
+    clerk = { address: ZeroAddress };
 
     // Deploy the mock tokens
     [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens();
@@ -98,7 +99,12 @@ describe("IBosonTwinHandler", function () {
       id = "1"; // argument sent to contract for createSeller will be ignored
 
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        clerk.address,
+        await treasury.getAddress()
+      );
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
@@ -115,7 +121,7 @@ describe("IBosonTwinHandler", function () {
       invalidTwinId = "222";
 
       // Create a valid twin, then set fields in tests directly
-      twin = mockTwin(bosonToken.address);
+      twin = mockTwin(await bosonToken.getAddress());
       expect(twin.isValid()).is.true;
 
       // How that twin looks as a returned struct
@@ -129,10 +135,10 @@ describe("IBosonTwinHandler", function () {
 
     context("👉 createTwin()", async function () {
       it("should emit a TwinCreated event", async function () {
-        twin.tokenAddress = bosonToken.address;
+        twin.tokenAddress = await bosonToken.getAddress();
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(assistant).approve(twinHandler.address, 1);
+        await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1);
 
         // Create a twin, testing for the event
         const tx = await twinHandler.connect(assistant).createTwin(twin);
@@ -153,7 +159,7 @@ describe("IBosonTwinHandler", function () {
         twin.id = "444";
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(assistant).approve(twinHandler.address, 1);
+        await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1);
 
         // Create a twin, testing for the event
         const tx = await twinHandler.connect(assistant).createTwin(twin);
@@ -188,11 +194,11 @@ describe("IBosonTwinHandler", function () {
       });
 
       it("should emit a TwinCreated event for ERC721 token address", async function () {
-        twin.tokenAddress = foreign721.address;
+        twin.tokenAddress = await foreign721.getAddress();
 
         // Mint a token and approve twinHandler contract to transfer it
         await foreign721.connect(assistant).mint(twin.tokenId, "1");
-        await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
+        await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
         // Create a twin, testing for the event
         const tx = await twinHandler.connect(assistant).createTwin(twin);
@@ -210,11 +216,11 @@ describe("IBosonTwinHandler", function () {
       });
 
       it("should emit a TwinCreated event for ERC1155 token address", async function () {
-        twin.tokenAddress = foreign1155.address;
+        twin.tokenAddress = await foreign1155.getAddress();
 
         // Mint a token and approve twinHandler contract to transfer it
         await foreign1155.connect(assistant).mint(twin.tokenId, twin.amount);
-        await foreign1155.connect(assistant).setApprovalForAll(twinHandler.address, true);
+        await foreign1155.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
         // Create a twin, testing for the event
         const tx = await twinHandler.connect(assistant).createTwin(twin);
@@ -235,12 +241,12 @@ describe("IBosonTwinHandler", function () {
         twin.supplyAvailable = "10";
         twin.amount = "0";
         twin.tokenId = "5";
-        twin.tokenAddress = foreign721.address;
+        twin.tokenAddress = await foreign721.getAddress();
         twin.tokenType = TokenType.NonFungibleToken;
 
         // Mint a token and approve twinHandler contract to transfer it
         await foreign721.connect(assistant).mint(twin.tokenId, twin.supplyAvailable);
-        await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
+        await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
         // Create first twin with ids range: ["5"..."14"]
         await twinHandler.connect(assistant).createTwin(twin);
@@ -252,10 +258,10 @@ describe("IBosonTwinHandler", function () {
       });
 
       it("It is possible to add an ERC721 with unlimited supply if token is not used yet", async function () {
-        twin.supplyAvailable = ethers.constants.MaxUint256.toString();
+        twin.supplyAvailable = MaxUint256.toString();
         twin.amount = "0";
         twin.tokenId = "0";
-        twin.tokenAddress = foreign721.address;
+        twin.tokenAddress = await foreign721.getAddress();
         twin.tokenType = TokenType.NonFungibleToken;
 
         // another erc721 token
@@ -263,11 +269,11 @@ describe("IBosonTwinHandler", function () {
 
         let twin2 = twin.clone();
         twin2.supplyAvailable = "1500";
-        twin2.tokenAddress = foreign721_2.address;
+        twin2.tokenAddress = await foreign721_2.getAddress();
 
         // Approve twinHandler contract to transfer it
-        await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
-        await foreign721_2.connect(assistant).setApprovalForAll(twinHandler.address, true);
+        await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
+        await foreign721_2.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
         // Create a twin with limited supply
         await twinHandler.connect(assistant).createTwin(twin);
@@ -277,10 +283,10 @@ describe("IBosonTwinHandler", function () {
       });
 
       it("It is possible to add ERC721 even if another ERC721 with unlimited supply exists", async function () {
-        twin.supplyAvailable = ethers.constants.MaxUint256.toString();
+        twin.supplyAvailable = MaxUint256.toString();
         twin.amount = "0";
         twin.tokenId = "0";
-        twin.tokenAddress = foreign721.address;
+        twin.tokenAddress = await foreign721.getAddress();
         twin.tokenType = TokenType.NonFungibleToken;
 
         // another erc721 token
@@ -288,11 +294,11 @@ describe("IBosonTwinHandler", function () {
 
         let twin2 = twin.clone();
         twin2.supplyAvailable = "1500";
-        twin2.tokenAddress = foreign721_2.address;
+        twin2.tokenAddress = await foreign721_2.getAddress();
 
         // Approve twinHandler contract to transfer it
-        await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
-        await foreign721_2.connect(assistant).setApprovalForAll(twinHandler.address, true);
+        await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
+        await foreign721_2.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
         // Create a twin with unlimited supply
         await twinHandler.connect(assistant).createTwin(twin);
@@ -303,10 +309,10 @@ describe("IBosonTwinHandler", function () {
 
       it("Should ignore twin id set by seller and use nextAccountId on twins entity", async function () {
         twin.id = "666";
-        twin.tokenAddress = bosonToken.address;
+        twin.tokenAddress = await bosonToken.getAddress();
 
         // Approve twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(assistant).approve(twinHandler.address, 1);
+        await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1);
 
         await twinHandler.connect(assistant).createTwin(twin);
 
@@ -336,7 +342,7 @@ describe("IBosonTwinHandler", function () {
 
         it("protocol is not approved to transfer the ERC20 token", async function () {
           //ERC20 token address
-          twin.tokenAddress = bosonToken.address;
+          twin.tokenAddress = await bosonToken.getAddress();
 
           await expect(twinHandler.connect(assistant).createTwin(twin)).to.revertedWith(
             RevertReasons.NO_TRANSFER_APPROVED
@@ -345,7 +351,7 @@ describe("IBosonTwinHandler", function () {
 
         it("protocol is not approved to transfer the ERC721 token", async function () {
           //ERC721 token address
-          twin.tokenAddress = foreign721.address;
+          twin.tokenAddress = await foreign721.getAddress();
 
           await expect(twinHandler.connect(assistant).createTwin(twin)).to.revertedWith(
             RevertReasons.NO_TRANSFER_APPROVED
@@ -354,7 +360,7 @@ describe("IBosonTwinHandler", function () {
 
         it("protocol is not approved to transfer the ERC1155 token", async function () {
           //ERC1155 token address
-          twin.tokenAddress = foreign1155.address;
+          twin.tokenAddress = await foreign1155.getAddress();
 
           await expect(twinHandler.connect(assistant).createTwin(twin)).to.revertedWith(
             RevertReasons.NO_TRANSFER_APPROVED
@@ -364,12 +370,12 @@ describe("IBosonTwinHandler", function () {
         it("supplyAvailable is zero", async function () {
           // Mint a token and approve twinHandler contract to transfer it
           await foreign721.connect(assistant).mint(twin.tokenId, "1");
-          await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
+          await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
           twin.supplyAvailable = "0";
           twin.amount = "0";
           twin.tokenId = "1";
-          twin.tokenAddress = foreign721.address;
+          twin.tokenAddress = await foreign721.getAddress();
           twin.tokenType = TokenType.NonFungibleToken;
 
           await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
@@ -379,11 +385,11 @@ describe("IBosonTwinHandler", function () {
 
         it("Amount is greater than supply available and token type is FungibleToken", async function () {
           // Approving the twinHandler contract to transfer seller's tokens
-          await bosonToken.connect(assistant).approve(twinHandler.address, 1);
+          await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1);
 
           twin.supplyAvailable = "10";
           twin.amount = "20";
-          twin.tokenAddress = bosonToken.address;
+          twin.tokenAddress = await bosonToken.getAddress();
           twin.tokenType = TokenType.FungibleToken;
 
           await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
@@ -394,11 +400,11 @@ describe("IBosonTwinHandler", function () {
         it("Amount is greater than supply available and token type is MultiToken", async function () {
           // Mint a token and approve twinHandler contract to transfer it
           await foreign1155.connect(assistant).mint(twin.tokenId, "1");
-          await foreign1155.connect(assistant).setApprovalForAll(twinHandler.address, true);
+          await foreign1155.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
           twin.supplyAvailable = "10";
           twin.amount = "20";
-          twin.tokenAddress = foreign1155.address;
+          twin.tokenAddress = await foreign1155.getAddress();
           twin.tokenType = TokenType.MultiToken;
 
           await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
@@ -408,10 +414,10 @@ describe("IBosonTwinHandler", function () {
 
         it("Amount is zero and token type is FungibleToken", async function () {
           // Approving the twinHandler contract to transfer seller's tokens
-          await bosonToken.connect(assistant).approve(twinHandler.address, 1);
+          await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1);
 
           twin.amount = "0";
-          twin.tokenAddress = bosonToken.address;
+          twin.tokenAddress = await bosonToken.getAddress();
           twin.tokenType = TokenType.FungibleToken;
 
           await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
@@ -422,10 +428,10 @@ describe("IBosonTwinHandler", function () {
         it("Amount is zero and token type is MultiToken", async function () {
           // Mint a token and approve twinHandler contract to transfer it
           await foreign1155.connect(assistant).mint(twin.tokenId, "1");
-          await foreign1155.connect(assistant).setApprovalForAll(twinHandler.address, true);
+          await foreign1155.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
           twin.amount = "0";
-          twin.tokenAddress = foreign1155.address;
+          twin.tokenAddress = await foreign1155.getAddress();
           twin.tokenType = TokenType.MultiToken;
 
           await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
@@ -434,14 +440,14 @@ describe("IBosonTwinHandler", function () {
         });
 
         it("Amount is zero and token type is NonFungibleToken", async function () {
-          twin.tokenAddress = foreign721.address;
+          twin.tokenAddress = await foreign721.getAddress();
           twin.tokenType = TokenType.NonFungibleToken;
           twin.amount = "1";
           twin.tokenId = "1";
 
           // Mint a token and approve twinHandler contract to transfer it
           await foreign721.connect(assistant).mint(twin.tokenId, "1");
-          await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
+          await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
           await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
             RevertReasons.INVALID_TWIN_PROPERTY
@@ -452,12 +458,12 @@ describe("IBosonTwinHandler", function () {
           twin.supplyAvailable = "10";
           twin.amount = "0";
           twin.tokenId = "5";
-          twin.tokenAddress = foreign721.address;
+          twin.tokenAddress = await foreign721.getAddress();
           twin.tokenType = TokenType.NonFungibleToken;
 
           // Mint a token and approve twinHandler contract to transfer it
           await foreign721.connect(assistant).mint(twin.tokenId, twin.supplyAvailable);
-          await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
+          await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
           // Create first twin with ids range: ["5"..."14"]
           await twinHandler.connect(assistant).createTwin(twin);
@@ -490,12 +496,12 @@ describe("IBosonTwinHandler", function () {
         });
 
         it("token address has been used in another twin with unlimited supply", async function () {
-          twin.supplyAvailable = ethers.constants.MaxUint256;
+          twin.supplyAvailable = MaxUint256;
           twin.tokenType = TokenType.NonFungibleToken;
-          twin.tokenAddress = foreign721.address;
+          twin.tokenAddress = await foreign721.getAddress();
           twin.amount = "0";
 
-          await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
+          await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
           // Create twin with unlimited supply
           await twinHandler.connect(assistant).createTwin(twin);
@@ -508,13 +514,13 @@ describe("IBosonTwinHandler", function () {
         });
 
         it("Supply range overflow", async function () {
-          twin.supplyAvailable = ethers.constants.MaxUint256.div(10).mul(8).toString();
+          twin.supplyAvailable = ((MaxUint256 / 10n) * 8n).toString();
           twin.tokenType = TokenType.NonFungibleToken;
-          twin.tokenAddress = foreign721.address;
+          twin.tokenAddress = await foreign721.getAddress();
           twin.amount = "0";
-          twin.tokenId = ethers.constants.MaxUint256.sub(twin.supplyAvailable).add(1).toString();
+          twin.tokenId = (MaxUint256 - BigInt(twin.supplyAvailable) + 1n).toString();
 
-          await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
+          await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
           // Create new twin with same token address
           await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
@@ -523,13 +529,13 @@ describe("IBosonTwinHandler", function () {
         });
 
         it("Token with unlimited supply with starting tokenId to high", async function () {
-          twin.supplyAvailable = ethers.constants.MaxUint256.toString();
+          twin.supplyAvailable = MaxUint256.toString();
           twin.tokenType = TokenType.NonFungibleToken;
-          twin.tokenAddress = foreign721.address;
+          twin.tokenAddress = await foreign721.getAddress();
           twin.amount = "0";
-          twin.tokenId = ethers.constants.MaxUint256.add(1).div(2).add(1).toString();
+          twin.tokenId = ((MaxUint256 + 1n) / 2n + 1n).toString();
 
-          await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
+          await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
           // Create new twin with same token address
           await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
@@ -539,7 +545,7 @@ describe("IBosonTwinHandler", function () {
 
         context("Token address is unsupported", async function () {
           it("Token address is a zero address", async function () {
-            twin.tokenAddress = ethers.constants.AddressZero;
+            twin.tokenAddress = ZeroAddress;
 
             await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
               RevertReasons.UNSUPPORTED_TOKEN
@@ -547,7 +553,7 @@ describe("IBosonTwinHandler", function () {
           });
 
           it("Token address is a contract address that does not support the isApprovedForAll", async function () {
-            twin.tokenAddress = twinHandler.address;
+            twin.tokenAddress = await twinHandler.getAddress();
 
             await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
               RevertReasons.UNSUPPORTED_TOKEN
@@ -555,7 +561,7 @@ describe("IBosonTwinHandler", function () {
           });
 
           it("Token address is a contract that reverts from a fallback method", async function () {
-            twin.tokenAddress = fallbackError.address;
+            twin.tokenAddress = await fallbackError.getAddress();
 
             await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
               RevertReasons.UNSUPPORTED_TOKEN
@@ -563,9 +569,9 @@ describe("IBosonTwinHandler", function () {
           });
 
           it("Token address is a contract that doesn't implement IERC721 interface when selected token type is NonFungible", async function () {
-            await bosonToken.connect(assistant).approve(twinHandler.address, 1);
+            await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1);
             twin.tokenType = TokenType.NonFungibleToken;
-            twin.tokenAddress = bosonToken.address;
+            twin.tokenAddress = await bosonToken.getAddress();
 
             await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
               RevertReasons.INVALID_TOKEN_ADDRESS
@@ -573,9 +579,9 @@ describe("IBosonTwinHandler", function () {
           });
 
           it("Token address is a contract that doesn't implement IERC1155 interface when selected token type is MultiToken", async function () {
-            await bosonToken.connect(assistant).approve(twinHandler.address, 1);
+            await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1);
             twin.tokenType = TokenType.MultiToken;
-            twin.tokenAddress = bosonToken.address;
+            twin.tokenAddress = await bosonToken.getAddress();
 
             await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
               RevertReasons.INVALID_TOKEN_ADDRESS
@@ -588,7 +594,7 @@ describe("IBosonTwinHandler", function () {
     context("👉 removeTwin()", async function () {
       beforeEach(async function () {
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(assistant).approve(twinHandler.address, 1);
+        await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1);
 
         // Create a twin
         await twinHandler.connect(assistant).createTwin(twin);
@@ -602,7 +608,7 @@ describe("IBosonTwinHandler", function () {
         // Remove the twin, testing for the event.
         await expect(twinHandler.connect(assistant).removeTwin(twin.id))
           .to.emit(twinHandler, "TwinDeleted")
-          .withArgs(twin.id, twin.sellerId, assistant.address);
+          .withArgs(twin.id, twin.sellerId, await assistant.getAddress());
 
         // Expect twin to be not found.
         [success] = await twinHandler.connect(rando).getTwin(twin.id);
@@ -611,11 +617,11 @@ describe("IBosonTwinHandler", function () {
 
       it("should make twin range available again if token type is NonFungible", async function () {
         twin.tokenType = TokenType.NonFungibleToken;
-        twin.tokenAddress = foreign721.address;
+        twin.tokenAddress = await foreign721.getAddress();
         twin.amount = "0";
         const expectedNewTwinId = "2";
 
-        await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
+        await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
         // Create a twin with range: [0,1499]
         await twinHandler.connect(assistant).createTwin(twin);
@@ -632,7 +638,7 @@ describe("IBosonTwinHandler", function () {
         // Create a twin with range: [0,1499]
         let twin1 = twin.clone();
         twin1.tokenType = TokenType.NonFungibleToken;
-        twin1.tokenAddress = foreign721.address;
+        twin1.tokenAddress = await foreign721.getAddress();
         twin1.amount = "0";
         twin1.id = "2";
 
@@ -646,7 +652,7 @@ describe("IBosonTwinHandler", function () {
         twin3.tokenId = "5000";
         twin3.id = "3";
 
-        await foreign721.connect(assistant).setApprovalForAll(twinHandler.address, true);
+        await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
         await twinHandler.connect(assistant).createTwin(twin1);
         await twinHandler.connect(assistant).createTwin(twin2);
@@ -731,7 +737,7 @@ describe("IBosonTwinHandler", function () {
     context("👉 getTwin()", async function () {
       beforeEach(async function () {
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(assistant).approve(twinHandler.address, 1);
+        await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1);
 
         // Create a twin
         await twinHandler.connect(assistant).createTwin(twin);
@@ -771,7 +777,7 @@ describe("IBosonTwinHandler", function () {
     context("👉 getNextTwinId()", async function () {
       beforeEach(async function () {
         // Create another valid seller.
-        seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
+        seller = mockSeller(await rando.getAddress(), await rando.getAddress(), ZeroAddress, await rando.getAddress());
         expect(seller.isValid()).is.true;
 
         // AuthToken
@@ -780,7 +786,7 @@ describe("IBosonTwinHandler", function () {
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(rando).approve(twinHandler.address, 1);
+        await bosonToken.connect(rando).approve(await twinHandler.getAddress(), 1);
 
         // Create a twin
         await twinHandler.connect(rando).createTwin(twin);
@@ -807,7 +813,7 @@ describe("IBosonTwinHandler", function () {
 
       it("should be incremented after a twin is created", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(assistant).approve(twinHandler.address, 1);
+        await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1);
 
         // Create another twin
         await twinHandler.connect(assistant).createTwin(twin);

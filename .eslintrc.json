@@ -1,11 +1,8 @@
 {
-  "extends": [
-    "eslint:recommended",
-    "prettier"
-  ],
+  "extends": ["eslint:recommended", "prettier"],
   "env": {
     "node": true,
-    "es6": true,
+    "es2020": true,
     "commonjs": true,
     "mocha": true
   },
@@ -17,7 +14,8 @@
     "no-empty": "off",
     "no-only-tests/no-only-tests": "error"
   },
-  "plugins": [
-    "no-only-tests"
-  ]
+  "plugins": ["no-only-tests"],
+  "globals": {
+    "BigInt": true
+  }
 }
