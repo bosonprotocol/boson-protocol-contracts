@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getContractFactory } = hre.ethers;
 const environments = require("../../../environments");
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
 const { getFees } = require("../../util/utils");
@@ -22,9 +22,9 @@ const { getFees } = require("../../util/utils");
  */
 async function deploySnapshotGateExample(snapshotGateArgs, maxPriorityFeePerGas) {
   // Deploy the SnapshotGate
-  const SnapshotGate = await ethers.getContractFactory("SnapshotGate");
+  const SnapshotGate = await getContractFactory("SnapshotGate");
   const snapshotGate = await SnapshotGate.deploy(...snapshotGateArgs, await getFees(maxPriorityFeePerGas));
-  await snapshotGate.deployTransaction.wait(confirmations);
+  await snapshotGate.waitForDeployment(confirmations);
 
   return [snapshotGate];
 }
