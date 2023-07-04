@@ -20,14 +20,14 @@ module.exports = {
     maxOffersPerBatch: "12",
     maxTokensPerWithdrawal: "125",
     maxFeesPerDisputeResolver: "75",
-    maxEscalationResponsePeriod: ninetyDays,
+    maxEscalationResponsePeriod: ninetyDays.toString(),
     maxDisputesPerBatch: "75",
     maxAllowedSellers: "140",
     maxTotalOfferFeePercentage: "10000", // 100%
     maxRoyaltyPecentage: "10000", //100%
-    minResolutionPeriod: oneWeek,
-    maxResolutionPeriod: ninetyDays,
-    minDisputePeriod: oneWeek,
+    minResolutionPeriod: oneWeek.toString(),
+    maxResolutionPeriod: ninetyDays.toString(),
+    minDisputePeriod: oneWeek.toString(),
     maxPremintedVouchers: "10000",
   },
 
