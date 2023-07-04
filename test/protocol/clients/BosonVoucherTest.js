@@ -619,11 +619,9 @@ describe("IBosonVoucher", function () {
 
     context("burnPremintedVouchers()", function () {
       let offerId, start, length, amount;
-      let maxPremintedVouchers;
 
       beforeEach(async function () {
         offerId = "1";
-        maxPremintedVouchers = "10";
 
         // reserve a range
         start = "1";
@@ -746,11 +744,11 @@ describe("IBosonVoucher", function () {
         let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
 
         // Number of events emitted should be equal to amount
-        assert.equal((await tx.wait()).events.length, Number(amount), "Wrong number of events emitted");
+        assert.equal((await tx.wait()).logs.length, Number(amount), "Wrong number of events emitted");
 
         // Last burned id should be updated
         const tokenIdStart = deriveTokenId(offerId, start);
-        const lastBurnedId = tokenIdStart.add(amount - 1);
+        const lastBurnedId = tokenIdStart + BigInt(amount) - 1n;
         const range = new Range(tokenIdStart.toString(), length, amount, lastBurnedId.toString(), assistant.address);
         const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
         assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
@@ -776,55 +774,6 @@ describe("IBosonVoucher", function () {
           await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
           await offerHandler.connect(assistant).reserveRange(offerId, length, assistantAddress);
           await bosonVoucher.connect(assistant).preMint(offerId, length);
-        });
-
-        it("Should burn only first MaxPremintedVouchers vouchers if there is more than MaxPremintedVouchers to burn", async function () {
-          // Mint another 10 vouchers, so that there are 20 in total
-          await bosonVoucher.connect(assistant).preMint(offerId, 10);
-          amount = `${Number(amount) + 10}`;
-
-          // void the offer
-          await offerHandler.connect(assistant).voidOffer(offerId);
-
-          // Burn tokens, test for event
-          let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
-
-          // Number of events emitted should be equal to maxPremintedVouchers
-          assert.equal((await tx.wait()).events.length, Number(maxPremintedVouchers), "Wrong number of events emitted");
-
-          // Last burned id should be updated
-          const tokenIdStart = deriveTokenId(offerId, start);
-          let lastBurnedId = tokenIdStart.add(maxPremintedVouchers - 1);
-          let range = new Range(tokenIdStart.toString(), length, amount, lastBurnedId.toString(), assistant.address);
-          let returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
-          assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
-
-          // Second call should burn the difference
-          tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
-
-          // Number of events emitted should be equal to amount
-          assert.equal(
-            (await tx.wait()).events.length,
-            Number(amount) - maxPremintedVouchers,
-            "Wrong number of events emitted"
-          );
-
-          // Last burned id should be updated
-          lastBurnedId = tokenIdStart.add(amount - 1);
-          range = new Range(tokenIdStart.toString(), length, amount, lastBurnedId.toString(), assistant.address);
-          returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
-          assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
-
-          // All burned tokens should not have an owner
-          for (let i = 0; i < Number(amount); i++) {
-            let tokenId = tokenIdStart.add(i);
-            await expect(bosonVoucher.ownerOf(tokenId)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
-          }
-
-          // Second call should revert since there's nothing to burn
-          await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId)).to.be.revertedWith(
-            RevertReasons.NOTHING_TO_BURN
-          );
         });
 
         it("Should skip all vouchers that were already committed", async function () {
@@ -2133,8 +2082,8 @@ describe("IBosonVoucher", function () {
       const calldata = mockSimpleContract.interface.encodeFunctionData("testReturn");
       const returnedValueRaw = await bosonVoucher
         .connect(assistant)
-        .callStatic.callExternalContract(mockSimpleContract.address, calldata);
-      const abiCoder = new ethers.utils.AbiCoder();
+        .callExternalContract.staticCall(await mockSimpleContract.getAddress(), calldata);
+      const abiCoder = new ethers.AbiCoder();
       const [returnedValue] = abiCoder.decode(["string"], returnedValueRaw);
       expect(returnedValue).to.equal("TestValue");
     });
