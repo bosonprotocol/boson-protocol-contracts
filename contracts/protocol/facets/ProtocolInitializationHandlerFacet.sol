@@ -93,9 +93,10 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         if (_isUpgrade) {
             if (_version == bytes32("2.2.0")) {
                 initV2_2_0(_initializationData);
-            }
-            if (_version == bytes32("2.2.1")) {
+            } else if (_version == bytes32("2.2.1")) {
                 initV2_2_1();
+            } else if (_version == bytes32("2.3.0")) {
+                initV2_3_0(_initializationData);
             }
         }
 
@@ -131,6 +132,27 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
     function initV2_2_1() internal view {
         // Current version must be 2.2.0
         require(protocolStatus().version == bytes32("2.2.0"), WRONG_CURRENT_VERSION);
+    }
+
+    /**
+     * @notice Initializes the version 2.3.0.
+     */
+    function initV2_3_0(bytes calldata _initializationData) internal {
+        // Partial initialization of v2.3.0. Other PRs have to be merged first.
+        (uint256[] memory sellerIds, address[] memory sellerCreators) = abi.decode(
+            _initializationData,
+            (uint256[], address[])
+        );
+
+        // Backfill sellerCreators
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        for (uint256 i = 0; i < sellerIds.length; i++) {
+            (bool exists, , ) = fetchSeller(sellerIds[i]);
+            require(exists, NO_SUCH_SELLER);
+            require(sellerCreators[i] != address(0), INVALID_ADDRESS);
+
+            lookups.sellerCreator[sellerIds[i]] = sellerCreators[i];
+        }
     }
 
     /**
