@@ -2409,7 +2409,7 @@ describe("IBosonExchangeHandler", function () {
             await foreign20gt_2.connect(assistant).approve(protocolDiamondAddress, "100");
 
             // Create two ERC20 twins that will consume all available gas
-            twin20 = mockTwin(foreign20gt.address);
+            twin20 = mockTwin(await foreign20gt.getAddress());
             twin20.amount = "1";
             twin20.supplyAvailable = "100";
             twin20.id = "4";
@@ -2418,7 +2418,7 @@ describe("IBosonExchangeHandler", function () {
 
             const twin20_2 = twin20.clone();
             twin20_2.id = "5";
-            twin20_2.tokenAddress = foreign20gt_2.address;
+            twin20_2.tokenAddress = await foreign20gt_2.getAddress();
             await twinHandler.connect(assistant).createTwin(twin20_2.toStruct());
 
             // Create a new offer and bundle
@@ -2429,7 +2429,8 @@ describe("IBosonExchangeHandler", function () {
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
             // Commit to offer
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            const buyerAddress = await buyer.getAddress();
+            await exchangeHandler.connect(buyer).commitToOffer(buyerAddress, offerId, { value: price });
 
             exchange.id = Number(exchange.id) + 1;
 
@@ -2437,11 +2438,11 @@ describe("IBosonExchangeHandler", function () {
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
             // Voucher should be revoked and both transfers should fail
-            await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyer.address);
+            await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
+              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -2719,7 +2720,7 @@ describe("IBosonExchangeHandler", function () {
             await foreign721gt_2.connect(assistant).setApprovalForAll(protocolDiamondAddress, true);
 
             // Create two ERC721 twins that will consume all available gas
-            twin721 = mockTwin(foreign721gt.address, TokenType.NonFungibleToken);
+            twin721 = mockTwin(await foreign721gt.getAddress(), TokenType.NonFungibleToken);
             twin721.amount = "0";
             twin721.supplyAvailable = "10";
             twin721.id = "4";
@@ -2728,7 +2729,7 @@ describe("IBosonExchangeHandler", function () {
 
             const twin721_2 = twin721.clone();
             twin721_2.id = "5";
-            twin721_2.tokenAddress = foreign721gt_2.address;
+            twin721_2.tokenAddress = await foreign721gt_2.getAddress();
             await twinHandler.connect(assistant).createTwin(twin721_2.toStruct());
 
             // Create a new offer and bundle
@@ -2739,7 +2740,8 @@ describe("IBosonExchangeHandler", function () {
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
             // Commit to offer
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            const buyerAddress = await buyer.getAddress();
+            await exchangeHandler.connect(buyer).commitToOffer(buyerAddress, offerId, { value: price });
 
             exchange.id = Number(exchange.id) + 1;
 
@@ -2747,16 +2749,16 @@ describe("IBosonExchangeHandler", function () {
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
             // Voucher should be revoked and both transfers should fail
-            await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyer.address);
+            await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyerAddress);
 
             let tokenId = "9";
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, twin721.amount, buyer.address);
+              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, twin721.amount, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin721_2.id, twin721_2.tokenAddress, exchange.id, tokenId, twin721_2.amount, buyer.address);
+              .withArgs(twin721_2.id, twin721_2.tokenAddress, exchange.id, tokenId, twin721_2.amount, buyerAddress);
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -2968,7 +2970,7 @@ describe("IBosonExchangeHandler", function () {
             await foreign1155gt_2.connect(assistant).setApprovalForAll(protocolDiamondAddress, true);
 
             // Create two ERC1155 twins that will consume all available gas
-            twin1155 = mockTwin(foreign1155gt.address, TokenType.MultiToken);
+            twin1155 = mockTwin(await foreign1155gt.getAddress(), TokenType.MultiToken);
             twin1155.amount = "1";
             twin1155.tokenId = "1";
             twin1155.supplyAvailable = "10";
@@ -2978,7 +2980,7 @@ describe("IBosonExchangeHandler", function () {
 
             const twin1155_2 = twin1155.clone();
             twin1155_2.id = "5";
-            twin1155_2.tokenAddress = foreign1155gt_2.address;
+            twin1155_2.tokenAddress = await foreign1155gt_2.getAddress();
             await twinHandler.connect(assistant).createTwin(twin1155_2.toStruct());
 
             // Create a new offer and bundle
@@ -2989,7 +2991,8 @@ describe("IBosonExchangeHandler", function () {
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
             // Commit to offer
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            const buyerAddress = await buyer.getAddress();
+            await exchangeHandler.connect(buyer).commitToOffer(buyerAddress, offerId, { value: price });
 
             exchange.id = Number(exchange.id) + 1;
 
@@ -2997,7 +3000,7 @@ describe("IBosonExchangeHandler", function () {
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
             // Voucher should be revoked and both transfers should fail
-            await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyer.address);
+            await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -3007,7 +3010,7 @@ describe("IBosonExchangeHandler", function () {
                 exchange.id,
                 twin1155.tokenId,
                 twin1155.amount,
-                buyer.address
+                buyerAddress
               );
 
             await expect(tx)
@@ -3018,7 +3021,7 @@ describe("IBosonExchangeHandler", function () {
                 exchange.id,
                 twin1155_2.tokenId,
                 twin1155_2.amount,
-                buyer.address
+                buyerAddress
               );
 
             // Get the exchange state
@@ -3435,17 +3438,17 @@ describe("IBosonExchangeHandler", function () {
             await foreign1155gt.connect(assistant).setApprovalForAll(protocolDiamondAddress, true);
 
             // Create twins that will consume all available gas
-            twin20 = mockTwin(foreign20gt.address);
+            twin20 = mockTwin(await foreign20gt.getAddress());
             twin20.amount = "1";
             twin20.supplyAvailable = "100";
             twin20.id = "4";
 
-            twin721 = mockTwin(foreign721gt.address, TokenType.NonFungibleToken);
+            twin721 = mockTwin(await foreign721gt.getAddress(), TokenType.NonFungibleToken);
             twin721.amount = "0";
             twin721.supplyAvailable = "10";
             twin721.id = "5";
 
-            twin1155 = mockTwin(foreign1155gt.address, TokenType.MultiToken);
+            twin1155 = mockTwin(await foreign1155gt.getAddress(), TokenType.MultiToken);
             twin1155.amount = "1";
             twin1155.tokenId = "1";
             twin1155.supplyAvailable = "10";
@@ -3463,7 +3466,8 @@ describe("IBosonExchangeHandler", function () {
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
             // Commit to offer
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            const buyerAddress = await buyer.getAddress();
+            await exchangeHandler.connect(buyer).commitToOffer(buyerAddress, offerId, { value: price });
 
             exchange.id = Number(exchange.id) + 1;
 
@@ -3471,16 +3475,16 @@ describe("IBosonExchangeHandler", function () {
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
             // Voucher should be revoked and both transfers should fail
-            await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyer.address);
+            await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
+              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyerAddress);
 
             let tokenId = "9";
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, twin721.amount, buyer.address);
+              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, twin721.amount, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -3490,7 +3494,7 @@ describe("IBosonExchangeHandler", function () {
                 exchange.id,
                 twin1155.tokenId,
                 twin1155.amount,
-                buyer.address
+                buyerAddress
               );
 
             // Get the exchange state
