@@ -722,43 +722,45 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 }
 
                 // Calldata to transfer the twin
-                bytes memory data;
+                {
+                    bytes memory data;
 
-                if (tokenType == TokenType.FungibleToken) {
-                    // ERC-20 style transfer
-                    data = abi.encodeCall(IERC20.transferFrom, (seller.assistant, sender, twin.amount));
-                } else if (tokenType == TokenType.NonFungibleToken) {
-                    // Token transfer order is ascending to avoid overflow when twin supply is unlimited
-                    if (twin.supplyAvailable == type(uint256).max) {
-                        twin.tokenId++;
-                    } else {
-                        // Token transfer order is descending
-                        tokenId += twin.supplyAvailable;
+                    if (tokenType == TokenType.FungibleToken) {
+                        // ERC-20 style transfer
+                        data = abi.encodeCall(IERC20.transferFrom, (seller.assistant, sender, twin.amount));
+                    } else if (tokenType == TokenType.NonFungibleToken) {
+                        // Token transfer order is ascending to avoid overflow when twin supply is unlimited
+                        if (twin.supplyAvailable == type(uint256).max) {
+                            twin.tokenId++;
+                        } else {
+                            // Token transfer order is descending
+                            tokenId += twin.supplyAvailable;
+                        }
+
+                        // ERC-721 style transfer
+                        data = abi.encodeWithSignature(
+                            "safeTransferFrom(address,address,uint256,bytes)",
+                            seller.assistant,
+                            sender,
+                            tokenId,
+                            ""
+                        );
+                    } else if (twin.tokenType == TokenType.MultiToken) {
+                        // ERC-1155 style transfer
+                        data = abi.encodeWithSignature(
+                            "safeTransferFrom(address,address,uint256,uint256,bytes)",
+                            seller.assistant,
+                            sender,
+                            tokenId,
+                            twin.amount,
+                            ""
+                        );
                     }
 
-                    // ERC-721 style transfer
-                    data = abi.encodeWithSignature(
-                        "safeTransferFrom(address,address,uint256,bytes)",
-                        seller.assistant,
-                        sender,
-                        tokenId,
-                        ""
-                    );
-                } else if (twin.tokenType == TokenType.MultiToken) {
-                    // ERC-1155 style transfer
-                    data = abi.encodeWithSignature(
-                        "safeTransferFrom(address,address,uint256,uint256,bytes)",
-                        seller.assistant,
-                        sender,
-                        tokenId,
-                        twin.amount,
-                        ""
-                    );
-                }
-
-                // Make call only if code at address exists
-                if (twin.tokenAddress.isContract()) {
-                    (success, result) = twin.tokenAddress.call(data);
+                    // Make call only if code at address exists
+                    if (twin.tokenAddress.isContract()) {
+                        (success, result) = twin.tokenAddress.call(data);
+                    }
                 }
 
                 // If token transfer failed
