@@ -481,7 +481,9 @@ describe("IBosonVoucher", function () {
           }
 
           // Token that is inside a range, but wasn't preminted yet should not have an owner
-          await expect(bosonVoucher.ownerOf(start + amount + 1)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+          await expect(bosonVoucher.ownerOf(start + amount + 1)).to.be.revertedWith(
+            RevertReasons.ERC721_INVALID_TOKEN_ID
+          );
 
           // Contract's balance should be updated for the total mint amount
           let contractBalanceAfter = await bosonVoucher.balanceOf(await bosonVoucher.getAddress());
@@ -509,7 +511,7 @@ describe("IBosonVoucher", function () {
 
         // Token that is inside a range, but wasn't preminted yet should not have an owner
         await expect(bosonVoucher.ownerOf(start + BigInt(amount) + 1n)).to.be.revertedWith(
-          RevertReasons.ERC721_NON_EXISTENT
+          RevertReasons.ERC721_INVALID_TOKEN_ID
         );
 
         // Seller's balance should be updated for the total mint amount
@@ -658,7 +660,7 @@ describe("IBosonVoucher", function () {
         const startId = deriveTokenId(offerId, start);
         for (let i = 0; i < Number(amount); i++) {
           let tokenId = startId + BigInt(i);
-          await expect(bosonVoucher.ownerOf(tokenId)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+          await expect(bosonVoucher.ownerOf(tokenId)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
         }
 
         // Seller's balance should be decreased for the total burn amount
@@ -737,93 +739,104 @@ describe("IBosonVoucher", function () {
         });
       });
 
-      it("Should skip all vouchers were already committed", async function () {
-        // make offer not voided so premint is possible
-        offer.voided = false;
-        // make offer not voided
-        offer.id = offerId = ++offerId;
-        length = amount = "10";
-        start = "1";
-
-        const assistantAddress = await assistant.getAddress();
-
-        await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
-
-        await offerHandler.connect(assistant).reserveRange(offerId, length, assistantAddress);
-
-        await bosonVoucher.connect(assistant).preMint(offerId, length);
-
-        let committedVouchers = [2, 4].map((tokenId) => deriveTokenId(offerId, tokenId));
-
-        // Transfer some preminted vouchers
-        const buyerAddress = await buyer.getAddress();
-        await Promise.all(
-          committedVouchers.map((tokenId) =>
-            bosonVoucher.connect(assistant).transferFrom(assistantAddress, buyerAddress, tokenId)
-          )
-        );
-
-        await offerHandler.connect(assistant).voidOffer(offerId);
-
+      it("Should burn all vouchers if there is less than MaxPremintedVouchers to burn", async function () {
         // Burn tokens, test for event
         let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
 
-        // All burned tokens should not have an owner, but commited ones should
-        const startId = deriveTokenId(offerId, start);
-        for (let i = 0; i < Number(length); i++) {
-          let tokenId = startId + BigInt(i);
-          if (committedVouchers.includes(tokenId)) {
-            // Check that owner is buyer.
-            expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyerAddress);
-          } else {
-            // Check that Transfer event was emitted and owner does not exist anymore
-            await expect(tx)
-              .to.emit(bosonVoucher, "Transfer")
-              .withArgs(await assistant.getAddress(), ZeroAddress, tokenId);
-            await expect(bosonVoucher.ownerOf(tokenId)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
-          }
-        }
+        // Number of events emitted should be equal to amount
+        assert.equal((await tx.wait()).logs.length, Number(amount), "Wrong number of events emitted");
 
         // Last burned id should be updated
         const tokenIdStart = deriveTokenId(offerId, start);
         const lastBurnedId = tokenIdStart + BigInt(amount) - 1n;
-        const range = new Range(
-          tokenIdStart.toString(),
-          length,
-          amount,
-          lastBurnedId.toString(),
-          await assistant.getAddress()
-        );
+        const range = new Range(tokenIdStart.toString(), length, amount, lastBurnedId.toString(), assistant.address);
         const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
         assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+
+        // Second call should revert since there's nothing to burn
+        await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId)).to.be.revertedWith(
+          RevertReasons.NOTHING_TO_BURN
+        );
       });
 
-      it("Burning is possible if offer not voided, but just expired", async function () {
-        // make offer not voided so premint is possible
-        offer.voided = false;
-        // make offer not voided
-        offer.id = offerId = ++offerId;
+      context("Test that require non-voided offer", function () {
+        let assistantAddress;
 
-        await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+        beforeEach(async function () {
+          // make offer not voided so premint is possible
+          offer.voided = false;
+          // make offer not voided
+          offer.id = offerId = ++offerId;
+          length = amount = "10";
+          start = "1";
 
-        await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress());
+          assistantAddress = await assistant.getAddress();
+          await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+          await offerHandler.connect(assistant).reserveRange(offerId, length, assistantAddress);
+          await bosonVoucher.connect(assistant).preMint(offerId, length);
+        });
 
-        // Mint another 10 vouchers, so that there are 15 in total
-        await bosonVoucher.connect(assistant).preMint(offerId, 10);
+        it("Should skip all vouchers that were already committed", async function () {
+          let committedVouchers = [2, 4].map((tokenId) => deriveTokenId(offerId, tokenId));
 
-        // skip to after offer expiration
-        await setNextBlockTimestamp(Number(BigInt(offerDates.validUntil) + 1n));
+          // Transfer some preminted vouchers
+          const buyerAddress = await buyer.getAddress();
+          await Promise.all(
+            committedVouchers.map((tokenId) =>
+              bosonVoucher.connect(assistant).transferFrom(assistantAddress, buyerAddress, tokenId)
+            )
+          );
 
-        // Burn tokens, test for event
-        const tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+          await offerHandler.connect(assistant).voidOffer(offerId);
 
-        // Expect an event for every burn
-        start = deriveTokenId(offerId, start);
-        for (let i = 0; i < Number(amount); i++) {
-          await expect(tx)
-            .to.emit(bosonVoucher, "Transfer")
-            .withArgs(await assistant.getAddress(), ZeroAddress, start + BigInt(i));
-        }
+          // Burn tokens, test for event
+          let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+
+          // All burned tokens should not have an owner, but committed ones should
+          const startId = deriveTokenId(offerId, start);
+          for (let i = 0; i < Number(length); i++) {
+            let tokenId = startId + BigInt(i);
+            if (committedVouchers.includes(tokenId)) {
+              // Check that owner is buyer.
+              expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyerAddress);
+            } else {
+              // Check that Transfer event was emitted and owner does not exist anymore
+              await expect(tx)
+                .to.emit(bosonVoucher, "Transfer")
+                .withArgs(await assistant.getAddress(), ZeroAddress, tokenId);
+              await expect(bosonVoucher.ownerOf(tokenId)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
+            }
+          }
+
+          // Last burned id should be updated
+          const tokenIdStart = deriveTokenId(offerId, start);
+          const lastBurnedId = tokenIdStart + BigInt(amount) - 1n;
+          const range = new Range(
+            tokenIdStart.toString(),
+            length,
+            amount,
+            lastBurnedId.toString(),
+            await assistant.getAddress()
+          );
+          const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offerId));
+          assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
+        });
+
+        it("Burning is possible if offer not voided, but just expired", async function () {
+          // skip to after offer expiration
+          await setNextBlockTimestamp(Number(BigInt(offerDates.validUntil) + 1n));
+
+          // Burn tokens, test for event
+          const tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+
+          // Expect an event for every burn
+          start = deriveTokenId(offerId, start);
+          for (let i = 0; i < Number(amount); i++) {
+            await expect(tx)
+              .to.emit(bosonVoucher, "Transfer")
+              .withArgs(await assistant.getAddress(), ZeroAddress, start + BigInt(i));
+          }
+        });
       });
 
       context("💔 Revert Reasons", async function () {
@@ -848,9 +861,7 @@ describe("IBosonVoucher", function () {
           offer.id = offerId = ++offerId;
 
           await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
-
           await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress());
-
           // Mint another 10 vouchers, so that there are 15 in total
           await bosonVoucher.connect(assistant).preMint(offerId, 10);
 
@@ -1003,7 +1014,7 @@ describe("IBosonVoucher", function () {
           it("Token does not exist", async function () {
             let tokenId = "10";
             await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
-              RevertReasons.ERC721_NON_EXISTENT
+              RevertReasons.ERC721_INVALID_TOKEN_ID
             );
           });
         });
@@ -1099,7 +1110,7 @@ describe("IBosonVoucher", function () {
             if (i < currentRange.start) {
               // tokenId not in range
               await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
-                RevertReasons.ERC721_NON_EXISTENT
+                RevertReasons.ERC721_INVALID_TOKEN_ID
               );
             } else if (i <= currentRangeMintEndId) {
               // tokenId in range and minted. Seller should be the owner
@@ -1108,7 +1119,7 @@ describe("IBosonVoucher", function () {
             } else if (i <= currentRangeEndId) {
               // tokenId still in range, but not minted yet
               await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
-                RevertReasons.ERC721_NON_EXISTENT
+                RevertReasons.ERC721_INVALID_TOKEN_ID
               );
             } else {
               // tokenId outside the current range
@@ -1122,7 +1133,7 @@ describe("IBosonVoucher", function () {
               // Technically, next range could be consecutive and next call should return seller's address
               // But range construction in this test ensures gaps between ranges
               await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
-                RevertReasons.ERC721_NON_EXISTENT
+                RevertReasons.ERC721_INVALID_TOKEN_ID
               );
             }
           }
@@ -1161,7 +1172,9 @@ describe("IBosonVoucher", function () {
           endTokenId = deriveTokenId(offerId, endExchangeId);
 
           for (let i = startTokenId; i < endTokenId; i = i + 1n) {
-            await expect(bosonVoucher.connect(rando).ownerOf(i)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+            await expect(bosonVoucher.connect(rando).ownerOf(i)).to.be.revertedWith(
+              RevertReasons.ERC721_INVALID_TOKEN_ID
+            );
           }
 
           // Second range - preminted tokens
@@ -1180,7 +1193,9 @@ describe("IBosonVoucher", function () {
           endTokenId = deriveTokenId(nextOfferId, endExchangeId);
 
           for (let i = startTokenId; i < endTokenId; i = i + 1n) {
-            await expect(bosonVoucher.connect(rando).ownerOf(i)).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+            await expect(bosonVoucher.connect(rando).ownerOf(i)).to.be.revertedWith(
+              RevertReasons.ERC721_INVALID_TOKEN_ID
+            );
           }
         });
 
@@ -1188,7 +1203,7 @@ describe("IBosonVoucher", function () {
           it("Token is outside any range and not minted", async function () {
             let tokenId = "200000";
             await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
-              RevertReasons.ERC721_NON_EXISTENT
+              RevertReasons.ERC721_INVALID_TOKEN_ID
             );
           });
 
@@ -1199,7 +1214,7 @@ describe("IBosonVoucher", function () {
             // None of reserved but not preminted tokens should have an owner
             for (let i = startTokenId; i < endTokenId; i = i + 1n) {
               await expect(bosonVoucher.connect(rando).ownerOf(i)).to.be.revertedWith(
-                RevertReasons.ERC721_NON_EXISTENT
+                RevertReasons.ERC721_INVALID_TOKEN_ID
               );
             }
           });
@@ -1226,7 +1241,7 @@ describe("IBosonVoucher", function () {
 
             // Token should have no owner
             await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
-              RevertReasons.ERC721_NON_EXISTENT
+              RevertReasons.ERC721_INVALID_TOKEN_ID
             );
           });
 
@@ -1245,7 +1260,7 @@ describe("IBosonVoucher", function () {
 
             // Token should have no owner
             await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
-              RevertReasons.ERC721_NON_EXISTENT
+              RevertReasons.ERC721_INVALID_TOKEN_ID
             );
           });
         });
@@ -1500,7 +1515,7 @@ describe("IBosonVoucher", function () {
                   bosonVoucher
                     .connect(assistant)
                     [selector](await assistant.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs)
-                ).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+                ).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
               });
 
               it("Transfer preminted voucher, which was not committed but burned already", async function () {
@@ -1515,7 +1530,7 @@ describe("IBosonVoucher", function () {
                   bosonVoucher
                     .connect(assistant)
                     [selector](await assistant.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs)
-                ).to.be.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+                ).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
               });
 
               it("Transfer preminted voucher, where offer was voided", async function () {
@@ -1612,11 +1627,6 @@ describe("IBosonVoucher", function () {
         expect(tokenURI).eq(metadataUri);
       });
 
-      it("should return empty tokenURI if token does not exist", async function () {
-        const tokenURI = await bosonVoucher.tokenURI(10);
-        expect(tokenURI).eq("");
-      });
-
       context("pre-minted", async function () {
         let start, tokenId;
         beforeEach(async function () {
@@ -1643,6 +1653,12 @@ describe("IBosonVoucher", function () {
 
           const tokenURI = await bosonVoucher.tokenURI(tokenId);
           expect(tokenURI).eq(metadataUri);
+        });
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("should revert if tokenId does not exist", async function () {
+          await expect(bosonVoucher.tokenURI(10)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
         });
       });
     });
@@ -2060,6 +2076,16 @@ describe("IBosonVoucher", function () {
       const event = getEvent(receipt, mockSimpleContract, "TestEvent");
 
       assert.equal(event._value.toString(), "1");
+    });
+
+    it("Should return the external contract return value", async function () {
+      const calldata = mockSimpleContract.interface.encodeFunctionData("testReturn");
+      const returnedValueRaw = await bosonVoucher
+        .connect(assistant)
+        .callExternalContract.staticCall(await mockSimpleContract.getAddress(), calldata);
+      const abiCoder = new ethers.AbiCoder();
+      const [returnedValue] = abiCoder.decode(["string"], returnedValueRaw);
+      expect(returnedValue).to.equal("TestValue");
     });
 
     context("💔 Revert Reasons", async function () {
