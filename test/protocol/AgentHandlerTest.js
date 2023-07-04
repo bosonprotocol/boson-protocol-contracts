@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ZeroAddress } = hre.ethers;
 const { expect } = require("chai");
 
 const Agent = require("../../scripts/domain/Agent");
@@ -51,7 +51,7 @@ describe("AgentHandler", function () {
       invalidAccountId = "666";
 
       // Create a valid agent, then set fields in tests directly
-      agent = mockAgent(other1.address);
+      agent = mockAgent(await other1.getAddress());
       expect(agent.isValid()).is.true;
 
       // How that agent looks as a returned struct
@@ -68,7 +68,7 @@ describe("AgentHandler", function () {
         // Create an agent, testing for the event
         await expect(accountHandler.connect(rando).createAgent(agent))
           .to.emit(accountHandler, "AgentCreated")
-          .withArgs(agent.id, agentStruct, rando.address);
+          .withArgs(agent.id, agentStruct, await rando.getAddress());
       });
 
       it("should update state", async function () {
@@ -93,7 +93,7 @@ describe("AgentHandler", function () {
         // Create an agent, testing for the event
         await expect(accountHandler.connect(rando).createAgent(agent))
           .to.emit(accountHandler, "AgentCreated")
-          .withArgs(nextAccountId, agentStruct, rando.address);
+          .withArgs(nextAccountId, agentStruct, await rando.getAddress());
 
         // wrong agent id should not exist
         [exists] = await accountHandler.connect(rando).getAgent(agent.id);
@@ -115,7 +115,7 @@ describe("AgentHandler", function () {
         // Create an agent, testing for the event
         await expect(accountHandler.connect(rando).createAgent(agent))
           .to.emit(accountHandler, "AgentCreated")
-          .withArgs(nextAccountId, agentStruct, rando.address);
+          .withArgs(nextAccountId, agentStruct, await rando.getAddress());
 
         // Get the agent as a struct
         [, agentStruct] = await accountHandler.connect(rando).getAgent(agent.id);
@@ -141,7 +141,7 @@ describe("AgentHandler", function () {
         // Create an agent, testing for the event
         await expect(accountHandler.connect(rando).createAgent(agent))
           .to.emit(accountHandler, "AgentCreated")
-          .withArgs(nextAccountId, agentStruct, rando.address);
+          .withArgs(nextAccountId, agentStruct, await rando.getAddress());
 
         // Get the agent as a struct
         [, agentStruct] = await accountHandler.connect(rando).getAgent(agent.id);
@@ -172,7 +172,7 @@ describe("AgentHandler", function () {
         });
 
         it("addresses are the zero address", async function () {
-          agent.wallet = ethers.constants.AddressZero;
+          agent.wallet = ZeroAddress;
 
           // Attempt to Create an Agent, expecting revert
           await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
@@ -212,7 +212,7 @@ describe("AgentHandler", function () {
       });
 
       it("should emit an AgentUpdated event with correct values if values change", async function () {
-        agent.wallet = other2.address;
+        agent.wallet = await other2.getAddress();
         agent.active = false;
         agent.feePercentage = "3000"; //30%
         expect(agent.isValid()).is.true;
@@ -226,18 +226,18 @@ describe("AgentHandler", function () {
         //Update a agent, testing for the event
         await expect(accountHandler.connect(other1).updateAgent(agent))
           .to.emit(accountHandler, "AgentUpdated")
-          .withArgs(agent.id, expectedAgentStruct, other1.address);
+          .withArgs(agent.id, expectedAgentStruct, await other1.getAddress());
       });
 
       it("should emit an AgentUpdated event with correct values if values stay the same", async function () {
         //Update a agent, testing for the event
         await expect(accountHandler.connect(other1).updateAgent(agent))
           .to.emit(accountHandler, "AgentUpdated")
-          .withArgs(agent.id, agentStruct, other1.address);
+          .withArgs(agent.id, agentStruct, await other1.getAddress());
       });
 
       it("should update state of all fields except Id and active flag", async function () {
-        agent.wallet = other2.address;
+        agent.wallet = await other2.getAddress();
         agent.active = false;
         agent.feePercentage = "3000"; //30%
         expect(agent.isValid()).is.true;
@@ -300,7 +300,7 @@ describe("AgentHandler", function () {
       });
 
       it("should update only wallet address", async function () {
-        agent.wallet = other2.address;
+        agent.wallet = await other2.getAddress();
         expect(agent.isValid()).is.true;
 
         agentStruct = agent.toStruct();
@@ -323,7 +323,7 @@ describe("AgentHandler", function () {
       it("should update the correct agent", async function () {
         // Confgiure another agent
         id2 = nextAccountId++;
-        agent2 = mockAgent(other3.address);
+        agent2 = mockAgent(await other3.getAddress());
         agent2.id = id2.toString();
         expect(agent2.isValid()).is.true;
 
@@ -332,10 +332,10 @@ describe("AgentHandler", function () {
         //Create agent2, testing for the event
         await expect(accountHandler.connect(rando).createAgent(agent2))
           .to.emit(accountHandler, "AgentCreated")
-          .withArgs(agent2.id, agent2Struct, rando.address);
+          .withArgs(agent2.id, agent2Struct, await rando.getAddress());
 
         //Update first agent
-        agent.wallet = other2.address;
+        agent.wallet = await other2.getAddress();
         agent.feePercentage = "3000"; //30%
         expect(agent.isValid()).is.true;
 
@@ -366,21 +366,21 @@ describe("AgentHandler", function () {
       });
 
       it("should be able to only update second time with new wallet address", async function () {
-        agent.wallet = other2.address;
+        agent.wallet = await other2.getAddress();
         agentStruct = agent.toStruct();
 
         // Update agent, testing for the event
         await expect(accountHandler.connect(other1).updateAgent(agent))
           .to.emit(accountHandler, "AgentUpdated")
-          .withArgs(agent.id, agentStruct, other1.address);
+          .withArgs(agent.id, agentStruct, await other1.getAddress());
 
-        agent.wallet = other3.address;
+        agent.wallet = await other3.getAddress();
         agentStruct = agent.toStruct();
 
         // Update agent, testing for the event
         await expect(accountHandler.connect(other2).updateAgent(agent))
           .to.emit(accountHandler, "AgentUpdated")
-          .withArgs(agent.id, agentStruct, other2.address);
+          .withArgs(agent.id, agentStruct, await other2.getAddress());
 
         // Attempt to update the agent with original wallet address, expecting revert
         await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(RevertReasons.NOT_AGENT_WALLET);
@@ -394,7 +394,7 @@ describe("AgentHandler", function () {
         // Update agent, testing for the event
         await expect(accountHandler.connect(other1).updateAgent(agent))
           .to.emit(accountHandler, "AgentUpdated")
-          .withArgs(agent.id, agentStruct, other1.address);
+          .withArgs(agent.id, agentStruct, await other1.getAddress());
 
         // Get the agent as a struct
         [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
@@ -418,7 +418,7 @@ describe("AgentHandler", function () {
         // Update agent, testing for the event
         await expect(accountHandler.connect(other1).updateAgent(agent))
           .to.emit(accountHandler, "AgentUpdated")
-          .withArgs(agent.id, agentStruct, other1.address);
+          .withArgs(agent.id, agentStruct, await other1.getAddress());
 
         // Get the agent as a struct
         [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
@@ -463,7 +463,7 @@ describe("AgentHandler", function () {
         });
 
         it("wallet address is the zero address", async function () {
-          agent.wallet = ethers.constants.AddressZero;
+          agent.wallet = ZeroAddress;
 
           // Attempt to update the agent, expecting revert
           await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(
@@ -486,7 +486,7 @@ describe("AgentHandler", function () {
         it("wallet address is not unique to this agent Id", async function () {
           id = await accountHandler.connect(rando).getNextAccountId();
 
-          agent2 = mockAgent(other2.address);
+          agent2 = mockAgent(await other2.getAddress());
           agent2.id = id.toString();
 
           agent2Struct = agent2.toStruct();
@@ -494,10 +494,10 @@ describe("AgentHandler", function () {
           //Create second agent, testing for the event
           await expect(accountHandler.connect(rando).createAgent(agent2))
             .to.emit(accountHandler, "AgentCreated")
-            .withArgs(agent2.id, agent2Struct, rando.address);
+            .withArgs(agent2.id, agent2Struct, await rando.getAddress());
 
           //Set wallet address value to be same as first agent created in Agent Methods beforeEach
-          agent2.wallet = other1.address; //already being used by agent 1
+          agent2.wallet = await other1.getAddress(); //already being used by agent 1
 
           // Attempt to update agent 2 with non-unique wallet address, expecting revert
           await expect(accountHandler.connect(other2).updateAgent(agent2)).to.revertedWith(

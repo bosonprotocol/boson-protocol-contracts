@@ -51,7 +51,7 @@ class Condition {
 
     return Condition.fromObject({
       method: parseInt(method),
-      tokenType,
+      tokenType: Number(tokenType),
       tokenAddress,
       tokenId: tokenId.toString(),
       threshold: threshold.toString(),
