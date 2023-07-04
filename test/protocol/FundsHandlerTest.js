@@ -220,7 +220,7 @@ describe("IBosonFundsHandler", function () {
           .withArgs(seller.id, rando.address, ethers.constants.AddressZero, depositAmount);
       });
 
-      it.only("should update state", async function () {
+      it("should update state", async function () {
         // Deposit token
         await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, depositAmount);
 
@@ -236,10 +236,8 @@ describe("IBosonFundsHandler", function () {
           .connect(rando)
           .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount, { value: depositAmount });
 
-        availableFundsAddresses.push(ethers.constants.AddressZero)
-
         // Get new on chain state
-        returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
+        returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, [...availableFundsAddresses, ethers.constants.AddressZero]));
 
         // Chain state should match the expected available funds
         expectedAvailableFunds.funds.push(new Funds(ethers.constants.AddressZero, "Native currency", depositAmount));
@@ -519,6 +517,8 @@ describe("IBosonFundsHandler", function () {
         it("should update state", async function () {
           // WITHDRAW ONE TOKEN PARTIALLY
 
+          availableFundsAddresses = [...availableFundsAddresses, ethers.constants.AddressZero];
+
           // Read on chain state
           sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
           const treasuryBalanceBefore = await ethers.provider.getBalance(treasury.address);
@@ -586,8 +586,9 @@ describe("IBosonFundsHandler", function () {
           const buyerBalanceAfter = await mockToken.balanceOf(buyer.address);
 
           // Chain state should match the expected available funds after the withdrawal
-          // Since all tokens are withdrawn, token should be removed from the list
+          // Since all tokens are withdrawn, getAvailableFunds should return 0 for token
           expectedBuyerAvailableFunds = new FundsList([
+            new Funds(mockToken.address, "Foreign20", '0'),
             new Funds(ethers.constants.AddressZero, "Native currency", buyerPayoff),
           ]);
           expect(buyerAvailableFunds).to.eql(
@@ -623,8 +624,12 @@ describe("IBosonFundsHandler", function () {
           const treasuryTokenBalanceAfter = await mockToken.balanceOf(treasury.address);
 
           // Chain state should match the expected available funds after the withdrawal
-          // Funds available should be an empty list
-          expectedSellerAvailableFunds = new FundsList([]);
+          // Funds available should be zero
+          expectedSellerAvailableFunds = new FundsList([
+             new Funds(mockToken.address, "Foreign20", "0"),
+            new Funds(ethers.constants.AddressZero, "Native currency",  "0"),
+          ]);
+
           expect(sellersAvailableFunds).to.eql(
             expectedSellerAvailableFunds,
             "Seller available funds mismatch after withdrawal"
@@ -3863,10 +3868,10 @@ describe("IBosonFundsHandler", function () {
 
             it("should update state", async function () {
               // Read on chain state
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-              buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-              protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-              agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
+              buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
+              protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
+              agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses));
 
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
@@ -3895,10 +3900,10 @@ describe("IBosonFundsHandler", function () {
                 "Foreign20",
                 ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
               );
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-              buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-              protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-              agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
+              buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
+              protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
+              agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses));
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3944,19 +3949,23 @@ describe("IBosonFundsHandler", function () {
               });
 
               it("should update state", async function () {
+                availableFundsAddresses.push(ethers.constants.AddressZero)
                 // Read on chain state
-                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-                buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-                protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-                agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
+                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
+                buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
+                protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
+                agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses));
 
                 // Chain state should match the expected available funds
                 expectedSellerAvailableFunds = new FundsList([
+                  new Funds(mockToken.address, "Foreign20", "0"),
                   new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
                 ]);
-                expectedBuyerAvailableFunds = new FundsList([]);
-                expectedProtocolAvailableFunds = new FundsList([]);
-                expectedAgentAvailableFunds = new FundsList([]);
+
+                const emptyFundsList = new FundsList([new Funds(mockToken.address, "Foreign20", "0"), new Funds(ethers.constants.AddressZero, "Native currency", "0")])
+                expectedBuyerAvailableFunds = emptyFundsList;
+                expectedProtocolAvailableFunds = emptyFundsList;
+                expectedAgentAvailableFunds = emptyFundsList;
                 expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                 expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                 expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3970,14 +3979,16 @@ describe("IBosonFundsHandler", function () {
                 // seller: sellerDeposit;
                 // protocol: 0
                 // agent: 0
-                expectedBuyerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", buyerPayoff);
-                expectedSellerAvailableFunds.funds.push(
-                  new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
-                );
-                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-                buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-                protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-                agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
+                expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff), new Funds(ethers.constants.AddressZero, "Native currency", "0")]);
+                expectedSellerAvailableFunds = new FundsList([
+                  new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString()),
+                  new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
+                ]);
+
+                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
+                buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
+                protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
+                agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses));
                 expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                 expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                 expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
