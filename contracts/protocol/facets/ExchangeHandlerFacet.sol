@@ -11,10 +11,10 @@ import { DisputeBase } from "../bases/DisputeBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
-import { Address } from "../../ext_libs/Address.sol";
 import { IERC1155 } from "../../interfaces/IERC1155.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
+import { Address } from "../../ext_libs/Address.sol";
 
 /**
  * @title ExchangeHandlerFacet
@@ -327,14 +327,17 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         (sellerExists, sellerId) = getSellerIdByAssistant(msgSender());
 
         // Get the offer, which will definitely exist
-        Offer storage offer;
-        (, offer) = fetchOffer(exchange.offerId);
+        uint256 offerId = exchange.offerId;
+        (, Offer storage offer) = fetchOffer(offerId);
 
         // Only seller's assistant may call
         require(sellerExists && offer.sellerId == sellerId, NOT_ASSISTANT);
 
-        // Revoke the voucher
-        revokeVoucherInternal(exchange);
+        // Finalize the exchange, burning the voucher
+        finalizeExchange(exchange, ExchangeState.Revoked);
+
+        // Notify watchers of state change
+        emit VoucherRevoked(offerId, _exchangeId, msgSender());
     }
 
     /**
@@ -475,14 +478,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Set the exchange state to the Redeemed
         exchange.state = ExchangeState.Redeemed;
 
-        // Transfer any bundled twins to buyer
-        // N.B.: If voucher was revoked because transfer twin failed, then voucher was already burned
-        bool shouldBurnVoucher = transferTwins(exchange, voucher);
+        // Burn the voucher
+        burnVoucher(exchange);
 
-        if (shouldBurnVoucher) {
-            // Burn the voucher
-            burnVoucher(exchange);
-        }
+        // Transfer any bundled twins to buyer
+        transferTwins(exchange, voucher);
 
         // Notify watchers of state change
         emit VoucherRedeemed(offerId, _exchangeId, msgSender());
@@ -647,24 +647,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Revokes a voucher.
-     *
-     * Emits a VoucherRevoked event if successful.
-     *
-     * Reverts if
-     * - Exchange is not in Committed state
-     *
-     * @param _exchange - the exchange to revoke
-     */
-    function revokeVoucherInternal(Exchange storage _exchange) internal {
-        // Finalize the exchange, burning the voucher
-        finalizeExchange(_exchange, ExchangeState.Revoked);
-
-        // Notify watchers of state change
-        emit VoucherRevoked(_exchange.offerId, _exchange.id, msgSender());
-    }
-
-    /**
      * @notice Burns the voucher associated with a given exchange.
      *
      * Emits ERC721 Transfer event in call stack if successful.
@@ -692,22 +674,17 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @notice Transfers bundled twins associated with an exchange to the buyer.
      *
      * Emits ERC20 Transfer, ERC721 Transfer, or ERC1155 TransferSingle events in call stack if successful.
+     * Emits TwinTransferred if twin transfer was successfull
+     * Emits TwinTransferFailed if twin transfer failed
      *
-     * Reverts if
-     * - A twin transfer fails
+     * If one of the twin transfers fails, the function will continue to transfer the remaining twins and
+     * automatically raises a dispute for the exchange.
      *
      * @param _exchange - the exchange for which twins should be transferred
-     * @return shouldBurnVoucher - whether or not the voucher should be burned
      */
-    function transferTwins(
-        Exchange storage _exchange,
-        Voucher storage _voucher
-    ) internal returns (bool shouldBurnVoucher) {
+    function transferTwins(Exchange storage _exchange, Voucher storage _voucher) internal {
         // See if there is an associated bundle
         (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
-
-        // Voucher should be burned in the happy path
-        shouldBurnVoucher = true;
 
         // Transfer the twins
         if (exists) {
@@ -719,11 +696,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             // Get seller account
             (, Seller storage seller, ) = fetchSeller(bundle.sellerId);
-
-            // Variable to track whether some twin transfer failed
-            bool transferFailed;
-
-            uint256 exchangeId = _exchange.id;
 
             ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
@@ -749,54 +721,56 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         : twin.supplyAvailable - twin.amount;
                 }
 
-                if (tokenType == TokenType.FungibleToken) {
-                    // ERC-20 style transfer
-                    (success, result) = twin.tokenAddress.call(
-                        abi.encodeWithSignature(
-                            "transferFrom(address,address,uint256)",
-                            seller.assistant,
-                            sender,
-                            twin.amount
-                        )
-                    );
-                } else if (tokenType == TokenType.NonFungibleToken) {
-                    // Token transfer order is ascending to avoid overflow when twin supply is unlimited
-                    if (twin.supplyAvailable == type(uint256).max) {
-                        twin.tokenId++;
-                    } else {
-                        // Token transfer order is descending
-                        tokenId = twin.tokenId + twin.supplyAvailable;
-                    }
-                    // ERC-721 style transfer
-                    (success, result) = twin.tokenAddress.call(
-                        abi.encodeWithSignature(
+                // Calldata to transfer the twin
+                {
+                    bytes memory data;
+
+                    if (tokenType == TokenType.FungibleToken) {
+                        // ERC-20 style transfer
+                        data = abi.encodeCall(IERC20.transferFrom, (seller.assistant, sender, twin.amount));
+                    } else if (tokenType == TokenType.NonFungibleToken) {
+                        // Token transfer order is ascending to avoid overflow when twin supply is unlimited
+                        if (twin.supplyAvailable == type(uint256).max) {
+                            twin.tokenId++;
+                        } else {
+                            // Token transfer order is descending
+                            tokenId += twin.supplyAvailable;
+                        }
+
+                        // ERC-721 style transfer
+                        data = abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,bytes)",
                             seller.assistant,
                             sender,
                             tokenId,
                             ""
-                        )
-                    );
-                } else if (twin.tokenType == TokenType.MultiToken) {
-                    // ERC-1155 style transfer
-                    (success, result) = twin.tokenAddress.call(
-                        abi.encodeWithSignature(
+                        );
+                    } else if (twin.tokenType == TokenType.MultiToken) {
+                        // ERC-1155 style transfer
+                        data = abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
                             seller.assistant,
                             sender,
                             tokenId,
                             twin.amount,
                             ""
-                        )
-                    );
+                        );
+                    }
+
+                    // Make call only if code at address exists
+                    if (twin.tokenAddress.isContract()) {
+                        (success, result) = twin.tokenAddress.call(data);
+                    }
                 }
 
                 // If token transfer failed
                 if (!success || (result.length > 0 && !abi.decode(result, (bool)))) {
-                    transferFailed = true;
-                    emit TwinTransferFailed(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
+                    raiseDisputeInternal(_exchange, _voucher, seller.id);
+
+                    emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, twin.amount, sender);
                 } else {
                     // Store twin receipt on twinReceiptsByExchange
+                    uint256 exchangeId = _exchange.id;
                     TwinReceipt storage twinReceipt = lookups.twinReceiptsByExchange[exchangeId].push();
                     twinReceipt.twinId = twin.id;
                     twinReceipt.tokenAddress = twin.tokenAddress;
@@ -805,18 +779,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     twinReceipt.tokenType = twin.tokenType;
 
                     emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
-                }
-            }
-
-            if (transferFailed) {
-                // Raise a dispute if caller is a contract
-                if (sender.isContract()) {
-                    raiseDisputeInternal(_exchange, _voucher, seller.id);
-                } else {
-                    // Revoke voucher if caller is an EOA
-                    revokeVoucherInternal(_exchange);
-                    // N.B.: If voucher was revoked because transfer twin failed, then voucher was already burned
-                    shouldBurnVoucher = false;
                 }
             }
         }
