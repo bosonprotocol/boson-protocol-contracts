@@ -7,7 +7,13 @@ const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { calculateCloneAddress, setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util/utils.js");
+const {
+  calculateCloneAddress,
+  calculateBosonProxyAddress,
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
+} = require("../util/utils.js");
 const { VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockSeller, mockAuthToken, mockVoucherInitValues, accountId } = require("../util/mock");
@@ -68,9 +74,6 @@ describe("SellerHandler", function () {
     ({
       signers: [pauser, admin, treasury, rando, other1, other2, other3, other4, other5, other6, other7],
       contractInstances: { accountHandler, exchangeHandler, pauseHandler, configHandler },
-      extraReturnValues: {
-        proxy: { address: beaconProxyAddress },
-      },
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
@@ -98,6 +101,9 @@ describe("SellerHandler", function () {
       .withArgs(AuthTokenType.ENS, await mockAuthERC721Contract2.getAddress(), await deployer.getAddress());
 
     await mockAuthERC721Contract.connect(authTokenOwner).mint(8400, 1);
+
+    // Get the beacon proxy address
+    beaconProxyAddress = await calculateBosonProxyAddress(configHandler.address);
 
     // Get snapshot id
     snapshotId = await getSnapshot();

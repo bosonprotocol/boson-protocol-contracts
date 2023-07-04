@@ -17,6 +17,7 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const {
   setNextBlockTimestamp,
   calculateCloneAddress,
+  calculateBosonProxyAddress,
   applyPercentage,
   setupTestEnvironment,
   getSnapshot,
@@ -36,7 +37,6 @@ describe("[@skip-on-coverage] DR removes fee", function () {
   let exchangeId;
   let disputeResolverFeeNative;
   let snapshotId;
-  let beaconProxyAddress;
 
   before(async function () {
     accountId.next(true);
@@ -50,13 +50,12 @@ describe("[@skip-on-coverage] DR removes fee", function () {
       disputeHandler: "IBosonDisputeHandler",
     };
 
+    let protocolDiamondAddress;
     ({
+      diamondAddress: protocolDiamondAddress,
       signers: [admin, treasury, buyer, adminDR, treasuryDR],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
       protocolConfig: [, , { buyerEscalationDepositPercentage }],
-      extraReturnValues: {
-        proxy: { address: beaconProxyAddress },
-      },
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
@@ -64,6 +63,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     assistantDR = adminDR;
     clerk = clerkDR = { address: ZeroAddress };
 
+    const beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
     expectedCloneAddress = calculateCloneAddress(
       await accountHandler.getAddress(),
       beaconProxyAddress,

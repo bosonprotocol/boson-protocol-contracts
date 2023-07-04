@@ -16,6 +16,7 @@ const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   applyPercentage,
   calculateCloneAddress,
+  calculateBosonProxyAddress,
   setupTestEnvironment,
   getSnapshot,
   revertToSnapshot,
@@ -126,9 +127,6 @@ describe("IBosonOfferHandler", function () {
         ,
         { percentage: protocolFeePercentage, flatBoson: protocolFeeFlatBoson, buyerEscalationDepositPercentage },
       ],
-      extraReturnValues: {
-        proxy: { address: beaconProxyAddress },
-      },
     } = await setupTestEnvironment(contracts, { bosonTokenAddress: await bosonToken.getAddress() }));
 
     // make all account the same
@@ -136,6 +134,9 @@ describe("IBosonOfferHandler", function () {
     assistantDR = adminDR;
     clerk = clerkDR = { address: ZeroAddress };
     [deployer] = await getSigners();
+
+    // Get the beacon proxy address
+    beaconProxyAddress = await calculateBosonProxyAddress(configHandler.address);
 
     // Get snapshot id
     snapshotId = await getSnapshot();

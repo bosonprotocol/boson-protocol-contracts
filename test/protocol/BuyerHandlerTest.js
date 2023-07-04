@@ -6,7 +6,13 @@ const Buyer = require("../../scripts/domain/Buyer");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { calculateCloneAddress, setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util/utils.js");
+const {
+  calculateCloneAddress,
+  calculateBosonProxyAddress,
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
+} = require("../util/utils.js");
 const {
   mockOffer,
   mockSeller,
@@ -35,7 +41,6 @@ describe("BuyerHandler", function () {
   let bosonVoucher;
   let voucherInitValues;
   let snapshotId;
-  let beaconProxyAddress;
 
   before(async function () {
     accountId.next(true);
@@ -52,9 +57,6 @@ describe("BuyerHandler", function () {
     ({
       signers: [pauser, admin, treasury, rando, other1, other2, other3, other4],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, pauseHandler },
-      extraReturnValues: {
-        proxy: { address: beaconProxyAddress },
-      },
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
@@ -404,6 +406,7 @@ describe("BuyerHandler", function () {
             .connect(other1)
             .commitToOffer(await other1.getAddress(), offerId, { value: offer.price });
 
+          const beaconProxyAddress = await calculateBosonProxyAddress(accountHandler.address);
           const bosonVoucherCloneAddress = calculateCloneAddress(
             accountHandler.address,
             beaconProxyAddress,

@@ -15,6 +15,7 @@ const {
   prepareDataSignatureParameters,
   applyPercentage,
   calculateCloneAddress,
+  calculateBosonProxyAddress,
   setupTestEnvironment,
   getSnapshot,
   revertToSnapshot,
@@ -131,10 +132,7 @@ describe("IBosonFundsHandler", function () {
       },
       protocolConfig: [, , { percentage: protocolFeePercentage, buyerEscalationDepositPercentage }],
       diamondAddress: protocolDiamondAddress,
-      extraReturnValues: {
-        accessController,
-        proxy: { address: beaconProxyAddress },
-      },
+      extraReturnValues: { accessController },
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
@@ -146,6 +144,9 @@ describe("IBosonFundsHandler", function () {
 
     // Deploy the mock token
     [mockToken] = await deployMockTokens(["Foreign20"]);
+
+    // Get the beacon proxy address
+    beaconProxyAddress = await calculateBosonProxyAddress(configHandler.address);
 
     // Get snapshot id
     snapshotId = await getSnapshot();

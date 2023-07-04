@@ -50,6 +50,7 @@ const {
   calculateVoucherExpiry,
   prepareDataSignatureParameters,
   calculateCloneAddress,
+  calculateBosonProxyAddress,
   applyPercentage,
   deriveTokenId,
   setupTestEnvironment,
@@ -157,12 +158,7 @@ describe("IBosonExchangeHandler", function () {
         configHandler,
       },
       protocolConfig: [, , { percentage: protocolFeePercentage }],
-      extraReturnValues: {
-        bosonVoucher,
-        voucherImplementation,
-        accessController,
-        proxy: { address: beaconProxyAddress },
-      },
+      extraReturnValues: { bosonVoucher, voucherImplementation, accessController },
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts));
 
@@ -175,6 +171,9 @@ describe("IBosonExchangeHandler", function () {
 
     // Deploy the mock tokens
     [foreign20, foreign721, foreign1155] = await deployMockTokens(["Foreign20", "Foreign721", "Foreign1155"]);
+
+    // Get the beacon proxy address
+    beaconProxyAddress = await calculateBosonProxyAddress(configHandler.address);
 
     // Get snapshot id
     snapshotId = await getSnapshot();

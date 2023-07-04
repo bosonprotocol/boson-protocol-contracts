@@ -22,6 +22,7 @@ const {
 const {
   applyPercentage,
   calculateCloneAddress,
+  calculateBosonProxyAddress,
   calculateVoucherExpiry,
   setNextBlockTimestamp,
   setupTestEnvironment,
@@ -83,11 +84,7 @@ describe("IBosonVoucher", function () {
     ({
       signers: [protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, configHandler },
-      extraReturnValues: {
-        bosonVoucher,
-        accessController,
-        proxy: { address: beaconProxyAddress },
-      },
+      extraReturnValues: { bosonVoucher, accessController },
     } = await setupTestEnvironment(contracts, {
       forwarderAddress: [await forwarder.getAddress()],
     }));
@@ -111,6 +108,9 @@ describe("IBosonVoucher", function () {
     await bosonVoucherInit.initializeVoucher(sellerId, "1", await assistant.getAddress(), voucherInitValues);
 
     [foreign20] = await deployMockTokens(["Foreign20", "BosonToken"]);
+
+    // Get the beacon proxy address
+    beaconProxyAddress = await calculateBosonProxyAddress(configHandler.address);
 
     // Get snapshot id
     snapshotId = await getSnapshot();

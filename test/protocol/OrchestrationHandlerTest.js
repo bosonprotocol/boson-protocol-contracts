@@ -24,6 +24,7 @@ const {
   getEvent,
   applyPercentage,
   calculateCloneAddress,
+  calculateBosonProxyAddress,
   setupTestEnvironment,
   getSnapshot,
   revertToSnapshot,
@@ -162,9 +163,6 @@ describe("IBosonOrchestrationHandler", function () {
         { percentage: protocolFeePercentage, flatBoson: protocolFeeFlatBoson, buyerEscalationDepositPercentage },
       ],
       diamondAddress: protocolDiamondAddress,
-      extraReturnValues: {
-        proxy: { address: beaconProxyAddress },
-      },
     } = await setupTestEnvironment(contracts, { bosonTokenAddress: await bosonToken.getAddress() }));
 
     // make all account the same
@@ -173,6 +171,9 @@ describe("IBosonOrchestrationHandler", function () {
     clerk = clerkDR = { address: ZeroAddress };
 
     [deployer] = await getSigners();
+
+    // Get the beacon proxy address
+    beaconProxyAddress = await calculateBosonProxyAddress(configHandler.address);
 
     // Get snapshot id
     snapshotId = await getSnapshot();

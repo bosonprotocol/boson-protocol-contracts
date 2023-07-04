@@ -264,7 +264,7 @@ describe("ProtocolInitializationHandler", async function () {
         const configHandlerInterface = InterfaceIds[interfaceImplementers["ConfigHandlerFacet"]];
         const accountInterface = InterfaceIds[interfaceImplementers["AccountHandlerFacet"]];
 
-        version = encodeBytes32String("2.3.0");
+        version = encodeBytes32String("0.0.0");
         const calldataProtocolInitialization =
           deployedProtocolInitializationHandlerFacet.contract.interface.encodeFunctionData("initialize", [
             version,
@@ -306,7 +306,7 @@ describe("ProtocolInitializationHandler", async function () {
 
       const calldataTestFacet = testFacet.interface.encodeFunctionData("initialize", [await rando.getAddress()]);
 
-      version = encodeBytes32String("2.3.0");
+      version = encodeBytes32String("0.0.0");
       const calldataProtocolInitialization =
         deployedProtocolInitializationHandlerFacet.contract.interface.encodeFunctionData("initialize", [
           version,
@@ -586,7 +586,7 @@ describe("ProtocolInitializationHandler", async function () {
     context("💔 Revert Reasons", async function () {
       it("Current version is not 2.2.0", async () => {
         // Deploy higher version
-        const wrongVersion = "2.3.0";
+        const wrongVersion = "0.0.0";
 
         // Prepare calldata
         const calldataProtocolInitializationWrong =

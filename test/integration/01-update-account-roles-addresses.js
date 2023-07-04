@@ -19,6 +19,7 @@ const { oneMonth } = require("../util/constants");
 const {
   setNextBlockTimestamp,
   calculateCloneAddress,
+  calculateBosonProxyAddress,
   prepareDataSignatureParameters,
   applyPercentage,
   setupTestEnvironment,
@@ -49,19 +50,21 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       disputeHandler: "IBosonDisputeHandler",
     };
 
+    let protocolDiamondAddress;
     ({
+      diamondAddress: protocolDiamondAddress,
       signers: [admin, treasury, buyer, rando, adminDR, treasuryDR, agent],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
       protocolConfig: [, , { buyerEscalationDepositPercentage }],
-      extraReturnValues: {
-        proxy: { address: beaconProxyAddress },
-      },
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
     clerk = clerkDR = { address: ZeroAddress };
+
+    // Get the beacon proxy address
+    beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
 
     // Get snapshot id
     snapshotId = await getSnapshot();

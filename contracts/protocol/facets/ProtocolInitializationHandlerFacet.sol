@@ -6,6 +6,7 @@ import { IBosonProtocolInitializationHandler } from "../../interfaces/handlers/I
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { BeaconClientProxy } from "../../protocol/clients/proxy/BeaconClientProxy.sol";
 
 /**
  * @title BosonProtocolInitializationHandler
@@ -153,6 +154,9 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
 
             lookups.sellerCreator[sellerIds[i]] = sellerCreators[i];
         }
+
+        // Deploy a new voucher proxy
+        protocolAddresses().beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());
     }
 
     /**
