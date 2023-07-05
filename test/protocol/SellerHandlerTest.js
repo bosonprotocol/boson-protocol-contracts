@@ -1955,7 +1955,7 @@ describe("SellerHandler", function () {
       });
 
       it("should clean pending addresses update when calling updateSeller again", async function () {
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
         sellerStruct = seller.toStruct();
 
         // Update seller, testing for the event
@@ -1985,7 +1985,7 @@ describe("SellerHandler", function () {
           .to.emit(accountHandler, "SellerUpdatePending")
           .withArgs(seller.id, pendingSellerUpdateStruct, emptyAuthTokenStruct, admin.address);
 
-        seller.admin = pendingSellerUpdate.admin = ethers.constants.AddressZero;
+        seller.admin = pendingSellerUpdate.admin = ZeroAddress;
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
 
         authToken.tokenId = "123";
@@ -1998,7 +1998,7 @@ describe("SellerHandler", function () {
       });
 
       it("should clean pending auth token update when calling updateSeller again", async function () {
-        seller.admin = ethers.constants.AddressZero;
+        seller.admin = ZeroAddress;
 
         // Calling updateSeller for the first time, request to replace the admin with an auth token
         await expect(accountHandler.connect(admin).updateSeller(seller, authToken))
