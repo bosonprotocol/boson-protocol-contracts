@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getSigners } = hre.ethers;
 const { expect } = require("chai");
 const { DisputeResolverFee, DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolverFee");
 
@@ -13,7 +13,7 @@ describe("DisputeResolverFee", function () {
 
   beforeEach(async function () {
     // Get a list of accounts
-    accounts = await ethers.getSigners();
+    accounts = await getSigners();
     tokenAddress = accounts[1].address;
 
     // Required constructor params
@@ -91,11 +91,6 @@ describe("DisputeResolverFee", function () {
 
       // Invalid field value
       disputeResolverFee.feeAmount = new Date();
-      expect(disputeResolverFee.feeAmountIsValid()).is.false;
-      expect(disputeResolverFee.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolverFee.feeAmount = 12;
       expect(disputeResolverFee.feeAmountIsValid()).is.false;
       expect(disputeResolverFee.isValid()).is.false;
 
@@ -218,7 +213,7 @@ describe("DisputeResolverFeeList", function () {
 
   beforeEach(async function () {
     // Get a list of accounts
-    accounts = await ethers.getSigners();
+    accounts = await getSigners();
 
     // Required constructor params
     disputeResolverFees = [

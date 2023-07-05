@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getContractFactory } = hre.ethers;
 const environments = require("../../environments");
 const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const { getFees } = require("./utils");
@@ -21,9 +21,9 @@ const { getFees } = require("./utils");
  */
 async function deployProtocolClientImpls(implementationArgs, maxPriorityFeePerGas) {
   // Deploy the BosonVoucher contract
-  const BosonVoucher = await ethers.getContractFactory("BosonVoucher");
+  const BosonVoucher = await getContractFactory("BosonVoucher");
   const bosonVoucher = await BosonVoucher.deploy(...implementationArgs, await getFees(maxPriorityFeePerGas));
-  await bosonVoucher.deployTransaction.wait(confirmations);
+  await bosonVoucher.waitForDeployment(confirmations);
 
   return [bosonVoucher];
 }

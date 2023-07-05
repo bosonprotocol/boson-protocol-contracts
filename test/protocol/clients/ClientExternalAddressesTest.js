@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-
+const { getSigners, ZeroAddress, getContractFactory } = ethers;
 const { gasLimit } = require("../../../environments");
 const { deployProtocolClientImpls } = require("../../../scripts/util/deploy-protocol-client-impls.js");
 const { deployProtocolClientBeacons } = require("../../../scripts/util/deploy-protocol-client-beacons.js");
@@ -25,7 +25,7 @@ describe("IClientExternalAddresses", function () {
       extraReturnValues: { beacon },
     } = await setupTestEnvironment(contracts));
 
-    [deployer] = await ethers.getSigners();
+    [deployer] = await getSigners();
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -41,14 +41,14 @@ describe("IClientExternalAddresses", function () {
     context("👉 setImplementation()", async function () {
       beforeEach(async function () {
         // set new value for voucher implementation
-        voucherImplementation = other1.address; // random address, just for test
+        voucherImplementation = await other1.getAddress(); // random address, just for test
       });
 
       it("should emit an Upgraded event", async function () {
         // Set new implementation, testing for the event
         await expect(beacon.connect(deployer).setImplementation(voucherImplementation))
           .to.emit(beacon, "Upgraded")
-          .withArgs(voucherImplementation, deployer.address);
+          .withArgs(voucherImplementation, await deployer.getAddress());
       });
 
       it("should update state", async function () {
@@ -69,7 +69,7 @@ describe("IClientExternalAddresses", function () {
 
         it("implementation address is the zero address", async function () {
           // Attempt to set new implementation, expecting revert
-          await expect(beacon.connect(deployer).setImplementation(ethers.constants.AddressZero)).to.revertedWith(
+          await expect(beacon.connect(deployer).setImplementation(ZeroAddress)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
         });
@@ -79,14 +79,14 @@ describe("IClientExternalAddresses", function () {
     context("👉 setProtocolAddress()", async function () {
       beforeEach(async function () {
         // set new value for protocol address
-        protocolAddress = other3.address; // random address, just for test
+        protocolAddress = await other3.getAddress(); // random address, just for test
       });
 
       it("should emit a ProtocolAddressChanged event", async function () {
         // Set new protocol address, testing for the event
         await expect(beacon.connect(deployer).setProtocolAddress(protocolAddress))
           .to.emit(beacon, "ProtocolAddressChanged")
-          .withArgs(protocolAddress, deployer.address);
+          .withArgs(protocolAddress, await deployer.getAddress());
       });
 
       it("should update state", async function () {
@@ -107,7 +107,7 @@ describe("IClientExternalAddresses", function () {
 
         it("protocol address is the zero address", async function () {
           // Attempt to set new protocol address, expecting revert
-          await expect(beacon.connect(deployer).setProtocolAddress(ethers.constants.AddressZero)).to.revertedWith(
+          await expect(beacon.connect(deployer).setProtocolAddress(ZeroAddress)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
         });
@@ -118,13 +118,10 @@ describe("IClientExternalAddresses", function () {
       context("💔 Revert Reasons", async function () {
         it("_protocolAddress address is the zero address", async function () {
           // Deploy Protocol Client implementation contracts
-          const protocolClientImpls = await deployProtocolClientImpls(
-            [ethers.constants.AddressZero],
-            maxPriorityFeePerGas
-          );
+          const protocolClientImpls = await deployProtocolClientImpls([ZeroAddress], maxPriorityFeePerGas);
 
           // Deploy Protocol Client beacon contracts
-          const protocolClientArgs = [ethers.constants.AddressZero];
+          const protocolClientArgs = [ZeroAddress];
           await expect(
             deployProtocolClientBeacons(protocolClientImpls, protocolClientArgs, maxPriorityFeePerGas)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
@@ -135,10 +132,10 @@ describe("IClientExternalAddresses", function () {
           const protocolClientArgs = [protocolDiamondAddress];
 
           // Deploy the ClientBeacon for BosonVoucher
-          const ClientBeacon = await ethers.getContractFactory("BosonClientBeacon");
-          await expect(
-            ClientBeacon.deploy(...protocolClientArgs, ethers.constants.AddressZero, { gasLimit })
-          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          const ClientBeacon = await getContractFactory("BosonClientBeacon");
+          await expect(ClientBeacon.deploy(...protocolClientArgs, ZeroAddress, { gasLimit })).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
         });
       });
     });

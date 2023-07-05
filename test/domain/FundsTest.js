@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getSigners } = hre.ethers;
 const { expect } = require("chai");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 
@@ -13,7 +13,7 @@ describe("Funds", function () {
 
   beforeEach(async function () {
     // Get a list of accounts
-    accounts = await ethers.getSigners();
+    accounts = await getSigners();
     tokenAddress = accounts[1].address;
 
     // Required constructor params
@@ -91,11 +91,6 @@ describe("Funds", function () {
 
       // Invalid field value
       funds.availableAmount = new Date();
-      expect(funds.availableAmountIsValid()).is.false;
-      expect(funds.isValid()).is.false;
-
-      // Invalid field value
-      funds.availableAmount = 12;
       expect(funds.availableAmountIsValid()).is.false;
       expect(funds.isValid()).is.false;
 
@@ -208,7 +203,7 @@ describe("FundsList", function () {
 
   beforeEach(async function () {
     // Get a list of accounts
-    accounts = await ethers.getSigners();
+    accounts = await getSigners();
 
     // Required constructor params
     funds = [

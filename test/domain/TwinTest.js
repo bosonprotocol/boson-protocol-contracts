@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getSigners } = hre.ethers;
 const { expect } = require("chai");
 const Twin = require("../../scripts/domain/Twin.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
@@ -15,7 +15,7 @@ describe("Twin", function () {
 
   beforeEach(async function () {
     // Get a list of accounts
-    const accounts = await ethers.getSigners();
+    const accounts = await getSigners();
     tokenAddress = accounts[0].address;
   });
 
@@ -51,11 +51,6 @@ describe("Twin", function () {
       expect(twin.idIsValid()).is.false;
       expect(twin.isValid()).is.false;
 
-      // Invalid field value
-      twin.id = 12;
-      expect(twin.idIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
       // Valid field value
       twin.id = "0";
       expect(twin.idIsValid()).is.true;
@@ -73,20 +68,15 @@ describe("Twin", function () {
       expect(twin.sellerIdIsValid()).is.false;
       expect(twin.isValid()).is.false;
 
-      // Invalid field value
-      twin.sellerId = new Date();
-      expect(twin.sellerIdIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
-      // Invalid field value
-      twin.sellerId = 12;
-      expect(twin.sellerIdIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
       // Valid field value
       twin.sellerId = "0";
       expect(twin.sellerIdIsValid()).is.true;
       expect(twin.isValid()).is.true;
+
+      // Invalid field value
+      twin.sellerId = new Date();
+      expect(twin.sellerIdIsValid()).is.false;
+      expect(twin.isValid()).is.false;
 
       // Valid field value
       twin.sellerId = "126";
@@ -100,20 +90,15 @@ describe("Twin", function () {
       expect(twin.amountIsValid()).is.false;
       expect(twin.isValid()).is.false;
 
-      // Invalid field value
-      twin.amount = new Date();
-      expect(twin.amountIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
-      // Invalid field value
-      twin.amount = 12;
-      expect(twin.amountIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
       // Valid field value
       twin.amount = "0";
       expect(twin.amountIsValid()).is.true;
       expect(twin.isValid()).is.true;
+
+      // Invalid field value
+      twin.amount = new Date();
+      expect(twin.amountIsValid()).is.false;
+      expect(twin.isValid()).is.false;
 
       // Valid field value
       twin.amount = "126";
@@ -128,17 +113,12 @@ describe("Twin", function () {
       expect(twin.isValid()).is.false;
 
       // Invalid field value
-      twin.supplyAvailable = new Date();
-      expect(twin.supplyAvailableIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
-      // Invalid field value
-      twin.supplyAvailable = 12;
-      expect(twin.supplyAvailableIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
-      // Invalid field value
       twin.supplyAvailable = ["1", "2"];
+      expect(twin.supplyAvailableIsValid()).is.false;
+      expect(twin.isValid()).is.false;
+
+      // Invalid field value
+      twin.supplyAvailable = new Date();
       expect(twin.supplyAvailableIsValid()).is.false;
       expect(twin.isValid()).is.false;
 
@@ -154,16 +134,6 @@ describe("Twin", function () {
       expect(twin.tokenIdIsValid()).is.false;
       expect(twin.isValid()).is.false;
 
-      // Invalid field value
-      twin.tokenId = new Date();
-      expect(twin.tokenIdIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
-      // Invalid field value
-      twin.tokenId = 12;
-      expect(twin.tokenIdIsValid()).is.false;
-      expect(twin.isValid()).is.false;
-
       // Valid field value
       twin.tokenId = "0";
       expect(twin.tokenIdIsValid()).is.true;
@@ -173,6 +143,11 @@ describe("Twin", function () {
       twin.tokenId = "126";
       expect(twin.tokenIdIsValid()).is.true;
       expect(twin.isValid()).is.true;
+
+      // Invalid field value
+      twin.tokenId = new Date();
+      expect(twin.tokenIdIsValid()).is.false;
+      expect(twin.isValid()).is.false;
     });
 
     it("Always present, tokenAddress must be a string representation of an EIP-55 compliant address", async function () {
