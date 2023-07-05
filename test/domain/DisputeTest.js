@@ -45,11 +45,6 @@ describe("Dispute", function () {
       expect(dispute.exchangeIdIsValid()).is.false;
       expect(dispute.isValid()).is.false;
 
-      // Invalid field value
-      dispute.exchangeId = 12;
-      expect(dispute.exchangeIdIsValid()).is.false;
-      expect(dispute.isValid()).is.false;
-
       // Valid field value
       dispute.exchangeId = "0";
       expect(dispute.exchangeIdIsValid()).is.true;
@@ -77,15 +72,15 @@ describe("Dispute", function () {
       expect(dispute.stateIsValid()).is.false;
       expect(dispute.isValid()).is.false;
 
-      // Invalid field value
-      dispute.state = new Date();
-      expect(dispute.stateIsValid()).is.false;
-      expect(dispute.isValid()).is.false;
-
       // Valid field value
       dispute.state = DisputeState.Resolving;
       expect(dispute.stateIsValid()).is.true;
       expect(dispute.isValid()).is.true;
+
+      // Invalid field value
+      dispute.state = new Date();
+      expect(dispute.stateIsValid()).is.false;
+      expect(dispute.isValid()).is.false;
     });
 
     it("Always present, buyerPercent must be the string representation of a BigNumber", async function () {
@@ -94,20 +89,15 @@ describe("Dispute", function () {
       expect(dispute.buyerPercentIsValid()).is.false;
       expect(dispute.isValid()).is.false;
 
-      // Invalid field value
-      dispute.buyerPercent = new Date();
-      expect(dispute.buyerPercentIsValid()).is.false;
-      expect(dispute.isValid()).is.false;
-
-      // Invalid field value
-      dispute.buyerPercent = 12;
-      expect(dispute.buyerPercentIsValid()).is.false;
-      expect(dispute.isValid()).is.false;
-
       // Valid field value
       dispute.buyerPercent = "0";
       expect(dispute.buyerPercentIsValid()).is.true;
       expect(dispute.isValid()).is.true;
+
+      // Invalid field value
+      dispute.buyerPercent = new Date();
+      expect(dispute.buyerPercentIsValid()).is.false;
+      expect(dispute.isValid()).is.false;
 
       // Valid field value
       dispute.buyerPercent = "126";
