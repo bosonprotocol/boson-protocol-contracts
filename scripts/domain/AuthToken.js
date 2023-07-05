@@ -42,7 +42,7 @@ class AuthToken {
 
     return AuthToken.fromObject({
       tokenId: tokenId.toString(),
-      tokenType: tokenType,
+      tokenType: Number(tokenType),
     });
   }
 

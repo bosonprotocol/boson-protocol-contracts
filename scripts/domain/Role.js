@@ -1,6 +1,5 @@
-const ethers = require("ethers");
-const keccak256 = ethers.utils.keccak256;
-const toUtf8Bytes = ethers.utils.toUtf8Bytes;
+const hre = require("hardhat");
+const { keccak256, toUtf8Bytes } = hre.ethers;
 
 /**
  * Boson Protocol Domain Enum: Role

@@ -9,7 +9,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xe393ad01
+ * The ERC-165 identifier for this interface is: 0x25616ef5
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
     /**
@@ -428,6 +428,26 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @return the maximum royalty percentage
      */
     function getMaxRoyaltyPecentage() external view returns (uint16);
+
+    /**
+     * @notice Sets the minimum resolution period a seller can specify.
+     *
+     * Emits a MinResolutionPeriodChanged event.
+     *
+     * Reverts if _minResolutionPeriod is zero.
+     *
+     * @dev Caller must have ADMIN role.
+     *
+     * @param _minResolutionPeriod - the minimum resolution period that a {BosonTypes.Seller} can specify
+     */
+    function setMinResolutionPeriod(uint256 _minResolutionPeriod) external;
+
+    /**
+     * @notice Gets the minimum resolution period a seller can specify.
+     *
+     * @return the minimum resolution period that a {BosonTypes.Seller} can specify
+     */
+    function getMinResolutionPeriod() external view returns (uint256);
 
     /**
      * @notice Sets the maximum resolution period a seller can specify.
