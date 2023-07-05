@@ -149,18 +149,19 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         // Current version must be 2.2.1
         require(protocolStatus().version == bytes32("2.2.1"), WRONG_CURRENT_VERSION);
 
+        // Decode initialization data
+        (uint256 _minResolutionPeriod, uint256[] memory sellerIds, address[] memory sellerCreators) = abi.decode(
+            _initializationData,
+            (uint256, uint256[], address[])
+        );
+
         // Initialize limits.maxPremintedVouchers (configHandlerFacet initializer)
-        uint256 _minResolutionPeriod = abi.decode(_initializationData, (uint256));
         require(_minResolutionPeriod != 0, VALUE_ZERO_NOT_ALLOWED);
         protocolLimits().minResolutionPeriod = _minResolutionPeriod;
         emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
 
         // Initialize sellerCreators
-        (uint256[] memory sellerIds, address[] memory sellerCreators) = abi.decode(
-            _initializationData,
-            (uint256[], address[])
-        );
-
+        require(sellerIds.length == sellerCreators.length, ARRAY_LENGTH_MISMATCH);
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
         for (uint256 i = 0; i < sellerIds.length; i++) {
             (bool exists, , ) = fetchSeller(sellerIds[i]);
@@ -171,7 +172,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         }
 
         // Deploy a new voucher proxy
-        protocolAddresses().beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());
+        // protocolAddresses().beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());
     }
 
     /**
