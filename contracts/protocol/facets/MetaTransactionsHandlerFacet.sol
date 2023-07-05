@@ -10,6 +10,8 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
+import { Strings } from "../../ext_libs/Strings.sol";
+import "hardhat/console.sol";
 
 /**
  * @title MetaTransactionsHandlerFacet
@@ -108,7 +110,8 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      */
     function hashOfferDetails(bytes memory _offerDetails) internal pure returns (bytes32) {
         (address buyer, uint256 offerId) = abi.decode(_offerDetails, (address, uint256));
-        return keccak256(abi.encode(OFFER_DETAILS_TYPEHASH, buyer, offerId));
+        string memory offerDetailsURI = string.concat(OFFER_DETAILS_URI_BASE, Strings.toString(offerId));
+        return keccak256(abi.encode(OFFER_DETAILS_TYPEHASH, buyer, offerId, keccak256(bytes(offerDetailsURI))));
     }
 
     /**

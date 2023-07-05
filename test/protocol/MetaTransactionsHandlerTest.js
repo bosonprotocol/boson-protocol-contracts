@@ -1529,6 +1529,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         context("👉 ExchangeHandlerFacet 👉 commitToOffer()", async function () {
+          let offerDetailsURIBase = "http://trusted.endpoint.xyz/offerInfo/";
+
           beforeEach(async function () {
             offer.exchangeToken = mockToken.address;
 
@@ -1557,6 +1559,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             offerType = [
               { name: "buyer", type: "address" },
               { name: "offerId", type: "uint256" },
+              { name: "offerDetailsURI", type: "string" },
             ];
 
             // Set the message Type
@@ -1581,7 +1584,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             };
 
             // Prepare the message
-            message.offerDetails = validOfferDetails;
+            message.offerDetails = { ...validOfferDetails, offerDetailsURI: `${offerDetailsURIBase}${offer.id}` };
 
             // Deposit native currency to the same seller id
             await fundsHandler
@@ -1642,7 +1645,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             validOfferDetails.offerId = offerId;
 
             // Prepare the message
-            message.offerDetails = validOfferDetails;
+            message.offerDetails = { ...validOfferDetails, offerDetailsURI: `${offerDetailsURIBase}${offerId}` };
 
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(

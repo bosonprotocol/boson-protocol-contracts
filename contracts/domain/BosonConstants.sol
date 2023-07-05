@@ -203,9 +203,11 @@ bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(
         "MetaTransaction(uint256 nonce,address from,address contractAddress,string functionName,bytes functionSignature)"
     )
 );
-bytes32 constant OFFER_DETAILS_TYPEHASH = keccak256("MetaTxOfferDetails(address buyer,uint256 offerId)");
+bytes32 constant OFFER_DETAILS_TYPEHASH = keccak256(
+    "MetaTxOfferDetails(address buyer,uint256 offerId,string offerDetailsURI)"
+);
 bytes32 constant META_TX_COMMIT_TO_OFFER_TYPEHASH = keccak256(
-    "MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,MetaTxOfferDetails offerDetails)MetaTxOfferDetails(address buyer,uint256 offerId)"
+    "MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,MetaTxOfferDetails offerDetails)MetaTxOfferDetails(address buyer,uint256 offerId,string offerDetailsURI)"
 );
 bytes32 constant EXCHANGE_DETAILS_TYPEHASH = keccak256("MetaTxExchangeDetails(uint256 exchangeId)");
 bytes32 constant META_TX_EXCHANGE_TYPEHASH = keccak256(
@@ -223,6 +225,7 @@ bytes32 constant DISPUTE_RESOLUTION_DETAILS_TYPEHASH = keccak256(
 bytes32 constant META_TX_DISPUTE_RESOLUTIONS_TYPEHASH = keccak256(
     "MetaTxDisputeResolution(uint256 nonce,address from,address contractAddress,string functionName,MetaTxDisputeResolutionDetails disputeResolutionDetails)MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercentBasisPoints,bytes32 sigR,bytes32 sigS,uint8 sigV)"
 );
+string constant OFFER_DETAILS_URI_BASE = "http://trusted.endpoint.xyz/offerInfo/";
 
 // Function names
 string constant COMMIT_TO_OFFER = "commitToOffer(address,uint256)";
