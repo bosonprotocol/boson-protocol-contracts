@@ -90,7 +90,7 @@ describe("IBosonConfigHandler", function () {
   describe("Deploy tests", async function () {
     context("📋 Initializer", async function () {
       it("should initialize the config handler and emit set events", async function () {
-        const proxyAddress = await calculateBosonProxyAddress(protocolDiamond.address);
+        const proxyAddress = await calculateBosonProxyAddress(await protocolDiamond.getAddress());
 
         const protocolConfig = [
           // Protocol addresses
@@ -1290,7 +1290,7 @@ describe("IBosonConfigHandler", function () {
           "Invalid voucher beacon address"
         );
 
-        const proxyAddress = await calculateBosonProxyAddress(protocolDiamond.address);
+        const proxyAddress = await calculateBosonProxyAddress(await protocolDiamond.getAddress());
         expect(await configHandler.connect(rando).getBeaconProxyAddress()).to.equal(
           proxyAddress,
           "Invalid voucher proxy address"

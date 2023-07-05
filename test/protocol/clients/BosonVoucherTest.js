@@ -45,11 +45,9 @@ describe("IBosonVoucher", function () {
     rando2,
     assistant,
     admin,
-    clerk,
     treasury,
     assistantDR,
     adminDR,
-    clerkDR,
     treasuryDR,
     seller,
     foreign20;
@@ -92,7 +90,6 @@ describe("IBosonVoucher", function () {
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
-    clerk = clerkDR = { address: ZeroAddress };
     [deployer] = await getSigners();
 
     // Grant protocol role to eoa so it's easier to test
@@ -110,7 +107,7 @@ describe("IBosonVoucher", function () {
     [foreign20] = await deployMockTokens(["Foreign20", "BosonToken"]);
 
     // Get the beacon proxy address
-    beaconProxyAddress = await calculateBosonProxyAddress(configHandler.address);
+    beaconProxyAddress = await calculateBosonProxyAddress(await configHandler.getAddress());
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -171,7 +168,7 @@ describe("IBosonVoucher", function () {
 
     before(async function () {
       const bosonVoucherCloneAddress = calculateCloneAddress(
-        await accountHandler.address,
+        await accountHandler.getAddress(),
         beaconProxyAddress,
         admin.address,
         ""
@@ -181,7 +178,7 @@ describe("IBosonVoucher", function () {
       seller = mockSeller(
         await assistant.getAddress(),
         await admin.getAddress(),
-        clerk.address,
+        ZeroAddress,
         await treasury.getAddress()
       );
 
@@ -194,7 +191,7 @@ describe("IBosonVoucher", function () {
       disputeResolver = mockDisputeResolver(
         await assistantDR.getAddress(),
         await adminDR.getAddress(),
-        clerkDR.address,
+        ZeroAddress,
         await treasuryDR.getAddress(),
         true
       );

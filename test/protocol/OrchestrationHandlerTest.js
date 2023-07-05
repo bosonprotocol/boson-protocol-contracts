@@ -173,7 +173,7 @@ describe("IBosonOrchestrationHandler", function () {
     [deployer] = await getSigners();
 
     // Get the beacon proxy address
-    beaconProxyAddress = await calculateBosonProxyAddress(configHandler.address);
+    beaconProxyAddress = await calculateBosonProxyAddress(await configHandler.getAddress());
 
     // Get snapshot id
     snapshotId = await getSnapshot();

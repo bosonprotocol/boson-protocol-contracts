@@ -103,7 +103,7 @@ describe("SellerHandler", function () {
     await mockAuthERC721Contract.connect(authTokenOwner).mint(8400, 1);
 
     // Get the beacon proxy address
-    beaconProxyAddress = await calculateBosonProxyAddress(configHandler.address);
+    beaconProxyAddress = await calculateBosonProxyAddress(await configHandler.getAddress());
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -492,7 +492,6 @@ describe("SellerHandler", function () {
         const newAuthTokenOwner = rando;
         seller.id = accountId.next().value;
         seller.assistant = newAuthTokenOwner.address;
-        seller.clerk = newAuthTokenOwner.address;
 
         //Create struct again with new addresses
         sellerStruct = seller.toStruct();
@@ -1902,14 +1901,13 @@ describe("SellerHandler", function () {
         seller2.treasury = other2.address;
         seller2.assistant = other1.address;
         seller2.admin = other1.address;
-        seller2.clerk = other1.address;
 
         // Create seller 2
         await accountHandler.connect(other1).createSeller(seller2, emptyAuthToken, voucherInitValues);
 
         // Update seller 2 treasury
         seller2.treasury = await treasury.getAddress();
-        await accountHandler.connect(admin).updateSeller(seller2, emptyAuthToken);
+        await accountHandler.connect(other1).updateSeller(seller2, emptyAuthToken);
 
         // Check seller 2 treasury
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller2.id);
@@ -2841,7 +2839,7 @@ describe("SellerHandler", function () {
 
         externalId = "newSellerBrand";
         expectedCollectionAddress = calculateCloneAddress(
-          accountHandler.address,
+          await accountHandler.getAddress(),
           beaconProxyAddress,
           admin.address, // original admin address
           externalId
@@ -2855,7 +2853,7 @@ describe("SellerHandler", function () {
           .withArgs(seller.id, 1, expectedCollectionAddress, externalId, other1.address);
 
         // Voucher clone contract
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCollectionAddress);
+        bosonVoucher = await getContractAt("IBosonVoucher", expectedCollectionAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
         await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged").withArgs(royaltyPercentage);
@@ -2863,11 +2861,9 @@ describe("SellerHandler", function () {
           .to.emit(bosonVoucher, "VoucherInitialized")
           .withArgs(seller.id, royaltyPercentage, contractURI);
 
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCollectionAddress);
+        bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCollectionAddress);
 
-        await expect(tx)
-          .to.emit(bosonVoucher, "OwnershipTransferred")
-          .withArgs(ethers.constants.AddressZero, other1.address);
+        await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred").withArgs(ZeroAddress, other1.address);
       });
 
       context("💔 Revert Reasons", async function () {

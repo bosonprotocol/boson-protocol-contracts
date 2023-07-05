@@ -146,7 +146,7 @@ describe("IBosonFundsHandler", function () {
     [mockToken] = await deployMockTokens(["Foreign20"]);
 
     // Get the beacon proxy address
-    beaconProxyAddress = await calculateBosonProxyAddress(configHandler.address);
+    beaconProxyAddress = await calculateBosonProxyAddress(await configHandler.getAddress());
 
     // Get snapshot id
     snapshotId = await getSnapshot();

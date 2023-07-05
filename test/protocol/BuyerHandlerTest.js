@@ -406,9 +406,9 @@ describe("BuyerHandler", function () {
             .connect(other1)
             .commitToOffer(await other1.getAddress(), offerId, { value: offer.price });
 
-          const beaconProxyAddress = await calculateBosonProxyAddress(accountHandler.address);
+          const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
           const bosonVoucherCloneAddress = calculateCloneAddress(
-            accountHandler.address,
+            await accountHandler.getAddress(),
             beaconProxyAddress,
             admin.address,
             ""
