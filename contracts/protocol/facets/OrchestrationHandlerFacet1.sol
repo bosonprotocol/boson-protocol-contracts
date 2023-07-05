@@ -43,8 +43,9 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
      * - Caller is not the supplied admin or does not own supplied auth token
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -113,8 +114,9 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The offers region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
      * - Caller is not the supplied admin or does not own supplied auth token
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - Reserved range length is zero
@@ -735,8 +737,9 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The offers region of protocol is paused
      * - The groups region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
      * - Caller is not the supplied admin or does not own supplied auth token
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -813,8 +816,9 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The groups region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
      * - Caller is not the supplied admin or does not own supplied auth token
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - Reserved range length is zero
@@ -909,8 +913,9 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
      * - Caller is not the supplied admin or does not own supplied auth token
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -995,8 +1000,9 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The bundles region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
      * - Caller is not the supplied admin or does not own supplied auth token
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - Reserved range length is zero
@@ -1099,8 +1105,9 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
      * - Caller is not the supplied admin or does not own supplied auth token
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - In seller struct:
@@ -1198,8 +1205,9 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - The bundles region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
      * - Caller is not the supplied admin or does not own supplied auth token
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - Reserved range length is zero

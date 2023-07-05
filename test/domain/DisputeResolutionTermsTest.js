@@ -52,20 +52,15 @@ describe("DisputeResolutionTerms", function () {
       expect(disputeResolutionTerms.disputeResolverIdIsValid()).is.false;
       expect(disputeResolutionTerms.isValid()).is.false;
 
-      // Invalid field value
-      disputeResolutionTerms.disputeResolverId = new Date();
-      expect(disputeResolutionTerms.disputeResolverIdIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolutionTerms.disputeResolverId = 12;
-      expect(disputeResolutionTerms.disputeResolverIdIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
       // Valid field value
       disputeResolutionTerms.disputeResolverId = "0";
       expect(disputeResolutionTerms.disputeResolverIdIsValid()).is.true;
       expect(disputeResolutionTerms.isValid()).is.true;
+
+      // Invalid field value
+      disputeResolutionTerms.disputeResolverId = new Date();
+      expect(disputeResolutionTerms.disputeResolverIdIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
 
       // Valid field value
       disputeResolutionTerms.disputeResolverId = "126";
@@ -79,20 +74,15 @@ describe("DisputeResolutionTerms", function () {
       expect(disputeResolutionTerms.escalationResponsePeriodIsValid()).is.false;
       expect(disputeResolutionTerms.isValid()).is.false;
 
-      // Invalid field value
-      disputeResolutionTerms.escalationResponsePeriod = new Date();
-      expect(disputeResolutionTerms.escalationResponsePeriodIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolutionTerms.escalationResponsePeriod = 12;
-      expect(disputeResolutionTerms.escalationResponsePeriodIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
       // Valid field value
       disputeResolutionTerms.escalationResponsePeriod = "0";
       expect(disputeResolutionTerms.escalationResponsePeriodIsValid()).is.true;
       expect(disputeResolutionTerms.isValid()).is.true;
+
+      // Invalid field value
+      disputeResolutionTerms.escalationResponsePeriod = new Date();
+      expect(disputeResolutionTerms.escalationResponsePeriodIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
 
       // Valid field value
       disputeResolutionTerms.escalationResponsePeriod = "126";
@@ -107,16 +97,6 @@ describe("DisputeResolutionTerms", function () {
       expect(disputeResolutionTerms.isValid()).is.false;
 
       // Invalid field value
-      disputeResolutionTerms.feeAmount = new Date();
-      expect(disputeResolutionTerms.feeAmountIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolutionTerms.feeAmount = 12;
-      expect(disputeResolutionTerms.feeAmountIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
-      // Invalid field value
       disputeResolutionTerms.feeAmount = "12345";
       expect(disputeResolutionTerms.feeAmountIsValid()).is.false;
       expect(disputeResolutionTerms.isValid()).is.false;
@@ -125,6 +105,11 @@ describe("DisputeResolutionTerms", function () {
       disputeResolutionTerms.feeAmount = "0";
       expect(disputeResolutionTerms.feeAmountIsValid()).is.true;
       expect(disputeResolutionTerms.isValid()).is.true;
+
+      // Invalid field value
+      disputeResolutionTerms.feeAmount = new Date();
+      expect(disputeResolutionTerms.feeAmountIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
 
       // Valid field value
       disputeResolutionTerms.feeAmount = "126";
@@ -138,16 +123,6 @@ describe("DisputeResolutionTerms", function () {
       expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.false;
       expect(disputeResolutionTerms.isValid()).is.false;
 
-      // Invalid field value
-      disputeResolutionTerms.buyerEscalationDeposit = new Date();
-      expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolutionTerms.buyerEscalationDeposit = 12;
-      expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.false;
-      expect(disputeResolutionTerms.isValid()).is.false;
-
       // Valid field value
       disputeResolutionTerms.buyerEscalationDeposit = "0";
       expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.true;
@@ -157,6 +132,11 @@ describe("DisputeResolutionTerms", function () {
       disputeResolutionTerms.buyerEscalationDeposit = "126";
       expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.true;
       expect(disputeResolutionTerms.isValid()).is.true;
+
+      // Invalid field value
+      disputeResolutionTerms.buyerEscalationDeposit = new Date();
+      expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
     });
   });
 

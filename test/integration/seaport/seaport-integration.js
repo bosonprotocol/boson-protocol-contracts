@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { constants, BigNumber } = ethers;
+const { ZeroAddress, BigNumber, getContractAt, ZeroHash } = ethers;
 const { setupTestEnvironment, getEvent, calculateContractAddress, objectToArray } = require("../../util/utils");
 const { SEAPORT_ADDRESS } = require("../../util/constants");
 
@@ -28,7 +28,7 @@ describe("[@skip-on-coverage] Seaport integration", function () {
   before(async function () {
     accountId.next(true);
 
-    seaport = await ethers.getContractAt("Seaport", SEAPORT_ADDRESS);
+    seaport = await getContractAt("Seaport", SEAPORT_ADDRESS);
     seaportFixtures = await seaportFixtures(seaport);
 
     // Specify contracts needed for this test
@@ -44,15 +44,26 @@ describe("[@skip-on-coverage] Seaport integration", function () {
       contractInstances: { accountHandler, offerHandler, fundsHandler },
     } = await setupTestEnvironment(contracts));
 
-    const seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+    const seller = mockSeller(
+      await assistant.getAddress(),
+      await assistant.getAddress(),
+      ZeroAddress,
+      await assistant.getAddress()
+    );
 
     const emptyAuthToken = mockAuthToken();
     const voucherInitValues = mockVoucherInitValues();
     await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-    const disputeResolver = mockDisputeResolver(DR.address, DR.address, DR.address, DR.address, true);
+    const disputeResolver = mockDisputeResolver(
+      await DR.getAddress(),
+      await DR.getAddress(),
+      ZeroAddress,
+      await DR.getAddress(),
+      true
+    );
 
-    const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+    const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
     const sellerAllowList = [];
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -64,23 +75,25 @@ describe("[@skip-on-coverage] Seaport integration", function () {
       .connect(assistant)
       .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
 
-    const voucherAddress = calculateContractAddress(accountHandler.address, seller.id);
-    bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
+    const voucherAddress = calculateContractAddress(await accountHandler.getAddress(), seller.id);
+    bosonVoucher = await getContractAt("BosonVoucher", voucherAddress);
 
     // Pool needs to cover both seller deposit and price
-    const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
-    await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, pool, {
+    const pool = BigInt(offer.sellerDeposit) + offer.price;
+    await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, pool, {
       value: pool,
     });
 
     // Pre mint range
-    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, bosonVoucher.address);
+    await offerHandler
+      .connect(assistant)
+      .reserveRange(offer.id, offer.quantityAvailable, await bosonVoucher.getAddress());
     await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
     // Create seaport offer which tokenId 1
     const endDate = "0xff00000000000000000000000000";
-    const seaportOffer = seaportFixtures.getTestVoucher(1, bosonVoucher.address, 1, 1);
-    const consideration = seaportFixtures.getTestToken(0, undefined, 1, 2, bosonVoucher.address);
+    const seaportOffer = seaportFixtures.getTestVoucher(1, await bosonVoucher.getAddress(), 1, 1);
+    const consideration = seaportFixtures.getTestToken(0, undefined, 1, 2, await bosonVoucher.getAddress());
     ({ order, orderHash, value } = await seaportFixtures.getOrder(
       bosonVoucher,
       undefined,
@@ -96,7 +109,7 @@ describe("[@skip-on-coverage] Seaport integration", function () {
   });
 
   it("Voucher contract can be used to call seaport validate", async function () {
-    const tx = await bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata);
+    const tx = await bosonVoucher.connect(assistant).callExternalContract(await seaport.getAddress(), calldata);
     const receipt = await tx.wait();
 
     const [, orderParameters] = getEvent(receipt, seaport, "OrderValidated");
@@ -105,22 +118,22 @@ describe("[@skip-on-coverage] Seaport integration", function () {
   });
 
   it("Seaport is allowed to transfer vouchers", async function () {
-    await bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata);
-    await bosonVoucher.connect(assistant).setApprovalForAllToContract(seaport.address, true);
+    await bosonVoucher.connect(assistant).callExternalContract(await seaport.getAddress(), calldata);
+    await bosonVoucher.connect(assistant).setApprovalForAllToContract(await seaport.getAddress(), true);
 
     let totalFilled, isValidated;
 
     ({ isValidated, totalFilled } = await seaport.getOrderStatus(orderHash));
     assert(isValidated, "Order is not validated");
-    assert.equal(totalFilled.toNumber(), 0);
+    assert.equal(totalFilled, 0n);
 
-    const tx = await seaport.connect(buyer).fulfillOrder(order, constants.HashZero, { value });
+    const tx = await seaport.connect(buyer).fulfillOrder(order, ZeroHash, { value });
     const receipt = await tx.wait();
 
     const event = getEvent(receipt, seaport, "OrderFulfilled");
 
     ({ totalFilled } = await seaport.getOrderStatus(orderHash));
-    assert.equal(totalFilled.toNumber(), 1);
+    assert.equal(totalFilled, 1n);
 
     assert.equal(orderHash, event[0]);
   });
@@ -131,9 +144,9 @@ describe("[@skip-on-coverage] Seaport integration", function () {
       const orders = [objectToArray(order)];
       calldata = seaport.interface.encodeFunctionData("validate", [orders]);
 
-      await expect(bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata)).to.be.revertedWith(
-        "0x466aa616"
-      ); //MissingOriginalConsiderationItems
+      await expect(
+        bosonVoucher.connect(assistant).callExternalContract(await seaport.getAddress(), calldata)
+      ).to.be.revertedWith("0x466aa616"); //MissingOriginalConsiderationItems
     });
   });
 });

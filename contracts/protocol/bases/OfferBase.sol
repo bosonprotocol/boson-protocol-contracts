@@ -338,9 +338,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // _to must be the contract address or the contract owner
         require(_to == address(bosonVoucher) || _to == sender, INVALID_TO_ADDRESS);
 
-        // Call reserveRange on voucher
-        bosonVoucher.reserveRange(_offerId, _startId, _length, _to);
-
         // increase exchangeIds
         pc.nextExchangeId = _startId + _length;
 
@@ -348,6 +345,9 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         if (offer.quantityAvailable != type(uint256).max) {
             offer.quantityAvailable -= _length;
         }
+
+        // Call reserveRange on voucher
+        bosonVoucher.reserveRange(_offerId, _startId, _length, _to);
 
         // Notify external observers
         emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, _to, sender);
