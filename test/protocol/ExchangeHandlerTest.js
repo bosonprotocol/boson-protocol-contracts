@@ -2295,15 +2295,15 @@ describe("IBosonExchangeHandler", function () {
         });
 
         context("Twin transfer fail", async function () {
-          it("should revoke exchange when buyer is an EOA", async function () {
+          it("should raise a dispute when buyer is an EOA", async function () {
             // Remove the approval for the protocol to transfer the seller's tokens
             await foreign20.connect(assistant).approve(protocolDiamondAddress, "0");
 
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
             await expect(tx)
-              .to.emit(exchangeHandler, "VoucherRevoked")
-              .withArgs(exchange.offerId, exchange.id, await buyer.getAddress());
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchangeId, exchange.buyerId, seller.id, await buyer.getAddress());
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -2319,11 +2319,11 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
-            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it("should revoke exchange when ERC20 contract transferFrom returns false", async function () {
+          it("should raise a dispute exchange when ERC20 contract transferFrom returns false", async function () {
             const [foreign20ReturnFalse] = await deployMockTokens(["Foreign20TransferFromReturnFalse"]);
 
             await foreign20ReturnFalse.connect(assistant).mint(await assistant.getAddress(), "500");
@@ -2360,8 +2360,8 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
-            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
           it("should raise a dispute when buyer account is a contract", async function () {
@@ -2438,7 +2438,9 @@ describe("IBosonExchangeHandler", function () {
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
             // Voucher should be revoked and both transfers should fail
-            await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyerAddress);
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -2454,12 +2456,32 @@ describe("IBosonExchangeHandler", function () {
                 twin20_2.amount,
                 buyer.address
               );
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
+
+          it("should raise a dispute if ERC20 does not exist anymore", async function () {
+            // Destruct the ERC20
+            await foreign20.destruct();
+
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchangeId, exchange.buyerId, seller.id, buyer.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
-            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
         });
       });
@@ -2658,15 +2680,15 @@ describe("IBosonExchangeHandler", function () {
         });
 
         context("Twin transfer fail", async function () {
-          it("should revoke exchange when buyer is an EOA", async function () {
-            // Remove the approval for the protocal to transfer the seller's tokens
+          it("should raise a dispute when buyer is an EOA", async function () {
+            // Remove the approval for the protocol to transfer the seller's tokens
             await foreign721.connect(assistant).setApprovalForAll(protocolDiamondAddress, false);
 
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
             await expect(tx)
-              .to.emit(exchangeHandler, "VoucherRevoked")
-              .withArgs(exchange.offerId, exchange.id, await buyer.getAddress());
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, await buyer.getAddress());
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -2675,8 +2697,8 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
-            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
           it("should raise a dispute when buyer account is a contract", async function () {
@@ -2749,7 +2771,9 @@ describe("IBosonExchangeHandler", function () {
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
             // Voucher should be revoked and both transfers should fail
-            await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyerAddress);
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
 
             let tokenId = "9";
             await expect(tx)
@@ -2763,8 +2787,29 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
-            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
+
+          it("should raise a dispute if erc721 contract does not exist anymore", async function () {
+            // Destruct the ERC721
+            await foreign721.destruct();
+
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, buyer.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "9", "0", buyer.address);
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
         });
       });
@@ -2900,14 +2945,14 @@ describe("IBosonExchangeHandler", function () {
         });
 
         context("Twin transfer fail", async function () {
-          it("should revoke exchange when buyer is an EOA", async function () {
-            // Remove the approval for the protocal to transfer the seller's tokens
+          it("should raise a dispute when buyer is an EOA", async function () {
+            // Remove the approval for the protocol to transfer the seller's tokens
             await foreign1155.connect(assistant).setApprovalForAll(protocolDiamondAddress, false);
 
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
             await expect(tx)
-              .to.emit(exchangeHandler, "VoucherRevoked")
-              .withArgs(exchange.offerId, exchange.id, await buyer.getAddress());
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, await buyer.getAddress());
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -2923,8 +2968,8 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
-            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
           it("should raise a dispute when buyer account is a contract", async function () {
@@ -2999,9 +3044,6 @@ describe("IBosonExchangeHandler", function () {
             // Redeem the voucher
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
-            // Voucher should be revoked and both transfers should fail
-            await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyerAddress);
-
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(
@@ -3027,8 +3069,35 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
-            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
+
+          it("should raise a dispute if erc1155 contract does not exist anymore", async function () {
+            // Destruct the ERC1155 contract
+            await foreign1155.destruct();
+
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, buyer.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(
+                twin1155.id,
+                twin1155.tokenAddress,
+                exchange.id,
+                twin1155.tokenId,
+                twin1155.amount,
+                buyer.address
+              );
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
         });
       });
@@ -3329,16 +3398,16 @@ describe("IBosonExchangeHandler", function () {
         });
 
         context("Twin transfer fail", async function () {
-          it("should revoke exchange when buyer is an EOA", async function () {
-            // Remove the approval for the protocal to transfer the seller's tokens
+          it("should raise a dispute when buyer is an EOA", async function () {
+            // Remove the approval for the protocol to transfer the seller's tokens
             await foreign20.connect(assistant).approve(protocolDiamondAddress, "0");
 
             let exchangeId = exchange.id;
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
             await expect(tx)
-              .to.emit(exchangeHandler, "VoucherRevoked")
-              .withArgs(exchange.offerId, exchangeId, await buyer.getAddress());
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchangeId, exchange.buyerId, seller.id, await buyer.getAddress());
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -3362,12 +3431,12 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
-            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
           it("should raise a dispute when buyer account is a contract", async function () {
-            // Remove the approval for the protocal to transfer the seller's tokens
+            // Remove the approval for the protocol to transfer the seller's tokens
             await foreign20.connect(assistant).approve(protocolDiamondAddress, "0");
 
             // Deploy contract to test redeem called by another contract
@@ -3475,7 +3544,9 @@ describe("IBosonExchangeHandler", function () {
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
             // Voucher should be revoked and both transfers should fail
-            await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchange.id, buyerAddress);
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -3500,8 +3571,8 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
-            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
         });
       });

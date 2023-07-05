@@ -195,6 +195,8 @@ describe("IBosonTwinHandler", function () {
 
       it("should emit a TwinCreated event for ERC721 token address", async function () {
         twin.tokenAddress = await foreign721.getAddress();
+        twin.tokenType = TokenType.NonFungibleToken;
+        twin.amount = "0";
 
         // Mint a token and approve twinHandler contract to transfer it
         await foreign721.connect(assistant).mint(twin.tokenId, "1");
@@ -217,6 +219,7 @@ describe("IBosonTwinHandler", function () {
 
       it("should emit a TwinCreated event for ERC1155 token address", async function () {
         twin.tokenAddress = await foreign1155.getAddress();
+        twin.tokenType = TokenType.MultiToken;
 
         // Mint a token and approve twinHandler contract to transfer it
         await foreign1155.connect(assistant).mint(twin.tokenId, twin.amount);
