@@ -2683,8 +2683,8 @@ describe("SellerHandler", function () {
         externalId = "Brand1";
         voucherInitValues.contractURI = contractURI = "https://brand1.com";
         voucherInitValues.royaltyPercentage = royaltyPercentage = "100"; // 1%
-        expectedDefaultAddress = calculateContractAddress(accountHandler.address, "1"); // default
-        expectedCollectionAddress = calculateContractAddress(accountHandler.address, "2");
+        expectedDefaultAddress = calculateContractAddress(await accountHandler.getAddress(), "1"); // default
+        expectedCollectionAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
       });
 
       it("should emit a CollectionCreated event", async function () {
@@ -2706,9 +2706,7 @@ describe("SellerHandler", function () {
 
         bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCollectionAddress);
 
-        await expect(tx)
-          .to.emit(bosonVoucher, "OwnershipTransferred")
-          .withArgs(ethers.constants.AddressZero, assistant.address);
+        await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred").withArgs(ZeroAddress, assistant.address);
       });
 
       it("should update state", async function () {
@@ -2743,7 +2741,7 @@ describe("SellerHandler", function () {
         const expectedCollections = new CollectionList([]);
 
         for (let i = 1; i < 4; i++) {
-          expectedCollectionAddress = calculateContractAddress(accountHandler.address, (i + 1).toString());
+          expectedCollectionAddress = calculateContractAddress(await accountHandler.getAddress(), (i + 1).toString());
           externalId = `Brand${i}`;
           voucherInitValues.contractURI = contractURI = `https://brand${i}.com`;
           voucherInitValues.royaltyPercentage = royaltyPercentage = (i * 100).toString(); // 1%, 2%, 3%
@@ -2766,9 +2764,7 @@ describe("SellerHandler", function () {
 
           bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCollectionAddress);
 
-          await expect(tx)
-            .to.emit(bosonVoucher, "OwnershipTransferred")
-            .withArgs(ethers.constants.AddressZero, assistant.address);
+          await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred").withArgs(ZeroAddress, assistant.address);
 
           // Get the collections information
           expectedCollections.collections.push(new Collection(expectedCollectionAddress, externalId));
