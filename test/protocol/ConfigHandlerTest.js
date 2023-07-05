@@ -31,6 +31,7 @@ describe("IBosonConfigHandler", function () {
     buyerEscalationDepositPercentage,
     maxTotalOfferFeePercentage,
     maxRoyaltyPecentage,
+    minResolutionPeriod,
     maxResolutionPeriod,
     minDisputePeriod,
     maxPremintedVouchers;
@@ -68,6 +69,7 @@ describe("IBosonConfigHandler", function () {
     buyerEscalationDepositPercentage = 100;
     maxTotalOfferFeePercentage = 4000; // 40%
     maxRoyaltyPecentage = 1000; // 10%
+    minResolutionPeriod = oneWeek;
     maxResolutionPeriod = oneMonth;
     minDisputePeriod = oneWeek;
     maxPremintedVouchers = 10000;
@@ -112,6 +114,7 @@ describe("IBosonConfigHandler", function () {
             maxAllowedSellers,
             maxTotalOfferFeePercentage,
             maxRoyaltyPecentage,
+            minResolutionPeriod,
             maxResolutionPeriod,
             minDisputePeriod,
             maxPremintedVouchers,
@@ -208,6 +211,10 @@ describe("IBosonConfigHandler", function () {
           .withArgs(maxRoyaltyPecentage, await deployer.getAddress());
 
         await expect(cutTransaction)
+          .to.emit(configHandler, "MinResolutionPeriodChanged")
+          .withArgs(minResolutionPeriod, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxResolutionPeriodChanged")
           .withArgs(maxResolutionPeriod, await deployer.getAddress());
 
@@ -247,6 +254,7 @@ describe("IBosonConfigHandler", function () {
           maxAllowedSellers,
           maxTotalOfferFeePercentage,
           maxRoyaltyPecentage,
+          minResolutionPeriod,
           maxResolutionPeriod,
           minDisputePeriod,
           maxPremintedVouchers,
@@ -1108,6 +1116,45 @@ describe("IBosonConfigHandler", function () {
         });
       });
 
+      context("👉 setMinResolutionPeriod()", async function () {
+        let minResolutionPeriod;
+        beforeEach(async function () {
+          // set new value
+          minResolutionPeriod = oneWeek * 2n;
+        });
+
+        it("should emit a MinResolutionPeriodChanged event", async function () {
+          // Set new resolution period
+          await expect(configHandler.connect(deployer).setMinResolutionPeriod(minResolutionPeriod))
+            .to.emit(configHandler, "MinResolutionPeriodChanged")
+            .withArgs(minResolutionPeriod, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new resolution period
+          await configHandler.connect(deployer).setMinResolutionPeriod(minResolutionPeriod);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMinResolutionPeriod()).to.equal(minResolutionPeriod);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new value, expecting revert
+            await expect(configHandler.connect(rando).setMinResolutionPeriod(minResolutionPeriod)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+
+          it("minResolutionPeriod is zero", async function () {
+            minResolutionPeriod = 0;
+            await expect(configHandler.connect(deployer).setMinResolutionPeriod(minResolutionPeriod)).to.revertedWith(
+              RevertReasons.VALUE_ZERO_NOT_ALLOWED
+            );
+          });
+        });
+      });
+
       context("👉 setMaxResolutionPeriod()", async function () {
         let maxResolutionPeriod;
         beforeEach(async function () {
@@ -1363,6 +1410,10 @@ describe("IBosonConfigHandler", function () {
         expect(await configHandler.connect(rando).getMaxExchangesPerBatch()).to.equal(
           maxExchangesPerBatch,
           "Invalid max exchanges per batch"
+        );
+        expect(await configHandler.connect(rando).getMinResolutionPeriod()).to.equal(
+          minResolutionPeriod,
+          "Invalid min resolution period"
         );
         expect(await configHandler.connect(rando).getMaxResolutionPeriod()).to.equal(
           maxResolutionPeriod,
