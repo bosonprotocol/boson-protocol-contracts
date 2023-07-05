@@ -62,6 +62,8 @@ library ProtocolLib {
         uint16 maxRoyaltyPecentage;
         // limit the max number of vouchers that can be preminted in a single transaction
         uint256 maxPremintedVouchers;
+        // lower limit for resolution period
+        uint256 minResolutionPeriod;
     }
 
     // Protocol fees storage

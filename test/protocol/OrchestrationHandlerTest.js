@@ -1884,9 +1884,9 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_PERIOD);
         });
 
-        it("Resolution period is set to zero", async function () {
-          // Set dispute duration period to 0
-          offerDurations.resolutionPeriod = "0";
+        it("Resolution period is less than minimum resolution period", async function () {
+          // Set resolution duration period to less than minResolutionPeriod (oneWeek)
+          offerDurations.resolutionPeriod = (oneWeek - 10n).toString();
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(

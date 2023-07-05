@@ -99,6 +99,9 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             } else if (_version == bytes32("2.3.0")) {
                 initV2_3_0(_initializationData);
             }
+            if (_version == bytes32("2.3.0")) {
+                initV2_3_0(_initializationData);
+            }
         }
 
         removeInterfaces(_interfacesToRemove);
@@ -137,15 +140,27 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
 
     /**
      * @notice Initializes the version 2.3.0.
+     *
+     * V2.3.0 adds the minimal resolution period. Cannot be initialized with ConfigHandlerFacet.initialize since it would reset the counters.
+     *
+     * @param _initializationData - data representing uint256 _minResolutionPeriod, uint256[] memory sellerIds, address[] memory sellerCreators
      */
     function initV2_3_0(bytes calldata _initializationData) internal {
-        // Partial initialization of v2.3.0. Other PRs have to be merged first.
+        // Current version must be 2.2.1
+        require(protocolStatus().version == bytes32("2.2.1"), WRONG_CURRENT_VERSION);
+
+        // Initialize limits.maxPremintedVouchers (configHandlerFacet initializer)
+        uint256 _minResolutionPeriod = abi.decode(_initializationData, (uint256));
+        require(_minResolutionPeriod != 0, VALUE_ZERO_NOT_ALLOWED);
+        protocolLimits().minResolutionPeriod = _minResolutionPeriod;
+        emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
+
+        // Initialize sellerCreators
         (uint256[] memory sellerIds, address[] memory sellerCreators) = abi.decode(
             _initializationData,
             (uint256[], address[])
         );
 
-        // Backfill sellerCreators
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
         for (uint256 i = 0; i < sellerIds.length; i++) {
             (bool exists, , ) = fetchSeller(sellerIds[i]);

@@ -27,7 +27,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
      * - Dispute period is less than minimum dispute period
-     * - Resolution period is set to zero or above the maximum resolution period
+     * - Resolution period is not between the minimum and the maximum resolution period
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -87,7 +87,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
      * - Dispute period is less than minimum dispute period
-     * - Resolution period is set to zero or above the maximum resolution period
+     * - Resolution period is not between the minimum and the maximum resolution period
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -136,9 +136,10 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             // dispute period must be greater than or equal to the minimum dispute period
             require(_offerDurations.disputePeriod >= limits.minDisputePeriod, INVALID_DISPUTE_PERIOD);
 
-            // dispute duration must be greater than zero
+            // resolution period must be between the minimum and maximum resolution periods
             require(
-                _offerDurations.resolutionPeriod > 0 && _offerDurations.resolutionPeriod <= limits.maxResolutionPeriod,
+                _offerDurations.resolutionPeriod >= limits.minResolutionPeriod &&
+                    _offerDurations.resolutionPeriod <= limits.maxResolutionPeriod,
                 INVALID_RESOLUTION_PERIOD
             );
         }

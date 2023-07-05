@@ -420,6 +420,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
       maxAllowedSellers: 100,
       maxTotalOfferFeePercentage: 4000, //40%
       maxRoyaltyPecentage: 1000, //10%
+      minResolutionPeriod: oneWeek,
       maxResolutionPeriod: oneMonth,
       minDisputePeriod: oneWeek,
       maxPremintedVouchers: 10000,
