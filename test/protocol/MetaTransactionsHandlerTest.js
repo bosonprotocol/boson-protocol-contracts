@@ -3192,7 +3192,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.from = await assistant.getAddress();
           message.contractAddress = await offerHandler.getAddress();
           message.functionName =
-            "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256)";
+            "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool,uint256),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256)";
           message.functionSignature = functionSignature;
         });
 

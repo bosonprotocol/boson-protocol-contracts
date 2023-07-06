@@ -683,4 +683,25 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         // Determine existence
         exists = (_exchangeId > 0 && condition.method != EvaluationMethod.None);
     }
+
+    /**
+     * @notice Fetches a clone address from storage by seller id and collection index
+     * If the collection index is 0, the clone address is the seller's main collection,
+     * otherwise it is the clone address of the additional collection at the given index.
+     *
+     * @param _lookups - storage slot for protocol lookups
+     * @param _sellerId - the id of the seller
+     * @param _collectionIndex - the index of the collection
+     * @return cloneAddress - the clone address
+     */
+    function getCloneAddress(
+        ProtocolLib.ProtocolLookups storage _lookups,
+        uint256 _sellerId,
+        uint256 _collectionIndex
+    ) internal view returns (address cloneAddress) {
+        return
+            _collectionIndex == 0
+                ? _lookups.cloneAddress[_sellerId]
+                : _lookups.additionalCollections[_sellerId][_collectionIndex - 1].collectionAddress;
+    }
 }

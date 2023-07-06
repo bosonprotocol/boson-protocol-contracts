@@ -69,10 +69,11 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      */
     function initializeVoucher(
         uint256 _sellerId,
+        uint256 _collectionIndex,
         address _newOwner,
         VoucherInitValues calldata voucherInitValues
     ) public initializer {
-        string memory sellerId = Strings.toString(_sellerId);
+        string memory sellerId = string.concat(Strings.toString(_sellerId), "_", Strings.toString(_collectionIndex));
         string memory voucherName = string.concat(VOUCHER_NAME, " ", sellerId);
         string memory voucherSymbol = string.concat(VOUCHER_SYMBOL, "_", sellerId);
 

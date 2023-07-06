@@ -703,6 +703,45 @@ describe("IBosonExchangeHandler", function () {
         ).to.not.reverted;
       });
 
+      it("should work on an additional collection", async function () {
+        // Create a new collection
+        const externalId = `Brand1`;
+        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+        offer.collectionIndex = 1;
+        offer.id = await offerHandler.getNextOfferId();
+        exchangeId = await exchangeHandler.getNextExchangeId();
+        const tokenId = deriveTokenId(offer.id, exchangeId);
+
+        // Create the offer
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+        // Commit to offer, creating a new exchange
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
+
+        // expected address of the first clone and first additional collection
+        const defaultCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "1");
+        const defaultBosonVoucher = await getContractAt("BosonVoucher", defaultCloneAddress);
+        const additionalCollectionAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
+        const additionalCollection = await getContractAt("BosonVoucher", additionalCollectionAddress);
+
+        // buyer should own 1 voucher additional collection and 0 vouchers on the default clone
+        expect(await defaultBosonVoucher.balanceOf(buyer.address)).to.equal(
+          "0",
+          "Default clone: buyer's balance should be 0"
+        );
+        expect(await additionalCollection.balanceOf(buyer.address)).to.equal(
+          "1",
+          "Additional collection: buyer's balance should be 1"
+        );
+
+        // Make sure that vouchers belong to correct buyers and that exist on the correct clone
+        await expect(defaultBosonVoucher.ownerOf(tokenId)).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
+        expect(await additionalCollection.ownerOf(tokenId)).to.equal(buyer.address, "Wrong buyer address");
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
@@ -922,7 +961,7 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("Should not decrement quantityAvailable", async function () {
-        // Offer qunantityAvailable should be decremented
+        // Offer quantityAvailable should be decremented
         let [, offer] = await offerHandler.connect(rando).getOffer(offerId);
         const quantityAvailableBefore = offer.quantityAvailable;
 
@@ -931,7 +970,7 @@ describe("IBosonExchangeHandler", function () {
           .connect(assistant)
           .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
 
-        // Offer qunantityAvailable should be decremented
+        // Offer quantityAvailable should be decremented
         [, offer] = await offerHandler.connect(rando).getOffer(offerId);
         assert.equal(
           offer.quantityAvailable.toString(),
@@ -1107,6 +1146,62 @@ describe("IBosonExchangeHandler", function () {
               .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.emit(exchangeHandler, "BuyerCommitted");
         });
+      });
+
+      it("should work on an additional collection", async function () {
+        // Create a new collection
+        const externalId = `Brand1`;
+        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+        offer.collectionIndex = 1;
+        offer.id = await offerHandler.getNextOfferId();
+        exchangeId = await exchangeHandler.getNextExchangeId();
+        exchange.offerId = offer.id.toString();
+        exchange.id = exchangeId.toString();
+        const tokenId = deriveTokenId(offer.id, exchangeId);
+
+        // Create the offer
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+        // Reserve range
+        await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
+
+        // expected address of the additional collection
+        const voucherCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
+        bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
+        await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
+
+        // Commit to preminted offer, retrieving the event
+        tx = await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
+        txReceipt = await tx.wait();
+        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        voucher.committedDate = block.timestamp.toString();
+
+        // Update the validUntilDate date in the expected exchange struct
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        // Examine event
+        assert.equal(event.exchangeId.toString(), exchangeId, "Exchange id is incorrect");
+        assert.equal(event.offerId.toString(), offer.id, "Offer id is incorrect");
+        assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
+
+        // Examine the exchange struct
+        assert.equal(
+          Exchange.fromStruct(event.exchange).toString(),
+          exchange.toString(),
+          "Exchange struct is incorrect"
+        );
+
+        // Examine the voucher struct
+        assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -2451,6 +2546,34 @@ describe("IBosonExchangeHandler", function () {
         assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
       });
 
+      it("should work on an additional collection", async function () {
+        // Create a new collection
+        const externalId = `Brand1`;
+        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+        offer.collectionIndex = 1;
+        offer.id = await offerHandler.getNextOfferId();
+        exchange.id = await exchangeHandler.getNextExchangeId();
+        const tokenId = deriveTokenId(offer.id, exchange.id);
+
+        // Create the offer
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+        // Commit to offer, creating a new exchange
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
+
+        // expected address of the first additional collection
+        const additionalCollectionAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
+        const additionalCollection = await getContractAt("BosonVoucher", additionalCollectionAddress);
+
+        // Revoke the voucher, expecting event
+        await expect(exchangeHandler.connect(assistant).revokeVoucher(exchange.id))
+          .to.emit(additionalCollection, "Transfer")
+          .withArgs(buyer.address, ZeroAddress, tokenId);
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
@@ -2528,6 +2651,34 @@ describe("IBosonExchangeHandler", function () {
 
         // It should match ExchangeState.Canceled
         assert.equal(response, ExchangeState.Canceled, "Exchange state is incorrect");
+      });
+
+      it("should work on an additional collection", async function () {
+        // Create a new collection
+        const externalId = `Brand1`;
+        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+        offer.collectionIndex = 1;
+        offer.id = await offerHandler.getNextOfferId();
+        exchange.id = await exchangeHandler.getNextExchangeId();
+        const tokenId = deriveTokenId(offer.id, exchange.id);
+
+        // Create the offer
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+        // Commit to offer, creating a new exchange
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
+
+        // expected address of the first additional collection
+        const additionalCollectionAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
+        const additionalCollection = await getContractAt("BosonVoucher", additionalCollectionAddress);
+
+        // Cancel the voucher, expecting event
+        await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id))
+          .to.emit(additionalCollection, "Transfer")
+          .withArgs(buyer.address, ZeroAddress, tokenId);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -2760,6 +2911,37 @@ describe("IBosonExchangeHandler", function () {
           exchangeHandler,
           "VoucherRedeemed"
         );
+      });
+
+      it("should work on an additional collection", async function () {
+        // Create a new collection
+        const externalId = `Brand1`;
+        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+        offer.collectionIndex = 1;
+        offer.id = await offerHandler.getNextOfferId();
+        exchange.id = await exchangeHandler.getNextExchangeId();
+        const tokenId = deriveTokenId(offer.id, exchange.id);
+
+        // Create the offer
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+        // Commit to offer, creating a new exchange
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
+
+        // expected address of the first additional collection
+        const additionalCollectionAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
+        const additionalCollection = await getContractAt("BosonVoucher", additionalCollectionAddress);
+
+        // Set time forward to the offer's voucherRedeemableFrom
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+        // Redeem the voucher, expecting event
+        await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+          .to.emit(additionalCollection, "Transfer")
+          .withArgs(buyer.address, ZeroAddress, tokenId);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -4478,6 +4660,35 @@ describe("IBosonExchangeHandler", function () {
         ).to.not.emit(exchangeHandler, "VoucherTransferred");
       });
 
+      it("should work with additional collections", async function () {
+        // Create a new collection
+        const externalId = `Brand1`;
+        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+        offer.collectionIndex = 1;
+        offer.id = await offerHandler.getNextOfferId();
+        exchange.id = await exchangeHandler.getNextExchangeId();
+        bosonVoucherCloneAddress = calculateContractAddress(await exchangeHandler.getAddress(), "2");
+        bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
+        const tokenId = deriveTokenId(offer.id, exchange.id);
+
+        // Create the offer
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+        // Commit to offer, creating a new exchange
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
+
+        // Get the next buyer id
+        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Call onVoucherTransferred, expecting event
+        await expect(bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, tokenId))
+          .to.emit(exchangeHandler, "VoucherTransferred")
+          .withArgs(offer.id, exchange.id, nextAccountId, await bosonVoucherClone.getAddress());
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The buyers region of protocol is paused", async function () {
           // Pause the buyers region of the protocol
@@ -4569,7 +4780,7 @@ describe("IBosonExchangeHandler", function () {
       context("👍 undisputed exchange", async function () {
         it("should return false if exchange does not exists", async function () {
           let exchangeId = "100";
-          // Invalied exchange id, ask if exchange is finalized
+          // Invalid exchange id, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchangeId);
 
           // It should not be exist

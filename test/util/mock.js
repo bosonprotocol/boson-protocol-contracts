@@ -75,6 +75,7 @@ async function mockOffer() {
   const metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
   const metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
   const voided = false;
+  const collectionIndex = "0";
 
   // Create a valid offer, then set fields in tests directly
   let offer = new Offer(
@@ -87,7 +88,8 @@ async function mockOffer() {
     exchangeToken,
     metadataUri,
     metadataHash,
-    voided
+    voided,
+    collectionIndex
   );
 
   const offerDates = await mockOfferDates();
