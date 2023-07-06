@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const { expect } = require("chai");
-const { utils, BigNumber } = hre.ethers;
+const { id } = hre.ethers;
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -79,8 +79,8 @@ describe("IBosonPauseHandler", function () {
     }
 
     before(async function () {
-      const protocolStatusStorageSlot = utils.keccak256(utils.toUtf8Bytes("boson.protocol.initializers"));
-      protocolStatusStorageSlotNumber = BigNumber.from(protocolStatusStorageSlot);
+      const protocolStatusStorageSlot = id("boson.protocol.initializers");
+      protocolStatusStorageSlotNumber = BigInt(protocolStatusStorageSlot);
     });
 
     context("👉 pause()", async function () {
@@ -101,12 +101,12 @@ describe("IBosonPauseHandler", function () {
           .withArgs([], pauser.address);
 
         // Check that all regions are paused
-        const pauseScenario = await getStorageAt(pauseHandler.address, protocolStatusStorageSlotNumber);
-        expect(BigNumber.from(pauseScenario).toNumber(), "Protocol not paused").to.equal(ALL_REGIONS_MASK);
+        const pauseScenario = await getStorageAt(await pauseHandler.getAddress(), protocolStatusStorageSlotNumber);
+        expect(Number(pauseScenario), "Protocol not paused").to.equal(ALL_REGIONS_MASK);
 
         // Check that all regions are paused
         const pausedRegions = await pauseHandler.getPausedRegions();
-        await expect(pausedRegions).to.deep.equal(scenarioToRegions(ALL_REGIONS_MASK));
+        expect(await pausedRegions).to.deep.equal(scenarioToRegions(ALL_REGIONS_MASK));
       });
 
       it("Can incrementally pause regions", async function () {
@@ -162,7 +162,7 @@ describe("IBosonPauseHandler", function () {
         // Unpause the protocol, testing for the event
         await expect(pauseHandler.connect(pauser).unpause(regions))
           .to.emit(pauseHandler, "ProtocolUnpaused")
-          .withArgs(await pauser.getAddress());
+          .withArgs(regions, await pauser.getAddress());
       });
 
       it("should be possible to pause again after an unpause", async function () {
@@ -203,7 +203,7 @@ describe("IBosonPauseHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to unpause without PAUSER role, expecting revert
-          await expect(pauseHandler.connect(rando).unpause()).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          await expect(pauseHandler.connect(rando).unpause([])).to.revertedWith(RevertReasons.ACCESS_DENIED);
         });
 
         it("Protocol is not currently paused", async function () {
