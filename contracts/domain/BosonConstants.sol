@@ -205,6 +205,7 @@ string constant ROYALTY_FEE_INVALID = "ERC2981: royalty fee exceeds protocol lim
 string constant NOT_COMMITTABLE = "Token not committable";
 string constant INVALID_TO_ADDRESS = "Tokens can only be pre-mined to the contract or contract owner address";
 string constant EXTERNAL_CALL_FAILED = "External call failed";
+string constant ERC721_INVALID_TOKEN_ID = "ERC721: invalid token ID";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(

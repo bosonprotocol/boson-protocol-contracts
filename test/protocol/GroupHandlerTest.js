@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, getSigners, parseUnits, getContractFactory } = ethers;
+const { ZeroAddress, getSigners, parseUnits, getContractFactory, MaxUint256 } = ethers;
 const { assert, expect } = require("chai");
 
 const Group = require("../../scripts/domain/Group");
@@ -483,7 +483,7 @@ describe("IBosonGroupHandler", function () {
           it("Condition 'Threshold' with MultiToken has tokenId + length - 1 > max uint256", async function () {
             condition.tokenType = TokenType.MultiToken;
             condition.tokenId = 1;
-            condition.length = ethers.constants.MaxUint256;
+            condition.length = MaxUint256;
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(

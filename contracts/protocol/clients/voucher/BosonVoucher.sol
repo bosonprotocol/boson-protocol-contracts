@@ -373,7 +373,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             if (committable) return owner;
 
             // Otherwise revert
-            revert(INVALID_TOKEN_ID);
+            revert(ERC721_INVALID_TOKEN_ID);
         }
     }
 
@@ -465,7 +465,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             }
         }
 
-        require(exists, INVALID_TOKEN_ID);
+        require(exists, ERC721_INVALID_TOKEN_ID);
         return offer.metadataUri;
     }
 

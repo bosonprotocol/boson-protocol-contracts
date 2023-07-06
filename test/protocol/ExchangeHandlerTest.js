@@ -687,7 +687,7 @@ describe("IBosonExchangeHandler", function () {
         // Create Condition
         condition = mockCondition({
           method: EvaluationMethod.None,
-          tokenAddress: ethers.constants.AddressZero,
+          tokenAddress: ZeroAddress,
           threshold: "0",
           maxCommits: "0",
         });
@@ -724,7 +724,7 @@ describe("IBosonExchangeHandler", function () {
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
-        it("await buyer.getAddress() is the zero address", async function () {
+        it("buyer.address is the zero address", async function () {
           // Attempt to commit, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(ZeroAddress, offerId, { value: price })
@@ -801,7 +801,7 @@ describe("IBosonExchangeHandler", function () {
           offerIds = [offerId];
 
           // Create Condition
-          condition = mockCondition({ tokenAddress: foreign20.address, threshold: "50", maxCommits: "3" });
+          condition = mockCondition({ tokenAddress: await foreign20.getAddress(), threshold: "50", maxCommits: "3" });
           expect(condition.isValid()).to.be.true;
 
           // Create Group
@@ -978,7 +978,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("Offer is part of a group that enforces per-address conditions and utilizes ERC20 tokens", async function () {
           // Create Condition
-          condition = mockCondition({ tokenAddress: foreign20.address, threshold: "50", maxCommits: "3" });
+          condition = mockCondition({ tokenAddress: await foreign20.getAddress(), threshold: "50", maxCommits: "3" });
           expect(condition.isValid()).to.be.true;
 
           // Create Group
@@ -991,13 +991,15 @@ describe("IBosonExchangeHandler", function () {
           await foreign20.connect(buyer).mint(await buyer.getAddress(), condition.threshold);
 
           await expect(
-            bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
         it("Offer is part of a group that enforces per-address conditions and utilizes ERC721 tokens", async function () {
           condition = mockCondition({
-            tokenAddress: foreign721.address,
+            tokenAddress: await foreign721.getAddress(),
             threshold: "1",
             maxCommits: "3",
             tokenType: TokenType.NonFungibleToken,
@@ -1015,13 +1017,15 @@ describe("IBosonExchangeHandler", function () {
           await foreign721.connect(buyer).mint("123", 1);
 
           await expect(
-            bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
         it("Offer is part of a group that enforces per-address conditions and utilizes ERC1155 tokens with range length == 1", async function () {
           condition = mockCondition({
-            tokenAddress: foreign1155.address,
+            tokenAddress: await foreign1155.getAddress(),
             threshold: "2",
             maxCommits: "3",
             tokenType: TokenType.MultiToken,
@@ -1041,13 +1045,15 @@ describe("IBosonExchangeHandler", function () {
           await foreign1155.connect(buyer).mint(condition.tokenId, condition.threshold);
 
           await expect(
-            bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
         it("Offer is part of a group that has no condition", async function () {
           condition = mockCondition({
-            tokenAddress: ethers.constants.AddressZero,
+            tokenAddress: ZeroAddress,
             threshold: "0",
             maxCommits: "0",
             tokenType: TokenType.FungibleToken,
@@ -1064,7 +1070,9 @@ describe("IBosonExchangeHandler", function () {
           await foreign721.connect(buyer).mint("123", 1);
 
           await expect(
-            bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
@@ -1074,7 +1082,7 @@ describe("IBosonExchangeHandler", function () {
           offerIds = [offerId];
 
           condition = mockCondition({
-            tokenAddress: foreign721.address,
+            tokenAddress: await foreign721.getAddress(),
             threshold: "0",
             maxCommits: "3",
             tokenType: TokenType.NonFungibleToken,
@@ -1094,7 +1102,9 @@ describe("IBosonExchangeHandler", function () {
           await foreign721.connect(buyer).mint(condition.tokenId, 1);
 
           await expect(
-            bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.emit(exchangeHandler, "BuyerCommitted");
         });
       });
@@ -1228,7 +1238,7 @@ describe("IBosonExchangeHandler", function () {
           offerIds = [offerId];
 
           condition = mockCondition({
-            tokenAddress: foreign1155.address,
+            tokenAddress: await foreign1155.getAddress(),
             threshold: "1",
             maxCommits: "3",
             tokenType: TokenType.MultiToken,
@@ -1244,7 +1254,9 @@ describe("IBosonExchangeHandler", function () {
           await groupHandler.connect(assistant).createGroup(group, condition);
 
           await expect(
-            bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
         });
 
@@ -1254,7 +1266,7 @@ describe("IBosonExchangeHandler", function () {
           offerIds = [offerId];
 
           condition = mockCondition({
-            tokenAddress: foreign721.address,
+            tokenAddress: await foreign721.getAddress(),
             threshold: "1",
             maxCommits: "3",
             tokenType: TokenType.NonFungibleToken,
@@ -1271,7 +1283,9 @@ describe("IBosonExchangeHandler", function () {
           await groupHandler.connect(assistant).createGroup(group, condition);
 
           await expect(
-            bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
         });
 
@@ -1281,7 +1295,7 @@ describe("IBosonExchangeHandler", function () {
           offerIds = [offerId];
 
           condition = mockCondition({
-            tokenAddress: foreign1155.address,
+            tokenAddress: await foreign1155.getAddress(),
             threshold: "2",
             maxCommits: "3",
             tokenType: TokenType.MultiToken, // ERC1155
@@ -1299,7 +1313,9 @@ describe("IBosonExchangeHandler", function () {
           await groupHandler.connect(assistant).createGroup(group, condition);
 
           await expect(
-            bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
         });
 
@@ -1309,7 +1325,7 @@ describe("IBosonExchangeHandler", function () {
           offerIds = [offerId];
 
           condition = mockCondition({
-            tokenAddress: foreign721.address,
+            tokenAddress: await foreign721.getAddress(),
             threshold: "0",
             maxCommits: "3",
             tokenType: TokenType.NonFungibleToken, // ERC721
@@ -1327,7 +1343,9 @@ describe("IBosonExchangeHandler", function () {
           await groupHandler.connect(assistant).createGroup(group, condition);
 
           await expect(
-            bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
         });
       });
@@ -1503,8 +1521,8 @@ describe("IBosonExchangeHandler", function () {
             await expect(
               exchangeHandler
                 .connect(buyer)
-                .commitToConditionalOffer(await buyer.getAddress(), offerId, 1, { value: price })
-            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
+            ).to.revertedWith(RevertReasons.MAX_COMMITS_ADDRESS_REACHED);
           });
 
           it("Caller sends non-zero tokenId", async function () {
@@ -1680,7 +1698,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+            ).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
           });
 
           it("buyer does not meet condition for commit", async function () {
@@ -1733,7 +1751,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Create Condition
           condition = mockCondition({
-            tokenAddress: foreign1155.address,
+            tokenAddress: await foreign1155.getAddress(),
             threshold: "1",
             maxCommits: "3",
             tokenType: TokenType.MultiToken,
@@ -1851,7 +1869,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Create Condition
           condition = mockCondition({
-            tokenAddress: foreign721.address,
+            tokenAddress: await foreign721.getAddress(),
             threshold: "0",
             maxCommits: "3",
             tokenType: TokenType.NonFungibleToken,
@@ -1897,9 +1915,7 @@ describe("IBosonExchangeHandler", function () {
         it("await buyer.getAddress() is the zero address", async function () {
           // Attempt to commit, expecting revert
           await expect(
-            exchangeHandler
-              .connect(buyer)
-              .commitToConditionalOffer(ethers.constants.AddressZero, offerId, tokenId, { value: price })
+            exchangeHandler.connect(buyer).commitToConditionalOffer(ZeroAddress, offerId, tokenId, { value: price })
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
@@ -1934,10 +1950,8 @@ describe("IBosonExchangeHandler", function () {
           const now = block.timestamp.toString();
 
           // set validFrom date in the past
-          offerDates.validFrom = ethers.BigNumber.from(now)
-            .add(oneMonth * 6)
-            .toString(); // 6 months in the future
-          offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom).add(10).toString(); // just after the valid from so it succeeds.
+          offerDates.validFrom = (BigInt(now) + BigInt(oneMonth) * 6n).toString(); // 6 months in the future
+          offerDates.validUntil = (BigInt(offerDates.validFrom) + 10n).toString(); // just after the valid from so it succeeds.
 
           await offerHandler
             .connect(assistant)

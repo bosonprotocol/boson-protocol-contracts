@@ -356,6 +356,7 @@ describe("SnapshotGate", function () {
           method: EvaluationMethod.SpecificToken,
           length: "3",
         });
+
         expect(condition.isValid()).to.be.true;
 
         // Create Group
