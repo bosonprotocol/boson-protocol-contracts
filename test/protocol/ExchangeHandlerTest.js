@@ -2038,6 +2038,14 @@ describe("IBosonExchangeHandler", function () {
           await expect(exchangeHandler.connect(rando).expireVoucher(exchange.id)).to.revertedWith(
             RevertReasons.VOUCHER_STILL_VALID
           );
+
+          // Set time forward past the last valid timestamp
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid));
+
+          // Attempt to cancel the voucher, expecting revert
+          await expect(exchangeHandler.connect(rando).expireVoucher(exchange.id)).to.revertedWith(
+            RevertReasons.VOUCHER_STILL_VALID
+          );
         });
       });
     });
@@ -2070,6 +2078,17 @@ describe("IBosonExchangeHandler", function () {
 
         // It should match ExchangeState.Redeemed
         assert.equal(response, ExchangeState.Redeemed, "Exchange state is incorrect");
+      });
+
+      it("It's possible to redeem at the the end of voucher validity period", async function () {
+        // Set time forward to the offer's validUntilDate
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid));
+
+        // Redeem the voucher, expecting event
+        await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.emit(
+          exchangeHandler,
+          "VoucherRedeemed"
+        );
       });
 
       context("💔 Revert Reasons", async function () {
@@ -2119,7 +2138,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("current time is after to voucher's validUntilDate", async function () {
           // Set time forward past the voucher's validUntilDate
-          await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + 1);
 
           // Attempt to redeem the voucher, expecting revert
           await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
@@ -4052,7 +4071,7 @@ describe("IBosonExchangeHandler", function () {
           block = await provider.getBlock(blockNumber);
           const escalatedDate = block.timestamp.toString();
 
-          await setNextBlockTimestamp(Number(escalatedDate) + Number(disputeResolver.escalationResponsePeriod));
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(disputeResolver.escalationResponsePeriod) + 1);
 
           // Expire dispute
           await disputeHandler.connect(rando).expireEscalatedDispute(exchange.id);

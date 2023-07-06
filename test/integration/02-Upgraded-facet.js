@@ -632,7 +632,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const escalatedDate = block.timestamp.toString();
 
           // Set time forward past the dispute escalation period
-          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
           // Expire the escalated dispute, testing for the event
           await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId))
