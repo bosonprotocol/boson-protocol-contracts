@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x15335ed7
+ * The ERC-165 identifier for this interface is: 0x868de65b
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -310,6 +310,23 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external;
 
     /**
+     * @notice Creates a new seller collection.
+     *
+     * Emits a CollectionCreated event if successful.
+     *
+     *  Reverts if:
+     *  - The offers region of protocol is paused
+     *  - Caller is not the seller assistant
+     *
+     * @param _externalId - external collection id
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
+     */
+    function createNewCollection(
+        string calldata _externalId,
+        BosonTypes.VoucherInitValues calldata _voucherInitValues
+    ) external;
+
+    /**
      * @notice Gets the details about a seller.
      *
      * @param _sellerId - the id of the seller to check
@@ -352,6 +369,17 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function getSellerByAuthToken(
         BosonTypes.AuthToken calldata _associatedAuthToken
     ) external view returns (bool exists, BosonTypes.Seller memory seller, BosonTypes.AuthToken memory authToken);
+
+    /**
+     * @notice Gets the details about a seller's collections.
+     *
+     * @param _sellerId - the id of the seller to check
+     * @return defaultVoucherAddress - the address of the default voucher contract for the seller
+     * @return additionalCollections - an array of additional collections that the seller has created
+     */
+    function getSellersCollections(
+        uint256 _sellerId
+    ) external view returns (address defaultVoucherAddress, BosonTypes.Collection[] memory additionalCollections);
 
     /**
      * @notice Gets the details about a buyer.

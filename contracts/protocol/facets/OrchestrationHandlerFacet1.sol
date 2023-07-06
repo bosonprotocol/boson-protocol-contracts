@@ -68,6 +68,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -141,6 +142,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -210,6 +212,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -275,6 +278,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -331,6 +335,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When adding to the group if:
      *   - Group does not exists
      *   - Caller is not the assistant of the group
@@ -393,6 +398,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When adding to the group if:
      *   - Group does not exists
      *   - Caller is not the assistant of the group
@@ -454,6 +460,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -519,6 +526,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -588,6 +596,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
@@ -659,6 +668,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
@@ -753,6 +763,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -834,6 +845,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -927,6 +939,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -1016,6 +1029,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -1117,6 +1131,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
@@ -1219,6 +1234,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token

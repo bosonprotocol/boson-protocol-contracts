@@ -13,7 +13,7 @@ import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  *
- * The ERC-165 identifier for this interface is: 0x0c62d8e3
+ * The ERC-165 identifier for this interface is: 0xb2539c77
  */
 interface IBosonOrchestrationHandler is
     IBosonAccountEvents,
@@ -91,6 +91,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -161,6 +162,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -218,6 +220,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -269,6 +272,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -323,6 +327,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When adding to the group if:
      *   - Group does not exists
      *   - Caller is not the assistant of the group
@@ -377,6 +382,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When adding to the group if:
      *   - Group does not exists
      *   - Caller is not the assistant of the group
@@ -435,6 +441,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -494,6 +501,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -558,6 +566,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
@@ -622,6 +631,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
@@ -705,6 +715,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -781,6 +792,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -861,6 +873,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -945,6 +958,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -1033,6 +1047,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
@@ -1122,6 +1137,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
