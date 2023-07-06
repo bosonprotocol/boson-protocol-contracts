@@ -1957,6 +1957,7 @@ describe("SellerHandler", function () {
           .withArgs(seller.id, pendingSellerUpdateStruct, emptyAuthTokenStruct, await admin.getAddress());
 
         sellerStruct = seller.toStruct();
+
         // Nothing pending left
         pendingSellerUpdate.admin = ZeroAddress;
         pendingSellerUpdate.clerk = ZeroAddress;
@@ -1978,6 +1979,66 @@ describe("SellerHandler", function () {
             emptyAuthTokenStruct,
             await other1.getAddress()
           );
+      });
+
+      it("should clean pending addresses update when calling updateSeller again", async function () {
+        seller.admin = ZeroAddress;
+        sellerStruct = seller.toStruct();
+
+        // Update seller, testing for the event
+        await expect(accountHandler.connect(admin).updateSeller(seller, authToken))
+          .to.emit(accountHandler, "SellerUpdatePending")
+          .withArgs(seller.id, pendingSellerUpdateStruct, authTokenStruct, admin.address);
+
+        // Approve update
+        await expect(
+          accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken])
+        )
+          .to.emit(accountHandler, "SellerUpdateApplied")
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            pendingSellerUpdateStruct,
+            authTokenStruct,
+            emptyAuthTokenStruct,
+            authTokenOwner.address
+          );
+
+        seller.admin = pendingSellerUpdate.admin = admin.address;
+        pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
+
+        // Calling updateSeller request to replace auth token with admin
+        await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
+          .to.emit(accountHandler, "SellerUpdatePending")
+          .withArgs(seller.id, pendingSellerUpdateStruct, emptyAuthTokenStruct, admin.address);
+
+        seller.admin = pendingSellerUpdate.admin = ZeroAddress;
+        pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
+
+        authToken.tokenId = "123";
+        authTokenStruct = authToken.toStruct();
+
+        // Calling updateSeller again, request to replace admin with an auth token
+        await expect(accountHandler.connect(admin).updateSeller(seller, authToken))
+          .to.emit(accountHandler, "SellerUpdatePending")
+          .withArgs(seller.id, pendingSellerUpdateStruct, authTokenStruct, admin.address);
+      });
+
+      it("should clean pending auth token update when calling updateSeller again", async function () {
+        seller.admin = ZeroAddress;
+
+        // Calling updateSeller for the first time, request to replace the admin with an auth token
+        await expect(accountHandler.connect(admin).updateSeller(seller, authToken))
+          .to.emit(accountHandler, "SellerUpdatePending")
+          .withArgs(seller.id, pendingSellerUpdateStruct, authTokenStruct, admin.address);
+
+        seller.admin = pendingSellerUpdate.admin = other1.address;
+        pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
+
+        // Calling updateSeller for the second time, request to replace auth token with admin
+        await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
+          .to.emit(accountHandler, "SellerUpdatePending")
+          .withArgs(seller.id, pendingSellerUpdateStruct, emptyAuthTokenStruct, admin.address);
       });
 
       context("💔 Revert Reasons", async function () {
