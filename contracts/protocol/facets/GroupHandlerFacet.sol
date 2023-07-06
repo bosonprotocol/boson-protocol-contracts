@@ -31,7 +31,6 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
      * - Offer exists in a different group
-     * - Number of offers exceeds maximum allowed number per group
      *
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct
@@ -51,7 +50,6 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * Reverts if:
      * - Caller is not the seller
      * - Offer ids param is an empty list
-     * - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - Group does not exist
      * - Any of offers belongs to different seller
      * - Any of offers does not exist

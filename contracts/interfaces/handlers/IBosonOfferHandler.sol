@@ -60,7 +60,6 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Number of offers exceeds maximum allowed number per batch
      * - Number of elements in offers, offerDates and offerDurations do not match
      * - For any offer:
      *   - Caller is not an assistant
@@ -145,7 +144,6 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *
      * Reverts if, for any offer:
      * - The offers region of protocol is paused
-     * - Number of offers exceeds maximum allowed number per batch
      * - Offer id is invalid
      * - Caller is not the assistant of the offer
      * - Offer has already been voided
@@ -178,7 +176,6 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Number of offers exceeds maximum allowed number per batch
      * - For any of the offers:
      *   - Offer does not exist
      *   - Caller is not the assistant of the offer

@@ -22,7 +22,6 @@ interface IBosonGroupHandler is IBosonGroupEvents {
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
      * - Offer exists in a different group
-     * - Number of offers exceeds maximum allowed number per group
      *
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct
@@ -37,7 +36,6 @@ interface IBosonGroupHandler is IBosonGroupEvents {
      * Reverts if:
      * - Caller is not the seller
      * - Offer ids param is an empty list
-     * - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - Group does not exist
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
@@ -58,7 +56,6 @@ interface IBosonGroupHandler is IBosonGroupEvents {
      * - The groups region of protocol is paused
      * - Caller is not the seller
      * - Offer ids param is an empty list
-     * - Number of offers exceeds maximum allowed number per group
      * - Group does not exist
      * - Any offer is not part of the group
      *

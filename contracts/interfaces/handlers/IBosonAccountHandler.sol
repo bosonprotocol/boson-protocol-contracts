@@ -66,7 +66,6 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
      * - EscalationResponsePeriod is invalid
-     * - Number of seller ids in _sellerAllowList array exceeds max
      * - Some seller does not exist
      * - Some seller id is duplicated
      * - DisputeResolver is not active (if active == false)
@@ -240,7 +239,6 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
-     * - Number of DisputeResolverFee structs in array exceeds max
      * - Number of DisputeResolverFee structs in array is zero
      * - DisputeResolverFee array contains duplicates
      * - Fee amount is a non-zero value. Protocol doesn't yet support fees for dispute resolvers
@@ -263,7 +261,6 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
-     * - Number of DisputeResolverFee structs in array exceeds max
      * - Number of DisputeResolverFee structs in array is zero
      * - DisputeResolverFee does not exist for the dispute resolver
      *
@@ -281,7 +278,6 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
-     * - Number of seller ids in array exceeds max
      * - Number of seller ids in array is zero
      * - Some seller does not exist
      * - Seller id is already approved
@@ -300,7 +296,6 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
-     * - Number of seller ids in array exceeds max
      * - Number of seller ids structs in array is zero
      * - Seller id is not approved
      *

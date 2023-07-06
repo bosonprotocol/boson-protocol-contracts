@@ -88,7 +88,6 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      *
      * Reverts if:
      * - The exchanges region of protocol is paused
-     * - Number of exchanges exceeds maximum allowed number per batch
      * - For any exchange:
      *   - Exchange does not exist
      *   - Exchange is not in Redeemed state
