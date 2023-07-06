@@ -158,7 +158,10 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @param _tokenList - list of tokens addresses to get available funds
      * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
      */
-    function getAvailableFunds(uint256 _entityId, address[] calldata _tokenList) external view override returns (Funds[] memory availableFunds) {
+    function getAvailableFunds(
+        uint256 _entityId,
+        address[] calldata _tokenList
+    ) external view override returns (Funds[] memory availableFunds) {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 

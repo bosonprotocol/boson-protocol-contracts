@@ -2139,8 +2139,10 @@ describe("IBosonFundsHandler", function () {
               new Funds(await mockToken.getAddress(), "Foreign20", agentOfferProtocolFee),
               new Funds(ZeroAddress, "Native currency", "0"),
             ]);
-            expectedAgentAvailableFunds = new FundsList([new Funds(await mockToken.getAddress(), "Foreign20", agentPayoff),
-                                                         new Funds(ZeroAddress, "Native currency", "0"),]);
+            expectedAgentAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", agentPayoff),
+              new Funds(ZeroAddress, "Native currency", "0"),
+            ]);
 
             sellersAvailableFunds = FundsList.fromStruct(
               await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
@@ -2679,10 +2681,18 @@ describe("IBosonFundsHandler", function () {
 
           it("should update state", async function () {
             // Read on chain state
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
-            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
-            protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
-            agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses));
+            sellersAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+            );
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
+            protocolAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+            );
+            agentAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+            );
 
             // Chain state should match the expected available funds
             expectedSellerAvailableFunds = new FundsList([
@@ -2690,13 +2700,15 @@ describe("IBosonFundsHandler", function () {
               new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
             ]);
 
-            const emptyFundsList = new FundsList([new Funds(await mockToken.getAddress(), "Foreign20", "0"), new Funds(ZeroAddress, "Native currency", "0")])
+            const emptyFundsList = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+              new Funds(ZeroAddress, "Native currency", "0"),
+            ]);
             expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
             expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
             expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
 
             // Retract from the dispute, so the funds are released
             await disputeHandler.connect(buyer).retractDispute(exchangeId);
@@ -2711,11 +2723,22 @@ describe("IBosonFundsHandler", function () {
               "Foreign20",
               (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
             );
-            expectedProtocolAvailableFunds = new FundsList([new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff), new Funds(ZeroAddress, "Native currency", "0")]);
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses));
-            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
-            protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses));
-            agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses));
+            expectedProtocolAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff),
+              new Funds(ZeroAddress, "Native currency", "0"),
+            ]);
+            sellersAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+            );
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
+            protocolAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+            );
+            agentAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+            );
             expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
             expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -2775,6 +2798,1483 @@ describe("IBosonFundsHandler", function () {
             });
 
             it("should update state", async function () {
+              // Read on chain state
+              sellersAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+              );
+              buyerAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+              );
+              protocolAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+              );
+              agentAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+              );
+
+              // Chain state should match the expected available funds
+              expectedSellerAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+              ]);
+              const emptyFundsList = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+              expectedBuyerAvailableFunds =
+                expectedProtocolAvailableFunds =
+                expectedAgentAvailableFunds =
+                  emptyFundsList;
+
+              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+
+              // Retract from the dispute, so the funds are released
+              await disputeHandler.connect(buyer).retractDispute(exchangeId);
+
+              // Available funds should be increased for
+              // buyer: 0
+              // seller: sellerDeposit + price - protocol fee - agentFee;
+              // protocol: protocolFee
+              // agent: agentFee
+              expectedSellerAvailableFunds.funds[0] = new Funds(
+                await mockToken.getAddress(),
+                "Foreign20",
+                BigInt(sellerPayoff).toString()
+              );
+              expectedProtocolAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+              expectedAgentAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", agentPayoff),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+              sellersAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+              );
+              buyerAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+              );
+              protocolAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+              );
+              agentAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+              );
+              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+            });
+          });
+        });
+
+        context("Final state DISPUTED - RETRACTED via expireDispute", async function () {
+          beforeEach(async function () {
+            // expected payoffs
+            // buyer: 0
+            buyerPayoff = 0;
+
+            // seller: sellerDeposit + price - protocolFee
+            sellerPayoff = (
+              BigInt(offerToken.sellerDeposit) +
+              BigInt(offerToken.price) -
+              BigInt(offerTokenProtocolFee)
+            ).toString();
+
+            // protocol: protocolFee
+            protocolPayoff = offerTokenProtocolFee;
+            await setNextBlockTimestamp(Number(timeout));
+          });
+
+          it("should emit a FundsReleased event", async function () {
+            // Expire the dispute, expecting event
+            const tx = await disputeHandler.connect(rando).expireDispute(exchangeId);
+            await expect(tx)
+              .to.emit(disputeHandler, "ProtocolFeeCollected")
+              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, rando.address);
+
+            await expect(tx)
+              .to.emit(disputeHandler, "FundsReleased")
+              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, rando.address);
+
+            //check that FundsReleased event was NOT emitted with buyer Id
+            const txReceipt = await tx.wait();
+            const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
+              exchangeId,
+              buyerId,
+              offerToken.exchangeToken,
+              buyerPayoff,
+              rando.address,
+            ]);
+            expect(match).to.be.false;
+          });
+
+          it("should update state", async function () {
+            // Read on chain state
+            sellersAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+            );
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
+            protocolAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+            );
+            agentAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+            );
+
+            // Chain state should match the expected available funds
+            expectedSellerAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
+              new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+            ]);
+            const emptyFundsList = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+              new Funds(ZeroAddress, "Native currency", "0"),
+            ]);
+            expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
+            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+            expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+
+            // Expire the dispute, so the funds are released
+            await disputeHandler.connect(rando).expireDispute(exchangeId);
+
+            // Available funds should be increased for
+            // buyer: 0
+            // seller: sellerDeposit + price - protocol fee; note that seller has sellerDeposit in availableFunds from before
+            // protocol: protocolFee
+            // agent: 0
+            expectedSellerAvailableFunds.funds[0] = new Funds(
+              await mockToken.getAddress(),
+              "Foreign20",
+              (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
+            );
+            expectedProtocolAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff),
+              new Funds(ZeroAddress, "Native currency", "0"),
+            ]);
+            sellersAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+            );
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
+            protocolAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+            );
+            agentAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+            );
+            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+            expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+          });
+
+          context("Offer has an agent", async function () {
+            beforeEach(async function () {
+              // Create Agent offer
+              await offerHandler
+                .connect(assistant)
+                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
+
+              // Commit to Offer
+              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+
+              // expected payoffs
+              // buyer: 0
+              buyerPayoff = 0;
+
+              // agentPayoff: agentFee
+              agentFee = ((BigInt(agentOffer.price) * BigInt(agentFeePercentage)) / 10000n).toString();
+              agentPayoff = agentFee;
+
+              // seller: sellerDeposit + price - protocolFee - agent fee
+              sellerPayoff = (
+                BigInt(agentOffer.sellerDeposit) +
+                BigInt(agentOffer.price) -
+                BigInt(agentOfferProtocolFee) -
+                BigInt(agentFee)
+              ).toString();
+              // protocol: protocolFee
+              protocolPayoff = agentOfferProtocolFee;
+
+              // Exchange id
+              exchangeId = "2";
+
+              // succesfully redeem exchange
+              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+              // raise the dispute
+              tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+
+              // Get the block timestamp of the confirmed tx and set disputedDate
+              blockNumber = tx.blockNumber;
+              block = await ethers.provider.getBlock(blockNumber);
+              disputedDate = block.timestamp.toString();
+              timeout = BigInt(disputedDate) + resolutionPeriod.toString();
+
+              await setNextBlockTimestamp(Number(timeout));
+            });
+
+            it("should emit a FundsReleased event", async function () {
+              // Expire the dispute, expecting event
+              const tx = await disputeHandler.connect(rando).expireDispute(exchangeId);
+
+              // Complete the exchange, expecting event
+              await expect(tx)
+                .to.emit(exchangeHandler, "FundsReleased")
+                .withArgs(exchangeId, agentId, agentOffer.exchangeToken, agentPayoff, rando.address);
+
+              await expect(tx)
+                .to.emit(exchangeHandler, "FundsReleased")
+                .withArgs(exchangeId, seller.id, agentOffer.exchangeToken, sellerPayoff, rando.address);
+
+              await expect(tx)
+                .to.emit(exchangeHandler, "ProtocolFeeCollected")
+                .withArgs(exchangeId, agentOffer.exchangeToken, protocolPayoff, rando.address);
+            });
+
+            it("should update state", async function () {
+              // Read on chain state
+              sellersAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+              );
+              buyerAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+              );
+              protocolAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+              );
+              agentAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+              );
+
+              // Chain state should match the expected available funds
+              expectedSellerAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+              ]);
+              const emptyFundsList = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+              expectedBuyerAvailableFunds =
+                expectedProtocolAvailableFunds =
+                expectedAgentAvailableFunds =
+                  emptyFundsList;
+
+              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+
+              // Expire the dispute, so the funds are released
+              await disputeHandler.connect(rando).expireDispute(exchangeId);
+
+              // Available funds should be increased for
+              // buyer: 0
+              // seller: sellerDeposit + price - protocol fee - agent fee;
+              // protocol: protocolFee
+              // agent: agent fee
+              expectedSellerAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff),
+                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+              ]);
+
+              expectedProtocolAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+              expectedAgentAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", agentPayoff),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+              sellersAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+              );
+              buyerAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+              );
+              protocolAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+              );
+              agentAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+              );
+              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+            });
+          });
+        });
+
+        context("Final state DISPUTED - RESOLVED", async function () {
+          beforeEach(async function () {
+            buyerPercentBasisPoints = "5566"; // 55.66%
+
+            // expected payoffs
+            // buyer: (price + sellerDeposit)*buyerPercentage
+            buyerPayoff =
+              ((BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit)) * BigInt(buyerPercentBasisPoints)) /
+              10000n;
+
+            // seller: (price + sellerDeposit)*(1-buyerPercentage)
+            sellerPayoff = BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit) - buyerPayoff;
+
+            // protocol: 0
+            protocolPayoff = 0;
+
+            // Set the message Type, needed for signature
+            resolutionType = [
+              { name: "exchangeId", type: "uint256" },
+              { name: "buyerPercentBasisPoints", type: "uint256" },
+            ];
+
+            customSignatureType = {
+              Resolution: resolutionType,
+            };
+
+            message = {
+              exchangeId: exchangeId,
+              buyerPercentBasisPoints,
+            };
+
+            // Collect the signature components
+            ({ r, s, v } = await prepareDataSignatureParameters(
+              buyer, // Assistant is the caller, seller should be the signer.
+              customSignatureType,
+              "Resolution",
+              message,
+              await disputeHandler.getAddress()
+            ));
+          });
+
+          it("should emit a FundsReleased event", async function () {
+            // Resolve the dispute, expecting event
+            const tx = await disputeHandler
+              .connect(assistant)
+              .resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+            await expect(tx)
+              .to.emit(disputeHandler, "FundsReleased")
+              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, await assistant.getAddress());
+
+            await expect(tx)
+              .to.emit(disputeHandler, "FundsReleased")
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, await assistant.getAddress());
+
+            await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
+          });
+
+          it("should update state", async function () {
+            // Read on chain state
+            sellersAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+            );
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
+            protocolAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+            );
+            agentAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+            );
+
+            // Chain state should match the expected available funds
+            expectedSellerAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
+              new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+            ]);
+            const emptyFundsList = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+              new Funds(ZeroAddress, "Native currency", "0"),
+            ]);
+            expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
+            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+            expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+
+            // Resolve the dispute, so the funds are released
+            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+
+            // Available funds should be increased for
+            // buyer: (price + sellerDeposit)*buyerPercentage
+            // seller: (price + sellerDeposit)*(1-buyerPercentage); note that seller has sellerDeposit in availableFunds from before
+            // protocol: 0
+            // agent: 0
+            expectedSellerAvailableFunds.funds[0] = new Funds(
+              await mockToken.getAddress(),
+              "Foreign20",
+              (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
+            );
+            expectedBuyerAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
+              new Funds(ZeroAddress, "Native currency", "0"),
+            ]);
+            sellersAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+            );
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
+            protocolAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+            );
+            agentAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+            );
+
+            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+            expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+          });
+
+          context("Offer has an agent", async function () {
+            beforeEach(async function () {
+              // Create Agent offer
+              await offerHandler
+                .connect(assistant)
+                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
+
+              // Commit to Offer
+              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+
+              exchangeId = "2";
+
+              // succesfully redeem exchange
+              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+              // raise the dispute
+              await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+
+              buyerPercentBasisPoints = "5566"; // 55.66%
+
+              // expected payoffs
+              // buyer: (price + sellerDeposit)*buyerPercentage
+              buyerPayoff = (
+                ((BigInt(agentOffer.price) + BigInt(agentOffer.sellerDeposit)) * BigInt(buyerPercentBasisPoints)) /
+                10000n
+              ).toString();
+
+              // seller: (price + sellerDeposit)*(1-buyerPercentage)
+              sellerPayoff = (
+                BigInt(agentOffer.price) +
+                BigInt(agentOffer.sellerDeposit) -
+                BigInt(buyerPayoff)
+              ).toString();
+
+              // protocol: 0
+              protocolPayoff = 0;
+
+              // Set the message Type, needed for signature
+              resolutionType = [
+                { name: "exchangeId", type: "uint256" },
+                { name: "buyerPercentBasisPoints", type: "uint256" },
+              ];
+
+              customSignatureType = {
+                Resolution: resolutionType,
+              };
+
+              message = {
+                exchangeId: exchangeId,
+                buyerPercentBasisPoints,
+              };
+
+              // Collect the signature components
+              ({ r, s, v } = await prepareDataSignatureParameters(
+                buyer, // Assistant is the caller, seller should be the signer.
+                customSignatureType,
+                "Resolution",
+                message,
+                await disputeHandler.getAddress()
+              ));
+            });
+
+            it("should update state", async function () {
+              // Read on chain state
+              sellersAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+              );
+              buyerAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+              );
+              protocolAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+              );
+              agentAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+              );
+
+              // Chain state should match the expected available funds
+              expectedSellerAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+              ]);
+              const emptyFundsList = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+              expectedBuyerAvailableFunds =
+                expectedProtocolAvailableFunds =
+                expectedAgentAvailableFunds =
+                  emptyFundsList;
+
+              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+
+              // Resolve the dispute, so the funds are released
+              await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+
+              // Available funds should be increased for
+              // buyer: (price + sellerDeposit)*buyerPercentage
+              // seller: (price + sellerDeposit)*(1-buyerPercentage);
+              // protocol: 0
+              // agent: 0
+              expectedSellerAvailableFunds.funds[0] = new Funds(
+                await mockToken.getAddress(),
+                "Foreign20",
+                sellerPayoff
+              );
+              expectedBuyerAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+
+              sellersAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+              );
+              buyerAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+              );
+              protocolAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+              );
+              agentAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+              );
+
+              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+            });
+          });
+        });
+
+        context("Final state DISPUTED - ESCALATED - RETRACTED", async function () {
+          beforeEach(async function () {
+            // expected payoffs
+            // buyer: 0
+            buyerPayoff = 0;
+
+            // seller: sellerDeposit + price - protocolFee + buyerEscalationDeposit
+            sellerPayoff = (
+              BigInt(offerToken.sellerDeposit) +
+              BigInt(offerToken.price) -
+              BigInt(offerTokenProtocolFee) +
+              BigInt(buyerEscalationDeposit)
+            ).toString();
+
+            // protocol: 0
+            protocolPayoff = offerTokenProtocolFee;
+
+            // Escalate the dispute
+            await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+          });
+
+          it("should emit a FundsReleased event", async function () {
+            // Retract from the dispute, expecting event
+            const tx = await disputeHandler.connect(buyer).retractDispute(exchangeId);
+
+            await expect(tx)
+              .to.emit(disputeHandler, "ProtocolFeeCollected")
+              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, await buyer.getAddress());
+
+            await expect(tx)
+              .to.emit(disputeHandler, "FundsReleased")
+              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, await buyer.getAddress());
+
+            //check that FundsReleased event was NOT emitted with buyer Id
+            const txReceipt = await tx.wait();
+            const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
+              exchangeId,
+              buyerId,
+              offerToken.exchangeToken,
+              buyerPayoff,
+              await buyer.getAddress(),
+            ]);
+            expect(match).to.be.false;
+          });
+
+          it("should update state", async function () {
+            // Read on chain state
+            sellersAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+            );
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
+            protocolAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+            );
+            agentAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+            );
+
+            // Chain state should match the expected available funds
+            expectedSellerAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
+              new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+            ]);
+
+            const emptyFundsList = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+              new Funds(ZeroAddress, "Native currency", "0"),
+            ]);
+            expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
+            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+            expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+
+            // Retract from the dispute, so the funds are released
+            await disputeHandler.connect(buyer).retractDispute(exchangeId);
+
+            // Available funds should be increased for
+            // buyer: 0
+            // seller: sellerDeposit + price - protocol fee + buyerEscalationDeposit; note that seller has sellerDeposit in availableFunds from before
+            // protocol: protocolFee
+            // agent: 0
+            expectedSellerAvailableFunds.funds[0] = new Funds(
+              await mockToken.getAddress(),
+              "Foreign20",
+              (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
+            );
+            expectedProtocolAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff),
+              new Funds(ZeroAddress, "Native currency", "0"),
+            ]);
+
+            sellersAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+            );
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
+            protocolAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+            );
+            agentAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+            );
+
+            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+            expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+          });
+
+          context("Offer has an agent", async function () {
+            beforeEach(async function () {
+              // expected payoffs
+              // buyer: 0
+              buyerPayoff = 0;
+
+              // agentPayoff: agentFee
+              agentFee = ((BigInt(agentOffer.price) * BigInt(agentFeePercentage)) / 10000n).toString();
+              agentPayoff = agentFee;
+
+              // seller: sellerDeposit + price - protocolFee - agentFee + buyerEscalationDeposit
+              sellerPayoff = (
+                BigInt(agentOffer.sellerDeposit) +
+                BigInt(agentOffer.price) -
+                BigInt(agentOfferProtocolFee) -
+                BigInt(agentFee) +
+                BigInt(buyerEscalationDeposit)
+              ).toString();
+
+              // protocol: 0
+              protocolPayoff = agentOfferProtocolFee;
+
+              // Exchange id
+              exchangeId = "2";
+              await offerHandler
+                .connect(assistant)
+                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
+
+              // approve protocol to transfer the tokens
+              await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
+              await mockToken.mint(await buyer.getAddress(), agentOffer.price);
+              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+
+              // succesfully redeem exchange
+              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+              // raise the dispute
+              await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+
+              // escalate the dispute
+              await mockToken.mint(await buyer.getAddress(), buyerEscalationDeposit);
+              await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDeposit);
+              await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+            });
+
+            it("should update state", async function () {
+              // Read on chain state
+              sellersAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+              );
+              buyerAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+              );
+              protocolAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+              );
+              agentAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+              );
+
+              // Chain state should match the expected available funds
+              expectedSellerAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+              ]);
+              const emptyFundsList = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+
+              expectedBuyerAvailableFunds =
+                expectedProtocolAvailableFunds =
+                expectedAgentAvailableFunds =
+                  emptyFundsList;
+              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+
+              // Retract from the dispute, so the funds are released
+              await disputeHandler.connect(buyer).retractDispute(exchangeId);
+
+              // Available funds should be increased for
+              // buyer: 0
+              // seller: sellerDeposit + price - protocol fee - agentFee  + buyerEscalationDeposit;
+              // protocol: protocolFee
+              // agent: agentFee
+              expectedSellerAvailableFunds.funds[0] = new Funds(
+                await mockToken.getAddress(),
+                "Foreign20",
+                sellerPayoff
+              );
+              expectedProtocolAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+              expectedAgentAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", agentPayoff),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+
+              sellersAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+              );
+              buyerAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+              );
+              protocolAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+              );
+              agentAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+              );
+
+              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+            });
+          });
+        });
+
+        context("Final state DISPUTED - ESCALATED - RESOLVED", async function () {
+          beforeEach(async function () {
+            buyerPercentBasisPoints = "5566"; // 55.66%
+
+            // expected payoffs
+            // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
+            buyerPayoff = (
+              ((BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit) + BigInt(buyerEscalationDeposit)) *
+                BigInt(buyerPercentBasisPoints)) /
+              10000n
+            ).toString();
+
+            // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
+            sellerPayoff = (
+              BigInt(offerToken.price) +
+              BigInt(offerToken.sellerDeposit) +
+              BigInt(buyerEscalationDeposit) -
+              BigInt(buyerPayoff)
+            ).toString();
+
+            // protocol: 0
+            protocolPayoff = 0;
+
+            // Set the message Type, needed for signature
+            resolutionType = [
+              { name: "exchangeId", type: "uint256" },
+              { name: "buyerPercentBasisPoints", type: "uint256" },
+            ];
+
+            customSignatureType = {
+              Resolution: resolutionType,
+            };
+
+            message = {
+              exchangeId: exchangeId,
+              buyerPercentBasisPoints,
+            };
+
+            // Collect the signature components
+            ({ r, s, v } = await prepareDataSignatureParameters(
+              buyer, // Assistant is the caller, seller should be the signer.
+              customSignatureType,
+              "Resolution",
+              message,
+              await disputeHandler.getAddress()
+            ));
+
+            // Escalate the dispute
+            await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+          });
+
+          it("should emit a FundsReleased event", async function () {
+            // Resolve the dispute, expecting event
+            const tx = await disputeHandler
+              .connect(assistant)
+              .resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+            await expect(tx)
+              .to.emit(disputeHandler, "FundsReleased")
+              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, await assistant.getAddress());
+
+            await expect(tx)
+              .to.emit(disputeHandler, "FundsReleased")
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, await assistant.getAddress());
+
+            await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
+          });
+
+          it("should update state", async function () {
+            // Read on chain state
+            sellersAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+            );
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
+            protocolAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+            );
+            agentAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+            );
+
+            // Chain state should match the expected available funds
+            expectedSellerAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
+              new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+            ]);
+
+            const emptyFundsList = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+              new Funds(ZeroAddress, "Native currency", "0"),
+            ]);
+            expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+            expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+
+            // Resolve the dispute, so the funds are released
+            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+
+            // Available funds should be increased for
+            // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
+            // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage); note that seller has sellerDeposit in availableFunds from before
+            // protocol: 0
+            // agent: 0
+            expectedBuyerAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
+              new Funds(ZeroAddress, "Native currency", "0"),
+            ]);
+            expectedSellerAvailableFunds.funds[0] = new Funds(
+              await mockToken.getAddress(),
+              "Foreign20",
+              (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
+            );
+            sellersAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+            );
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
+            protocolAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+            );
+            agentAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+            );
+            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+            expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+          });
+
+          context("Offer has an agent", async function () {
+            beforeEach(async function () {
+              // Create Agent offer
+              await offerHandler
+                .connect(assistant)
+                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
+
+              // approve protocol to transfer the tokens
+              await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
+              await mockToken.mint(await buyer.getAddress(), agentOffer.price);
+
+              // Commit to Offer
+              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+
+              exchangeId = "2";
+
+              // succesfully redeem exchange
+              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+              // raise the dispute
+              await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+
+              buyerPercentBasisPoints = "5566"; // 55.66%
+
+              // expected payoffs
+              // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
+              buyerPayoff = (
+                ((BigInt(agentOffer.price) + BigInt(agentOffer.sellerDeposit) + BigInt(buyerEscalationDeposit)) *
+                  BigInt(buyerPercentBasisPoints)) /
+                10000n
+              ).toString();
+
+              // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
+              sellerPayoff = (
+                BigInt(agentOffer.price) +
+                BigInt(agentOffer.sellerDeposit) +
+                BigInt(buyerEscalationDeposit) -
+                BigInt(buyerPayoff)
+              ).toString();
+
+              // protocol: 0
+              protocolPayoff = 0;
+
+              // Set the message Type, needed for signature
+              resolutionType = [
+                { name: "exchangeId", type: "uint256" },
+                { name: "buyerPercentBasisPoints", type: "uint256" },
+              ];
+
+              customSignatureType = {
+                Resolution: resolutionType,
+              };
+
+              message = {
+                exchangeId: exchangeId,
+                buyerPercentBasisPoints,
+              };
+
+              // Collect the signature components
+              ({ r, s, v } = await prepareDataSignatureParameters(
+                buyer, // Assistant is the caller, seller should be the signer.
+                customSignatureType,
+                "Resolution",
+                message,
+                await disputeHandler.getAddress()
+              ));
+
+              // escalate the dispute
+              await mockToken.mint(await buyer.getAddress(), buyerEscalationDeposit);
+              await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDeposit);
+              await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+            });
+
+            it("should update state", async function () {
+              // Read on chain state
+              sellersAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+              );
+              buyerAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+              );
+              protocolAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+              );
+              agentAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+              );
+
+              // Chain state should match the expected available funds
+              expectedSellerAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+              ]);
+              const emptyFundsList = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+              expectedBuyerAvailableFunds =
+                expectedProtocolAvailableFunds =
+                expectedAgentAvailableFunds =
+                  emptyFundsList;
+
+              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+
+              // Resolve the dispute, so the funds are released
+              await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+
+              // Available funds should be increased for
+              // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
+              // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage);
+              // protocol: 0
+              // agent: 0
+              expectedSellerAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff),
+                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+              ]);
+              expectedBuyerAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+              sellersAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+              );
+              buyerAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+              );
+              protocolAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+              );
+              agentAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+              );
+
+              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+            });
+          });
+        });
+
+        context("Final state DISPUTED - ESCALATED - DECIDED", async function () {
+          beforeEach(async function () {
+            buyerPercentBasisPoints = "5566"; // 55.66%
+
+            // expected payoffs
+            // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
+            buyerPayoff = (
+              ((BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit) + BigInt(buyerEscalationDeposit)) *
+                BigInt(buyerPercentBasisPoints)) /
+              10000n
+            ).toString();
+
+            // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
+            sellerPayoff = (
+              BigInt(offerToken.price) +
+              BigInt(offerToken.sellerDeposit) +
+              BigInt(buyerEscalationDeposit) -
+              BigInt(buyerPayoff)
+            ).toString();
+
+            // protocol: 0
+            protocolPayoff = 0;
+
+            // escalate the dispute
+            await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+          });
+
+          it("should emit a FundsReleased event", async function () {
+            // Decide the dispute, expecting event
+            const tx = await disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints);
+            await expect(tx)
+              .to.emit(disputeHandler, "FundsReleased")
+              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, await assistantDR.getAddress());
+
+            await expect(tx)
+              .to.emit(disputeHandler, "FundsReleased")
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, await assistantDR.getAddress());
+
+            await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
+          });
+
+          it("should update state", async function () {
+            // Read on chain state
+            sellersAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+            );
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
+            protocolAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+            );
+            agentAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+            );
+
+            // Chain state should match the expected available funds
+            expectedSellerAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
+              new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+            ]);
+            const emptyFundsList = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+              new Funds(ZeroAddress, "Native currency", "0"),
+            ]);
+            expectedBuyerAvailableFunds = expectedProtocolAvailableFunds = expectedAgentAvailableFunds = emptyFundsList;
+
+            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+            expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+
+            // Decide the dispute, so the funds are released
+            await disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints);
+
+            // Available funds should be increased for
+            // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
+            // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage); note that seller has sellerDeposit in availableFunds from before
+            // protocol: 0
+            // agent: 0
+            expectedBuyerAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
+              new Funds(ZeroAddress, "Native currency", "0"),
+            ]);
+            expectedSellerAvailableFunds.funds[0] = new Funds(
+              await mockToken.getAddress(),
+              "Foreign20",
+              (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
+            );
+            sellersAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+            );
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
+            protocolAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+            );
+            agentAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+            );
+            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+            expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+          });
+
+          context("Offer has an agent", async function () {
+            beforeEach(async function () {
+              // Create Agent offer
+              await offerHandler
+                .connect(assistant)
+                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
+
+              // approve protocol to transfer the tokens
+              await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
+              await mockToken.mint(await buyer.getAddress(), agentOffer.price);
+
+              // Commit to Offer
+              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+
+              exchangeId = "2";
+
+              // succesfully redeem exchange
+              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+              // raise the dispute
+              tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+
+              // Get the block timestamp of the confirmed tx and set disputedDate
+              blockNumber = tx.blockNumber;
+              block = await provider.getBlock(blockNumber);
+              disputedDate = block.timestamp.toString();
+              timeout = (BigInt(disputedDate) + BigInt(resolutionPeriod)).toString();
+
+              buyerPercentBasisPoints = "5566"; // 55.66%
+
+              // expected payoffs
+              // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
+              buyerPayoff = (
+                ((BigInt(agentOffer.price) + BigInt(agentOffer.sellerDeposit) + BigInt(buyerEscalationDeposit)) *
+                  BigInt(buyerPercentBasisPoints)) /
+                10000n
+              ).toString();
+
+              // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
+              sellerPayoff = (
+                BigInt(agentOffer.price) +
+                BigInt(agentOffer.sellerDeposit) +
+                BigInt(buyerEscalationDeposit) -
+                BigInt(buyerPayoff)
+              ).toString();
+
+              // protocol: 0
+              protocolPayoff = 0;
+
+              // escalate the dispute
+              await mockToken.mint(await buyer.getAddress(), buyerEscalationDeposit);
+              await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDeposit);
+              await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+            });
+
+            it("should update state", async function () {
+              // Read on chain state
+              sellersAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+              );
+              buyerAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+              );
+              protocolAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+              );
+              agentAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+              );
+
+              // Chain state should match the expected available funds
+              expectedSellerAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+              ]);
+              const emptyFundsList = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+              expectedBuyerAvailableFunds =
+                expectedProtocolAvailableFunds =
+                expectedAgentAvailableFunds =
+                  emptyFundsList;
+
+              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+
+              // Decide the dispute, so the funds are released
+              await disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints);
+
+              // Available funds should be increased for
+              // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
+              // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage);
+              // protocol: 0
+              // agent: 0
+              expectedSellerAvailableFunds.funds[0] = new Funds(
+                await mockToken.getAddress(),
+                "Foreign20",
+                sellerPayoff
+              );
+              expectedBuyerAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+
+              sellersAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+              );
+              buyerAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+              );
+              protocolAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+              );
+              agentAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+              );
+
+              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+            });
+          });
+        });
+        context(
+          "Final state DISPUTED - ESCALATED - REFUSED via expireEscalatedDispute (fail to resolve)",
+          async function () {
+            beforeEach(async function () {
+              // expected payoffs
+              // buyer: price + buyerEscalationDeposit
+              buyerPayoff = (BigInt(offerToken.price) + BigInt(buyerEscalationDeposit)).toString();
+
+              // seller: sellerDeposit
+              sellerPayoff = offerToken.sellerDeposit;
+
+              // protocol: 0
+              protocolPayoff = 0;
+
+              // Escalate the dispute
+              tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+
+              // Get the block timestamp of the confirmed tx and set escalatedDate
+              blockNumber = tx.blockNumber;
+              block = await provider.getBlock(blockNumber);
+              escalatedDate = block.timestamp.toString();
+
+              await setNextBlockTimestamp(Number(escalatedDate) + Number(disputeResolver.escalationResponsePeriod));
+            });
+
+            it("should emit a FundsReleased event", async function () {
+              // Expire the dispute, expecting event
+              const tx = await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
+              await expect(tx)
+                .to.emit(disputeHandler, "FundsReleased")
+                .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address);
+              await expect(tx)
+                .to.emit(disputeHandler, "FundsReleased")
+                .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, rando.address);
+              await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
+            });
+
+            it("should update state", async function () {
+              // Read on chain state
+              sellersAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+              );
+              buyerAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+              );
+              protocolAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+              );
+              agentAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+              );
+
+              // Chain state should match the expected available funds
+              expectedSellerAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
+                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+              ]);
+              const emptyFundsList = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+              expectedBuyerAvailableFunds =
+                expectedAgentAvailableFunds =
+                expectedProtocolAvailableFunds =
+                  emptyFundsList;
+              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+
+              // Expire the escalated dispute, so the funds are released
+              await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
+
+              // Available funds should be increased for
+              // buyer: price + buyerEscalationDeposit
+              // seller: sellerDeposit; note that seller has sellerDeposit in availableFunds from before
+              // protocol: 0
+              // agent: 0
+              expectedBuyerAvailableFunds = new FundsList([
+                new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
+                new Funds(ZeroAddress, "Native currency", "0"),
+              ]);
+              expectedSellerAvailableFunds.funds[0] = new Funds(
+                await mockToken.getAddress(),
+                "Foreign20",
+                (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
+              );
+              sellersAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+              );
+              buyerAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+              );
+              protocolAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+              );
+              agentAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+              );
+              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+            });
+
+            context("Offer has an agent", async function () {
+              beforeEach(async function () {
+                // Create Agent offer
+                await offerHandler
+                  .connect(assistant)
+                  .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
+
+                // approve protocol to transfer the tokens
+                await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
+                await mockToken.mint(await buyer.getAddress(), agentOffer.price);
+
+                // Commit to Offer
+                await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+
+                exchangeId = "2";
+
+                // succesfully redeem exchange
+                await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+                // raise the dispute
+                tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+
+                // expected payoffs
+                // buyer: price + buyerEscalationDeposit
+                buyerPayoff = (BigInt(offerToken.price) + BigInt(buyerEscalationDeposit)).toString();
+
+                // seller: sellerDeposit
+                sellerPayoff = offerToken.sellerDeposit;
+
+                // protocol: 0
+                protocolPayoff = 0;
+
+                // Escalate the dispute
+                await mockToken.mint(await buyer.getAddress(), buyerEscalationDeposit);
+                await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDeposit);
+                tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+
+                // Get the block timestamp of the confirmed tx and set escalatedDate
+                blockNumber = tx.blockNumber;
+                block = await provider.getBlock(blockNumber);
+                escalatedDate = block.timestamp.toString();
+
+                await setNextBlockTimestamp(Number(escalatedDate) + Number(disputeResolver.escalationResponsePeriod));
+              });
+
+              it("should update state", async function () {
                 // Read on chain state
                 sellersAvailableFunds = FundsList.fromStruct(
                   await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
@@ -2802,33 +4302,28 @@ describe("IBosonFundsHandler", function () {
                   expectedProtocolAvailableFunds =
                   expectedAgentAvailableFunds =
                     emptyFundsList;
-
                 expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                 expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                 expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                 expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
-                // Retract from the dispute, so the funds are released
-                await disputeHandler.connect(buyer).retractDispute(exchangeId);
+                // Expire the escalated dispute, so the funds are released
+                await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
 
                 // Available funds should be increased for
-                // buyer: 0
-                // seller: sellerDeposit + price - protocol fee - agentFee;
-                // protocol: protocolFee
-                // agent: agentFee
+                // buyer: price + buyerEscalationDeposit
+                // seller: sellerDeposit;
+                // protocol: 0
+                // agent: 0
+                expectedBuyerAvailableFunds = new FundsList([
+                  new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
+                  new Funds(ZeroAddress, "Native currency", "0"),
+                ]);
                 expectedSellerAvailableFunds.funds[0] = new Funds(
                   await mockToken.getAddress(),
                   "Foreign20",
-                  BigInt(sellerPayoff).toString()
+                  sellerPayoff
                 );
-                expectedProtocolAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
-                expectedAgentAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", agentPayoff),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
                 sellersAvailableFunds = FundsList.fromStruct(
                   await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
                 );
@@ -2847,44 +4342,54 @@ describe("IBosonFundsHandler", function () {
                 expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
               });
             });
-          });
+          }
+        );
 
-          context("Final state DISPUTED - RETRACTED via expireDispute", async function () {
+        context(
+          "Final state DISPUTED - ESCALATED - REFUSED via refuseEscalatedDispute (explicit refusal)",
+          async function () {
             beforeEach(async function () {
               // expected payoffs
-              // buyer: 0
-              buyerPayoff = 0;
+              // buyer: price + buyerEscalationDeposit
+              buyerPayoff = (BigInt(offerToken.price) + BigInt(buyerEscalationDeposit)).toString();
 
-              // seller: sellerDeposit + price - protocolFee
-              sellerPayoff = (
-                BigInt(offerToken.sellerDeposit) +
-                BigInt(offerToken.price) -
-                BigInt(offerTokenProtocolFee)
-              ).toString();
+              // seller: sellerDeposit
+              sellerPayoff = offerToken.sellerDeposit;
 
-              // protocol: protocolFee
-              protocolPayoff = offerTokenProtocolFee;
-              await setNextBlockTimestamp(Number(timeout));
+              // protocol: 0
+              protocolPayoff = 0;
+
+              // Escalate the dispute
+              tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
             });
 
             it("should emit a FundsReleased event", async function () {
               // Expire the dispute, expecting event
-              const tx = await disputeHandler.connect(rando).expireDispute(exchangeId);
-              await expect(tx)
-                .to.emit(disputeHandler, "ProtocolFeeCollected")
-                .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, rando.address);
+              const tx = await disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId);
 
               await expect(tx)
                 .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, rando.address);
+                .withArgs(
+                  exchangeId,
+                  seller.id,
+                  offerToken.exchangeToken,
+                  sellerPayoff,
+                  await assistantDR.getAddress()
+                );
 
-              //check that FundsReleased event was NOT emitted with buyer Id
+              await expect(tx)
+                .to.emit(disputeHandler, "FundsReleased")
+                .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, await assistantDR.getAddress());
+
+              await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
+
+              //check that FundsReleased event was NOT emitted with  rando address
               const txReceipt = await tx.wait();
               const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
                 exchangeId,
-                buyerId,
+                seller.id,
                 offerToken.exchangeToken,
-                buyerPayoff,
+                sellerPayoff,
                 rando.address,
               ]);
               expect(match).to.be.false;
@@ -2914,1439 +4419,74 @@ describe("IBosonFundsHandler", function () {
                 new Funds(await mockToken.getAddress(), "Foreign20", "0"),
                 new Funds(ZeroAddress, "Native currency", "0"),
               ]);
-              expectedBuyerAvailableFunds =
-                expectedProtocolAvailableFunds =
-                expectedAgentAvailableFunds =
-                  emptyFundsList;
-
+              expectedBuyerAvailableFunds = emptyFundsList;
+              expectedProtocolAvailableFunds = emptyFundsList;
+              expectedAgentAvailableFunds = emptyFundsList;
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
               expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
-              // Expire the dispute, so the funds are released
-              await disputeHandler.connect(rando).expireDispute(exchangeId);
+              // Expire the escalated dispute, so the funds are released
+              await disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId);
 
               // Available funds should be increased for
-              // buyer: 0
-              // seller: sellerDeposit + price - protocol fee; note that seller has sellerDeposit in availableFunds from before
-              // protocol: protocolFee
-              // agent: 0
-              expectedSellerAvailableFunds.funds[0] = new Funds(
-                await mockToken.getAddress(),
-                "Foreign20",
-                (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
-              );
-              expectedProtocolAvailableFunds = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff),
-                new Funds(ZeroAddress, "Native currency", "0"),
-              ]);
-              sellersAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-              );
-              buyerAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-              );
-              protocolAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-              );
-              agentAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-              );
-              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-            });
-
-            context("Offer has an agent", async function () {
-              beforeEach(async function () {
-                // Create Agent offer
-                await offerHandler
-                  .connect(assistant)
-                  .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
-
-                // Commit to Offer
-                await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
-
-                // expected payoffs
-                // buyer: 0
-                buyerPayoff = 0;
-
-                // agentPayoff: agentFee
-                agentFee = ((BigInt(agentOffer.price) * BigInt(agentFeePercentage)) / 10000n).toString();
-                agentPayoff = agentFee;
-
-                // seller: sellerDeposit + price - protocolFee - agent fee
-                sellerPayoff = (
-                  BigInt(agentOffer.sellerDeposit) +
-                  BigInt(agentOffer.price) -
-                  BigInt(agentOfferProtocolFee) -
-                  BigInt(agentFee)
-                ).toString();
-                // protocol: protocolFee
-                protocolPayoff = agentOfferProtocolFee;
-
-                // Exchange id
-                exchangeId = "2";
-
-                // succesfully redeem exchange
-                await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
-                // raise the dispute
-                tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
-
-                // Get the block timestamp of the confirmed tx and set disputedDate
-                blockNumber = tx.blockNumber;
-                block = await ethers.provider.getBlock(blockNumber);
-                disputedDate = block.timestamp.toString();
-                timeout = BigInt(disputedDate) + resolutionPeriod.toString();
-
-                await setNextBlockTimestamp(Number(timeout));
-              });
-
-              it("should emit a FundsReleased event", async function () {
-                // Expire the dispute, expecting event
-                const tx = await disputeHandler.connect(rando).expireDispute(exchangeId);
-
-                // Complete the exchange, expecting event
-                await expect(tx)
-                  .to.emit(exchangeHandler, "FundsReleased")
-                  .withArgs(exchangeId, agentId, agentOffer.exchangeToken, agentPayoff, rando.address);
-
-                await expect(tx)
-                  .to.emit(exchangeHandler, "FundsReleased")
-                  .withArgs(exchangeId, seller.id, agentOffer.exchangeToken, sellerPayoff, rando.address);
-
-                await expect(tx)
-                  .to.emit(exchangeHandler, "ProtocolFeeCollected")
-                  .withArgs(exchangeId, agentOffer.exchangeToken, protocolPayoff, rando.address);
-              });
-
-              it("should update state", async function () {
-                // Read on chain state
-                sellersAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                );
-                buyerAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                );
-                protocolAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                );
-                agentAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                );
-
-                // Chain state should match the expected available funds
-                expectedSellerAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                  new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-                ]);
-                const emptyFundsList = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
-                expectedBuyerAvailableFunds =
-                  expectedProtocolAvailableFunds =
-                  expectedAgentAvailableFunds =
-                    emptyFundsList;
-
-                expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-                // Expire the dispute, so the funds are released
-                await disputeHandler.connect(rando).expireDispute(exchangeId);
-
-                // Available funds should be increased for
-                // buyer: 0
-                // seller: sellerDeposit + price - protocol fee - agent fee;
-                // protocol: protocolFee
-                // agent: agent fee
-                expectedSellerAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff),
-                  new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-                ]);
-
-                expectedProtocolAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
-                expectedAgentAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", agentPayoff),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
-                sellersAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                );
-                buyerAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                );
-                protocolAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                );
-                agentAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                );
-                expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-              });
-            });
-          });
-
-          context("Final state DISPUTED - RESOLVED", async function () {
-            beforeEach(async function () {
-              buyerPercentBasisPoints = "5566"; // 55.66%
-
-              // expected payoffs
-              // buyer: (price + sellerDeposit)*buyerPercentage
-              buyerPayoff =
-                ((BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit)) * BigInt(buyerPercentBasisPoints)) /
-                10000n;
-
-              // seller: (price + sellerDeposit)*(1-buyerPercentage)
-              sellerPayoff = BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit) - buyerPayoff;
-
-              // protocol: 0
-              protocolPayoff = 0;
-
-              // Set the message Type, needed for signature
-              resolutionType = [
-                { name: "exchangeId", type: "uint256" },
-                { name: "buyerPercentBasisPoints", type: "uint256" },
-              ];
-
-              customSignatureType = {
-                Resolution: resolutionType,
-              };
-
-              message = {
-                exchangeId: exchangeId,
-                buyerPercentBasisPoints,
-              };
-
-              // Collect the signature components
-              ({ r, s, v } = await prepareDataSignatureParameters(
-                buyer, // Assistant is the caller, seller should be the signer.
-                customSignatureType,
-                "Resolution",
-                message,
-                await disputeHandler.getAddress()
-              ));
-            });
-
-            it("should emit a FundsReleased event", async function () {
-              // Resolve the dispute, expecting event
-              const tx = await disputeHandler
-                .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
-              await expect(tx)
-                .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, await assistant.getAddress());
-
-              await expect(tx)
-                .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, await assistant.getAddress());
-
-              await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
-            });
-
-            it("should update state", async function () {
-              // Read on chain state
-              sellersAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-              );
-              buyerAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-              );
-              protocolAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-              );
-              agentAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-              );
-
-              // Chain state should match the expected available funds
-              expectedSellerAvailableFunds = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
-                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-              ]);
-              const emptyFundsList = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                new Funds(ZeroAddress, "Native currency", "0"),
-              ]);
-              expectedBuyerAvailableFunds =
-                expectedProtocolAvailableFunds =
-                expectedAgentAvailableFunds =
-                  emptyFundsList;
-
-              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-              // Resolve the dispute, so the funds are released
-              await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
-
-              // Available funds should be increased for
-              // buyer: (price + sellerDeposit)*buyerPercentage
-              // seller: (price + sellerDeposit)*(1-buyerPercentage); note that seller has sellerDeposit in availableFunds from before
-              // protocol: 0
-              // agent: 0
-              expectedSellerAvailableFunds.funds[0] = new Funds(
-                await mockToken.getAddress(),
-                "Foreign20",
-                (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
-              );
-              expectedBuyerAvailableFunds = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
-                new Funds(ZeroAddress, "Native currency", "0"),
-              ]);
-              sellersAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-              );
-              buyerAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-              );
-              protocolAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-              );
-              agentAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-              );
-
-              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-            });
-
-            context("Offer has an agent", async function () {
-              beforeEach(async function () {
-                // Create Agent offer
-                await offerHandler
-                  .connect(assistant)
-                  .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
-
-                // Commit to Offer
-                await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
-
-                exchangeId = "2";
-
-                // succesfully redeem exchange
-                await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
-                // raise the dispute
-                await disputeHandler.connect(buyer).raiseDispute(exchangeId);
-
-                buyerPercentBasisPoints = "5566"; // 55.66%
-
-                // expected payoffs
-                // buyer: (price + sellerDeposit)*buyerPercentage
-                buyerPayoff = (
-                  ((BigInt(agentOffer.price) + BigInt(agentOffer.sellerDeposit)) * BigInt(buyerPercentBasisPoints)) /
-                  10000n
-                ).toString();
-
-                // seller: (price + sellerDeposit)*(1-buyerPercentage)
-                sellerPayoff = (
-                  BigInt(agentOffer.price) +
-                  BigInt(agentOffer.sellerDeposit) -
-                  BigInt(buyerPayoff)
-                ).toString();
-
-                // protocol: 0
-                protocolPayoff = 0;
-
-                // Set the message Type, needed for signature
-                resolutionType = [
-                  { name: "exchangeId", type: "uint256" },
-                  { name: "buyerPercentBasisPoints", type: "uint256" },
-                ];
-
-                customSignatureType = {
-                  Resolution: resolutionType,
-                };
-
-                message = {
-                  exchangeId: exchangeId,
-                  buyerPercentBasisPoints,
-                };
-
-                // Collect the signature components
-                ({ r, s, v } = await prepareDataSignatureParameters(
-                  buyer, // Assistant is the caller, seller should be the signer.
-                  customSignatureType,
-                  "Resolution",
-                  message,
-                  await disputeHandler.getAddress()
-                ));
-              });
-
-              it("should update state", async function () {
-                // Read on chain state
-                sellersAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                );
-                buyerAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                );
-                protocolAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                );
-                agentAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                );
-
-                // Chain state should match the expected available funds
-                expectedSellerAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                  new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-                ]);
-                const emptyFundsList = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
-                expectedBuyerAvailableFunds =
-                  expectedProtocolAvailableFunds =
-                  expectedAgentAvailableFunds =
-                    emptyFundsList;
-
-                expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-                // Resolve the dispute, so the funds are released
-                await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
-
-                // Available funds should be increased for
-                // buyer: (price + sellerDeposit)*buyerPercentage
-                // seller: (price + sellerDeposit)*(1-buyerPercentage);
-                // protocol: 0
-                // agent: 0
-                expectedSellerAvailableFunds.funds[0] = new Funds(
-                  await mockToken.getAddress(),
-                  "Foreign20",
-                  sellerPayoff
-                );
-                expectedBuyerAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
-
-                sellersAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                );
-                buyerAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                );
-                protocolAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                );
-                agentAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                );
-
-                expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-              });
-            });
-          });
-
-          context("Final state DISPUTED - ESCALATED - RETRACTED", async function () {
-            beforeEach(async function () {
-              // expected payoffs
-              // buyer: 0
-              buyerPayoff = 0;
-
-              // seller: sellerDeposit + price - protocolFee + buyerEscalationDeposit
-              sellerPayoff = (
-                BigInt(offerToken.sellerDeposit) +
-                BigInt(offerToken.price) -
-                BigInt(offerTokenProtocolFee) +
-                BigInt(buyerEscalationDeposit)
-              ).toString();
-
-              // protocol: 0
-              protocolPayoff = offerTokenProtocolFee;
-
-              // Escalate the dispute
-              await disputeHandler.connect(buyer).escalateDispute(exchangeId);
-            });
-
-            it("should emit a FundsReleased event", async function () {
-              // Retract from the dispute, expecting event
-              const tx = await disputeHandler.connect(buyer).retractDispute(exchangeId);
-
-              await expect(tx)
-                .to.emit(disputeHandler, "ProtocolFeeCollected")
-                .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, await buyer.getAddress());
-
-              await expect(tx)
-                .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, await buyer.getAddress());
-
-              //check that FundsReleased event was NOT emitted with buyer Id
-              const txReceipt = await tx.wait();
-              const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
-                exchangeId,
-                buyerId,
-                offerToken.exchangeToken,
-                buyerPayoff,
-                await buyer.getAddress(),
-              ]);
-              expect(match).to.be.false;
-            });
-
-            it("should update state", async function () {
-              // Read on chain state
-              sellersAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-              );
-              buyerAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-              );
-              protocolAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-              );
-              agentAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-              );
-
-              // Chain state should match the expected available funds
-              expectedSellerAvailableFunds = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
-                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-              ]);
-
-              const emptyFundsList = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                new Funds(ZeroAddress, "Native currency", "0"),
-              ]);
-              expectedBuyerAvailableFunds =
-                expectedProtocolAvailableFunds =
-                expectedAgentAvailableFunds =
-                  emptyFundsList;
-
-              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-              // Retract from the dispute, so the funds are released
-              await disputeHandler.connect(buyer).retractDispute(exchangeId);
-
-              // Available funds should be increased for
-              // buyer: 0
-              // seller: sellerDeposit + price - protocol fee + buyerEscalationDeposit; note that seller has sellerDeposit in availableFunds from before
-              // protocol: protocolFee
-              // agent: 0
-              expectedSellerAvailableFunds.funds[0] = new Funds(
-                await mockToken.getAddress(),
-                "Foreign20",
-                (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
-              );
-              expectedProtocolAvailableFunds = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff),
-                new Funds(ZeroAddress, "Native currency", "0"),
-              ]);
-
-              sellersAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-              );
-              buyerAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-              );
-              protocolAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-              );
-              agentAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-              );
-
-              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-            });
-
-            context("Offer has an agent", async function () {
-              beforeEach(async function () {
-                // expected payoffs
-                // buyer: 0
-                buyerPayoff = 0;
-
-                // agentPayoff: agentFee
-                agentFee = ((BigInt(agentOffer.price) * BigInt(agentFeePercentage)) / 10000n).toString();
-                agentPayoff = agentFee;
-
-                // seller: sellerDeposit + price - protocolFee - agentFee + buyerEscalationDeposit
-                sellerPayoff = (
-                  BigInt(agentOffer.sellerDeposit) +
-                  BigInt(agentOffer.price) -
-                  BigInt(agentOfferProtocolFee) -
-                  BigInt(agentFee) +
-                  BigInt(buyerEscalationDeposit)
-                ).toString();
-
-                // protocol: 0
-                protocolPayoff = agentOfferProtocolFee;
-
-                // Exchange id
-                exchangeId = "2";
-                await offerHandler
-                  .connect(assistant)
-                  .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
-
-                // approve protocol to transfer the tokens
-                await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
-                await mockToken.mint(await buyer.getAddress(), agentOffer.price);
-                await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
-
-                // succesfully redeem exchange
-                await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
-                // raise the dispute
-                await disputeHandler.connect(buyer).raiseDispute(exchangeId);
-
-                // escalate the dispute
-                await mockToken.mint(await buyer.getAddress(), buyerEscalationDeposit);
-                await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDeposit);
-                await disputeHandler.connect(buyer).escalateDispute(exchangeId);
-              });
-
-              it("should update state", async function () {
-                // Read on chain state
-                sellersAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                );
-                buyerAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                );
-                protocolAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                );
-                agentAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                );
-
-                // Chain state should match the expected available funds
-                expectedSellerAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                  new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-                ]);
-                const emptyFundsList = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
-
-                expectedBuyerAvailableFunds =
-                  expectedProtocolAvailableFunds =
-                  expectedAgentAvailableFunds =
-                    emptyFundsList;
-                expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-                // Retract from the dispute, so the funds are released
-                await disputeHandler.connect(buyer).retractDispute(exchangeId);
-
-                // Available funds should be increased for
-                // buyer: 0
-                // seller: sellerDeposit + price - protocol fee - agentFee  + buyerEscalationDeposit;
-                // protocol: protocolFee
-                // agent: agentFee
-                expectedSellerAvailableFunds.funds[0] = new Funds(
-                  await mockToken.getAddress(),
-                  "Foreign20",
-                  sellerPayoff
-                );
-                expectedProtocolAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
-                expectedAgentAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", agentPayoff),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
-
-                sellersAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                );
-                buyerAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                );
-                protocolAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                );
-                agentAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                );
-
-                expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-              });
-            });
-          });
-
-          context("Final state DISPUTED - ESCALATED - RESOLVED", async function () {
-            beforeEach(async function () {
-              buyerPercentBasisPoints = "5566"; // 55.66%
-
-              // expected payoffs
-              // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-              buyerPayoff = (
-                ((BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit) + BigInt(buyerEscalationDeposit)) *
-                  BigInt(buyerPercentBasisPoints)) /
-                10000n
-              ).toString();
-
-              // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
-              sellerPayoff = (
-                BigInt(offerToken.price) +
-                BigInt(offerToken.sellerDeposit) +
-                BigInt(buyerEscalationDeposit) -
-                BigInt(buyerPayoff)
-              ).toString();
-
-              // protocol: 0
-              protocolPayoff = 0;
-
-              // Set the message Type, needed for signature
-              resolutionType = [
-                { name: "exchangeId", type: "uint256" },
-                { name: "buyerPercentBasisPoints", type: "uint256" },
-              ];
-
-              customSignatureType = {
-                Resolution: resolutionType,
-              };
-
-              message = {
-                exchangeId: exchangeId,
-                buyerPercentBasisPoints,
-              };
-
-              // Collect the signature components
-              ({ r, s, v } = await prepareDataSignatureParameters(
-                buyer, // Assistant is the caller, seller should be the signer.
-                customSignatureType,
-                "Resolution",
-                message,
-                await disputeHandler.getAddress()
-              ));
-
-              // Escalate the dispute
-              await disputeHandler.connect(buyer).escalateDispute(exchangeId);
-            });
-
-            it("should emit a FundsReleased event", async function () {
-              // Resolve the dispute, expecting event
-              const tx = await disputeHandler
-                .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
-              await expect(tx)
-                .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, await assistant.getAddress());
-
-              await expect(tx)
-                .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, await assistant.getAddress());
-
-              await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
-            });
-
-            it("should update state", async function () {
-              // Read on chain state
-              sellersAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-              );
-              buyerAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-              );
-              protocolAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-              );
-              agentAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-              );
-
-              // Chain state should match the expected available funds
-              expectedSellerAvailableFunds = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
-                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-              ]);
-
-              const emptyFundsList = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                new Funds(ZeroAddress, "Native currency", "0"),
-              ]);
-              expectedBuyerAvailableFunds =
-                expectedProtocolAvailableFunds =
-                expectedAgentAvailableFunds =
-                  emptyFundsList;
-              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-              // Resolve the dispute, so the funds are released
-              await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
-
-              // Available funds should be increased for
-              // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-              // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage); note that seller has sellerDeposit in availableFunds from before
+              // buyer: price + buyerEscalationDeposit
+              // seller: sellerDeposit; note that seller has sellerDeposit in availableFunds from before
               // protocol: 0
               // agent: 0
               expectedBuyerAvailableFunds = new FundsList([
                 new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
                 new Funds(ZeroAddress, "Native currency", "0"),
               ]);
-              expectedSellerAvailableFunds.funds[0] = new Funds(
-                await mockToken.getAddress(),
-                "Foreign20",
-                (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
-              );
-              sellersAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-              );
-              buyerAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-              );
-              protocolAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-              );
-              agentAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-              );
-              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-            });
-
-            context("Offer has an agent", async function () {
-              beforeEach(async function () {
-                // Create Agent offer
-                await offerHandler
-                  .connect(assistant)
-                  .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
-
-                // approve protocol to transfer the tokens
-                await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
-                await mockToken.mint(await buyer.getAddress(), agentOffer.price);
-
-                // Commit to Offer
-                await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
-
-                exchangeId = "2";
-
-                // succesfully redeem exchange
-                await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
-                // raise the dispute
-                await disputeHandler.connect(buyer).raiseDispute(exchangeId);
-
-                buyerPercentBasisPoints = "5566"; // 55.66%
-
-                // expected payoffs
-                // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-                buyerPayoff = (
-                  ((BigInt(agentOffer.price) + BigInt(agentOffer.sellerDeposit) + BigInt(buyerEscalationDeposit)) *
-                    BigInt(buyerPercentBasisPoints)) /
-                  10000n
-                ).toString();
-
-                // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
-                sellerPayoff = (
-                  BigInt(agentOffer.price) +
-                  BigInt(agentOffer.sellerDeposit) +
-                  BigInt(buyerEscalationDeposit) -
-                  BigInt(buyerPayoff)
-                ).toString();
-
-                // protocol: 0
-                protocolPayoff = 0;
-
-                // Set the message Type, needed for signature
-                resolutionType = [
-                  { name: "exchangeId", type: "uint256" },
-                  { name: "buyerPercentBasisPoints", type: "uint256" },
-                ];
-
-                customSignatureType = {
-                  Resolution: resolutionType,
-                };
-
-                message = {
-                  exchangeId: exchangeId,
-                  buyerPercentBasisPoints,
-                };
-
-                // Collect the signature components
-                ({ r, s, v } = await prepareDataSignatureParameters(
-                  buyer, // Assistant is the caller, seller should be the signer.
-                  customSignatureType,
-                  "Resolution",
-                  message,
-                  await disputeHandler.getAddress()
-                ));
-
-                // escalate the dispute
-                await mockToken.mint(await buyer.getAddress(), buyerEscalationDeposit);
-                await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDeposit);
-                await disputeHandler.connect(buyer).escalateDispute(exchangeId);
-              });
-
-              it("should update state", async function () {
-                // Read on chain state
-                sellersAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                );
-                buyerAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                );
-                protocolAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                );
-                agentAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                );
-
-                // Chain state should match the expected available funds
-                expectedSellerAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                  new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-                ]);
-                const emptyFundsList = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
-                expectedBuyerAvailableFunds =
-                  expectedProtocolAvailableFunds =
-                  expectedAgentAvailableFunds =
-                    emptyFundsList;
-
-                expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-                // Resolve the dispute, so the funds are released
-                await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
-
-                // Available funds should be increased for
-                // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-                // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage);
-                // protocol: 0
-                // agent: 0
-                expectedSellerAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff),
-                  new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-                ]);
-                expectedBuyerAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
-                sellersAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                );
-                buyerAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                );
-                protocolAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                );
-                agentAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                );
-
-                expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-              });
-            });
-          });
-
-          context("Final state DISPUTED - ESCALATED - DECIDED", async function () {
-            beforeEach(async function () {
-              buyerPercentBasisPoints = "5566"; // 55.66%
-
-              // expected payoffs
-              // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-              buyerPayoff = (
-                ((BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit) + BigInt(buyerEscalationDeposit)) *
-                  BigInt(buyerPercentBasisPoints)) /
-                10000n
-              ).toString();
-
-              // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
-              sellerPayoff = (
-                BigInt(offerToken.price) +
-                BigInt(offerToken.sellerDeposit) +
-                BigInt(buyerEscalationDeposit) -
-                BigInt(buyerPayoff)
-              ).toString();
-
-              // protocol: 0
-              protocolPayoff = 0;
-
-              // escalate the dispute
-              await disputeHandler.connect(buyer).escalateDispute(exchangeId);
-            });
-
-            it("should emit a FundsReleased event", async function () {
-              // Decide the dispute, expecting event
-              const tx = await disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints);
-              await expect(tx)
-                .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(
-                  exchangeId,
-                  seller.id,
-                  offerToken.exchangeToken,
-                  sellerPayoff,
-                  await assistantDR.getAddress()
-                );
-
-              await expect(tx)
-                .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, await assistantDR.getAddress());
-
-              await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
-            });
-
-            it("should update state", async function () {
-              // Read on chain state
-              sellersAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-              );
-              buyerAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-              );
-              protocolAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-              );
-              agentAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-              );
-
-              // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
-                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-              ]);
-              const emptyFundsList = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                new Funds(ZeroAddress, "Native currency", "0"),
-              ]);
-              expectedBuyerAvailableFunds =
-                expectedProtocolAvailableFunds =
-                expectedAgentAvailableFunds =
-                  emptyFundsList;
-
-              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-              // Decide the dispute, so the funds are released
-              await disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints);
-
-              // Available funds should be increased for
-              // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-              // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage); note that seller has sellerDeposit in availableFunds from before
-              // protocol: 0
-              // agent: 0
-              expectedBuyerAvailableFunds = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
-                new Funds(ZeroAddress, "Native currency", "0"),
-              ]);
-              expectedSellerAvailableFunds.funds[0] = new Funds(
-                await mockToken.getAddress(),
-                "Foreign20",
-                (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
-              );
-              sellersAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-              );
-              buyerAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-              );
-              protocolAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-              );
-              agentAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-              );
-              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-            });
-
-            context("Offer has an agent", async function () {
-              beforeEach(async function () {
-                // Create Agent offer
-                await offerHandler
-                  .connect(assistant)
-                  .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
-
-                // approve protocol to transfer the tokens
-                await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
-                await mockToken.mint(await buyer.getAddress(), agentOffer.price);
-
-                // Commit to Offer
-                await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
-
-                exchangeId = "2";
-
-                // succesfully redeem exchange
-                await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
-                // raise the dispute
-                tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
-
-                // Get the block timestamp of the confirmed tx and set disputedDate
-                blockNumber = tx.blockNumber;
-                block = await provider.getBlock(blockNumber);
-                disputedDate = block.timestamp.toString();
-                timeout = (BigInt(disputedDate) + BigInt(resolutionPeriod)).toString();
-
-                buyerPercentBasisPoints = "5566"; // 55.66%
-
-                // expected payoffs
-                // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-                buyerPayoff = (
-                  ((BigInt(agentOffer.price) + BigInt(agentOffer.sellerDeposit) + BigInt(buyerEscalationDeposit)) *
-                    BigInt(buyerPercentBasisPoints)) /
-                  10000n
-                ).toString();
-
-                // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage)
-                sellerPayoff = (
-                  BigInt(agentOffer.price) +
-                  BigInt(agentOffer.sellerDeposit) +
-                  BigInt(buyerEscalationDeposit) -
-                  BigInt(buyerPayoff)
-                ).toString();
-
-                // protocol: 0
-                protocolPayoff = 0;
-
-                // escalate the dispute
-                await mockToken.mint(await buyer.getAddress(), buyerEscalationDeposit);
-                await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDeposit);
-                await disputeHandler.connect(buyer).escalateDispute(exchangeId);
-              });
-
-              it("should update state", async function () {
-                // Read on chain state
-                sellersAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                );
-                buyerAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                );
-                protocolAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                );
-                agentAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                );
-
-                // Chain state should match the expected available funds
-                expectedSellerAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                  new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-                ]);
-                const emptyFundsList = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
-                expectedBuyerAvailableFunds =
-                  expectedProtocolAvailableFunds =
-                  expectedAgentAvailableFunds =
-                    emptyFundsList;
-
-                expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-                // Decide the dispute, so the funds are released
-                await disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints);
-
-                // Available funds should be increased for
-                // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
-                // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage);
-                // protocol: 0
-                // agent: 0
-                expectedSellerAvailableFunds.funds[0] = new Funds(
-                  await mockToken.getAddress(),
-                  "Foreign20",
-                  sellerPayoff
-                );
-                expectedBuyerAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
-
-                sellersAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                );
-                buyerAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                );
-                protocolAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                );
-                agentAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                );
-
-                expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-              });
-            });
-          });
-          context(
-            "Final state DISPUTED - ESCALATED - REFUSED via expireEscalatedDispute (fail to resolve)",
-            async function () {
-              beforeEach(async function () {
-                // expected payoffs
-                // buyer: price + buyerEscalationDeposit
-                buyerPayoff = (BigInt(offerToken.price) + BigInt(buyerEscalationDeposit)).toString();
-
-                // seller: sellerDeposit
-                sellerPayoff = offerToken.sellerDeposit;
-
-                // protocol: 0
-                protocolPayoff = 0;
-
-                // Escalate the dispute
-                tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
-
-                // Get the block timestamp of the confirmed tx and set escalatedDate
-                blockNumber = tx.blockNumber;
-                block = await provider.getBlock(blockNumber);
-                escalatedDate = block.timestamp.toString();
-
-                await setNextBlockTimestamp(Number(escalatedDate) + Number(disputeResolver.escalationResponsePeriod));
-              });
-
-              it("should emit a FundsReleased event", async function () {
-                // Expire the dispute, expecting event
-                const tx = await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
-                await expect(tx)
-                  .to.emit(disputeHandler, "FundsReleased")
-                  .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address);
-                await expect(tx)
-                  .to.emit(disputeHandler, "FundsReleased")
-                  .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, rando.address);
-                await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
-              });
-
-              it("should update state", async function () {
-                // Read on chain state
-                sellersAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                );
-                buyerAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                );
-                protocolAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                );
-                agentAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                );
-
-                // Chain state should match the expected available funds
-                expectedSellerAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
-                  new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-                ]);
-                const emptyFundsList = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
-                expectedBuyerAvailableFunds =
-                  expectedAgentAvailableFunds =
-                  expectedProtocolAvailableFunds =
-                    emptyFundsList;
-                expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-                // Expire the escalated dispute, so the funds are released
-                await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
-
-                // Available funds should be increased for
-                // buyer: price + buyerEscalationDeposit
-                // seller: sellerDeposit; note that seller has sellerDeposit in availableFunds from before
-                // protocol: 0
-                // agent: 0
-                expectedBuyerAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
-                  new Funds(ZeroAddress, "Native currency", "0"),
-                ]);
-                expectedSellerAvailableFunds.funds[0] = new Funds(
+                new Funds(
                   await mockToken.getAddress(),
                   "Foreign20",
                   (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
-                );
-                sellersAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                );
-                buyerAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                );
-                protocolAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                );
-                agentAvailableFunds = FundsList.fromStruct(
-                  await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                );
-                expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-              });
+                ),
+                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+              ]);
+              sellersAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+              );
+              buyerAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+              );
+              protocolAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
+              );
+              agentAvailableFunds = FundsList.fromStruct(
+                await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
+              );
+              expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+              expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+              expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
+            });
 
-              context("Offer has an agent", async function () {
-                beforeEach(async function () {
-                  // Create Agent offer
-                  await offerHandler
-                    .connect(assistant)
-                    .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
-
-                  // approve protocol to transfer the tokens
-                  await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
-                  await mockToken.mint(await buyer.getAddress(), agentOffer.price);
-
-                  // Commit to Offer
-                  await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
-
-                  exchangeId = "2";
-
-                  // succesfully redeem exchange
-                  await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
-                  // raise the dispute
-                  tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
-
-                  // expected payoffs
-                  // buyer: price + buyerEscalationDeposit
-                  buyerPayoff = (BigInt(offerToken.price) + BigInt(buyerEscalationDeposit)).toString();
-
-                  // seller: sellerDeposit
-                  sellerPayoff = offerToken.sellerDeposit;
-
-                  // protocol: 0
-                  protocolPayoff = 0;
-
-                  // Escalate the dispute
-                  await mockToken.mint(await buyer.getAddress(), buyerEscalationDeposit);
-                  await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDeposit);
-                  tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
-
-                  // Get the block timestamp of the confirmed tx and set escalatedDate
-                  blockNumber = tx.blockNumber;
-                  block = await provider.getBlock(blockNumber);
-                  escalatedDate = block.timestamp.toString();
-
-                  await setNextBlockTimestamp(Number(escalatedDate) + Number(disputeResolver.escalationResponsePeriod));
-                });
-
-                it("should update state", async function () {
-                  // Read on chain state
-                  sellersAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                  );
-                  buyerAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                  );
-                  protocolAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                  );
-                  agentAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                  );
-
-                  // Chain state should match the expected available funds
-                  expectedSellerAvailableFunds = new FundsList([
-                    new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                    new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-                  ]);
-                  const emptyFundsList = new FundsList([
-                    new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                    new Funds(ZeroAddress, "Native currency", "0"),
-                  ]);
-                  expectedBuyerAvailableFunds =
-                    expectedProtocolAvailableFunds =
-                    expectedAgentAvailableFunds =
-                      emptyFundsList;
-                  expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                  expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                  expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                  expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-                  // Expire the escalated dispute, so the funds are released
-                  await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
-
-                  // Available funds should be increased for
-                  // buyer: price + buyerEscalationDeposit
-                  // seller: sellerDeposit;
-                  // protocol: 0
-                  // agent: 0
-                  expectedBuyerAvailableFunds = new FundsList([
-                    new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
-                    new Funds(ZeroAddress, "Native currency", "0"),
-                  ]);
-                  expectedSellerAvailableFunds.funds[0] = new Funds(
-                    await mockToken.getAddress(),
-                    "Foreign20",
-                    sellerPayoff
-                  );
-                  sellersAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                  );
-                  buyerAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                  );
-                  protocolAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                  );
-                  agentAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                  );
-                  expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                  expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                  expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                  expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-                });
-              });
-            }
-          );
-
-          context(
-            "Final state DISPUTED - ESCALATED - REFUSED via refuseEscalatedDispute (explicit refusal)",
-            async function () {
+            context("Offer has an agent", async function () {
               beforeEach(async function () {
+                // Create Agent offer
+                await offerHandler
+                  .connect(assistant)
+                  .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
+
+                // approve protocol to transfer the tokens
+                await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
+                await mockToken.mint(await buyer.getAddress(), agentOffer.price);
+
+                // Commit to Offer
+                await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+
+                exchangeId = "2";
+
+                // succesfully redeem exchange
+                await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+                // raise the dispute
+                await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+
                 // expected payoffs
                 // buyer: price + buyerEscalationDeposit
                 buyerPayoff = (BigInt(offerToken.price) + BigInt(buyerEscalationDeposit)).toString();
@@ -4358,39 +4498,9 @@ describe("IBosonFundsHandler", function () {
                 protocolPayoff = 0;
 
                 // Escalate the dispute
-                tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
-              });
-
-              it("should emit a FundsReleased event", async function () {
-                // Expire the dispute, expecting event
-                const tx = await disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId);
-
-                await expect(tx)
-                  .to.emit(disputeHandler, "FundsReleased")
-                  .withArgs(
-                    exchangeId,
-                    seller.id,
-                    offerToken.exchangeToken,
-                    sellerPayoff,
-                    await assistantDR.getAddress()
-                  );
-
-                await expect(tx)
-                  .to.emit(disputeHandler, "FundsReleased")
-                  .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, await assistantDR.getAddress());
-
-                await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
-
-                //check that FundsReleased event was NOT emitted with  rando address
-                const txReceipt = await tx.wait();
-                const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
-                  exchangeId,
-                  seller.id,
-                  offerToken.exchangeToken,
-                  sellerPayoff,
-                  rando.address,
-                ]);
-                expect(match).to.be.false;
+                await mockToken.mint(await buyer.getAddress(), buyerEscalationDeposit);
+                await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDeposit);
+                await disputeHandler.connect(buyer).escalateDispute(exchangeId);
               });
 
               it("should update state", async function () {
@@ -4410,9 +4520,10 @@ describe("IBosonFundsHandler", function () {
 
                 // Chain state should match the expected available funds
                 expectedSellerAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
+                  new Funds(await mockToken.getAddress(), "Foreign20", "0"),
                   new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
                 ]);
+
                 const emptyFundsList = new FundsList([
                   new Funds(await mockToken.getAddress(), "Foreign20", "0"),
                   new Funds(ZeroAddress, "Native currency", "0"),
@@ -4430,7 +4541,7 @@ describe("IBosonFundsHandler", function () {
 
                 // Available funds should be increased for
                 // buyer: price + buyerEscalationDeposit
-                // seller: sellerDeposit; note that seller has sellerDeposit in availableFunds from before
+                // seller: sellerDeposit;
                 // protocol: 0
                 // agent: 0
                 expectedBuyerAvailableFunds = new FundsList([
@@ -4438,13 +4549,10 @@ describe("IBosonFundsHandler", function () {
                   new Funds(ZeroAddress, "Native currency", "0"),
                 ]);
                 expectedSellerAvailableFunds = new FundsList([
-                  new Funds(
-                    await mockToken.getAddress(),
-                    "Foreign20",
-                    (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
-                  ),
+                  new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff),
                   new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
                 ]);
+
                 sellersAvailableFunds = FundsList.fromStruct(
                   await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
                 );
@@ -4462,119 +4570,79 @@ describe("IBosonFundsHandler", function () {
                 expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                 expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
               });
+            });
+          }
+        );
+      });
 
-              context("Offer has an agent", async function () {
-                beforeEach(async function () {
-                  // Create Agent offer
-                  await offerHandler
-                    .connect(assistant)
-                    .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
+      context("Changing the protocol fee", async function () {
+        beforeEach(async function () {
+          // Cast Diamond to IBosonConfigHandler
+          configHandler = await getContractAt("IBosonConfigHandler", protocolDiamondAddress);
 
-                  // approve protocol to transfer the tokens
-                  await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
-                  await mockToken.mint(await buyer.getAddress(), agentOffer.price);
+          // expected payoffs
+          // buyer: 0
+          buyerPayoff = 0;
 
-                  // Commit to Offer
-                  await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
-
-                  exchangeId = "2";
-
-                  // succesfully redeem exchange
-                  await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
-                  // raise the dispute
-                  await disputeHandler.connect(buyer).raiseDispute(exchangeId);
-
-                  // expected payoffs
-                  // buyer: price + buyerEscalationDeposit
-                  buyerPayoff = (BigInt(offerToken.price) + BigInt(buyerEscalationDeposit)).toString();
-
-                  // seller: sellerDeposit
-                  sellerPayoff = offerToken.sellerDeposit;
-
-                  // protocol: 0
-                  protocolPayoff = 0;
-
-                  // Escalate the dispute
-                  await mockToken.mint(await buyer.getAddress(), buyerEscalationDeposit);
-                  await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDeposit);
-                  await disputeHandler.connect(buyer).escalateDispute(exchangeId);
-                });
-
-                it("should update state", async function () {
-                  // Read on chain state
-                  sellersAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                  );
-                  buyerAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                  );
-                  protocolAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                  );
-                  agentAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                  );
-
-                  // Chain state should match the expected available funds
-                  expectedSellerAvailableFunds = new FundsList([
-                    new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                    new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-                  ]);
-
-                  const emptyFundsList = new FundsList([
-                    new Funds(await mockToken.getAddress(), "Foreign20", "0"),
-                    new Funds(ZeroAddress, "Native currency", "0"),
-                  ]);
-                  expectedBuyerAvailableFunds = emptyFundsList;
-                  expectedProtocolAvailableFunds = emptyFundsList;
-                  expectedAgentAvailableFunds = emptyFundsList;
-                  expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                  expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                  expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                  expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-                  // Expire the escalated dispute, so the funds are released
-                  await disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId);
-
-                  // Available funds should be increased for
-                  // buyer: price + buyerEscalationDeposit
-                  // seller: sellerDeposit;
-                  // protocol: 0
-                  // agent: 0
-                  expectedBuyerAvailableFunds = new FundsList([
-                    new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
-                    new Funds(ZeroAddress, "Native currency", "0"),
-                  ]);
-                  expectedSellerAvailableFunds = new FundsList([
-                    new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff),
-                    new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-                  ]);
-
-                  sellersAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
-                  );
-                  buyerAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
-                  );
-                  protocolAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(protocolId, availableFundsAddresses)
-                  );
-                  agentAvailableFunds = FundsList.fromStruct(
-                    await fundsHandler.getAvailableFunds(agentId, availableFundsAddresses)
-                  );
-                  expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-                  expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-                  expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-                  expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-                });
-              });
-            }
-          );
+          // seller: sellerDeposit + price - protocolFee
+          sellerPayoff = BigInt(offerToken.sellerDeposit) + BigInt(offerToken.price) - BigInt(offerTokenProtocolFee);
         });
 
-        context("Changing the protocol fee", async function () {
+        it("Protocol fee for existing exchanges should be the same as at the offer creation", async function () {
+          // set the new procol fee
+          protocolFeePercentage = "300"; // 3%
+          await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // succesfully redeem exchange
+          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+          // Complete the exchange, expecting event
+          const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+          await expect(tx)
+            .to.emit(exchangeHandler, "FundsReleased")
+            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, await buyer.getAddress());
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ProtocolFeeCollected")
+            .withArgs(exchangeId, offerToken.exchangeToken, offerTokenProtocolFee, await buyer.getAddress());
+        });
+
+        it("Protocol fee for new exchanges should be the same as at the offer creation", async function () {
+          // set the new procol fee
+          protocolFeePercentage = "300"; // 3%
+          await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
+          // similar as teste before, excpet the commit to offer is done after the procol fee change
+
+          // commit to offer and get the correct exchangeId
+          tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+          txReceipt = await tx.wait();
+          event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+          exchangeId = event.exchangeId.toString();
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // succesfully redeem exchange
+          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+          // Complete the exchange, expecting event
+          tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+          await expect(tx)
+            .to.emit(exchangeHandler, "FundsReleased")
+            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, await buyer.getAddress());
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ProtocolFeeCollected")
+            .withArgs(exchangeId, offerToken.exchangeToken, offerTokenProtocolFee, await buyer.getAddress());
+        });
+
+        context("Offer has an agent", async function () {
           beforeEach(async function () {
+            exchangeId = "2";
+
             // Cast Diamond to IBosonConfigHandler
             configHandler = await getContractAt("IBosonConfigHandler", protocolDiamondAddress);
 
@@ -4582,15 +4650,34 @@ describe("IBosonFundsHandler", function () {
             // buyer: 0
             buyerPayoff = 0;
 
-            // seller: sellerDeposit + price - protocolFee
-            sellerPayoff = BigInt(offerToken.sellerDeposit) + BigInt(offerToken.price) - BigInt(offerTokenProtocolFee);
-          });
+            // agentPayoff: agentFee
+            agentFee = ((BigInt(agentOffer.price) * BigInt(agentFeePercentage)) / 10000n).toString();
+            agentPayoff = agentFee;
 
-          it("Protocol fee for existing exchanges should be the same as at the offer creation", async function () {
+            // seller: sellerDeposit + price - protocolFee - agentFee
+            sellerPayoff =
+              BigInt(agentOffer.sellerDeposit) +
+              BigInt(agentOffer.price) -
+              BigInt(agentOfferProtocolFee) -
+              BigInt(agentFee);
+
+            // protocol: protocolFee
+            protocolPayoff = agentOfferProtocolFee;
+
+            // Create Agent Offer before setting new protocol fee as 3%
+            await offerHandler
+              .connect(assistant)
+              .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
+
+            // Commit to Agent Offer
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+
             // set the new procol fee
             protocolFeePercentage = "300"; // 3%
             await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
+          });
 
+          it("Protocol fee for existing exchanges should be the same as at the agent offer creation", async function () {
             // Set time forward to the offer's voucherRedeemableFrom
             await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
@@ -4599,23 +4686,36 @@ describe("IBosonFundsHandler", function () {
 
             // Complete the exchange, expecting event
             const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
             await expect(tx)
               .to.emit(exchangeHandler, "FundsReleased")
-              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, await buyer.getAddress());
+              .withArgs(exchangeId, seller.id, agentOffer.exchangeToken, sellerPayoff, await buyer.getAddress());
 
             await expect(tx)
               .to.emit(exchangeHandler, "ProtocolFeeCollected")
-              .withArgs(exchangeId, offerToken.exchangeToken, offerTokenProtocolFee, await buyer.getAddress());
+              .withArgs(exchangeId, agentOffer.exchangeToken, protocolPayoff, await buyer.getAddress());
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "FundsReleased")
+              .withArgs(exchangeId, agentId, agentOffer.exchangeToken, agentPayoff, await buyer.getAddress());
           });
 
-          it("Protocol fee for new exchanges should be the same as at the offer creation", async function () {
-            // set the new procol fee
-            protocolFeePercentage = "300"; // 3%
-            await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
-            // similar as teste before, excpet the commit to offer is done after the procol fee change
+          it("Protocol fee for new exchanges should be the same as at the agent offer creation", async function () {
+            // similar as tests before, excpet the commit to offer is done after the protocol fee change
+
+            // top up seller's and buyer's account
+            await mockToken.mint(await assistant.getAddress(), sellerDeposit);
+            await mockToken.mint(await buyer.getAddress(), price);
+
+            // approve protocol to transfer the tokens
+            await mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
+            await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
+
+            // deposit to seller's pool
+            await fundsHandler.connect(assistant).depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit);
 
             // commit to offer and get the correct exchangeId
-            tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+            tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
             txReceipt = await tx.wait();
             event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
             exchangeId = event.exchangeId.toString();
@@ -4628,122 +4728,22 @@ describe("IBosonFundsHandler", function () {
 
             // Complete the exchange, expecting event
             tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+            // Complete the exchange, expecting event
             await expect(tx)
               .to.emit(exchangeHandler, "FundsReleased")
-              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, await buyer.getAddress());
+              .withArgs(exchangeId, seller.id, agentOffer.exchangeToken, sellerPayoff, await buyer.getAddress());
 
             await expect(tx)
               .to.emit(exchangeHandler, "ProtocolFeeCollected")
-              .withArgs(exchangeId, offerToken.exchangeToken, offerTokenProtocolFee, await buyer.getAddress());
-          });
+              .withArgs(exchangeId, agentOffer.exchangeToken, protocolPayoff, await buyer.getAddress());
 
-          context("Offer has an agent", async function () {
-            beforeEach(async function () {
-              exchangeId = "2";
-
-              // Cast Diamond to IBosonConfigHandler
-              configHandler = await getContractAt("IBosonConfigHandler", protocolDiamondAddress);
-
-              // expected payoffs
-              // buyer: 0
-              buyerPayoff = 0;
-
-              // agentPayoff: agentFee
-              agentFee = ((BigInt(agentOffer.price) * BigInt(agentFeePercentage)) / 10000n).toString();
-              agentPayoff = agentFee;
-
-              // seller: sellerDeposit + price - protocolFee - agentFee
-              sellerPayoff =
-                BigInt(agentOffer.sellerDeposit) +
-                BigInt(agentOffer.price) -
-                BigInt(agentOfferProtocolFee) -
-                BigInt(agentFee);
-
-              // protocol: protocolFee
-              protocolPayoff = agentOfferProtocolFee;
-
-              // Create Agent Offer before setting new protocol fee as 3%
-              await offerHandler
-                .connect(assistant)
-                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id);
-
-              // Commit to Agent Offer
-              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
-
-              // set the new procol fee
-              protocolFeePercentage = "300"; // 3%
-              await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
-            });
-
-            it("Protocol fee for existing exchanges should be the same as at the agent offer creation", async function () {
-              // Set time forward to the offer's voucherRedeemableFrom
-              await setNextBlockTimestamp(Number(voucherRedeemableFrom));
-
-              // succesfully redeem exchange
-              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
-              // Complete the exchange, expecting event
-              const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
-
-              await expect(tx)
-                .to.emit(exchangeHandler, "FundsReleased")
-                .withArgs(exchangeId, seller.id, agentOffer.exchangeToken, sellerPayoff, await buyer.getAddress());
-
-              await expect(tx)
-                .to.emit(exchangeHandler, "ProtocolFeeCollected")
-                .withArgs(exchangeId, agentOffer.exchangeToken, protocolPayoff, await buyer.getAddress());
-
-              await expect(tx)
-                .to.emit(exchangeHandler, "FundsReleased")
-                .withArgs(exchangeId, agentId, agentOffer.exchangeToken, agentPayoff, await buyer.getAddress());
-            });
-
-            it("Protocol fee for new exchanges should be the same as at the agent offer creation", async function () {
-              // similar as tests before, excpet the commit to offer is done after the protocol fee change
-
-              // top up seller's and buyer's account
-              await mockToken.mint(await assistant.getAddress(), sellerDeposit);
-              await mockToken.mint(await buyer.getAddress(), price);
-
-              // approve protocol to transfer the tokens
-              await mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
-              await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
-
-              // deposit to seller's pool
-              await fundsHandler
-                .connect(assistant)
-                .depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit);
-
-              // commit to offer and get the correct exchangeId
-              tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
-              txReceipt = await tx.wait();
-              event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
-              exchangeId = event.exchangeId.toString();
-
-              // Set time forward to the offer's voucherRedeemableFrom
-              await setNextBlockTimestamp(Number(voucherRedeemableFrom));
-
-              // succesfully redeem exchange
-              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
-              // Complete the exchange, expecting event
-              tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
-
-              // Complete the exchange, expecting event
-              await expect(tx)
-                .to.emit(exchangeHandler, "FundsReleased")
-                .withArgs(exchangeId, seller.id, agentOffer.exchangeToken, sellerPayoff, await buyer.getAddress());
-
-              await expect(tx)
-                .to.emit(exchangeHandler, "ProtocolFeeCollected")
-                .withArgs(exchangeId, agentOffer.exchangeToken, protocolPayoff, await buyer.getAddress());
-
-              await expect(tx)
-                .to.emit(exchangeHandler, "FundsReleased")
-                .withArgs(exchangeId, agentId, agentOffer.exchangeToken, agentPayoff, await buyer.getAddress());
-            });
+            await expect(tx)
+              .to.emit(exchangeHandler, "FundsReleased")
+              .withArgs(exchangeId, agentId, agentOffer.exchangeToken, agentPayoff, await buyer.getAddress());
           });
         });
       });
     });
   });
+});
