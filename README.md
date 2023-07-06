@@ -3,6 +3,7 @@
 <h1 align="center">Boson Protocol V2</h1>
 
 [![Coverage Status](https://coveralls.io/repos/github/bosonprotocol/boson-protocol-contracts/badge.svg)](https://coveralls.io/github/bosonprotocol/boson-protocol-contracts)
+[![Contracts CI](https://github.com/bosonprotocol/boson-protocol-contracts/actions/workflows/ci.yaml/badge.svg)](https://github.com/bosonprotocol/boson-protocol-contracts/actions/workflows/ci.yaml)
 
 ### Intro | [Audits](docs/audits.md) | [Setup](docs/setup.md) | [Tasks](docs/tasks.md) | [Architecture](docs/architecture.md) | [Domain Model](docs/domain.md) | [State Machines](docs/state-machines.md) | [Sequences](docs/sequences.md)
 

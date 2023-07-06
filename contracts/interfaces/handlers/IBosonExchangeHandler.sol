@@ -11,7 +11,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xe300dfc1
+ * The ERC-165 identifier for this interface is: 0xc0342297
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
@@ -44,6 +44,37 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
     function commitToOffer(address payable _buyer, uint256 _offerId) external payable;
 
     /**
+     * @notice Commits to an conditional offer (first step of an exchange).
+     *
+     * Emits a BuyerCommitted event if successful.
+     * Issues a voucher to the buyer address.
+     *
+     * Reverts if:
+     * - The exchanges region of protocol is paused
+     * - The buyers region of protocol is paused
+     * - OfferId is invalid
+     * - Offer has been voided
+     * - Offer has expired
+     * - Offer is not yet available for commits
+     * - Offer's quantity available is zero
+     * - Buyer address is zero
+     * - Buyer account is inactive
+     * - Conditional commit requirements not met or already used
+     * - Offer price is in native token and caller does not send enough
+     * - Offer price is in some ERC20 token and caller also sends native currency
+     * - Contract at token address does not support ERC20 function transferFrom
+     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Received ERC20 token amount differs from the expected value
+     * - Seller has less funds available than sellerDeposit
+     * - Condition has a range and the token id is not within the range
+     *
+     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
+     * @param _offerId - the id of the offer to commit to
+     * @param _tokenId - the id of the token to use for the conditional commit
+     */
+    function commitToConditionalOffer(address payable _buyer, uint256 _offerId, uint256 _tokenId) external payable;
+
+    /**
      * @notice Commits to a preminted offer (first step of an exchange).
      *
      * Emits a BuyerCommitted event if successful.
@@ -58,6 +89,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - Offer is not yet available for commits
      * - Buyer account is inactive
      * - Buyer is token-gated (conditional commit requirements not met or already used)
+     * - Buyer is token-gated and condition has a range.
      * - Seller has less funds available than sellerDeposit and price
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)

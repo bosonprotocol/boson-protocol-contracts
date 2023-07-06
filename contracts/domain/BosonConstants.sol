@@ -102,6 +102,12 @@ string constant OFFER_NOT_IN_GROUP = "Offer not part of the group";
 string constant TOO_MANY_OFFERS = "Exceeded maximum offers in a single transaction";
 string constant NOTHING_UPDATED = "Nothing updated";
 string constant INVALID_CONDITION_PARAMETERS = "Invalid condition parameters";
+string constant GROUP_HAS_NO_CONDITION = "Offer belongs to a group without a condition. Use commitToOffer instead";
+string constant GROUP_HAS_CONDITION = "Offer belongs to a group with a condition. Use commitToConditionalOffer instead";
+string constant MAX_COMMITS_ADDRESS_REACHED = "Max commits per address reached";
+string constant MAX_COMMITS_TOKEN_REACHED = "Max commits per token id reached";
+string constant TOKEN_ID_NOT_IN_CONDITION_RANGE = "Token id not in condition range";
+string constant INVALID_TOKEN_ID = "ERC721 and ERC20 require zero tokenId";
 
 // Revert Reasons: Exchange related
 string constant NO_SUCH_EXCHANGE = "No such exchange";
@@ -200,7 +206,7 @@ string constant ROYALTY_FEE_INVALID = "ERC2981: royalty fee exceeds protocol lim
 string constant NOT_COMMITTABLE = "Token not committable";
 string constant INVALID_TO_ADDRESS = "Tokens can only be pre-mined to the contract or contract owner address";
 string constant EXTERNAL_CALL_FAILED = "External call failed";
-string constant INVALID_TOKEN_ID = "ERC721: invalid token ID";
+string constant ERC721_INVALID_TOKEN_ID = "ERC721: invalid token ID";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(
