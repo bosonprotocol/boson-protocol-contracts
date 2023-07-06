@@ -88,8 +88,6 @@ async function deploySuite(deployer, newVersion) {
 
   // checkout old version
   const { oldVersion: tag, deployScript: scriptsTag } = versionTags;
-  console.log("only", versionTags);
-
   console.log(`Fetching tags`);
   shell.exec(`git fetch --force --tags origin`);
 

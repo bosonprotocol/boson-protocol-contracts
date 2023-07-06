@@ -54,6 +54,12 @@ exports.RevertReasons = {
   OFFER_NOT_IN_GROUP: "Offer not part of the group",
   NOTHING_UPDATED: "Nothing updated",
   INVALID_CONDITION_PARAMETERS: "Invalid condition parameters",
+  MAX_COMMITS_ADDRESS_REACHED: "Max commits per address reached",
+  MAX_COMMITS_TOKEN_REACHED: "Max commits per token id reached",
+  GROUP_HAS_NO_CONDITION: "Offer belongs to a group without a condition. Use commitToOffer instead",
+  GROUP_HAS_CONDITION: "Offer belongs to a group with a condition. Use commitToConditionalOffer instead",
+  TOKEN_ID_NOT_IN_CONDITION_RANGE: "Token id not in condition range",
+  INVALID_TOKEN_ID: "ERC721 and ERC20 require zero tokenId",
 
   // Account-related
   MUST_BE_ACTIVE: "Account must be active",

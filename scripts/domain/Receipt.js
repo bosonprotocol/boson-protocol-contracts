@@ -70,7 +70,7 @@ class Receipt {
     this.agentId = agentId ?? "0";
     this.exchangeToken = exchangeToken;
     this.finalizedDate = finalizedDate;
-    this.condition = condition ?? new Condition(0, 0, ZeroAddress, "0", "0", "0");
+    this.condition = condition ?? new Condition(0, 0, ZeroAddress, "0", "0", "0", "0");
     this.committedDate = committedDate;
     this.redeemedDate = redeemedDate;
     this.voucherExpired = voucherExpired;

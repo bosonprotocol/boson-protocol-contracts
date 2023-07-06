@@ -45,7 +45,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
         for (uint256 i = 0; i < _group.offerIds.length; i++) {
             // make sure offer exists and belongs to the seller
-            getValidOffer(_group.offerIds[i]);
+            getValidOfferWithSellerCheck(_group.offerIds[i]);
 
             // Offer should not belong to another group already
             (bool exist, ) = getGroupIdByOffer(_group.offerIds[i]);
@@ -90,31 +90,74 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         condition.tokenId = _condition.tokenId;
         condition.threshold = _condition.threshold;
         condition.maxCommits = _condition.maxCommits;
+        condition.length = _condition.length;
     }
 
     /**
      * @notice Validates that condition parameters make sense.
      *
-     * Reverts if:
-     * - EvaluationMethod.None and has fields different from 0
-     * - EvaluationMethod.Threshold and token address or maxCommits is zero
-     * - EvaluationMethod.SpecificToken and token address or maxCommits is zero
+     * A invalid condition is one that fits any of the following criteria:
+     * - EvaluationMethod.None: any field different from zero
+     * - EvaluationMethod.Threshold: 
+          -Token address, maxCommits, or threshold is zero. 
+     *    - TokenType is FungibleToken or NonFungibleToken and length and tokenId are not 0.
+     * - EvaluationMethod.Threshold:
+     *    - token address, maxCommits or threshold is zero
+     *    - tokenType is FungibleToken or NonFungibleToken and length and tokenId is not zero
+     *    - tokenType is MultiToken and length is zero when tokenId is not zero or range overflow
+     * - EvaluationMethod.SpecificToken:
+     *    - tokenType is FungibleToken
+     *    - tokenType is NonFungibleToken and threshold is not zero
+     *    - tokenId is not zero and length is zero or range overflow
+     *    - tokenType is MultiToken and threshold is zero
+     *    - maxCommits is zero
+     *    - token address is zero
      *
      * @param _condition - fully populated condition struct
      * @return valid - validity of condition
      *
      */
-    function validateCondition(Condition memory _condition) internal pure returns (bool valid) {
+    function validateCondition(Condition calldata _condition) internal pure returns (bool) {
+        bool valid = true;
         if (_condition.method == EvaluationMethod.None) {
             valid = (_condition.tokenAddress == address(0) &&
                 _condition.tokenId == 0 &&
                 _condition.threshold == 0 &&
-                _condition.maxCommits == 0);
-        } else if (_condition.method == EvaluationMethod.Threshold) {
-            valid = (_condition.tokenAddress != address(0) && _condition.maxCommits > 0 && _condition.threshold > 0);
-        } else if (_condition.method == EvaluationMethod.SpecificToken) {
-            valid = (_condition.tokenAddress != address(0) && _condition.threshold == 0 && _condition.maxCommits > 0);
+                _condition.maxCommits == 0 &&
+                _condition.length == 0);
+        } else {
+            if (_condition.tokenId != 0) {
+                valid = _condition.length != 0;
+                valid = valid && type(uint256).max - _condition.length >= _condition.tokenId;
+            }
+
+            if (_condition.method == EvaluationMethod.Threshold) {
+                valid =
+                    valid &&
+                    (_condition.tokenAddress != address(0) && _condition.maxCommits > 0 && _condition.threshold > 0);
+
+                if (_condition.tokenType != TokenType.MultiToken) {
+                    // NonFungibleToken and FungibleToken should not have length and tokenId
+                    valid = valid && _condition.length == 0 && _condition.tokenId == 0;
+                }
+            } else {
+                valid =
+                    valid &&
+                    (_condition.tokenAddress != address(0) &&
+                        _condition.maxCommits > 0 &&
+                        _condition.tokenType != TokenType.FungibleToken); // FungibleToken not allowed for SpecificToken
+
+                // SpecificToken with NonFungibleToken should not have threshold
+                if (_condition.tokenType == TokenType.NonFungibleToken) {
+                    valid = valid && _condition.threshold == 0;
+                } else {
+                    // SpecificToken with MultiToken should have threshold
+                    valid = valid && _condition.threshold > 0;
+                }
+            }
         }
+
+        return valid;
     }
 
     /**
@@ -143,8 +186,8 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
         for (uint256 i = 0; i < _offerIds.length; i++) {
             uint256 offerId = _offerIds[i];
-            // make sure offer exist and belong to the seller
-            getValidOffer(offerId);
+
+            getValidOfferWithSellerCheck(offerId);
 
             // Offer should not belong to another group already
             (bool exist, ) = getGroupIdByOffer(offerId);

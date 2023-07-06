@@ -162,7 +162,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         uint256 _offerId
     ) internal view returns (uint256 offersTotalQuantity) {
         // make sure all offers exist and belong to the seller
-        Offer storage offer = getValidOffer(_offerId);
+        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
 
         // Unchecked because we're handling overflow below
         unchecked {

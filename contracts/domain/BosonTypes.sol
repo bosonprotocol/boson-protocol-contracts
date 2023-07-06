@@ -175,6 +175,7 @@ contract BosonTypes {
         uint256 tokenId;
         uint256 threshold;
         uint256 maxCommits;
+        uint256 length;
     }
 
     struct Exchange {

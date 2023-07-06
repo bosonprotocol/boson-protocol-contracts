@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const { getContractAt, parseUnits, ZeroAddress, getSigners } = hre.ethers;
 const { expect } = require("chai");
 
+const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const Role = require("../../scripts/domain/Role");
 const TokenType = require("../../scripts/domain/TokenType");
 const Group = require("../../scripts/domain/Group");
@@ -63,6 +64,9 @@ describe("SnapshotGate", function () {
   let snapshot, snapshotTokenSupplies, snapshotTokenCount, holders, holderByAddress;
 
   beforeEach(async function () {
+    // Reset the accountId iterator
+    accountId.next(true);
+
     // Make accounts available
     [
       deployer,
@@ -350,7 +354,9 @@ describe("SnapshotGate", function () {
           tokenType: TokenType.NonFungibleToken,
           tokenId: tokenId,
           method: EvaluationMethod.SpecificToken,
+          length: "3",
         });
+
         expect(condition.isValid()).to.be.true;
 
         // Create Group
@@ -713,7 +719,7 @@ describe("SnapshotGate", function () {
           // Commit to the offer
           await expect(
             snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId, { value: price })
-          ).to.revertedWith("Condition specifies a different tokenId from the one given");
+          ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
         });
 
         it("offer is from another seller", async function () {
@@ -896,7 +902,7 @@ describe("SnapshotGate", function () {
 
   // Relevant Boson Protocol methods
   context("📋 Protocol Methods", async function () {
-    context("👉 commitToOffer()", async function () {
+    context("👉 commitToConditionalOffer()", async function () {
       context("💔 Revert Reasons", async function () {
         it("buyer is in snapshot but attempts to commit directly on protocol", async function () {
           // Upload the snapshot
@@ -916,8 +922,8 @@ describe("SnapshotGate", function () {
 
           // Check that holder cannot commit directly to the offer on the protocol itself
           await expect(
-            exchangeHandler.connect(holder).commitToOffer(await holder.getAddress(), offerId)
-          ).to.revertedWith("Caller cannot commit");
+            exchangeHandler.connect(holder).commitToConditionalOffer(await holder.getAddress(), offerId, entry.tokenId)
+          ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
         });
       });
     });
