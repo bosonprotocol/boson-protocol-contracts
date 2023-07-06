@@ -78,7 +78,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * - The funds region of protocol is paused
      * - Caller is not associated with the entity id
      * - Token list length does not match amount list length
-     * - Token list length exceeds the maximum allowed number of tokens
      * - Caller tries to withdraw more that they have in available funds
      * - There is nothing to withdraw
      * - Transfer of funds is not successful
@@ -135,7 +134,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * - The funds region of protocol is paused
      * - Caller does not have the FEE_COLLECTOR role
      * - Token list length does not match amount list length
-     * - Token list length exceeds the maximum allowed number of tokens
      * - Caller tries to withdraw more that they have in available funds
      * - There is nothing to withdraw
      * - Transfer of funds is not successful
