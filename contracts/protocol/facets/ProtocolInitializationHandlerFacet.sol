@@ -99,9 +99,6 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             } else if (_version == bytes32("2.3.0")) {
                 initV2_3_0(_initializationData);
             }
-            if (_version == bytes32("2.3.0")) {
-                initV2_3_0(_initializationData);
-            }
         }
 
         removeInterfaces(_interfacesToRemove);
@@ -172,7 +169,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         }
 
         // Deploy a new voucher proxy
-        // protocolAddresses().beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());
+        protocolAddresses().beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());
     }
 
     /**
