@@ -493,7 +493,7 @@ describe("IBosonDisputeHandler", function () {
           block = await provider.getBlock(blockNumber);
           escalatedDate = block.timestamp.toString();
 
-          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
           // Attempt to retract the dispute, expecting revert
           await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWith(
@@ -1082,7 +1082,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Dispute has expired", async function () {
             // Set time forward to the dispute expiration date
-            await setNextBlockTimestamp(Number(timeout));
+            await setNextBlockTimestamp(Number(timeout) + 1);
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
@@ -1650,7 +1650,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Dispute escalation response period has elapsed", async function () {
             // Set time past escalation period
-            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
             // Attempt to decide the dispute, expecting revert
             await expect(
@@ -1682,7 +1682,7 @@ describe("IBosonDisputeHandler", function () {
 
         it("should emit a EscalatedDisputeExpired event", async function () {
           // Set time forward past the dispute escalation period
-          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
           // Expire the escalated dispute, testing for the event
           await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId))
@@ -1692,7 +1692,7 @@ describe("IBosonDisputeHandler", function () {
 
         it("should update state", async function () {
           // Set time forward past the dispute escalation period
-          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
           // Expire the dispute
           tx = await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
@@ -1740,7 +1740,7 @@ describe("IBosonDisputeHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("The disputes region of protocol is paused", async function () {
             // Set time forward past the dispute escalation period
-            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
             // Pause the disputes region of the protocol
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
@@ -1942,7 +1942,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Dispute escalation response period has elapsed", async function () {
             // Set time forward past the dispute escalation period
-            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
             // Attempt to refuse the escalated dispute, expecting revert
             await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
@@ -2094,7 +2094,7 @@ describe("IBosonDisputeHandler", function () {
 
         it("should return the expected dispute state if exchange id is valid and dispute has expired", async function () {
           // Set time forward to the dispute's timeout
-          await setNextBlockTimestamp(Number(timeout));
+          await setNextBlockTimestamp(Number(timeout) + 1);
 
           // Anyone calls expireDispute
           await disputeHandler.connect(rando).expireDispute(exchangeId);
@@ -2347,7 +2347,7 @@ describe("IBosonDisputeHandler", function () {
             block = await provider.getBlock(blockNumber);
             escalatedDate = block.timestamp.toString();
 
-            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
             // Expire dispute
             await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
