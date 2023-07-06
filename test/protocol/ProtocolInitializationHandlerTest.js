@@ -467,6 +467,20 @@ describe("ProtocolInitializationHandler", async function () {
       );
     });
 
+    it("Should emit MaxPremintedVouchersChanged event", async function () {
+      // Make the cut, check the event
+      await expect(
+        await diamondCutFacet.diamondCut(
+          [facetCut],
+          await deployedProtocolInitializationHandlerFacet.getAddress(),
+          calldataProtocolInitialization,
+          await getFees(maxPriorityFeePerGas)
+        )
+      )
+        .to.emit(configHandler, "MaxPremintedVouchersChanged")
+        .withArgs(maxPremintedVouchers, await deployer.getAddress());
+    });
+
     it("Should update state", async function () {
       // Make the cut, check the event
       await diamondCutFacet.diamondCut(
