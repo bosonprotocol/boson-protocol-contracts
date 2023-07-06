@@ -162,7 +162,7 @@ class Condition {
    * @returns {boolean}
    */
   isValid() {
-      this.methodIsValid() &&
+    this.methodIsValid() &&
       this.tokenTypeIsValid() &&
       this.tokenAddressIsValid() &&
       this.tokenIdIsValid() &&

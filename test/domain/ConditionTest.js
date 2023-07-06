@@ -15,7 +15,7 @@ describe("Condition", function () {
 
   beforeEach(async function () {
     // Get a list of accounts
-    accounts = await ethers.getSigners();
+    accounts = await getSigners();
     tokenAddress = accounts[1].address;
 
     // Required constructor params

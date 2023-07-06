@@ -6874,7 +6874,6 @@ describe("IBosonOrchestrationHandler", function () {
         condition = mockCondition({
           tokenType: TokenType.MultiToken,
           tokenAddress: await other2.getAddress(),
-          tokenAddress: other2.address,
           method: EvaluationMethod.Threshold,
         });
         expect(condition.isValid()).to.be.true;

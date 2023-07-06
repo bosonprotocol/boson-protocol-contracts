@@ -990,10 +990,9 @@ describe("IBosonExchangeHandler", function () {
           // mint enough tokens for the buyer
           await foreign20.connect(buyer).mint(await buyer.getAddress(), condition.threshold);
 
-          await expect(bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)).to.emit(
-            exchangeHandler,
-            "BuyerCommitted"
-          );
+          await expect(
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)
+          ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
         it("Offer is part of a group that enforces per-address conditions and utilizes ERC721 tokens", async function () {
@@ -1015,10 +1014,9 @@ describe("IBosonExchangeHandler", function () {
 
           await foreign721.connect(buyer).mint("123", 1);
 
-          await expect(bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)).to.emit(
-            exchangeHandler,
-            "BuyerCommitted"
-          );
+          await expect(
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)
+          ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
         it("Offer is part of a group that enforces per-address conditions and utilizes ERC1155 tokens with range length == 1", async function () {
@@ -1042,10 +1040,9 @@ describe("IBosonExchangeHandler", function () {
 
           await foreign1155.connect(buyer).mint(condition.tokenId, condition.threshold);
 
-          await expect(bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)).to.emit(
-            exchangeHandler,
-            "BuyerCommitted"
-          );
+          await expect(
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)
+          ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
         it("Offer is part of a group that has no condition", async function () {
@@ -1066,10 +1063,9 @@ describe("IBosonExchangeHandler", function () {
 
           await foreign721.connect(buyer).mint("123", 1);
 
-          await expect(bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)).to.emit(
-            exchangeHandler,
-            "BuyerCommitted"
-          );
+          await expect(
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)
+          ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
         it("Offer is part of a group that enforces per-wallet conditions and range length == 1", async function () {
@@ -1097,10 +1093,9 @@ describe("IBosonExchangeHandler", function () {
           // mint enough tokens for the buyer
           await foreign721.connect(buyer).mint(condition.tokenId, 1);
 
-          await expect(bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)).to.emit(
-            exchangeHandler,
-            "BuyerCommitted"
-          );
+          await expect(
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, await buyer.getAddress(), tokenId)
+          ).to.emit(exchangeHandler, "BuyerCommitted");
         });
       });
 
@@ -1362,7 +1357,9 @@ describe("IBosonExchangeHandler", function () {
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
           ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
@@ -1374,7 +1371,9 @@ describe("IBosonExchangeHandler", function () {
           for (let i = 0; i < Number(condition.maxCommits); i++) {
             // We're only concerned that the event is emitted, indicating the commit was allowed
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
             ).to.emit(exchangeHandler, "BuyerCommitted");
           }
         });
@@ -1383,7 +1382,9 @@ describe("IBosonExchangeHandler", function () {
           it("buyer does not meet condition for commit", async function () {
             // Attempt to commit, expecting revert
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
             ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
           });
 
@@ -1400,7 +1401,9 @@ describe("IBosonExchangeHandler", function () {
 
             // Attempt to commit again after maximum commits has been reached
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
             ).to.revertedWith(RevertReasons.MAX_COMMITS_ADDRESS_REACHED);
           });
 
@@ -1411,13 +1414,17 @@ describe("IBosonExchangeHandler", function () {
               .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), ++offerId, 0, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), ++offerId, 0, { value: price })
             ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
           });
 
           it("Caller sends non-zero tokenId", async function () {});
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, 1, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, 1, { value: price })
           ).to.revertedWith(RevertReasons.INVALID_TOKEN_ID);
         });
       });
@@ -1450,7 +1457,9 @@ describe("IBosonExchangeHandler", function () {
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
           ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
@@ -1462,7 +1471,9 @@ describe("IBosonExchangeHandler", function () {
           for (let i = 0; i < Number(condition.maxCommits); i++) {
             // We're only concerned that the event is emitted, indicating the commit was allowed
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
             ).to.emit(exchangeHandler, "BuyerCommitted");
           }
         });
@@ -1471,7 +1482,9 @@ describe("IBosonExchangeHandler", function () {
           it("buyer does not meet condition for commit", async function () {
             // Attempt to commit, expecting revert
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
             ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
           });
 
@@ -1486,17 +1499,21 @@ describe("IBosonExchangeHandler", function () {
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price });
             }
 
-          // Attempt to commit again after maximum commits has been reached
+            // Attempt to commit again after maximum commits has been reached
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, 1, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, 1, { value: price })
             ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
           });
 
           it("Caller sends non-zero tokenId", async function () {
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, 1, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, 1, { value: price })
             ).to.revertedWith(RevertReasons.INVALID_TOKEN_ID);
-            });
+          });
         });
       });
 
@@ -1534,7 +1551,9 @@ describe("IBosonExchangeHandler", function () {
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
           ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
@@ -1546,7 +1565,9 @@ describe("IBosonExchangeHandler", function () {
           for (let i = 0; i < Number(condition.maxCommits); i++) {
             // We're only concerned that the event is emitted, indicating the commit was allowed
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
             ).to.emit(exchangeHandler, "BuyerCommitted");
           }
         });
@@ -1555,7 +1576,9 @@ describe("IBosonExchangeHandler", function () {
           it("buyer does not meet condition for commit", async function () {
             // Attempt to commit, expecting revert
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
             ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
           });
 
@@ -1572,7 +1595,9 @@ describe("IBosonExchangeHandler", function () {
 
             // Attempt to commit again after maximum commits has been reached
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
             ).to.revertedWith(RevertReasons.MAX_COMMITS_ADDRESS_REACHED);
           });
         });
@@ -1611,7 +1636,9 @@ describe("IBosonExchangeHandler", function () {
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
           ).to.emit(exchangeHandler, "BuyerCommitted");
         });
 
@@ -1620,7 +1647,9 @@ describe("IBosonExchangeHandler", function () {
           for (let i = 0; i < Number(condition.maxCommits); i++) {
             // We're only concerned that the event is emitted, indicating the commit was allowed
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
             ).to.emit(exchangeHandler, "BuyerCommitted");
           }
         });
@@ -1637,7 +1666,9 @@ describe("IBosonExchangeHandler", function () {
 
           // buyer can commit
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
           ).to.not.reverted;
         });
 
@@ -1646,7 +1677,9 @@ describe("IBosonExchangeHandler", function () {
             tokenId = "13";
             // Attempt to commit, expecting revert
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
             ).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
           });
 
@@ -1656,7 +1689,9 @@ describe("IBosonExchangeHandler", function () {
 
             // Attempt to commit, expecting revert
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
             ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
           });
 
@@ -1670,7 +1705,9 @@ describe("IBosonExchangeHandler", function () {
 
             // Attempt to commit again after maximum commits has been reached
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
             ).to.revertedWith(RevertReasons.MAX_COMMITS_TOKEN_REACHED);
           });
 
@@ -1678,7 +1715,9 @@ describe("IBosonExchangeHandler", function () {
             tokenId = "666";
             // Attempt to commit, expecting revert
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
             ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
           });
         });
@@ -1718,20 +1757,20 @@ describe("IBosonExchangeHandler", function () {
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
           ).to.emit(exchangeHandler, "BuyerCommitted");
         });
-
-
-
-
 
         it("should allow buyer to commit up to the max times for the group", async function () {
           // Commit to offer the maximum number of times
           for (let i = 0; i < Number(condition.maxCommits); i++) {
             // We're only concerned that the event is emitted, indicating the commit was allowed
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
             ).to.emit(exchangeHandler, "BuyerCommitted");
           }
         });
@@ -1748,7 +1787,9 @@ describe("IBosonExchangeHandler", function () {
 
           // buyer can commit
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
           ).to.not.reverted;
         });
 
@@ -1758,7 +1799,9 @@ describe("IBosonExchangeHandler", function () {
 
             // Attempt to commit, expecting revert
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
             ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
           });
 
@@ -1779,7 +1822,9 @@ describe("IBosonExchangeHandler", function () {
 
             // Attempt to commit again after maximum commits has been reached
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
             ).to.revertedWith(RevertReasons.MAX_COMMITS_TOKEN_REACHED);
           });
 
@@ -1787,7 +1832,9 @@ describe("IBosonExchangeHandler", function () {
             tokenId = "666";
             // Attempt to commit, expecting revert
             await expect(
-              exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+              exchangeHandler
+                .connect(buyer)
+                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
             ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
           });
         });
@@ -1829,7 +1876,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to create an exchange, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -1839,7 +1888,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to create a buyer, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -1858,7 +1909,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to commit, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
           ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
         });
 
@@ -1868,7 +1921,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to commit to the voided offer, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
           ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
         });
 
@@ -1893,7 +1948,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to commit to the not availabe offer, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
           ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
         });
 
@@ -1903,7 +1960,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to commit to the expired offer, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
           ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
         });
 
@@ -1924,7 +1983,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to commit to the sold out offer, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
           ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
         });
 
@@ -1951,7 +2012,9 @@ describe("IBosonExchangeHandler", function () {
 
           // Commit to offer.
           await expect(
-            exchangeHandler.connect(buyer).commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
+            exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
           ).to.revertedWith(RevertReasons.GROUP_HAS_NO_CONDITION);
         });
       });
@@ -3088,7 +3151,14 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, await buyer.getAddress());
+              .withArgs(
+                twin20.id,
+                twin20.tokenAddress,
+                exchange.id,
+                twin20.tokenId,
+                twin20.amount,
+                await buyer.getAddress()
+              );
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
