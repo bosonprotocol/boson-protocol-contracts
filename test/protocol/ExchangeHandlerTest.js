@@ -642,8 +642,11 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("Should not decrement seller funds if offer price and sellerDeposit is 0", async function () {
+        let availableFundsAddresses = [ZeroAddress];
         // Seller funds before
-        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+        const sellersFundsBefore = FundsList.fromStruct(
+          await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+        );
 
         // Set protocolFee to zero so we don't get the error AGENT_FEE_AMOUNT_TOO_HIGH
         let protocolFeePercentage = "0";
@@ -672,7 +675,9 @@ describe("IBosonExchangeHandler", function () {
         await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId);
 
         // Seller funds after
-        const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+        const sellerFundsAfter = FundsList.fromStruct(
+          await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+        );
         expect(sellerFundsAfter.toString()).to.equal(
           sellersFundsBefore.toString(),
           "Seller funds should not be decremented"
@@ -2444,16 +2449,6 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to complete an exchange, expecting revert
           await expect(exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
             RevertReasons.REGION_PAUSED
-          );
-        });
-
-        it("Completing too many exchanges", async function () {
-          // Try to complete more than 100 exchanges
-          exchangesToComplete = [...Array(101).keys()];
-
-          // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(rando).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
-            RevertReasons.TOO_MANY_EXCHANGES
           );
         });
 

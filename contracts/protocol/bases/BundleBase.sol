@@ -24,10 +24,8 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
      * - Any of the offers belongs to different seller
      * - Any of the offers does not exist
      * - Offer exists in a different bundle
-     * - Number of offers exceeds maximum allowed number per bundle
      * - Any of the twins belongs to different seller
      * - Any of the twins does not exist
-     * - Number of twins exceeds maximum allowed number per bundle
      * - Duplicate twins added in same bundle
      * - Exchange already exists for the offer id in bundle
      * - Offers' total quantity is greater than twin supply when token is nonfungible
@@ -38,7 +36,6 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
     function createBundleInternal(Bundle memory _bundle) internal {
         // Cache protocol lookups and limits for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-        ProtocolLib.ProtocolLimits storage limits = protocolLimits();
 
         // get message sender
         address sender = msgSender();
@@ -52,12 +49,6 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             _bundle.offerIds.length > 0 && _bundle.twinIds.length > 0,
             BUNDLE_REQUIRES_AT_LEAST_ONE_TWIN_AND_ONE_OFFER
         );
-
-        // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_bundle.offerIds.length <= limits.maxOffersPerBundle, TOO_MANY_OFFERS);
-
-        // limit maximum number of twins to avoid running into block gas limit in a loop
-        require(_bundle.twinIds.length <= limits.maxTwinsPerBundle, TOO_MANY_TWINS);
 
         // Get the next bundle and increment the counter
         uint256 bundleId = protocolCounters().nextBundleId++;

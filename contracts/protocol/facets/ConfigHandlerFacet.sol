@@ -38,23 +38,13 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setBeaconProxyAddress(_addresses.beaconProxy);
         setProtocolFeePercentage(_fees.percentage);
         setProtocolFeeFlatBoson(_fees.flatBoson);
-        setMaxExchangesPerBatch(_limits.maxExchangesPerBatch);
-        setMaxOffersPerGroup(_limits.maxOffersPerGroup);
-        setMaxTwinsPerBundle(_limits.maxTwinsPerBundle);
-        setMaxOffersPerBundle(_limits.maxOffersPerBundle);
-        setMaxOffersPerBatch(_limits.maxOffersPerBatch);
-        setMaxTokensPerWithdrawal(_limits.maxTokensPerWithdrawal);
-        setMaxFeesPerDisputeResolver(_limits.maxFeesPerDisputeResolver);
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
-        setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);
-        setMaxAllowedSellers(_limits.maxAllowedSellers);
         setBuyerEscalationDepositPercentage(_fees.buyerEscalationDepositPercentage);
         setMaxTotalOfferFeePercentage(_limits.maxTotalOfferFeePercentage);
         setMaxRoyaltyPecentage(_limits.maxRoyaltyPecentage);
         setMinResolutionPeriod(_limits.minResolutionPeriod);
         setMaxResolutionPeriod(_limits.maxResolutionPeriod);
         setMinDisputePeriod(_limits.minDisputePeriod);
-        setMaxPremintedVouchers(_limits.maxPremintedVouchers);
 
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -240,176 +230,6 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-     * @notice Sets the maximum numbers of offers that can be added to a group in a single transaction.
-     *
-     * Emits a MaxOffersPerGroupChanged event if successful.
-     *
-     * Reverts if the _maxOffersPerGroup is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxOffersPerGroup - the maximum length of {BosonTypes.Group.offerIds}
-     */
-    function setMaxOffersPerGroup(uint16 _maxOffersPerGroup) public override onlyRole(ADMIN) nonReentrant {
-        // Make sure _maxOffersPerGroup is greater than 0
-        checkNonZero(_maxOffersPerGroup);
-
-        protocolLimits().maxOffersPerGroup = _maxOffersPerGroup;
-        emit MaxOffersPerGroupChanged(_maxOffersPerGroup, msgSender());
-    }
-
-    /**
-     * @notice Gets the maximum numbers of offers that can be added to a group in a single transaction.
-     *
-     * @return the maximum numbers of offers that can be added to a group in a single transaction
-     */
-    function getMaxOffersPerGroup() external view override returns (uint16) {
-        return protocolLimits().maxOffersPerGroup;
-    }
-
-    /**
-     * @notice Sets the maximum numbers of twins that can be added to a bundle in a single transaction.
-     *
-     * Emits a MaxTwinsPerBundleChanged event if successful.
-     *
-     * Reverts if the _maxTwinsPerBundle is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxTwinsPerBundle - the maximum length of {BosonTypes.Bundle.twinIds}
-     */
-    function setMaxTwinsPerBundle(uint16 _maxTwinsPerBundle) public override onlyRole(ADMIN) nonReentrant {
-        // Make sure _maxTwinsPerBundle is greater than 0
-        checkNonZero(_maxTwinsPerBundle);
-
-        protocolLimits().maxTwinsPerBundle = _maxTwinsPerBundle;
-        emit MaxTwinsPerBundleChanged(_maxTwinsPerBundle, msgSender());
-    }
-
-    /**
-     * @notice Gets the maximum numbers of twins that can be added to a bundle in a single transaction.
-     *
-     * @return the maximum numbers of twins that can be added to a bundle in a single transaction.
-     */
-    function getMaxTwinsPerBundle() external view override returns (uint16) {
-        return protocolLimits().maxTwinsPerBundle;
-    }
-
-    /**
-     * @notice Sets the maximum numbers of offers that can be added to a bundle in a single transaction.
-     *
-     * Emits a MaxOffersPerBundleChanged event if successful.
-     *
-     * Reverts if the _maxOffersPerBundle is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxOffersPerBundle - the maximum length of {BosonTypes.Bundle.offerIds}
-     */
-    function setMaxOffersPerBundle(uint16 _maxOffersPerBundle) public override onlyRole(ADMIN) nonReentrant {
-        // Make sure _maxOffersPerBundle is greater than 0
-        checkNonZero(_maxOffersPerBundle);
-
-        protocolLimits().maxOffersPerBundle = _maxOffersPerBundle;
-        emit MaxOffersPerBundleChanged(_maxOffersPerBundle, msgSender());
-    }
-
-    /**
-     * @notice Gets the maximum numbers of offers that can be added to a bundle in a single transaction.
-     *
-     * @return the maximum numbers of offers that can be added to a bundle in a single transaction
-     */
-    function getMaxOffersPerBundle() external view override returns (uint16) {
-        return protocolLimits().maxOffersPerBundle;
-    }
-
-    /**
-     * @notice Sets the maximum numbers of offers that can be created in a single transaction.
-     *
-     * Emits a MaxOffersPerBatchChanged event if successful.
-     *
-     * Reverts if the _maxOffersPerBatch is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
-     */
-    function setMaxOffersPerBatch(uint16 _maxOffersPerBatch) public override onlyRole(ADMIN) nonReentrant {
-        // Make sure _maxOffersPerBatch is greater than 0
-        checkNonZero(_maxOffersPerBatch);
-
-        protocolLimits().maxOffersPerBatch = _maxOffersPerBatch;
-        emit MaxOffersPerBatchChanged(_maxOffersPerBatch, msgSender());
-    }
-
-    /**
-     * @notice Gets the maximum numbers of offers that can be created in a single transaction.
-     *
-     * @return the maximum numbers of offers that can be created in a single transaction
-     */
-    function getMaxOffersPerBatch() external view override returns (uint16) {
-        return protocolLimits().maxOffersPerBatch;
-    }
-
-    /**
-     * @notice Sets the maximum numbers of tokens that can be withdrawn in a single transaction.
-     *
-     * Emits a MaxTokensPerWithdrawalChanged event if successful.
-     *
-     * Reverts if the _maxTokensPerWithdrawal is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxTokensPerWithdrawal - the maximum length of token list when calling {FundsHandlerFacet.withdraw}
-     */
-    function setMaxTokensPerWithdrawal(uint16 _maxTokensPerWithdrawal) public override onlyRole(ADMIN) nonReentrant {
-        // Make sure _maxTokensPerWithdrawal is greater than 0
-        checkNonZero(_maxTokensPerWithdrawal);
-
-        protocolLimits().maxTokensPerWithdrawal = _maxTokensPerWithdrawal;
-        emit MaxTokensPerWithdrawalChanged(_maxTokensPerWithdrawal, msgSender());
-    }
-
-    /**
-     * @notice Gets the maximum numbers of tokens that can be withdrawn in a single transaction.
-     *
-     * @return the maximum length of token list when calling {FundsHandlerFacet.withdraw}
-     */
-    function getMaxTokensPerWithdrawal() external view override returns (uint16) {
-        return protocolLimits().maxTokensPerWithdrawal;
-    }
-
-    /**
-     * @notice Sets the maximum number of dispute resolver fee structs that can be processed in a single transaction.
-     *
-     * Emits a MaxFeesPerDisputeResolverChanged event if successful.
-     *
-     * Reverts if the _maxFeesPerDisputeResolver is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxFeesPerDisputeResolver - the maximum length of dispute resolver fees list when calling {AccountHandlerFacet.createDisputeResolver} or {AccountHandlerFacet.updateDisputeResolver}
-     */
-    function setMaxFeesPerDisputeResolver(
-        uint16 _maxFeesPerDisputeResolver
-    ) public override onlyRole(ADMIN) nonReentrant {
-        // Make sure _maxFeesPerDisputeResolver is greater than 0
-        checkNonZero(_maxFeesPerDisputeResolver);
-
-        protocolLimits().maxFeesPerDisputeResolver = _maxFeesPerDisputeResolver;
-        emit MaxFeesPerDisputeResolverChanged(_maxFeesPerDisputeResolver, msgSender());
-    }
-
-    /**
-     * @notice Gets the maximum number of dispute resolver fee structs that can be processed in a single transaction.
-     *
-     * @return the maximum number of dispute resolver fee structs that can be processed in a single transaction
-     */
-    function getMaxFeesPerDisputeResolver() external view override returns (uint16) {
-        return protocolLimits().maxFeesPerDisputeResolver;
-    }
-
-    /**
      * @notice Sets the maximum escalation response period a dispute resolver can specify.
      *
      * Emits a MaxEscalationResponsePeriodChanged event if successful.
@@ -437,32 +257,6 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getMaxEscalationResponsePeriod() external view override returns (uint256) {
         return protocolLimits().maxEscalationResponsePeriod;
-    }
-
-    /**
-     * @notice Sets the maximum number of disputes that can be expired in a single transaction.
-     *
-     * Emits a MaxDisputesPerBatchChanged event if successful.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxDisputesPerBatch - the maximum number of disputes that can be expired
-     */
-    function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch) public override onlyRole(ADMIN) nonReentrant {
-        // Make sure _maxDisputesPerBatch is greater than 0
-        checkNonZero(_maxDisputesPerBatch);
-
-        protocolLimits().maxDisputesPerBatch = _maxDisputesPerBatch;
-        emit MaxDisputesPerBatchChanged(_maxDisputesPerBatch, msgSender());
-    }
-
-    /**
-     * @notice Gets the maximum number of disputes that can be expired in a single transaction.
-     *
-     * @return the maximum number of disputes that can be expired
-     */
-    function getMaxDisputesPerBatch() external view override returns (uint16) {
-        return protocolLimits().maxDisputesPerBatch;
     }
 
     /**
@@ -541,34 +335,6 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-     * @notice Sets the maximum number of seller ids that can be added to or removed from dispute resolver seller allow list in a single transaction.
-     *
-     * Emits a MaxAllowedSellersChanged event if successful.
-     *
-     * Reverts if the _maxAllowedSellers is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxAllowedSellers - the maximum number of seller ids that can be added or removed
-     */
-    function setMaxAllowedSellers(uint16 _maxAllowedSellers) public override onlyRole(ADMIN) nonReentrant {
-        // Make sure _maxAllowedSellers  greater than 0
-        checkNonZero(_maxAllowedSellers);
-
-        protocolLimits().maxAllowedSellers = _maxAllowedSellers;
-        emit MaxAllowedSellersChanged(_maxAllowedSellers, msgSender());
-    }
-
-    /**
-     * @notice Gets the maximum number of seller ids that can be added to or removed from dispute resolver seller allow list in a single transaction.
-     *
-     * @return the maximum number of seller ids that can be added or removed
-     */
-    function getMaxAllowedSellers() external view override returns (uint16) {
-        return protocolLimits().maxAllowedSellers;
-    }
-
-    /**
      * @notice Sets the buyer escalation fee percentage.
      *
      * Emits a BuyerEscalationFeePercentageChanged event if successful.
@@ -640,34 +406,6 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getAuthTokenContract(AuthTokenType _authTokenType) external view returns (address) {
         return protocolLookups().authTokenContracts[_authTokenType];
-    }
-
-    /**
-     * @notice Sets the maximum number of exchanges that can be created in a single transaction.
-     *
-     * Emits a MaxExchangesPerBatchChanged event if successful.
-     *
-     * Reverts if the _maxExchangesPerBatch is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxExchangesPerBatch - the maximum length of {BosonTypes.Exchange[]}
-     */
-    function setMaxExchangesPerBatch(uint16 _maxExchangesPerBatch) public override onlyRole(ADMIN) nonReentrant {
-        // Make sure _maxExchangePerBatch is greater than 0
-        checkNonZero(_maxExchangesPerBatch);
-
-        protocolLimits().maxExchangesPerBatch = _maxExchangesPerBatch;
-        emit MaxExchangesPerBatchChanged(_maxExchangesPerBatch, msgSender());
-    }
-
-    /**
-     * @notice Gets the maximum number of exchanges that can be created in a single transaction.
-     *
-     * @return the maximum length of {BosonTypes.Exchange[]}
-     */
-    function getMaxExchangesPerBatch() external view override returns (uint16) {
-        return protocolLimits().maxExchangesPerBatch;
     }
 
     /**
@@ -748,30 +486,6 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getMinDisputePeriod() external view override returns (uint256) {
         return protocolLimits().minDisputePeriod;
-    }
-
-    /**
-     * @notice Sets the maximum number of vouchers that can be preminted in a single transaction.
-     *
-     * Emits a MaxPremintedVouchersChanged event if successful.
-     *
-     * Reverts if the _maxPremintedVouchers is zero.
-     *
-     * @param _maxPremintedVouchers - the maximum number of vouchers
-     */
-    function setMaxPremintedVouchers(uint256 _maxPremintedVouchers) public override onlyRole(ADMIN) nonReentrant {
-        // Make sure _maxPremintedVouchers is greater than 0
-        checkNonZero(_maxPremintedVouchers);
-
-        protocolLimits().maxPremintedVouchers = _maxPremintedVouchers;
-        emit MaxPremintedVouchersChanged(_maxPremintedVouchers, msgSender());
-    }
-
-    /**
-     * @notice Gets the maximum number of vouchers that can be preminted in a single transaction.
-     */
-    function getMaxPremintedVouchers() external view override returns (uint256) {
-        return protocolLimits().maxPremintedVouchers;
     }
 
     /**

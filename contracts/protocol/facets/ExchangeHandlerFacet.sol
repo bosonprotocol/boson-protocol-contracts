@@ -388,7 +388,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * Reverts if:
      * - The exchanges region of protocol is paused
-     * - Number of exchanges exceeds maximum allowed number per batch
      * - For any exchange:
      *   - Exchange does not exist
      *   - Exchange is not in Redeemed state
@@ -397,9 +396,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeIds - the array of exchanges ids
      */
     function completeExchangeBatch(uint256[] calldata _exchangeIds) external override exchangesNotPaused {
-        // limit maximum number of exchanges to avoid running into block gas limit in a loop
-        require(_exchangeIds.length <= protocolLimits().maxExchangesPerBatch, TOO_MANY_EXCHANGES);
-
         for (uint256 i = 0; i < _exchangeIds.length; i++) {
             // complete the exchange
             completeExchange(_exchangeIds[i]);
