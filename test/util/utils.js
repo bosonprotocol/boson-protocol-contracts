@@ -133,11 +133,13 @@ function compareOfferStructs(returnedOffer) {
   return true;
 }
 
-async function setNextBlockTimestamp(timestamp) {
+async function setNextBlockTimestamp(timestamp, mine = false) {
   if (typeof timestamp == "string" && timestamp.startsWith("0x0") && timestamp.length > 3)
     timestamp = "0x" + timestamp.substring(3);
   await provider.send("evm_setNextBlockTimestamp", [timestamp]);
-  await provider.send("evm_mine", []);
+
+  // when testing static call, a block must be mined to get the correct timestamp
+  if (mine) await provider.send("evm_mine", []);
 }
 
 function getSignatureParameters(signature) {
