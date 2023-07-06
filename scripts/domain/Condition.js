@@ -162,13 +162,13 @@ class Condition {
    * @returns {boolean}
    */
   isValid() {
-    this.methodIsValid() &&
-      this.tokenTypeIsValid() &&
-      this.tokenAddressIsValid() &&
-      this.tokenIdIsValid() &&
-      this.thresholdIsValid() &&
-      this.maxCommitsIsValid() &&
-      this.lengthIsValid();
+    return(this.methodIsValid() &&
+           this.tokenTypeIsValid() &&
+           this.tokenAddressIsValid() &&
+           this.tokenIdIsValid() &&
+           this.thresholdIsValid() &&
+           this.maxCommitsIsValid() &&
+           this.lengthIsValid());
   }
 }
 
