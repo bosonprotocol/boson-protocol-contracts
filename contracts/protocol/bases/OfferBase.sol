@@ -150,46 +150,59 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // quantity must be greater than zero
         require(_offer.quantityAvailable > 0, INVALID_QUANTITY_AVAILABLE);
 
-        // Specified resolver must be registered and active, except for absolute zero offers with unspecified dispute resolver.
-        // If price and sellerDeposit are 0, seller is not obliged to choose dispute resolver, which is done by setting _disputeResolverId to 0.
-        // In this case, there is no need to check the validity of the dispute resolver. However, if one (or more) of {price, sellerDeposit, _disputeResolverId}
-        // is different from 0, it must be checked that dispute resolver exists, supports the exchange token and seller is allowed to choose them.
         DisputeResolutionTerms memory disputeResolutionTerms;
-        if (_offer.price != 0 || _offer.sellerDeposit != 0 || _disputeResolverId != 0) {
-            (
-                bool exists,
-                DisputeResolver storage disputeResolver,
-                DisputeResolverFee[] storage disputeResolverFees
-            ) = fetchDisputeResolver(_disputeResolverId);
-            require(exists && disputeResolver.active, INVALID_DISPUTE_RESOLVER);
+        {
+            // Cache protocol lookups for reference
+            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-            // Operate in a block to avoid "stack too deep" error
-            {
-                // Cache protocol lookups for reference
-                ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+            // Specified resolver must be registered and active, except for absolute zero offers with unspecified dispute resolver.
+            // If price and sellerDeposit are 0, seller is not obliged to choose dispute resolver, which is done by setting _disputeResolverId to 0.
+            // In this case, there is no need to check the validity of the dispute resolver. However, if one (or more) of {price, sellerDeposit, _disputeResolverId}
+            // is different from 0, it must be checked that dispute resolver exists, supports the exchange token and seller is allowed to choose them.
+            if (_offer.price != 0 || _offer.sellerDeposit != 0 || _disputeResolverId != 0) {
+                (
+                    bool exists,
+                    DisputeResolver storage disputeResolver,
+                    DisputeResolverFee[] storage disputeResolverFees
+                ) = fetchDisputeResolver(_disputeResolverId);
+                require(exists && disputeResolver.active, INVALID_DISPUTE_RESOLVER);
 
-                // check that seller is on the DR allow list
-                if (lookups.allowedSellers[_disputeResolverId].length > 0) {
-                    // if length == 0, dispute resolver allows any seller
-                    // if length > 0, we check that it is on allow list
-                    require(lookups.allowedSellerIndex[_disputeResolverId][_offer.sellerId] > 0, SELLER_NOT_APPROVED);
+                // Operate in a block to avoid "stack too deep" error
+                {
+                    // check that seller is on the DR allow list
+                    if (lookups.allowedSellers[_disputeResolverId].length > 0) {
+                        // if length == 0, dispute resolver allows any seller
+                        // if length > 0, we check that it is on allow list
+                        require(
+                            lookups.allowedSellerIndex[_disputeResolverId][_offer.sellerId] > 0,
+                            SELLER_NOT_APPROVED
+                        );
+                    }
+
+                    // get the index of DisputeResolverFee and make sure DR supports the exchangeToken
+                    uint256 feeIndex = lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_offer.exchangeToken];
+                    require(feeIndex > 0, DR_UNSUPPORTED_FEE);
+
+                    uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
+
+                    // store DR terms
+                    disputeResolutionTerms.disputeResolverId = _disputeResolverId;
+                    disputeResolutionTerms.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
+                    disputeResolutionTerms.feeAmount = feeAmount;
+                    disputeResolutionTerms.buyerEscalationDeposit =
+                        (feeAmount * protocolFees().buyerEscalationDepositPercentage) /
+                        10000;
+
+                    protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
                 }
+            }
 
-                // get the index of DisputeResolverFee and make sure DR supports the exchangeToken
-                uint256 feeIndex = lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_offer.exchangeToken];
-                require(feeIndex > 0, DR_UNSUPPORTED_FEE);
-
-                uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
-
-                // store DR terms
-                disputeResolutionTerms.disputeResolverId = _disputeResolverId;
-                disputeResolutionTerms.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
-                disputeResolutionTerms.feeAmount = feeAmount;
-                disputeResolutionTerms.buyerEscalationDeposit =
-                    (feeAmount * protocolFees().buyerEscalationDepositPercentage) /
-                    10000;
-
-                protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
+            // Collection must exist. Collections with index 0 exist by default.
+            if (_offer.collectionIndex > 0) {
+                require(
+                    lookups.additionalCollections[_offer.sellerId].length >= _offer.collectionIndex,
+                    NO_SUCH_COLLECTION
+                );
             }
         }
 
@@ -244,6 +257,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.exchangeToken = _offer.exchangeToken;
         offer.metadataUri = _offer.metadataUri;
         offer.metadataHash = _offer.metadataHash;
+        offer.collectionIndex = _offer.collectionIndex;
 
         // Get storage location for offer dates
         OfferDates storage offerDates = fetchOfferDates(_offer.id);
@@ -316,7 +330,9 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
         uint256 _startId = pc.nextExchangeId;
 
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
+        IBosonVoucher bosonVoucher = IBosonVoucher(
+            getCloneAddress(protocolLookups(), offer.sellerId, offer.collectionIndex)
+        );
 
         address sender = msgSender();
 

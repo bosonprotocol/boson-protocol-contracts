@@ -103,7 +103,7 @@ describe("IBosonVoucher", function () {
     voucherInitValues = mockVoucherInitValues();
     const bosonVoucherInit = await getContractAt("BosonVoucher", await bosonVoucher.getAddress());
 
-    await bosonVoucherInit.initializeVoucher(sellerId, await assistant.getAddress(), voucherInitValues);
+    await bosonVoucherInit.initializeVoucher(sellerId, "1", await assistant.getAddress(), voucherInitValues);
 
     [foreign20] = await deployMockTokens(["Foreign20", "BosonToken"]);
 
@@ -151,9 +151,12 @@ describe("IBosonVoucher", function () {
     });
 
     it("Cannot initialize voucher twice", async function () {
-      const initalizableClone = await getContractAt("IInitializableVoucherClone", await bosonVoucher.getAddress());
+      const initalizableClone = await ethers.getContractAt(
+        "IInitializableVoucherClone",
+        await bosonVoucher.getAddress()
+      );
       await expect(
-        initalizableClone.initializeVoucher(2, await assistant.getAddress(), voucherInitValues)
+        initalizableClone.initializeVoucher(2, "1", await assistant.getAddress(), voucherInitValues)
       ).to.be.revertedWith(RevertReasons.INITIALIZABLE_ALREADY_INITIALIZED);
     });
   });

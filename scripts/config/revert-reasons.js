@@ -47,6 +47,7 @@ exports.RevertReasons = {
   OFFER_NOT_AVAILABLE: "Offer is not yet available",
   OFFER_HAS_EXPIRED: "Offer has expired",
   OFFER_SOLD_OUT: "Offer has sold out",
+  NO_SUCH_COLLECTION: "No such collection",
 
   // Group related
   NO_SUCH_GROUP: "No such group",

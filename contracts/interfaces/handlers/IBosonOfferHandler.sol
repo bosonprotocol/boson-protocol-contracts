@@ -9,7 +9,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xa1598d02
+ * The ERC-165 identifier for this interface is: 0xa1e3b91c
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
     /**
@@ -35,6 +35,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Seller is not on dispute resolver's seller allow list
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
+     * - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -78,6 +79,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When agent ids are non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
