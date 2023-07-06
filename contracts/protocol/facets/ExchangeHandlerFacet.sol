@@ -381,7 +381,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Make sure that the voucher has expired
-        require(block.timestamp >= voucher.validUntilDate, VOUCHER_STILL_VALID);
+        require(block.timestamp > voucher.validUntilDate, VOUCHER_STILL_VALID);
 
         // Finalize the exchange, burning the voucher
         finalizeExchange(exchange, ExchangeState.Canceled);
@@ -697,29 +697,36 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             address sender = msgSender();
 
+            uint256 twinCount = twinIds.length;
+
+            // Fetch twin: up to 20,000 gas
+            // Handle individual outcome: up to 120,000 gas
+            // Handle overall outcome: up to 200,000 gas
+            // Next line would overflow if twinCount > (type(uint256).max - MINIMAL_RESIDUAL_GAS)/SINGLE_TWIN_RESERVED_GAS
+            // Oveflow happens for twinCount ~ 9.6x10^71, which is impossible to achieve
+            uint256 reservedGas = twinCount * SINGLE_TWIN_RESERVED_GAS + MINIMAL_RESIDUAL_GAS;
+
             // Visit the twins
-            for (uint256 i = 0; i < twinIds.length; i++) {
+            for (uint256 i = 0; i < twinCount; i++) {
                 // Get the twin
                 (, Twin storage twin) = fetchTwin(twinIds[i]);
 
-                // Transfer the token from the seller's assistant to the buyer
-                // N.B. Using call here so as to normalize the revert reason
-                bytes memory result;
                 bool success;
                 uint256 tokenId = twin.tokenId;
-                TokenType tokenType = twin.tokenType;
 
-                // Shouldn't decrement supply if twin supply is unlimited
-                if (twin.supplyAvailable != type(uint256).max) {
-                    // Decrement by 1 if token type is NonFungible otherwise decrement amount (i.e, tokenType is MultiToken or FungibleToken)
-                    twin.supplyAvailable = twin.tokenType == TokenType.NonFungibleToken
-                        ? twin.supplyAvailable - 1
-                        : twin.supplyAvailable - twin.amount;
-                }
-
-                // Calldata to transfer the twin
                 {
-                    bytes memory data;
+                    TokenType tokenType = twin.tokenType;
+
+                    // Shouldn't decrement supply if twin supply is unlimited
+                    if (twin.supplyAvailable != type(uint256).max) {
+                        // Decrement by 1 if token type is NonFungible otherwise decrement amount (i.e, tokenType is MultiToken or FungibleToken)
+                        twin.supplyAvailable = tokenType == TokenType.NonFungibleToken
+                            ? twin.supplyAvailable - 1
+                            : twin.supplyAvailable - twin.amount;
+                    }
+
+                    // Transfer the token from the seller's assistant to the buyer
+                    bytes memory data; // Calldata to transfer the twin
 
                     if (tokenType == TokenType.FungibleToken) {
                         // ERC-20 style transfer
@@ -741,7 +748,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                             tokenId,
                             ""
                         );
-                    } else if (twin.tokenType == TokenType.MultiToken) {
+                    } else if (tokenType == TokenType.MultiToken) {
                         // ERC-1155 style transfer
                         data = abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
@@ -753,14 +760,21 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         );
                     }
 
-                    // Make call only if code at address exists
-                    if (twin.tokenAddress.isContract()) {
-                        (success, result) = twin.tokenAddress.call(data);
+                    // Make call only if there is enough gas and code at address exists.
+                    // If not, skip the call and mark the transfer as failed
+                    if (gasleft() > reservedGas && twin.tokenAddress.isContract()) {
+                        bytes memory result;
+                        (success, result) = twin.tokenAddress.call{ gas: gasleft() - reservedGas }(data);
+
+                        success = success && (result.length == 0 || abi.decode(result, (bool)));
                     }
                 }
 
+                // Reduce minimum gas required for succesful execution
+                reservedGas -= SINGLE_TWIN_RESERVED_GAS;
+
                 // If token transfer failed
-                if (!success || (result.length > 0 && !abi.decode(result, (bool)))) {
+                if (!success) {
                     raiseDisputeInternal(_exchange, _voucher, seller.id);
 
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, twin.amount, sender);

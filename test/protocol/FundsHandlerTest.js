@@ -2887,7 +2887,8 @@ describe("IBosonFundsHandler", function () {
 
             // protocol: protocolFee
             protocolPayoff = offerTokenProtocolFee;
-            await setNextBlockTimestamp(Number(timeout));
+
+            await setNextBlockTimestamp(Number(timeout) + 1);
           });
 
           it("should emit a FundsReleased event", async function () {
@@ -3022,7 +3023,7 @@ describe("IBosonFundsHandler", function () {
               disputedDate = block.timestamp.toString();
               timeout = BigInt(disputedDate) + resolutionPeriod.toString();
 
-              await setNextBlockTimestamp(Number(timeout));
+              await setNextBlockTimestamp(Number(timeout) + 1);
             });
 
             it("should emit a FundsReleased event", async function () {
@@ -4146,7 +4147,7 @@ describe("IBosonFundsHandler", function () {
               block = await provider.getBlock(blockNumber);
               escalatedDate = block.timestamp.toString();
 
-              await setNextBlockTimestamp(Number(escalatedDate) + Number(disputeResolver.escalationResponsePeriod));
+              await setNextBlockTimestamp(Number(escalatedDate) + Number(disputeResolver.escalationResponsePeriod) + 1);
             });
 
             it("should emit a FundsReleased event", async function () {
@@ -4271,7 +4272,9 @@ describe("IBosonFundsHandler", function () {
                 block = await provider.getBlock(blockNumber);
                 escalatedDate = block.timestamp.toString();
 
-                await setNextBlockTimestamp(Number(escalatedDate) + Number(disputeResolver.escalationResponsePeriod));
+                await setNextBlockTimestamp(
+                  Number(escalatedDate) + Number(disputeResolver.escalationResponsePeriod) + 1
+                );
               });
 
               it("should update state", async function () {
