@@ -1,3 +1,5 @@
+import "./BosonTypes.sol";
+
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.18;
 
@@ -10,11 +12,10 @@ bytes32 constant UPGRADER = keccak256("UPGRADER"); // Role for performing contra
 bytes32 constant FEE_COLLECTOR = keccak256("FEE_COLLECTOR"); // Role for collecting fees from the protocol
 
 // Revert Reasons: Pause related
-string constant NO_REGIONS_SPECIFIED = "Must specify at least one region to pause";
-string constant REGION_DUPLICATED = "A region may only be specified once";
-string constant ALREADY_PAUSED = "Protocol is already paused";
 string constant NOT_PAUSED = "Protocol is not currently paused";
 string constant REGION_PAUSED = "This region of the protocol is currently paused";
+
+uint256 constant ALL_REGIONS_MASK = (1 << (uint256(type(BosonTypes.PausableRegion).max) + 1)) - 1;
 
 // Revert Reasons: General
 string constant INVALID_ADDRESS = "Invalid address";
