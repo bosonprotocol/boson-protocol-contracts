@@ -1038,16 +1038,16 @@ async function getMetaTxContractState() {
 
 async function getMetaTxPrivateContractState(protocolDiamondAddress) {
   /*
-        ProtocolMetaTxInfo storage layout
-    
-        #0 [ currentSenderAddress + isMetaTransaction ]
-        #1 [ domain separator ]
-        #2 [ ] // placeholder for usedNonce
-        #3 [ cachedChainId ]
-        #4 [ ] // placeholder for inputType
-        #5 [ ] // placeholder for hashInfo
-        #6 [ ] // placeholder for isAllowlisted
-        */
+          ProtocolMetaTxInfo storage layout
+      
+          #0 [ currentSenderAddress + isMetaTransaction ]
+          #1 [ domain separator ]
+          #2 [ ] // placeholder for usedNonce
+          #3 [ cachedChainId ]
+          #4 [ ] // placeholder for inputType
+          #5 [ ] // placeholder for hashInfo
+          #6 [ ] // placeholder for isAllowlisted
+          */
 
   // starting slot
   const metaTxStorageSlot = keccak256(toUtf8Bytes("boson.protocol.metaTransactions"));
@@ -1134,14 +1134,14 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
 
 async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
   /*
-        ProtocolStatus storage layout
-    
-        #0 [ pauseScenario ]
-        #1 [ reentrancyStatus ]
-        #2 [ ] // placeholder for initializedInterfaces
-        #3 [ ] // placeholder for initializedVersions
-        #4 [ version ] - not here as should be updated one very upgrade
-        */
+          ProtocolStatus storage layout
+      
+          #0 [ pauseScenario ]
+          #1 [ reentrancyStatus ]
+          #2 [ ] // placeholder for initializedInterfaces
+          #3 [ ] // placeholder for initializedVersions
+          #4 [ version ] - not here as should be updated one very upgrade
+          */
 
   // starting slot
   const protocolStatusStorageSlot = keccak256(toUtf8Bytes("boson.protocol.initializers"));
@@ -1185,42 +1185,42 @@ async function getProtocolLookupsPrivateContractState(
   { sellers, DRs, agents, buyers, offers, groups }
 ) {
   /*
-        ProtocolLookups storage layout
-    
-        Variables marked with X have an external getter and are not handled here
-        #0  [ ] // placeholder for exchangeIdsByOffer
-        #1  [X] // placeholder for bundleIdByOffer
-        #2  [X] // placeholder for bundleIdByTwin
-        #3  [ ] // placeholder for groupIdByOffer
-        #4  [X] // placeholder for agentIdByOffer
-        #5  [X] // placeholder for sellerIdByAssistant
-        #6  [X] // placeholder for sellerIdByAdmin
-        #7  [X] // placeholder for sellerIdByClerk
-        #8  [ ] // placeholder for buyerIdByWallet
-        #9  [X] // placeholder for disputeResolverIdByAssistant
-        #10 [X] // placeholder for disputeResolverIdByAdmin
-        #11 [X] // placeholder for disputeResolverIdByClerk
-        #12 [ ] // placeholder for disputeResolverFeeTokenIndex
-        #13 [ ] // placeholder for agentIdByWallet
-        #14 [X] // placeholder for availableFunds
-        #15 [X] // placeholder for tokenList
-        #16 [ ] // placeholder for tokenIndexByAccount
-        #17 [ ] // placeholder for cloneAddress
-        #18 [ ] // placeholder for voucherCount
-        #19 [ ] // placeholder for conditionalCommitsByAddress
-        #20 [X] // placeholder for authTokenContracts
-        #21 [X] // placeholder for sellerIdByAuthToken
-        #22 [ ] // placeholder for twinRangesBySeller
-        #23 [ ] // placeholder for twinIdsByTokenAddressAndBySeller
-        #24 [X] // placeholder for twinReceiptsByExchange
-        #25 [X] // placeholder for allowedSellers
-        #26 [ ] // placeholder for allowedSellerIndex
-        #27 [X] // placeholder for exchangeCondition
-        #28 [ ] // placeholder for offerIdIndexByGroup
-        #29 [ ] // placeholder for pendingAddressUpdatesBySeller
-        #30 [ ] // placeholder for pendingAuthTokenUpdatesBySeller
-        #31 [ ] // placeholder for pendingAddressUpdatesByDisputeResolver
-        */
+          ProtocolLookups storage layout
+      
+          Variables marked with X have an external getter and are not handled here
+          #0  [ ] // placeholder for exchangeIdsByOffer
+          #1  [X] // placeholder for bundleIdByOffer
+          #2  [X] // placeholder for bundleIdByTwin
+          #3  [ ] // placeholder for groupIdByOffer
+          #4  [X] // placeholder for agentIdByOffer
+          #5  [X] // placeholder for sellerIdByAssistant
+          #6  [X] // placeholder for sellerIdByAdmin
+          #7  [X] // placeholder for sellerIdByClerk
+          #8  [ ] // placeholder for buyerIdByWallet
+          #9  [X] // placeholder for disputeResolverIdByAssistant
+          #10 [X] // placeholder for disputeResolverIdByAdmin
+          #11 [X] // placeholder for disputeResolverIdByClerk
+          #12 [ ] // placeholder for disputeResolverFeeTokenIndex
+          #13 [ ] // placeholder for agentIdByWallet
+          #14 [X] // placeholder for availableFunds
+          #15 [X] // placeholder for tokenList
+          #16 [ ] // placeholder for tokenIndexByAccount
+          #17 [ ] // placeholder for cloneAddress
+          #18 [ ] // placeholder for voucherCount
+          #19 [ ] // placeholder for conditionalCommitsByAddress
+          #20 [X] // placeholder for authTokenContracts
+          #21 [X] // placeholder for sellerIdByAuthToken
+          #22 [ ] // placeholder for twinRangesBySeller
+          #23 [ ] // placeholder for twinIdsByTokenAddressAndBySeller
+          #24 [X] // placeholder for twinReceiptsByExchange
+          #25 [X] // placeholder for allowedSellers
+          #26 [ ] // placeholder for allowedSellerIndex
+          #27 [X] // placeholder for exchangeCondition
+          #28 [ ] // placeholder for offerIdIndexByGroup
+          #29 [ ] // placeholder for pendingAddressUpdatesBySeller
+          #30 [ ] // placeholder for pendingAuthTokenUpdatesBySeller
+          #31 [ ] // placeholder for pendingAddressUpdatesByDisputeResolver
+          */
 
   // starting slot
   const protocolLookupsSlot = keccak256(toUtf8Bytes("boson.protocol.lookups"));
