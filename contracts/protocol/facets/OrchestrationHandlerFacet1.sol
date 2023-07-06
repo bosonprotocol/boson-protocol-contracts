@@ -60,7 +60,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -68,6 +68,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -133,7 +134,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -141,6 +142,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -202,7 +204,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -210,6 +212,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -267,7 +270,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -275,6 +278,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -323,7 +327,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -331,10 +335,10 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When adding to the group if:
      *   - Group does not exists
      *   - Caller is not the assistant of the group
-     *   - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -385,7 +389,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -393,10 +397,10 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When adding to the group if:
      *   - Group does not exists
      *   - Caller is not the assistant of the group
-     *   - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -446,7 +450,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -454,6 +458,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -511,7 +516,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -519,6 +524,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -580,7 +586,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -588,6 +594,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
@@ -651,7 +658,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -659,6 +666,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
@@ -745,7 +753,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -753,6 +761,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -826,7 +835,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -834,6 +843,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -919,7 +929,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -927,6 +937,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -1008,7 +1019,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -1016,6 +1027,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -1109,7 +1121,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -1117,6 +1129,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
@@ -1211,7 +1224,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -1219,6 +1232,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token

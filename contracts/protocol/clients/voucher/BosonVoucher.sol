@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.18;
+
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
@@ -68,12 +69,13 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      */
     function initializeVoucher(
         uint256 _sellerId,
+        uint256 _collectionIndex,
         address _newOwner,
         VoucherInitValues calldata voucherInitValues
     ) public initializer {
-        string memory sellerId = Strings.toString(_sellerId);
-        string memory voucherName = string(abi.encodePacked(VOUCHER_NAME, " ", sellerId));
-        string memory voucherSymbol = string(abi.encodePacked(VOUCHER_SYMBOL, "_", sellerId));
+        string memory sellerId = string.concat(Strings.toString(_sellerId), "_", Strings.toString(_collectionIndex));
+        string memory voucherName = string.concat(VOUCHER_NAME, " ", sellerId);
+        string memory voucherSymbol = string.concat(VOUCHER_SYMBOL, "_", sellerId);
 
         __ERC721_init_unchained(voucherName, voucherSymbol);
 
@@ -200,7 +202,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * Reverts if:
      * - Offer id is not associated with a range
      * - Amount to mint is more than remaining un-minted in range
-     * - Too many to mint in a single transaction, given current block gas limit
      * - Offer already expired
      * - Offer is voided
      *
@@ -216,13 +217,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Revert if no more to mint in range
         require(range.length >= range.minted + _amount, INVALID_AMOUNT_TO_MINT);
-
-        // Get max amount that can be minted in a single transaction
-        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        uint256 maxPremintedVouchers = IBosonConfigHandler(protocolDiamond).getMaxPremintedVouchers();
-
-        // Revert if too many to mint in a single transaction
-        require(_amount <= maxPremintedVouchers, TOO_MANY_TO_MINT);
 
         // Make sure that offer is not expired or voided
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
@@ -271,8 +265,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * - There is nothing to burn
      *
      * @param _offerId - the id of the offer
+     * @param _amount - amount to burn
      */
-    function burnPremintedVouchers(uint256 _offerId) external override onlyOwner {
+    function burnPremintedVouchers(uint256 _offerId, uint256 _amount) external override onlyOwner {
         // Get the offer's range
         Range storage range = _rangeByOfferId[_offerId];
 
@@ -283,23 +278,14 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
         require(offer.voided || (offerDates.validUntil <= block.timestamp), OFFER_STILL_VALID);
 
-        // Get max amount that can be burned in a single transaction
-        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        uint256 maxPremintedVouchers = IBosonConfigHandler(protocolDiamond).getMaxPremintedVouchers();
-
         // Get the first token to burn
         uint256 start = (range.lastBurnedTokenId == 0) ? range.start : (range.lastBurnedTokenId + 1);
 
         // Get the last token to burn
-        uint256 end = range.start + range.minted;
+        uint256 end = start + _amount;
 
         // End should be greater than start
-        require(end > start, NOTHING_TO_BURN);
-
-        // If amount to burn is more than maxPremintedVouchers, burn only maxPremintedVouchers
-        if (end > start + maxPremintedVouchers) {
-            end = start + maxPremintedVouchers;
-        }
+        require(end > start && end <= range.start + range.minted, AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN);
 
         // Burn the range
         address rangeOwner = range.owner;
@@ -377,7 +363,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             if (committable) return owner;
 
             // Otherwise revert
-            revert("ERC721: invalid token ID");
+            revert(ERC721_INVALID_TOKEN_ID);
         }
     }
 
@@ -449,6 +435,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * replaceable baseURI template, since the latter is not compatible
      * with IPFS hashes.
      *
+     * Reverts if token id is not associated with any exchange or pre-minted offer.
+     *
      * @param _tokenId - id of the voucher's associated exchange or pre-minted token id
      * @return the uri for the associated offer's off-chain metadata (blank if not found)
      */
@@ -466,7 +454,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
                 (offer, ) = getBosonOffer(offerId);
             }
         }
-        return exists ? offer.metadataUri : "";
+
+        require(exists, ERC721_INVALID_TOKEN_ID);
+        return offer.metadataUri;
     }
 
     /**
@@ -536,8 +526,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      *
      * @param _to - address of the contract to call
      * @param _data - data to pass to the external contract
+     * @return result - result of the call
      */
-    function callExternalContract(address _to, bytes calldata _data) external payable onlyOwner {
+    function callExternalContract(address _to, bytes calldata _data) external payable onlyOwner returns (bytes memory) {
         require(_to != address(0), INVALID_ADDRESS);
 
         // Prevent invocation of functions that would allow transfer of tokens from this contract
@@ -551,7 +542,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             FUNCTION_NOT_ALLOWLISTED
         );
 
-        _to.functionCallWithValue(_data, msg.value, FUNCTION_CALL_NOT_SUCCESSFUL);
+        return _to.functionCallWithValue(_data, msg.value, FUNCTION_CALL_NOT_SUCCESSFUL);
     }
 
     /** @notice Set approval for all to the vouchers owned by this contract
@@ -862,11 +853,4 @@ contract BosonVoucher is BosonVoucherBase, ERC2771ContextUpgradeable {
     {
         return ERC2771ContextUpgradeable._msgSender();
     }
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[50] private __gap;
 }

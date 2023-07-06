@@ -43,11 +43,6 @@ describe("OfferFees", function () {
       expect(offerFees.protocolFeeIsValid()).is.false;
       expect(offerFees.isValid()).is.false;
 
-      // Invalid field value
-      offerFees.protocolFee = 12;
-      expect(offerFees.protocolFeeIsValid()).is.false;
-      expect(offerFees.isValid()).is.false;
-
       // Valid field value
       offerFees.protocolFee = "0";
       expect(offerFees.protocolFeeIsValid()).is.true;
@@ -65,20 +60,15 @@ describe("OfferFees", function () {
       expect(offerFees.agentFeeIsValid()).is.false;
       expect(offerFees.isValid()).is.false;
 
-      // Invalid field value
-      offerFees.agentFee = new Date();
-      expect(offerFees.agentFeeIsValid()).is.false;
-      expect(offerFees.isValid()).is.false;
-
-      // Invalid field value
-      offerFees.agentFee = 12;
-      expect(offerFees.agentFeeIsValid()).is.false;
-      expect(offerFees.isValid()).is.false;
-
       // Valid field value
       offerFees.agentFee = "0";
       expect(offerFees.agentFeeIsValid()).is.true;
       expect(offerFees.isValid()).is.true;
+
+      // Invalid field value
+      offerFees.agentFee = new Date();
+      expect(offerFees.agentFeeIsValid()).is.false;
+      expect(offerFees.isValid()).is.false;
 
       // Valid field value
       offerFees.agentFee = "126";

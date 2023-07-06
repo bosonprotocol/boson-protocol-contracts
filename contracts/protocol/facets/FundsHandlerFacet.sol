@@ -78,7 +78,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * - The funds region of protocol is paused
      * - Caller is not associated with the entity id
      * - Token list length does not match amount list length
-     * - Token list length exceeds the maximum allowed number of tokens
      * - Caller tries to withdraw more that they have in available funds
      * - There is nothing to withdraw
      * - Transfer of funds is not successful
@@ -135,7 +134,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * - The funds region of protocol is paused
      * - Caller does not have the FEE_COLLECTOR role
      * - Token list length does not match amount list length
-     * - Token list length exceeds the maximum allowed number of tokens
      * - Caller tries to withdraw more that they have in available funds
      * - There is nothing to withdraw
      * - Transfer of funds is not successful
@@ -155,21 +153,23 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @notice Returns the information about the funds that an entity can use as a sellerDeposit and/or withdraw from the protocol.
      *
      * @param _entityId - id of entity for which availability of funds should be checked
+     * @param _tokenList - list of tokens addresses to get available funds
      * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
      */
-    function getAvailableFunds(uint256 _entityId) external view override returns (Funds[] memory availableFunds) {
+    function getAvailableFunds(
+        uint256 _entityId,
+        address[] calldata _tokenList
+    ) external view override returns (Funds[] memory availableFunds) {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        // get list of token addresses for the entity
-        address[] storage tokenList = lookups.tokenList[_entityId];
-        availableFunds = new Funds[](tokenList.length);
+        availableFunds = new Funds[](_tokenList.length);
 
         // Get entity's availableFunds storage pointer
         mapping(address => uint256) storage entityFunds = lookups.availableFunds[_entityId];
 
-        for (uint256 i = 0; i < tokenList.length; i++) {
-            address tokenAddress = tokenList[i];
+        for (uint256 i = 0; i < _tokenList.length; i++) {
+            address tokenAddress = _tokenList[i];
             string memory tokenName;
 
             if (tokenAddress == address(0)) {
@@ -199,7 +199,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * Reverts if:
      * - Caller is not associated with the entity id
      * - Token list length does not match amount list length
-     * - Token list length exceeds the maximum allowed number of tokens
      * - Caller tries to withdraw more that they have in available funds
      * - There is nothing to withdraw
      * - Transfer of funds is not successful
@@ -221,10 +220,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         // Make sure that the data is complete
         require(_tokenList.length == _tokenAmounts.length, TOKEN_AMOUNT_MISMATCH);
 
-        // Limit maximum number of tokens to avoid running into block gas limit in a loop
-        uint256 maxTokensPerWithdrawal = protocolLimits().maxTokensPerWithdrawal;
-        require(_tokenList.length <= maxTokensPerWithdrawal, TOO_MANY_TOKENS);
-
         // Two possible options: withdraw all, or withdraw only specified tokens and amounts
         if (_tokenList.length == 0) {
             // Withdraw everything
@@ -235,14 +230,11 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             // Make sure that at least something will be withdrawn
             require(tokenList.length != 0, NOTHING_TO_WITHDRAW);
 
-            // Make sure that tokenList is not too long
-            uint256 len = maxTokensPerWithdrawal <= tokenList.length ? maxTokensPerWithdrawal : tokenList.length;
-
             // Get entity's availableFunds storage pointer
             mapping(address => uint256) storage entityFunds = lookups.availableFunds[_entityId];
 
             // Transfer funds
-            for (uint256 i = 0; i < len; i++) {
+            for (uint256 i = 0; i < tokenList.length; i++) {
                 // Get available funds from storage
                 uint256 availableFunds = entityFunds[tokenList[i]];
                 FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], _destinationAddress, availableFunds);

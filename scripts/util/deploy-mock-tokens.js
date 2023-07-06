@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 const { expect } = require("chai");
 const environments = require("../../environments");
-const ethers = hre.ethers;
+const { getContractFactory, provider, ZeroAddress, getAddress } = hre.ethers;
 const network = hre.network.name;
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
 
@@ -18,9 +18,9 @@ async function deployMockTokens(tokens = ["BosonToken", "Foreign721", "Foreign11
   // Deploy all the mock tokens
   while (tokens.length) {
     let token = tokens.shift();
-    let TokenContractFactory = await ethers.getContractFactory(token);
+    let TokenContractFactory = await getContractFactory(token);
     const tokenContract = await TokenContractFactory.deploy();
-    await tokenContract.deployed();
+    await tokenContract.waitForDeployment();
     deployedTokens.push(tokenContract);
   }
 
@@ -39,16 +39,16 @@ async function deployAndMintMockNFTAuthTokens() {
   let tx1, tx2;
 
   //Deploy a mock NFT to represent the Lens Protocol profile NFT
-  let lensTokenContractFactory = await ethers.getContractFactory("MockNFTAuth721");
+  let lensTokenContractFactory = await getContractFactory("MockNFTAuth721");
   const lensTokenContract = await lensTokenContractFactory.deploy();
-  await lensTokenContract.deployTransaction.wait(confirmations);
-  console.log(`✅ Mock Lens NFT Token deployed to: ${lensTokenContract.address}`);
+  await lensTokenContract.waitForDeployment(confirmations);
+  console.log(`✅ Mock Lens NFT Token deployed to: ${await lensTokenContract.getAddress()}`);
 
   //Deploy a mock NFT to represent the ENS NFT
-  let ensTokenContractFactory = await ethers.getContractFactory("MockNFTAuth721");
+  let ensTokenContractFactory = await getContractFactory("MockNFTAuth721");
   const ensTokenContract = await ensTokenContractFactory.deploy();
-  await ensTokenContract.deployTransaction.wait(confirmations);
-  console.log(`✅ Mock ENS NFT Token deployed to: ${ensTokenContract.address}`);
+  await ensTokenContract.waitForDeployment(confirmations);
+  console.log(`✅ Mock ENS NFT Token deployed to: ${await ensTokenContract.getAddress()}`);
 
   if (network == "test" || network == "localhost") {
     //We want to mint auth tokens to specific addresses
@@ -57,7 +57,7 @@ async function deployAndMintMockNFTAuthTokens() {
       console.log("\n Tokens will be minted to addresses ", addresses);
     }
   } else if (network == "hardhat") {
-    [...addresses] = await ethers.provider.listAccounts();
+    [...addresses] = await provider.listAccounts();
 
     //We only need auth tokens for 3 addresses
     addresses.splice(3, 18);
@@ -69,19 +69,15 @@ async function deployAndMintMockNFTAuthTokens() {
   // Mint tokens for testing
   while (addresses.length) {
     let to = addresses.shift();
-    tx1 = await lensTokenContract.mint(to, ethers.BigNumber.from(lensTokenId));
-    tx2 = await ensTokenContract.mint(to, ethers.BigNumber.from(ensTokenId));
+    tx1 = await lensTokenContract.mint(to, BigInt(lensTokenId));
+    tx2 = await ensTokenContract.mint(to, BigInt(ensTokenId));
 
-    await expect(tx1)
-      .to.emit(lensTokenContract, "Transfer")
-      .withArgs(ethers.constants.AddressZero, ethers.utils.getAddress(to), lensTokenId);
+    await expect(tx1).to.emit(lensTokenContract, "Transfer").withArgs(ZeroAddress, getAddress(to), lensTokenId);
 
-    await expect(tx2)
-      .to.emit(ensTokenContract, "Transfer")
-      .withArgs(ethers.constants.AddressZero, ethers.utils.getAddress(to), ensTokenId);
+    await expect(tx2).to.emit(ensTokenContract, "Transfer").withArgs(ZeroAddress, getAddress(to), ensTokenId);
 
-    let lensOwner = await lensTokenContract.ownerOf(ethers.BigNumber.from(lensTokenId));
-    let ensOwner = await ensTokenContract.ownerOf(ethers.BigNumber.from(ensTokenId));
+    let lensOwner = await lensTokenContract.ownerOf(BigInt(lensTokenId));
+    let ensOwner = await ensTokenContract.ownerOf(BigInt(ensTokenId));
 
     console.log("✅ Owner of Lens token Id %s is ", lensTokenId, lensOwner);
     console.log("✅ Owner of ENS token Id %s is ", ensTokenId, ensOwner);
@@ -90,7 +86,7 @@ async function deployAndMintMockNFTAuthTokens() {
     ensTokenId++;
   }
   return {
-    addresses: [lensTokenContract.address, ensTokenContract.address],
+    addresses: [await lensTokenContract.getAddress(), await ensTokenContract.getAddress()],
   };
 }
 

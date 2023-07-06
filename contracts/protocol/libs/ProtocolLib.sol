@@ -62,6 +62,8 @@ library ProtocolLib {
         uint16 maxRoyaltyPecentage;
         // limit the max number of vouchers that can be preminted in a single transaction
         uint256 maxPremintedVouchers;
+        // lower limit for resolution period
+        uint256 minResolutionPeriod;
     }
 
     // Protocol fees storage
@@ -166,6 +168,7 @@ library ProtocolLib {
         mapping(BosonTypes.AuthTokenType => mapping(uint256 => uint256)) sellerIdByAuthToken;
         // seller id => token address (only ERC721) => start and end of token ids range
         mapping(uint256 => mapping(address => BosonTypes.TokenRange[])) twinRangesBySeller;
+        // seller id => token address (only ERC721) => twin ids
         // @deprecated twinIdsByTokenAddressAndBySeller is no longer used. Keeping it for backwards compatibility.
         mapping(uint256 => mapping(address => uint256[])) twinIdsByTokenAddressAndBySeller;
         // exchange id => BosonTypes.TwinReceipt
@@ -186,6 +189,10 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.DisputeResolver) pendingAddressUpdatesByDisputeResolver;
         // twin id => range id
         mapping(uint256 => uint256) rangeIdByTwin;
+        // tokenId => groupId =>  commit count (count how many times a token has been used as gate for this group)
+        mapping(uint256 => mapping(uint256 => uint256)) conditionalCommitsByTokenId;
+        // seller id => collections
+        mapping(uint256 => BosonTypes.Collection[]) additionalCollections;
     }
 
     // Incrementing id counters

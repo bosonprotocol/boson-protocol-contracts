@@ -10,7 +10,7 @@ import { IERC721ReceiverUpgradeable } from "@openzeppelin/contracts-upgradeable/
  *
  * @notice This is the interface for the Boson Protocol ERC-721 Voucher contract.
  *
- * The ERC-165 identifier for this interface is: 0xaf16da6e
+ * The ERC-165 identifier for this interface is: 0x5235dd2b
  */
 interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable, IERC721ReceiverUpgradeable {
     event ContractURIChanged(string contractURI);
@@ -189,8 +189,9 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable, IERC7
      * - There is nothing to burn
      *
      * @param _offerId - the id of the offer
+     * @param _amount - amount to burn
      */
-    function burnPremintedVouchers(uint256 _offerId) external;
+    function burnPremintedVouchers(uint256 _offerId, uint256 _amount) external;
 
     /**
      * @notice Gets the number of vouchers available to be pre-minted for an offer.
@@ -219,8 +220,9 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable, IERC7
      *
      * @param _to - address of the contract to call
      * @param _data - data to pass to the external contract
+     * @return result - result of the call
      */
-    function callExternalContract(address _to, bytes memory _data) external payable;
+    function callExternalContract(address _to, bytes memory _data) external payable returns (bytes memory);
 
     /** @notice Set approval for all to the vouchers owned by this contract
      *

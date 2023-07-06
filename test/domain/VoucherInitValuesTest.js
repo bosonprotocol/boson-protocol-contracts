@@ -66,11 +66,6 @@ describe("VoucherInitValues", function () {
       expect(voucherInitValues.isValid()).is.false;
 
       // Invalid field value
-      voucherInitValues.royaltyPercentage = 12;
-      expect(voucherInitValues.royaltyPercentageIsValid()).is.false;
-      expect(voucherInitValues.isValid()).is.false;
-
-      // Invalid field value
       voucherInitValues.royaltyPercentage = "10001"; // Value greater than 100% should be invalid
       expect(voucherInitValues.royaltyPercentageIsValid()).is.false;
       expect(voucherInitValues.isValid()).is.false;

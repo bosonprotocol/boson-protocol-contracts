@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getSigners } = hre.ethers;
 const { expect } = require("chai");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { oneMonth } = require("../util/constants");
@@ -14,7 +14,7 @@ describe("DisputeResolver", function () {
 
   beforeEach(async function () {
     // Get a list of accounts
-    accounts = await ethers.getSigners();
+    accounts = await getSigners();
     assistant = accounts[0].address;
     admin = accounts[1].address;
     clerk = accounts[2].address;
@@ -79,11 +79,6 @@ describe("DisputeResolver", function () {
       expect(disputeResolver.idIsValid()).is.false;
       expect(disputeResolver.isValid()).is.false;
 
-      // Invalid field value
-      disputeResolver.id = 12;
-      expect(disputeResolver.idIsValid()).is.false;
-      expect(disputeResolver.isValid()).is.false;
-
       // Valid field value
       disputeResolver.id = "0";
       expect(disputeResolver.idIsValid()).is.true;
@@ -101,20 +96,15 @@ describe("DisputeResolver", function () {
       expect(disputeResolver.escalationResponsePeriodIsValid()).is.false;
       expect(disputeResolver.isValid()).is.false;
 
-      // Invalid field value
-      disputeResolver.escalationResponsePeriod = new Date();
-      expect(disputeResolver.escalationResponsePeriodIsValid()).is.false;
-      expect(disputeResolver.isValid()).is.false;
-
-      // Invalid field value
-      disputeResolver.escalationResponsePeriod = 12;
-      expect(disputeResolver.escalationResponsePeriodIsValid()).is.false;
-      expect(disputeResolver.isValid()).is.false;
-
       // Valid field value
       disputeResolver.escalationResponsePeriod = "0";
       expect(disputeResolver.escalationResponsePeriodIsValid()).is.true;
       expect(disputeResolver.isValid()).is.true;
+
+      // Invalid field value
+      disputeResolver.escalationResponsePeriod = new Date();
+      expect(disputeResolver.escalationResponsePeriodIsValid()).is.false;
+      expect(disputeResolver.isValid()).is.false;
 
       // Valid field value
       disputeResolver.escalationResponsePeriod = "126";
