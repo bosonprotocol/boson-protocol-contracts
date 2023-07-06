@@ -1,7 +1,16 @@
 const { expect } = require("chai");
 const hre = require("hardhat");
-const { getContractAt, getContractFactory, getSigners, encodeBytes32String, AbiCoder, ZeroHash, ZeroAddress } =
-  hre.ethers;
+const {
+  getContractAt,
+  getContractFactory,
+  getSigners,
+  encodeBytes32String,
+  AbiCoder,
+  ZeroHash,
+  ZeroAddress,
+  keccak256,
+  toUtf8Bytes,
+} = hre.ethers;
 const { getSnapshot, revertToSnapshot } = require("../util/utils.js");
 
 const Role = require("../../scripts/domain/Role");
@@ -16,6 +25,7 @@ const { getFacetsWithArgs } = require("../util/utils.js");
 const { getV2_2_0DeployConfig } = require("../upgrade/00_config.js");
 const { mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("ProtocolInitializationHandler", async function () {
   // Common vars
@@ -485,8 +495,13 @@ describe("ProtocolInitializationHandler", async function () {
         await getFees(maxPriorityFeePerGas)
       );
 
-      // Verify that new value is stored
-      expect(await configHandler.connect(rando).getMaxPremintedVouchers()).to.equal(maxPremintedVouchers);
+      const protocolLimitsSlot = BigInt(keccak256(toUtf8Bytes("boson.protocol.limits")));
+      const maxPremintedVoucherStorage = await getStorageAt(
+        await diamondCutFacet.getAddress(),
+        protocolLimitsSlot + 4n
+      );
+
+      expect(BigInt(maxPremintedVoucherStorage).toString()).to.equal(maxPremintedVouchers);
     });
 
     context("💔 Revert Reasons", async function () {

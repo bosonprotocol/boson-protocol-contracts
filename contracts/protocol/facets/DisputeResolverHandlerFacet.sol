@@ -34,7 +34,6 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
      * - EscalationResponsePeriod is invalid
-     * - Number of seller ids in _sellerAllowList array exceeds max
      * - Some seller does not exist
      * - Some seller id is duplicated
      * - DisputeResolver is not active (if active == false)
@@ -92,15 +91,6 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         {
             // Cache protocol limits for reference
             ProtocolLib.ProtocolLimits storage limits = protocolLimits();
-
-            // Make sure the gas block limit is not hit
-            require(_sellerAllowList.length <= limits.maxAllowedSellers, INVALID_AMOUNT_ALLOWED_SELLERS);
-
-            // The number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
-            require(
-                _disputeResolverFees.length <= limits.maxFeesPerDisputeResolver,
-                INVALID_AMOUNT_DISPUTE_RESOLVER_FEES
-            );
 
             // Escalation period must be greater than zero and less than or equal to the max allowed
             require(
@@ -380,7 +370,6 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
-     * - Number of DisputeResolverFee structs in array exceeds max
      * - Number of DisputeResolverFee structs in array is zero
      * - DisputeResolverFee array contains duplicates
      * - Fee amount is a non-zero value. Protocol doesn't yet support fees for dispute resolvers
@@ -412,12 +401,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Check that msg.sender is the admin address for this dispute resolver
         require(disputeResolver.admin == sender, NOT_ADMIN);
 
-        // At least one fee must be specified and the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
-        require(
-            _disputeResolverFees.length > 0 &&
-                _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver,
-            INVALID_AMOUNT_DISPUTE_RESOLVER_FEES
-        );
+        // At least one fee must be specified
+        require(_disputeResolverFees.length > 0, INEXISTENT_DISPUTE_RESOLVER_FEES);
 
         // Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
         for (uint256 i = 0; i < _disputeResolverFees.length; i++) {
@@ -446,7 +431,6 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
-     * - Number of DisputeResolverFee structs in array exceeds max
      * - Number of DisputeResolverFee structs in array is zero
      * - DisputeResolverFee does not exist for the dispute resolver
      *
@@ -476,11 +460,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Check that msg.sender is the admin address for this dispute resolver
         require(disputeResolver.admin == sender, NOT_ADMIN);
 
-        // At least one fee must be specified and the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
-        require(
-            _feeTokenAddresses.length > 0 && _feeTokenAddresses.length <= protocolLimits().maxFeesPerDisputeResolver,
-            INVALID_AMOUNT_DISPUTE_RESOLVER_FEES
-        );
+        // At least one fee must be specified and
+        require(_feeTokenAddresses.length > 0, INEXISTENT_DISPUTE_RESOLVER_FEES);
 
         // Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
         for (uint256 i = 0; i < _feeTokenAddresses.length; i++) {
@@ -518,7 +499,6 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
-     * - Number of seller ids in array exceeds max
      * - Number of seller ids in array is zero
      * - Some seller does not exist
      * - Seller id is already approved
@@ -530,11 +510,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         uint256 _disputeResolverId,
         uint256[] calldata _sellerAllowList
     ) external disputeResolversNotPaused nonReentrant {
-        // At least one seller id must be specified and the number of ids cannot exceed the maximum number of seller ids to avoid running into block gas limit in a loop
-        require(
-            _sellerAllowList.length > 0 && _sellerAllowList.length <= protocolLimits().maxAllowedSellers,
-            INVALID_AMOUNT_ALLOWED_SELLERS
-        );
+        // At least one seller id must be specified
+        require(_sellerAllowList.length > 0, INEXISTENT_ALLOWED_SELLERS_LIST);
         bool exists;
         DisputeResolver storage disputeResolver;
 
@@ -564,7 +541,6 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
-     * - Number of seller ids in array exceeds max
      * - Number of seller ids structs in array is zero
      * - Seller id is not approved
      *
@@ -578,11 +554,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        // At least one seller id must be specified and the number of ids cannot exceed the maximum number of seller ids to avoid running into block gas limit in a loop
-        require(
-            _sellerAllowList.length > 0 && _sellerAllowList.length <= protocolLimits().maxAllowedSellers,
-            INVALID_AMOUNT_ALLOWED_SELLERS
-        );
+        // At least one seller id must be specified
+        require(_sellerAllowList.length > 0, INEXISTENT_ALLOWED_SELLERS_LIST);
 
         bool exists;
         DisputeResolver storage disputeResolver;

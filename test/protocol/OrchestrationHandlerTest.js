@@ -2341,7 +2341,7 @@ describe("IBosonOrchestrationHandler", function () {
         condition = mockCondition({
           tokenAddress: await other2.getAddress(),
           tokenType: TokenType.MultiToken,
-          tokenId: "5150",
+          method: EvaluationMethod.Threshold,
         });
         expect(condition.isValid()).to.be.true;
 
@@ -3048,7 +3048,7 @@ describe("IBosonOrchestrationHandler", function () {
         condition = mockCondition({
           tokenType: TokenType.MultiToken,
           tokenAddress: await other2.getAddress(),
-          tokenId: "5150",
+          method: EvaluationMethod.Threshold,
           maxCommits: "3",
         });
         expect(condition.isValid()).to.be.true;
@@ -4458,7 +4458,7 @@ describe("IBosonOrchestrationHandler", function () {
         condition = mockCondition({
           tokenType: TokenType.MultiToken,
           tokenAddress: await other2.getAddress(),
-          tokenId: "5150",
+          method: EvaluationMethod.Threshold,
         });
         expect(condition.isValid()).to.be.true;
 
@@ -5404,7 +5404,7 @@ describe("IBosonOrchestrationHandler", function () {
         condition = mockCondition({
           tokenType: TokenType.MultiToken,
           tokenAddress: await other2.getAddress(),
-          tokenId: "5150",
+          method: EvaluationMethod.Threshold,
         });
         expect(condition.isValid()).to.be.true;
 
@@ -7144,7 +7144,7 @@ describe("IBosonOrchestrationHandler", function () {
         condition = mockCondition({
           tokenType: TokenType.MultiToken,
           tokenAddress: await other2.getAddress(),
-          tokenId: "5150",
+          method: EvaluationMethod.Threshold,
         });
         expect(condition.isValid()).to.be.true;
 

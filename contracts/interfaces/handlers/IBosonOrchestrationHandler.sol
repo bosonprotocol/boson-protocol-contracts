@@ -13,7 +13,7 @@ import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  *
- * The ERC-165 identifier for this interface is: 0xb2539c77
+ * The ERC-165 identifier for this interface is: 0xd66094dc
  */
 interface IBosonOrchestrationHandler is
     IBosonAccountEvents,
@@ -331,7 +331,6 @@ interface IBosonOrchestrationHandler is
      * - When adding to the group if:
      *   - Group does not exists
      *   - Caller is not the assistant of the group
-     *   - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -386,7 +385,6 @@ interface IBosonOrchestrationHandler is
      * - When adding to the group if:
      *   - Group does not exists
      *   - Caller is not the assistant of the group
-     *   - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit

@@ -202,7 +202,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * Reverts if:
      * - Offer id is not associated with a range
      * - Amount to mint is more than remaining un-minted in range
-     * - Too many to mint in a single transaction, given current block gas limit
      * - Offer already expired
      * - Offer is voided
      *
@@ -218,13 +217,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Revert if no more to mint in range
         require(range.length >= range.minted + _amount, INVALID_AMOUNT_TO_MINT);
-
-        // Get max amount that can be minted in a single transaction
-        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        uint256 maxPremintedVouchers = IBosonConfigHandler(protocolDiamond).getMaxPremintedVouchers();
-
-        // Revert if too many to mint in a single transaction
-        require(_amount <= maxPremintedVouchers, TOO_MANY_TO_MINT);
 
         // Make sure that offer is not expired or voided
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
@@ -273,8 +265,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * - There is nothing to burn
      *
      * @param _offerId - the id of the offer
+     * @param _amount - amount to burn
      */
-    function burnPremintedVouchers(uint256 _offerId) external override onlyOwner {
+    function burnPremintedVouchers(uint256 _offerId, uint256 _amount) external override onlyOwner {
         // Get the offer's range
         Range storage range = _rangeByOfferId[_offerId];
 
@@ -285,18 +278,14 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
         require(offer.voided || (offerDates.validUntil <= block.timestamp), OFFER_STILL_VALID);
 
-        // Get max amount that can be burned in a single transaction
-        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        uint256 maxPremintedVouchers = IBosonConfigHandler(protocolDiamond).getMaxPremintedVouchers();
-
         // Get the first token to burn
         uint256 start = (range.lastBurnedTokenId == 0) ? range.start : (range.lastBurnedTokenId + 1);
 
         // Get the last token to burn
-        uint256 end = range.start + range.minted;
+        uint256 end = start + _amount;
 
         // End should be greater than start
-        require(end > start, NOTHING_TO_BURN);
+        require(end > start && end <= range.start + range.minted, AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN);
 
         // Burn the range
         address rangeOwner = range.owner;
@@ -374,7 +363,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             if (committable) return owner;
 
             // Otherwise revert
-            revert(INVALID_TOKEN_ID);
+            revert(ERC721_INVALID_TOKEN_ID);
         }
     }
 
@@ -466,7 +455,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             }
         }
 
-        require(exists, INVALID_TOKEN_ID);
+        require(exists, ERC721_INVALID_TOKEN_ID);
         return offer.metadataUri;
     }
 
