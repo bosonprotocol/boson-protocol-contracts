@@ -62,6 +62,8 @@ library ProtocolLib {
         uint16 maxRoyaltyPecentage;
         // limit the max number of vouchers that can be preminted in a single transaction
         uint256 maxPremintedVouchers;
+        // lower limit for resolution period
+        uint256 minResolutionPeriod;
     }
 
     // Protocol fees storage
@@ -133,6 +135,7 @@ library ProtocolLib {
         // seller admin address => sellerId
         mapping(address => uint256) sellerIdByAdmin;
         // seller clerk address => sellerId
+        // @deprecated sellerIdByClerk is no longer used. Keeping it for backwards compatibility.
         mapping(address => uint256) sellerIdByClerk;
         // buyer wallet address => buyerId
         mapping(address => uint256) buyerIdByWallet;
@@ -141,6 +144,7 @@ library ProtocolLib {
         // dispute resolver admin address => disputeResolverId
         mapping(address => uint256) disputeResolverIdByAdmin;
         // dispute resolver clerk address => disputeResolverId
+        // @deprecated disputeResolverIdByClerk is no longer used. Keeping it for backwards compatibility.
         mapping(address => uint256) disputeResolverIdByClerk;
         // dispute resolver id to fee token address => index of the token address
         mapping(uint256 => mapping(address => uint256)) disputeResolverFeeTokenIndex;

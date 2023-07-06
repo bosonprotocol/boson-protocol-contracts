@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getContractAt } = hre.ethers;
 
 /**
  * Cast the Protocol Client Proxy contracts to their implementation interfaces
@@ -25,7 +25,7 @@ async function castProtocolClientProxies(protocolClientProxies) {
   [bosonVoucherProxy] = protocolClientProxies;
 
   // Cast the Proxies to the appropriate interfaces for further interaction
-  const bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherProxy.address);
+  const bosonVoucher = await getContractAt("IBosonVoucher", await bosonVoucherProxy.getAddress());
 
   return [bosonVoucher];
 }

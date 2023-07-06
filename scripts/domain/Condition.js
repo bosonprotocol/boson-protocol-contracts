@@ -52,7 +52,7 @@ class Condition {
 
     return Condition.fromObject({
       method: parseInt(method),
-      tokenType,
+      tokenType: Number(tokenType),
       tokenAddress,
       tokenId: tokenId.toString(),
       threshold: threshold.toString(),
@@ -162,15 +162,13 @@ class Condition {
    * @returns {boolean}
    */
   isValid() {
-    return (
       this.methodIsValid() &&
       this.tokenTypeIsValid() &&
       this.tokenAddressIsValid() &&
       this.tokenIdIsValid() &&
       this.thresholdIsValid() &&
       this.maxCommitsIsValid() &&
-      this.lengthIsValid()
-    );
+      this.lengthIsValid();
   }
 }
 

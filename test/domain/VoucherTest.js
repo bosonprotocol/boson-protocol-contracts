@@ -55,11 +55,6 @@ describe("Voucher", function () {
       expect(voucher.committedDateIsValid()).is.false;
       expect(voucher.isValid()).is.false;
 
-      // Invalid field value
-      voucher.committedDate = 12;
-      expect(voucher.committedDateIsValid()).is.false;
-      expect(voucher.isValid()).is.false;
-
       // Valid field value
       voucher.committedDate = "0";
       expect(voucher.committedDateIsValid()).is.false;
@@ -82,11 +77,6 @@ describe("Voucher", function () {
       expect(voucher.validUntilDateIsValid()).is.false;
       expect(voucher.isValid()).is.false;
 
-      // Invalid field value
-      voucher.validUntilDate = 12;
-      expect(voucher.validUntilDateIsValid()).is.false;
-      expect(voucher.isValid()).is.false;
-
       // Valid field value
       voucher.validUntilDate = "0";
       expect(voucher.validUntilDateIsValid()).is.false;
@@ -106,11 +96,6 @@ describe("Voucher", function () {
 
       // Invalid field value
       voucher.redeemedDate = new Date();
-      expect(voucher.redeemedDateIsValid()).is.false;
-      expect(voucher.isValid()).is.false;
-
-      // Invalid field value
-      voucher.redeemedDate = 12;
       expect(voucher.redeemedDateIsValid()).is.false;
       expect(voucher.isValid()).is.false;
 

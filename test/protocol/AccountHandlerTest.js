@@ -1,3 +1,5 @@
+const hre = require("hardhat");
+const { ZeroAddress } = hre.ethers;
 const { expect } = require("chai");
 
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
@@ -49,7 +51,8 @@ describe("IBosonAccountHandler", function () {
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
+    assistant = admin;
+    clerk = { address: ZeroAddress };
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -80,7 +83,12 @@ describe("IBosonAccountHandler", function () {
       nextAccountId = "1";
 
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        clerk.address,
+        await treasury.getAddress()
+      );
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
@@ -92,26 +100,31 @@ describe("IBosonAccountHandler", function () {
       expect(emptyAuthToken.isValid()).is.true;
 
       // Create a valid buyer
-      buyer = mockBuyer(other1.address);
+      buyer = mockBuyer(await other1.getAddress());
 
       expect(buyer.isValid()).is.true;
 
       // Create a valid dispute resolver
-      disputeResolver = mockDisputeResolver(assistant.address, admin.address, clerk.address, treasury.address);
+      disputeResolver = mockDisputeResolver(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        clerk.address,
+        await treasury.getAddress()
+      );
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array
       disputeResolverFees = [
-        new DisputeResolverFee(other1.address, "MockToken1", "0"),
-        new DisputeResolverFee(other2.address, "MockToken2", "0"),
-        new DisputeResolverFee(other3.address, "MockToken3", "0"),
+        new DisputeResolverFee(await other1.getAddress(), "MockToken1", "0"),
+        new DisputeResolverFee(await other2.getAddress(), "MockToken2", "0"),
+        new DisputeResolverFee(await other3.getAddress(), "MockToken3", "0"),
       ];
 
       // Make a sellerAllowList
       sellerAllowList = ["1"];
 
       // Create a valid agent, then set fields in tests directly
-      agent = mockAgent(other1.address);
+      agent = mockAgent(await other1.getAddress());
       expect(agent.isValid()).is.true;
     });
 
@@ -146,9 +159,9 @@ describe("IBosonAccountHandler", function () {
 
       it("should be incremented after a seller is created", async function () {
         //addresses need to be unique to seller Id, so setting them to random addresses here
-        seller.assistant = rando.address;
-        seller.admin = rando.address;
-        seller.clerk = rando.address;
+        seller.assistant = await rando.getAddress();
+        seller.admin = await rando.getAddress();
+        seller.clerk = ZeroAddress;
 
         // Create another seller
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);

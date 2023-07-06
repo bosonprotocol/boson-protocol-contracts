@@ -1,12 +1,12 @@
 const hre = require("hardhat");
+const { keccak256, toUtf8Bytes, getContractAt, ZeroAddress, Interface, getContractFactory, encodeBytes32String } =
+  hre.ethers;
 const environments = "../../environments.js";
+
 const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const FacetCutAction = require("../domain/FacetCutAction");
 const { interfacesWithMultipleArtifacts } = require("./constants");
-const { getFees } = require("./utils");
-const ethers = hre.ethers;
-const keccak256 = ethers.utils.keccak256;
-const toUtf8Bytes = ethers.utils.toUtf8Bytes;
+const { getFees, toHexString } = require("./utils");
 
 /**
  * Utilities for testing and interacting with Diamond
@@ -15,16 +15,14 @@ const toUtf8Bytes = ethers.utils.toUtf8Bytes;
  */
 // get function selectors from ABI
 function getSelectors(contract, returnSignatureToNameMapping = false) {
-  const signatures = Object.keys(contract.interface.functions);
   let signatureToNameMapping = {};
-  const selectors = signatures.reduce((acc, val) => {
-    if (val !== "init(bytes)") {
-      const signature = contract.interface.getSighash(val);
-      acc.push(signature);
-      if (returnSignatureToNameMapping) signatureToNameMapping[signature] = val;
-    }
-    return acc;
-  }, []);
+  const selectors = contract.interface.fragments
+    .filter((f) => f.type == "function" && f.name !== "init")
+    .map((f) => {
+      if (returnSignatureToNameMapping) signatureToNameMapping[f.selector] = f.name;
+      return f.selector;
+    });
+
   selectors.contract = contract;
   selectors.remove = remove;
   selectors.get = get;
@@ -34,14 +32,14 @@ function getSelectors(contract, returnSignatureToNameMapping = false) {
 
 // get interface id
 async function getInterfaceId(contractName, skipBaseCheck = false, isFullPath = false) {
-  const contract = await ethers.getContractAt(contractName, ethers.constants.AddressZero);
-  const signatures = Object.keys(contract.interface.functions);
-  const selectors = signatures.reduce((acc, val) => {
-    acc.push(ethers.BigNumber.from(contract.interface.getSighash(val)));
+  const contract = await getContractAt(contractName, ZeroAddress);
+  const fragments = contract.interface.fragments.filter((f) => f.type == "function");
+  const selectors = fragments.reduce((acc, val) => {
+    acc.push(val.selector);
     return acc;
   }, []);
 
-  let interfaceId = selectors.reduce((pv, cv) => pv.xor(cv), ethers.BigNumber.from("0x00000000"));
+  let interfaceId = selectors.reduce((pv, cv) => pv ^ BigInt(cv), BigInt(0x00000000));
 
   // If contract inherits other contracts, their interfaces must be xor-ed
   if (!skipBaseCheck) {
@@ -63,7 +61,7 @@ async function getInterfaceId(contractName, skipBaseCheck = false, isFullPath = 
 
       isFullPath = interfacesWithMultipleArtifacts.includes(baseName);
 
-      const baseContractInterfaceId = ethers.BigNumber.from(
+      const baseContractInterfaceId = BigInt(
         await getInterfaceId(
           interfacesWithMultipleArtifacts.includes(baseName)
             ? `contracts/interfaces/${baseName}.sol:${baseName}`
@@ -74,24 +72,17 @@ async function getInterfaceId(contractName, skipBaseCheck = false, isFullPath = 
       );
 
       // Remove interface id of base contracts
-      interfaceId = interfaceId.xor(baseContractInterfaceId);
+      interfaceId = interfaceId ^ baseContractInterfaceId;
     }
   }
-  return interfaceId.isZero() ? "0x00000000" : ethers.utils.hexZeroPad(interfaceId.toHexString(), 4);
-}
-
-// get function selector from function signature
-function getSelector(func) {
-  const abiInterface = new ethers.utils.Interface([func]);
-  return abiInterface.getSighash(ethers.utils.Fragment.from(func));
+  return interfaceId == 0n ? "0x00000000" : toHexString(interfaceId, { startPad: 8 });
 }
 
 // used with getSelectors to remove selectors from an array of selectors
-// functionNames argument is an array of function signatures
-function remove(functionNamesOrSignature) {
+function remove(selectorsToRemove) {
   const selectors = this.filter((v) => {
-    for (const functionName of functionNamesOrSignature) {
-      if (v === this.contract.interface.getSighash(functionName)) {
+    for (const selector of selectorsToRemove) {
+      if (v === selector) {
         return false;
       }
     }
@@ -106,14 +97,11 @@ function remove(functionNamesOrSignature) {
 // used with getSelectors to get selectors from an array of selectors
 // functionNames argument is an array of function signatures
 function get(functionNames) {
-  const selectors = this.filter((v) => {
-    for (const functionName of functionNames) {
-      if (v === this.contract.interface.getSighash(functionName)) {
-        return true;
-      }
-    }
-    return false;
-  });
+  const selectors = this.contract.interface.fragments
+    .filter((f) => f.type == "function")
+    .filter((f) => functionNames.includes(f.name))
+    .map((f) => f.selector);
+
   selectors.contract = this.contract;
   selectors.remove = this.remove;
   selectors.get = this.get;
@@ -122,8 +110,8 @@ function get(functionNames) {
 
 // remove selectors using an array of signatures
 function removeSelectors(selectors, signatures) {
-  const iface = new ethers.utils.Interface(signatures.map((v) => "function " + v));
-  const removeSelectors = signatures.map((v) => iface.getSighash(v));
+  const iface = new Interface(signatures.map((v) => "function " + v));
+  const removeSelectors = iface.fragments.map((f) => f.selector);
   selectors = selectors.filter((v) => !removeSelectors.includes(v));
   return selectors;
 }
@@ -137,40 +125,42 @@ function findAddressPositionInFacets(facetAddress, facets) {
   }
 }
 
-function getFacetAddCut(facet, omitFunctions = []) {
+async function getFacetAddCut(facet, omitFunctions = []) {
   let selectors = omitFunctions.length ? getSelectors(facet).remove(omitFunctions) : getSelectors(facet);
-  return [facet.address, FacetCutAction.Add, selectors];
+  const address = await facet.getAddress();
+  return [address, FacetCutAction.Add, selectors];
 }
 
-function getFacetReplaceCut(facet, omitFunctions = []) {
+async function getFacetReplaceCut(facet, omitFunctions = []) {
   let selectors = omitFunctions.length ? getSelectors(facet).remove(omitFunctions) : getSelectors(facet);
-  return [facet.address, FacetCutAction.Replace, selectors];
+  const address = await facet.getAddress();
+  return [address, FacetCutAction.Replace, selectors];
 }
 
-function getFacetRemoveCut(facet, omitFunctions = []) {
+async function getFacetRemoveCut(facet, omitFunctions = []) {
   let selectors = omitFunctions.length ? getSelectors(facet).remove(omitFunctions) : getSelectors(facet);
-  return [facet.address, FacetCutAction.Remove, selectors];
+  const address = await facet.getAddress();
+  return [address, FacetCutAction.Remove, selectors];
 }
 
 async function getStateModifyingFunctions(facetNames, omitFunctions = [], onlyFunctions = []) {
   let stateModifyingFunctions = [];
   for (const facetName of facetNames) {
-    let FacetContractFactory = await ethers.getContractFactory(facetName);
-    const functions = FacetContractFactory.interface.functions;
-    const functionNames = Object.keys(functions);
-    const facetStateModifyingFunctions = functionNames.filter((fn) => {
-      if (functions[fn].stateMutability !== "view" && !omitFunctions.includes(fn)) {
-        if (onlyFunctions.length === 0) {
-          return true;
-        }
-        for (const func of onlyFunctions) {
-          if (fn.includes(func)) {
+    let FacetContractFactory = await getContractFactory(facetName);
+    const functions = FacetContractFactory.interface.fragments;
+    const facetStateModifyingFunctions = functions
+      .filter((fn) => {
+        if (fn.type == "function" && fn.stateMutability !== "view" && !omitFunctions.includes(fn.name)) {
+          if (onlyFunctions.length === 0) {
+            return true;
+          }
+          if (onlyFunctions.includes(fn.name)) {
             return true;
           }
         }
-      }
-      return false;
-    });
+        return false;
+      })
+      .map((fn) => fn.format("sighash"));
 
     stateModifyingFunctions = stateModifyingFunctions.concat(facetStateModifyingFunctions);
   }
@@ -183,7 +173,7 @@ function getStateModifyingFunctionsHashes(facetNames, omitFunctions = [], onlyFu
     //  Allowlist contract methods
     const stateModifyingFunctions = await getStateModifyingFunctions(
       facetNames,
-      [...omitFunctions, "initialize()"],
+      [...omitFunctions, "initialize"],
       onlyFunctions
     );
     return stateModifyingFunctions.map((smf) => keccak256(toUtf8Bytes(smf)));
@@ -191,17 +181,18 @@ function getStateModifyingFunctionsHashes(facetNames, omitFunctions = [], onlyFu
 }
 
 // Get ProtocolInitializationHandlerFacet initialize calldata to be called on diamondCut
-function getInitializeCalldata(
+async function getInitializeCalldata(
   facetsToInitialize,
   version,
   isUpgrade,
   initializationData,
-  initializationFacet,
+  initializationFacet = "0x",
   interfacesToRemove = [],
   interfacesToAdd = []
 ) {
-  version = ethers.utils.formatBytes32String(version);
-  const addresses = facetsToInitialize.map((f) => f.contract.address);
+  version = encodeBytes32String(version);
+  const addresses = await facetsToInitialize.map((f) => f.contract.target);
+
   const calldata = facetsToInitialize.map((f) => f.initialize);
 
   return initializationFacet.interface.encodeFunctionData("initialize", [
@@ -224,7 +215,7 @@ async function cutDiamond(
   initializeCalldata,
   facetsToRemove = []
 ) {
-  const diamondCutFacet = await ethers.getContractAt("DiamondCutFacet", diamond);
+  const diamondCutFacet = await getContractAt("DiamondCutFacet", diamond);
 
   const cut = deployedFacets.reduce((acc, val) => {
     val.cut.forEach((c) => acc.push(c));
@@ -244,7 +235,6 @@ async function cutDiamond(
 }
 
 exports.getSelectors = getSelectors;
-exports.getSelector = getSelector;
 exports.FacetCutAction = FacetCutAction;
 exports.remove = remove;
 exports.removeSelectors = removeSelectors;

@@ -38,8 +38,8 @@ string constant DIRECT_INITIALIZATION_NOT_ALLOWED = "Direct initializtion is not
 string constant ACCESS_DENIED = "Access denied, caller doesn't have role";
 string constant NOT_ASSISTANT = "Not seller's assistant";
 string constant NOT_ADMIN = "Not admin";
-string constant NOT_ASSISTANT_AND_CLERK = "Not assistant and clerk";
-string constant NOT_ADMIN_ASSISTANT_AND_CLERK = "Not admin, assistant and clerk";
+string constant CLERK_DEPRECATED = "Clerk is deprecated and must be set to address 0";
+string constant NOT_ADMIN_AND_ASSISTANT = "Not admin and assistant";
 string constant NOT_BUYER_OR_SELLER = "Not buyer or seller";
 string constant NOT_VOUCHER_HOLDER = "Not current voucher holder";
 string constant NOT_BUYER_WALLET = "Not buyer's wallet address";
@@ -120,6 +120,8 @@ string constant EXCHANGE_ALREADY_EXISTS = "Exchange already exists";
 string constant INVALID_RANGE_LENGTH = "Range length is too large or zero";
 
 // Revert Reasons: Twin related
+uint256 constant SINGLE_TWIN_RESERVED_GAS = 140000;
+uint256 constant MINIMAL_RESIDUAL_GAS = 180000;
 string constant NO_SUCH_TWIN = "No such twin";
 string constant NO_TRANSFER_APPROVED = "No transfer approved";
 string constant TWIN_TRANSFER_FAILED = "Twin could not be transferred";
