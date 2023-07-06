@@ -1,6 +1,6 @@
 const { getFacetAddCut, cutDiamond, getInitializeCalldata } = require("./diamond-utils.js");
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getContractFactory } = hre.ethers;
 const environments = require("../../environments");
 const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const { getFees } = require("./utils");
@@ -35,7 +35,7 @@ async function deployAndCutFacets(
   initializationFacet =
     initializationFacet || deployedFacets.find((f) => f.name == "ProtocolInitializationHandlerFacet").contract;
 
-  const initializeCalldata = getInitializeCalldata(
+  const initializeCalldata = await getInitializeCalldata(
     facetsToInit,
     version,
     false,
@@ -45,20 +45,23 @@ async function deployAndCutFacets(
     interfacesToAdd
   );
 
-  deployedFacets = deployedFacets.map((facet) => {
-    const cut =
-      facet.name == "ProtocolInitializationHandlerFacet"
-        ? getFacetAddCut(facet.contract, [initializeCalldata.slice(0, 10)])
-        : getFacetAddCut(facet.contract, [facet.initialize && facet.initialize.slice(0, 10)] || []);
-    facet.cut.push(cut);
-    return facet;
-  });
+  deployedFacets = await Promise.all(
+    deployedFacets.map(async (facet) => {
+      const cut =
+        facet.name === "ProtocolInitializationHandlerFacet"
+          ? await getFacetAddCut(facet.contract, [initializeCalldata.slice(0, 10)])
+          : await getFacetAddCut(facet.contract, facet.initialize ? [facet.initialize.slice(0, 10)] : []);
+
+      facet.cut.push(cut);
+      return facet;
+    })
+  );
 
   const cutTransaction = await cutDiamond(
     diamond,
     maxPriorityFeePerGas,
     deployedFacets,
-    initializationFacet.address,
+    await initializationFacet.getAddress(),
     initializeCalldata
   );
 
@@ -82,10 +85,10 @@ async function deployProtocolFacets(facetNames, facetsToInit, maxPriorityFeePerG
 
   // Deploy all handler facets
   for (const facetName of facetNames) {
-    let FacetContractFactory = await ethers.getContractFactory(facetName);
+    let FacetContractFactory = await getContractFactory(facetName);
     const constructorArgs = (facetsToInit[facetName] && facetsToInit[facetName].constructorArgs) || [];
     const facetContract = await FacetContractFactory.deploy(...constructorArgs, await getFees(maxPriorityFeePerGas));
-    await facetContract.deployTransaction.wait(confirmations);
+    await facetContract.waitForDeployment(confirmations);
 
     const deployedFacet = {
       name: facetName,

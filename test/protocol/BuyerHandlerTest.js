@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { getContractAt, ZeroAddress } = ethers;
 const { expect } = require("chai");
 
 const Buyer = require("../../scripts/domain/Buyer");
@@ -54,7 +55,7 @@ describe("BuyerHandler", function () {
 
     // make all account the same
     assistant = admin;
-    clerk = { address: ethers.constants.AddressZero };
+    clerk = { address: ZeroAddress };
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -72,7 +73,7 @@ describe("BuyerHandler", function () {
       invalidAccountId = "666";
 
       // Create a valid buyer, then set fields in tests directly
-      buyer = mockBuyer(other1.address);
+      buyer = mockBuyer(await other1.getAddress());
       expect(buyer.isValid()).is.true;
 
       // How that buyer looks as a returned struct
@@ -89,7 +90,7 @@ describe("BuyerHandler", function () {
         // Create a buyer, testing for the event
         await expect(accountHandler.connect(rando).createBuyer(buyer))
           .to.emit(accountHandler, "BuyerCreated")
-          .withArgs(buyer.id, buyerStruct, rando.address);
+          .withArgs(buyer.id, buyerStruct, await rando.getAddress());
       });
 
       it("should update state", async function () {
@@ -112,7 +113,7 @@ describe("BuyerHandler", function () {
         // Create a buyer, testing for the event
         await expect(accountHandler.connect(rando).createBuyer({ ...buyer, id: invalidAccountId }))
           .to.emit(accountHandler, "BuyerCreated")
-          .withArgs(buyer.id, buyerStruct, rando.address);
+          .withArgs(buyer.id, buyerStruct, await rando.getAddress());
 
         // wrong buyer id should not exist
         [exists] = await accountHandler.connect(rando).getBuyer(invalidAccountId);
@@ -140,7 +141,7 @@ describe("BuyerHandler", function () {
         });
 
         it("addresses are the zero address", async function () {
-          buyer.wallet = ethers.constants.AddressZero;
+          buyer.wallet = ZeroAddress;
 
           // Attempt to Create a Buyer, expecting revert
           await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
@@ -165,7 +166,7 @@ describe("BuyerHandler", function () {
       });
 
       it("should emit a BuyerUpdated event with correct values if values change", async function () {
-        buyer.wallet = other2.address;
+        buyer.wallet = await other2.getAddress();
         buyer.active = false;
         expect(buyer.isValid()).is.true;
 
@@ -178,18 +179,18 @@ describe("BuyerHandler", function () {
         //Update a buyer, testing for the event
         await expect(accountHandler.connect(other1).updateBuyer(buyer))
           .to.emit(accountHandler, "BuyerUpdated")
-          .withArgs(buyer.id, expectedBuyerStruct, other1.address);
+          .withArgs(buyer.id, expectedBuyerStruct, await other1.getAddress());
       });
 
       it("should emit a BuyerUpdated event with correct values if values stay the same", async function () {
         //Update a buyer, testing for the event
         await expect(accountHandler.connect(other1).updateBuyer(buyer))
           .to.emit(accountHandler, "BuyerUpdated")
-          .withArgs(buyer.id, buyerStruct, other1.address);
+          .withArgs(buyer.id, buyerStruct, await other1.getAddress());
       });
 
       it("should update state of all fields except Id and active flag", async function () {
-        buyer.wallet = other2.address;
+        buyer.wallet = await other2.getAddress();
         buyer.active = false;
         expect(buyer.isValid()).is.true;
 
@@ -230,7 +231,7 @@ describe("BuyerHandler", function () {
       });
 
       it("should update only wallet address", async function () {
-        buyer.wallet = other2.address;
+        buyer.wallet = await other2.getAddress();
         expect(buyer.isValid()).is.true;
 
         buyerStruct = buyer.toStruct();
@@ -252,7 +253,7 @@ describe("BuyerHandler", function () {
 
       it("should update the correct buyer", async function () {
         // Confgiure another buyer
-        buyer2 = mockBuyer(other3.address);
+        buyer2 = mockBuyer(await other3.getAddress());
         expect(buyer2.isValid()).is.true;
 
         buyer2Struct = buyer2.toStruct();
@@ -260,10 +261,10 @@ describe("BuyerHandler", function () {
         //Create buyer2, testing for the event
         await expect(accountHandler.connect(rando).createBuyer(buyer2))
           .to.emit(accountHandler, "BuyerCreated")
-          .withArgs(buyer2.id, buyer2Struct, rando.address);
+          .withArgs(buyer2.id, buyer2Struct, await rando.getAddress());
 
         //Update first buyer
-        buyer.wallet = other2.address;
+        buyer.wallet = await other2.getAddress();
         expect(buyer.isValid()).is.true;
 
         buyerStruct = buyer.toStruct();
@@ -295,21 +296,21 @@ describe("BuyerHandler", function () {
       });
 
       it("should be able to only update second time with new wallet address", async function () {
-        buyer.wallet = other2.address;
+        buyer.wallet = await other2.getAddress();
         buyerStruct = buyer.toStruct();
 
         // Update buyer, testing for the event
         await expect(accountHandler.connect(other1).updateBuyer(buyer))
           .to.emit(accountHandler, "BuyerUpdated")
-          .withArgs(buyer.id, buyerStruct, other1.address);
+          .withArgs(buyer.id, buyerStruct, await other1.getAddress());
 
-        buyer.wallet = other3.address;
+        buyer.wallet = await other3.getAddress();
         buyerStruct = buyer.toStruct();
 
         // Update buyer, testing for the event
         await expect(accountHandler.connect(other2).updateBuyer(buyer))
           .to.emit(accountHandler, "BuyerUpdated")
-          .withArgs(buyer.id, buyerStruct, other2.address);
+          .withArgs(buyer.id, buyerStruct, await other2.getAddress());
 
         // Attempt to update the buyer with original wallet address, expecting revert
         await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NOT_BUYER_WALLET);
@@ -323,7 +324,12 @@ describe("BuyerHandler", function () {
           let agentId = "0"; // agent id is optional while creating an offer
 
           // Create a valid seller
-          seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await admin.getAddress(),
+            clerk.address,
+            await treasury.getAddress()
+          );
           seller.id = id.toString();
           expect(seller.isValid()).is.true;
 
@@ -338,26 +344,26 @@ describe("BuyerHandler", function () {
           // Create a seller
           await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-          [exists] = await accountHandler.connect(rando).getSellerByAddress(assistant.address);
+          [exists] = await accountHandler.connect(rando).getSellerByAddress(await assistant.getAddress());
           expect(exists).is.true;
 
           // Create a valid dispute resolver
           disputeResolver = mockDisputeResolver(
-            assistant.address,
-            admin.address,
+            await assistant.getAddress(),
+            await admin.getAddress(),
             clerk.address,
-            treasury.address,
+            await treasury.getAddress(),
             true
           );
-          disputeResolver.id = id.add(1).toString();
+          disputeResolver.id = id + 1n;
           expect(disputeResolver.isValid()).is.true;
 
           //Create DisputeResolverFee array
           disputeResolverFees = [
-            new DisputeResolverFee(other1.address, "MockToken1", "0"),
-            new DisputeResolverFee(other2.address, "MockToken2", "0"),
-            new DisputeResolverFee(other3.address, "MockToken3", "0"),
-            new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+            new DisputeResolverFee(await other1.getAddress(), "MockToken1", "0"),
+            new DisputeResolverFee(await other2.getAddress(), "MockToken2", "0"),
+            new DisputeResolverFee(await other3.getAddress(), "MockToken3", "0"),
+            new DisputeResolverFee(ZeroAddress, "Native", "0"),
           ];
 
           // Add seller to sellerAllowList
@@ -387,14 +393,16 @@ describe("BuyerHandler", function () {
           // Deposit seller funds so the commit will succeed
           await fundsHandler
             .connect(assistant)
-            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+            .depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit });
 
           //Commit to offer
-          await exchangeHandler.connect(other1).commitToOffer(other1.address, offerId, { value: offer.price });
+          await exchangeHandler
+            .connect(other1)
+            .commitToOffer(await other1.getAddress(), offerId, { value: offer.price });
 
-          const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
-          const balance = await bosonVoucher.connect(rando).balanceOf(other1.address);
+          const bosonVoucherCloneAddress = calculateContractAddress(await exchangeHandler.getAddress(), "1");
+          bosonVoucher = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
+          const balance = await bosonVoucher.connect(rando).balanceOf(await other1.getAddress());
           expect(balance).equal(1);
         });
 
@@ -433,7 +441,7 @@ describe("BuyerHandler", function () {
         });
 
         it("wallet address is the zero address", async function () {
-          buyer.wallet = ethers.constants.AddressZero;
+          buyer.wallet = ZeroAddress;
 
           // Attempt to update the buyer, expecting revert
           await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(
@@ -444,17 +452,17 @@ describe("BuyerHandler", function () {
         it("wallet address is unique to this seller Id", async function () {
           id = await accountHandler.connect(rando).getNextAccountId();
 
-          buyer2 = mockBuyer(other2.address);
+          buyer2 = mockBuyer(await other2.getAddress());
           buyer2.id = id.toString();
           buyer2Struct = buyer2.toStruct();
 
           //Create second buyer, testing for the event
           await expect(accountHandler.connect(rando).createBuyer(buyer2))
             .to.emit(accountHandler, "BuyerCreated")
-            .withArgs(buyer2.id, buyer2Struct, rando.address);
+            .withArgs(buyer2.id, buyer2Struct, await rando.getAddress());
 
           //Set wallet address value to be same as first buyer created in Buyer Methods beforeEach
-          buyer2.wallet = other1.address; //already being used by buyer 1
+          buyer2.wallet = await other1.getAddress(); //already being used by buyer 1
 
           // Attempt to update buyer 2 with non-unique wallet address, expecting revert
           await expect(accountHandler.connect(other2).updateBuyer(buyer2)).to.revertedWith(
@@ -463,7 +471,7 @@ describe("BuyerHandler", function () {
         });
 
         it("current buyer wallet address has outstanding vouchers", async function () {
-          buyer.wallet = other4.address;
+          buyer.wallet = await other4.getAddress();
 
           // Attempt to update the buyer, expecting revert
           await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(

@@ -1,6 +1,15 @@
 const { ethers } = require("hardhat");
 const {
-  utils: { keccak256, toUtf8Bytes },
+  keccak256,
+  toUtf8Bytes,
+  ZeroAddress,
+  getContractAt,
+  getContractFactory,
+  getSigners,
+  randomBytes,
+  zeroPadBytes,
+  ZeroHash,
+  MaxUint256,
 } = ethers;
 const { expect, assert } = require("chai");
 
@@ -14,6 +23,7 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
+const { toHexString } = require("../../scripts/util/utils.js");
 const {
   prepareDataSignatureParameters,
   setNextBlockTimestamp,
@@ -152,9 +162,9 @@ describe("IBosonMetaTransactionsHandler", function () {
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
-    clerk = clerkDR = { address: ethers.constants.AddressZero };
+    clerk = clerkDR = { address: ZeroAddress };
 
-    [deployer] = await ethers.getSigners();
+    [deployer] = await getSigners();
 
     // Deploy the mock tokens
     [bosonToken, mockToken] = await deployMockTokens(["BosonToken", "Foreign20"]);
@@ -174,24 +184,24 @@ describe("IBosonMetaTransactionsHandler", function () {
   async function upgradeMetaTransactionsHandlerFacet() {
     // Upgrade the ExchangeHandlerFacet functions
     // DiamondCutFacet
-    const cutFacetViaDiamond = await ethers.getContractAt("DiamondCutFacet", protocolDiamondAddress);
+    const cutFacetViaDiamond = await getContractAt("DiamondCutFacet", protocolDiamondAddress);
 
     // Deploy MockMetaTransactionsHandlerFacet
-    const MockMetaTransactionsHandlerFacet = await ethers.getContractFactory("MockMetaTransactionsHandlerFacet");
+    const MockMetaTransactionsHandlerFacet = await getContractFactory("MockMetaTransactionsHandlerFacet");
     const mockMetaTransactionsHandlerFacet = await MockMetaTransactionsHandlerFacet.deploy();
-    await mockMetaTransactionsHandlerFacet.deployed();
+    await mockMetaTransactionsHandlerFacet.waitForDeployment();
 
     // Define the facet cut
     const facetCuts = [
       {
-        facetAddress: mockMetaTransactionsHandlerFacet.address,
+        facetAddress: await mockMetaTransactionsHandlerFacet.getAddress(),
         action: FacetCutAction.Add,
         functionSelectors: getSelectors(mockMetaTransactionsHandlerFacet),
       },
     ];
 
     // Send the DiamondCut transaction
-    const tx = await cutFacetViaDiamond.connect(deployer).diamondCut(facetCuts, ethers.constants.AddressZero, "0x");
+    const tx = await cutFacetViaDiamond.connect(deployer).diamondCut(facetCuts, ZeroAddress, "0x");
 
     // Wait for transaction to confirm
     const receipt = await tx.wait();
@@ -200,10 +210,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
 
     // Cast Diamond to MockMetaTransactionsHandlerFacet
-    mockMetaTransactionsHandler = await ethers.getContractAt(
-      "MockMetaTransactionsHandlerFacet",
-      protocolDiamondAddress
-    );
+    mockMetaTransactionsHandler = await getContractAt("MockMetaTransactionsHandlerFacet", protocolDiamondAddress);
   }
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -222,7 +229,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   // All supported methods
   context("📋 Meta Transactions Handler Methods", async function () {
     beforeEach(async function () {
-      nonce = parseInt(ethers.utils.randomBytes(8));
+      nonce = parseInt(randomBytes(8));
     });
 
     context("👉 isUsedNonce()", async function () {
@@ -233,20 +240,25 @@ describe("IBosonMetaTransactionsHandler", function () {
 
       it("should return false if nonce is not used", async function () {
         // Check if nonce is used before
-        result = await metaTransactionsHandler.connect(assistant).isUsedNonce(rando.address, nonce);
+        result = await metaTransactionsHandler.connect(assistant).isUsedNonce(await rando.getAddress(), nonce);
 
         // Verify the expectation
         assert.equal(result, expectedResult, "Nonce is used");
       });
 
       it("should be true after executing a meta transaction with nonce", async function () {
-        result = await metaTransactionsHandler.connect(assistant).isUsedNonce(assistant.address, nonce);
+        result = await metaTransactionsHandler.connect(assistant).isUsedNonce(await assistant.getAddress(), nonce);
 
         // Verify the expectation
         assert.equal(result, expectedResult, "Nonce is used");
 
         // Create a valid seller for meta transaction
-        seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
+        seller = mockSeller(
+          await assistant.getAddress(),
+          await assistant.getAddress(),
+          ZeroAddress,
+          await assistant.getAddress()
+        );
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
@@ -280,8 +292,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Prepare the message
         let message = {};
         message.nonce = parseInt(nonce);
-        message.from = assistant.address;
-        message.contractAddress = accountHandler.address;
+        message.from = await assistant.getAddress();
+        message.contractAddress = await accountHandler.getAddress();
         message.functionName =
           "createSeller((uint256,address,address,address,address,bool,string),(uint256,uint8),(string,uint256))";
         message.functionSignature = functionSignature;
@@ -292,12 +304,12 @@ describe("IBosonMetaTransactionsHandler", function () {
           customTransactionType,
           "MetaTransaction",
           message,
-          metaTransactionsHandler.address
+          await metaTransactionsHandler.getAddress()
         );
 
         // Send as meta transaction
         await metaTransactionsHandler.executeMetaTransaction(
-          assistant.address,
+          await assistant.getAddress(),
           message.functionName,
           functionSignature,
           nonce,
@@ -308,13 +320,13 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // We expect that the nonce is used now. Hence expecting to return true.
         expectedResult = true;
-        result = await metaTransactionsHandler.connect(assistant).isUsedNonce(assistant.address, nonce);
+        result = await metaTransactionsHandler.connect(assistant).isUsedNonce(await assistant.getAddress(), nonce);
         assert.equal(result, expectedResult, "Nonce is not used");
 
         //Verify that another nonce value is unused.
         expectedResult = false;
         nonce = nonce + 1;
-        result = await metaTransactionsHandler.connect(rando).isUsedNonce(assistant.address, nonce);
+        result = await metaTransactionsHandler.connect(rando).isUsedNonce(await assistant.getAddress(), nonce);
         assert.equal(result, expectedResult, "Nonce is used");
       });
     });
@@ -333,19 +345,19 @@ describe("IBosonMetaTransactionsHandler", function () {
         functionHashList = functionList.map((func) => keccak256(toUtf8Bytes(func)));
 
         // Grant UPGRADER role to admin account
-        await accessController.grantRole(Role.ADMIN, admin.address);
+        await accessController.grantRole(Role.ADMIN, await admin.getAddress());
       });
 
       it("should emit a FunctionsAllowlisted event", async function () {
         // Enable functions
         await expect(metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, true))
           .to.emit(metaTransactionsHandler, "FunctionsAllowlisted")
-          .withArgs(functionHashList, true, admin.address);
+          .withArgs(functionHashList, true, await admin.getAddress());
 
         // Disable functions
         await expect(metaTransactionsHandler.connect(admin).setAllowlistedFunctions(functionHashList, false))
           .to.emit(metaTransactionsHandler, "FunctionsAllowlisted")
-          .withArgs(functionHashList, false, admin.address);
+          .withArgs(functionHashList, false, await admin.getAddress());
       });
 
       it("should update state", async function () {
@@ -395,13 +407,11 @@ describe("IBosonMetaTransactionsHandler", function () {
         functionHashList = functionList.map((func) => keccak256(toUtf8Bytes(func)));
 
         // Grant UPGRADER role to admin account
-        await accessController.grantRole(Role.ADMIN, admin.address);
+        await accessController.grantRole(Role.ADMIN, await admin.getAddress());
       });
 
       it("after initialization all state modifying functions should be allowlisted", async function () {
-        const stateModifyingFunctionsClosure = getStateModifyingFunctionsHashes(facetNames, [
-          "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)",
-        ]);
+        const stateModifyingFunctionsClosure = getStateModifyingFunctionsHashes(facetNames, ["executeMetaTransaction"]);
         const stateModifyingFunctionsHashes = await stateModifyingFunctionsClosure();
 
         // Functions should be enabled
@@ -448,14 +458,14 @@ describe("IBosonMetaTransactionsHandler", function () {
         functionHashList = functionList.map((func) => keccak256(toUtf8Bytes(func)));
 
         // Grant UPGRADER role to admin account
-        await accessController.grantRole(Role.ADMIN, admin.address);
+        await accessController.grantRole(Role.ADMIN, await admin.getAddress());
       });
 
       it("after initialization all state modifying functions should be allowlisted", async function () {
         // Get list of state modifying functions
         const stateModifyingFunctions = await getStateModifyingFunctions(facetNames, [
-          "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)",
-          "initialize()",
+          "executeMetaTransaction",
+          "initialize",
         ]);
 
         for (const func of stateModifyingFunctions) {
@@ -511,7 +521,12 @@ describe("IBosonMetaTransactionsHandler", function () {
       context("👉 AccountHandlerFacet 👉 createSeller()", async function () {
         beforeEach(async function () {
           // Create a valid seller for meta transaction
-          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await assistant.getAddress(),
+            ZeroAddress,
+            await assistant.getAddress()
+          );
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -525,8 +540,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Prepare the message
           message = {};
           message.nonce = parseInt(nonce);
-          message.from = assistant.address;
-          message.contractAddress = accountHandler.address;
+          message.from = await assistant.getAddress();
+          message.contractAddress = await accountHandler.getAddress();
           message.functionName =
             "createSeller((uint256,address,address,address,address,bool,string),(uint256,uint8),(string,uint256))";
         });
@@ -547,21 +562,29 @@ describe("IBosonMetaTransactionsHandler", function () {
             customTransactionType,
             "MetaTransaction",
             message,
-            metaTransactionsHandler.address
+            await metaTransactionsHandler.getAddress()
           );
 
           // send a meta transaction, check for event
           await expect(
             metaTransactionsHandler
               .connect(deployer)
-              .executeMetaTransaction(assistant.address, message.functionName, functionSignature, nonce, r, s, v)
+              .executeMetaTransaction(
+                await assistant.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-            .withArgs(assistant.address, deployer.address, message.functionName, nonce);
+            .withArgs(await assistant.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
           // Verify that nonce is used. Expect true.
           let expectedResult = true;
-          result = await metaTransactionsHandler.connect(assistant).isUsedNonce(assistant.address, nonce);
+          result = await metaTransactionsHandler.connect(assistant).isUsedNonce(await assistant.getAddress(), nonce);
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
@@ -586,21 +609,29 @@ describe("IBosonMetaTransactionsHandler", function () {
             customTransactionType,
             "MetaTransaction",
             message,
-            metaTransactionsHandler.address
+            await metaTransactionsHandler.getAddress()
           );
 
           // send a meta transaction, does not revert
           await expect(
             metaTransactionsHandler
               .connect(deployer)
-              .executeMetaTransaction(assistant.address, message.functionName, functionSignature, nonce, r, s, v)
+              .executeMetaTransaction(
+                await assistant.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-            .withArgs(assistant.address, deployer.address, message.functionName, nonce);
+            .withArgs(await assistant.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
           // Verify that nonce is used. Expect true.
           let expectedResult = true;
-          result = await metaTransactionsHandler.connect(assistant).isUsedNonce(assistant.address, nonce);
+          result = await metaTransactionsHandler.connect(assistant).isUsedNonce(await assistant.getAddress(), nonce);
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
@@ -623,13 +654,13 @@ describe("IBosonMetaTransactionsHandler", function () {
             customTransactionType,
             "MetaTransaction",
             message,
-            metaTransactionsHandler.address
+            await metaTransactionsHandler.getAddress()
           );
 
           // send a meta transaction, expecting revert
           await expect(
             metaTransactionsHandler.executeMetaTransaction(
-              assistant.address,
+              await assistant.getAddress(),
               message.functionName,
               functionSignature,
               nonce,
@@ -658,30 +689,38 @@ describe("IBosonMetaTransactionsHandler", function () {
             customTransactionType,
             "MetaTransaction",
             message,
-            metaTransactionsHandler.address
+            await metaTransactionsHandler.getAddress()
           ));
 
           // send a meta transaction, check for event
           await expect(
             metaTransactionsHandler
               .connect(deployer)
-              .executeMetaTransaction(assistant.address, message.functionName, functionSignature, nonce, r, s, v)
+              .executeMetaTransaction(
+                await assistant.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-            .withArgs(assistant.address, deployer.address, message.functionName, nonce);
+            .withArgs(await assistant.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
           // Verify that nonce is used. Expect true.
           let expectedResult = true;
-          result = await metaTransactionsHandler.connect(assistant).isUsedNonce(assistant.address, nonce);
+          result = await metaTransactionsHandler.connect(assistant).isUsedNonce(await assistant.getAddress(), nonce);
           assert.equal(result, expectedResult, "Nonce is unused");
 
           // send a meta transaction again, check for event
-          seller.assistant = assistantDR.address;
-          seller.admin = adminDR.address;
+          seller.assistant = await assistantDR.getAddress();
+          seller.admin = await adminDR.getAddress();
           seller.clerk = clerkDR.address;
-          seller.treasury = treasuryDR.address;
+          seller.treasury = await treasuryDR.getAddress();
 
-          message.from = adminDR.address;
+          message.from = await adminDR.getAddress();
 
           // Prepare the function signature for the facet function.
           functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
@@ -698,20 +737,30 @@ describe("IBosonMetaTransactionsHandler", function () {
             customTransactionType,
             "MetaTransaction",
             message,
-            metaTransactionsHandler.address
+            await metaTransactionsHandler.getAddress()
           ));
 
           await expect(
             metaTransactionsHandler
               .connect(rando)
-              .executeMetaTransaction(adminDR.address, message.functionName, functionSignature, nonce, r, s, v)
+              .executeMetaTransaction(
+                await adminDR.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-            .withArgs(adminDR.address, rando.address, message.functionName, nonce);
+            .withArgs(await adminDR.getAddress(), await rando.getAddress(), message.functionName, nonce);
 
           // Verify that nonce is used. Expect true.
           expectedResult = true;
-          result = await metaTransactionsHandler.connect(assistantDR).isUsedNonce(assistantDR.address, nonce);
+          result = await metaTransactionsHandler
+            .connect(assistantDR)
+            .isUsedNonce(await assistantDR.getAddress(), nonce);
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
@@ -734,7 +783,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTransaction",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Pause the metatx region of the protocol
@@ -744,7 +793,15 @@ describe("IBosonMetaTransactionsHandler", function () {
             await expect(
               metaTransactionsHandler
                 .connect(deployer)
-                .executeMetaTransaction(assistant.address, message.functionName, functionSignature, nonce, r, s, v)
+                .executeMetaTransaction(
+                  await assistant.getAddress(),
+                  message.functionName,
+                  functionSignature,
+                  nonce,
+                  r,
+                  s,
+                  v
+                )
             ).to.revertedWith(RevertReasons.REGION_PAUSED);
           });
 
@@ -771,13 +828,13 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTransaction",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Execute meta transaction, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                assistant.address,
+                await assistant.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -808,13 +865,13 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTransaction",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Execute meta transaction, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                assistant.address,
+                await assistant.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -845,13 +902,13 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTransaction",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Execute meta transaction, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                assistant.address,
+                await assistant.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -866,11 +923,11 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Prepare a function, which selector collide with another funtion selector
             // In this case certain bytes are appended to redeemVoucher so it gets the same selector as cancelVoucher
             const fn = `redeemVoucher(uint256)`;
-            const fnBytes = ethers.utils.toUtf8Bytes(fn);
+            const fnBytes = toUtf8Bytes(fn);
             const collisionBytes = "0a7f0f031e";
             const collisionBytesBuffer = Buffer.from(collisionBytes, "hex");
             const fnCollision = Buffer.concat([fnBytes, collisionBytesBuffer]);
-            const sigCollision = ethers.utils.keccak256(fnCollision).slice(0, 10);
+            const sigCollision = keccak256(fnCollision).slice(0, 10);
 
             // Prepare the function signature for the facet function.
             functionSignature = exchangeHandler.interface.encodeFunctionData("cancelVoucher", [1]);
@@ -888,13 +945,13 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTransaction",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Execute meta transaction, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                assistant.address,
+                await assistant.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -921,12 +978,12 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTransaction",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Execute the meta transaction.
             await metaTransactionsHandler.executeMetaTransaction(
-              assistant.address,
+              await assistant.getAddress(),
               message.functionName,
               functionSignature,
               nonce,
@@ -938,7 +995,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Execute meta transaction again with the same nonce, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                assistant.address,
+                await assistant.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -958,7 +1015,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             ]);
 
             // Prepare the message
-            message.from = rando.address;
+            message.from = await rando.getAddress();
             message.functionSignature = functionSignature;
 
             // Collect the signature components
@@ -967,13 +1024,13 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTransaction",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Execute meta transaction, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                assistant.address,
+                await assistant.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -1001,13 +1058,13 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTransaction",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Execute meta transaction, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                assistant.address,
+                await assistant.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -1020,12 +1077,12 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Execute meta transaction, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                assistant.address,
+                await assistant.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
                 r,
-                ethers.constants.MaxUint256, // invalid s signature component
+                toHexString(MaxUint256), // invalid s signature component
                 v
               )
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
@@ -1033,12 +1090,12 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Execute meta transaction, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                assistant.address,
+                await assistant.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
                 r,
-                ethers.utils.hexZeroPad("0x", 32), // invalid s signature component
+                zeroPadBytes("0x", 32), // invalid s signature component
                 v
               )
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
@@ -1046,11 +1103,11 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Execute meta transaction, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                assistant.address,
+                await assistant.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
-                ethers.utils.hexZeroPad("0x", 32), // invalid r signature component
+                zeroPadBytes("0x", 32), // invalid r signature component
                 s,
                 v
               )
@@ -1062,7 +1119,12 @@ describe("IBosonMetaTransactionsHandler", function () {
       context("👉TwinHandler 👉 removeTwin()", async function () {
         beforeEach(async function () {
           // Create a valid seller for meta transaction
-          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await assistant.getAddress(),
+            ZeroAddress,
+            await assistant.getAddress()
+          );
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -1076,13 +1138,13 @@ describe("IBosonMetaTransactionsHandler", function () {
           await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Create a valid twin, then set fields in tests directly
-          twin = mockTwin(bosonToken.address);
+          twin = mockTwin(await bosonToken.getAddress());
           twin.id = "1";
           twin.sellerId = "1";
           expect(twin.isValid()).is.true;
 
           // Approving the twinHandler contract to transfer seller's tokens
-          await bosonToken.connect(assistant).approve(twinHandler.address, 1);
+          await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1);
 
           // Create a twin
           await twinHandler.connect(assistant).createTwin(twin);
@@ -1090,8 +1152,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Prepare the message
           message = {};
           message.nonce = parseInt(nonce);
-          message.from = assistant.address;
-          message.contractAddress = twinHandler.address;
+          message.from = await assistant.getAddress();
+          message.contractAddress = await twinHandler.getAddress();
         });
 
         it("removeTwin() can remove a twin", async function () {
@@ -1112,12 +1174,12 @@ describe("IBosonMetaTransactionsHandler", function () {
             customTransactionType,
             "MetaTransaction",
             message,
-            metaTransactionsHandler.address
+            await metaTransactionsHandler.getAddress()
           );
 
           // Remove the twin. Send as meta transaction.
           await metaTransactionsHandler.executeMetaTransaction(
-            assistant.address,
+            await assistant.getAddress(),
             message.functionName,
             functionSignature,
             nonce,
@@ -1137,24 +1199,24 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Prepare the message
           message = {};
           message.nonce = parseInt(nonce);
-          message.from = assistant.address;
-          message.contractAddress = metaTransactionsHandler.address;
+          message.from = await assistant.getAddress();
+          message.contractAddress = await metaTransactionsHandler.getAddress();
         });
 
         it("Should fail when try to call executeMetaTransaction method itself", async function () {
           // Function signature for executeMetaTransaction function.
           functionSignature = metaTransactionsHandler.interface.encodeFunctionData("executeMetaTransaction", [
-            assistant.address,
+            await assistant.getAddress(),
             "executeMetaTransaction",
-            ethers.constants.HashZero, // hash of zero
+            ZeroHash, // hash of zero
             nonce,
-            ethers.utils.randomBytes(32), // random bytes32
-            ethers.utils.randomBytes(32), // random bytes32
-            parseInt(ethers.utils.randomBytes(8)), // random uint8
+            randomBytes(32), // random bytes32
+            randomBytes(32), // random bytes32
+            parseInt(randomBytes(8)), // random uint8
           ]);
 
           // Prepare the message
-          message.contractAddress = metaTransactionsHandler.address;
+          message.contractAddress = await metaTransactionsHandler.getAddress();
           message.functionName = "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)";
           message.functionSignature = functionSignature;
 
@@ -1164,13 +1226,13 @@ describe("IBosonMetaTransactionsHandler", function () {
             customTransactionType,
             "MetaTransaction",
             message,
-            metaTransactionsHandler.address
+            await metaTransactionsHandler.getAddress()
           );
 
           // send a meta transaction, expecting revert
           await expect(
             metaTransactionsHandler.executeMetaTransaction(
-              assistant.address,
+              await assistant.getAddress(),
               message.functionName,
               functionSignature,
               nonce,
@@ -1183,7 +1245,12 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         it("Returns default revert reason if called function reverts without a reason", async function () {
           // Create a valid seller for meta transaction
-          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await assistant.getAddress(),
+            ZeroAddress,
+            await assistant.getAddress()
+          );
           voucherInitValues = mockVoucherInitValues();
           emptyAuthToken = mockAuthToken();
           await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -1191,7 +1258,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Depositing funds, where token address is not a contract address reverts without a reason.
           functionSignature = fundsHandler.interface.encodeFunctionData("depositFunds", [
             seller.id,
-            rando.address,
+            await rando.getAddress(),
             "10",
           ]);
 
@@ -1205,13 +1272,13 @@ describe("IBosonMetaTransactionsHandler", function () {
             customTransactionType,
             "MetaTransaction",
             message,
-            metaTransactionsHandler.address
+            await metaTransactionsHandler.getAddress()
           );
 
           // send a meta transaction, expecting revert
           await expect(
             metaTransactionsHandler.executeMetaTransaction(
-              assistant.address,
+              await assistant.getAddress(),
               message.functionName,
               functionSignature,
               nonce,
@@ -1225,7 +1292,12 @@ describe("IBosonMetaTransactionsHandler", function () {
         context("Reentrancy guard", async function () {
           beforeEach(async function () {
             // Create a valid seller for meta transaction
-            seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
+            seller = mockSeller(
+              await assistant.getAddress(),
+              await assistant.getAddress(),
+              ZeroAddress,
+              await assistant.getAddress()
+            );
             expect(seller.isValid()).is.true;
 
             // VoucherInitValues
@@ -1250,10 +1322,10 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Create a valid dispute resolver
             disputeResolver = mockDisputeResolver(
-              assistantDR.address,
-              adminDR.address,
+              await assistantDR.getAddress(),
+              await adminDR.getAddress(),
               clerkDR.address,
-              treasuryDR.address,
+              await treasuryDR.getAddress(),
               true
             );
             expect(disputeResolver.isValid()).is.true;
@@ -1261,7 +1333,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             buyerId = accountId.next().value;
 
             //Create DisputeResolverFee array so offer creation will succeed
-            disputeResolverFees = [new DisputeResolverFee(maliciousToken.address, "maliciousToken", "0")];
+            disputeResolverFees = [new DisputeResolverFee(await maliciousToken.getAddress(), "maliciousToken", "0")];
 
             // Make empty seller list, so every seller is allowed
             sellerAllowList = [];
@@ -1274,7 +1346,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             const { offer, ...mo } = await mockOffer();
             ({ offerDates, offerDurations } = mo);
             offerToken = offer;
-            offerToken.exchangeToken = maliciousToken.address;
+            offerToken.exchangeToken = await maliciousToken.getAddress();
 
             price = offer.price;
             sellerDeposit = offer.sellerDeposit;
@@ -1290,28 +1362,30 @@ describe("IBosonMetaTransactionsHandler", function () {
               .createOffer(offerToken, offerDates, offerDurations, disputeResolver.id, agentId);
 
             // top up seller's and buyer's account
-            await maliciousToken.mint(assistant.address, sellerDeposit);
-            await maliciousToken.mint(buyer.address, price);
+            await maliciousToken.mint(await assistant.getAddress(), sellerDeposit);
+            await maliciousToken.mint(await buyer.getAddress(), price);
 
             // Approve protocol to transfer the tokens
             await maliciousToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
             await maliciousToken.connect(buyer).approve(protocolDiamondAddress, price);
 
             // Deposit to seller's pool
-            await fundsHandler.connect(assistant).depositFunds(seller.id, maliciousToken.address, sellerDeposit);
+            await fundsHandler
+              .connect(assistant)
+              .depositFunds(seller.id, await maliciousToken.getAddress(), sellerDeposit);
 
             // Commit to the offer
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
 
             // Cancel the voucher, so both seller and buyer have something to withdraw
             await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
 
             // Expected payoffs - they are the same for token and native currency
             // Buyer: price - buyerCancelPenalty
-            buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
+            buyerPayoff = (BigInt(offerToken.price) - BigInt(offerToken.buyerCancelPenalty)).toString();
 
             // Prepare validFundDetails
-            tokenListBuyer = [maliciousToken.address];
+            tokenListBuyer = [await maliciousToken.getAddress()];
             tokenAmountsBuyer = [buyerPayoff];
             validFundDetails = {
               entityId: buyerId,
@@ -1322,10 +1396,10 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Prepare the message
             message = {};
             message.nonce = parseInt(nonce);
-            message.contractAddress = fundsHandler.address;
+            message.contractAddress = await fundsHandler.getAddress();
             message.functionName = "withdrawFunds(uint256,address[],uint256[])";
             message.fundDetails = validFundDetails;
-            message.from = buyer.address;
+            message.from = await buyer.getAddress();
 
             // Set the fund Type
             fundType = [
@@ -1361,7 +1435,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTxFund",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             let [, buyerStruct] = await accountHandler.getBuyer(buyerId);
@@ -1370,7 +1444,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Execute the meta transaction.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                buyer.address,
+                await buyer.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -1391,7 +1465,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             await maliciousToken.setProtocolAddress(protocolDiamondAddress);
 
             // Mint and approve protocol to transfer the tokens
-            await maliciousToken.mint(rando.address, "1");
+            await maliciousToken.mint(await rando.getAddress(), "1");
             await maliciousToken.connect(rando).approve(protocolDiamondAddress, "1");
 
             // Just make a random metaTx signature to some view function that will delete "currentSender"
@@ -1400,8 +1474,8 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Prepare the message
             message.nonce = "0";
-            message.from = rando.address;
-            message.contractAddress = accountHandler.address;
+            message.from = await rando.getAddress();
+            message.contractAddress = await accountHandler.getAddress();
             message.functionName = "getNextExchangeId()";
             message.functionSignature = functionSignature;
 
@@ -1411,22 +1485,22 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTransaction",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
-            await maliciousToken.setMetaTxBytes(rando.address, functionSignature, r, s, v);
+            await maliciousToken.setMetaTxBytes(await rando.getAddress(), functionSignature, r, s, v);
 
             // Prepare the function signature for the facet function.
             functionSignature = fundsHandler.interface.encodeFunctionData("depositFunds", [
               seller.id,
-              maliciousToken.address,
+              await maliciousToken.getAddress(),
               "1",
             ]);
 
             // Prepare the message
             message.nonce = nonce;
-            message.from = rando.address;
-            message.contractAddress = accountHandler.address;
+            message.from = await rando.getAddress();
+            message.contractAddress = await accountHandler.getAddress();
             message.functionName = "depositFunds(uint256,address,uint256)";
             message.functionSignature = functionSignature;
 
@@ -1436,14 +1510,22 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTransaction",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             ));
 
             // send a meta transaction, expect revert
             await expect(
               metaTransactionsHandler
                 .connect(deployer)
-                .executeMetaTransaction(rando.address, message.functionName, functionSignature, nonce, r, s, v)
+                .executeMetaTransaction(
+                  await rando.getAddress(),
+                  message.functionName,
+                  functionSignature,
+                  nonce,
+                  r,
+                  s,
+                  v
+                )
             ).to.revertedWith(RevertReasons.REENTRANCY_GUARD);
           });
         });
@@ -1454,7 +1536,12 @@ describe("IBosonMetaTransactionsHandler", function () {
           offerId = "1";
 
           // Create a valid seller
-          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await assistant.getAddress(),
+            ZeroAddress,
+            await assistant.getAddress()
+          );
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -1468,18 +1555,18 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Create a valid dispute resolver
           disputeResolver = mockDisputeResolver(
-            assistantDR.address,
-            adminDR.address,
+            await assistantDR.getAddress(),
+            await adminDR.getAddress(),
             clerkDR.address,
-            treasuryDR.address,
+            await treasuryDR.getAddress(),
             true
           );
           expect(disputeResolver.isValid()).is.true;
 
           //Create DisputeResolverFee array so offer creation will succeed
           disputeResolverFees = [
-            new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
-            new DisputeResolverFee(mockToken.address, "BosonToken", "0"),
+            new DisputeResolverFee(ZeroAddress, "Native", "0"),
+            new DisputeResolverFee(await mockToken.getAddress(), "BosonToken", "0"),
           ];
 
           // Make empty seller list, so every seller is allowed
@@ -1513,14 +1600,14 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Prepare the message
           message = {};
           message.nonce = parseInt(nonce);
-          message.contractAddress = exchangeHandler.address;
-          message.from = buyer.address;
+          message.contractAddress = await exchangeHandler.getAddress();
+          message.from = await buyer.getAddress();
           message.functionName = "commitToOffer(address,uint256)";
 
           // Deposit native currency to the same seller id
           await fundsHandler
             .connect(rando)
-            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+            .depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit });
         });
 
         afterEach(async function () {
@@ -1530,7 +1617,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         context("👉 ExchangeHandlerFacet 👉 commitToOffer()", async function () {
           beforeEach(async function () {
-            offer.exchangeToken = mockToken.address;
+            offer.exchangeToken = await mockToken.getAddress();
 
             // Check if domains are valid
             expect(offer.isValid()).is.true;
@@ -1538,15 +1625,15 @@ describe("IBosonMetaTransactionsHandler", function () {
             expect(offerDurations.isValid()).is.true;
 
             // top up seller's and buyer's account
-            await mockToken.mint(assistant.address, sellerDeposit);
-            await mockToken.mint(buyer.address, price);
+            await mockToken.mint(await assistant.getAddress(), sellerDeposit);
+            await mockToken.mint(await buyer.getAddress(), price);
 
             // approve protocol to transfer the tokens
             await mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
             await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
 
             // deposit to seller's pool
-            await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerDeposit);
+            await fundsHandler.connect(assistant).depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit);
 
             // Create the offer
             await offerHandler
@@ -1576,7 +1663,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // prepare validOfferDetails
             validOfferDetails = {
-              buyer: buyer.address,
+              buyer: await buyer.getAddress(),
               offerId: offer.id,
             };
 
@@ -1586,7 +1673,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Deposit native currency to the same seller id
             await fundsHandler
               .connect(rando)
-              .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+              .depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit });
           });
 
           it("Should emit MetaTransactionExecuted event and update state", async () => {
@@ -1596,7 +1683,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTxCommitToOffer",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Prepare the function signature
@@ -1606,13 +1693,13 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Expect that buyer has token balance matching the offer price.
-            const buyerBalanceBefore = await mockToken.balanceOf(buyer.address);
+            const buyerBalanceBefore = await mockToken.balanceOf(await buyer.getAddress());
             assert.equal(buyerBalanceBefore, price, "Buyer initial token balance mismatch");
 
             // send a meta transaction, check for event
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                buyer.address,
+                await buyer.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -1622,15 +1709,15 @@ describe("IBosonMetaTransactionsHandler", function () {
               )
             )
               .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-              .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+              .withArgs(await buyer.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
             // Expect that buyer (meta tx signer) has paid the tokens to commit to an offer.
-            const buyerBalanceAfter = await mockToken.balanceOf(buyer.address);
+            const buyerBalanceAfter = await mockToken.balanceOf(await buyer.getAddress());
             assert.equal(buyerBalanceAfter, "0", "Buyer final token balance mismatch");
 
             // Verify that nonce is used. Expect true.
             let expectedResult = true;
-            result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
+            result = await metaTransactionsHandler.connect(buyer).isUsedNonce(await buyer.getAddress(), nonce);
             assert.equal(result, expectedResult, "Nonce is unused");
           });
 
@@ -1650,7 +1737,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTxCommitToOffer",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Prepare the function signature
@@ -1662,7 +1749,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Execute meta transaction, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                buyer.address,
+                await buyer.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -1689,12 +1776,12 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxCommitToOffer",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Execute the meta transaction.
               await metaTransactionsHandler.executeMetaTransaction(
-                buyer.address,
+                await buyer.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -1706,7 +1793,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // Execute meta transaction again with the same nonce, expecting revert.
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -1719,7 +1806,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             it("Should fail when Signer and Signature do not match", async function () {
               // Prepare the message
-              message.from = rando.address;
+              message.from = await rando.getAddress();
 
               // Collect the signature components
               let { r, s, v } = await prepareDataSignatureParameters(
@@ -1727,13 +1814,13 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxCommitToOffer",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Execute meta transaction, expecting revert.
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -1773,7 +1860,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.exchangeDetails = validExchangeDetails;
 
             // Commit to offer
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
           });
 
           context("👉 ExchangeHandlerFacet 👉 cancelVoucher()", async function () {
@@ -1789,7 +1876,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxExchange",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Prepare the function signature
@@ -1800,7 +1887,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // send a meta transaction, check for event
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -1810,11 +1897,11 @@ describe("IBosonMetaTransactionsHandler", function () {
                 )
               )
                 .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-                .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+                .withArgs(await buyer.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
               // Verify that nonce is used. Expect true.
               let expectedResult = true;
-              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
+              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(await buyer.getAddress(), nonce);
               assert.equal(result, expectedResult, "Nonce is unused");
             });
 
@@ -1833,7 +1920,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxExchange",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Prepare the function signature
@@ -1844,7 +1931,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // Execute meta transaction, expecting revert.
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -1870,12 +1957,12 @@ describe("IBosonMetaTransactionsHandler", function () {
                   customTransactionType,
                   "MetaTxExchange",
                   message,
-                  metaTransactionsHandler.address
+                  await metaTransactionsHandler.getAddress()
                 );
 
                 // Execute the meta transaction.
                 await metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -1887,7 +1974,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 // Execute meta transaction again with the same nonce, expecting revert.
                 await expect(
                   metaTransactionsHandler.executeMetaTransaction(
-                    buyer.address,
+                    await buyer.getAddress(),
                     message.functionName,
                     functionSignature,
                     nonce,
@@ -1900,7 +1987,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               it("Should fail when Signer and Signature do not match", async function () {
                 // Prepare the message
-                message.from = rando.address;
+                message.from = await rando.getAddress();
 
                 // Collect the signature components
                 let { r, s, v } = await prepareDataSignatureParameters(
@@ -1908,13 +1995,13 @@ describe("IBosonMetaTransactionsHandler", function () {
                   customTransactionType,
                   "MetaTxExchange",
                   message,
-                  metaTransactionsHandler.address
+                  await metaTransactionsHandler.getAddress()
                 );
 
                 // Execute meta transaction, expecting revert.
                 await expect(
                   metaTransactionsHandler.executeMetaTransaction(
-                    buyer.address,
+                    await buyer.getAddress(),
                     message.functionName,
                     functionSignature,
                     nonce,
@@ -1943,7 +2030,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxExchange",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Prepare the function signature
@@ -1954,7 +2041,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // send a meta transaction, check for event
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -1964,11 +2051,11 @@ describe("IBosonMetaTransactionsHandler", function () {
                 )
               )
                 .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-                .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+                .withArgs(await buyer.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
               // Verify that nonce is used. Expect true.
               let expectedResult = true;
-              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
+              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(await buyer.getAddress(), nonce);
               assert.equal(result, expectedResult, "Nonce is unused");
             });
 
@@ -1987,7 +2074,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxExchange",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Prepare the function signature
@@ -1998,7 +2085,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // Execute meta transaction, expecting revert.
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2024,12 +2111,12 @@ describe("IBosonMetaTransactionsHandler", function () {
                   customTransactionType,
                   "MetaTxExchange",
                   message,
-                  metaTransactionsHandler.address
+                  await metaTransactionsHandler.getAddress()
                 );
 
                 // Execute the meta transaction.
                 await metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2041,7 +2128,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 // Execute meta transaction again with the same nonce, expecting revert.
                 await expect(
                   metaTransactionsHandler.executeMetaTransaction(
-                    buyer.address,
+                    await buyer.getAddress(),
                     message.functionName,
                     functionSignature,
                     nonce,
@@ -2054,7 +2141,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               it("Should fail when Signer and Signature do not match", async function () {
                 // Prepare the message
-                message.from = rando.address;
+                message.from = await rando.getAddress();
 
                 // Collect the signature components
                 let { r, s, v } = await prepareDataSignatureParameters(
@@ -2062,13 +2149,13 @@ describe("IBosonMetaTransactionsHandler", function () {
                   customTransactionType,
                   "MetaTxExchange",
                   message,
-                  metaTransactionsHandler.address
+                  await metaTransactionsHandler.getAddress()
                 );
 
                 // Execute meta transaction, expecting revert.
                 await expect(
                   metaTransactionsHandler.executeMetaTransaction(
-                    buyer.address,
+                    await buyer.getAddress(),
                     message.functionName,
                     functionSignature,
                     nonce,
@@ -2100,7 +2187,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxExchange",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Prepare the function signature
@@ -2111,7 +2198,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // send a meta transaction, check for event
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2121,7 +2208,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 )
               )
                 .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-                .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+                .withArgs(await buyer.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
               // Get the exchange state
               let response;
@@ -2131,7 +2218,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               // Verify that nonce is used. Expect true.
               let expectedResult = true;
-              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
+              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(await buyer.getAddress(), nonce);
               assert.equal(result, expectedResult, "Nonce is unused");
             });
 
@@ -2150,7 +2237,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxExchange",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Prepare the function signature
@@ -2161,7 +2248,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // Execute meta transaction, expecting revert.
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2187,12 +2274,12 @@ describe("IBosonMetaTransactionsHandler", function () {
                   customTransactionType,
                   "MetaTxExchange",
                   message,
-                  metaTransactionsHandler.address
+                  await metaTransactionsHandler.getAddress()
                 );
 
                 // Execute the meta transaction.
                 await metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2204,7 +2291,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 // Execute meta transaction again with the same nonce, expecting revert.
                 await expect(
                   metaTransactionsHandler.executeMetaTransaction(
-                    buyer.address,
+                    await buyer.getAddress(),
                     message.functionName,
                     functionSignature,
                     nonce,
@@ -2217,7 +2304,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               it("Should fail when Signer and Signature do not match", async function () {
                 // Prepare the message
-                message.from = rando.address;
+                message.from = await rando.getAddress();
 
                 // Collect the signature components
                 let { r, s, v } = await prepareDataSignatureParameters(
@@ -2225,13 +2312,13 @@ describe("IBosonMetaTransactionsHandler", function () {
                   customTransactionType,
                   "MetaTxExchange",
                   message,
-                  metaTransactionsHandler.address
+                  await metaTransactionsHandler.getAddress()
                 );
 
                 // Execute meta transaction, expecting revert.
                 await expect(
                   metaTransactionsHandler.executeMetaTransaction(
-                    buyer.address,
+                    await buyer.getAddress(),
                     message.functionName,
                     functionSignature,
                     nonce,
@@ -2265,7 +2352,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxExchange",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Prepare the function signature
@@ -2276,7 +2363,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // send a meta transaction, check for event
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2286,7 +2373,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 )
               )
                 .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-                .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+                .withArgs(await buyer.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
               // Get the dispute state
               let response;
@@ -2296,7 +2383,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               // Verify that nonce is used. Expect true.
               let expectedResult = true;
-              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
+              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(await buyer.getAddress(), nonce);
               assert.equal(result, expectedResult, "Nonce is unused");
             });
 
@@ -2315,7 +2402,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxExchange",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Prepare the function signature
@@ -2326,7 +2413,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // Execute meta transaction, expecting revert.
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2352,12 +2439,12 @@ describe("IBosonMetaTransactionsHandler", function () {
                   customTransactionType,
                   "MetaTxExchange",
                   message,
-                  metaTransactionsHandler.address
+                  await metaTransactionsHandler.getAddress()
                 );
 
                 // Execute the meta transaction.
                 await metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2369,7 +2456,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 // Execute meta transaction again with the same nonce, expecting revert.
                 await expect(
                   metaTransactionsHandler.executeMetaTransaction(
-                    buyer.address,
+                    await buyer.getAddress(),
                     message.functionName,
                     functionSignature,
                     nonce,
@@ -2382,7 +2469,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               it("Should fail when Signer and Signature do not match", async function () {
                 // Prepare the message
-                message.from = rando.address;
+                message.from = await rando.getAddress();
 
                 // Collect the signature components
                 let { r, s, v } = await prepareDataSignatureParameters(
@@ -2390,13 +2477,13 @@ describe("IBosonMetaTransactionsHandler", function () {
                   customTransactionType,
                   "MetaTxExchange",
                   message,
-                  metaTransactionsHandler.address
+                  await metaTransactionsHandler.getAddress()
                 );
 
                 // Execute meta transaction, expecting revert.
                 await expect(
                   metaTransactionsHandler.executeMetaTransaction(
-                    buyer.address,
+                    await buyer.getAddress(),
                     message.functionName,
                     functionSignature,
                     nonce,
@@ -2436,7 +2523,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // Prepare the message
               message.functionName = "raiseDispute(uint256)";
               message.exchangeDetails = validExchangeDetails;
-              message.from = buyer.address;
+              message.from = await buyer.getAddress();
 
               // Set time forward to the offer's voucherRedeemableFrom
               await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -2452,7 +2539,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxExchange",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Prepare the function signature
@@ -2463,7 +2550,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // send a meta transaction, check for event
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2473,7 +2560,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 )
               )
                 .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-                .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+                .withArgs(await buyer.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
               // Get the exchange state
               let response;
@@ -2483,7 +2570,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               // Verify that nonce is used. Expect true.
               let expectedResult = true;
-              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
+              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(await buyer.getAddress(), nonce);
               assert.equal(result, expectedResult, "Nonce is unused");
             });
 
@@ -2502,7 +2589,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxExchange",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Prepare the function signature
@@ -2513,7 +2600,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // Execute meta transaction, expecting revert.
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2539,12 +2626,12 @@ describe("IBosonMetaTransactionsHandler", function () {
                   customTransactionType,
                   "MetaTxExchange",
                   message,
-                  metaTransactionsHandler.address
+                  await metaTransactionsHandler.getAddress()
                 );
 
                 // Execute the meta transaction.
                 await metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2556,7 +2643,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 // Execute meta transaction again with the same nonce, expecting revert.
                 await expect(
                   metaTransactionsHandler.executeMetaTransaction(
-                    buyer.address,
+                    await buyer.getAddress(),
                     message.functionName,
                     functionSignature,
                     nonce,
@@ -2569,7 +2656,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               it("Should fail when Signer and Signature do not match", async function () {
                 // Prepare the message
-                message.from = rando.address;
+                message.from = await rando.getAddress();
 
                 // Collect the signature components
                 let { r, s, v } = await prepareDataSignatureParameters(
@@ -2577,13 +2664,13 @@ describe("IBosonMetaTransactionsHandler", function () {
                   customTransactionType,
                   "MetaTxExchange",
                   message,
-                  metaTransactionsHandler.address
+                  await metaTransactionsHandler.getAddress()
                 );
 
                 // Execute meta transaction, expecting revert.
                 await expect(
                   metaTransactionsHandler.executeMetaTransaction(
-                    buyer.address,
+                    await buyer.getAddress(),
                     message.functionName,
                     functionSignature,
                     nonce,
@@ -2617,7 +2704,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxExchange",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Prepare the function signature
@@ -2628,7 +2715,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // send a meta transaction, check for event
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2638,7 +2725,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 )
               )
                 .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-                .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+                .withArgs(await buyer.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
               // Get the dispute state
               let response;
@@ -2648,7 +2735,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               // Verify that nonce is used. Expect true.
               let expectedResult = true;
-              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
+              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(await buyer.getAddress(), nonce);
               assert.equal(result, expectedResult, "Nonce is unused");
             });
 
@@ -2667,7 +2754,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxExchange",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Prepare the function signature
@@ -2678,7 +2765,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // Execute meta transaction, expecting revert.
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2704,12 +2791,12 @@ describe("IBosonMetaTransactionsHandler", function () {
                   customTransactionType,
                   "MetaTxExchange",
                   message,
-                  metaTransactionsHandler.address
+                  await metaTransactionsHandler.getAddress()
                 );
 
                 // Execute the meta transaction.
                 await metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2721,7 +2808,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 // Execute meta transaction again with the same nonce, expecting revert.
                 await expect(
                   metaTransactionsHandler.executeMetaTransaction(
-                    buyer.address,
+                    await buyer.getAddress(),
                     message.functionName,
                     functionSignature,
                     nonce,
@@ -2734,7 +2821,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               it("Should fail when Signer and Signature do not match", async function () {
                 // Prepare the message
-                message.from = rando.address;
+                message.from = await rando.getAddress();
 
                 // Collect the signature components
                 let { r, s, v } = await prepareDataSignatureParameters(
@@ -2742,13 +2829,13 @@ describe("IBosonMetaTransactionsHandler", function () {
                   customTransactionType,
                   "MetaTxExchange",
                   message,
-                  metaTransactionsHandler.address
+                  await metaTransactionsHandler.getAddress()
                 );
 
                 // Execute meta transaction, expecting revert.
                 await expect(
                   metaTransactionsHandler.executeMetaTransaction(
-                    buyer.address,
+                    await buyer.getAddress(),
                     message.functionName,
                     functionSignature,
                     nonce,
@@ -2794,7 +2881,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customSignatureType2,
                 "Resolution",
                 message2,
-                disputeHandler.address
+                await disputeHandler.getAddress()
               );
 
               // prepare validDisputeResolutionDetails
@@ -2832,7 +2919,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // Prepare the message
               message.functionName = "resolveDispute(uint256,uint256,bytes32,bytes32,uint8)";
               message.disputeResolutionDetails = validDisputeResolutionDetails;
-              message.from = buyer.address;
+              message.from = await buyer.getAddress();
             });
 
             it("Should emit MetaTransactionExecuted event and update state", async () => {
@@ -2842,7 +2929,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxDisputeResolution",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Prepare the function signature
@@ -2857,7 +2944,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // send a meta transaction, check for event
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2867,7 +2954,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 )
               )
                 .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-                .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+                .withArgs(await buyer.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
               // Get the dispute state
               let response;
@@ -2877,7 +2964,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               // Verify that nonce is used. Expect true.
               let expectedResult = true;
-              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
+              result = await metaTransactionsHandler.connect(buyer).isUsedNonce(await buyer.getAddress(), nonce);
               assert.equal(result, expectedResult, "Nonce is unused");
             });
 
@@ -2903,7 +2990,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 customTransactionType,
                 "MetaTxDisputeResolution",
                 message,
-                metaTransactionsHandler.address
+                await metaTransactionsHandler.getAddress()
               );
 
               // Prepare the function signature
@@ -2918,7 +3005,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // Execute meta transaction, expecting revert.
               await expect(
                 metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2948,12 +3035,12 @@ describe("IBosonMetaTransactionsHandler", function () {
                   customTransactionType,
                   "MetaTxDisputeResolution",
                   message,
-                  metaTransactionsHandler.address
+                  await metaTransactionsHandler.getAddress()
                 );
 
                 // Execute the meta transaction.
                 await metaTransactionsHandler.executeMetaTransaction(
-                  buyer.address,
+                  await buyer.getAddress(),
                   message.functionName,
                   functionSignature,
                   nonce,
@@ -2965,7 +3052,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 // Execute meta transaction again with the same nonce, expecting revert.
                 await expect(
                   metaTransactionsHandler.executeMetaTransaction(
-                    buyer.address,
+                    await buyer.getAddress(),
                     message.functionName,
                     functionSignature,
                     nonce,
@@ -2978,7 +3065,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               it("Should fail when Signer and Signature do not match", async function () {
                 // Prepare the message
-                message.from = rando.address;
+                message.from = await rando.getAddress();
 
                 // Collect the signature components
                 let { r, s, v } = await prepareDataSignatureParameters(
@@ -2986,13 +3073,13 @@ describe("IBosonMetaTransactionsHandler", function () {
                   customTransactionType,
                   "MetaTxDisputeResolution",
                   message,
-                  metaTransactionsHandler.address
+                  await metaTransactionsHandler.getAddress()
                 );
 
                 // Execute meta transaction, expecting revert.
                 await expect(
                   metaTransactionsHandler.executeMetaTransaction(
-                    buyer.address,
+                    await buyer.getAddress(),
                     message.functionName,
                     functionSignature,
                     nonce,
@@ -3013,7 +3100,12 @@ describe("IBosonMetaTransactionsHandler", function () {
           offerId = "1";
 
           // Create a valid seller
-          seller = mockSeller(assistant.address, assistant.address, ethers.constants.AddressZero, assistant.address);
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await assistant.getAddress(),
+            ZeroAddress,
+            await assistant.getAddress()
+          );
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -3028,16 +3120,16 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Create a valid dispute resolver
           disputeResolver = mockDisputeResolver(
-            assistantDR.address,
-            adminDR.address,
+            await assistantDR.getAddress(),
+            await adminDR.getAddress(),
             clerkDR.address,
-            treasuryDR.address,
+            await treasuryDR.getAddress(),
             true
           );
           expect(disputeResolver.isValid()).is.true;
 
           //Create DisputeResolverFee array so offer creation will succeed
-          disputeResolverFees = [new DisputeResolverFee(mockToken.address, "mockToken", "0")];
+          disputeResolverFees = [new DisputeResolverFee(await mockToken.getAddress(), "mockToken", "0")];
 
           // Make empty seller list, so every seller is allowed
           sellerAllowList = [];
@@ -3049,7 +3141,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Valid offer domains
           ({ offer, offerDates, offerDurations } = await mockOffer());
-          offer.exchangeToken = mockToken.address;
+          offer.exchangeToken = await mockToken.getAddress();
 
           // Check if domains are valid
           expect(offer.isValid()).is.true;
@@ -3062,15 +3154,15 @@ describe("IBosonMetaTransactionsHandler", function () {
           voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
 
           // top up seller's and buyer's account
-          await mockToken.mint(assistant.address, sellerDeposit);
-          await mockToken.mint(buyer.address, price);
+          await mockToken.mint(await assistant.getAddress(), sellerDeposit);
+          await mockToken.mint(await buyer.getAddress(), price);
 
           // approve protocol to transfer the tokens
           await mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
           await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
 
           // deposit to seller's pool
-          await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerDeposit);
+          await fundsHandler.connect(assistant).depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit);
 
           // Prepare the function signature for the facet function.
           functionSignature = offerHandler.interface.encodeFunctionData("createOffer", [
@@ -3097,8 +3189,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Prepare the message
           message = {};
           message.nonce = parseInt(nonce);
-          message.from = assistant.address;
-          message.contractAddress = offerHandler.address;
+          message.from = await assistant.getAddress();
+          message.contractAddress = await offerHandler.getAddress();
           message.functionName =
             "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256)";
           message.functionSignature = functionSignature;
@@ -3116,13 +3208,13 @@ describe("IBosonMetaTransactionsHandler", function () {
             customTransactionType,
             "MetaTransaction",
             message,
-            metaTransactionsHandler.address
+            await metaTransactionsHandler.getAddress()
           );
 
           // send a meta transaction, check for event
           await expect(
             metaTransactionsHandler.executeMetaTransaction(
-              assistant.address,
+              await assistant.getAddress(),
               message.functionName,
               functionSignature,
               nonce,
@@ -3132,18 +3224,18 @@ describe("IBosonMetaTransactionsHandler", function () {
             )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-            .withArgs(assistant.address, deployer.address, message.functionName, nonce);
+            .withArgs(await assistant.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
           // Verify that nonce is used. Expect true.
           let expectedResult = true;
-          result = await metaTransactionsHandler.connect(assistant).isUsedNonce(assistant.address, nonce);
+          result = await metaTransactionsHandler.connect(assistant).isUsedNonce(await assistant.getAddress(), nonce);
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
         it("does not modify revert reasons", async function () {
           // Reverse the from and until dates
-          offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
-          offerDates.validUntil = ethers.BigNumber.from(Date.now()).toString(); // now
+          offerDates.validFrom = (BigInt(Date.now()) + oneMonth * 6n).toString(); // 6 months from now
+          offerDates.validUntil = BigInt(Date.now()).toString(); // now
 
           // Prepare the function signature for the facet function.
           functionSignature = offerHandler.interface.encodeFunctionData("createOffer", [
@@ -3163,13 +3255,13 @@ describe("IBosonMetaTransactionsHandler", function () {
             customTransactionType,
             "MetaTransaction",
             message,
-            metaTransactionsHandler.address
+            await metaTransactionsHandler.getAddress()
           );
 
           // Execute meta transaction, expecting revert.
           await expect(
             metaTransactionsHandler.executeMetaTransaction(
-              assistant.address,
+              await assistant.getAddress(),
               message.functionName,
               functionSignature,
               nonce,
@@ -3188,12 +3280,12 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTransaction",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Execute the meta transaction.
             await metaTransactionsHandler.executeMetaTransaction(
-              assistant.address,
+              await assistant.getAddress(),
               message.functionName,
               functionSignature,
               nonce,
@@ -3205,7 +3297,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Execute meta transaction again with the same nonce, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                assistant.address,
+                await assistant.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -3218,7 +3310,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           it("Should fail when Signer and Signature do not match", async function () {
             // Prepare the message
-            message.from = rando.address;
+            message.from = await rando.getAddress();
 
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(
@@ -3226,13 +3318,13 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTransaction",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Execute meta transaction, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                assistant.address,
+                await assistant.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -3251,7 +3343,12 @@ describe("IBosonMetaTransactionsHandler", function () {
           exchangeId = "1";
 
           // Create a valid seller
-          seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await admin.getAddress(),
+            clerk.address,
+            await treasury.getAddress()
+          );
           expect(seller.isValid()).is.true;
 
           // VoucherInitValues
@@ -3265,18 +3362,18 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Create a valid dispute resolver
           disputeResolver = mockDisputeResolver(
-            assistantDR.address,
-            adminDR.address,
+            await assistantDR.getAddress(),
+            await adminDR.getAddress(),
             clerkDR.address,
-            treasuryDR.address,
+            await treasuryDR.getAddress(),
             true
           );
           expect(disputeResolver.isValid()).is.true;
 
           //Create DisputeResolverFee array so offer creation will succeed
           disputeResolverFees = [
-            new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
-            new DisputeResolverFee(mockToken.address, "mockToken", "0"),
+            new DisputeResolverFee(ZeroAddress, "Native", "0"),
+            new DisputeResolverFee(await mockToken.getAddress(), "mockToken", "0"),
           ];
 
           buyerId = accountId.next().value;
@@ -3294,7 +3391,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           offerNative = offer;
           offerToken = offerNative.clone();
           offerToken.id = "2";
-          offerToken.exchangeToken = mockToken.address;
+          offerToken.exchangeToken = await mockToken.getAddress();
 
           price = offer.price;
           sellerDeposit = offer.sellerDeposit;
@@ -3315,24 +3412,24 @@ describe("IBosonMetaTransactionsHandler", function () {
           ]);
 
           // top up seller's and buyer's account
-          await mockToken.mint(assistant.address, sellerDeposit);
-          await mockToken.mint(buyer.address, price);
+          await mockToken.mint(await assistant.getAddress(), sellerDeposit);
+          await mockToken.mint(await buyer.getAddress(), price);
 
           // approve protocol to transfer the tokens
           await mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
           await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
 
           // deposit to seller's pool
-          await fundsHandler.connect(assistant).depositFunds(seller.id, mockToken.address, sellerDeposit);
-          await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, {
+          await fundsHandler.connect(assistant).depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit);
+          await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, sellerDeposit, {
             value: sellerDeposit,
           });
 
           // commit to both offers
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
           await exchangeHandler
             .connect(buyer)
-            .commitToOffer(buyer.address, offerNative.id, { value: offerNative.price });
+            .commitToOffer(await buyer.getAddress(), offerNative.id, { value: offerNative.price });
 
           // cancel the voucher, so both seller and buyer have something to withdraw
           await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
@@ -3340,11 +3437,11 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // expected payoffs - they are the same for token and native currency
           // buyer: price - buyerCancelPenalty
-          buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
+          buyerPayoff = (BigInt(offerToken.price) - BigInt(offerToken.buyerCancelPenalty)).toString();
 
           // prepare validFundDetails
-          tokenListBuyer = [mockToken.address, ethers.constants.AddressZero];
-          tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("2").toString()];
+          tokenListBuyer = [await mockToken.getAddress(), ZeroAddress];
+          tokenAmountsBuyer = [buyerPayoff.toString(), (BigInt(buyerPayoff) / 2n).toString()];
           validFundDetails = {
             entityId: buyerId,
             tokenList: tokenListBuyer,
@@ -3354,10 +3451,10 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Prepare the message
           message = {};
           message.nonce = parseInt(nonce);
-          message.contractAddress = fundsHandler.address;
+          message.contractAddress = await fundsHandler.getAddress();
           message.functionName = "withdrawFunds(uint256,address[],uint256[])";
           message.fundDetails = validFundDetails;
-          message.from = buyer.address;
+          message.from = await buyer.getAddress();
 
           // Set the fund Type
           fundType = [
@@ -3392,18 +3489,15 @@ describe("IBosonMetaTransactionsHandler", function () {
             availableFundsAddresses = [await mockToken.getAddress(), ZeroAddress];
 
             // Read on chain state
-<<<<<<< HEAD
-            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-            buyerBalanceBefore = await mockToken.balanceOf(buyer.address);
-=======
-            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
             buyerBalanceBefore = await mockToken.balanceOf(await buyer.getAddress());
->>>>>>> 1b3488e6 (Remediate tests on MetaTx and ExchangeHandler)
 
             // Chain state should match the expected available funds before the withdrawal
             expectedBuyerAvailableFunds = new FundsList([
-              new Funds(mockToken.address, "Foreign20", buyerPayoff),
-              new Funds(ethers.constants.AddressZero, "Native currency", buyerPayoff),
+              new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
+              new Funds(ZeroAddress, "Native currency", buyerPayoff),
             ]);
             expect(buyerAvailableFunds).to.eql(
               expectedBuyerAvailableFunds,
@@ -3418,7 +3512,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTxFund",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Prepare the function signature
@@ -3431,7 +3525,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Withdraw funds. Send a meta transaction, check for event.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                buyer.address,
+                await buyer.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -3441,10 +3535,12 @@ describe("IBosonMetaTransactionsHandler", function () {
               )
             )
               .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-              .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+              .withArgs(await buyer.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
             // Read on chain state
-            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
             buyerBalanceAfter = await mockToken.balanceOf(await buyer.getAddress());
 
             // Chain state should match the expected available funds after the withdrawal
@@ -3459,11 +3555,11 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Token balance is increased for the buyer payoff
-            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore.add(buyerPayoff), "Buyer token balance mismatch");
+            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore + BigInt(buyerPayoff), "Buyer token balance mismatch");
 
             // Verify that nonce is used. Expect true.
             let expectedResult = true;
-            result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
+            result = await metaTransactionsHandler.connect(buyer).isUsedNonce(await buyer.getAddress(), nonce);
             assert.equal(result, expectedResult, "Nonce is unused");
           });
 
@@ -3483,7 +3579,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTxFund",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Prepare the function signature
@@ -3496,7 +3592,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Withdraw funds. Send a meta transaction, check for event.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                buyer.address,
+                await buyer.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -3506,10 +3602,12 @@ describe("IBosonMetaTransactionsHandler", function () {
               )
             )
               .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-              .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+              .withArgs(await buyer.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
             // Read on chain state
-            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses));
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
             buyerBalanceAfter = await mockToken.balanceOf(await buyer.getAddress());
 
             // Chain state should match the expected available funds after the withdrawal
@@ -3525,11 +3623,11 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Token balance is increased for the buyer payoff
-            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore.add(buyerPayoff), "Buyer token balance mismatch");
+            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore + BigInt(buyerPayoff), "Buyer token balance mismatch");
 
             // Verify that nonce is used. Expect true.
             let expectedResult = true;
-            result = await metaTransactionsHandler.connect(buyer).isUsedNonce(buyer.address, nonce);
+            result = await metaTransactionsHandler.connect(buyer).isUsedNonce(await buyer.getAddress(), nonce);
             assert.equal(result, expectedResult, "Nonce is unused");
           });
 
@@ -3537,7 +3635,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Set token address to boson token
             validFundDetails = {
               entityId: buyerId,
-              tokenList: [bosonToken.address],
+              tokenList: [await bosonToken.getAddress()],
               tokenAmounts: [buyerPayoff],
             };
 
@@ -3550,7 +3648,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTxFund",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Prepare the function signature
@@ -3563,7 +3661,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Execute meta transaction, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                buyer.address,
+                await buyer.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -3592,12 +3690,12 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTxFund",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Execute the meta transaction.
             await metaTransactionsHandler.executeMetaTransaction(
-              buyer.address,
+              await buyer.getAddress(),
               message.functionName,
               functionSignature,
               nonce,
@@ -3609,7 +3707,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Execute meta transaction again with the same nonce, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                buyer.address,
+                await buyer.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,
@@ -3622,7 +3720,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           it("Should fail when Signer and Signature do not match", async function () {
             // Prepare the message
-            message.from = rando.address;
+            message.from = await rando.getAddress();
 
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(
@@ -3630,13 +3728,13 @@ describe("IBosonMetaTransactionsHandler", function () {
               customTransactionType,
               "MetaTxFund",
               message,
-              metaTransactionsHandler.address
+              await metaTransactionsHandler.getAddress()
             );
 
             // Execute meta transaction, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTransaction(
-                buyer.address,
+                await buyer.getAddress(),
                 message.functionName,
                 functionSignature,
                 nonce,

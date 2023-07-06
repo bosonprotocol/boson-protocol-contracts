@@ -42,6 +42,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setBuyerEscalationDepositPercentage(_fees.buyerEscalationDepositPercentage);
         setMaxTotalOfferFeePercentage(_limits.maxTotalOfferFeePercentage);
         setMaxRoyaltyPecentage(_limits.maxRoyaltyPecentage);
+        setMinResolutionPeriod(_limits.minResolutionPeriod);
         setMaxResolutionPeriod(_limits.maxResolutionPeriod);
         setMinDisputePeriod(_limits.minDisputePeriod);
 
@@ -405,6 +406,34 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getAuthTokenContract(AuthTokenType _authTokenType) external view returns (address) {
         return protocolLookups().authTokenContracts[_authTokenType];
+    }
+
+    /**
+     * @notice Sets the minimum resolution period a seller can specify.
+     *
+     * Emits a MinResolutionPeriodChanged event.
+     *
+     * Reverts if _minResolutionPeriod is zero.
+     *
+     * @dev Caller must have ADMIN role.
+     *
+     * @param _minResolutionPeriod - the minimum resolution period that a {BosonTypes.Seller} can specify
+     */
+    function setMinResolutionPeriod(uint256 _minResolutionPeriod) public override onlyRole(ADMIN) nonReentrant {
+        // Make sure _maxResolutionPeriod is greater than 0
+        checkNonZero(_minResolutionPeriod);
+
+        protocolLimits().minResolutionPeriod = _minResolutionPeriod;
+        emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
+    }
+
+    /**
+     * @notice Gets the minimum resolution period a seller can specify.
+     *
+     * @return the minimum resolution period that a {BosonTypes.Seller} can specify
+     */
+    function getMinResolutionPeriod() external view override returns (uint256) {
+        return protocolLimits().minResolutionPeriod;
     }
 
     /**

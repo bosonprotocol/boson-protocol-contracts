@@ -31,6 +31,7 @@ describe("IBosonConfigHandler", function () {
     buyerEscalationDepositPercentage,
     maxTotalOfferFeePercentage,
     maxRoyaltyPecentage,
+    minResolutionPeriod,
     maxResolutionPeriod,
     minDisputePeriod,
     maxPremintedVouchers;
@@ -68,6 +69,7 @@ describe("IBosonConfigHandler", function () {
     buyerEscalationDepositPercentage = 100;
     maxTotalOfferFeePercentage = 4000; // 40%
     maxRoyaltyPecentage = 1000; // 10%
+    minResolutionPeriod = oneWeek;
     maxResolutionPeriod = oneMonth;
     minDisputePeriod = oneWeek;
     maxPremintedVouchers = 10000;
@@ -112,6 +114,8 @@ describe("IBosonConfigHandler", function () {
             maxAllowedSellers,
             maxTotalOfferFeePercentage,
             maxRoyaltyPecentage,
+
+            minResolutionPeriod,
             maxResolutionPeriod,
             minDisputePeriod,
             maxPremintedVouchers,
@@ -149,7 +153,6 @@ describe("IBosonConfigHandler", function () {
 
         await expect(cutTransaction)
           .to.emit(configHandler, "BeaconProxyAddressChanged")
-
           .withArgs(await proxy.getAddress(), await deployer.getAddress());
 
         await expect(cutTransaction)
@@ -208,6 +211,7 @@ describe("IBosonConfigHandler", function () {
           maxAllowedSellers,
           maxTotalOfferFeePercentage,
           maxRoyaltyPecentage,
+          minResolutionPeriod,
           maxResolutionPeriod,
           minDisputePeriod,
           maxPremintedVouchers,
@@ -893,6 +897,10 @@ describe("IBosonConfigHandler", function () {
         expect(await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.Custom)).to.equal(
           ZeroAddress,
           "Invalid auth token contract address"
+        );
+        expect(await configHandler.connect(rando).getMinResolutionPeriod()).to.equal(
+          minResolutionPeriod,
+          "Invalid min resolution period"
         );
         expect(await configHandler.connect(rando).getMaxResolutionPeriod()).to.equal(
           maxResolutionPeriod,

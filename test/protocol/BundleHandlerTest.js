@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { ZeroAddress, getContractFactory, MaxUint256 } = ethers;
 const { expect, assert } = require("chai");
 
 const Bundle = require("../../scripts/domain/Bundle");
@@ -95,7 +96,7 @@ describe("IBosonBundleHandler", function () {
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
-    clerk = clerkDR = { address: ethers.constants.AddressZero };
+    clerk = clerkDR = { address: ZeroAddress };
 
     // Deploy the mock tokens
     [bosonToken] = await deployMockTokens();
@@ -130,7 +131,12 @@ describe("IBosonBundleHandler", function () {
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        clerk.address,
+        await treasury.getAddress()
+      );
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
@@ -145,16 +151,16 @@ describe("IBosonBundleHandler", function () {
 
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
-        assistantDR.address,
-        adminDR.address,
+        await assistantDR.getAddress(),
+        await adminDR.getAddress(),
         clerkDR.address,
-        treasuryDR.address,
+        await treasuryDR.getAddress(),
         true
       );
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+      disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
 
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
@@ -167,11 +173,11 @@ describe("IBosonBundleHandler", function () {
       // create 5 twins
       for (let i = 0; i < 5; i++) {
         // Create a valid twin.
-        twin = mockTwin(bosonToken.address);
+        twin = mockTwin(await bosonToken.getAddress());
         expect(twin.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
+        await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
         // Create a twin.
         await twinHandler.connect(assistant).createTwin(twin);
@@ -201,7 +207,7 @@ describe("IBosonBundleHandler", function () {
       bundleStruct = bundle.toStruct();
 
       // initialize bundleHandler
-      bundleHandlerFacet_Factory = await ethers.getContractFactory("BundleHandlerFacet");
+      bundleHandlerFacet_Factory = await getContractFactory("BundleHandlerFacet");
     });
 
     afterEach(async function () {
@@ -282,19 +288,19 @@ describe("IBosonBundleHandler", function () {
         expect(bundleInstance.isValid()).to.be.true;
 
         //Get seller id by assistant which created the bundle
-        const [, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(assistant.address);
+        const [, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(await assistant.getAddress());
         let expectedSellerId = sellerStruct.id;
 
         assert.equal(event.bundleId.toString(), nextBundleId, "Bundle Id is incorrect");
         assert.equal(event.sellerId.toString(), expectedSellerId.toString(), "Seller Id is incorrect");
-        assert.equal(event.executedBy.toString(), assistant.address, "Executed by is incorrect");
+        assert.equal(event.executedBy.toString(), await assistant.getAddress(), "Executed by is incorrect");
         assert.equal(bundleInstance.toStruct().toString(), bundleStruct.toString(), "Bundle struct is incorrect");
       });
 
       it("If sum of offers' quantities is more than maxUint256, total quantity is maxUint256", async function () {
         // create two offers with close to unlimited supply
         const newOffer = offer.clone();
-        newOffer.quantityAvailable = ethers.constants.MaxUint256.div(10).mul(9).toString();
+        newOffer.quantityAvailable = ((MaxUint256 / 10n) * 9n).toString();
         const newOffer2 = newOffer.clone();
         const newOfferId = "6";
         const newOfferId2 = "7";
@@ -308,12 +314,12 @@ describe("IBosonBundleHandler", function () {
           .createOffer(newOffer2, offerDates, offerDurations, disputeResolverId, agentId);
 
         // create a twin with almost unlimited supply
-        twin = mockTwin(bosonToken.address);
-        twin.supplyAvailable = ethers.constants.MaxUint256.sub(1).toString();
+        twin = mockTwin(await bosonToken.getAddress());
+        twin.supplyAvailable = MaxUint256 - 1n;
         expect(twin.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(assistant).approve(twinHandler.address, twin.supplyAvailable); // approving the twin handler
+        await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), twin.supplyAvailable); // approving the twin handler
 
         // Create a twin with id 6
         await twinHandler.connect(assistant).createTwin(twin);
@@ -325,12 +331,12 @@ describe("IBosonBundleHandler", function () {
         );
 
         // create a twin with unlimited supply
-        twin = mockTwin(bosonToken.address);
-        twin.supplyAvailable = ethers.constants.MaxUint256.toString();
+        twin = mockTwin(await bosonToken.getAddress());
+        twin.supplyAvailable = MaxUint256;
         expect(twin.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(assistant).approve(twinHandler.address, twin.supplyAvailable); // approving the twin handler
+        await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), twin.supplyAvailable); // approving the twin handler
 
         // Create a twin with id 7
         await twinHandler.connect(assistant).createTwin(twin);
@@ -386,7 +392,12 @@ describe("IBosonBundleHandler", function () {
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
           let expectedNewOfferId = "6";
-          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
+          seller = mockSeller(
+            await rando.getAddress(),
+            await rando.getAddress(),
+            ZeroAddress,
+            await rando.getAddress()
+          );
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           const tx = await offerHandler
@@ -426,10 +437,15 @@ describe("IBosonBundleHandler", function () {
         it("Caller is not the seller of all twins", async function () {
           // create another seller and a twin
           let expectedNewTwinId = "6";
-          seller = mockSeller(rando.address, rando.address, ethers.constants.AddressZero, rando.address);
+          seller = mockSeller(
+            await rando.getAddress(),
+            await rando.getAddress(),
+            ZeroAddress,
+            await rando.getAddress()
+          );
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
-          await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler
+          await bosonToken.connect(rando).approve(await twinHandler.getAddress(), 1); // approving the twin handler
           const tx = await twinHandler.connect(rando).createTwin(twin); // creates a twin with id 6
           const txReceipt = await tx.wait();
           const event = getEvent(txReceipt, twinHandler, "TwinCreated");
@@ -499,11 +515,13 @@ describe("IBosonBundleHandler", function () {
           // Deposit seller funds so the commit will succeed
           await fundsHandler
             .connect(assistant)
-            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+            .depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit });
 
           // Commit to an offer
           let offerIdToCommit = bundle.offerIds[0];
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit, { value: price });
+          await exchangeHandler
+            .connect(buyer)
+            .commitToOffer(await buyer.getAddress(), offerIdToCommit, { value: price });
 
           // Attempt to Create a bundle, expecting revert
           await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
@@ -544,7 +562,7 @@ describe("IBosonBundleHandler", function () {
 
         it("Offers quantity is unlimited but twin supply is not", async function () {
           const newOffer = offer.clone();
-          newOffer.quantityAvailable = ethers.constants.MaxUint256.toString();
+          newOffer.quantityAvailable = MaxUint256;
           let expectedNewOfferId = "6";
 
           await offerHandler
@@ -689,7 +707,7 @@ describe("IBosonBundleHandler", function () {
     context("👉 getBundleIdByTwin()", async function () {
       beforeEach(async function () {
         // Create a twin with id 6
-        await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
+        await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
         await twinHandler.connect(assistant).createTwin(twin);
 
         // Create a bundle

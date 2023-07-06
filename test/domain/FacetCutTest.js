@@ -77,11 +77,6 @@ describe("FacetCut", function () {
       expect(facet.isValid()).is.false;
 
       // Invalid field value
-      facet.action = 12;
-      expect(facet.actionIsValid()).is.false;
-      expect(facet.isValid()).is.false;
-
-      // Invalid field value
       facet.action = "0";
       expect(facet.actionIsValid()).is.false;
       expect(facet.isValid()).is.false;

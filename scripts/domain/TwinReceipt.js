@@ -48,7 +48,7 @@ class TwinReceipt {
       tokenId: tokenId.toString(),
       amount: amount.toString(),
       tokenAddress: tokenAddress,
-      tokenType,
+      tokenType: Number(tokenType),
     });
   }
 

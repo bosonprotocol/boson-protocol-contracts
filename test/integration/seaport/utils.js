@@ -1,4 +1,4 @@
-const { BigNumber, constants, utils } = require("ethers");
+const { BigNumber, utils, ZeroAddress } = require("ethers");
 
 const getOfferOrConsiderationItem = function (
   itemType = 0,
@@ -46,9 +46,9 @@ const calculateOrderHash = (orderComponents) => {
                   offerItemTypeHash.slice(2),
                   offerItem.itemType.toString().padStart(64, "0"),
                   offerItem.token.slice(2).padStart(64, "0"),
-                  BigNumber.from(offerItem.identifierOrCriteria).toHexString().slice(2).padStart(64, "0"),
-                  BigNumber.from(offerItem.startAmount).toHexString().slice(2).padStart(64, "0"),
-                  BigNumber.from(offerItem.endAmount).toHexString().slice(2).padStart(64, "0"),
+                  BigNumber.from(offerItem.identifierOrCriteria).toString(16).slice(2).padStart(64, "0"),
+                  BigNumber.from(offerItem.startAmount).toString(16).slice(2).padStart(64, "0"),
+                  BigNumber.from(offerItem.endAmount).toString(16).slice(2).padStart(64, "0"),
                 ].join("")
             )
             .slice(2);
@@ -67,9 +67,9 @@ const calculateOrderHash = (orderComponents) => {
                   considerationItemTypeHash.slice(2),
                   considerationItem.itemType.toString().padStart(64, "0"),
                   considerationItem.token.slice(2).padStart(64, "0"),
-                  BigNumber.from(considerationItem.identifierOrCriteria).toHexString().slice(2).padStart(64, "0"),
-                  BigNumber.from(considerationItem.startAmount).toHexString().slice(2).padStart(64, "0"),
-                  BigNumber.from(considerationItem.endAmount).toHexString().slice(2).padStart(64, "0"),
+                  BigNumber.from(considerationItem.identifierOrCriteria).toString(16).slice(2).padStart(64, "0"),
+                  BigNumber.from(considerationItem.startAmount).toString(16).slice(2).padStart(64, "0"),
+                  BigNumber.from(considerationItem.endAmount).toString(16).slice(2).padStart(64, "0"),
                   considerationItem.recipient.slice(2).padStart(64, "0"),
                 ].join("")
             )
@@ -87,12 +87,12 @@ const calculateOrderHash = (orderComponents) => {
         offerHash.slice(2),
         considerationHash.slice(2),
         orderComponents.orderType.toString().padStart(64, "0"),
-        BigNumber.from(orderComponents.startTime).toHexString().slice(2).padStart(64, "0"),
-        BigNumber.from(orderComponents.endTime).toHexString().slice(2).padStart(64, "0"),
+        BigNumber.from(orderComponents.startTime).toString(16).slice(2).padStart(64, "0"),
+        BigNumber.from(orderComponents.endTime).toString(16).slice(2).padStart(64, "0"),
         orderComponents.zoneHash.slice(2),
-        BigNumber.from(orderComponents.salt).toHexString().slice(2).padStart(64, "0"),
+        BigNumber.from(orderComponents.salt).toString(16).slice(2).padStart(64, "0"),
         orderComponents.conduitKey.slice(2).padStart(64, "0"),
-        BigNumber.from(orderComponents.counter).toHexString().slice(2).padStart(64, "0"),
+        BigNumber.from(orderComponents.counter).toString(16).slice(2).padStart(64, "0"),
       ].join("")
   );
 

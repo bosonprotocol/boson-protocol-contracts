@@ -114,6 +114,7 @@ contract SellerHandlerFacet is SellerBase {
 
         // Clean old seller pending update data if exists
         delete lookups.pendingAddressUpdatesBySeller[_seller.id];
+        delete lookups.pendingAuthTokenUpdatesBySeller[_seller.id];
 
         bool needsApproval;
         (, Seller storage sellerPendingUpdate, AuthToken storage authTokenPendingUpdate) = fetchSellerPendingUpdate(
