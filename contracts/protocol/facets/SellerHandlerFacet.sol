@@ -114,6 +114,7 @@ contract SellerHandlerFacet is SellerBase {
 
         // Clean old seller pending update data if exists
         delete lookups.pendingAddressUpdatesBySeller[_seller.id];
+        delete lookups.pendingAuthTokenUpdatesBySeller[_seller.id];
 
         bool needsApproval;
         (, Seller storage sellerPendingUpdate, AuthToken storage authTokenPendingUpdate) = fetchSellerPendingUpdate(
@@ -270,7 +271,13 @@ contract SellerHandlerFacet is SellerBase {
                 seller.assistant = sender;
 
                 // Transfer ownership of voucher contract to new assistant
-                IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender);
+                IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender); // default voucher contract
+                Collection[] storage sellersAdditionalCollections = lookups.additionalCollections[_sellerId];
+                uint256 collectionCount = sellersAdditionalCollections.length;
+                for (i = 0; i < collectionCount; i++) {
+                    // Additional collections (if they exist)
+                    IBosonVoucher(sellersAdditionalCollections[i].collectionAddress).transferOwnership(sender);
+                }
 
                 // Store new seller id by assistant mapping
                 lookups.sellerIdByAssistant[sender] = _sellerId;
@@ -328,6 +335,41 @@ contract SellerHandlerFacet is SellerBase {
                 msgSender()
             );
         }
+    }
+
+    /**
+     * @notice Creates a new seller collection.
+     *
+     * Emits a CollectionCreated event if successful.
+     *
+     *  Reverts if:
+     *  - The offers region of protocol is paused
+     *  - Caller is not the seller assistant
+     *
+     * @param _externalId - external collection id
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
+     */
+    function createNewCollection(
+        string calldata _externalId,
+        VoucherInitValues calldata _voucherInitValues
+    ) external sellersNotPaused {
+        address assistant = msgSender();
+
+        (bool exists, uint256 sellerId) = getSellerIdByAssistant(assistant);
+        require(exists, NO_SUCH_SELLER);
+
+        Collection[] storage sellersAdditionalCollections = protocolLookups().additionalCollections[sellerId];
+        uint256 collectionIndex = sellersAdditionalCollections.length + 1; // 0 is reserved for the original collection
+
+        // Create clone and store its address to additionalCollections
+        address voucherCloneAddress = cloneBosonVoucher(sellerId, collectionIndex, assistant, _voucherInitValues);
+
+        // Store collection details
+        Collection storage newCollection = sellersAdditionalCollections.push();
+        newCollection.collectionAddress = voucherCloneAddress;
+        newCollection.externalId = _externalId;
+
+        emit CollectionCreated(sellerId, collectionIndex, voucherCloneAddress, _externalId, assistant);
     }
 
     /**
@@ -393,6 +435,20 @@ contract SellerHandlerFacet is SellerBase {
         if (exists) {
             return fetchSeller(sellerId);
         }
+    }
+
+    /**
+     * @notice Gets the details about a seller's collections.
+     *
+     * @param _sellerId - the id of the seller to check
+     * @return defaultVoucherAddress - the address of the default voucher contract for the seller
+     * @return additionalCollections - an array of additional collections that the seller has created
+     */
+    function getSellersCollections(
+        uint256 _sellerId
+    ) external view returns (address defaultVoucherAddress, Collection[] memory additionalCollections) {
+        ProtocolLib.ProtocolLookups storage pl = protocolLookups();
+        return (pl.cloneAddress[_sellerId], pl.additionalCollections[_sellerId]);
     }
 
     /**

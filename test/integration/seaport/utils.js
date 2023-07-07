@@ -1,8 +1,8 @@
-const { BigNumber, constants, utils } = require("ethers");
+const { BigNumber, utils, ZeroAddress } = require("ethers");
 
 const getOfferOrConsiderationItem = function (
   itemType = 0,
-  token = constants.AddressZero,
+  token = ZeroAddress,
   identifierOrCriteria = 0,
   startAmount = 1,
   endAmount = 1,

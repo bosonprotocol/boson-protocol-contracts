@@ -24,10 +24,8 @@ interface IBosonBundleHandler is IBosonBundleEvents {
      * - Any of the offers belongs to different seller
      * - Any of the offers does not exist
      * - Offer exists in a different bundle
-     * - Number of offers exceeds maximum allowed number per bundle
      * - Any of the twins belongs to different seller
      * - Any of the twins does not exist
-     * - Number of twins exceeds maximum allowed number per bundle
      * - Duplicate twins added in same bundle
      * - Exchange already exists for the offer id in bundle
      * - Offers' total quantity is greater than twin supply when token is nonfungible

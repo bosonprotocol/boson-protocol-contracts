@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, getSigners, parseUnits, getContractFactory } = ethers;
+const { ZeroAddress, getSigners, parseUnits, getContractFactory, MaxUint256 } = ethers;
 const { assert, expect } = require("chai");
 
 const Group = require("../../scripts/domain/Group");
@@ -177,7 +177,8 @@ describe("IBosonGroupHandler", function () {
       condition = mockCondition({
         tokenType: TokenType.MultiToken,
         tokenAddress: accounts[0].address,
-        tokenId: "5150",
+        length: "0",
+        method: EvaluationMethod.Threshold,
       });
       expect(condition.isValid()).to.be.true;
 
@@ -370,16 +371,6 @@ describe("IBosonGroupHandler", function () {
           );
         });
 
-        it("Adding too many offers", async function () {
-          // Try to add the more than 100 offers
-          group.offerIds = [...Array(101).keys()];
-
-          // Attempt to create a group, expecting revert
-          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
-            RevertReasons.TOO_MANY_OFFERS
-          );
-        });
-
         context("Condition 'None' has some values in other fields", async function () {
           beforeEach(async function () {
             condition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
@@ -414,6 +405,15 @@ describe("IBosonGroupHandler", function () {
 
           it("Max commits is not zero", async function () {
             condition.maxCommits = "5";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Length is not zero", async function () {
+            condition.length = "5";
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
@@ -458,6 +458,28 @@ describe("IBosonGroupHandler", function () {
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
+
+          it("Condition 'Threshold' with MultiToken has non-zero tokenId and zero length", async function () {
+            condition.tokenType = TokenType.MultiToken;
+            condition.tokenId = "1";
+            condition.length = "0";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'Threshold' with MultiToken has tokenId + length - 1 > max uint256", async function () {
+            condition.tokenType = TokenType.MultiToken;
+            condition.tokenId = 1;
+            condition.length = MaxUint256;
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
         });
 
         context("Condition 'SpecificToken' has invalid fields", async function () {
@@ -479,7 +501,7 @@ describe("IBosonGroupHandler", function () {
             );
           });
 
-          it("Condition 'SpecificToken' has non zero threshold", async function () {
+          it("Condition 'SpecificToken' has non zero threshold when tokenType is NonFungibleToken", async function () {
             condition.threshold = "10";
 
             // Attempt to create the group, expecting revert
@@ -490,6 +512,25 @@ describe("IBosonGroupHandler", function () {
 
           it("Condition 'SpecificToken' has zero maxCommits", async function () {
             condition.maxCommits = "0";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Length is zero when tokenId is not zero", async function () {
+            condition.length = "0";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'SpecificToken' with MultiToken has zero threshold", async function () {
+            condition.tokenType = TokenType.MultiToken;
+            condition.threshold = "0";
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
@@ -620,26 +661,6 @@ describe("IBosonGroupHandler", function () {
           // Attempt to add offers to a group, expecting revert
           await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
             RevertReasons.OFFER_MUST_BE_UNIQUE
-          );
-        });
-
-        it("Number of offers to add exceeds max", async function () {
-          // Try to add the more than 100 offers
-          offerIdsToAdd = [...Array(101).keys()];
-
-          // Attempt to add offers to a group, expecting revert
-          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.TOO_MANY_OFFERS
-          );
-        });
-
-        it("Current number of offers plus number of offers to add exceeds max", async function () {
-          // Try to add offers to that total is more than 100. Group currently has 3.
-          offerIdsToAdd = [...Array(98).keys()];
-
-          // Attempt to add offers to a group, expecting revert
-          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.TOO_MANY_OFFERS
           );
         });
 
@@ -817,16 +838,6 @@ describe("IBosonGroupHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_NOT_IN_GROUP);
         });
 
-        it("Removing too many offers", async function () {
-          // Try to remove the more than 100 offers
-          offerIdsToRemove = [...Array(101).keys()];
-
-          // Attempt to remove offers from the group, expecting revert
-          await expect(
-            groupHandler.connect(assistant).removeOffersFromGroup(group.id, offerIdsToRemove)
-          ).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
-        });
-
         it("Removing nothing", async function () {
           // Try to remove nothing
           offerIdsToRemove = [];
@@ -844,9 +855,10 @@ describe("IBosonGroupHandler", function () {
         condition = mockCondition({
           tokenAddress: accounts[1].address,
           tokenId: "88775544",
-          threshold: "0",
+          threshold: "1",
           tokenType: TokenType.MultiToken,
           method: EvaluationMethod.SpecificToken,
+          length: "1",
         });
         expect(condition.isValid()).to.be.true;
 

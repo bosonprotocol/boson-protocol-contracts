@@ -62,6 +62,8 @@ library ProtocolLib {
         uint16 maxRoyaltyPecentage;
         // limit the max number of vouchers that can be preminted in a single transaction
         uint256 maxPremintedVouchers;
+        // lower limit for resolution period
+        uint256 minResolutionPeriod;
     }
 
     // Protocol fees storage
@@ -185,6 +187,9 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.AuthToken) pendingAuthTokenUpdatesBySeller;
         // dispute resolver id => DisputeResolver
         mapping(uint256 => BosonTypes.DisputeResolver) pendingAddressUpdatesByDisputeResolver;
+        // tokenId => groupId =>  commit count (count how many times a token has been used as gate for this group)
+        mapping(uint256 => mapping(uint256 => uint256)) conditionalCommitsByTokenId;
+        mapping(uint256 => BosonTypes.Collection[]) additionalCollections;
     }
 
     // Incrementing id counters

@@ -5,7 +5,6 @@ const { provider, getContractAt } = hre.ethers;
 const network = hre.network.name;
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const tag = "v2.2.1";
-const version = "2.2.1";
 
 const config = {
   addOrUpgrade: [
@@ -35,10 +34,14 @@ async function migrate(env) {
       throw new Error("Local changes found. Please stash them before upgrading");
     }
 
-    if (env != "upgrade-test") {
-      console.log("Installing dependencies");
-      shell.exec(`npm install`);
-    }
+    // Checking old version contracts to get selectors to remove
+    console.log("Checking out contracts on version 2.2.0");
+    shell.exec(`rm -rf contracts/*`);
+    shell.exec(`git checkout v2.2.0 contracts`);
+
+    console.log("Compiling old contracts");
+    await hre.run("clean");
+    await hre.run("compile");
 
     const { chainId } = await provider.getNetwork();
     const contractsFile = readContracts(chainId, network, env);
@@ -52,15 +55,6 @@ async function migrate(env) {
     // Get addresses of currently deployed contracts
     const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
 
-    // Checking old version contracts to get selectors to remove
-    console.log("Checking out contracts on version 2.2.0");
-    shell.exec(`rm -rf contracts/*`);
-    shell.exec(`git checkout v2.2.0 contracts`);
-
-    console.log("Compiling old contracts");
-    await hre.run("clean");
-    await hre.run("compile");
-
     const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
       ["SellerHandlerFacet", "OrchestrationHandlerFacet1"],
       undefined,
@@ -71,7 +65,10 @@ async function migrate(env) {
 
     console.log(`Checking out contracts on version ${tag}`);
     shell.exec(`rm -rf contracts/*`);
-    shell.exec(`git checkout ${tag} contracts`);
+    shell.exec(`git checkout ${tag} contracts package.json package-lock.json`);
+
+    console.log("Installing dependencies");
+    shell.exec(`npm install`);
 
     console.log("Compiling contracts");
     await hre.run("clean");
@@ -81,7 +78,7 @@ async function migrate(env) {
     await hre.run("upgrade-facets", {
       env,
       facetConfig: JSON.stringify(config),
-      newVersion: version,
+      newVersion: tag.replace("v", ""),
     });
 
     const selectorsToAdd = await getFunctionHashesClosure();

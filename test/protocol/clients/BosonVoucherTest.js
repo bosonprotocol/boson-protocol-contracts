@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { assert, expect } = require("chai");
 const { ZeroAddress, getSigners, getContractAt, getContractFactory, provider, parseUnits, MaxUint256 } = ethers;
 
 const { getInterfaceIds } = require("../../../scripts/config/supported-interfaces.js");
@@ -7,9 +8,6 @@ const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverF
 const Range = require("../../../scripts/domain/Range");
 const VoucherInitValues = require("../../../scripts/domain/VoucherInitValues");
 const { Funds, FundsList } = require("../../../scripts/domain/Funds");
-
-const { mockOffer, mockExchange, mockVoucher } = require("../../util/mock.js");
-const { assert, expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 const {
   mockDisputeResolver,
@@ -18,6 +16,9 @@ const {
   mockAuthToken,
   mockBuyer,
   accountId,
+  mockVoucher,
+  mockExchange,
+  mockOffer,
 } = require("../../util/mock");
 const {
   applyPercentage,
@@ -36,7 +37,7 @@ const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens")
 describe("IBosonVoucher", function () {
   let interfaceIds;
   let accessController;
-  let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler, configHandler;
+  let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler;
   let deployer,
     protocol,
     buyer,
@@ -76,12 +77,11 @@ describe("IBosonVoucher", function () {
       offerHandler: "IBosonOfferHandler",
       exchangeHandler: "IBosonExchangeHandler",
       fundsHandler: "IBosonFundsHandler",
-      configHandler: "IBosonConfigHandler",
     };
 
     ({
       signers: [protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR],
-      contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, configHandler },
+      contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler },
       extraReturnValues: { bosonVoucher, accessController },
     } = await setupTestEnvironment(contracts, {
       forwarderAddress: [await forwarder.getAddress()],
@@ -103,7 +103,7 @@ describe("IBosonVoucher", function () {
     voucherInitValues = mockVoucherInitValues();
     const bosonVoucherInit = await getContractAt("BosonVoucher", await bosonVoucher.getAddress());
 
-    await bosonVoucherInit.initializeVoucher(sellerId, await assistant.getAddress(), voucherInitValues);
+    await bosonVoucherInit.initializeVoucher(sellerId, "1", await assistant.getAddress(), voucherInitValues);
 
     [foreign20] = await deployMockTokens(["Foreign20", "BosonToken"]);
 
@@ -151,9 +151,12 @@ describe("IBosonVoucher", function () {
     });
 
     it("Cannot initialize voucher twice", async function () {
-      const initalizableClone = await getContractAt("IInitializableVoucherClone", await bosonVoucher.getAddress());
+      const initalizableClone = await ethers.getContractAt(
+        "IInitializableVoucherClone",
+        await bosonVoucher.getAddress()
+      );
       await expect(
-        initalizableClone.initializeVoucher(2, await assistant.getAddress(), voucherInitValues)
+        initalizableClone.initializeVoucher(2, "1", await assistant.getAddress(), voucherInitValues)
       ).to.be.revertedWith(RevertReasons.INITIALIZABLE_ALREADY_INITIALIZED);
     });
   });
@@ -639,7 +642,7 @@ describe("IBosonVoucher", function () {
 
       it("Should emit Transfer events", async function () {
         // Burn tokens, test for event
-        const tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+        const tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
         // Expect an event for every burn
         start = deriveTokenId(offerId, start);
@@ -654,7 +657,7 @@ describe("IBosonVoucher", function () {
         let sellerBalanceBefore = await bosonVoucher.balanceOf(await assistant.getAddress());
 
         // Burn tokens
-        await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+        await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
         // All burned tokens should not have an owner
         const startId = deriveTokenId(offerId, start);
@@ -693,7 +696,7 @@ describe("IBosonVoucher", function () {
           // Burn tokens, test for event
           let tx;
           await expect(() => {
-            tx = bosonVoucher.connect(rando).burnPremintedVouchers(offerId);
+            tx = bosonVoucher.connect(rando).burnPremintedVouchers(offerId, amount);
             return tx;
           }).to.changeTokenBalance(bosonVoucher, assistant, BigInt(amount) * -1n);
 
@@ -725,7 +728,7 @@ describe("IBosonVoucher", function () {
           // Burn tokens, test for event
           let tx;
           await expect(() => {
-            tx = bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+            tx = bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
             return tx;
           }).to.changeTokenBalance(bosonVoucher, bosonVoucher, BigInt(amount) * -1n);
 
@@ -741,7 +744,7 @@ describe("IBosonVoucher", function () {
 
       it("Should burn all vouchers if there is less than MaxPremintedVouchers to burn", async function () {
         // Burn tokens, test for event
-        let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+        let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
         // Number of events emitted should be equal to amount
         assert.equal((await tx.wait()).logs.length, Number(amount), "Wrong number of events emitted");
@@ -754,8 +757,8 @@ describe("IBosonVoucher", function () {
         assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
 
         // Second call should revert since there's nothing to burn
-        await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId)).to.be.revertedWith(
-          RevertReasons.NOTHING_TO_BURN
+        await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
+          RevertReasons.AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN
         );
       });
 
@@ -790,7 +793,7 @@ describe("IBosonVoucher", function () {
           await offerHandler.connect(assistant).voidOffer(offerId);
 
           // Burn tokens, test for event
-          let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+          let tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
           // All burned tokens should not have an owner, but committed ones should
           const startId = deriveTokenId(offerId, start);
@@ -827,7 +830,7 @@ describe("IBosonVoucher", function () {
           await setNextBlockTimestamp(Number(BigInt(offerDates.validUntil) + 1n));
 
           // Burn tokens, test for event
-          const tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+          const tx = await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
           // Expect an event for every burn
           start = deriveTokenId(offerId, start);
@@ -841,7 +844,7 @@ describe("IBosonVoucher", function () {
 
       context("💔 Revert Reasons", async function () {
         it("Caller is not the owner", async function () {
-          await expect(bosonVoucher.connect(rando).burnPremintedVouchers(offerId)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(rando).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
             RevertReasons.OWNABLE_NOT_OWNER
           );
         });
@@ -851,7 +854,7 @@ describe("IBosonVoucher", function () {
           offerId = 15;
 
           // Try to burn, it should fail
-          await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
             RevertReasons.NO_RESERVED_RANGE_FOR_OFFER
           );
         });
@@ -866,18 +869,18 @@ describe("IBosonVoucher", function () {
           await bosonVoucher.connect(assistant).preMint(offerId, 10);
 
           // Try to burn, it should fail
-          await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
             RevertReasons.OFFER_STILL_VALID
           );
         });
 
         it("Nothing to burn", async function () {
           // Burn tokens
-          await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+          await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
           // Try to burn, it should fail
-          await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId)).to.be.revertedWith(
-            RevertReasons.NOTHING_TO_BURN
+          await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
+            RevertReasons.AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN
           );
         });
       });
@@ -920,9 +923,6 @@ describe("IBosonVoucher", function () {
       });
 
       it("Range is fully minted", async function () {
-        // Adjust config value
-        await configHandler.connect(deployer).setMaxPremintedVouchers(length);
-
         // Premint tokens
         await bosonVoucher.connect(assistant).preMint(offerId, length);
 
@@ -1256,7 +1256,7 @@ describe("IBosonVoucher", function () {
             await offerHandler.connect(assistant).voidOffer(offerId);
 
             // Burn preminted voucher
-            await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+            await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
             // Token should have no owner
             await expect(bosonVoucher.connect(rando).ownerOf(tokenId)).to.be.revertedWith(
@@ -1522,7 +1522,7 @@ describe("IBosonVoucher", function () {
                 await offerHandler.connect(assistant).voidOffer(offerId);
 
                 // Burn preminted vouchers
-                await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId);
+                await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, "1");
 
                 // None of reserved but not preminted tokens should have an owner
                 await expect(
@@ -1839,9 +1839,17 @@ describe("IBosonVoucher", function () {
         });
       });
     });
+
     context("withdrawToProtocol", function () {
+      let availableFundsAddresses;
+
+      beforeEach(async function () {
+        availableFundsAddresses = [ZeroAddress];
+      });
       it("Can withdraw native token", async function () {
-        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+        const sellersFundsBefore = FundsList.fromStruct(
+          await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+        );
 
         const amount = parseUnits("1", "ether");
         await admin.sendTransaction({ to: await bosonVoucher.getAddress(), value: amount });
@@ -1858,7 +1866,9 @@ describe("IBosonVoucher", function () {
           new Funds(ZeroAddress, "Native currency", (BigInt(availableAmount) + BigInt(amount)).toString()),
         ]);
 
-        const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+        const sellerFundsAfter = FundsList.fromStruct(
+          await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+        );
 
         expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
       });
@@ -1866,6 +1876,7 @@ describe("IBosonVoucher", function () {
       it("Can withdraw ERC20", async function () {
         const amount = parseUnits("1", "ether");
         await foreign20.connect(deployer).mint(await deployer.getAddress(), amount);
+
         await foreign20.connect(deployer).transfer(await bosonVoucher.getAddress(), amount);
 
         const foreign20Address = await foreign20.getAddress();
@@ -1879,12 +1890,18 @@ describe("IBosonVoucher", function () {
         const expectedAvailableFunds = new Funds(await foreign20.getAddress(), "Foreign20", amount.toString());
 
         // first item is AddressZero
-        const [, sellerFundsAfter] = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id)).funds;
+        availableFundsAddresses.push(await foreign20.getAddress());
+        const [, sellerFundsAfter] = FundsList.fromStruct(
+          await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+        ).funds;
         expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
       });
 
       it("Should withdraw all tokens when list length > 1", async function () {
-        const { funds: sellerFundsBefore } = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+        availableFundsAddresses.push(await foreign20.getAddress());
+        const { funds: sellerFundsBefore } = FundsList.fromStruct(
+          await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+        );
 
         sellerFundsBefore[1] = new Funds(await foreign20.getAddress(), "Foreign20", "0");
 
@@ -1901,7 +1918,9 @@ describe("IBosonVoucher", function () {
         }).to.changeTokenBalances(foreign20, [bosonVoucher, fundsHandler], [amount * -1n, amount]);
         await expect(() => tx).to.changeEtherBalances([bosonVoucher, fundsHandler], [amount * -1n, amount]);
 
-        const { funds: sellerFundsAfter } = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+        const { funds: sellerFundsAfter } = FundsList.fromStruct(
+          await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+        );
 
         expect(
           sellerFundsBefore.map((f) => {

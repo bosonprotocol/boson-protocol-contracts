@@ -87,7 +87,6 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      *
      * Reverts if:
      * - The disputes region of protocol is paused
-     * - Number of disputes exceeds maximum allowed number per batch
      * - For any dispute:
      *   - Exchange does not exist
      *   - Exchange is not in a Disputed state
