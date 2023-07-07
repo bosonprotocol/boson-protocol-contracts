@@ -2070,7 +2070,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("offer has expired", async function () {
           // Go past offer expiration date
-          await setNextBlockTimestamp(Number(offerDates.validUntil));
+          await setNextBlockTimestamp(Number(offerDates.validUntil) + 1);
 
           // Attempt to commit to the expired offer, expecting revert
           await expect(
