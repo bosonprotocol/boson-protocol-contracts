@@ -14,7 +14,8 @@ const {
   eventEmittedWithArgs,
   prepareDataSignatureParameters,
   applyPercentage,
-  calculateContractAddress,
+  calculateCloneAddress,
+  calculateBosonProxyAddress,
   setupTestEnvironment,
   getSnapshot,
   revertToSnapshot,
@@ -97,6 +98,7 @@ describe("IBosonFundsHandler", function () {
   let DRFee, buyerEscalationDeposit;
   let protocolDiamondAddress;
   let snapshotId;
+  let beaconProxyAddress;
 
   before(async function () {
     accountId.next(true);
@@ -142,6 +144,9 @@ describe("IBosonFundsHandler", function () {
 
     // Deploy the mock token
     [mockToken] = await deployMockTokens(["Foreign20"]);
+
+    // Get the beacon proxy address
+    beaconProxyAddress = await calculateBosonProxyAddress(await configHandler.getAddress());
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -1840,9 +1845,14 @@ describe("IBosonFundsHandler", function () {
         // reserve a range and premint vouchers
         await offerHandler
           .connect(assistant)
-          .reserveRange(offerToken.id, offerToken.quantityAvailable, await assistant.getAddress());
-        const voucherCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "1");
-        const bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
+          .reserveRange(offerToken.id, offerToken.quantityAvailable, assistant.address);
+        const voucherCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address,
+          ""
+        );
+        const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
         await bosonVoucher.connect(assistant).preMint(offerToken.id, offerToken.quantityAvailable);
 
         // commit to an offer via preminted voucher
@@ -2030,9 +2040,14 @@ describe("IBosonFundsHandler", function () {
           // reserve a range and premint vouchers for offer in tokens
           await offerHandler
             .connect(assistant)
-            .reserveRange(offerToken.id, offerToken.quantityAvailable, await assistant.getAddress());
-          const voucherCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "1");
-          const bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
+            .reserveRange(offerToken.id, offerToken.quantityAvailable, assistant.address);
+          const voucherCloneAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            admin.address,
+            ""
+          );
+          const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
           await bosonVoucher.connect(assistant).preMint(offerToken.id, offerToken.quantityAvailable);
 
           // Seller's availableFunds is 2*sellerDeposit which is less than sellerDeposit + price.
