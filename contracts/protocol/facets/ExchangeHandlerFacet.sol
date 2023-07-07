@@ -235,7 +235,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * Issues a voucher to the buyer address for non preminted offers.
      *
      * Reverts if:
-     * - Offer has been voided
      * - Offer has expired
      * - Offer is not yet available for commits
      * - Offer's quantity available is zero [for non preminted offers]
@@ -266,7 +265,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Make sure offer is available, and isn't void, expired, or sold out
         OfferDates storage offerDates = fetchOfferDates(_offerId);
         require(block.timestamp >= offerDates.validFrom, OFFER_NOT_AVAILABLE);
-        require(block.timestamp < offerDates.validUntil, OFFER_HAS_EXPIRED);
+        require(block.timestamp <= offerDates.validUntil, OFFER_HAS_EXPIRED);
 
         if (!_isPreminted) {
             // For non-preminted offers, quantityAvailable must be greater than zero, since it gets decremented

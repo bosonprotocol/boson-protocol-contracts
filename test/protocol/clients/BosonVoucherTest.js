@@ -957,7 +957,7 @@ describe("IBosonVoucher", function () {
 
       it("Should be 0 if offer is expired", async function () {
         // Skip to after offer expiry
-        await setNextBlockTimestamp(Number(offerDates.validUntil), true);
+        await setNextBlockTimestamp(Number(BigInt(offerDates.validUntil) + 1n), true);
 
         // Get available premints from contract
         let availablePremints = await bosonVoucher.getAvailablePreMints(offerId);
@@ -1382,7 +1382,7 @@ describe("IBosonVoucher", function () {
           });
 
           context("Transfer of a preminted voucher when owner is assistant", async function () {
-            let voucherRedeemableFrom, voucherValid, offerValid;
+            let voucherRedeemableFrom, voucherValid;
 
             beforeEach(async function () {
               exchangeId = offerId = "1";
@@ -1398,7 +1398,6 @@ describe("IBosonVoucher", function () {
 
               voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
               voucherValid = offerDurations.voucherValid;
-              offerValid = offerDates.validUntil;
             });
 
             it("Should emit a Transfer event", async function () {
@@ -1554,7 +1553,7 @@ describe("IBosonVoucher", function () {
 
               it("Transfer preminted voucher, where offer has expired", async function () {
                 // Skip past offer expiry
-                await setNextBlockTimestamp(Number(offerValid));
+                await setNextBlockTimestamp(Number(BigInt(offerDates.validUntil) + 1n));
 
                 // Transfer should fail, since protocol reverts
                 await expect(
