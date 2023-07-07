@@ -85,6 +85,8 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      * @notice Returns list of addresses for which the entity has funds available.
      *
      * @param _entityId - id of entity for which availability of funds should be checked
+     * @param _limit - the maximum number of token addresses that should be returned starting from the index defined by `_offset`. If `_offset` + `_limit` exceeds total tokens, `_limit` is adjusted to return all remaining tokens.
+     * @param _offset - the starting index from which to return token addresses. If `_offset` is greater than or equal to total tokens, an empty list is returned.
      * @return tokenList - list of token addresses
      */
     function getTokenListPaginated(
