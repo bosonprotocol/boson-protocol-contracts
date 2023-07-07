@@ -678,6 +678,7 @@ describe("ProtocolInitializationHandler", async function () {
         );
         const [beacon] = beacons;
 
+        // @TODO move this to 00_config.js:getFacets
         const facetsToDeploy = await getV2_2_0DeployConfig(); // To deploy 2.2.1, we can use 2.2.0 config
         facetsToDeploy.ConfigHandlerFacet.init[0] = {
           ...facetsToDeploy.ConfigHandlerFacet.init[0],
@@ -816,7 +817,6 @@ describe("ProtocolInitializationHandler", async function () {
       });
 
       it("Min resolution period is zero", async function () {
-        // set invalid minResolutionPeriod
         version = "2.3.0";
         minResolutionPeriod = "0";
         initializationData = abiCoder.encode(["uint256", "uint256[]", "address[]"], [minResolutionPeriod, [], []]);
@@ -838,7 +838,6 @@ describe("ProtocolInitializationHandler", async function () {
       });
 
       it("sellerIds and sellerCreators length mismatch", async function () {
-        // set invalid minResolutionPeriod
         version = "2.3.0";
         initializationData = abiCoder.encode(["uint256", "uint256[]", "address[]"], [minResolutionPeriod, [1], []]);
 
@@ -859,7 +858,6 @@ describe("ProtocolInitializationHandler", async function () {
       });
 
       it("invalid seller id ", async function () {
-        // set invalid minResolutionPeriod
         initializationData = abiCoder.encode(
           ["uint256", "uint256[]", "address[]"],
           [minResolutionPeriod, [66], [rando.address]]
