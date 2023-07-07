@@ -15,7 +15,8 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   applyPercentage,
-  calculateContractAddress,
+  calculateCloneAddress,
+  calculateBosonProxyAddress,
   setupTestEnvironment,
   getSnapshot,
   revertToSnapshot,
@@ -87,6 +88,7 @@ describe("IBosonOfferHandler", function () {
   let sellerAllowList, allowedSellersToAdd;
   let returnedAgentId;
   let snapshotId;
+  let beaconProxyAddress;
 
   before(async function () {
     // get interface Ids
@@ -132,6 +134,9 @@ describe("IBosonOfferHandler", function () {
     assistantDR = adminDR;
     clerk = clerkDR = { address: ZeroAddress };
     [deployer] = await getSigners();
+
+    // Get the beacon proxy address
+    beaconProxyAddress = await calculateBosonProxyAddress(await configHandler.getAddress());
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -540,7 +545,12 @@ describe("IBosonOfferHandler", function () {
 
         beforeEach(async function () {
           const externalId = "Brand1";
-          expectedCollectionAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
+          expectedCollectionAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            admin.address,
+            externalId
+          );
 
           // Create a new collection
           await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
@@ -1342,7 +1352,12 @@ describe("IBosonOfferHandler", function () {
         id = nextOfferId++;
 
         // expected address of the first clone
-        const voucherCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "1");
+        const voucherCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address,
+          ""
+        );
         bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
 
         length = 100;
