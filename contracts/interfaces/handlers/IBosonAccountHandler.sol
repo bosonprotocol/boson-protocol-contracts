@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x15335ed7
+ * The ERC-165 identifier for this interface is: 0x868de65b
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -66,7 +66,6 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
      * - EscalationResponsePeriod is invalid
-     * - Number of seller ids in _sellerAllowList array exceeds max
      * - Some seller does not exist
      * - Some seller id is duplicated
      * - DisputeResolver is not active (if active == false)
@@ -240,7 +239,6 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
-     * - Number of DisputeResolverFee structs in array exceeds max
      * - Number of DisputeResolverFee structs in array is zero
      * - DisputeResolverFee array contains duplicates
      * - Fee amount is a non-zero value. Protocol doesn't yet support fees for dispute resolvers
@@ -263,7 +261,6 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
-     * - Number of DisputeResolverFee structs in array exceeds max
      * - Number of DisputeResolverFee structs in array is zero
      * - DisputeResolverFee does not exist for the dispute resolver
      *
@@ -281,7 +278,6 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
-     * - Number of seller ids in array exceeds max
      * - Number of seller ids in array is zero
      * - Some seller does not exist
      * - Seller id is already approved
@@ -300,7 +296,6 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
-     * - Number of seller ids in array exceeds max
      * - Number of seller ids structs in array is zero
      * - Seller id is not approved
      *
@@ -308,6 +303,23 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _sellerAllowList - list of seller ids to remove from allowed list
      */
     function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external;
+
+    /**
+     * @notice Creates a new seller collection.
+     *
+     * Emits a CollectionCreated event if successful.
+     *
+     *  Reverts if:
+     *  - The offers region of protocol is paused
+     *  - Caller is not the seller assistant
+     *
+     * @param _externalId - external collection id
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
+     */
+    function createNewCollection(
+        string calldata _externalId,
+        BosonTypes.VoucherInitValues calldata _voucherInitValues
+    ) external;
 
     /**
      * @notice Gets the details about a seller.
@@ -352,6 +364,17 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function getSellerByAuthToken(
         BosonTypes.AuthToken calldata _associatedAuthToken
     ) external view returns (bool exists, BosonTypes.Seller memory seller, BosonTypes.AuthToken memory authToken);
+
+    /**
+     * @notice Gets the details about a seller's collections.
+     *
+     * @param _sellerId - the id of the seller to check
+     * @return defaultVoucherAddress - the address of the default voucher contract for the seller
+     * @return additionalCollections - an array of additional collections that the seller has created
+     */
+    function getSellersCollections(
+        uint256 _sellerId
+    ) external view returns (address defaultVoucherAddress, BosonTypes.Collection[] memory additionalCollections);
 
     /**
      * @notice Gets the details about a buyer.

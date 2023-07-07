@@ -147,7 +147,7 @@ async function getBytecodes() {
 
     // Abstract contracts do not have bytecode, and factory creation fails. Skip them.
     try {
-      const contract = await hre.ethers.getContractFactory(name);
+      const contract = await hre.getContractFactory(name);
 
       // Store the bytecode
       byteCodes[name] = contract.bytecode;

@@ -1,6 +1,7 @@
 const hre = require("hardhat");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const ethers = hre.ethers;
+const { getSigners, getContractAt } = hre.ethers;
+
 const { getSnapshot, revertToSnapshot } = require("../util/utils");
 
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
@@ -36,7 +37,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   before(async function () {
     try {
       // Make accounts available
-      [deployer, rando] = await ethers.getSigners();
+      [deployer, rando] = await getSigners();
 
       let contractsBefore;
 
@@ -86,7 +87,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       contractsAfter = { ...contractsBefore };
 
       for (const [handlerName, interfaceName] of Object.entries(newHandlers)) {
-        contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
+        contractsAfter[handlerName] = await getContractAt(interfaceName, protocolDiamondAddress);
       }
 
       ({ accountHandler } = contractsAfter);
@@ -215,7 +216,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         it("New seller has metadataUri field", async function () {
           const { nextAccountId } = accountContractState;
-          const seller = mockSeller(rando.address, rando.address, rando.address, rando.address, true, "metadata");
+          const seller = mockSeller(
+            await rando.getAddress(),
+            await rando.getAddress(),
+            await rando.getAddress(),
+            await rando.getAddress(),
+            true,
+            "metadata"
+          );
           const authToken = mockAuthToken();
           const voucherInitValues = mockVoucherInitValues();
 
@@ -225,9 +233,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             .withArgs(
               nextAccountId,
               seller,
-              calculateContractAddress(accountHandler.address, nextAccountId),
+              calculateContractAddress(await accountHandler.getAddress(), nextAccountId),
               authToken,
-              rando.address
+              await rando.getAddress()
             );
         });
       });

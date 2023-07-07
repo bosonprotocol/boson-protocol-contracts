@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { provider, getContractAt } = hre.ethers;
 const fs = require("fs");
 const addressesDirPath = __dirname + `/../../addresses`;
 
@@ -12,6 +12,7 @@ function delay(ms) {
 }
 
 function deploymentComplete(name, address, args, interfaceId, contracts) {
+  console.log("address", address);
   contracts.push({ name, address, args, interfaceId });
   console.log(`✅ ${name} deployed to: ${address}`);
 }
@@ -21,7 +22,7 @@ async function writeContracts(contracts, env, version) {
     fs.mkdirSync(addressesDirPath);
   }
 
-  const chainId = (await hre.ethers.provider.getNetwork()).chainId;
+  const chainId = Number((await provider.getNetwork()).chainId);
   const network = hre.network.name;
   const path = getAddressesFilePath(chainId, network, env);
   fs.writeFileSync(
@@ -48,10 +49,10 @@ function readContracts(chainId, network, env) {
 }
 
 async function getFees(maxPriorityFeePerGas) {
-  const { lastBaseFeePerGas } = await ethers.provider.getFeeData();
+  const { lastBaseFeePerGas } = await provider.getFeeData();
   // Set maxFeePerGas so it's likely to be accepted by the network
   // maxFeePerGas = maxPriorityFeePerGas + 2 * lastBaseFeePerGas
-  return { maxPriorityFeePerGas, maxFeePerGas: maxPriorityFeePerGas.add(lastBaseFeePerGas.mul(2)) };
+  return { maxPriorityFeePerGas, maxFeePerGas: maxPriorityFeePerGas + lastBaseFeePerGas * 2n };
 }
 
 // Check if account has a role
@@ -63,7 +64,7 @@ async function checkRole(contracts, role, address) {
   }
 
   // Get AccessController abstraction
-  const accessController = await ethers.getContractAt("AccessController", accessControllerAddress);
+  const accessController = await getContractAt("AccessController", accessControllerAddress);
 
   // Check that caller has upgrader role.
   const hasRole = await accessController.hasRole(role, address);
@@ -77,6 +78,10 @@ const addressNotFound = (address) => {
   process.exit(1);
 };
 
+function toHexString(bigNumber, { startPad } = { startPad: 8 }) {
+  return "0x" + (startPad ? bigNumber.toString(16).padStart(startPad, "0") : bigNumber.toString(16));
+}
+
 exports.getAddressesFilePath = getAddressesFilePath;
 exports.writeContracts = writeContracts;
 exports.readContracts = readContracts;
@@ -85,3 +90,4 @@ exports.deploymentComplete = deploymentComplete;
 exports.getFees = getFees;
 exports.checkRole = checkRole;
 exports.addressNotFound = addressNotFound;
+exports.toHexString = toHexString;

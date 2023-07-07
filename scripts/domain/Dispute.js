@@ -43,7 +43,7 @@ class Dispute {
     return Dispute.fromObject({
       exchangeId: exchangeId.toString(),
       buyerPercent: buyerPercent.toString(),
-      state,
+      state: Number(state),
     });
   }
 

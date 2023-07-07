@@ -146,6 +146,7 @@ contract BosonTypes {
         string metadataUri;
         string metadataHash;
         bool voided;
+        uint256 collectionIndex;
     }
 
     struct OfferDates {
@@ -174,6 +175,7 @@ contract BosonTypes {
         uint256 tokenId;
         uint256 threshold;
         uint256 maxCommits;
+        uint256 length;
     }
 
     struct Exchange {
@@ -284,5 +286,10 @@ contract BosonTypes {
     struct VoucherInitValues {
         string contractURI;
         uint256 royaltyPercentage;
+    }
+
+    struct Collection {
+        address collectionAddress;
+        string externalId;
     }
 }
