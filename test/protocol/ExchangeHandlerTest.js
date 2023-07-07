@@ -11,8 +11,9 @@ const {
   getImpersonatedSigner,
   toBeHex,
   keccak256,
-  toUtf8Bytes,
   zeroPadBytes,
+  zeroPadValue,
+  id,
 } = ethers;
 const { expect, assert } = require("chai");
 
@@ -3476,7 +3477,7 @@ describe("IBosonExchangeHandler", function () {
 
           beforeEach(async function () {
             // starting slot
-            const protocolLookupsSlot = keccak256(toUtf8Bytes("boson.protocol.lookups"));
+            const protocolLookupsSlot = id("boson.protocol.lookups");
             protocolLookupsSlotNumber = BigInt(protocolLookupsSlot);
 
             // seller id mapping from twinRangesBySeller
@@ -3499,13 +3500,13 @@ describe("IBosonExchangeHandler", function () {
             await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
             const start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot);
-            expect(start).to.equal(zeroPadBytes(toHexString(BigInt("1"), 32)));
+            expect(start).to.equal(zeroPadValue(toHexString(BigInt("1")), 32));
 
-            const end = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(1));
-            expect(end).to.equal(zeroPadBytes(toHexString(BigInt("9")), 32));
+            const end = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 1n);
+            expect(end).to.equal(zeroPadValue(toHexString(BigInt("9")), 32));
           });
 
-          it("Should remove element from range when transfering last twin", async function () {
+          it("Should remove element from range when transferring last twin", async function () {
             let exchangeId = 1;
             let supply = 9;
 
@@ -3521,16 +3522,16 @@ describe("IBosonExchangeHandler", function () {
               let expectedEnd;
               if (exchangeId == 10) {
                 // Last transfer should remove range
-                expectedStart = zeroPadBytes(toHexString(BigInt("0")), 32);
-                expectedEnd = zeroPadBytes(toHexString(BigInt("0")), 32);
+                expectedStart = zeroPadValue(toHexString(BigInt("0")), 32);
+                expectedEnd = zeroPadValue(toHexString(BigInt("0")), 32);
               } else {
-                expectedStart = zeroPadBytes(toHexString(BigInt("1")), 32);
-                expectedEnd = zeroPadBytes(toHexString(BigInt(--supply)), 32);
+                expectedStart = zeroPadValue(toHexString(BigInt("1")), 32);
+                expectedEnd = zeroPadValue(toHexString(BigInt(--supply)), 32);
               }
               const start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot);
               expect(start).to.equal(expectedStart);
 
-              const end = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(1));
+              const end = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 1n);
               expect(end).to.equal(expectedEnd);
 
               exchangeId++;
@@ -3585,20 +3586,20 @@ describe("IBosonExchangeHandler", function () {
 
             // First range
             let range1Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot);
-            let expectedRange1Start = zeroPadBytes(toHexString(BigInt("1")), 32);
+            let expectedRange1Start = zeroPadValue(toHexString(BigInt("1")), 32);
             expect(range1Start).to.equal(expectedRange1Start);
 
-            let range1End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(1));
-            let expectedRange1End = zeroPadBytes(toHexString(BigInt("10")), 32);
+            let range1End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 1n);
+            let expectedRange1End = zeroPadValue(toHexString(BigInt("10")), 32);
             expect(range1End).to.equal(expectedRange1End);
 
             // Second range
-            let range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(2));
-            let expectedRange2Start = zeroPadBytes(toHexString(BigInt("11")), 32);
+            let range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 2n);
+            let expectedRange2Start = zeroPadValue(toHexString(BigInt("11")), 32);
             expect(range2Start).to.equal(expectedRange2Start);
 
-            let range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(3));
-            let expectedRange2End = zeroPadBytes(toHexString(BigInt("20")), 32);
+            let range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 3n);
+            let expectedRange2End = zeroPadValue(toHexString(BigInt("20")), 32);
             expect(range2End).to.equal(expectedRange2End);
 
             // Set time forward to the offer's voucherRedeemableFrom
@@ -3623,14 +3624,14 @@ describe("IBosonExchangeHandler", function () {
             // First range now should be second range
             range1Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot);
             expect(range1Start).to.equal(expectedRange2Start);
-            range1End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(1));
+            range1End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 1n);
             expect(range1End).to.equal(expectedRange2End);
 
             // Second range should be empty
             const slotEmpty = zeroPadBytes(toHexString(BigInt("0")), 32);
-            range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(2));
+            range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 2n);
             expect(range2Start).to.equal(slotEmpty);
-            range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot.add(3));
+            range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 3n);
             expect(range2End).to.equal(slotEmpty);
           });
         });
@@ -3734,7 +3735,7 @@ describe("IBosonExchangeHandler", function () {
             await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
             // starting slot
-            const protocolLookupsSlot = keccak256(toUtf8Bytes("boson.protocol.lookups"));
+            const protocolLookupsSlot = id("boson.protocol.lookups");
             const protocolLookupsSlotNumber = BigInt(protocolLookupsSlot);
 
             // seller id mapping from twinRangesBySeller
@@ -3751,12 +3752,12 @@ describe("IBosonExchangeHandler", function () {
 
             const range = {};
             const arrayStart = BigInt(keccak256(secondMappingSlot));
-            (range.start = await getStorageAt(protocolDiamondAddress, arrayStart.add(0))),
-              (range.end = await getStorageAt(protocolDiamondAddress, arrayStart.add(1)));
+            (range.start = await getStorageAt(protocolDiamondAddress, arrayStart + 0n)),
+              (range.end = await getStorageAt(protocolDiamondAddress, arrayStart + 1n));
 
             const expectedRange = {
-              start: zeroPadBytes(toHexString(BigInt("2")), 32),
-              end: zeroPadBytes(ethers.constants.MaxUint256, 32),
+              start: zeroPadValue(toHexString(BigInt("2")), 32),
+              end: MaxUint256,
             };
             expect(range).to.deep.equal(expectedRange);
           });

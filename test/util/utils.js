@@ -10,7 +10,6 @@ const {
   toBeArray,
   isHexString,
   zeroPadValue,
-  zeroPadBytes,
   Interface,
   toUtf8Bytes,
 } = ethers;
@@ -267,7 +266,7 @@ function getMappingStoragePosition(slot, key, padding = paddingType.NONE) {
       keyBuffer = toUtf8Bytes(key);
       break;
     case paddingType.START:
-      keyBuffer = Buffer.from(zeroPadBytes(keyHex, 32).toString().slice(2), "hex");
+      keyBuffer = Buffer.from(zeroPadValue(keyHex, 32).toString().slice(2), "hex");
       break;
     case paddingType.END:
       keyBuffer = Buffer.from(keyHex.slice(2).padEnd(64, "0"), "hex");
