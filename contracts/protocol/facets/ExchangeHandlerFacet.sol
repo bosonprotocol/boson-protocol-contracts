@@ -813,6 +813,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 (, Twin storage twin) = fetchTwin(twinIds[i]);
 
                 bool success;
+
                 uint256 tokenId = twin.tokenId;
 
                 {
@@ -880,16 +881,44 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, twin.amount, sender);
                 } else {
-                    // Store twin receipt on twinReceiptsByExchange
                     uint256 exchangeId = _exchange.id;
-                    TwinReceipt storage twinReceipt = lookups.twinReceiptsByExchange[exchangeId].push();
-                    twinReceipt.twinId = twin.id;
-                    twinReceipt.tokenAddress = twin.tokenAddress;
-                    twinReceipt.tokenId = tokenId;
-                    twinReceipt.amount = twin.amount;
-                    twinReceipt.tokenType = twin.tokenType;
+                    uint256 twinId = twin.id;
+                    {
+                        // Store twin receipt on twinReceiptsByExchange
+                        TwinReceipt storage twinReceipt = lookups.twinReceiptsByExchange[exchangeId].push();
+                        twinReceipt.twinId = twinId;
+                        twinReceipt.tokenAddress = twin.tokenAddress;
+                        twinReceipt.tokenId = tokenId;
+                        twinReceipt.amount = twin.amount;
+                        twinReceipt.tokenType = twin.tokenType;
+                    }
+                    if (twin.tokenType == TokenType.NonFungibleToken) {
+                        // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
+                        TokenRange[] storage twinRanges = lookups.twinRangesBySeller[seller.id][twin.tokenAddress];
 
-                    emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
+                        bool unlimitedSupply = twin.supplyAvailable == type(uint256).max;
+
+                        uint256 rangeIndex = lookups.rangeIdByTwin[twinId] - 1;
+                        TokenRange storage range = twinRanges[rangeIndex];
+
+                        if (unlimitedSupply ? range.end == tokenId : range.start == tokenId) {
+                            uint256 lastIndex = twinRanges.length - 1;
+
+                            if (rangeIndex != lastIndex) {
+                                // Replace range with last range
+                                twinRanges[rangeIndex] = twinRanges[lastIndex];
+                            }
+
+                            // Remove from ranges mapping
+                            twinRanges.pop();
+
+                            // Delete rangeId from rangeIdByTwin mapping
+                            lookups.rangeIdByTwin[twinId] = 0;
+                        } else {
+                            unlimitedSupply ? range.start++ : range.end--;
+                        }
+                    }
+                    emit TwinTransferred(twinId, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 }
             }
         }

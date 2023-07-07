@@ -10,6 +10,10 @@ const {
   parseEther,
   getImpersonatedSigner,
   toBeHex,
+  keccak256,
+  zeroPadBytes,
+  zeroPadValue,
+  id,
 } = ethers;
 const { expect, assert } = require("chai");
 
@@ -45,6 +49,8 @@ const {
   accountId,
 } = require("../util/mock");
 const {
+  getMappingStoragePosition,
+  paddingType,
   getEvent,
   setNextBlockTimestamp,
   calculateVoucherExpiry,
@@ -58,6 +64,8 @@ const {
 } = require("../util/utils.js");
 const { oneWeek, oneMonth } = require("../util/constants");
 const { FundsList } = require("../../scripts/domain/Funds");
+const { toHexString } = require("../../scripts/util/utils.js");
+const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
 
 /**
@@ -3001,8 +3009,7 @@ describe("IBosonExchangeHandler", function () {
         // Mint some tokens to be bundled
         await foreign20.connect(assistant).mint(await assistant.getAddress(), "500");
         // Mint first two and last two tokens of range
-        await foreign721.connect(assistant).mint("0", "2");
-        await foreign721.connect(assistant).mint("8", "2");
+        await foreign721.connect(assistant).mint("1", "10");
         await foreign1155.connect(assistant).mint("1", "500");
 
         // Approve the protocol diamond to transfer seller's tokens
@@ -3021,6 +3028,7 @@ describe("IBosonExchangeHandler", function () {
         twin721.id = "2";
         twin721.amount = "0";
         twin721.supplyAvailable = "10";
+        twin721.tokenId = "1";
         expect(twin721.isValid()).is.true;
 
         // Create an ERC1155 twin
@@ -3375,7 +3383,8 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("Should transfer the twin", async function () {
-          let tokenId = "9";
+          // Start with last id
+          let tokenId = "10";
 
           // Check the assistant owns the last ERC721 of twin range
           owner = await foreign721.ownerOf(tokenId);
@@ -3391,7 +3400,7 @@ describe("IBosonExchangeHandler", function () {
           owner = await foreign721.ownerOf(tokenId);
           expect(owner).to.equal(await buyer.getAddress());
 
-          tokenId = "8";
+          tokenId = "9";
           // Check the assistant owns the last ERC721 of twin range
           owner = await foreign721.ownerOf(tokenId);
           expect(owner).to.equal(await assistant.getAddress());
@@ -3420,7 +3429,7 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("Should transfer the twin even if supplyAvailable is equal to 1", async function () {
-          await foreign721.connect(assistant).mint("10", "2");
+          await foreign721.connect(assistant).mint("11", "1");
 
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "1";
@@ -3431,7 +3440,7 @@ describe("IBosonExchangeHandler", function () {
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
           twin721.supplyAvailable = "1";
-          twin721.tokenId = "10";
+          twin721.tokenId = "11";
           twin721.id = "4";
 
           // Create a new twin
@@ -3448,7 +3457,8 @@ describe("IBosonExchangeHandler", function () {
           voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
-          let tokenId = "10";
+          let tokenId = "11";
+
           // Redeem the second voucher
           await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
             .to.emit(exchangeHandler, "TwinTransferred")
@@ -3462,6 +3472,170 @@ describe("IBosonExchangeHandler", function () {
           expect(twin.supplyAvailable).to.equal(0);
         });
 
+        context("Check twinRangesBySeller slot", async function () {
+          let sellerTwinRangesSlot, protocolLookupsSlotNumber;
+
+          beforeEach(async function () {
+            // starting slot
+            const protocolLookupsSlot = id("boson.protocol.lookups");
+            protocolLookupsSlotNumber = BigInt(protocolLookupsSlot);
+
+            // seller id mapping from twinRangesBySeller
+            const firstMappingSlot = BigInt(
+              getMappingStoragePosition(protocolLookupsSlotNumber + 22n, Number(seller.id), paddingType.START)
+            );
+
+            // token address mapping from twinRangesBySeller
+            const secondMappingSlot = getMappingStoragePosition(
+              firstMappingSlot,
+              twin721.tokenAddress.toLowerCase(),
+              paddingType.START
+            );
+
+            sellerTwinRangesSlot = BigInt(keccak256(secondMappingSlot));
+          });
+
+          it("Should reduce end in twinRangesBySeller range", async function () {
+            // Redeem the voucher
+            await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+            const start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot);
+            expect(start).to.equal(zeroPadValue(toHexString(BigInt("1")), 32));
+
+            const end = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 1n);
+            expect(end).to.equal(zeroPadValue(toHexString(BigInt("9")), 32));
+          });
+
+          it("Should remove element from range when transferring last twin", async function () {
+            let exchangeId = 1;
+            let supply = 9;
+
+            // redeem first exchange and increase exchangeId
+            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId++);
+
+            while (exchangeId <= 10) {
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+              let expectedStart;
+              let expectedEnd;
+              if (exchangeId == 10) {
+                // Last transfer should remove range
+                expectedStart = zeroPadValue(toHexString(BigInt("0")), 32);
+                expectedEnd = zeroPadValue(toHexString(BigInt("0")), 32);
+              } else {
+                expectedStart = zeroPadValue(toHexString(BigInt("1")), 32);
+                expectedEnd = zeroPadValue(toHexString(BigInt(--supply)), 32);
+              }
+              const start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot);
+              expect(start).to.equal(expectedStart);
+
+              const end = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 1n);
+              expect(end).to.equal(expectedEnd);
+
+              exchangeId++;
+            }
+          });
+
+          it("Should remove rangeIdByTwin when transfering last token from range", async () => {
+            const rangeIdByTwinMappingSlot = BigInt(
+              getMappingStoragePosition(protocolLookupsSlotNumber + 32n, Number(twin721.id), paddingType.START)
+            );
+
+            let exchangeId = 1;
+
+            // redeem first exchange and increase exchangeId
+            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId++);
+
+            while (exchangeId <= 10) {
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+              let expectedRangeId = BigInt("1");
+              if (exchangeId == 10) {
+                expectedRangeId = BigInt("0");
+              }
+
+              const rangeId = await getStorageAt(protocolDiamondAddress, rangeIdByTwinMappingSlot);
+              expect(rangeId).to.equal(expectedRangeId);
+
+              exchangeId++;
+            }
+          });
+
+          it("If seller has more than one range for the same token should remove correct range", async () => {
+            // Create a new twin with the same token addresses
+            twin721.id = "4";
+            twin721.tokenId = "11";
+
+            await twinHandler.connect(assistant).createTwin(twin721.toStruct());
+
+            // Create a new offer
+            const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+            offer.quantityAvailable = "10";
+
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+            // Bundle offer with twin
+            bundle = new Bundle("2", seller.id, [++offerId], [twin721.id]);
+            await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
+
+            // First range
+            let range1Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot);
+            let expectedRange1Start = zeroPadValue(toHexString(BigInt("1")), 32);
+            expect(range1Start).to.equal(expectedRange1Start);
+
+            let range1End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 1n);
+            let expectedRange1End = zeroPadValue(toHexString(BigInt("10")), 32);
+            expect(range1End).to.equal(expectedRange1End);
+
+            // Second range
+            let range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 2n);
+            let expectedRange2Start = zeroPadValue(toHexString(BigInt("11")), 32);
+            expect(range2Start).to.equal(expectedRange2Start);
+
+            let range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 3n);
+            let expectedRange2End = zeroPadValue(toHexString(BigInt("20")), 32);
+            expect(range2End).to.equal(expectedRange2End);
+
+            // Set time forward to the offer's voucherRedeemableFrom
+            voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+            await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+            let exchangeId = 1;
+            // Redeem all twins from first offer
+            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId++);
+
+            // Reduce offer id to commit to first offer
+            --offerId;
+
+            while (exchangeId <= 10) {
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+              exchangeId++;
+            }
+
+            // First range now should be second range
+            range1Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot);
+            expect(range1Start).to.equal(expectedRange2Start);
+            range1End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 1n);
+            expect(range1End).to.equal(expectedRange2End);
+
+            // Second range should be empty
+            const slotEmpty = zeroPadBytes(toHexString(BigInt("0")), 32);
+            range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 2n);
+            expect(range2Start).to.equal(slotEmpty);
+            range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 3n);
+            expect(range2End).to.equal(slotEmpty);
+          });
+        });
+
         context("Unlimited supply", async function () {
           let other721;
           beforeEach(async function () {
@@ -3470,7 +3644,7 @@ describe("IBosonExchangeHandler", function () {
             other721 = await TokenContractFactory.connect(rando).deploy();
 
             // Mint enough tokens to cover the offer
-            await other721.connect(assistant).mint("0", "2");
+            await other721.connect(assistant).mint("1", "2");
 
             // Approve the protocol diamond to transfer seller's tokens
             await other721.connect(assistant).setApprovalForAll(protocolDiamondAddress, true);
@@ -3487,6 +3661,10 @@ describe("IBosonExchangeHandler", function () {
             twin721.supplyAvailable = MaxUint256.toString();
             twin721.tokenAddress = await other721.getAddress();
             twin721.id = "4";
+            twin721.tokenId = "1";
+
+            // Increase exchange id
+            exchange.id++;
 
             // Create a new twin with the new token address
             await twinHandler.connect(assistant).createTwin(twin721.toStruct());
@@ -3514,10 +3692,10 @@ describe("IBosonExchangeHandler", function () {
           });
 
           it("Transfer token order must be ascending if twin supply is unlimited", async function () {
-            let exchangeId = ++exchange.id;
+            let exchangeId = exchange.id;
 
-            // tokenId transferred to the buyer is 0
-            let expectedTokenId = "0";
+            // tokenId transferred to the buyer is 1
+            let expectedTokenId = "1";
 
             // Check the assistant owns the first ERC721 of twin range
             owner = await other721.ownerOf(expectedTokenId);
@@ -3551,6 +3729,38 @@ describe("IBosonExchangeHandler", function () {
             owner = await other721.ownerOf(expectedTokenId);
             expect(owner).to.equal(await buyer.getAddress());
           });
+
+          it("Should increase start in twinRangesBySeller range", async function () {
+            // Redeem the voucher
+            await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+            // starting slot
+            const protocolLookupsSlot = id("boson.protocol.lookups");
+            const protocolLookupsSlotNumber = BigInt(protocolLookupsSlot);
+
+            // seller id mapping from twinRangesBySeller
+            const firstMappingSlot = BigInt(
+              getMappingStoragePosition(protocolLookupsSlotNumber + 22n, Number(seller.id), paddingType.START)
+            );
+
+            // token address mapping from twinRangesBySeller
+            const secondMappingSlot = getMappingStoragePosition(
+              firstMappingSlot,
+              twin721.tokenAddress.toLowerCase(),
+              paddingType.START
+            );
+
+            const range = {};
+            const arrayStart = BigInt(keccak256(secondMappingSlot));
+            (range.start = await getStorageAt(protocolDiamondAddress, arrayStart + 0n)),
+              (range.end = await getStorageAt(protocolDiamondAddress, arrayStart + 1n));
+
+            const expectedRange = {
+              start: zeroPadValue(toHexString(BigInt("2")), 32),
+              end: MaxUint256,
+            };
+            expect(range).to.deep.equal(expectedRange);
+          });
         });
 
         context("Twin transfer fail", async function () {
@@ -3566,7 +3776,7 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "9", "0", await buyer.getAddress());
+              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "10", "0", buyer.address);
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -3596,7 +3806,7 @@ describe("IBosonExchangeHandler", function () {
                 twin721.id,
                 twin721.tokenAddress,
                 exchange.id,
-                "9",
+                "10",
                 "0",
                 await testProtocolFunctions.getAddress()
               );
@@ -3677,7 +3887,7 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "9", "0", await buyer.getAddress());
+              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "10", "0", await buyer.getAddress());
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -3991,7 +4201,7 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("should transfer the twins", async function () {
-          let tokenIdNonFungible = "9";
+          let tokenIdNonFungible = "10";
           let tokenIdMultiToken = "1";
 
           // Check the buyer's balance of the ERC20
@@ -4051,7 +4261,7 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("Should transfer the twin even if supplyAvailable is equal to amount", async function () {
-          await foreign721.connect(assistant).mint("10", "1");
+          await foreign721.connect(assistant).mint("11", "1");
 
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "1";
@@ -4073,7 +4283,7 @@ describe("IBosonExchangeHandler", function () {
           await twinHandler.connect(assistant).createTwin(twin20.toStruct());
 
           twin721.supplyAvailable = "1";
-          twin721.tokenId = "10";
+          twin721.tokenId = "11";
           twin721.id = "6";
 
           await twinHandler.connect(assistant).createTwin(twin721.toStruct());
@@ -4147,7 +4357,7 @@ describe("IBosonExchangeHandler", function () {
             other721 = await TokenContractFactory.connect(rando).deploy();
 
             // Mint enough tokens to cover the offer
-            await other721.connect(assistant).mint("0", "2");
+            await other721.connect(assistant).mint("1", "2");
 
             // Approve the protocol diamond to transfer seller's tokens
             await other721.connect(assistant).setApprovalForAll(protocolDiamondAddress, true);
@@ -4197,7 +4407,7 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferred")
-              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "0", twin721.amount, await buyer.getAddress());
+              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "1", twin721.amount, buyer.address);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferred")
@@ -4233,8 +4443,7 @@ describe("IBosonExchangeHandler", function () {
           });
 
           it("Transfer token order must be ascending if twin supply is unlimited and token type is NonFungible", async function () {
-            // tokenId transferred to the buyer is 0
-            let expectedTokenId = "0";
+            let expectedTokenId = "1";
             let exchangeId = exchange.id;
 
             // Check the assistant owns the first ERC721 of twin range
@@ -4289,7 +4498,7 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferred")
-              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, "9", "0", await buyer.getAddress());
+              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, "10", "0", buyer.address);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferred")
@@ -4345,7 +4554,7 @@ describe("IBosonExchangeHandler", function () {
                 twin721.id,
                 twin721.tokenAddress,
                 exchangeId,
-                "9",
+                "10",
                 "0",
                 await testProtocolFunctions.getAddress()
               );
@@ -5376,8 +5585,8 @@ describe("IBosonExchangeHandler", function () {
       context("TwinReceipt tests", async function () {
         beforeEach(async function () {
           // Mint some tokens to be bundled
-          await foreign20.connect(assistant).mint(await assistant.getAddress(), "500");
-          await foreign721.connect(assistant).mint("0", "10");
+          await foreign20.connect(assistant).mint(assistant.address, "500");
+          await foreign721.connect(assistant).mint("1", "10");
 
           // Approve the protocol diamond to transfer seller's tokens
           await foreign20.connect(assistant).approve(protocolDiamondAddress, "3");
@@ -5395,6 +5604,7 @@ describe("IBosonExchangeHandler", function () {
           twin721.amount = "0";
           twin721.supplyAvailable = "10";
           twin721.id = "2";
+          twin721.tokenId = "1";
           expect(twin721.isValid()).is.true;
 
           await twinHandler.connect(assistant).createTwin(twin721.toStruct());
@@ -5596,7 +5806,7 @@ describe("IBosonExchangeHandler", function () {
 
           const expectedTwin721Receipt = new TwinReceipt(
             twin721.id,
-            "9", // twin transfer order is descending
+            "10", // twin transfer order is descending
             twin721.amount,
             twin721.tokenAddress,
             twin721.tokenType

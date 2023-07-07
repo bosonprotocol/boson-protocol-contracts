@@ -96,10 +96,10 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
     /**
      * @notice Validates that condition parameters make sense.
      *
-     * A invalid condition is one that fits any of the following criteria:
+     * An invalid condition is one that fits any of the following criteria:
      * - EvaluationMethod.None: any field different from zero
      * - EvaluationMethod.Threshold: 
-          -Token address, maxCommits, or threshold is zero. 
+          - Token address, maxCommits, or threshold is zero.
      *    - TokenType is FungibleToken or NonFungibleToken and length and tokenId are not 0.
      * - EvaluationMethod.Threshold:
      *    - token address, maxCommits or threshold is zero

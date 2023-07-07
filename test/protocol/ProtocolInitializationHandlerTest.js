@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const hre = require("hardhat");
+const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   getContractAt,
   getContractFactory,
@@ -9,8 +10,10 @@ const {
   ZeroHash,
   keccak256,
   toUtf8Bytes,
+  ZeroAddress,
 } = hre.ethers;
 const Role = require("../../scripts/domain/Role");
+const { mockTwin, mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployAndCutFacets, deployProtocolFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const { getInterfaceIds, interfaceImplementers } = require("../../scripts/config/supported-interfaces");
@@ -20,6 +23,7 @@ const { getFacetAddCut, getFacetReplaceCut } = require("../../scripts/util/diamo
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { getFacetsWithArgs } = require("../util/utils.js");
 const { getV2_2_0DeployConfig } = require("../upgrade/00_config.js");
+const TokenType = require("../../scripts/domain/TokenType");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("ProtocolInitializationHandler", async function () {
@@ -785,6 +789,36 @@ describe("ProtocolInitializationHandler", async function () {
             await getFees(maxPriorityFeePerGas)
           )
         ).to.be.revertedWith(RevertReasons.WRONG_CURRENT_VERSION);
+      });
+
+      it("Next twin id is not 1", async () => {
+        const twinHandler = await getContractAt("IBosonTwinHandler", await protocolDiamond.getAddress());
+        const accountHandler = await getContractAt("IBosonAccountHandler", await protocolDiamond.getAddress());
+
+        const [bosonToken] = await deployMockTokens();
+        let twin = mockTwin(await bosonToken.getAddress(), TokenType.FungibleToken);
+
+        const seller = mockSeller(rando.address, rando.address, ZeroAddress, rando.address);
+        expect(seller.isValid()).is.true;
+
+        const emptyAuthToken = mockAuthToken();
+        const voucherInitValues = mockVoucherInitValues();
+
+        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        await bosonToken.connect(rando).approve(await twinHandler.getAddress(), 1);
+
+        await twinHandler.connect(rando).createTwin(twin);
+
+        // make diamond cut, expect revert
+        await expect(
+          diamondCutFacet.diamondCut(
+            [facetCut],
+            await deployedProtocolInitializationHandlerFacet.getAddress(),
+            calldataProtocolInitialization,
+            await getFees(maxPriorityFeePerGas)
+          )
+        ).to.be.revertedWith(RevertReasons.TWINS_ALREADY_EXIST);
       });
     });
   });
