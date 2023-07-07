@@ -8,6 +8,7 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
+import { BeaconClientProxy } from "../../protocol/clients/proxy/BeaconClientProxy.sol";
 
 /**
  * @title ConfigHandlerFacet
@@ -32,10 +33,10 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         DiamondLib.addSupportedInterface(type(IBosonConfigHandler).interfaceId);
 
         // Initialize protocol config params
+        // _addresses.beaconProxy is ignored, since it's deployed later in this function
         setTokenAddress(_addresses.token);
         setTreasuryAddress(_addresses.treasury);
         setVoucherBeaconAddress(_addresses.voucherBeacon);
-        setBeaconProxyAddress(_addresses.beaconProxy);
         setProtocolFeePercentage(_fees.percentage);
         setProtocolFeeFlatBoson(_fees.flatBoson);
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
@@ -62,6 +63,10 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
         pmti.domainSeparator = EIP712Lib.buildDomainSeparator(PROTOCOL_NAME, PROTOCOL_VERSION);
         pmti.cachedChainId = block.chainid;
+
+        // Deploy Boson Voucher proxy contract
+        address beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());
+        setBeaconProxyAddress(beaconProxy);
     }
 
     /**

@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const hre = require("hardhat");
+const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   getContractAt,
   getContractFactory,
@@ -7,10 +8,14 @@ const {
   encodeBytes32String,
   AbiCoder,
   ZeroHash,
+  ZeroAddress,
   keccak256,
   toUtf8Bytes,
 } = hre.ethers;
+const { getSnapshot, revertToSnapshot } = require("../util/utils.js");
+
 const Role = require("../../scripts/domain/Role");
+const { mockTwin, mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployAndCutFacets, deployProtocolFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const { getInterfaceIds, interfaceImplementers } = require("../../scripts/config/supported-interfaces");
@@ -20,6 +25,8 @@ const { getFacetAddCut, getFacetReplaceCut } = require("../../scripts/util/diamo
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { getFacetsWithArgs } = require("../util/utils.js");
 const { getV2_2_0DeployConfig } = require("../upgrade/00_config.js");
+const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+const TokenType = require("../../scripts/domain/TokenType");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("ProtocolInitializationHandler", async function () {
@@ -652,24 +659,88 @@ describe("ProtocolInitializationHandler", async function () {
     let facetCut;
     let calldataProtocolInitialization;
     let minResolutionPeriod;
+    let snapshotId;
+    let protocolDiamondAddress;
 
     beforeEach(async function () {
-      version = "2.2.1";
+      if (snapshotId) {
+        await revertToSnapshot(snapshotId);
+        snapshotId = await getSnapshot();
+      } else {
+        version = "2.2.1";
+        protocolDiamondAddress = await protocolDiamond.getAddress();
 
-      const facetsToDeploy = await getV2_2_0DeployConfig(); // To deploy 2.2.1, we can use 2.2.0 config
-
-      // Make initial deployment (simulate v2.2.0)
-      const protocolDiamondAddress = await protocolDiamond.getAddress();
-      await deployAndCutFacets(protocolDiamondAddress, facetsToDeploy, maxPriorityFeePerGas, version);
-
-      // Deploy v2.3.0 facets
-      [{ contract: deployedProtocolInitializationHandlerFacet }, { contract: configHandler }] =
-        await deployProtocolFacets(
-          ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet"],
-          {},
-          maxPriorityFeePerGas
+        // NEED TO ACTUALLY DEPLOY VOUCHER IMPLEMENTATIONS
+        const protocolClientArgs = [protocolDiamondAddress];
+        const [, beacons] = await deployProtocolClients(
+          protocolClientArgs,
+          maxPriorityFeePerGas,
+          [rando.address] // random address in place of forwarder
         );
+        const [beacon] = beacons;
 
+        // @TODO move this to 00_config.js:getFacets
+        const facetsToDeploy = await getV2_2_0DeployConfig(); // To deploy 2.2.1, we can use 2.2.0 config
+        facetsToDeploy.ConfigHandlerFacet.init[0] = {
+          ...facetsToDeploy.ConfigHandlerFacet.init[0],
+          voucherBeacon: await beacon.getAddress(),
+        };
+
+        // Make initial deployment (simulate v2.2.1)
+        // The new config initialization deploys the same voucher proxy as initV2_3_0, which makes the initV2_3_0 test fail
+        // One way to approach would be to checkout the contracts from the previous tag.
+        // Instead, we will just comment out the voucher proxy initialization in the config handler with preprocess
+        hre.config.preprocess = {
+          eachLine: () => ({
+            transform: (line) => {
+              if (
+                line.includes("address beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());")
+              ) {
+                // comment out the proxy deployment
+                line = "//" + line;
+              } else if (line.includes("setBeaconProxyAddress(beaconProxy)")) {
+                // set beacon proxy from config, not the deployed one
+                line = line.replace(
+                  "setBeaconProxyAddress(beaconProxy)",
+                  "setBeaconProxyAddress(_addresses.beaconProxy)"
+                );
+              }
+              return line;
+            },
+          }),
+        };
+
+        // Compile old version
+        await hre.run("compile");
+        await deployAndCutFacets(protocolDiamondAddress, facetsToDeploy, maxPriorityFeePerGas, version);
+
+        // Create a seller so backfilling is possible
+        const accountHandler = await getContractAt("IBosonAccountHandler", protocolDiamondAddress);
+        const seller = mockSeller(
+          await rando.getAddress(),
+          await rando.getAddress(),
+          ZeroAddress,
+          await rando.getAddress()
+        );
+        const emptyAuthToken = mockAuthToken();
+        const voucherInitValues = mockVoucherInitValues();
+        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        // Deploy v2.3.0 facets
+        // Remove preprocess
+        hre.config.preprocess = {};
+        // Compile old version
+        await hre.run("compile");
+
+        [{ contract: deployedProtocolInitializationHandlerFacet }, { contract: configHandler }] =
+          await deployProtocolFacets(
+            ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet", "SellerHandlerFacet"],
+            {},
+            await getFees(maxPriorityFeePerGas)
+          );
+
+        snapshotId = await getSnapshot();
+      }
       // Prepare cut data
       facetCut = await getFacetReplaceCut(deployedProtocolInitializationHandlerFacet, [
         deployedProtocolInitializationHandlerFacet.interface.fragments.find((f) => f.name == "initialize").selector,
@@ -677,7 +748,12 @@ describe("ProtocolInitializationHandler", async function () {
 
       // initialization data for v2.3.0
       minResolutionPeriod = oneWeek;
-      initializationData = abiCoder.encode(["uint256"], [minResolutionPeriod]);
+      const sellerIds = [1];
+      const sellerCreators = [await rando.getAddress()];
+      initializationData = abiCoder.encode(
+        ["uint256", "uint256[]", "address[]"],
+        [minResolutionPeriod, sellerIds, sellerCreators]
+      );
 
       // Prepare calldata
       version = "2.3.0";
@@ -689,6 +765,8 @@ describe("ProtocolInitializationHandler", async function () {
       configHandler = configHandler.attach(protocolDiamondAddress);
 
       deployedProtocolInitializationHandlerFacetAddress = await deployedProtocolInitializationHandlerFacet.getAddress();
+
+      diamondCutFacet = await getContractAt("DiamondCutFacet", protocolDiamondAddress);
     });
 
     it("Should emit a MinResolutionPeriodChanged event", async function () {
@@ -719,10 +797,30 @@ describe("ProtocolInitializationHandler", async function () {
     });
 
     context("💔 Revert Reasons", async function () {
+      it("Next twin id is not 1", async () => {
+        // Make a twin
+        const twinHandler = await getContractAt("IBosonTwinHandler", protocolDiamondAddress);
+        const [bosonToken] = await deployMockTokens();
+        await bosonToken.connect(rando).approve(await twinHandler.getAddress(), 1);
+
+        let twin = mockTwin(await bosonToken.getAddress(), TokenType.FungibleToken);
+        await twinHandler.connect(rando).createTwin(twin);
+
+        // make diamond cut, expect revert
+        await expect(
+          diamondCutFacet.diamondCut(
+            [facetCut],
+            deployedProtocolInitializationHandlerFacetAddress,
+            calldataProtocolInitialization,
+            await getFees(maxPriorityFeePerGas)
+          )
+        ).to.be.revertedWith(RevertReasons.TWINS_ALREADY_EXIST);
+      });
+
       it("Min resolution period is zero", async function () {
-        // set invalid minResolutionPeriod
+        version = "2.3.0";
         minResolutionPeriod = "0";
-        initializationData = abiCoder.encode(["uint256"], [minResolutionPeriod]);
+        initializationData = abiCoder.encode(["uint256", "uint256[]", "address[]"], [minResolutionPeriod, [], []]);
 
         calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
           "initialize",
@@ -738,6 +836,70 @@ describe("ProtocolInitializationHandler", async function () {
             await getFees(maxPriorityFeePerGas)
           )
         ).to.be.revertedWith(RevertReasons.VALUE_ZERO_NOT_ALLOWED);
+      });
+
+      it("sellerIds and sellerCreators length mismatch", async function () {
+        version = "2.3.0";
+        initializationData = abiCoder.encode(["uint256", "uint256[]", "address[]"], [minResolutionPeriod, [1], []]);
+
+        calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+          "initialize",
+          [encodeBytes32String(version), [], [], true, initializationData, [], []]
+        );
+
+        // make diamond cut, expect revert
+        await expect(
+          diamondCutFacet.diamondCut(
+            [facetCut],
+            deployedProtocolInitializationHandlerFacetAddress,
+            calldataProtocolInitialization,
+            await getFees(maxPriorityFeePerGas)
+          )
+        ).to.be.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+      });
+
+      it("invalid seller id ", async function () {
+        initializationData = abiCoder.encode(
+          ["uint256", "uint256[]", "address[]"],
+          [minResolutionPeriod, [66], [rando.address]]
+        );
+
+        calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+          "initialize",
+          [encodeBytes32String(version), [], [], true, initializationData, [], []]
+        );
+
+        // make diamond cut, expect revert
+        await expect(
+          diamondCutFacet.diamondCut(
+            [facetCut],
+            deployedProtocolInitializationHandlerFacetAddress,
+            calldataProtocolInitialization,
+            await getFees(maxPriorityFeePerGas)
+          )
+        ).to.be.revertedWith(RevertReasons.NO_SUCH_SELLER);
+      });
+
+      it("invalid seller creator address ", async function () {
+        initializationData = abiCoder.encode(
+          ["uint256", "uint256[]", "address[]"],
+          [minResolutionPeriod, [1], [ZeroAddress]]
+        );
+
+        calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+          "initialize",
+          [encodeBytes32String(version), [], [], true, initializationData, [], []]
+        );
+
+        // make diamond cut, expect revert
+        await expect(
+          diamondCutFacet.diamondCut(
+            [facetCut],
+            deployedProtocolInitializationHandlerFacetAddress,
+            calldataProtocolInitialization,
+            await getFees(maxPriorityFeePerGas)
+          )
+        ).to.be.revertedWith(RevertReasons.INVALID_ADDRESS);
       });
 
       it("Current version is not 2.2.1", async () => {

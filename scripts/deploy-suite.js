@@ -178,12 +178,6 @@ async function main(env, facetConfig) {
   );
   await transactionResponse.wait(confirmations);
 
-  transactionResponse = await bosonConfigHandler.setBeaconProxyAddress(
-    await bosonVoucherProxy.getAddress(),
-    await getFees(maxPriorityFeePerGas)
-  );
-  await transactionResponse.wait(confirmations);
-
   // Add NFT auth token addresses to protocol config
   // LENS
   transactionResponse = await bosonConfigHandler.setAuthTokenContract(

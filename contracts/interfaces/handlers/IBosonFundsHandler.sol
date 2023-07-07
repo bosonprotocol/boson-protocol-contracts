@@ -10,7 +10,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles custody and withdrawal of buyer and seller funds within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xb5850c2a
+ * The ERC-165 identifier for this interface is: 0x2f4a64d7
  */
 interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
     /**
@@ -73,7 +73,41 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
     function withdrawProtocolFees(address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external;
 
     /**
+     * @notice Returns list of addresses for which the entity has funds available.
+     * If the list is too long, it can be retrieved in chunks by using `getTokenListPaginated` and specifying _limit and _offset.
+     *
+     * @param _entityId - id of entity for which availability of funds should be checked
+     * @return tokenList - list of token addresses
+     */
+    function getTokenList(uint256 _entityId) external view returns (address[] memory tokenList);
+
+    /**
+     * @notice Returns list of addresses for which the entity has funds available.
+     *
+     * @param _entityId - id of entity for which availability of funds should be checked
+     * @param _limit - the maximum number of token addresses that should be returned starting from the index defined by `_offset`. If `_offset` + `_limit` exceeds total tokens, `_limit` is adjusted to return all remaining tokens.
+     * @param _offset - the starting index from which to return token addresses. If `_offset` is greater than or equal to total tokens, an empty list is returned.
+     * @return tokenList - list of token addresses
+     */
+    function getTokenListPaginated(
+        uint256 _entityId,
+        uint256 _limit,
+        uint256 _offset
+    ) external view returns (address[] memory tokenList);
+
+    /**
      * @notice Returns the information about the funds that an entity can use as a sellerDeposit and/or withdraw from the protocol.
+     * It tries to get information about all tokens that the entity has in availableFunds storage.
+     * If the token list is too long, this call may run out of gas. In this case, the caller should use the function `getAvailableFunds` and pass the token list.
+     *
+     * @param _entityId - id of entity for which availability of funds should be checked
+     * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
+     */
+    function getAllAvailableFunds(uint256 _entityId) external view returns (BosonTypes.Funds[] memory availableFunds);
+
+    /**
+     * @notice Returns the information about the funds that an entity can use as a sellerDeposit and/or withdraw from the protocol.
+     * To get a list of tokens that the entity has in availableFunds storage, use the function `getTokenList`.
      *
      * @param _entityId - id of entity for which availability of funds should be checked
      * @param _tokenList - list of tokens addresses to get available funds

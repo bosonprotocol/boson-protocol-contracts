@@ -366,7 +366,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
       it("Can withdraw native token", async function () {
         // Sellers initial available funds
-        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(sellerId));
         let expectedAvailableFunds = new FundsList([new Funds(ZeroAddress, "Native currency", offer.sellerDeposit)]);
         expect(sellersFundsBefore).to.eql(expectedAvailableFunds);
 
@@ -382,13 +382,13 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         expectedAvailableFunds = new FundsList([
           new Funds(ZeroAddress, "Native currency", amount + offer.sellerDeposit.toString()),
         ]);
-        const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(sellerId));
         expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
       });
 
       it("Can withdraw ERC20", async function () {
         // Sellers initial available funds
-        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(sellerId));
         let expectedAvailableFunds = new FundsList([new Funds(ZeroAddress, "Native currency", offer.sellerDeposit)]);
         expect(sellersFundsBefore).to.eql(expectedAvailableFunds);
 
@@ -407,7 +407,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
 
         // Seller's available balance should increase
         expectedAvailableFunds.funds.push(new Funds(await foreign20.getAddress(), "Foreign20", amount.toString()));
-        const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(sellerId));
         expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
       });
     });

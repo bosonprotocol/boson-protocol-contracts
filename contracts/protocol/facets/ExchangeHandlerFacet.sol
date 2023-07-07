@@ -235,7 +235,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * Issues a voucher to the buyer address for non preminted offers.
      *
      * Reverts if:
-     * - Offer has been voided
      * - Offer has expired
      * - Offer is not yet available for commits
      * - Offer's quantity available is zero [for non preminted offers]
@@ -266,7 +265,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Make sure offer is available, and isn't void, expired, or sold out
         OfferDates storage offerDates = fetchOfferDates(_offerId);
         require(block.timestamp >= offerDates.validFrom, OFFER_NOT_AVAILABLE);
-        require(block.timestamp < offerDates.validUntil, OFFER_HAS_EXPIRED);
+        require(block.timestamp <= offerDates.validUntil, OFFER_HAS_EXPIRED);
 
         if (!_isPreminted) {
             // For non-preminted offers, quantityAvailable must be greater than zero, since it gets decremented
@@ -814,6 +813,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 (, Twin storage twin) = fetchTwin(twinIds[i]);
 
                 bool success;
+
                 uint256 tokenId = twin.tokenId;
 
                 {
@@ -881,16 +881,44 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, twin.amount, sender);
                 } else {
-                    // Store twin receipt on twinReceiptsByExchange
                     uint256 exchangeId = _exchange.id;
-                    TwinReceipt storage twinReceipt = lookups.twinReceiptsByExchange[exchangeId].push();
-                    twinReceipt.twinId = twin.id;
-                    twinReceipt.tokenAddress = twin.tokenAddress;
-                    twinReceipt.tokenId = tokenId;
-                    twinReceipt.amount = twin.amount;
-                    twinReceipt.tokenType = twin.tokenType;
+                    uint256 twinId = twin.id;
+                    {
+                        // Store twin receipt on twinReceiptsByExchange
+                        TwinReceipt storage twinReceipt = lookups.twinReceiptsByExchange[exchangeId].push();
+                        twinReceipt.twinId = twinId;
+                        twinReceipt.tokenAddress = twin.tokenAddress;
+                        twinReceipt.tokenId = tokenId;
+                        twinReceipt.amount = twin.amount;
+                        twinReceipt.tokenType = twin.tokenType;
+                    }
+                    if (twin.tokenType == TokenType.NonFungibleToken) {
+                        // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
+                        TokenRange[] storage twinRanges = lookups.twinRangesBySeller[seller.id][twin.tokenAddress];
 
-                    emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
+                        bool unlimitedSupply = twin.supplyAvailable == type(uint256).max;
+
+                        uint256 rangeIndex = lookups.rangeIdByTwin[twinId] - 1;
+                        TokenRange storage range = twinRanges[rangeIndex];
+
+                        if (unlimitedSupply ? range.end == tokenId : range.start == tokenId) {
+                            uint256 lastIndex = twinRanges.length - 1;
+
+                            if (rangeIndex != lastIndex) {
+                                // Replace range with last range
+                                twinRanges[rangeIndex] = twinRanges[lastIndex];
+                            }
+
+                            // Remove from ranges mapping
+                            twinRanges.pop();
+
+                            // Delete rangeId from rangeIdByTwin mapping
+                            lookups.rangeIdByTwin[twinId] = 0;
+                        } else {
+                            unlimitedSupply ? range.start++ : range.end--;
+                        }
+                    }
+                    emit TwinTransferred(twinId, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 }
             }
         }

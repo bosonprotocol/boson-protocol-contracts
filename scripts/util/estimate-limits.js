@@ -27,7 +27,7 @@ const {
   mockTwin,
   accountId,
 } = require("../../test/util/mock");
-const { setNextBlockTimestamp, getFacetsWithArgs, calculateContractAddress } = require("../../test/util/utils.js");
+const { setNextBlockTimestamp, getFacetsWithArgs, calculateCloneAddress } = require("../../test/util/utils.js");
 
 // Common vars
 let deployer,
@@ -54,7 +54,7 @@ let protocolDiamond,
   groupHandler,
   offerHandler,
   twinHandler;
-let bosonVoucher;
+let bosonVoucher, proxy;
 let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
 let handlers = {};
 let result = {};
@@ -788,7 +788,9 @@ setupEnvironment["maxPremintedVouchers"] = async function (tokenCount = 10) {
   await offerHandler.connect(sellerWallet1).reserveRange(offer.id, length);
 
   // update bosonVoucher address
-  handlers.IBosonVoucher = bosonVoucher.attach(calculateContractAddress(await accountHandler.getAddress(), seller1.id));
+  handlers.IBosonVoucher = bosonVoucher.attach(
+    calculateCloneAddress(await accountHandler.getAddress(), await proxy.getAddress(), seller1.admin, "")
+  );
 
   // make an empty array of length tokenCount
   const amounts = new Array(tokenCount);
@@ -944,7 +946,7 @@ async function setupCommonEnvironment() {
   const protocolClientArgs = [await protocolDiamond.getAddress()];
   const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, gasLimit);
   const [beacon] = beacons;
-  const [proxy] = proxies;
+  [proxy] = proxies;
   [bosonVoucher] = bv;
 
   // Set protocolFees
