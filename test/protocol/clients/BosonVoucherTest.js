@@ -1853,6 +1853,7 @@ describe("IBosonVoucher", function () {
       beforeEach(async function () {
         availableFundsAddresses = [ZeroAddress];
       });
+
       it("Can withdraw native token", async function () {
         const sellersFundsBefore = FundsList.fromStruct(
           await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
