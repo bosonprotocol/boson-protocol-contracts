@@ -193,6 +193,8 @@ library ProtocolLib {
         mapping(uint256 => mapping(uint256 => uint256)) conditionalCommitsByTokenId;
         // seller id => collections
         mapping(uint256 => BosonTypes.Collection[]) additionalCollections;
+        // seller id => address that was used to create it
+        mapping(uint256 => address) sellerCreator;
     }
 
     // Incrementing id counters

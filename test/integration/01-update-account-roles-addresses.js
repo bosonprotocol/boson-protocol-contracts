@@ -18,7 +18,8 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { oneMonth } = require("../util/constants");
 const {
   setNextBlockTimestamp,
-  calculateContractAddress,
+  calculateCloneAddress,
+  calculateBosonProxyAddress,
   prepareDataSignatureParameters,
   applyPercentage,
   setupTestEnvironment,
@@ -35,6 +36,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
   let assistant, admin, clerk, treasury, buyer, rando, assistantDR, adminDR, clerkDR, treasuryDR, agent;
   let buyerEscalationDepositPercentage, redeemedDate;
   let snapshotId;
+  let beaconProxyAddress;
 
   before(async function () {
     accountId.next(true);
@@ -48,7 +50,9 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       disputeHandler: "IBosonDisputeHandler",
     };
 
+    let protocolDiamondAddress;
     ({
+      diamondAddress: protocolDiamondAddress,
       signers: [admin, treasury, buyer, rando, adminDR, treasuryDR, agent],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
       protocolConfig: [, , { buyerEscalationDepositPercentage }],
@@ -58,6 +62,9 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
     assistant = admin;
     assistantDR = adminDR;
     clerk = clerkDR = { address: ZeroAddress };
+
+    // Get the beacon proxy address
+    beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -76,7 +83,12 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
     let expectedCloneAddress, emptyAuthToken, voucherInitValues;
 
     beforeEach(async function () {
-      expectedCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "1");
+      expectedCloneAddress = calculateCloneAddress(
+        await accountHandler.getAddress(),
+        beaconProxyAddress,
+        admin.address,
+        ""
+      );
       emptyAuthToken = mockAuthToken();
       expect(emptyAuthToken.isValid()).is.true;
       voucherInitValues = mockVoucherInitValues();

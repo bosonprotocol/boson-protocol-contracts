@@ -8,7 +8,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
-const { getFacetsWithArgs, getSnapshot, revertToSnapshot } = require("../util/utils");
+const { getFacetsWithArgs, getSnapshot, revertToSnapshot, calculateBosonProxyAddress } = require("../util/utils");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 
 /**
@@ -17,7 +17,7 @@ const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handl
 describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
-  let accounts, deployer, rando, token, treasury, beacon, proxy;
+  let accounts, deployer, rando, token, treasury, beacon;
   let maxOffersPerGroup,
     maxTwinsPerBundle,
     maxOffersPerBundle,
@@ -45,7 +45,7 @@ describe("IBosonConfigHandler", function () {
 
     // Make accounts available
     accounts = await getSigners();
-    [deployer, rando, token, treasury, beacon, proxy] = accounts;
+    [deployer, rando, token, treasury, beacon] = accounts;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -92,13 +92,15 @@ describe("IBosonConfigHandler", function () {
   describe("Deploy tests", async function () {
     context("📋 Initializer", async function () {
       it("should initialize the config handler and emit set events", async function () {
+        const proxyAddress = await calculateBosonProxyAddress(await protocolDiamond.getAddress());
+
         const protocolConfig = [
           // Protocol addresses
           {
             token: await token.getAddress(),
             treasury: await treasury.getAddress(),
             voucherBeacon: await beacon.getAddress(),
-            beaconProxy: await proxy.getAddress(),
+            beaconProxy: ZeroAddress,
           },
           // Protocol limits
           {
@@ -153,7 +155,7 @@ describe("IBosonConfigHandler", function () {
 
         await expect(cutTransaction)
           .to.emit(configHandler, "BeaconProxyAddressChanged")
-          .withArgs(await proxy.getAddress(), await deployer.getAddress());
+          .withArgs(proxyAddress, await deployer.getAddress());
 
         await expect(cutTransaction)
           .to.emit(configHandler, "ProtocolFeePercentageChanged")
@@ -195,7 +197,7 @@ describe("IBosonConfigHandler", function () {
           treasury: await treasury.getAddress(),
           token: await token.getAddress(),
           voucherBeacon: await beacon.getAddress(),
-          beaconProxy: await proxy.getAddress(),
+          beaconProxy: ZeroAddress,
         },
         // Protocol limits
         {
@@ -373,7 +375,7 @@ describe("IBosonConfigHandler", function () {
           proxy = accounts[9];
         });
 
-        it("should emit a VoucherAddressChanged event", async function () {
+        it("should emit a BeaconProxyAddressChanged event", async function () {
           // Set new proxy address, testing for the event
           await expect(configHandler.connect(deployer).setBeaconProxyAddress(await proxy.getAddress()))
             .to.emit(configHandler, "BeaconProxyAddressChanged")
@@ -855,11 +857,13 @@ describe("IBosonConfigHandler", function () {
         );
         expect(await configHandler.connect(rando).getVoucherBeaconAddress()).to.equal(
           await beacon.getAddress(),
-          "Invalid voucher address"
+          "Invalid voucher beacon address"
         );
+
+        const proxyAddress = await calculateBosonProxyAddress(await protocolDiamond.getAddress());
         expect(await configHandler.connect(rando).getBeaconProxyAddress()).to.equal(
-          await proxy.getAddress(),
-          "Invalid voucher address"
+          proxyAddress,
+          "Invalid voucher proxy address"
         );
         expect(await configHandler.connect(rando).getProtocolFeePercentage()).to.equal(
           protocolFeePercentage,
