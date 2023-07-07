@@ -7,7 +7,6 @@ require("@nomicfoundation/hardhat-toolbox");
 require("@nomiclabs/hardhat-web3");
 require("hardhat-contract-sizer");
 require("hardhat-preprocessor");
-require("hardhat-change-network");
 
 const lazyImport = async (module) => {
   return await require(module);
@@ -109,6 +108,8 @@ task("migrate", "Migrates the protocol to a new version")
       let setupDryRun;
       ({ setupDryRun, getBalance } = await lazyImport(`./scripts/migrations/dry-run.js`));
       ({ env, upgraderBalance: balanceBefore } = await setupDryRun(env));
+    } else {
+      process.exit();
     }
 
     const { migrate } = await lazyImport(`./scripts/migrations/migrate_${newVersion}.js`);
