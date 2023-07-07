@@ -140,11 +140,20 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      *
      * V2.3.0 adds the minimal resolution period. Cannot be initialized with ConfigHandlerFacet.initialize since it would reset the counters.
      *
+     * Reverts if:
+     *  - Current version is not 2.2.1
+     *  - There are already twins. This version adds a new mapping for twins which make it incompatible with previous versions.
+     *  - minResolutionPeriond is not present in _initializationData parameter
+     *  - length of seller creators does not match the length of seller ids
+     *  - if some of seller creators is zero address
+     *  - if some of seller ids does not bellong to a seller
+     *
      * @param _initializationData - data representing uint256 _minResolutionPeriod, uint256[] memory sellerIds, address[] memory sellerCreators
      */
     function initV2_3_0(bytes calldata _initializationData) internal {
         // Current version must be 2.2.1
         require(protocolStatus().version == bytes32("2.2.1"), WRONG_CURRENT_VERSION);
+        require(protocolCounters().nextTwinId == 1, TWINS_ALREADY_EXIST);
 
         // Decode initialization data
         (uint256 _minResolutionPeriod, uint256[] memory sellerIds, address[] memory sellerCreators) = abi.decode(

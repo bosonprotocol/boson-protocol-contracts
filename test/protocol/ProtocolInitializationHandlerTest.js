@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const hre = require("hardhat");
+const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   getContractAt,
   getContractFactory,
@@ -14,6 +15,7 @@ const {
 const { getSnapshot, revertToSnapshot } = require("../util/utils.js");
 
 const Role = require("../../scripts/domain/Role");
+const { mockTwin, mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployAndCutFacets, deployProtocolFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const { getInterfaceIds, interfaceImplementers } = require("../../scripts/config/supported-interfaces");
@@ -23,8 +25,8 @@ const { getFacetAddCut, getFacetReplaceCut } = require("../../scripts/util/diamo
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { getFacetsWithArgs } = require("../util/utils.js");
 const { getV2_2_0DeployConfig } = require("../upgrade/00_config.js");
-const { mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+const TokenType = require("../../scripts/domain/TokenType");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("ProtocolInitializationHandler", async function () {
@@ -735,13 +737,12 @@ describe("ProtocolInitializationHandler", async function () {
             await getFees(maxPriorityFeePerGas)
           );
 
-        // Prepare cut data
-        facetCut = await getFacetReplaceCut(deployedProtocolInitializationHandlerFacet, [
-          deployedProtocolInitializationHandlerFacet.interface.fragments.find((f) => f.name == "initialize").selector,
-        ]);
-
         snapshotId = await getSnapshot();
       }
+      // Prepare cut data
+      facetCut = await getFacetReplaceCut(deployedProtocolInitializationHandlerFacet, [
+        deployedProtocolInitializationHandlerFacet.interface.fragments.find((f) => f.name == "initialize").selector,
+      ]);
 
       // initialization data for v2.3.0
       minResolutionPeriod = oneWeek;
@@ -794,6 +795,26 @@ describe("ProtocolInitializationHandler", async function () {
     });
 
     context("💔 Revert Reasons", async function () {
+      it("Next twin id is not 1", async () => {
+        // Make a twin
+        const twinHandler = await getContractAt("IBosonTwinHandler", protocolDiamondAddress);
+        const [bosonToken] = await deployMockTokens();
+        await bosonToken.connect(rando).approve(await twinHandler.getAddress(), 1);
+
+        let twin = mockTwin(await bosonToken.getAddress(), TokenType.FungibleToken);
+        await twinHandler.connect(rando).createTwin(twin);
+
+        // make diamond cut, expect revert
+        await expect(
+          diamondCutFacet.diamondCut(
+            [facetCut],
+            deployedProtocolInitializationHandlerFacetAddress,
+            calldataProtocolInitialization,
+            await getFees(maxPriorityFeePerGas)
+          )
+        ).to.be.revertedWith(RevertReasons.TWINS_ALREADY_EXIST);
+      });
+
       it("Min resolution period is zero", async function () {
         // set invalid minResolutionPeriod
         version = "2.3.0";

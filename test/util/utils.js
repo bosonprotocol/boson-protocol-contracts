@@ -13,6 +13,7 @@ const {
   Interface,
   toUtf8Bytes,
   solidityPackedKeccak256,
+  ZeroAddress,
 } = ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
@@ -20,7 +21,6 @@ const Role = require("../../scripts/domain/Role");
 const { toHexString } = require("../../scripts/util/utils.js");
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
-const { zeroPadBytes, ZeroAddress } = require("ethers");
 
 function getEvent(receipt, factory, eventName) {
   let found = false;
@@ -295,18 +295,22 @@ const paddingType = {
 
 function getMappingStoragePosition(slot, key, padding = paddingType.NONE) {
   let keyBuffer;
+  let keyHex = String(key).startsWith("0x") ? String(key) : toHexString(key);
+
   switch (padding) {
     case paddingType.NONE:
       keyBuffer = toUtf8Bytes(key);
       break;
     case paddingType.START:
-      keyBuffer = Buffer.from(zeroPadBytes(key, 32).toString().slice(2), "hex");
+      keyBuffer = Buffer.from(zeroPadValue(keyHex, 32).toString().slice(2), "hex");
       break;
     case paddingType.END:
-      keyBuffer = Buffer.from(key.slice(2).padEnd(64, "0"), "hex"); // assume key is prefixed with 0x
+      keyBuffer = Buffer.from(keyHex.slice(2).padEnd(64, "0"), "hex");
       break;
   }
-  const pBuffer = Buffer.from(toHexString(slot).slice(2), "hex");
+
+  const slotHex = String(slot).startsWith("0x") ? slot : toHexString(slot);
+  const pBuffer = Buffer.from(slotHex.slice(2), "hex"); // slice is used to remove '0x' prefix for Buffer.from
   return keccak256(Buffer.concat([keyBuffer, pBuffer]));
 }
 
