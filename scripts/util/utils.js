@@ -49,10 +49,10 @@ function readContracts(chainId, network, env) {
 }
 
 async function getFees(maxPriorityFeePerGas) {
-  const { lastBaseFeePerGas } = await provider.getFeeData();
+  const { baseFeePerGas } = await provider.getBlock();
   // Set maxFeePerGas so it's likely to be accepted by the network
   // maxFeePerGas = maxPriorityFeePerGas + 2 * lastBaseFeePerGas
-  return { maxPriorityFeePerGas, maxFeePerGas: maxPriorityFeePerGas + lastBaseFeePerGas * 2n };
+  return { maxPriorityFeePerGas, maxFeePerGas: maxPriorityFeePerGas + BigInt(baseFeePerGas) * 2n };
 }
 
 // Check if account has a role

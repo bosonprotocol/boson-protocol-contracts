@@ -1,5 +1,6 @@
 const hre = require("hardhat");
 const shell = require("shelljs");
+const { getContractFactory } = hre.ethers;
 const { getInterfaceIds, interfaceImplementers } = require("../config/supported-interfaces.js");
 
 const prefix = "contracts/";
@@ -53,7 +54,11 @@ async function detectChangedContract(referenceCommit, targetCommit = "HEAD") {
 
   // Temporary target install reference version dependencies
   // - Protocol versions < 2.3.0 use different OZ contracts
-  installDependencies(referenceCommit);
+  const isOldOZVersion = ["v2.0", "v2.1", "v2.2"].some((v) => referenceCommit.startsWith(v));
+  if (isOldOZVersion) {
+    // Temporary install old OZ contracts
+    shell.exec("npm i @openzeppelin/contracts-upgradeable@4.7.1");
+  }
 
   // Compile old version
   await hre.run("clean");
@@ -70,7 +75,9 @@ async function detectChangedContract(referenceCommit, targetCommit = "HEAD") {
   shell.exec(`git checkout ${targetCommit} contracts`);
 
   // If reference commit is old version, we need to revert to target version dependencies
-  installDependencies(targetCommit);
+  if (isOldOZVersion) {
+    installDependencies(targetCommit);
+  }
 
   // Compile new version
   await hre.run("clean");
@@ -147,7 +154,7 @@ async function getBytecodes() {
 
     // Abstract contracts do not have bytecode, and factory creation fails. Skip them.
     try {
-      const contract = await hre.getContractFactory(name);
+      const contract = await getContractFactory(name);
 
       // Store the bytecode
       byteCodes[name] = contract.bytecode;
