@@ -31,3 +31,16 @@ contract Foreign721 is ERC721Upgradeable {
         selfdestruct(payable(msg.sender));
     }
 }
+
+/*
+ * @title Foreign721 that consumes all gas when transfer is called
+ *
+ * @notice Mock ERC-(721) for Unit Testing
+ */
+contract Foreign721GasTheft is Foreign721 {
+    function safeTransferFrom(address, address, uint256, bytes memory) public virtual override {
+        while (true) {
+            // consume all gas
+        }
+    }
+}

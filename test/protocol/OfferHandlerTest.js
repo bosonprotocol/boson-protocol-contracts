@@ -158,6 +158,8 @@ describe("IBosonOfferHandler", function () {
   // All supported methods - single offer
   context("📋 Offer Handler Methods", async function () {
     beforeEach(async function () {
+      accountId.next(true);
+
       // create a seller
       // Required constructor params
       id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
@@ -533,6 +535,66 @@ describe("IBosonOfferHandler", function () {
         ).to.emit(offerHandler, "OfferCreated");
       });
 
+      context("Additional collections", async function () {
+        let expectedCollectionAddress;
+
+        beforeEach(async function () {
+          const externalId = "Brand1";
+          expectedCollectionAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
+
+          // Create a new collection
+          await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+          // Update collection index
+          offer.collectionIndex = "1";
+        });
+
+        it("Create offer", async function () {
+          // Create an offer, testing for the event
+          await expect(
+            offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+          )
+            .to.emit(offerHandler, "OfferCreated")
+            .withArgs(
+              nextOfferId,
+              offer.sellerId,
+              offer.toStruct(),
+              offerDatesStruct,
+              offerDurationsStruct,
+              disputeResolutionTermsStruct,
+              offerFeesStruct,
+              agentId,
+              assistant.address
+            );
+        });
+
+        it("Reserve range", async function () {
+          offer.quantityAvailable = "200";
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
+          // expected address of the first clone
+          const bosonVoucher = await getContractAt("BosonVoucher", expectedCollectionAddress);
+
+          const length = 100;
+          const exchangeId = "1";
+          const lastExchangeId = BigInt(exchangeId) + BigInt(length) - 1n;
+          const firstTokenId = deriveTokenId(nextOfferId, exchangeId);
+
+          const range = new Range(firstTokenId.toString(), length.toString(), "0", "0", assistant.address);
+
+          // Reserve a range, testing for the event
+          const tx = await offerHandler.connect(assistant).reserveRange(id, length, assistant.address);
+
+          await expect(tx)
+            .to.emit(offerHandler, "RangeReserved")
+            .withArgs(nextOfferId, offer.sellerId, exchangeId, lastExchangeId, assistant.address, assistant.address);
+
+          await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
+        });
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
@@ -654,9 +716,9 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_PERIOD);
         });
 
-        it("Resolution period is set to zero", async function () {
-          // Set dispute duration period to 0
-          offerDurations.resolutionPeriod = "0";
+        it("Resolution period is less than minimum resolution period", async function () {
+          // Set resolution duration period to less than minResolutionPeriod (oneWeek)
+          offerDurations.resolutionPeriod = (oneWeek - 10n).toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -803,6 +865,28 @@ describe("IBosonOfferHandler", function () {
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
           ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
+        });
+
+        it("Collection does not exist", async function () {
+          // Set non existent collection index
+          offer.collectionIndex = "1";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+          ).to.revertedWith(RevertReasons.NO_SUCH_COLLECTION);
+
+          // Create a new collection
+          const externalId = "Brand1";
+          await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+          // Set non existent collection index
+          offer.collectionIndex = "2";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+          ).to.revertedWith(RevertReasons.NO_SUCH_COLLECTION);
         });
       });
 
@@ -2255,20 +2339,6 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
-        it("Creating too many offers", async function () {
-          const gasLimit = 10000000;
-
-          // Try to create the more than 100 offers
-          offers = new Array(101).fill(offer);
-
-          // Attempt to create the offers, expecting revert
-          await expect(
-            offerHandler
-              .connect(assistant)
-              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds, { gasLimit })
-          ).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
-        });
-
         it("Dispute valid duration is 0 for some offer", async function () {
           // Set dispute valid duration to 0
           offerDurationsList[2].resolutionPeriod = "0";
@@ -2347,9 +2417,9 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_PERIOD);
         });
 
-        it("For some offer, dispute duration is set to zero", async function () {
-          // Set dispute duration period to 0
-          offerDurationsList[0].resolutionPeriod = "0";
+        it("For some offer, resolution period is less than minimum dispute period", async function () {
+          // Set resolution duration period to less than minResolutionPeriod (oneWeek)
+          offerDurationsList[0].resolutionPeriod = (oneWeek - 10n).toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -2565,6 +2635,32 @@ describe("IBosonOfferHandler", function () {
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
           ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+        });
+
+        it("For some offer, collection does not exist", async function () {
+          // Set non existent collection index
+          offers[3].collectionIndex = "1";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+          ).to.revertedWith(RevertReasons.NO_SUCH_COLLECTION);
+
+          // Create a new collection
+          const externalId = "Brand1";
+          await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+          // Index "1" exists now, but "2" does not
+          offers[3].collectionIndex = "2";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+          ).to.revertedWith(RevertReasons.NO_SUCH_COLLECTION);
         });
       });
 
@@ -2864,16 +2960,6 @@ describe("IBosonOfferHandler", function () {
             RevertReasons.OFFER_HAS_BEEN_VOIDED
           );
         });
-
-        it("Voiding too many offers", async function () {
-          // Try to void the more than 100 offers
-          offersToVoid = [...Array(101).keys()];
-
-          // Attempt to void the offers, expecting revert
-          await expect(offerHandler.connect(assistant).voidOfferBatch(offersToVoid)).to.revertedWith(
-            RevertReasons.TOO_MANY_OFFERS
-          );
-        });
       });
     });
 
@@ -3036,16 +3122,6 @@ describe("IBosonOfferHandler", function () {
           await expect(
             offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
-        });
-
-        it("Extending too many offers", async function () {
-          // Try to extend the more than 100 offers
-          offersToExtend = [...Array(101).keys()];
-
-          // Attempt to extend the offers, expecting revert
-          await expect(
-            offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate)
-          ).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
         });
       });
     });

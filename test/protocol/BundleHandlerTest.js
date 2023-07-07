@@ -501,16 +501,6 @@ describe("IBosonBundleHandler", function () {
           );
         });
 
-        it("Adding too many offers", async function () {
-          // Try to add the more than 100 offers
-          bundle.offerIds = [...Array(101).keys()];
-
-          // Attempt to create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
-            RevertReasons.TOO_MANY_OFFERS
-          );
-        });
-
         it("Twin is duplicated", async function () {
           // Try to add the same twin twice
           bundle.twinIds = ["1", "1", "4"];
@@ -518,16 +508,6 @@ describe("IBosonBundleHandler", function () {
           // Attempt to create a bundle, expecting revert
           await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
             RevertReasons.BUNDLE_TWIN_MUST_BE_UNIQUE
-          );
-        });
-
-        it("Adding too many twins", async function () {
-          // Try to add the more than 100 twins
-          bundle.twinIds = [...Array(101).keys()];
-
-          // Attempt to create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
-            RevertReasons.TOO_MANY_TWINS
           );
         });
 

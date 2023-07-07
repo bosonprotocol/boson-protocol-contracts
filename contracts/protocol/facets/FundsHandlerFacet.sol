@@ -78,7 +78,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * - The funds region of protocol is paused
      * - Caller is not associated with the entity id
      * - Token list length does not match amount list length
-     * - Token list length exceeds the maximum allowed number of tokens
      * - Caller tries to withdraw more that they have in available funds
      * - There is nothing to withdraw
      * - Transfer of funds is not successful
@@ -135,7 +134,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * - The funds region of protocol is paused
      * - Caller does not have the FEE_COLLECTOR role
      * - Token list length does not match amount list length
-     * - Token list length exceeds the maximum allowed number of tokens
      * - Caller tries to withdraw more that they have in available funds
      * - There is nothing to withdraw
      * - Transfer of funds is not successful
@@ -209,7 +207,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * To get a list of tokens that the entity has in availableFunds storage, use the function `getTokenList`.
      *
      * @param _entityId - id of entity for which availability of funds should be checked
-     * @param _tokenList - list of token addresses to check
+     * @param _tokenList - list of tokens addresses to get available funds
      * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
      */
     function getAvailableFunds(
@@ -254,7 +252,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * Reverts if:
      * - Caller is not associated with the entity id
      * - Token list length does not match amount list length
-     * - Token list length exceeds the maximum allowed number of tokens
      * - Caller tries to withdraw more that they have in available funds
      * - There is nothing to withdraw
      * - Transfer of funds is not successful
@@ -276,10 +273,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         // Make sure that the data is complete
         require(_tokenList.length == _tokenAmounts.length, TOKEN_AMOUNT_MISMATCH);
 
-        // Limit maximum number of tokens to avoid running into block gas limit in a loop
-        uint256 maxTokensPerWithdrawal = protocolLimits().maxTokensPerWithdrawal;
-        require(_tokenList.length <= maxTokensPerWithdrawal, TOO_MANY_TOKENS);
-
         // Two possible options: withdraw all, or withdraw only specified tokens and amounts
         if (_tokenList.length == 0) {
             // Withdraw everything
@@ -290,14 +283,11 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             // Make sure that at least something will be withdrawn
             require(tokenList.length != 0, NOTHING_TO_WITHDRAW);
 
-            // Make sure that tokenList is not too long
-            uint256 len = maxTokensPerWithdrawal <= tokenList.length ? maxTokensPerWithdrawal : tokenList.length;
-
             // Get entity's availableFunds storage pointer
             mapping(address => uint256) storage entityFunds = lookups.availableFunds[_entityId];
 
             // Transfer funds
-            for (uint256 i = 0; i < len; i++) {
+            for (uint256 i = 0; i < tokenList.length; i++) {
                 // Get available funds from storage
                 uint256 availableFunds = entityFunds[tokenList[i]];
                 FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], _destinationAddress, availableFunds);

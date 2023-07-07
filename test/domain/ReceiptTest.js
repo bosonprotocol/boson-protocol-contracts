@@ -289,7 +289,7 @@ describe("Receipt", function () {
       expect(receipt.isValid()).is.false;
 
       // Valid field value
-      receipt.condition = mockCondition(ZeroAddress);
+      receipt.condition = mockCondition();
       expect(receipt.conditionIsValid()).is.true;
       expect(receipt.isValid()).is.true;
 

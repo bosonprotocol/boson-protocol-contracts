@@ -232,3 +232,17 @@ contract Foreign20TransferFromReturnFalse is Foreign20 {
         return false;
     }
 }
+
+/*
+ * @title Foreign20 that consumes all gas when transfer is called
+ *
+ * @notice Mock ERC-(20) for Unit Testing
+ */
+contract Foreign20GasTheft is Foreign20 {
+    function transferFrom(address, address, uint256) public virtual override returns (bool) {
+        while (true) {
+            // consume all gas
+        }
+        return false;
+    }
+}

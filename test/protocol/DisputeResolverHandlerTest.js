@@ -522,15 +522,6 @@ describe("DisputeResolverHandler", function () {
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
         });
 
-        it("DisputeResolverFees above max", async function () {
-          await configHandler.setMaxFeesPerDisputeResolver(2);
-
-          // Attempt to Create a DisputeResolver, expecting revert
-          await expect(
-            accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
-        });
-
         it("EscalationResponsePeriod is invalid", async function () {
           await configHandler.setMaxEscalationResponsePeriod(oneWeek);
 
@@ -560,15 +551,6 @@ describe("DisputeResolverHandler", function () {
           await expect(
             accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees2, sellerAllowList)
           ).to.revertedWith(RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
-        });
-
-        it("Number of seller ids above max", async function () {
-          sellerAllowList = new Array(101).fill("1");
-
-          // Attempt to Create a DisputeResolver, expecting revert
-          await expect(
-            accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
         });
 
         it("Duplicate dispute resolver fees", async function () {
@@ -1507,16 +1489,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
-          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
-        });
-
-        it("DisputeResolverFees above max", async function () {
-          await configHandler.setMaxFeesPerDisputeResolver(2);
-
-          // Attempt to add fees to the dispute resolver, expecting revert
-          await expect(
-            accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
-          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
+          ).to.revertedWith(RevertReasons.INEXISTENT_DISPUTE_RESOLVER_FEES);
         });
 
         it("Duplicate dispute resolver fees", async function () {
@@ -1761,16 +1734,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
-          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
-        });
-
-        it("DisputeResolverFees above max", async function () {
-          await configHandler.setMaxFeesPerDisputeResolver(2);
-
-          // Attempt to remove fees from the dispute resolver, expecting revert
-          await expect(
-            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
-          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
+          ).to.revertedWith(RevertReasons.INEXISTENT_DISPUTE_RESOLVER_FEES);
         });
 
         it("DisputeResolverFee in array does not exist for Dispute Resolver", async function () {
@@ -1901,16 +1865,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
             accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
-          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
-        });
-
-        it("SellerAllowList above max", async function () {
-          allowedSellersToAdd = new Array(101).fill("1");
-
-          // Attempt to add sellers to the allow list, expecting revert
-          await expect(
-            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
-          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
+          ).to.revertedWith(RevertReasons.INEXISTENT_ALLOWED_SELLERS_LIST);
         });
 
         it("Some seller does not exist", async function () {
@@ -2115,16 +2070,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
             accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
-          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
-        });
-
-        it("SellerAllowList above max", async function () {
-          allowedSellersToRemove = new Array(101).fill("1");
-
-          // Attempt to remove sellers from the allowed list, expecting revert
-          await expect(
-            accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
-          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
+          ).to.revertedWith(RevertReasons.INEXISTENT_ALLOWED_SELLERS_LIST);
         });
 
         it("Seller id is not approved", async function () {

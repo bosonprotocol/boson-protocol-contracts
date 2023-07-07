@@ -19,7 +19,8 @@ describe("Offer", function () {
     exchangeToken,
     metadataUri,
     metadataHash,
-    voided;
+    voided,
+    collectionIndex;
 
   beforeEach(async function () {
     // Get a list of accounts
@@ -35,6 +36,7 @@ describe("Offer", function () {
     metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
     metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
     voided = false;
+    collectionIndex = "2";
   });
 
   context("📋 Constructor", async function () {
@@ -50,7 +52,8 @@ describe("Offer", function () {
         exchangeToken,
         metadataUri,
         metadataHash,
-        voided
+        voided,
+        collectionIndex
       );
       expect(offer.idIsValid()).is.true;
       expect(offer.sellerIdIsValid()).is.true;
@@ -63,6 +66,7 @@ describe("Offer", function () {
       expect(offer.metadataHashIsValid()).is.true;
       expect(offer.voidedIsValid()).is.true;
       expect(offer.isValid()).is.true;
+      expect(offer.collectionIndexIsValid()).is.true;
     });
   });
 
@@ -79,7 +83,8 @@ describe("Offer", function () {
         exchangeToken,
         metadataUri,
         metadataHash,
-        voided
+        voided,
+        collectionIndex
       );
       expect(offer.isValid()).is.true;
     });
@@ -293,6 +298,33 @@ describe("Offer", function () {
       expect(offer.voidedIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
+
+    it("Always present, collectionIndex must be the string representation of a BigNumber", async function () {
+      // Invalid field value
+      offer.collectionIndex = "zedzdeadbaby";
+      expect(offer.collectionIndexIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.collectionIndex = new Date();
+      expect(offer.collectionIndexIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.collectionIndex = 12;
+      expect(offer.collectionIndexIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Valid field value
+      offer.collectionIndex = "0";
+      expect(offer.collectionIndexIsValid()).is.true;
+      expect(offer.isValid()).is.true;
+
+      // Valid field value
+      offer.collectionIndex = "126";
+      expect(offer.collectionIndexIsValid()).is.true;
+      expect(offer.isValid()).is.true;
+    });
   });
 
   context("📋 Utility functions", async function () {
@@ -311,7 +343,8 @@ describe("Offer", function () {
         exchangeToken,
         metadataUri,
         metadataHash,
-        voided
+        voided,
+        collectionIndex
       );
       expect(offer.isValid()).is.true;
 
@@ -327,6 +360,7 @@ describe("Offer", function () {
         metadataUri,
         metadataHash,
         voided,
+        collectionIndex,
       };
     });
 
@@ -356,6 +390,7 @@ describe("Offer", function () {
           offer.metadataUri,
           offer.metadataHash,
           offer.voided,
+          offer.collectionIndex,
         ];
 
         // Get struct

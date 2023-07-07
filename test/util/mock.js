@@ -42,7 +42,7 @@ function mockOfferDurations() {
   // Required constructor params
   const disputePeriod = oneMonth.toString(); // dispute period is one month
   const voucherValid = oneMonth.toString(); // offers valid for one month
-  const resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
+  const resolutionPeriod = oneWeek.toString(); // dispute is valid for one week
 
   // Create a valid offerDurations, then set fields in tests directly
   return new OfferDurations(disputePeriod, voucherValid, resolutionPeriod);
@@ -75,6 +75,7 @@ async function mockOffer() {
   const metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
   const metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
   const voided = false;
+  const collectionIndex = "0";
 
   // Create a valid offer, then set fields in tests directly
   let offer = new Offer(
@@ -87,7 +88,8 @@ async function mockOffer() {
     exchangeToken,
     metadataUri,
     metadataHash,
-    voided
+    voided,
+    collectionIndex
   );
 
   const offerDates = await mockOfferDates();
@@ -245,14 +247,15 @@ async function mockReceipt() {
   );
 }
 
-function mockCondition({ method, tokenType, tokenAddress, tokenId, threshold, maxCommits }) {
+function mockCondition({ method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length } = {}) {
   return new Condition(
     method ?? EvaluationMethod.Threshold,
     tokenType ?? TokenType.FungibleToken,
     tokenAddress ?? ZeroAddress,
     tokenId ?? "0",
     threshold ?? "1",
-    maxCommits ?? "1"
+    maxCommits ?? "1",
+    length ?? "0"
   );
 }
 

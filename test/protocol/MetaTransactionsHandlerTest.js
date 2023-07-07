@@ -3192,7 +3192,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.from = await assistant.getAddress();
           message.contractAddress = await offerHandler.getAddress();
           message.functionName =
-            "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256)";
+            "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool,uint256),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256)";
           message.functionSignature = functionSignature;
         });
 
@@ -3484,9 +3484,14 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         context("Should emit MetaTransactionExecuted event and update state", async () => {
+          let availableFundsAddresses;
           beforeEach(async function () {
+            availableFundsAddresses = [await mockToken.getAddress(), ZeroAddress];
+
             // Read on chain state
-            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
             buyerBalanceBefore = await mockToken.balanceOf(await buyer.getAddress());
 
             // Chain state should match the expected available funds before the withdrawal
@@ -3533,12 +3538,15 @@ describe("IBosonMetaTransactionsHandler", function () {
               .withArgs(await buyer.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
             // Read on chain state
-            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
             buyerBalanceAfter = await mockToken.balanceOf(await buyer.getAddress());
 
             // Chain state should match the expected available funds after the withdrawal
             // Since all tokens are withdrawn, token should be removed from the list
             expectedBuyerAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", "0"),
               new Funds(ZeroAddress, "Native currency", (BigInt(buyerPayoff) / 2n).toString()),
             ]);
             expect(buyerAvailableFunds).to.eql(
@@ -3597,12 +3605,18 @@ describe("IBosonMetaTransactionsHandler", function () {
               .withArgs(await buyer.getAddress(), await deployer.getAddress(), message.functionName, nonce);
 
             // Read on chain state
-            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
+            buyerAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAvailableFunds(buyerId, availableFundsAddresses)
+            );
             buyerBalanceAfter = await mockToken.balanceOf(await buyer.getAddress());
 
             // Chain state should match the expected available funds after the withdrawal
-            // Since all tokens are withdrawn, funds list should be empty.
-            expectedBuyerAvailableFunds = new FundsList([]);
+            // Since all tokens are withdrawn, values should be zero
+            const emptyFundsList = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", "0"),
+              new Funds(ZeroAddress, "Native currency", "0"),
+            ]);
+            expectedBuyerAvailableFunds = emptyFundsList;
             expect(buyerAvailableFunds).to.eql(
               expectedBuyerAvailableFunds,
               "Buyer available funds mismatch after withdrawal"
