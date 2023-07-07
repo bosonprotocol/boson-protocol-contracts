@@ -880,7 +880,6 @@ describe("ProtocolInitializationHandler", async function () {
       });
 
       it("invalid seller creator address ", async function () {
-        // set invalid minResolutionPeriod
         initializationData = abiCoder.encode(
           ["uint256", "uint256[]", "address[]"],
           [minResolutionPeriod, [1], [ZeroAddress]]
