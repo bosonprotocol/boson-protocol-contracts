@@ -667,7 +667,7 @@ describe("ProtocolInitializationHandler", async function () {
         await deployProtocolFacets(
           ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet"],
           {},
-          await getFees(maxPriorityFeePerGas)
+          maxPriorityFeePerGas
         );
 
       // Prepare cut data
@@ -750,7 +750,7 @@ describe("ProtocolInitializationHandler", async function () {
         [{ contract: deployedProtocolInitializationHandlerFacet }] = await deployProtocolFacets(
           ["ProtocolInitializationHandlerFacet"],
           {},
-          await getFees(maxPriorityFeePerGas)
+          maxPriorityFeePerGas
         );
         facetCut = await getFacetReplaceCut(deployedProtocolInitializationHandlerFacet, [
           deployedProtocolInitializationHandlerFacet.interface.fragments.find((f) => f.name == "initialize").selector,
@@ -771,7 +771,7 @@ describe("ProtocolInitializationHandler", async function () {
         [{ contract: deployedProtocolInitializationHandlerFacet }] = await deployProtocolFacets(
           ["ProtocolInitializationHandlerFacet"],
           {},
-          await getFees(maxPriorityFeePerGas)
+          maxPriorityFeePerGas
         );
         facetCut = await getFacetReplaceCut(deployedProtocolInitializationHandlerFacet, [
           deployedProtocolInitializationHandlerFacet.interface.fragments.find((f) => f.name == "initialize").selector,
