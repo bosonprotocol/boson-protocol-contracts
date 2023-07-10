@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getContractAt, provider } = hre.ethers;
 const network = hre.network.name;
 const { RoleAssignments } = require("./config/role-assignments");
 const { readContracts } = require("./util/utils");
@@ -31,7 +31,7 @@ async function main(env) {
   // Bail now if hardhat network
   if (network === "hardhat") process.exit();
 
-  const chainId = (await hre.ethers.provider.getNetwork()).chainId;
+  const chainId = (await provider.getNetwork()).chainId;
   const contractsFile = readContracts(chainId, network, env);
 
   const divider = "-".repeat(80);
@@ -39,7 +39,7 @@ async function main(env) {
   console.log(`⛓  Network: ${hre.network.name}\n📅 ${new Date()}`);
 
   // Get the accounts
-  const accounts = await ethers.provider.listAccounts();
+  const accounts = await provider.listAccounts();
   const admin = accounts[0];
   console.log("🔱 Admin account: ", admin ? admin : "not found" && process.exit());
   console.log(divider);
@@ -49,7 +49,7 @@ async function main(env) {
   const accessControllerInfo = contractsFile.contracts.find((i) => i.name === "AccessController");
 
   // Get AccessController abstraction
-  const accessController = await ethers.getContractAt("AccessController", accessControllerInfo.address);
+  const accessController = await getContractAt("AccessController", await accessControllerInfo.getAddress());
 
   // Loop through assignments for this network
   const assignments = Object.entries(RoleAssignments[network]);
@@ -63,19 +63,19 @@ async function main(env) {
 
     let contractInfo;
     contractInfo = contractsFile.contracts.find((i) => i.name === name);
-    config.address = name === "AdminAddress" ? environments[network].adminAddress : contractInfo.address;
+    config.address = name === "AdminAddress" ? environments[network].adminAddress : await contractInfo.getAddress();
 
-    console.log(`   👉 ${config.address}`);
+    console.log(`   👉 ${await config.getAddress()}`);
 
     // Loop through assigned roles for address
     for (let j = 0; j < config.roles.length; j++) {
       // Check if role already assigned
       const role = config.roles[j];
-      const hasRole = await accessController.hasRole(role, config.address);
+      const hasRole = await accessController.hasRole(role, await config.getAddress());
 
       // Grant role if not already granted
       if (!hasRole) {
-        await accessController.grantRole(role, config.address);
+        await accessController.grantRole(role, await config.getAddress());
       }
 
       // Report status
@@ -88,11 +88,11 @@ async function main(env) {
     for (let j = 0; j < unassigned.length; j++) {
       // Check if role currently assigned
       const role = Role[unassigned[j]];
-      const hasRole = await accessController.hasRole(role, config.address);
+      const hasRole = await accessController.hasRole(role, await config.getAddress());
 
       // Revoke role if previously granted
       if (hasRole) {
-        await accessController.revokeRole(role, config.address);
+        await accessController.revokeRole(role, await config.getAddress());
       }
 
       // Report status

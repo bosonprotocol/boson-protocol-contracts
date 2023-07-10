@@ -1,7 +1,7 @@
 const { getFacetAddCut } = require("./diamond-utils.js");
 const { getInterfaceIds } = require("../config/supported-interfaces.js");
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getContractFactory } = hre.ethers;
 const environments = require("../../environments");
 const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const { getFees } = require("./utils");
@@ -27,36 +27,36 @@ async function deployProtocolDiamond(maxPriorityFeePerGas) {
   ];
 
   // Deploy the AccessController contract
-  const AccessController = await ethers.getContractFactory("AccessController");
+  const AccessController = await getContractFactory("AccessController");
   const accessController = await AccessController.deploy(await getFees(maxPriorityFeePerGas));
-  await accessController.deployTransaction.wait(confirmations);
+  await accessController.deploymentTransaction().wait(confirmations);
 
   // Diamond Loupe Facet
-  const DiamondLoupeFacet = await ethers.getContractFactory("DiamondLoupeFacet");
+  const DiamondLoupeFacet = await getContractFactory("DiamondLoupeFacet");
   const dlf = await DiamondLoupeFacet.deploy(await getFees(maxPriorityFeePerGas));
-  await dlf.deployTransaction.wait(confirmations);
+  await dlf.deploymentTransaction().wait(confirmations);
 
   // Diamond Cut Facet
-  const DiamondCutFacet = await ethers.getContractFactory("DiamondCutFacet");
+  const DiamondCutFacet = await getContractFactory("DiamondCutFacet");
   const dcf = await DiamondCutFacet.deploy(await getFees(maxPriorityFeePerGas));
-  await dcf.deployTransaction.wait(confirmations);
+  await dcf.deploymentTransaction().wait(confirmations);
 
   // ERC165 Facet
-  const ERC165Facet = await ethers.getContractFactory("ERC165Facet");
+  const ERC165Facet = await getContractFactory("ERC165Facet");
   const erc165f = await ERC165Facet.deploy(await getFees(maxPriorityFeePerGas));
-  await erc165f.deployTransaction.wait(confirmations);
+  await erc165f.deploymentTransaction().wait(confirmations);
 
   // Arguments for Diamond constructor
   const diamondArgs = [
-    accessController.address,
-    [getFacetAddCut(dlf), getFacetAddCut(dcf), getFacetAddCut(erc165f)],
+    await accessController.getAddress(),
+    [await getFacetAddCut(dlf), await getFacetAddCut(dcf), await getFacetAddCut(erc165f)],
     interfaces,
   ];
 
   // Deploy Protocol Diamond
-  const ProtocolDiamond = await ethers.getContractFactory("ProtocolDiamond");
+  const ProtocolDiamond = await getContractFactory("ProtocolDiamond");
   const protocolDiamond = await ProtocolDiamond.deploy(...diamondArgs, await getFees(maxPriorityFeePerGas));
-  await protocolDiamond.deployTransaction.wait(confirmations);
+  await protocolDiamond.deploymentTransaction().wait(confirmations);
 
   return [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs];
 }

@@ -1,6 +1,6 @@
 const { ethers } = require("hardhat");
+const { ZeroAddress, provider, zeroPadBytes, MaxUint256, parseUnits } = ethers;
 const { expect, assert } = require("chai");
-
 const Exchange = require("../../scripts/domain/Exchange");
 const Dispute = require("../../scripts/domain/Dispute");
 const DisputeState = require("../../scripts/domain/DisputeState");
@@ -9,6 +9,7 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
+const { toHexString } = require("../../scripts/util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   setNextBlockTimestamp,
@@ -117,7 +118,7 @@ describe("IBosonDisputeHandler", function () {
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
-    clerk = clerkDR = { address: ethers.constants.AddressZero };
+    clerk = clerkDR = { address: ZeroAddress };
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -149,7 +150,12 @@ describe("IBosonDisputeHandler", function () {
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller
-      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        clerk.address,
+        await treasury.getAddress()
+      );
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
@@ -164,17 +170,17 @@ describe("IBosonDisputeHandler", function () {
 
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
-        assistantDR.address,
-        adminDR.address,
+        await assistantDR.getAddress(),
+        await adminDR.getAddress(),
         clerkDR.address,
-        treasuryDR.address,
+        await treasuryDR.getAddress(),
         true
       );
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
       DRFeeNative = "0";
-      disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative)];
+      disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", DRFeeNative)];
 
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
@@ -209,10 +215,10 @@ describe("IBosonDisputeHandler", function () {
       escalationPeriod = disputeResolver.escalationResponsePeriod;
 
       // Deposit seller funds so the commit will succeed
-      const fundsToDeposit = ethers.BigNumber.from(sellerDeposit).mul(quantityAvailable);
+      const fundsToDeposit = BigInt(sellerDeposit) * BigInt(quantityAvailable);
       await fundsHandler
         .connect(assistant)
-        .depositFunds(seller.id, ethers.constants.AddressZero, fundsToDeposit, { value: fundsToDeposit });
+        .depositFunds(seller.id, ZeroAddress, fundsToDeposit, { value: fundsToDeposit });
 
       buyerId = accountId.next().value;
     });
@@ -227,7 +233,7 @@ describe("IBosonDisputeHandler", function () {
         exchangeId = "1";
 
         // Commit to offer, creating a new exchange
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -244,7 +250,7 @@ describe("IBosonDisputeHandler", function () {
           // Raise a dispute, testing for the event
           await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeRaised")
-            .withArgs(exchangeId, buyerId, seller.id, buyer.address);
+            .withArgs(exchangeId, buyerId, seller.id, await buyer.getAddress());
         });
 
         it("should update state", async function () {
@@ -253,13 +259,13 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set disputedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
-          disputedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+          block = await provider.getBlock(blockNumber);
+          disputedDate = block.timestamp;
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
 
           // expected values
           dispute = new Dispute(exchangeId, DisputeState.Resolving, buyerPercentBasisPoints);
-          disputeDates = new DisputeDates(disputedDate, "0", "0", timeout);
+          disputeDates = new DisputeDates(disputedDate.toString(), "0", "0", timeout.toString());
 
           // Get the dispute as a struct
           [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchangeId);
@@ -306,8 +312,8 @@ describe("IBosonDisputeHandler", function () {
           });
 
           it("exchange is not in a redeemed state - completed", async function () {
-            const blockNumber = await ethers.provider.getBlockNumber();
-            const block = await ethers.provider.getBlock(blockNumber);
+            const blockNumber = await provider.getBlockNumber();
+            const block = await provider.getBlock(blockNumber);
             const currentTime = block.timestamp;
 
             // Set time forward to run out the dispute period
@@ -344,7 +350,7 @@ describe("IBosonDisputeHandler", function () {
             const voucherRedeemedDate = voucherStruct.redeemedDate;
 
             // Set time forward past the dispute period
-            await setNextBlockTimestamp(voucherRedeemedDate.add(disputePeriod).add(1).toNumber());
+            await setNextBlockTimestamp(Number(voucherRedeemedDate + BigInt(disputePeriod) + 1n));
 
             // Attempt to raise a dispute, expecting revert
             await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWith(
@@ -361,16 +367,16 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set disputedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
         });
 
         it("should emit a DisputeRetracted event", async function () {
           // Retract the dispute, testing for the event
           await expect(disputeHandler.connect(buyer).retractDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeRetracted")
-            .withArgs(exchangeId, buyer.address);
+            .withArgs(exchangeId, await buyer.getAddress());
         });
 
         it("should update state", async function () {
@@ -379,7 +385,7 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set finalizedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           finalizedDate = block.timestamp.toString();
 
           dispute = new Dispute(exchangeId, DisputeState.Retracted, buyerPercentBasisPoints);
@@ -424,7 +430,7 @@ describe("IBosonDisputeHandler", function () {
           // Retract the dispute, testing for the event
           await expect(disputeHandler.connect(buyer).retractDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeRetracted")
-            .withArgs(exchangeId, buyer.address);
+            .withArgs(exchangeId, await buyer.getAddress());
         });
 
         context("💔 Revert Reasons", async function () {
@@ -452,7 +458,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to retract the dispute, expecting revert
             await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWith(
@@ -484,10 +490,10 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set escalatedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           escalatedDate = block.timestamp.toString();
 
-          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
           // Attempt to retract the dispute, expecting revert
           await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWith(
@@ -503,19 +509,19 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set disputedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
 
           // extend timeout for a month
-          newDisputeTimeout = ethers.BigNumber.from(timeout).add(oneMonth).toString();
+          newDisputeTimeout = BigInt(timeout) + oneMonth;
         });
 
         it("should emit a DisputeTimeoutExtended event", async function () {
           // Extend the dispute timeout, testing for the event
           await expect(disputeHandler.connect(assistant).extendDisputeTimeout(exchangeId, newDisputeTimeout))
             .to.emit(disputeHandler, "DisputeTimeoutExtended")
-            .withArgs(exchangeId, newDisputeTimeout, assistant.address);
+            .withArgs(exchangeId, newDisputeTimeout, await assistant.getAddress());
         });
 
         it("should update state", async function () {
@@ -555,12 +561,12 @@ describe("IBosonDisputeHandler", function () {
           await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
           // extend for another week
-          newDisputeTimeout = ethers.BigNumber.from(newDisputeTimeout).add(oneWeek).toString();
+          newDisputeTimeout = BigInt(newDisputeTimeout) + oneWeek;
 
           // Extend the dispute timeout, testing for the event
           await expect(disputeHandler.connect(assistant).extendDisputeTimeout(exchangeId, newDisputeTimeout))
             .to.emit(disputeHandler, "DisputeTimeoutExtended")
-            .withArgs(exchangeId, newDisputeTimeout, assistant.address);
+            .withArgs(exchangeId, newDisputeTimeout, await assistant.getAddress());
         });
 
         context("💔 Revert Reasons", async function () {
@@ -588,7 +594,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to extend the dispute timeout, expecting revert
             await expect(
@@ -614,7 +620,7 @@ describe("IBosonDisputeHandler", function () {
           });
 
           it("new dispute timeout is before the current dispute timeout", async function () {
-            newDisputeTimeout = ethers.BigNumber.from(timeout).sub(oneWeek).toString();
+            newDisputeTimeout = BigInt(timeout) - oneWeek;
 
             // Attempt to extend the dispute timeout, expecting revert
             await expect(
@@ -641,9 +647,9 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set disputedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
         });
 
         it("should emit a DisputeExpired event", async function () {
@@ -653,7 +659,7 @@ describe("IBosonDisputeHandler", function () {
           // Expire the dispute, testing for the event
           await expect(disputeHandler.connect(rando).expireDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeExpired")
-            .withArgs(exchangeId, rando.address);
+            .withArgs(exchangeId, await rando.getAddress());
         });
 
         it("should update state", async function () {
@@ -665,7 +671,7 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set finalizedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           finalizedDate = block.timestamp.toString();
 
           dispute = new Dispute(exchangeId, DisputeState.Retracted, buyerPercentBasisPoints);
@@ -731,7 +737,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to expire the dispute, expecting revert
             await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWith(
@@ -780,9 +786,9 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set disputedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
 
           buyerPercentBasisPoints = "1234";
 
@@ -810,7 +816,7 @@ describe("IBosonDisputeHandler", function () {
               customSignatureType,
               "Resolution",
               message,
-              disputeHandler.address
+              await disputeHandler.getAddress()
             ));
           });
 
@@ -818,7 +824,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
 
           it("should update state", async function () {
@@ -827,7 +833,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Get the block timestamp of the confirmed tx and set finalizedDate
             blockNumber = tx.blockNumber;
-            block = await ethers.provider.getBlock(blockNumber);
+            block = await provider.getBlock(blockNumber);
             finalizedDate = block.timestamp.toString();
 
             dispute = new Dispute(exchangeId, DisputeState.Resolved, buyerPercentBasisPoints);
@@ -867,7 +873,12 @@ describe("IBosonDisputeHandler", function () {
 
           it("Buyer can also have a seller account and this will work", async function () {
             // Create a valid seller with buyer's wallet
-            seller = mockSeller(buyer.address, buyer.address, ethers.constants.AddressZero, buyer.address);
+            seller = mockSeller(
+              await buyer.getAddress(),
+              await buyer.getAddress(),
+              ZeroAddress,
+              await buyer.getAddress()
+            );
             expect(seller.isValid()).is.true;
 
             await accountHandler.connect(buyer).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -875,7 +886,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
 
           it("Dispute can be mutually resolved even if it's in escalated state", async function () {
@@ -885,16 +896,12 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
 
           it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
             // Set time forward before the dispute original expiration date
-            await setNextBlockTimestamp(
-              ethers.BigNumber.from(disputedDate)
-                .add(resolutionPeriod / 2)
-                .toNumber()
-            );
+            await setNextBlockTimestamp(Number(BigInt(disputedDate) + BigInt(resolutionPeriod) / 2n));
 
             // escalate dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
@@ -905,7 +912,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
 
           it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
@@ -920,7 +927,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
         });
 
@@ -932,7 +939,7 @@ describe("IBosonDisputeHandler", function () {
               customSignatureType,
               "Resolution",
               message,
-              disputeHandler.address
+              await disputeHandler.getAddress()
             ));
           });
 
@@ -940,7 +947,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, assistant.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
 
           it("should update state", async function () {
@@ -949,7 +956,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Get the block timestamp of the confirmed tx and set finalizedDate
             blockNumber = tx.blockNumber;
-            block = await ethers.provider.getBlock(blockNumber);
+            block = await provider.getBlock(blockNumber);
             finalizedDate = block.timestamp.toString();
 
             dispute = new Dispute(exchangeId, DisputeState.Resolved, buyerPercentBasisPoints);
@@ -989,14 +996,14 @@ describe("IBosonDisputeHandler", function () {
 
           it("Assistant can also have a buyer account and this will work", async function () {
             // Create a valid buyer with assistant's wallet
-            let buyer = mockBuyer(assistant.address);
+            let buyer = mockBuyer(await assistant.getAddress());
             expect(buyer.isValid()).is.true;
             await accountHandler.connect(assistant).createBuyer(buyer);
 
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, assistant.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
 
           it("Dispute can be mutually resolved even if it's in escalated state", async function () {
@@ -1006,16 +1013,12 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, assistant.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
 
           it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
             // Set time forward before the dispute original expiration date
-            await setNextBlockTimestamp(
-              ethers.BigNumber.from(disputedDate)
-                .add(resolutionPeriod / 2)
-                .toNumber()
-            );
+            await setNextBlockTimestamp(Number(BigInt(disputedDate) + BigInt(resolutionPeriod) / 2n));
 
             // escalate dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
@@ -1026,7 +1029,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, assistant.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
 
           it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
@@ -1041,7 +1044,7 @@ describe("IBosonDisputeHandler", function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, assistant.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
         });
 
@@ -1053,7 +1056,7 @@ describe("IBosonDisputeHandler", function () {
               customSignatureType,
               "Resolution",
               message,
-              disputeHandler.address
+              await disputeHandler.getAddress()
             ));
           });
 
@@ -1079,7 +1082,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Dispute has expired", async function () {
             // Set time forward to the dispute expiration date
-            await setNextBlockTimestamp(Number(timeout));
+            await setNextBlockTimestamp(Number(timeout) + 1);
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
@@ -1101,7 +1104,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
@@ -1118,7 +1121,12 @@ describe("IBosonDisputeHandler", function () {
 
             // Wallet with seller account, but not the seller in this exchange
             // Create a valid seller
-            seller = mockSeller(other1.address, other1.address, ethers.constants.AddressZero, other1.address);
+            seller = mockSeller(
+              await other1.getAddress(),
+              await other1.getAddress(),
+              ZeroAddress,
+              await other1.getAddress()
+            );
             expect(seller.isValid()).is.true;
 
             await accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -1129,7 +1137,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Wallet with buyer account, but not the buyer in this exchange
             // Create a valid buyer
-            let buyer = mockBuyer(other2.address);
+            let buyer = mockBuyer(await other2.getAddress());
             expect(buyer.isValid()).is.true;
             await accountHandler.connect(other2).createBuyer(buyer);
 
@@ -1146,7 +1154,7 @@ describe("IBosonDisputeHandler", function () {
               customSignatureType,
               "Resolution",
               message,
-              disputeHandler.address
+              await disputeHandler.getAddress()
             ));
 
             // Attempt to resolve the dispute, expecting revert
@@ -1178,17 +1186,17 @@ describe("IBosonDisputeHandler", function () {
             await expect(
               disputeHandler
                 .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, ethers.utils.hexZeroPad("0x", 32), v)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, zeroPadBytes("0x", 32), v)
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
             await expect(
               disputeHandler
                 .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, ethers.utils.hexZeroPad("0x", 32), s, v)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, zeroPadBytes("0x", 32), s, v)
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
             await expect(
               disputeHandler
                 .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, ethers.constants.MaxUint256, v)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, toHexString(MaxUint256), v)
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
           });
 
@@ -1215,11 +1223,11 @@ describe("IBosonDisputeHandler", function () {
           await accountHandler
             .connect(adminDR)
             .addFeesToDisputeResolver(disputeResolverId, [
-              new DisputeResolverFee(mockToken.address, "MockToken", DRFeeToken),
+              new DisputeResolverFee(await mockToken.getAddress(), "MockToken", DRFeeToken),
             ]);
 
           // create an offer with a mock token contract
-          offer.exchangeToken = mockToken.address;
+          offer.exchangeToken = await mockToken.getAddress();
           offer.sellerDeposit = offer.price = offer.buyerCancelPenalty = "0";
           offer.id++;
 
@@ -1230,11 +1238,11 @@ describe("IBosonDisputeHandler", function () {
 
           // mint tokens to buyer and approve the protocol
           buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
-          await mockToken.mint(buyer.address, buyerEscalationDepositToken);
-          await mockToken.connect(buyer).approve(disputeHandler.address, buyerEscalationDepositToken);
+          await mockToken.mint(await buyer.getAddress(), buyerEscalationDepositToken);
+          await mockToken.connect(buyer).approve(await disputeHandler.getAddress(), buyerEscalationDepositToken);
 
           // Commit to offer and put exchange all the way to dispute
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
           await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
           await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -1247,9 +1255,9 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set disputedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+          timeout = BigInt(disputedDate) + resolutionPeriod.toString();
         });
 
         it("should emit a DisputeEscalated event", async function () {
@@ -1258,21 +1266,21 @@ describe("IBosonDisputeHandler", function () {
             disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative })
           )
             .to.emit(disputeHandler, "DisputeEscalated")
-            .withArgs(exchangeId, disputeResolverId, buyer.address);
+            .withArgs(exchangeId, disputeResolverId, await buyer.getAddress());
         });
 
         it("should update state", async function () {
           // Protocol balance before
-          const escrowBalanceBefore = await ethers.provider.getBalance(disputeHandler.address);
+          const escrowBalanceBefore = await provider.getBalance(await disputeHandler.getAddress());
 
           // Escalate the dispute
           tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
           // Get the block timestamp of the confirmed tx and set escalatedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           escalatedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
+          timeout = BigInt(escalatedDate) + BigInt(escalationPeriod);
 
           dispute = new Dispute(exchangeId, DisputeState.Escalated, "0");
           disputeDates = new DisputeDates(disputedDate, escalatedDate, "0", timeout);
@@ -1299,8 +1307,8 @@ describe("IBosonDisputeHandler", function () {
           assert.equal(response, DisputeState.Escalated, "Dispute state is incorrect");
 
           // Protocol balance should increase for buyer escalation deposit
-          const escrowBalanceAfter = await ethers.provider.getBalance(disputeHandler.address);
-          expect(escrowBalanceAfter.sub(escrowBalanceBefore)).to.equal(
+          const escrowBalanceAfter = await provider.getBalance(await disputeHandler.getAddress());
+          expect(escrowBalanceAfter - escrowBalanceBefore).to.equal(
             buyerEscalationDepositNative,
             "Escrow balance mismatch"
           );
@@ -1310,16 +1318,16 @@ describe("IBosonDisputeHandler", function () {
           const mockToken = await createDisputeExchangeWithToken();
 
           // Protocol balance before
-          const escrowBalanceBefore = await mockToken.balanceOf(disputeHandler.address);
+          const escrowBalanceBefore = await mockToken.balanceOf(await disputeHandler.getAddress());
 
           // Escalate the dispute, testing for the event
           await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeEscalated")
-            .withArgs(exchangeId, disputeResolverId, buyer.address);
+            .withArgs(exchangeId, disputeResolverId, await buyer.getAddress());
 
           // Protocol balance should increase for buyer escalation deposit
-          const escrowBalanceAfter = await mockToken.balanceOf(disputeHandler.address);
-          expect(escrowBalanceAfter.sub(escrowBalanceBefore)).to.equal(
+          const escrowBalanceAfter = await mockToken.balanceOf(await disputeHandler.getAddress());
+          expect(escrowBalanceAfter - escrowBalanceBefore).to.equal(
             buyerEscalationDepositToken,
             "Escrow balance mismatch"
           );
@@ -1350,7 +1358,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to escalate the dispute, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId), {
@@ -1367,7 +1375,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Dispute has expired", async function () {
             // Set time forward past the dispute resolution period
-            await setNextBlockTimestamp(Number(timeout) + oneWeek);
+            await setNextBlockTimestamp(Number(timeout + oneWeek));
 
             // Attempt to escalate the dispute, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId), {
@@ -1398,7 +1406,7 @@ describe("IBosonDisputeHandler", function () {
               .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
             // Commit to offer and put exchange all the way to dispute
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
             await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
             await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -1412,7 +1420,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to escalate the dispute, expecting revert
             await expect(
               disputeHandler.connect(buyer).escalateDispute(exchangeId, {
-                value: ethers.BigNumber.from(buyerEscalationDepositNative).sub("1").toString(),
+                value: BigInt(buyerEscalationDepositNative) - 1n,
               })
             ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
           });
@@ -1423,7 +1431,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to escalate the dispute, expecting revert
             await expect(
               disputeHandler.connect(buyer).escalateDispute(exchangeId, {
-                value: ethers.BigNumber.from("1").toString(),
+                value: 1n,
               })
             ).to.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
           });
@@ -1446,7 +1454,7 @@ describe("IBosonDisputeHandler", function () {
             const mockToken = await createDisputeExchangeWithToken();
 
             // get rid of some tokens, so buyer has insufficient funds
-            await mockToken.connect(buyer).transfer(other1.address, buyerEscalationDepositToken);
+            await mockToken.connect(buyer).transfer(await other1.getAddress(), buyerEscalationDepositToken);
 
             // Attempt to commit to an offer, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
@@ -1456,7 +1464,7 @@ describe("IBosonDisputeHandler", function () {
             // not approved
             await mockToken
               .connect(buyer)
-              .approve(protocolDiamond.address, ethers.BigNumber.from(buyerEscalationDepositToken).sub("1").toString());
+              .approve(await protocolDiamond.getAddress(), BigInt(buyerEscalationDepositToken) - "1".toString());
 
             // Attempt to commit to an offer, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
@@ -1469,16 +1477,16 @@ describe("IBosonDisputeHandler", function () {
             const [Foreign20WithFee] = await deployMockTokens(["Foreign20WithFee"]);
 
             // add to DR fees
-            DRFeeToken = ethers.utils.parseUnits("2", "ether").toString();
+            DRFeeToken = parseUnits("2", "ether").toString();
             await accountHandler
               .connect(adminDR)
               .addFeesToDisputeResolver(disputeResolverId, [
-                new DisputeResolverFee(Foreign20WithFee.address, "Foreign20WithFee", "0"),
+                new DisputeResolverFee(await Foreign20WithFee.getAddress(), "Foreign20WithFee", "0"),
               ]);
 
             // Create an offer with ERC20 with fees
             // Prepare an absolute zero offer
-            offer.exchangeToken = Foreign20WithFee.address;
+            offer.exchangeToken = await Foreign20WithFee.getAddress();
             offer.sellerDeposit = offer.price = offer.buyerCancelPenalty = "0";
             offer.id++;
 
@@ -1489,11 +1497,14 @@ describe("IBosonDisputeHandler", function () {
 
             // mint tokens and approve
             buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
-            await Foreign20WithFee.mint(buyer.address, buyerEscalationDepositToken);
-            await Foreign20WithFee.connect(buyer).approve(protocolDiamond.address, buyerEscalationDepositToken);
+            await Foreign20WithFee.mint(await buyer.getAddress(), buyerEscalationDepositToken);
+            await Foreign20WithFee.connect(buyer).approve(
+              await protocolDiamond.getAddress(),
+              buyerEscalationDepositToken
+            );
 
             // Commit to offer and put exchange all the way to dispute
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
             await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
             await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -1512,7 +1523,7 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set disputedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
 
           // Escalate the dispute
@@ -1520,9 +1531,9 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set escalatedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           escalatedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
+          timeout = BigInt(escalatedDate) + BigInt(escalationPeriod);
 
           // buyer percent used in tests
           buyerPercentBasisPoints = "4321";
@@ -1532,7 +1543,7 @@ describe("IBosonDisputeHandler", function () {
           // Escalate the dispute, testing for the event
           await expect(disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints))
             .to.emit(disputeHandler, "DisputeDecided")
-            .withArgs(exchangeId, buyerPercentBasisPoints, assistantDR.address);
+            .withArgs(exchangeId, buyerPercentBasisPoints, await assistantDR.getAddress());
         });
 
         it("should update state", async function () {
@@ -1541,7 +1552,7 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set finalizedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           finalizedDate = block.timestamp.toString();
 
           dispute = new Dispute(exchangeId, DisputeState.Decided, buyerPercentBasisPoints);
@@ -1604,7 +1615,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to decide the dispute, expecting revert
             await expect(
@@ -1623,7 +1634,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Redeem voucher
             await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -1639,7 +1650,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Dispute escalation response period has elapsed", async function () {
             // Set time past escalation period
-            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
             // Attempt to decide the dispute, expecting revert
             await expect(
@@ -1656,7 +1667,7 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set disputedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
 
           // Escalate the dispute
@@ -1664,31 +1675,31 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set escalatedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           escalatedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
+          timeout = BigInt(escalatedDate) + BigInt(escalationPeriod);
         });
 
         it("should emit a EscalatedDisputeExpired event", async function () {
           // Set time forward past the dispute escalation period
-          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
           // Expire the escalated dispute, testing for the event
           await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId))
             .to.emit(disputeHandler, "EscalatedDisputeExpired")
-            .withArgs(exchangeId, rando.address);
+            .withArgs(exchangeId, await rando.getAddress());
         });
 
         it("should update state", async function () {
           // Set time forward past the dispute escalation period
-          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
           // Expire the dispute
           tx = await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
 
           // Get the block timestamp of the confirmed tx and set finalizedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           finalizedDate = block.timestamp.toString();
 
           dispute = new Dispute(exchangeId, DisputeState.Refused, buyerPercentBasisPoints);
@@ -1729,7 +1740,7 @@ describe("IBosonDisputeHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("The disputes region of protocol is paused", async function () {
             // Set time forward past the dispute escalation period
-            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
             // Pause the disputes region of the protocol
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
@@ -1754,7 +1765,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to expire the escalated dispute, expecting revert
             await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWith(
@@ -1773,7 +1784,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Redeem voucher
             await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -1805,7 +1816,7 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set disputedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
 
           // Escalate the dispute
@@ -1813,16 +1824,16 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set escalatedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           escalatedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
+          timeout = BigInt(escalatedDate) + BigInt(escalationPeriod);
         });
 
         it("should emit a EscalatedDisputeRefused event", async function () {
           // Refuse the escalated dispute, testing for the event
           await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId))
             .to.emit(disputeHandler, "EscalatedDisputeRefused")
-            .withArgs(exchangeId, assistantDR.address);
+            .withArgs(exchangeId, await assistantDR.getAddress());
         });
 
         it("should update state", async function () {
@@ -1831,7 +1842,7 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set finalizedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           finalizedDate = block.timestamp.toString();
 
           dispute = new Dispute(exchangeId, DisputeState.Refused, buyerPercentBasisPoints);
@@ -1894,7 +1905,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to refuse the escalated dispute, expecting revert
             await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
@@ -1906,7 +1917,7 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Redeem voucher
             await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -1931,7 +1942,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Dispute escalation response period has elapsed", async function () {
             // Set time forward past the dispute escalation period
-            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
             // Attempt to refuse the escalated dispute, expecting revert
             await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
@@ -1955,9 +1966,9 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
 
           // Expected value for dispute
           dispute = new Dispute(exchangeId, DisputeState.Resolving, buyerPercentBasisPoints);
@@ -1999,7 +2010,7 @@ describe("IBosonDisputeHandler", function () {
           exchangeId++;
 
           // Commit to offer, creating a new exchange
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
           // Get the exchange
           [exists, response] = await exchangeHandler.connect(rando).getExchange(exchangeId);
@@ -2041,9 +2052,9 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set disputedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+          timeout = (BigInt(disputedDate) + BigInt(resolutionPeriod)).toString();
         });
 
         it("should return true for exists if exchange id is valid", async function () {
@@ -2083,7 +2094,7 @@ describe("IBosonDisputeHandler", function () {
 
         it("should return the expected dispute state if exchange id is valid and dispute has expired", async function () {
           // Set time forward to the dispute's timeout
-          await setNextBlockTimestamp(Number(timeout));
+          await setNextBlockTimestamp(Number(timeout) + 1);
 
           // Anyone calls expireDispute
           await disputeHandler.connect(rando).expireDispute(exchangeId);
@@ -2098,9 +2109,9 @@ describe("IBosonDisputeHandler", function () {
         it("should return the expected dispute state if exchange id is valid and dispute has been resolved", async function () {
           // Get the block timestamp of the confirmed tx and set disputedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+          timeout = (BigInt(disputedDate) + BigInt(resolutionPeriod)).toString();
 
           buyerPercentBasisPoints = "1234";
 
@@ -2125,7 +2136,7 @@ describe("IBosonDisputeHandler", function () {
             customSignatureType,
             "Resolution",
             message,
-            disputeHandler.address
+            await disputeHandler.getAddress()
           ));
 
           // Buyer resolves dispute
@@ -2155,9 +2166,9 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set escalatedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           escalatedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
+          timeout = (BigInt(escalatedDate) + BigInt(escalationPeriod)).toString();
 
           // buyer percent used in tests
           buyerPercentBasisPoints = "4321";
@@ -2194,9 +2205,9 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set disputedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
         });
 
         it("should return true for exists if exchange id is valid", async function () {
@@ -2294,7 +2305,7 @@ describe("IBosonDisputeHandler", function () {
               customSignatureType,
               "Resolution",
               message,
-              disputeHandler.address
+              await disputeHandler.getAddress()
             ));
 
             // Retract dispute
@@ -2333,10 +2344,10 @@ describe("IBosonDisputeHandler", function () {
 
             // Get the block timestamp of the confirmed tx and set escalatedDate
             blockNumber = tx.blockNumber;
-            block = await ethers.provider.getBlock(blockNumber);
+            block = await provider.getBlock(blockNumber);
             escalatedDate = block.timestamp.toString();
 
-            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
             // Expire dispute
             await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
@@ -2359,7 +2370,7 @@ describe("IBosonDisputeHandler", function () {
 
         for (exchangeId = 1; exchangeId <= 5; exchangeId++) {
           // Commit to offer, creating a new exchange
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
           // Redeem voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -2381,9 +2392,9 @@ describe("IBosonDisputeHandler", function () {
 
             // Get the block timestamp of the confirmed tx and set disputedDate
             blockNumber = tx.blockNumber;
-            block = await ethers.provider.getBlock(blockNumber);
-            disputedDate = block.timestamp.toString();
-            timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+            block = await provider.getBlock(blockNumber);
+            disputedDate = block.timestamp;
+            timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
 
             dispute[exchangeId] = new Dispute(exchangeId, DisputeState.Retracted, buyerPercentBasisPoints);
             disputeDates[exchangeId] = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
@@ -2396,11 +2407,17 @@ describe("IBosonDisputeHandler", function () {
 
           // Expire the disputes, testing for the event
           const tx = disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire);
-          await expect(tx).to.emit(disputeHandler, "DisputeExpired").withArgs("2", rando.address);
+          await expect(tx)
+            .to.emit(disputeHandler, "DisputeExpired")
+            .withArgs("2", await rando.getAddress());
 
-          await expect(tx).to.emit(disputeHandler, "DisputeExpired").withArgs("3", rando.address);
+          await expect(tx)
+            .to.emit(disputeHandler, "DisputeExpired")
+            .withArgs("3", await rando.getAddress());
 
-          await expect(tx).to.emit(disputeHandler, "DisputeExpired").withArgs("4", rando.address);
+          await expect(tx)
+            .to.emit(disputeHandler, "DisputeExpired")
+            .withArgs("4", await rando.getAddress());
         });
 
         it("should update state", async function () {
@@ -2412,7 +2429,7 @@ describe("IBosonDisputeHandler", function () {
 
           // Get the block timestamp of the confirmed tx and set finalizedDate
           blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
+          block = await provider.getBlock(blockNumber);
           finalizedDate = block.timestamp.toString();
 
           // verify that state for all disputes was updated
@@ -2506,16 +2523,6 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to expire the disputes, expecting revert
             await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWith(
               RevertReasons.INVALID_STATE
-            );
-          });
-
-          it("Expiring too many disputes", async function () {
-            // Try to expire the more than 100 disputes
-            disputesToExpire = [...Array(101).keys()];
-
-            // Attempt to expire the disputes, expecting revert
-            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWith(
-              RevertReasons.TOO_MANY_DISPUTES
             );
           });
         });

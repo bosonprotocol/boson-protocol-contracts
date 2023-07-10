@@ -15,11 +15,13 @@ interface IInitializableVoucherClone {
      * @notice Initializes a voucher with the given parameters.
      *
      * @param _sellerId - The ID of the seller.
+     * @param _collectionIndex - The index of the collection.
      * @param _newOwner - The address of the new owner.
      * @param _voucherInitValues - The voucher initialization values.
      */
     function initializeVoucher(
         uint256 _sellerId,
+        uint256 _collectionIndex,
         address _newOwner,
         BosonTypes.VoucherInitValues calldata _voucherInitValues
     ) external;

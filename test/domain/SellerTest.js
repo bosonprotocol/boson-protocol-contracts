@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getSigners, ZeroAddress } = hre.ethers;
 const { expect } = require("chai");
 const Seller = require("../../scripts/domain/Seller");
 
@@ -13,10 +13,10 @@ describe("Seller", function () {
 
   beforeEach(async function () {
     // Get a list of accounts
-    accounts = await ethers.getSigners();
+    accounts = await getSigners();
     assistant = accounts[0].address;
     admin = accounts[1].address;
-    clerk = ethers.constants.AddressZero;
+    clerk = ZeroAddress;
     treasury = accounts[3].address;
 
     // Required constructor params
@@ -53,16 +53,6 @@ describe("Seller", function () {
       expect(seller.idIsValid()).is.false;
       expect(seller.isValid()).is.false;
 
-      // Invalid field value
-      seller.id = new Date();
-      expect(seller.idIsValid()).is.false;
-      expect(seller.isValid()).is.false;
-
-      // Invalid field value
-      seller.id = 12;
-      expect(seller.idIsValid()).is.false;
-      expect(seller.isValid()).is.false;
-
       // Valid field value
       seller.id = "0";
       expect(seller.idIsValid()).is.true;
@@ -72,6 +62,11 @@ describe("Seller", function () {
       seller.id = "126";
       expect(seller.idIsValid()).is.true;
       expect(seller.isValid()).is.true;
+
+      // Invalid field value
+      seller.id = new Date();
+      expect(seller.idIsValid()).is.false;
+      expect(seller.isValid()).is.false;
     });
 
     it("Always present, assistant must be a string representation of an EIP-55 compliant address", async function () {
