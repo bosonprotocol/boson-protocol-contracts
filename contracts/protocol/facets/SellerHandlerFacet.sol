@@ -353,16 +353,24 @@ contract SellerHandlerFacet is SellerBase {
         string calldata _externalId,
         VoucherInitValues calldata _voucherInitValues
     ) external sellersNotPaused {
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
         address assistant = msgSender();
 
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(assistant);
         require(exists, NO_SUCH_SELLER);
 
-        Collection[] storage sellersAdditionalCollections = protocolLookups().additionalCollections[sellerId];
+        Collection[] storage sellersAdditionalCollections = lookups.additionalCollections[sellerId];
         uint256 collectionIndex = sellersAdditionalCollections.length + 1; // 0 is reserved for the original collection
 
         // Create clone and store its address to additionalCollections
-        address voucherCloneAddress = cloneBosonVoucher(sellerId, collectionIndex, assistant, _voucherInitValues);
+        address voucherCloneAddress = cloneBosonVoucher(
+            sellerId,
+            collectionIndex,
+            lookups.sellerCreator[sellerId],
+            assistant,
+            _voucherInitValues,
+            _externalId
+        );
 
         // Store collection details
         Collection storage newCollection = sellersAdditionalCollections.push();

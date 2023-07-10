@@ -22,7 +22,8 @@ const {
 } = require("../../util/mock");
 const {
   applyPercentage,
-  calculateContractAddress,
+  calculateCloneAddress,
+  calculateBosonProxyAddress,
   calculateVoucherExpiry,
   setNextBlockTimestamp,
   setupTestEnvironment,
@@ -45,11 +46,9 @@ describe("IBosonVoucher", function () {
     rando2,
     assistant,
     admin,
-    clerk,
     treasury,
     assistantDR,
     adminDR,
-    clerkDR,
     treasuryDR,
     seller,
     foreign20;
@@ -58,6 +57,7 @@ describe("IBosonVoucher", function () {
   let voucherInitValues, contractURI, royaltyPercentage, exchangeId, offerPrice;
   let forwarder;
   let snapshotId;
+  let beaconProxyAddress;
 
   before(async function () {
     accountId.next(true);
@@ -90,7 +90,6 @@ describe("IBosonVoucher", function () {
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
-    clerk = clerkDR = { address: ZeroAddress };
     [deployer] = await getSigners();
 
     // Grant protocol role to eoa so it's easier to test
@@ -106,6 +105,9 @@ describe("IBosonVoucher", function () {
     await bosonVoucherInit.initializeVoucher(sellerId, "1", await assistant.getAddress(), voucherInitValues);
 
     [foreign20] = await deployMockTokens(["Foreign20", "BosonToken"]);
+
+    // Get the beacon proxy address
+    beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -165,13 +167,18 @@ describe("IBosonVoucher", function () {
     let offer, offerDates, offerDurations, disputeResolverId;
 
     before(async function () {
-      const bosonVoucherCloneAddress = calculateContractAddress(await exchangeHandler.getAddress(), "1");
+      const bosonVoucherCloneAddress = calculateCloneAddress(
+        await accountHandler.getAddress(),
+        beaconProxyAddress,
+        admin.address,
+        ""
+      );
       bosonVoucher = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
 
       seller = mockSeller(
         await assistant.getAddress(),
         await admin.getAddress(),
-        clerk.address,
+        ZeroAddress,
         await treasury.getAddress()
       );
 
@@ -184,7 +191,7 @@ describe("IBosonVoucher", function () {
       disputeResolver = mockDisputeResolver(
         await assistantDR.getAddress(),
         await adminDR.getAddress(),
-        clerkDR.address,
+        ZeroAddress,
         await treasuryDR.getAddress(),
         true
       );
@@ -950,7 +957,7 @@ describe("IBosonVoucher", function () {
 
       it("Should be 0 if offer is expired", async function () {
         // Skip to after offer expiry
-        await setNextBlockTimestamp(Number(offerDates.validUntil), true);
+        await setNextBlockTimestamp(Number(BigInt(offerDates.validUntil) + 1n), true);
 
         // Get available premints from contract
         let availablePremints = await bosonVoucher.getAvailablePreMints(offerId);
@@ -1375,7 +1382,7 @@ describe("IBosonVoucher", function () {
           });
 
           context("Transfer of a preminted voucher when owner is assistant", async function () {
-            let voucherRedeemableFrom, voucherValid, offerValid;
+            let voucherRedeemableFrom, voucherValid;
 
             beforeEach(async function () {
               exchangeId = offerId = "1";
@@ -1391,7 +1398,6 @@ describe("IBosonVoucher", function () {
 
               voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
               voucherValid = offerDurations.voucherValid;
-              offerValid = offerDates.validUntil;
             });
 
             it("Should emit a Transfer event", async function () {
@@ -1547,7 +1553,7 @@ describe("IBosonVoucher", function () {
 
               it("Transfer preminted voucher, where offer has expired", async function () {
                 // Skip past offer expiry
-                await setNextBlockTimestamp(Number(offerValid));
+                await setNextBlockTimestamp(Number(BigInt(offerDates.validUntil) + 1n));
 
                 // Transfer should fail, since protocol reverts
                 await expect(
@@ -1847,6 +1853,7 @@ describe("IBosonVoucher", function () {
       beforeEach(async function () {
         availableFundsAddresses = [ZeroAddress];
       });
+
       it("Can withdraw native token", async function () {
         const sellersFundsBefore = FundsList.fromStruct(
           await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)

@@ -55,7 +55,8 @@ const {
   setNextBlockTimestamp,
   calculateVoucherExpiry,
   prepareDataSignatureParameters,
-  calculateContractAddress,
+  calculateCloneAddress,
+  calculateBosonProxyAddress,
   applyPercentage,
   deriveTokenId,
   setupTestEnvironment,
@@ -103,6 +104,7 @@ describe("IBosonExchangeHandler", function () {
     mockMetaTransactionsHandler;
   let bosonVoucher, voucherImplementation;
   let bosonVoucherClone, bosonVoucherCloneAddress;
+  let beaconProxyAddress;
   let buyerId, offerId, seller, nextExchangeId, nextAccountId, disputeResolverId;
   let block, blockNumber, tx, txReceipt, event;
   let support, newTime;
@@ -177,6 +179,9 @@ describe("IBosonExchangeHandler", function () {
 
     // Deploy the mock tokens
     [foreign20, foreign721, foreign1155] = await deployMockTokens(["Foreign20", "Foreign721", "Foreign1155"]);
+
+    // Get the beacon proxy address
+    beaconProxyAddress = await calculateBosonProxyAddress(await configHandler.getAddress());
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -259,7 +264,12 @@ describe("IBosonExchangeHandler", function () {
       expect(voucherInitValues.isValid()).is.true;
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
-      expectedCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "1");
+      expectedCloneAddress = calculateCloneAddress(
+        await accountHandler.getAddress(),
+        beaconProxyAddress,
+        admin.address,
+        ""
+      );
 
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
@@ -380,7 +390,12 @@ describe("IBosonExchangeHandler", function () {
 
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-        expectedCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
+        expectedCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          rando.address,
+          ""
+        );
         const bosonVoucherClone2 = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         // Create an offer with new seller
@@ -482,7 +497,12 @@ describe("IBosonExchangeHandler", function () {
         expect(voucherInitValues.isValid()).is.true;
 
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
-        expectedCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
+        expectedCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          rando.address,
+          ""
+        );
         const bosonVoucherClone2 = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         // Create an offer with new seller
@@ -735,9 +755,19 @@ describe("IBosonExchangeHandler", function () {
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
 
         // expected address of the first clone and first additional collection
-        const defaultCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "1");
+        const defaultCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address,
+          ""
+        );
         const defaultBosonVoucher = await getContractAt("BosonVoucher", defaultCloneAddress);
-        const additionalCollectionAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
+        const additionalCollectionAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address,
+          externalId
+        );
         const additionalCollection = await getContractAt("BosonVoucher", additionalCollectionAddress);
 
         // buyer should own 1 voucher additional collection and 0 vouchers on the default clone
@@ -824,7 +854,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("offer has expired", async function () {
           // Go past offer expiration date
-          await setNextBlockTimestamp(Number(offerDates.validUntil));
+          await setNextBlockTimestamp(Number(offerDates.validUntil) + 1);
 
           // Attempt to commit to the expired offer, expecting revert
           await expect(
@@ -877,7 +907,12 @@ describe("IBosonExchangeHandler", function () {
           .reserveRange(offer.id, offer.quantityAvailable, await assistant.getAddress());
 
         // expected address of the first clone
-        const voucherCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "1");
+        const voucherCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address,
+          ""
+        );
         bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
         await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
@@ -1182,7 +1217,12 @@ describe("IBosonExchangeHandler", function () {
         await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
 
         // expected address of the additional collection
-        const voucherCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
+        const voucherCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address,
+          externalId
+        );
         bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
         await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
@@ -1315,7 +1355,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("offer has expired", async function () {
           // Go past offer expiration date
-          await setNextBlockTimestamp(Number(offerDates.validUntil));
+          await setNextBlockTimestamp(Number(offerDates.validUntil) + 1);
 
           // Attempt to commit to the expired offer, expecting revert
           await expect(
@@ -2078,7 +2118,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("offer has expired", async function () {
           // Go past offer expiration date
-          await setNextBlockTimestamp(Number(offerDates.validUntil));
+          await setNextBlockTimestamp(Number(offerDates.validUntil) + 1);
 
           // Attempt to commit to the expired offer, expecting revert
           await expect(
@@ -2568,7 +2608,12 @@ describe("IBosonExchangeHandler", function () {
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
 
         // expected address of the first additional collection
-        const additionalCollectionAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
+        const additionalCollectionAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address,
+          externalId
+        );
         const additionalCollection = await getContractAt("BosonVoucher", additionalCollectionAddress);
 
         // Revoke the voucher, expecting event
@@ -2633,11 +2678,14 @@ describe("IBosonExchangeHandler", function () {
       it("should emit an VoucherCanceled event when new owner (not a buyer) calls", async function () {
         // Transfer voucher to new owner
         tokenId = deriveTokenId(offerId, exchange.id);
-        bosonVoucherCloneAddress = calculateContractAddress(await exchangeHandler.getAddress(), "1");
+        bosonVoucherCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address,
+          ""
+        );
         bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
-        await bosonVoucherClone
-          .connect(buyer)
-          .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId);
+        await bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, tokenId);
 
         // Cancel the voucher, expecting event
         await expect(exchangeHandler.connect(newOwner).cancelVoucher(exchange.id))
@@ -2675,7 +2723,12 @@ describe("IBosonExchangeHandler", function () {
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
 
         // expected address of the first additional collection
-        const additionalCollectionAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
+        const additionalCollectionAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address,
+          externalId
+        );
         const additionalCollection = await getContractAt("BosonVoucher", additionalCollectionAddress);
 
         // Cancel the voucher, expecting event
@@ -2935,7 +2988,12 @@ describe("IBosonExchangeHandler", function () {
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
 
         // expected address of the first additional collection
-        const additionalCollectionAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
+        const additionalCollectionAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address,
+          externalId
+        );
         const additionalCollection = await getContractAt("BosonVoucher", additionalCollectionAddress);
 
         // Set time forward to the offer's voucherRedeemableFrom
@@ -4755,7 +4813,12 @@ describe("IBosonExchangeHandler", function () {
         await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Client used for tests
-        bosonVoucherCloneAddress = calculateContractAddress(await exchangeHandler.getAddress(), "1");
+        bosonVoucherCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address,
+          ""
+        );
         bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
 
         tokenId = deriveTokenId(offerId, exchange.id);
@@ -4872,7 +4935,12 @@ describe("IBosonExchangeHandler", function () {
         offer.collectionIndex = 1;
         offer.id = await offerHandler.getNextOfferId();
         exchange.id = await exchangeHandler.getNextExchangeId();
-        bosonVoucherCloneAddress = calculateContractAddress(await exchangeHandler.getAddress(), "2");
+        bosonVoucherCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address,
+          externalId
+        );
         bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
         const tokenId = deriveTokenId(offer.id, exchange.id);
 
@@ -4924,7 +4992,12 @@ describe("IBosonExchangeHandler", function () {
           expect(seller.isValid()).is.true;
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
-          expectedCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "2");
+          expectedCloneAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            rando.address,
+            ""
+          );
           const bosonVoucherClone2 = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
           // For the sake of test, mint token on bv2 with the id of token on bv1

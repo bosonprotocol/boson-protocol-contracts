@@ -147,7 +147,7 @@ string constant BUNDLE_REQUIRES_AT_LEAST_ONE_TWIN_AND_ONE_OFFER = "Bundle must h
 // Revert Reasons: Funds related
 string constant NATIVE_WRONG_ADDRESS = "Native token address must be 0";
 string constant NATIVE_WRONG_AMOUNT = "Transferred value must match amount";
-string constant TOKEN_NAME_UNSPECIFIED = "Token name unspecified";
+string constant TOKEN_NAME_UNSPECIFIED = "Token name unavailable";
 string constant NATIVE_CURRENCY = "Native currency";
 string constant TOKEN_AMOUNT_MISMATCH = "Number of amounts should match number of tokens";
 string constant NOTHING_TO_WITHDRAW = "Nothing to withdraw";
@@ -176,6 +176,7 @@ string constant ESCALATION_NOT_ALLOWED = "Disputes without dispute resolver cann
 // Revert Reasons: Config related
 string constant FEE_PERCENTAGE_INVALID = "Percentage representation must be less than 10000";
 string constant VALUE_ZERO_NOT_ALLOWED = "Value must be greater than 0";
+bytes32 constant VOUCHER_PROXY_SALT = keccak256(abi.encodePacked("BosonVoucherProxy"));
 
 // EIP712Lib
 string constant PROTOCOL_NAME = "Boson Protocol";

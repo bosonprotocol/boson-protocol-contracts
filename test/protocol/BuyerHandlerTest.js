@@ -6,7 +6,13 @@ const Buyer = require("../../scripts/domain/Buyer");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { calculateContractAddress, setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util/utils.js");
+const {
+  calculateCloneAddress,
+  calculateBosonProxyAddress,
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
+} = require("../util/utils.js");
 const {
   mockOffer,
   mockSeller,
@@ -400,7 +406,13 @@ describe("BuyerHandler", function () {
             .connect(other1)
             .commitToOffer(await other1.getAddress(), offerId, { value: offer.price });
 
-          const bosonVoucherCloneAddress = calculateContractAddress(await exchangeHandler.getAddress(), "1");
+          const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
+          const bosonVoucherCloneAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            admin.address,
+            ""
+          );
           bosonVoucher = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
           const balance = await bosonVoucher.connect(rando).balanceOf(await other1.getAddress());
           expect(balance).equal(1);

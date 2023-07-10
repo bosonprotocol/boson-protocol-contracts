@@ -12,6 +12,8 @@ const {
   zeroPadValue,
   Interface,
   toUtf8Bytes,
+  solidityPackedKeccak256,
+  ZeroAddress,
 } = ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
@@ -251,6 +253,40 @@ function calculateContractAddress(senderAddress, senderNonce) {
   return getAddress(contract_address);
 }
 
+function calculateContractAddress2(senderAddress, cloneByteCodeHash, salt) {
+  const contract_address_long = solidityPackedKeccak256(
+    ["bytes1", "address", "bytes32", "bytes32"],
+    ["0xFF", senderAddress, salt, cloneByteCodeHash]
+  );
+
+  const contract_address = "0x" + contract_address_long.substring(26); //Trim the first 24 characters.
+
+  return getAddress(contract_address);
+}
+
+function getCloneByteCodeHash(beaconProxyAddress) {
+  return keccak256(
+    `0x3d602d80600a3d3981f3363d3d373d3d3d363d73${beaconProxyAddress.slice(2)}5af43d82803e903d91602b57fd5bf3`
+  );
+}
+
+function getCloneSalt(sellerAddress, externalId) {
+  return solidityPackedKeccak256(["address", "string"], [sellerAddress, externalId]);
+}
+
+function calculateCloneAddress(voucherCreator, beaconProxyAddress, sellerAddress, externalId) {
+  const salt = getCloneSalt(sellerAddress, externalId);
+  const cloneByteCodeHash = getCloneByteCodeHash(beaconProxyAddress);
+  return calculateContractAddress2(voucherCreator, cloneByteCodeHash, salt);
+}
+
+async function calculateBosonProxyAddress(proxyCreator) {
+  const salt = solidityPackedKeccak256(["string"], ["BosonVoucherProxy"]);
+  const { bytecode } = await ethers.getContractFactory("BeaconClientProxy");
+  const byteCodeHash = keccak256(bytecode);
+  return calculateContractAddress2(proxyCreator, byteCodeHash, salt);
+}
+
 const paddingType = {
   NONE: 0,
   START: 1,
@@ -353,13 +389,12 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
 
   // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
   const protocolClientArgs = [await protocolDiamond.getAddress()];
-  const [implementations, beacons, proxies, clients] = await deployProtocolClients(
+  const [implementations, beacons, , clients] = await deployProtocolClients(
     protocolClientArgs,
     maxPriorityFeePerGas,
     forwarderAddress
   );
   const [beacon] = beacons;
-  const [proxy] = proxies;
   const [bosonVoucher] = clients;
   const [voucherImplementation] = implementations;
 
@@ -375,7 +410,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
       treasury: await protocolTreasury.getAddress(),
       token: bosonTokenAddress || (await bosonToken.getAddress()),
       voucherBeacon: await beacon.getAddress(),
-      beaconProxy: await proxy.getAddress(),
+      beaconProxy: ZeroAddress,
     },
     // Protocol limits
     {
@@ -443,6 +478,8 @@ exports.eventEmittedWithArgs = eventEmittedWithArgs;
 exports.prepareDataSignatureParameters = prepareDataSignatureParameters;
 exports.calculateVoucherExpiry = calculateVoucherExpiry;
 exports.calculateContractAddress = calculateContractAddress;
+exports.calculateCloneAddress = calculateCloneAddress;
+exports.calculateBosonProxyAddress = calculateBosonProxyAddress;
 exports.applyPercentage = applyPercentage;
 exports.getMappingStoragePosition = getMappingStoragePosition;
 exports.paddingType = paddingType;
