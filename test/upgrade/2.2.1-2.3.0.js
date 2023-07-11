@@ -74,156 +74,156 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let preUpgradeEntities;
 
   before(async function () {
-    try {
-      // Make accounts available
-      [deployer, rando, clerk, pauser, assistant] = await ethers.getSigners();
+    //   try {
+    // Make accounts available
+    [deployer, rando, clerk, pauser, assistant] = await ethers.getSigners();
 
-      let contractsBefore;
+    let contractsBefore;
 
-      ({
-        protocolDiamondAddress,
-        protocolContracts: contractsBefore,
-        mockContracts,
-        accessController,
-      } = await deploySuite(deployer, version));
+    ({
+      protocolDiamondAddress,
+      protocolContracts: contractsBefore,
+      mockContracts,
+      accessController,
+    } = await deploySuite(deployer, version));
 
-      // Populate protocol with data
-      preUpgradeEntities = await populateProtocolContract(
+    // Populate protocol with data
+    preUpgradeEntities = await populateProtocolContract(
+      deployer,
+      protocolDiamondAddress,
+      contractsBefore,
+      mockContracts,
+      true
+    );
+
+    // Start a seller update (finished in tests)
+    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
+    const { sellers } = preUpgradeEntities;
+    let { wallet, id, seller, authToken } = sellers[0];
+    seller.clerk = rando.address;
+    await accountHandler.connect(wallet).updateSeller(seller, authToken);
+
+    ({ wallet, id, seller, authToken } = sellers[1]);
+    seller.clerk = rando.address;
+    seller.assistant = rando.address;
+    await accountHandler.connect(wallet).updateSeller(seller, authToken);
+
+    ({ wallet, id, seller, authToken } = sellers[2]);
+    seller.clerk = clerk.address;
+    await accountHandler.connect(wallet).updateSeller(seller, authToken);
+    await accountHandler.connect(clerk).optInToSellerUpdate(id, [SellerUpdateFields.Clerk]);
+
+    const { DRs } = preUpgradeEntities;
+    let disputeResolver;
+    ({ wallet, disputeResolver } = DRs[0]);
+    disputeResolver.clerk = rando.address;
+    await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
+
+    ({ wallet, disputeResolver } = DRs[1]);
+    disputeResolver.clerk = rando.address;
+    disputeResolver.assistant = rando.address;
+    await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
+
+    // Get current protocol state, which serves as the reference
+    // We assume that this state is a true one, relying on our unit and integration tests
+    protocolContractStateBefore = await getProtocolContractState(
+      protocolDiamondAddress,
+      contractsBefore,
+      mockContracts,
+      preUpgradeEntities,
+      true
+    );
+
+    ({ bundleHandler, exchangeHandler, twinHandler, disputeHandler } = contractsBefore);
+
+    const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
+      [
+        "ConfigHandlerFacet",
+        "PauseHandlerFacet",
+        "GroupHandlerFacet",
+        "OfferHandlerFacet",
+        "OrchestrationHandlerFacet",
+      ],
+      undefined,
+      ["setMinResolutionPeriod", "unpause", "createGroup", "createSellerAnd", "createOffer", "createPremintedOffer"] //ToDo: revise
+    );
+
+    removedFunctionHashes = await getFunctionHashesClosure();
+
+    await migrate("upgrade-test");
+
+    // Cast to updated interface
+    let newHandlers = {
+      accountHandler: "IBosonAccountHandler",
+      pauseHandler: "IBosonPauseHandler",
+      configHandler: "IBosonConfigHandler",
+      offerHandler: "IBosonOfferHandler",
+      groupHandler: "IBosonGroupHandler",
+      orchestrationHandler: "IBosonOrchestrationHandler",
+      fundsHandler: "IBosonFundsHandler",
+    };
+
+    contractsAfter = { ...contractsBefore };
+
+    for (const [handlerName, interfaceName] of Object.entries(newHandlers)) {
+      contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
+    }
+
+    ({ accountHandler, pauseHandler, configHandler, offerHandler, groupHandler, orchestrationHandler } =
+      contractsAfter);
+
+    addedFunctionHashes = await getFunctionHashesClosure();
+
+    snapshot = await getSnapshot();
+
+    const includeTests = [
+      // "accountContractState", // Clerk deprecated
+      "offerContractState",
+      "exchangeContractState",
+      "bundleContractState",
+      // "configContractState", // minResolutionPeriod changed
+      "disputeContractState",
+      "fundsContractState",
+      "groupContractState",
+      "twinContractState",
+      // "metaTxPrivateContractState", // isAllowlisted changed
+      "protocolStatusPrivateContractState",
+      "protocolLookupsPrivateContractState",
+    ];
+
+    // Get protocol state after the upgrade
+    protocolContractStateAfter = await getProtocolContractState(
+      protocolDiamondAddress,
+      contractsAfter,
+      mockContracts,
+      preUpgradeEntities
+    );
+
+    // This context is placed in an uncommon place due to order of test execution.
+    // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
+    // and those values are undefined if this is placed outside "before".
+    // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
+    context(
+      "Generic tests",
+      getGenericContext(
         deployer,
         protocolDiamondAddress,
         contractsBefore,
-        mockContracts,
-        true
-      );
-
-      // Start a seller update (finished in tests)
-      accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
-      const { sellers } = preUpgradeEntities;
-      let { wallet, id, seller, authToken } = sellers[0];
-      seller.clerk = rando.address;
-      await accountHandler.connect(wallet).updateSeller(seller, authToken);
-
-      ({ wallet, id, seller, authToken } = sellers[1]);
-      seller.clerk = rando.address;
-      seller.assistant = rando.address;
-      await accountHandler.connect(wallet).updateSeller(seller, authToken);
-
-      ({ wallet, id, seller, authToken } = sellers[2]);
-      seller.clerk = clerk.address;
-      await accountHandler.connect(wallet).updateSeller(seller, authToken);
-      await accountHandler.connect(clerk).optInToSellerUpdate(id, [SellerUpdateFields.Clerk]);
-
-      const { DRs } = preUpgradeEntities;
-      let disputeResolver;
-      ({ wallet, disputeResolver } = DRs[0]);
-      disputeResolver.clerk = rando.address;
-      await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
-
-      ({ wallet, disputeResolver } = DRs[1]);
-      disputeResolver.clerk = rando.address;
-      disputeResolver.assistant = rando.address;
-      await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
-
-      // Get current protocol state, which serves as the reference
-      // We assume that this state is a true one, relying on our unit and integration tests
-      protocolContractStateBefore = await getProtocolContractState(
-        protocolDiamondAddress,
-        contractsBefore,
-        mockContracts,
-        preUpgradeEntities,
-        true
-      );
-
-      ({ bundleHandler, exchangeHandler, twinHandler, disputeHandler } = contractsBefore);
-
-      const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
-        [
-          "ConfigHandlerFacet",
-          "PauseHandlerFacet",
-          "GroupHandlerFacet",
-          "OfferHandlerFacet",
-          "OrchestrationHandlerFacet",
-        ],
-        undefined,
-        ["setMinResolutionPeriod", "unpause", "createGroup", "createSellerAnd", "createOffer", "createPremintedOffer"] //ToDo: revise
-      );
-
-      removedFunctionHashes = await getFunctionHashesClosure();
-
-      await migrate("upgrade-test");
-
-      // Cast to updated interface
-      let newHandlers = {
-        accountHandler: "IBosonAccountHandler",
-        pauseHandler: "IBosonPauseHandler",
-        configHandler: "IBosonConfigHandler",
-        offerHandler: "IBosonOfferHandler",
-        groupHandler: "IBosonGroupHandler",
-        orchestrationHandler: "IBosonOrchestrationHandler",
-        fundsHandler: "IBosonFundsHandler",
-      };
-
-      contractsAfter = { ...contractsBefore };
-
-      for (const [handlerName, interfaceName] of Object.entries(newHandlers)) {
-        contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
-      }
-
-      ({ accountHandler, pauseHandler, configHandler, offerHandler, groupHandler, orchestrationHandler } =
-        contractsAfter);
-
-      addedFunctionHashes = await getFunctionHashesClosure();
-
-      snapshot = await getSnapshot();
-
-      const includeTests = [
-        // "accountContractState", // Clerk deprecated
-        "offerContractState",
-        "exchangeContractState",
-        "bundleContractState",
-        // "configContractState", // minResolutionPeriod changed
-        "disputeContractState",
-        "fundsContractState",
-        "groupContractState",
-        "twinContractState",
-        // "metaTxPrivateContractState", // isAllowlisted changed
-        "protocolStatusPrivateContractState",
-        "protocolLookupsPrivateContractState",
-      ];
-
-      // Get protocol state after the upgrade
-      protocolContractStateAfter = await getProtocolContractState(
-        protocolDiamondAddress,
         contractsAfter,
         mockContracts,
-        preUpgradeEntities
-      );
-
-      // This context is placed in an uncommon place due to order of test execution.
-      // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
-      // and those values are undefined if this is placed outside "before".
-      // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
-      context(
-        "Generic tests",
-        getGenericContext(
-          deployer,
-          protocolDiamondAddress,
-          contractsBefore,
-          contractsAfter,
-          mockContracts,
-          protocolContractStateBefore,
-          protocolContractStateAfter,
-          preUpgradeEntities,
-          snapshot,
-          includeTests
-        )
-      );
-    } catch (err) {
-      // revert to latest version of scripts and contracts
-      revertState();
-      // stop execution
-      assert(false, `Before all reverts with: ${err}`);
-    }
+        protocolContractStateBefore,
+        protocolContractStateAfter,
+        preUpgradeEntities,
+        snapshot,
+        includeTests
+      )
+    );
+    //    } catch (err) {
+    //      // revert to latest version of scripts and contracts
+    //      revertState();
+    //      // stop execution
+    //      assert(false, `Before all reverts with: ${err}`);
+    //    }
   });
 
   afterEach(async function () {
