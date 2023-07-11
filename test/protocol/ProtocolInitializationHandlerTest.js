@@ -1,4 +1,3 @@
-const { expect } = require("chai");
 const hre = require("hardhat");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
@@ -13,13 +12,14 @@ const {
   toUtf8Bytes,
 } = hre.ethers;
 const { getSnapshot, revertToSnapshot } = require("../util/utils.js");
-
+const { expect } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const { mockTwin, mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployAndCutFacets, deployProtocolFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const { getInterfaceIds, interfaceImplementers } = require("../../scripts/config/supported-interfaces");
 const { maxPriorityFeePerGas, oneWeek } = require("../util/constants");
+
 const { getFees } = require("../../scripts/util/utils");
 const { getFacetAddCut, getFacetReplaceCut } = require("../../scripts/util/diamond-utils");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -97,9 +97,7 @@ describe("ProtocolInitializationHandler", async function () {
 
         beforeEach(async function () {
           const ProtocolInitilizationContractFactory = await getContractFactory("ProtocolInitializationHandlerFacet");
-          protocolInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy(
-            await getFees(maxPriorityFeePerGas)
-          );
+          protocolInitializationFacetDeployed = await ProtocolInitilizationContractFactory.deploy();
 
           await protocolInitializationFacetDeployed.waitForDeployment();
         });
@@ -459,7 +457,7 @@ describe("ProtocolInitializationHandler", async function () {
         await deployProtocolFacets(
           ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet"],
           {},
-          await getFees(maxPriorityFeePerGas)
+          maxPriorityFeePerGas
         );
 
       version = encodeBytes32String("2.2.0");
@@ -578,7 +576,7 @@ describe("ProtocolInitializationHandler", async function () {
       [{ contract: deployedProtocolInitializationHandlerFacet }] = await deployProtocolFacets(
         ["ProtocolInitializationHandlerFacet", "AccountHandlerFacet"],
         {},
-        await getFees(maxPriorityFeePerGas)
+        maxPriorityFeePerGas
       );
 
       // Prepare cut data
@@ -631,7 +629,7 @@ describe("ProtocolInitializationHandler", async function () {
         const [{ contract: accountHandler }] = await deployProtocolFacets(
           ["AccountHandlerFacet"],
           {},
-          await getFees(maxPriorityFeePerGas)
+          maxPriorityFeePerGas
         );
 
         // Prepare cut data
@@ -735,7 +733,7 @@ describe("ProtocolInitializationHandler", async function () {
           await deployProtocolFacets(
             ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet", "SellerHandlerFacet"],
             {},
-            await getFees(maxPriorityFeePerGas)
+            maxPriorityFeePerGas
           );
 
         snapshotId = await getSnapshot();
@@ -774,8 +772,7 @@ describe("ProtocolInitializationHandler", async function () {
         diamondCutFacet.diamondCut(
           [facetCut],
           deployedProtocolInitializationHandlerFacetAddress,
-          calldataProtocolInitialization,
-          await getFees(maxPriorityFeePerGas)
+          calldataProtocolInitialization
         )
       )
         .to.emit(configHandler, "MinResolutionPeriodChanged")
@@ -787,8 +784,7 @@ describe("ProtocolInitializationHandler", async function () {
       await diamondCutFacet.diamondCut(
         [facetCut],
         deployedProtocolInitializationHandlerFacetAddress,
-        calldataProtocolInitialization,
-        await getFees(maxPriorityFeePerGas)
+        calldataProtocolInitialization
       );
 
       // Verify that new value is stored
@@ -810,8 +806,7 @@ describe("ProtocolInitializationHandler", async function () {
           diamondCutFacet.diamondCut(
             [facetCut],
             deployedProtocolInitializationHandlerFacetAddress,
-            calldataProtocolInitialization,
-            await getFees(maxPriorityFeePerGas)
+            calldataProtocolInitialization
           )
         ).to.be.revertedWith(RevertReasons.TWINS_ALREADY_EXIST);
       });
@@ -831,8 +826,7 @@ describe("ProtocolInitializationHandler", async function () {
           diamondCutFacet.diamondCut(
             [facetCut],
             deployedProtocolInitializationHandlerFacetAddress,
-            calldataProtocolInitialization,
-            await getFees(maxPriorityFeePerGas)
+            calldataProtocolInitialization
           )
         ).to.be.revertedWith(RevertReasons.VALUE_ZERO_NOT_ALLOWED);
       });
@@ -851,8 +845,7 @@ describe("ProtocolInitializationHandler", async function () {
           diamondCutFacet.diamondCut(
             [facetCut],
             deployedProtocolInitializationHandlerFacetAddress,
-            calldataProtocolInitialization,
-            await getFees(maxPriorityFeePerGas)
+            calldataProtocolInitialization
           )
         ).to.be.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
       });
@@ -873,8 +866,7 @@ describe("ProtocolInitializationHandler", async function () {
           diamondCutFacet.diamondCut(
             [facetCut],
             deployedProtocolInitializationHandlerFacetAddress,
-            calldataProtocolInitialization,
-            await getFees(maxPriorityFeePerGas)
+            calldataProtocolInitialization
           )
         ).to.be.revertedWith(RevertReasons.NO_SUCH_SELLER);
       });
@@ -895,8 +887,7 @@ describe("ProtocolInitializationHandler", async function () {
           diamondCutFacet.diamondCut(
             [facetCut],
             deployedProtocolInitializationHandlerFacetAddress,
-            calldataProtocolInitialization,
-            await getFees(maxPriorityFeePerGas)
+            calldataProtocolInitialization
           )
         ).to.be.revertedWith(RevertReasons.INVALID_ADDRESS);
       });
@@ -911,7 +902,7 @@ describe("ProtocolInitializationHandler", async function () {
         [{ contract: deployedProtocolInitializationHandlerFacet }] = await deployProtocolFacets(
           ["ProtocolInitializationHandlerFacet"],
           {},
-          await getFees(maxPriorityFeePerGas)
+          maxPriorityFeePerGas
         );
         facetCut = await getFacetReplaceCut(deployedProtocolInitializationHandlerFacet, [
           deployedProtocolInitializationHandlerFacet.interface.fragments.find((f) => f.name == "initialize").selector,
@@ -919,8 +910,7 @@ describe("ProtocolInitializationHandler", async function () {
         await diamondCutFacet.diamondCut(
           [facetCut],
           await deployedProtocolInitializationHandlerFacet.getAddress(),
-          calldataProtocolInitialization,
-          await getFees(maxPriorityFeePerGas)
+          calldataProtocolInitialization
         );
 
         // Prepare 2.3.0 deployment
@@ -932,7 +922,7 @@ describe("ProtocolInitializationHandler", async function () {
         [{ contract: deployedProtocolInitializationHandlerFacet }] = await deployProtocolFacets(
           ["ProtocolInitializationHandlerFacet"],
           {},
-          await getFees(maxPriorityFeePerGas)
+          maxPriorityFeePerGas
         );
         facetCut = await getFacetReplaceCut(deployedProtocolInitializationHandlerFacet, [
           deployedProtocolInitializationHandlerFacet.interface.fragments.find((f) => f.name == "initialize").selector,
@@ -943,8 +933,7 @@ describe("ProtocolInitializationHandler", async function () {
           diamondCutFacet.diamondCut(
             [facetCut],
             await deployedProtocolInitializationHandlerFacet.getAddress(),
-            calldataProtocolInitialization,
-            await getFees(maxPriorityFeePerGas)
+            calldataProtocolInitialization
           )
         ).to.be.revertedWith(RevertReasons.WRONG_CURRENT_VERSION);
       });

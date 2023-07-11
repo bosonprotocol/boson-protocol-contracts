@@ -39,20 +39,20 @@
     "deploy-suite:polygon:mumbai-test": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network mumbai --env test >> logs/mumbai-test.deploy.contracts.txt",
     "deploy-suite:polygon:mumbai-staging": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network mumbai --env staging >> logs/mumbai-staging.deploy.contracts.txt",
     "deploy-suite:polygon:mainnet": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network polygon --env prod >> logs/polygon.deploy.contracts.txt",
-    "verify-suite:ethereum:mainnet": "npx hardhat verify-suite --network mainnet --chain-id 1 --env prod --env prod >> logs/mainnet.verify.contracts.txt",
+    "verify-suite:ethereum:mainnet": "npx hardhat verify-suite --network mainnet --chain-id 1 --env prod >> logs/mainnet.verify.contracts.txt",
     "verify-suite:polygon:mumbai-test": "npx hardhat verify-suite --network mumbai --chain-id 80001 --env test >> logs/mumbai-test.verify.contracts.txt",
     "verify-suite:polygon:mumbai-staging": "npx hardhat verify-suite --network mumbai --chain-id 80001 --env staging >> logs/mumbai-staging.verify.contracts.txt",
     "verify-suite:polygon:mainnet": "npx hardhat verify-suite --network polygon --chain-id 137 --env prod >> logs/polygon.verify.contracts.txt",
     "deploy-mocks:hardhat": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-mock-nft-auth --network hardhat",
     "deploy-mocks:local": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-mock-nft-auth --network localhost",
     "deploy-mocks:test": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-mock-nft-auth --network test >> logs/test.deploy.mocks.txt",
-    "upgrade-facets:local": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-facets --network localhost",
+    "upgrade-facets:local": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-facets --network localhost --env ''",
     "upgrade-facets:test": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-facets --network test --env test >> logs/test.upgrade.contracts.txt",
     "upgrade-facets:ethereum:mainnet": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-facets --network mainnet --env prod >> logs/mainnet.upgrade.contracts.txt",
     "upgrade-facets:polygon:mumbai-test": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-facets --network mumbai --env test >> logs/mumbai-test.upgrade.contracts.txt",
     "upgrade-facets:polygon:mumbai-staging": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-facets --network mumbai --env staging >> logs/mumbai-staging.upgrade.contracts.txt",
     "upgrade-facets:polygon:mainnet": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-facets --network polygon --env prod >> logs/polygon.upgrade.contracts.txt",
-    "upgrade-clients:local": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-clients --network localhost",
+    "upgrade-clients:local": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-clients --network localhost --env ''",
     "upgrade-clients:test": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-clients --network test --env test >> logs/test.upgrade.contracts.txt",
     "upgrade-clients:ethereum:mainnet": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-clients --network mainnet --env prod >> logs/mainnet.upgrade.contracts.txt",
     "upgrade-clients:polygon:mumbai-test": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-clients --network mumbai --env test >> logs/mumbai-test.upgrade.contracts.txt",
@@ -74,6 +74,7 @@
   },
   "devDependencies": {
     "@bosonprotocol/solidoc": "3.0.3",
+    "@nomicfoundation/hardhat-ethers": "^3.0.3",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@nomicfoundation/hardhat-toolbox": "^3.0.0",
     "@nomiclabs/hardhat-web3": "^2.0.0",
@@ -86,6 +87,7 @@
     "eslint-config-prettier": "^8.6.0",
     "eslint-plugin-no-only-tests": "^3.1.0",
     "ethereum-input-data-decoder": "^0.4.2",
+    "ethers": "^6.6.0",
     "glob": "^10.2.7",
     "hardhat": "^2.14.1",
     "hardhat-contract-sizer": "^2.7.0",
@@ -97,7 +99,6 @@
     "simple-statistics": "^7.8.2",
     "solhint": "^3.3.8",
     "truffle": "^5.9.4",
-    "web3": "^1.8.1",
-    "ethers": "^6.6.0"
+    "web3": "^1.8.1"
   }
 }
