@@ -87,7 +87,7 @@
     "eslint-config-prettier": "^8.6.0",
     "eslint-plugin-no-only-tests": "^3.1.0",
     "ethereum-input-data-decoder": "^0.4.2",
-    "ethers": "^6.6.0",
+    "ethers": "^6.6.2",
     "glob": "^10.2.7",
     "hardhat": "^2.14.1",
     "hardhat-contract-sizer": "^2.7.0",
