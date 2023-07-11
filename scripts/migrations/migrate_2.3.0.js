@@ -36,14 +36,14 @@ async function migrate(env) {
       throw new Error("Local changes found. Please stash them before upgrading");
     }
 
-    console.log("Installing dependencies");
-    shell.exec(`npm install`);
-
     const { chainId } = await ethers.provider.getNetwork();
     const contractsFile = readContracts(chainId, network, env);
     if (contractsFile?.protocolVersion != "2.2.1") {
       throw new Error("Current contract version must be 2.2.1");
     }
+
+    console.log("Installing dependencies");
+    shell.exec(`npm install`);
 
     // let contracts = contractsFile?.contracts;
 

@@ -108,8 +108,6 @@ task("migrate", "Migrates the protocol to a new version")
       let setupDryRun;
       ({ setupDryRun, getBalance } = await lazyImport(`./scripts/migrations/dry-run.js`));
       ({ env, upgraderBalance: balanceBefore } = await setupDryRun(env));
-    } else {
-      process.exit();
     }
 
     const { migrate } = await lazyImport(`./scripts/migrations/migrate_${newVersion}.js`);

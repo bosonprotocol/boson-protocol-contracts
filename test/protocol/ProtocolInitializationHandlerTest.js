@@ -736,7 +736,7 @@ describe("ProtocolInitializationHandler", async function () {
           await deployProtocolFacets(
             ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet", "SellerHandlerFacet"],
             {},
-            maxPriorityFeePerGas
+            await getFees(maxPriorityFeePerGas)
           );
 
         snapshotId = await getSnapshot();

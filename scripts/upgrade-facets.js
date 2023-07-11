@@ -5,8 +5,8 @@ const network = hre.network.name;
 const { getFacets } = require("./config/facet-upgrade");
 const environments = require("../environments");
 const tipMultiplier = BigInt(environments.tipMultiplier);
-const tipSuggestion = "1500000000"; // js always returns this constant, it does not vary per block
-const maxPriorityFeePerGas = BigInt(tipSuggestion).mul(tipMultiplier);
+const tipSuggestion = 1500000000n; // js always returns this constant, it does not vary per block
+const maxPriorityFeePerGas = tipSuggestion + tipMultiplier;
 const { deploymentComplete, readContracts, writeContracts, checkRole, addressNotFound } = require("./util/utils.js");
 const { deployProtocolFacets } = requireUncached("./util/deploy-protocol-handler-facets.js");
 const {
