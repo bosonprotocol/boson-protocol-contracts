@@ -50,6 +50,7 @@ const { migrate } = require(`../../scripts/migrations/migrate_${version}.js`);
  *  Upgrade test case - After upgrade from 2.2.1 to 2.3.0 everything is still operational
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
+  this.timeout(1000000);
   // Common vars
   let deployer, rando, clerk, pauser, assistant;
   let accessController;

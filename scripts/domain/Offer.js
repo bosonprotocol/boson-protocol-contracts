@@ -127,7 +127,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
-      collectionIndex: collectionIndex.toString(),
+      collectionIndex: collectionIndex && collectionIndex.toString(),
     });
   }
 

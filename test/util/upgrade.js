@@ -2,6 +2,7 @@ const shell = require("shelljs");
 const _ = require("lodash");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
+const decache = require("decache");
 const {
   keccak256,
   formatBytes32String,
@@ -46,7 +47,7 @@ const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { readContracts } = require("../../scripts/util/utils");
 const { getFacets } = require("../upgrade/00_config");
 const Receipt = require("../../scripts/domain/Receipt");
-const Offer = require("../../scripts/domain/Offer");
+let Offer = require("../../scripts/domain/Offer");
 const OfferFees = require("../../scripts/domain/OfferFees");
 const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
@@ -93,7 +94,9 @@ async function deploySuite(deployer, newVersion) {
 
   console.log(`Checking out version ${tag}`);
   shell.exec(`rm -rf contracts/*`);
-  shell.exec(`find contracts -type f | xargs git checkout ${tag} --`);
+  // @TODO check subfolders
+  //shell.exec(`find contracts -type f | xargs git checkout ${tag} --`);
+  shell.exec(`git checkout ${tag} contracts/**`);
 
   if (scriptsTag) {
     console.log(`Checking out scripts on version ${scriptsTag}`);
@@ -103,6 +106,7 @@ async function deploySuite(deployer, newVersion) {
 
   const isOldOZVersion = ["v2.0", "v2.1", "v2.2"].some((v) => tag.startsWith(v));
   if (isOldOZVersion) {
+    console.log("Installing correct version of OZ");
     // Temporary install old OZ contracts
     shell.exec("npm i @openzeppelin/contracts-upgradeable@4.7.1");
   }
@@ -383,7 +387,6 @@ async function populateProtocolContract(
         ];
         const sellerAllowList = [];
         disputeResolver.id = nextAccountId.toString();
-
         await accountHandler
           .connect(connectedWallet)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -494,14 +497,14 @@ async function populateProtocolContract(
       }
 
       // Set unique offer dates based on offer id
-      const now = offerDates.validFrom;
-      offerDates.validFrom = (BigInt(now) + oneMonth + BigInt(offerId) * 1000n).toString();
-      offerDates.validUntil = (BigInt(now) + oneMonth * 6n * BigInt(offerId) + 1n).toString();
+      const now = BigInt(offerDates.validFrom);
+      offerDates.validFrom = (now + oneMonth + BigInt(offerId) * 1000n).toString();
+      offerDates.validUntil = (now + oneMonth * 6n * BigInt(offerId) + 1n).toString();
 
       // Set unique offerDurations based on offer id
-      offerDurations.disputePeriod = `${(offerId + 1) * oneMonth}`;
-      offerDurations.voucherValid = `${(offerId + 1) * oneMonth}`;
-      offerDurations.resolutionPeriod = `${(offerId + 1) * oneDay}`;
+      offerDurations.disputePeriod = `${(offerId + 1) * Number(oneMonth)}`;
+      offerDurations.voucherValid = `${(offerId + 1) * Number(oneMonth)}`;
+      offerDurations.resolutionPeriod = `${(offerId + 1) * Number(oneDay)}`;
 
       // choose one DR and agent
       const disputeResolverId = DRs[offerId % 3].disputeResolver.id;
@@ -567,7 +570,7 @@ async function populateProtocolContract(
     for (let j = 0; j < 7; j++) {
       twin721.tokenId = `${sellerId * 1000000 + j * 100000}`;
       twin721.supplyAvailable = minSupplyAvailable;
-      twin721.tokenAddress = mockTwinTokens[j % 2].address; // oscilate between twins
+      twin721.tokenAddress = await mockTwinTokens[j % 2].getAddress(); // oscilate between twins
       twin721.id = twinId;
 
       // mint tokens to be transferred on redeem
@@ -715,7 +718,7 @@ async function getProtocolContractState(
     getOfferContractState(offerHandler, offers),
     getExchangeContractState(exchangeHandler, exchanges),
     getBundleContractState(bundleHandler, bundles),
-    getConfigContractState(configHandler),
+    getConfigContractState(configHandler, isBefore),
     getDisputeContractState(disputeHandler, exchanges),
     getFundsContractState(fundsHandler, { DRs, sellers, buyers, agents }, isBefore),
     getGroupContractState(groupHandler, groups),
@@ -834,6 +837,9 @@ async function getOfferContractState(offerHandler, offers) {
     ]);
 
     let [exist, offerStruct, offerDates, offerDurations, disputeResolutionTerms, offerFees] = singleOffersState;
+    decache("../../scripts/domain/Offer.js");
+    Offer = require("../../scripts/domain/Offer.js");
+
     offerStruct = Offer.fromStruct(offerStruct);
     offerDates = OfferDates.fromStruct(offerDates);
     offerDurations = OfferDurations.fromStruct(offerDurations);
@@ -907,8 +913,9 @@ async function getBundleContractState(bundleHandler, bundles) {
   return { bundlesState, bundleIdByOfferState, bundleIdByTwinState, nextBundleId };
 }
 
-async function getConfigContractState(configHandler) {
+async function getConfigContractState(configHandler, isBefore = false) {
   const configHandlerRando = configHandler.connect(rando);
+  console.log("ana", versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion));
   const [
     tokenAddress,
     treasuryAddress,
@@ -966,7 +973,8 @@ async function getConfigContractState(configHandler) {
     configHandlerRando.getMinDisputePeriod(),
     configHandlerRando.getAccessControllerAddress(),
     configHandlerRando.getMaxPremintedVouchers(),
-    configHandlerRando.getMinResolutionPeriod(),
+    !versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion) &&
+      configHandlerRando.getMinResolutionPeriod(),
   ]);
 
   return {
@@ -1261,7 +1269,7 @@ async function getProtocolLookupsPrivateContractState(
     const id = Number(offer.offer.id);
     // exchangeIdsByOffer
     let exchangeIdsByOffer = [];
-    const arraySlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + 0n, id, paddingType.START));
+    const arraySlot = getMappingStoragePosition(protocolLookupsSlotNumber + 0n, id, paddingType.START);
     const arrayLength = await getStorageAt(protocolDiamondAddress, arraySlot);
     const arrayStart = keccak256(arraySlot);
     for (let i = 0n; i < arrayLength; i++) {
