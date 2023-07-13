@@ -7,7 +7,14 @@ const environments = require("../environments");
 const tipMultiplier = BigInt(environments.tipMultiplier);
 const tipSuggestion = 1500000000n; // js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = BigInt(tipSuggestion) * tipMultiplier;
-const { deploymentComplete, readContracts, writeContracts, checkRole, addressNotFound } = require("./util/utils.js");
+const {
+  deploymentComplete,
+  readContracts,
+  writeContracts,
+  checkRole,
+  addressNotFound,
+  listAccounts,
+} = require("./util/utils.js");
 const { deployProtocolFacets } = requireUncached("./util/deploy-protocol-handler-facets.js");
 const {
   FacetCutAction,
@@ -89,9 +96,8 @@ async function main(env, facetConfig, version) {
     process.exit(1);
   }
 
-  console.log("provider", provider);
   // Get list of accounts managed by node
-  const nodeAccountList = (await provider.listAccounts()).map((address) => address.toLowerCase());
+  const nodeAccountList = (await listAccounts()).map((address) => address.toLowerCase());
 
   if (nodeAccountList.includes(adminAddress.toLowerCase())) {
     console.log("🔱 Admin account: ", adminAddress);
@@ -147,7 +153,7 @@ async function main(env, facetConfig, version) {
     let registeredSelectors;
     if (oldFacet) {
       // Facet exists, so all selectors should be removed
-      registeredSelectors = await diamondLoupe.facetFunctionSelectors(await oldFacet.getAddress());
+      registeredSelectors = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
     } else {
       // Facet does not exist, skip next steps
       continue;
@@ -186,12 +192,15 @@ async function main(env, facetConfig, version) {
 
   // Manage new or upgraded facets
   for (const [index, newFacet] of deployedFacets.entries()) {
+    console.log("newFacet", newFacet);
     // Get currently registered selectors
     const oldFacet = contracts.find((i) => i.name === newFacet.name);
     let registeredSelectors;
+
+    console.log("oldFacet", oldFacet);
     if (oldFacet) {
       // Facet already exists and is only upgraded
-      registeredSelectors = await diamondLoupe.facetFunctionSelectors(await oldFacet.getAddress());
+      registeredSelectors = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
     } else {
       // Facet is new
       registeredSelectors = [];
@@ -201,7 +210,13 @@ async function main(env, facetConfig, version) {
     contracts = contracts.filter((i) => i.name !== newFacet.name);
 
     const newFacetInterfaceId = interfaceIdFromFacetName(newFacet.name);
-    deploymentComplete(newFacet.name, newFacet.contract, newFacet.constructorArgs, newFacetInterfaceId, contracts);
+    deploymentComplete(
+      newFacet.name,
+      await newFacet.contract.getAddress(),
+      newFacet.constructorArgs,
+      newFacetInterfaceId,
+      contracts
+    );
 
     // Get new selectors from compiled contract
     const selectors = getSelectors(newFacet.contract, true);
@@ -209,9 +224,8 @@ async function main(env, facetConfig, version) {
 
     // Initialize selectors should not be added
     const facetFactory = await getContractFactory(newFacet.name);
-    const functionFragment = facetFactory.interface.getFunction("initialize");
-    const signature = facetFactory.interface.getSighash(functionFragment);
-    newSelectors = selectors.selectors.remove([signature]);
+    const { selector } = facetFactory.interface.getFunction("initialize");
+    newSelectors = selectors.selectors.remove([selector]);
 
     // Determine actions to be made
     let selectorsToReplace = registeredSelectors.filter((value) => newSelectors.includes(value)); // intersection of old and new selectors
@@ -256,7 +270,7 @@ async function main(env, facetConfig, version) {
       }
     }
 
-    const newFacetAddress = newFacet.contract;
+    const newFacetAddress = await newFacet.contract.getAddress();
     if (selectorsToAdd.length > 0) {
       deployedFacets[index].cut.push([newFacetAddress, FacetCutAction.Add, selectorsToAdd]);
     }

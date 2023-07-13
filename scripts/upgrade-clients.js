@@ -12,6 +12,7 @@ const {
   writeContracts,
   checkRole,
   addressNotFound,
+  listAccounts,
 } = require("./util/utils.js");
 const { deployProtocolClientImpls } = requireUncached("./util/deploy-protocol-client-impls.js");
 const Role = require("./domain/Role");
@@ -47,7 +48,7 @@ async function main(env, clientConfig, version) {
 
   console.log(provider);
   // Get list of accounts managed by node
-  const nodeAccountList = (await provider.listAccounts()).map((address) => address.toLowerCase());
+  const nodeAccountList = (await listAccounts()).map((address) => address.toLowerCase());
 
   if (nodeAccountList.includes(adminAddress.toLowerCase())) {
     console.log("🔱 Admin account: ", adminAddress);

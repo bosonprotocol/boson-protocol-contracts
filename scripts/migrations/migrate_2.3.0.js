@@ -33,7 +33,7 @@ async function migrate(env) {
   console.log(`Migration ${tag} started`);
   try {
     console.log("Removing any local changes before upgrading");
-    shell.exec(`git reset @{u}`);
+    //shell.exec(`git reset @{u}`);
     const statusOutput = shell.exec("git status -s -uno scripts package.json");
 
     if (statusOutput.stdout) {

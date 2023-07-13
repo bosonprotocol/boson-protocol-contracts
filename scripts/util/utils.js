@@ -96,6 +96,11 @@ function toHexString(bigNumber, { startPad } = { startPad: 8 }) {
   return "0x" + (startPad ? bigNumber.toString(16).padStart(startPad, "0") : bigNumber.toString(16));
 }
 
+// Workaround since hardhat provider doesn't support listAccounts yet (this may be a hardhat bug after ether v6 migration)
+async function listAccounts() {
+  return await provider.send("eth_accounts", []);
+}
+
 exports.getAddressesFilePath = getAddressesFilePath;
 exports.writeContracts = writeContracts;
 exports.readContracts = readContracts;
@@ -107,3 +112,4 @@ exports.getFees = getFees;
 exports.checkRole = checkRole;
 exports.addressNotFound = addressNotFound;
 exports.toHexString = toHexString;
+exports.listAccounts = listAccounts;
