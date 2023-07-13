@@ -1,5 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const shell = require("shelljs");
 const { assert, expect } = require("chai");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
@@ -75,7 +76,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let preUpgradeEntities;
 
   before(async function () {
-    //   try {
+    //try {
     // Make accounts available
     [deployer, rando, clerk, pauser, assistant] = await ethers.getSigners();
 
@@ -143,7 +144,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         "PauseHandlerFacet",
         "GroupHandlerFacet",
         "OfferHandlerFacet",
-        "OrchestrationHandlerFacet",
+        "OrchestrationHandlerFacet1",
+        "OrchestrationHandlerFacet2",
       ],
       undefined,
       ["setMinResolutionPeriod", "unpause", "createGroup", "createSellerAnd", "createOffer", "createPremintedOffer"] //ToDo: revise
@@ -151,6 +153,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     removedFunctionHashes = await getFunctionHashesClosure();
 
+    console.log("Removing old contracts and scripts...");
+    shell.exec("rm -rf contracts/ scripts/ package.json package-lock.json");
+    // @TODO change this to version
+    shell.exec("git checkout HEAD contracts/ scripts/ package.json package-lock.json");
+    shell.exec("git reset --hard HEAD contracts/ scripts/ package.json package-lock.json");
     await migrate("upgrade-test");
 
     // Cast to updated interface

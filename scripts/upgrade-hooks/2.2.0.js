@@ -2,8 +2,8 @@ const { ethers } = require("hardhat");
 const { getContractAt } = ethers;
 const environments = require("../../environments");
 const tipMultiplier = BigInt(environments.tipMultiplier);
-const tipSuggestion = "1500000000"; // js always returns this constant, it does not vary per block
-const maxPriorityFeePerGas = BigInt(tipSuggestion).mul(tipMultiplier);
+const tipSuggestion = 1500000000n; // js always returns this constant, it does not vary per block
+const maxPriorityFeePerGas = BigInt(tipSuggestion) * tipMultiplier;
 const { getFees } = require("./../util/utils");
 
 const PausableRegion = require("../domain/PausableRegion.js");

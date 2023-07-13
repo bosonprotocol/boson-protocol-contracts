@@ -34,16 +34,14 @@ async function migrate(env) {
   try {
     console.log("Removing any local changes before upgrading");
     shell.exec(`git reset @{u}`);
-    const statusOutput = shell.exec("git status -s -uno scripts");
+    const statusOutput = shell.exec("git status -s -uno scripts package.json");
 
     if (statusOutput.stdout) {
       throw new Error("Local changes found. Please stash them before upgrading");
     }
 
-    if (env != "upgrade-test") {
-      console.log("Installing dependencies");
-      shell.exec(`npm install`);
-    }
+    console.log("Installing dependencies");
+    shell.exec(`npm install`);
 
     const { chainId } = await ethers.provider.getNetwork();
     const contractsFile = readContracts(chainId, network, env);

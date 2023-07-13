@@ -3,8 +3,8 @@ const { provider, ZeroAddress, getSigners, getSigner, getContractAt } = hre.ethe
 const network = hre.network.name;
 const environments = require("../environments");
 const tipMultiplier = BigInt(environments.tipMultiplier);
-const tipSuggestion = "1500000000"; // js always returns this constant, it does not vary per block
-const maxPriorityFeePerGas = BigInt(tipSuggestion).mul(tipMultiplier);
+const tipSuggestion = 1500000000n; // js always returns this constant, it does not vary per block
+const maxPriorityFeePerGas = tipSuggestion * tipMultiplier;
 const {
   deploymentComplete,
   getFees,
@@ -45,6 +45,7 @@ async function main(env, clientConfig, version) {
     process.exit(1);
   }
 
+  console.log(provider);
   // Get list of accounts managed by node
   const nodeAccountList = (await provider.listAccounts()).map((address) => address.toLowerCase());
 

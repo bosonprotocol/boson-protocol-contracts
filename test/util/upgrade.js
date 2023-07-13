@@ -4,8 +4,9 @@ const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
 const decache = require("decache");
 const {
+  id: ethersId,
   keccak256,
-  formatBytes32String,
+  encodeBytes32String,
   ZeroAddress,
   getContractAt,
   Wallet,
@@ -77,7 +78,7 @@ function getVersionsBeforeTarget(versions, targetVersion) {
 
   return versionsBefore.map((version) => {
     // Remove "v" prefix and "-rc.${number}" suffix
-    return formatBytes32String(version.replace(/^v/, "").replace(/-rc\.\d+$/, ""));
+    return encodeBytes32String(version.replace(/^v/, "").replace(/-rc\.\d+$/, ""));
   });
 }
 
@@ -777,7 +778,7 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
     }
     agentsState.push(await getAgent(accountHandlerRando, id));
     buyersState.push(await getBuyer(accountHandlerRando, id));
-    if (versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
+    if (!versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
       sellersCollections.push(await accountHandlerRando.getSellersCollections(id));
     } else {
       sellersCollections.push([ZeroAddress, []]);
@@ -915,7 +916,6 @@ async function getBundleContractState(bundleHandler, bundles) {
 
 async function getConfigContractState(configHandler, isBefore = false) {
   const configHandlerRando = configHandler.connect(rando);
-  console.log("ana", versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion));
   const [
     tokenAddress,
     treasuryAddress,
@@ -1132,7 +1132,7 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
     // get also hashFunction
     hashInfoState.push({
       typeHash: await getStorageAt(protocolDiamondAddress, storageSlot),
-      functionPointer: await getStorageAt(protocolDiamondAddress, BigInt(storageSlot) + 1),
+      functionPointer: await getStorageAt(protocolDiamondAddress, BigInt(storageSlot) + 1n),
     });
   }
   const isAllowlistedState = {};
@@ -1273,7 +1273,7 @@ async function getProtocolLookupsPrivateContractState(
     const arrayLength = await getStorageAt(protocolDiamondAddress, arraySlot);
     const arrayStart = keccak256(arraySlot);
     for (let i = 0n; i < arrayLength; i++) {
-      exchangeIdsByOffer.push(await getStorageAt(protocolDiamondAddress, arrayStart + i));
+      exchangeIdsByOffer.push(await getStorageAt(protocolDiamondAddress, BigInt(arrayStart) + i));
     }
     exchangeIdsByOfferState.push(exchangeIdsByOffer);
 
@@ -1294,7 +1294,7 @@ async function getProtocolLookupsPrivateContractState(
   const accounts = [...sellers, ...DRs, ...agents, ...buyers];
 
   for (const account of accounts) {
-    const accountAddress = account.wallet;
+    const accountAddress = account.wallet.address;
 
     // buyerIdByWallet
     buyerIdByWallet.push(
@@ -1399,9 +1399,9 @@ async function getProtocolLookupsPrivateContractState(
         await mockTwin.getAddress(),
         paddingType.START
       );
-      const arrayLength = await getStorageAt(protocolDiamondAddress, arraySlot);
-      const arrayStart = keccak256(arraySlot);
-      for (let i = 0; i < arrayLength * 2n; i = i + 2n) {
+      const arrayLength = BigInt(await getStorageAt(protocolDiamondAddress, arraySlot));
+      const arrayStart = BigInt(keccak256(arraySlot));
+      for (let i = 0n; i < arrayLength * 2n; i = i + 2n) {
         // each BosonTypes.TokenRange has length 2
         ranges[await mockTwin.getAddress()].push({
           start: await getStorageAt(protocolDiamondAddress, arrayStart + i),
@@ -1427,8 +1427,8 @@ async function getProtocolLookupsPrivateContractState(
         paddingType.START
       );
       const arrayLength = await getStorageAt(protocolDiamondAddress, arraySlot);
-      const arrayStart = keccak256(arraySlot);
-      for (let i = 0; i < arrayLength; i++) {
+      const arrayStart = BigInt(keccak256(arraySlot));
+      for (let i = 0n; i < arrayLength; i++) {
         twinIds[await mockTwin.getAddress()].push(await getStorageAt(protocolDiamondAddress, arrayStart + i));
       }
     }
@@ -1483,13 +1483,13 @@ async function getProtocolLookupsPrivateContractState(
     // pendingAddressUpdatesBySeller
     let structStorageSlot = BigInt(getMappingStoragePosition(protocolLookupsSlotNumber + 29n, id, paddingType.START));
     let structFields = [];
-    for (let i = 0; i < 6n; i++) {
+    for (let i = 0n; i < 6n; i++) {
       // BosonTypes.Seller has 7 fields, but `address payable treasury` and `bool active` are packed into one slot
       structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot + i));
     }
     // ToDo: make sure this gets the corrects slots
-    const metadataUriLength = await getStorageAt(protocolDiamondAddress, structStorageSlot + 6n);
-    const metadataUriSlot = BigInt(keccak256(structStorageSlot + 6n));
+    const metadataUriLength = BigInt(await getStorageAt(protocolDiamondAddress, structStorageSlot + 6n));
+    const metadataUriSlot = BigInt(keccak256(ethersId(structStorageSlot + 6n)));
     const occupiedSlots = metadataUriLength / 32n + 1n;
     const metadataUri = [];
     for (let i = 0n; i < occupiedSlots; i++) {
@@ -1515,7 +1515,7 @@ async function getProtocolLookupsPrivateContractState(
       // BosonTypes.DisputeResolver has 8 fields
       structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot + i));
     }
-    structFields[6] = await getStorageAt(protocolDiamondAddress, keccak256(structStorageSlot + 6n)); // represents field string metadataUri. Technically this value represents the length of the string, but since it should be 0, we don't do further decoding
+    structFields[6] = await getStorageAt(protocolDiamondAddress, keccak256(ethersId(structStorageSlot + 6n))); // represents field string metadataUri. Technically this value represents the length of the string, but since it should be 0, we don't do further decoding
     pendingAddressUpdatesByDisputeResolver.push(structFields);
   }
 
@@ -1582,7 +1582,6 @@ function compareStorageLayouts(storageBefore, storageAfter) {
       storageOk = false;
       console.error("Storage layout mismatch");
       console.log("State variable before", stateVariableBefore);
-      console.log("State variable after", stateVariableAfter);
     }
   }
 
@@ -1878,9 +1877,9 @@ async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buye
 }
 
 function revertState() {
-  shell.exec(`rm -rf contracts/* scripts/*`);
-  shell.exec(`git checkout HEAD contracts scripts`);
-  shell.exec(`git reset HEAD contracts scripts`);
+  shell.exec(`rm -rf contracts/* scripts/* package.json package-lock.json`);
+  shell.exec(`git checkout HEAD contracts scripts package.json package-lock.json`);
+  shell.exec(`git reset HEAD contracts scripts package.json package-lock.json`);
 }
 
 async function getDisputeResolver(accountHandler, value, { getBy }) {

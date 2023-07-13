@@ -295,6 +295,7 @@ const paddingType = {
 
 function getMappingStoragePosition(slot, key, padding = paddingType.NONE) {
   let keyBuffer;
+
   let keyHex = String(key).startsWith("0x") ? String(key) : toHexString(key);
 
   switch (padding) {
