@@ -1,5 +1,6 @@
 const hre = require("hardhat");
 const shell = require("shelljs");
+const { getContractFactory } = hre.ethers;
 const { getInterfaceIds, interfaceImplementers } = require("../config/supported-interfaces.js");
 
 const prefix = "contracts/";
@@ -51,9 +52,10 @@ async function detectChangedContract(referenceCommit, targetCommit = "HEAD") {
   shell.exec(`rm -rf contracts`);
   shell.exec(`git checkout ${referenceCommit} contracts`);
 
-  // Protocol versions < 2.3.0 use different OZ contracts. We need to install them
-  const isOldVersion = ["v2.0", "v2.1", "v2.2"].some((v) => referenceCommit.startsWith(v));
-  if (isOldVersion) {
+  // Temporary target install reference version dependencies
+  // - Protocol versions < 2.3.0 use different OZ contracts
+  const isOldOZVersion = ["v2.0", "v2.1", "v2.2"].some((v) => referenceCommit.startsWith(v));
+  if (isOldOZVersion) {
     // Temporary install old OZ contracts
     shell.exec("npm i @openzeppelin/contracts-upgradeable@4.7.1");
   }
@@ -72,10 +74,9 @@ async function detectChangedContract(referenceCommit, targetCommit = "HEAD") {
   console.log(`Checking out version ${targetCommit}`);
   shell.exec(`git checkout ${targetCommit} contracts`);
 
-  if (isOldVersion) {
-    // If reference commit is old version, we need to revert to target version
-    shell.exec(`git checkout ${targetCommit} package.json package-lock.json`);
-    shell.exec("npm i");
+  // If reference commit is old version, we need to revert to target version dependencies
+  if (isOldOZVersion) {
+    installDependencies(targetCommit);
   }
 
   // Compile new version
@@ -135,6 +136,11 @@ async function detectChangedContract(referenceCommit, targetCommit = "HEAD") {
   shell.exec(`git reset HEAD contracts`);
 }
 
+function installDependencies(commit) {
+  shell.exec(`git checkout ${commit} package.json package-lock.json`);
+  shell.exec("npm i");
+}
+
 async function getBytecodes() {
   // Get build info
   const contractNames = await hre.artifacts.getAllFullyQualifiedNames();
@@ -148,7 +154,7 @@ async function getBytecodes() {
 
     // Abstract contracts do not have bytecode, and factory creation fails. Skip them.
     try {
-      const contract = await hre.getContractFactory(name);
+      const contract = await getContractFactory(name);
 
       // Store the bytecode
       byteCodes[name] = contract.bytecode;

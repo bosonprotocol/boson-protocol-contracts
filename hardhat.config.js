@@ -101,10 +101,25 @@ task("split-unit-tests-into-chunks", "Splits unit tests into chunks")
 task("migrate", "Migrates the protocol to a new version")
   .addPositionalParam("newVersion", "The version to migrate to")
   .addParam("env", "The deployment environment")
-  .setAction(async ({ newVersion, env }) => {
-    const { migrate } = await lazyImport(`./scripts/migrations/migrate_${newVersion}.js`);
+  .addFlag("dryRun", "Test the migration without deploying")
+  .setAction(async ({ newVersion, env, dryRun }) => {
+    let balanceBefore, getBalance;
+    if (dryRun) {
+      let setupDryRun;
+      ({ setupDryRun, getBalance } = await lazyImport(`./scripts/migrations/dry-run.js`));
+      ({ env, upgraderBalance: balanceBefore } = await setupDryRun(env));
+    }
 
+    const { migrate } = await lazyImport(`./scripts/migrations/migrate_${newVersion}.js`);
     await migrate(env);
+
+    if (dryRun) {
+      const balanceAfter = await getBalance();
+      const etherSpent = balanceBefore.sub(balanceAfter);
+
+      const formatUnits = require("ethers").utils.formatUnits;
+      console.log("Ether spent: ", formatUnits(etherSpent, "ether"));
+    }
   });
 
 module.exports = {

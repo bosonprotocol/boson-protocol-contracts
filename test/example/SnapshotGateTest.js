@@ -182,12 +182,10 @@ describe("SnapshotGate", function () {
 
     // Deploy the SnapshotGate example
     sellerId = "1";
-    [snapshotGate] = await deploySnapshotGateExample([
-      "SnapshotGateToken",
-      "SGT",
-      await protocolDiamond.getAddress(),
-      sellerId,
-    ]);
+    [snapshotGate] = await deploySnapshotGateExample(
+      ["SnapshotGateToken", "SGT", await protocolDiamond.getAddress(), sellerId],
+      maxPriorityFeePerGas
+    );
 
     // Deploy the mock tokens
     [foreign20] = await deployMockTokens(["Foreign20"]);
