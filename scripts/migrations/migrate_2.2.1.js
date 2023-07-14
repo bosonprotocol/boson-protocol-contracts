@@ -34,8 +34,8 @@ async function migrate(env) {
       throw new Error("Local changes found. Please stash them before upgrading");
     }
 
-    // Checking old version contracts to get selectors to remove
-    console.log("Checking out contracts on version 2.2.0");
+    // checking old version contracts to get selectors to remove
+    console.log("checking out contracts on version 2.2.0");
     shell.exec(`rm -rf contracts/*`);
     shell.exec(`git checkout v2.2.0 contracts`);
 

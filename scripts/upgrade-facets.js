@@ -228,7 +228,7 @@ async function main(env, facetConfig, version) {
     newSelectors = selectors.selectors.remove([selector]);
 
     // Determine actions to be made
-    let selectorsToReplace = registeredSelectors.filter((value) => newSelectors.includes(value)); // intersection of old and new selectors
+    let selectorsToReplace = registeredSelectors.filter((value) => newSelectors.includes(value));
     let selectorsToRemove = registeredSelectors.filter((value) => !selectorsToReplace.includes(value)); // unique old selectors
     let selectorsToAdd = newSelectors.filter((value) => !selectorsToReplace.includes(value)); // unique new selectors
 

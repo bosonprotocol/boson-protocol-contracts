@@ -82,6 +82,7 @@ async function migrate(env) {
     await hre.run("compile");
 
     console.log("Executing upgrade facets script");
+    console.log("config", config);
     await hre.run("upgrade-facets", {
       env,
       facetConfig: JSON.stringify(config),
