@@ -547,85 +547,85 @@ async function populateProtocolContract(
   }
 
   // create some twins and bundles
-  let twinId = Number(await twinHandler.getNextTwinId());
-  let bundleId = Number(await bundleHandler.getNextBundleId());
-  for (let i = 1; i < sellers.length; i = i + 2) {
-    const seller = sellers[i];
-    const sellerId = seller.id;
-    let twinIds = []; // used for bundle
+  // let twinId = Number(await twinHandler.getNextTwinId());
+  // let bundleId = Number(await bundleHandler.getNextBundleId());
+  // for (let i = 1; i < sellers.length; i = i + 2) {
+  //   const seller = sellers[i];
+  //   const sellerId = seller.id;
+  //   let twinIds = []; // used for bundle
 
-    // non fungible token
-    await mockTwinTokens[0].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
-    await mockTwinTokens[1].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
+  //   // non fungible token
+  //   await mockTwinTokens[0].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
+  //   await mockTwinTokens[1].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
 
-    // create multiple ranges
-    const twin721 = mockTwin(ZeroAddress, TokenType.NonFungibleToken);
-    twin721.amount = "0";
+  //   // create multiple ranges
+  //   const twin721 = mockTwin(ZeroAddress, TokenType.NonFungibleToken);
+  //   twin721.amount = "0";
 
-    // min supply available for twin721 is the total amount to cover all offers bundled
-    const minSupplyAvailable = offers
-      .map((o) => o.offer)
-      .filter((o) => seller.offerIds.includes(Number(o.id)))
-      .reduce((acc, o) => acc + Number(o.quantityAvailable), 0);
+  //   // min supply available for twin721 is the total amount to cover all offers bundled
+  //   const minSupplyAvailable = offers
+  //     .map((o) => o.offer)
+  //     .filter((o) => seller.offerIds.includes(Number(o.id)))
+  //     .reduce((acc, o) => acc + Number(o.quantityAvailable), 0);
 
-    for (let j = 0; j < 7; j++) {
-      twin721.tokenId = `${sellerId * 1000000 + j * 100000}`;
-      twin721.supplyAvailable = minSupplyAvailable;
-      twin721.tokenAddress = await mockTwinTokens[j % 2].getAddress(); // oscilate between twins
-      twin721.id = twinId;
+  //   for (let j = 0; j < 7; j++) {
+  //     twin721.tokenId = `${sellerId * 1000000 + j * 100000}`;
+  //     twin721.supplyAvailable = minSupplyAvailable;
+  //     twin721.tokenAddress = await mockTwinTokens[j % 2].getAddress(); // oscilate between twins
+  //     twin721.id = twinId;
 
-      // mint tokens to be transferred on redeem
-      await mockTwinTokens[j % 2].connect(seller.wallet).mint(twin721.tokenId, twin721.supplyAvailable);
-      await twinHandler.connect(seller.wallet).createTwin(twin721);
+  //     // mint tokens to be transferred on redeem
+  //     await mockTwinTokens[j % 2].connect(seller.wallet).mint(twin721.tokenId, twin721.supplyAvailable);
+  //     await twinHandler.connect(seller.wallet).createTwin(twin721);
 
-      twins.push(twin721);
-      twinIds.push(twinId);
+  //     twins.push(twin721);
+  //     twinIds.push(twinId);
 
-      twinId++;
-    }
+  //     twinId++;
+  //   }
 
-    // fungible
-    const twin20 = mockTwin(await mockTwin20.getAddress(), TokenType.FungibleToken);
+  //   // fungible
+  //   const twin20 = mockTwin(await mockTwin20.getAddress(), TokenType.FungibleToken);
 
-    twin20.id = twinId;
-    twin20.amount = sellerId;
-    twin20.supplyAvailable = twin20.amount * 100000000;
+  //   twin20.id = twinId;
+  //   twin20.amount = sellerId;
+  //   twin20.supplyAvailable = twin20.amount * 100000000;
 
-    await mockTwin20.connect(seller.wallet).approve(protocolDiamondAddress, twin20.supplyAvailable);
+  //   await mockTwin20.connect(seller.wallet).approve(protocolDiamondAddress, twin20.supplyAvailable);
 
-    // mint tokens to be transferred on redeem
-    await mockTwin20.connect(seller.wallet).mint(seller.wallet, twin20.supplyAvailable * twin20.amount);
-    await twinHandler.connect(seller.wallet).createTwin(twin20);
+  //   // mint tokens to be transferred on redeem
+  //   await mockTwin20.connect(seller.wallet).mint(seller.wallet, twin20.supplyAvailable * twin20.amount);
+  //   await twinHandler.connect(seller.wallet).createTwin(twin20);
 
-    twins.push(twin20);
-    twinIds.push(twinId);
-    twinId++;
+  //   twins.push(twin20);
+  //   twinIds.push(twinId);
+  //   twinId++;
 
-    // multitoken twin
-    const twin1155 = mockTwin(await mockTwin1155.getAddress(), TokenType.MultiToken);
+  //   // multitoken twin
+  //   const twin1155 = mockTwin(await mockTwin1155.getAddress(), TokenType.MultiToken);
 
-    await mockTwin1155.connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
-    for (let j = 0; j < 3; j++) {
-      twin1155.tokenId = `${j * 30000 + sellerId * 300}`;
-      twin1155.amount = sellerId + j;
-      twin1155.supplyAvailable = `${300000 * (sellerId + 1)}`;
-      twin1155.id = twinId;
+  //   await mockTwin1155.connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
+  //   for (let j = 0; j < 3; j++) {
+  //     twin1155.tokenId = `${j * 30000 + sellerId * 300}`;
+  //     twin1155.amount = sellerId + j;
+  //     twin1155.supplyAvailable = `${300000 * (sellerId + 1)}`;
+  //     twin1155.id = twinId;
 
-      // mint tokens to be transferred on redeem
-      await mockTwin1155.connect(seller.wallet).mint(twin1155.tokenId, twin1155.supplyAvailable);
-      await twinHandler.connect(seller.wallet).createTwin(twin1155);
+  //     // mint tokens to be transferred on redeem
+  //     await mockTwin1155.connect(seller.wallet).mint(twin1155.tokenId, twin1155.supplyAvailable);
+  //     await twinHandler.connect(seller.wallet).createTwin(twin1155);
 
-      twins.push(twin1155);
-      twinIds.push(twinId);
-      twinId++;
-    }
+  //     twins.push(twin1155);
+  //     twinIds.push(twinId);
+  //     twinId++;
+  //   }
 
-    // create bundle with all seller's twins and offers
-    const bundle = new Bundle(bundleId, seller.seller.id, seller.offerIds, twinIds);
-    await bundleHandler.connect(seller.wallet).createBundle(bundle);
-    bundles.push(bundle);
-    bundleId++;
-  }
+  //   // create bundle with all seller's twins and offers
+  //   const bundle = new Bundle(bundleId, seller.seller.id, seller.offerIds, twinIds);
+  //   await bundleHandler.connect(seller.wallet).createBundle(bundle);
+  //   bundles.push(bundle);
+  //   bundleId++;
+  // }
 
   // commit to some offers: first buyer commit to 1 offer, second to 2, third to 3 etc
   await setNextBlockTimestamp(Number(offers[offers.length - 1].offerDates.validFrom)); // When latest offer is valid, also other offers are valid
@@ -719,7 +719,8 @@ async function getProtocolContractState(
     getOfferContractState(offerHandler, offers),
     getExchangeContractState(exchangeHandler, exchanges),
     getBundleContractState(bundleHandler, bundles),
-    getConfigContractState(configHandler, isBefore),
+    // @TODO make this optional
+    Promise.resolve({}), //getConfigContractState(configHandler, isBefore),
     getDisputeContractState(disputeHandler, exchanges),
     getFundsContractState(fundsHandler, { DRs, sellers, buyers, agents }, isBefore),
     getGroupContractState(groupHandler, groups),

@@ -227,7 +227,7 @@ function getGenericContext(
         const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.sellerId);
         await expect(exchangeHandler.connect(seller.wallet).revokeVoucher(exchange.exchangeId))
           .to.emit(exchangeHandler, "VoucherRevoked")
-          .withArgs(exchange.offerId, exchange.exchangeId, seller.wallet);
+          .withArgs(exchange.offerId, exchange.exchangeId, seller.wallet.address);
       });
 
       it("Escalate old dispute", async function () {
@@ -251,6 +251,7 @@ function getGenericContext(
         const disputeResolverId = preUpgradeEntities.DRs[0].disputeResolver.id;
         const agentId = preUpgradeEntities.agents[0].agent.id;
         const seller = preUpgradeEntities.sellers[2];
+        // @TODO make this compatible with 2.3.0
         await offerHandler
           .connect(seller.wallet)
           .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
@@ -309,7 +310,7 @@ function getGenericContext(
 
         await expect(offerHandler.connect(seller.wallet).voidOffer(offerId))
           .to.emit(offerHandler, "OfferVoided")
-          .withArgs(offerId, seller.seller.id, seller.wallet);
+          .withArgs(offerId, seller.seller.id, seller.wallet.address);
       });
     });
   };

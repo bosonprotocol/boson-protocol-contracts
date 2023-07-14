@@ -153,7 +153,7 @@ async function main(env, facetConfig, version) {
     let registeredSelectors;
     if (oldFacet) {
       // Facet exists, so all selectors should be removed
-      registeredSelectors = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
+      [...registeredSelectors] = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
     } else {
       // Facet does not exist, skip next steps
       continue;
@@ -192,15 +192,13 @@ async function main(env, facetConfig, version) {
 
   // Manage new or upgraded facets
   for (const [index, newFacet] of deployedFacets.entries()) {
-    console.log("newFacet", newFacet);
     // Get currently registered selectors
     const oldFacet = contracts.find((i) => i.name === newFacet.name);
     let registeredSelectors;
 
-    console.log("oldFacet", oldFacet);
     if (oldFacet) {
       // Facet already exists and is only upgraded
-      registeredSelectors = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
+      [...registeredSelectors] = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
     } else {
       // Facet is new
       registeredSelectors = [];
@@ -235,7 +233,9 @@ async function main(env, facetConfig, version) {
     // Skip selectors if set in config
     let selectorsToSkip = facets.skipSelectors[newFacet.name] ? facets.skipSelectors[newFacet.name] : [];
     selectorsToReplace = removeSelectors(selectorsToReplace, selectorsToSkip);
+
     selectorsToRemove = removeSelectors(selectorsToRemove, selectorsToSkip);
+
     selectorsToAdd = removeSelectors(selectorsToAdd, selectorsToSkip);
 
     // Check if selectors that are being added are not registered yet on some other facet

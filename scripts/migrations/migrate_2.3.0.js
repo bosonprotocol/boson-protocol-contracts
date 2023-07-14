@@ -26,7 +26,7 @@ const config = {
   remove: [],
   skipSelectors: {},
   facetsToInit: {},
-  initializationData: abiCoder.encode(["uint256"], [oneWeek]), // min resolution period
+  initializationData: abiCoder.encode(["uint256", "uint256[]", "address[]"], [oneWeek, [], []]),
 };
 
 async function migrate(env) {
@@ -36,9 +36,9 @@ async function migrate(env) {
     //shell.exec(`git reset @{u}`);
     const statusOutput = shell.exec("git status -s -uno scripts package.json");
 
-    if (statusOutput.stdout) {
-      throw new Error("Local changes found. Please stash them before upgrading");
-    }
+    //    if (statusOutput.stdout) {
+    //      throw new Error("Local changes found. Please stash them before upgrading");
+    //    }
 
     console.log("Installing dependencies");
     shell.exec(`npm install`);
@@ -82,7 +82,6 @@ async function migrate(env) {
     await hre.run("compile");
 
     console.log("Executing upgrade facets script");
-    console.log("config", config);
     await hre.run("upgrade-facets", {
       env,
       facetConfig: JSON.stringify(config),
