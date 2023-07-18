@@ -134,7 +134,6 @@ async function main(env, facetConfig, version) {
   }
 
   // Deploy new facets
-  console.log(maxPriorityFeePerGas);
   let deployedFacets = await deployProtocolFacets(facets.addOrUpgrade, facets.facetsToInit, maxPriorityFeePerGas);
   console.log("📋Deployed facets: ", deployedFacets.map((f) => f.name).join(", "));
 

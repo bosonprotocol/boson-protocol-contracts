@@ -261,11 +261,11 @@ async function upgradeSuite(protocolDiamondAddress, upgradedInterfaces, override
 // upgrade the clients to new version
 async function upgradeClients() {
   // Upgrade Clients
-  shell.exec(`rm -rf contracts/*`);
   shell.exec(`git checkout HEAD scripts`);
   const tag = versionTags.newVersion;
 
   // checkout the new tag
+  shell.exec(`rm -rf contracts/*`);
   console.log(`Checking out version ${tag}`);
   shell.exec(`git checkout ${tag} contracts`);
 

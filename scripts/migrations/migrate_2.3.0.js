@@ -3,6 +3,7 @@ const { readContracts } = require("../util/utils.js");
 const hre = require("hardhat");
 const { oneWeek } = require("../../test/util/constants.js");
 const ethers = hre.ethers;
+const { getContractFactory } = ethers;
 const network = hre.network.name;
 const abiCoder = new ethers.AbiCoder();
 // const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
@@ -101,6 +102,25 @@ async function migrate(env) {
     // await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToRemove, false);
     // console.log("Adding selectors", selectorsToAdd.join(","));
     // await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToAdd, true);
+    //
+
+    console.log("Executing upgrade clients script");
+    // TODO get correct forwarder address
+    const MockForwarder = await getContractFactory("MockForwarder");
+    const forwarder = await MockForwarder.deploy();
+
+    const clientConfig = {
+      META_TRANSACTION_FORWARDER: {
+        hardhat: await forwarder.getAddress(),
+      },
+    };
+
+    // Upgrade clients
+    await hre.run("upgrade-clients", {
+      env,
+      clientConfig: JSON.stringify(clientConfig),
+      newVersion: tag.replace("v", ""),
+    });
 
     shell.exec(`git checkout HEAD`);
     console.log(`Migration ${tag} completed`);
