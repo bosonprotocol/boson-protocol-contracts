@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
+import "hardhat/console.sol";
 import "./../../domain/BosonConstants.sol";
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
 import { ProtocolBase } from "./ProtocolBase.sol";
@@ -94,6 +95,9 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         uint256 sellerId = protocolCounters().nextAccountId++;
         _seller.id = sellerId;
         storeSeller(_seller, _authToken, lookups);
+
+        console.log("sellerId: %s", sellerId);
+        console.log("sellerIdByAssistant: %s", lookups.sellerIdByAssistant[sender]);
 
         // Create clone and store its address cloneAddress
         address voucherCloneAddress = cloneBosonVoucher(sellerId, 0, sender, _seller.assistant, _voucherInitValues, "");

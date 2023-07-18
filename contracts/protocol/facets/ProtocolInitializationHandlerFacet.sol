@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.18;
 
-import "hardhat/console.sol";
 import "../../domain/BosonConstants.sol";
 import { IBosonProtocolInitializationHandler } from "../../interfaces/handlers/IBosonProtocolInitializationHandler.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -91,9 +90,6 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             }
         }
 
-        console.log("Protocol initialized with version");
-        console.log(string(abi.encodePacked(_version)));
-        console.log("isUpgrade", _isUpgrade);
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
         if (_isUpgrade) {
             if (_version == bytes32("2.2.0")) {
@@ -102,7 +98,6 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
                 initV2_2_1();
             } else if (_version == bytes32("2.3.0")) {
                 initV2_3_0(_initializationData);
-                console.log("after initV2_3_0");
             }
         }
 
@@ -157,8 +152,6 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      */
     function initV2_3_0(bytes calldata _initializationData) internal {
         // Current version must be 2.2.1
-        console.log(string(abi.encodePacked(protocolStatus().version)));
-        console.log(protocolCounters().nextTwinId);
         require(protocolStatus().version == bytes32("2.2.1"), WRONG_CURRENT_VERSION);
         require(protocolCounters().nextTwinId == 1, TWINS_ALREADY_EXIST);
 
@@ -169,13 +162,11 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             (uint256, uint256[], address[])
         );
 
-        console.log("1");
         // Initialize limits.maxPremintedVouchers (configHandlerFacet initializer)
         require(_minResolutionPeriod != 0, VALUE_ZERO_NOT_ALLOWED);
         protocolLimits().minResolutionPeriod = _minResolutionPeriod;
         emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
 
-        console.log("2");
         // Initialize sellerCreators
         require(sellerIds.length == sellerCreators.length, ARRAY_LENGTH_MISMATCH);
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
@@ -186,7 +177,6 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
 
             lookups.sellerCreator[sellerIds[i]] = sellerCreators[i];
         }
-        console.log('3');
 
         // Deploy a new voucher proxy
         protocolAddresses().beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());

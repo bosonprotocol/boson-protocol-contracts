@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
+import "hardhat/console.sol";
 import { IBosonOfferEvents } from "../../interfaces/events/IBosonOfferEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
@@ -197,6 +198,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                 }
             }
 
+
             // Collection must exist. Collections with index 0 exist by default.
             if (_offer.collectionIndex > 0) {
                 require(
@@ -233,6 +235,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
             uint256 totalOfferFeeLimit = (protocolLimits().maxTotalOfferFeePercentage * offerPrice) / 10000;
 
+
             // Sum of agent fee amount and protocol fee amount should be <= offer fee limit
             require((agentFeeAmount + protocolFee) <= totalOfferFeeLimit, AGENT_FEE_AMOUNT_TOO_HIGH);
 
@@ -247,6 +250,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // Get storage location for offer
         (, Offer storage offer) = fetchOffer(_offer.id);
 
+
         // Set offer props individually since memory structs can't be copied to storage
         offer.id = _offer.id;
         offer.sellerId = _offer.sellerId;
@@ -257,10 +261,12 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.exchangeToken = _offer.exchangeToken;
         offer.metadataUri = _offer.metadataUri;
         offer.metadataHash = _offer.metadataHash;
+        _offer.collectionIndex = 1;
         offer.collectionIndex = _offer.collectionIndex;
 
         // Get storage location for offer dates
         OfferDates storage offerDates = fetchOfferDates(_offer.id);
+
 
         // Set offer dates props individually since calldata structs can't be copied to storage
         offerDates.validFrom = _offerDates.validFrom;
@@ -270,6 +276,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
         // Get storage location for offer durations
         OfferDurations storage offerDurations = fetchOfferDurations(_offer.id);
+
 
         // Set offer durations props individually since calldata structs can't be copied to storage
         offerDurations.disputePeriod = _offerDurations.disputePeriod;

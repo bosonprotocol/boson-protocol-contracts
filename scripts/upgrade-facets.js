@@ -134,7 +134,9 @@ async function main(env, facetConfig, version) {
   }
 
   // Deploy new facets
+  console.log(maxPriorityFeePerGas);
   let deployedFacets = await deployProtocolFacets(facets.addOrUpgrade, facets.facetsToInit, maxPriorityFeePerGas);
+  console.log("📋Deployed facets: ", deployedFacets.map((f) => f.name).join(", "));
 
   // Cast Diamond to DiamondCutFacet, DiamondLoupeFacet and IERC165Extended
   const diamondCutFacet = await getContractAt("DiamondCutFacet", protocolAddress);

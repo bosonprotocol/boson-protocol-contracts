@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { ZeroAddress, parseEther, Wallet, provider } = ethers;
+const { ZeroAddress, parseEther, Wallet, provider, NonceManager } = ethers;
 const shell = require("shelljs");
 const { assert, expect } = require("chai");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
@@ -168,6 +168,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // @TODO change this to version
     shell.exec("git checkout HEAD contracts/ scripts/ package.json package-lock.json");
     shell.exec("git reset --hard HEAD contracts/ scripts/ package.json package-lock.json");
+
+    shell.exec(`npm i`);
     await migrate("upgrade-test");
 
     // Cast to updated interface
@@ -324,21 +326,22 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       context("Protocol limits", async function () {
         let wallets;
-        let sellers, DRs, sellerWallet;
+        let nonceManager;
+        let sellers, buyers, DRs, sellerWallet, buyerWallet;
 
-        before(async function () {
+        beforeEach(async function () {
+          ({ sellers, DRs, buyers } = preUpgradeEntities);
+          ({ wallet: sellerWallet } = sellers[0]);
+          ({ wallet: buyerWallet } = buyers[0]);
+          nonceManager = new NonceManager(buyerWallet);
+          ({ signer: buyerWallet } = nonceManager);
           wallets = new Array(10000).fill(Wallet.createRandom(provider));
           await Promise.all(
-            wallets.map((w) => ethers.provider.send("hardhat_setBalance", [w.address, toHexString(parseEther("10"))]))
+            wallets.map((w) => provider.send("hardhat_setBalance", [w.address, toHexString(parseEther("10"))]))
           );
         });
 
-        beforeEach(async function () {
-          ({ sellers, DRs } = preUpgradeEntities);
-          ({ wallet: sellerWallet } = sellers[0]);
-        });
-
-        it.only("can complete more exchanges than maxExchangesPerBatch", async function () {
+        it("can complete more exchanges than maxExchangesPerBatch", async function () {
           const { maxExchangesPerBatch } = protocolLimits;
           const exchangesCount = Number(maxExchangesPerBatch) + 1;
           const startingExchangeId = await exchangeHandler.getNextExchangeId();
@@ -350,26 +353,24 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           offer.price = offer.buyerCancelPenalty = offer.sellerDeposit = 0;
           const offerId = await offerHandler.getNextOfferId();
           await offerHandler.connect(sellerWallet).createOffer(offer, offerDates, offerDurations, DRs[0].id, "0");
+          await setNextBlockTimestamp(Number(offerDates.voucherRedeemableFrom));
 
           // Commit to offer and redeem voucher
           // Use unique wallets to avoid nonce issues
+          // @TODO use nonce manager
           const walletSet = wallets.slice(0, exchangesCount);
-          await Promise.all(
-            walletSet.map(async (wallet) => {
-              console.log(wallet);
-              console.log(exchangeHandler);
-              const tx = await exchangeHandler.connect(wallet).commitToOffer(wallet.address, offerId);
-              const { exchangeId } = getEvent(await tx.wait(), exchangeHandler, "BuyerCommitted");
-              return exchangeHandler.connect(wallet).redeemVoucher(exchangeId);
-            })
-          );
+
+          for (let i = 0; i < exchangesCount; i++) {
+            const tx = await exchangeHandler.connect(walletSet[i]).commitToOffer(walletSet[i].address, offerId);
+            const { exchangeId } = getEvent(await tx.wait(), exchangeHandler, "BuyerCommitted");
+            await exchangeHandler.connect(walletSet[i]).redeemVoucher(exchangeId);
+          }
 
           const { timestamp } = await ethers.provider.getBlock();
           setNextBlockTimestamp(timestamp + Number(offerDurations.disputePeriod) + 1);
 
-          await expect(
-            exchangeHandler.connect(sellerWallet).completeExchangeBatch(exchangesToComplete)
-          ).to.not.be.reverted;
+          const tx = await exchangeHandler.connect(sellerWallet).completeExchangeBatch(exchangesToComplete);
+          await expect(tx).to.not.be.reverted;
         });
 
         it("can create/extend/void more offers than maxOffersPerBatch", async function () {
@@ -438,7 +439,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const startingOfferId = await offerHandler.getNextOfferId();
           const offerIds = [...Array(offerCount).keys()].map((i) => startingOfferId + BigInt(i));
 
-          const { offer, offerDates, offerDurations } = await mockOffer();
+          const { offer, offerDates, offerDurations } = await mockOffer({ refreshModule: true });
           const offers = new Array(offerCount).fill(offer);
           const offerDatesList = new Array(offerCount).fill(offerDates);
           const offerDurationsList = new Array(offerCount).fill(offerDurations);
@@ -448,7 +449,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Create offers in batch
           await offerHandler
             .connect(sellerWallet)
-            .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds);
+            .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds, {
+              gasLimit: 100000000, // increase gas limit to avoid out of gas error
+            });
 
           // At list one twin is needed to create a bundle
           const [twinContract] = await deployMockTokens(["Foreign721"]);
@@ -727,8 +730,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
 
         context("Create new collection", async function () {
-          it("New seller can create a new collection", async function () {
+          it.only("New seller can create a new collection", async function () {
             const { sellers } = preUpgradeEntities;
+            const seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
+            const emptyAuthToken = mockAuthToken();
+            const voucherInitValues = mockVoucherInitValues();
+
             // const { wallet: sellerWallet, id: sellerId, voucherInitValues } = sellers[0];
             await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -1219,7 +1226,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const emptyAuthToken = mockAuthToken();
           const voucherInitValues = mockVoucherInitValues();
           const { offer, offerDates, offerDurations } = await mockOffer();
-          console.log("offer", offer);
 
           // Create a seller and an offer, testing for the event
           const tx = await orchestrationHandler

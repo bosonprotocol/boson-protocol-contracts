@@ -63,7 +63,12 @@ async function mockOfferDates() {
 }
 
 // Returns a mock offer with price in native token
-async function mockOffer() {
+async function mockOffer({ refreshModule } = {}) {
+  if (refreshModule) {
+    decache("../../scripts/domain/Offer.js");
+    Seller = require("../../scripts/domain/Offer.js");
+  }
+
   const id = "1";
   const sellerId = "1"; // argument sent to contract for createOffer will be ignored
   const price = parseUnits("1.5", "ether").toString();

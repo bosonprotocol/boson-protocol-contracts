@@ -87,7 +87,7 @@ async function deployProtocolFacets(facetNames, facetsToInit, maxPriorityFeePerG
   for (const facetName of facetNames) {
     let FacetContractFactory = await getContractFactory(facetName);
     const constructorArgs = (facetsToInit[facetName] && facetsToInit[facetName].constructorArgs) || [];
-    const facetContract = await FacetContractFactory.deploy(...constructorArgs, await getFees(maxPriorityFeePerGas));
+    const facetContract = await FacetContractFactory.deploy(...constructorArgs);
     await facetContract.waitForDeployment(confirmations);
 
     const deployedFacet = {

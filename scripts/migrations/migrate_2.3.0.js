@@ -14,6 +14,7 @@ const config = {
   addOrUpgrade: [
     "ConfigHandlerFacet",
     "DisputeResolverHandlerFacet",
+    "ExchangeHandlerFacet",
     "FundsHandlerFacet",
     "MetaTransactionsHandlerFacet",
     "OfferHandlerFacet",
@@ -21,11 +22,15 @@ const config = {
     "PauseHandlerFacet",
     "ProtocolInitializationHandlerFacet",
     "SellerHandlerFacet",
+    "BundleHandlerFacet",
     "TwinHandlerFacet",
   ],
   remove: [],
   skipSelectors: {},
-  facetsToInit: {},
+  facetsToInit: {
+    // @TODO get correct constructor args
+    ExchangeHandlerFacet: { init: [], constructorArgs: [1] },
+  }, // must match nextExchangeId at the time of the upgrade
   initializationData: abiCoder.encode(["uint256", "uint256[]", "address[]"], [oneWeek, [], []]),
 };
 
