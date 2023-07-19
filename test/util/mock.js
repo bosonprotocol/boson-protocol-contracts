@@ -4,7 +4,7 @@ const { ZeroAddress, provider, parseUnits } = hre.ethers;
 const decache = require("decache");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
-const Offer = require("../../scripts/domain/Offer");
+let Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferFees = require("../../scripts/domain/OfferFees");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
@@ -66,7 +66,7 @@ async function mockOfferDates() {
 async function mockOffer({ refreshModule } = {}) {
   if (refreshModule) {
     decache("../../scripts/domain/Offer.js");
-    Seller = require("../../scripts/domain/Offer.js");
+    Offer = require("../../scripts/domain/Offer.js");
   }
 
   const id = "1";
@@ -116,12 +116,18 @@ function mockTwin(tokenAddress, tokenType) {
   return new Twin(id, sellerId, amount, supplyAvailable, tokenId, tokenAddress, tokenType);
 }
 
-function mockDisputeResolver(assistantAddress, adminAddress, clerkAddress, treasuryAddress, active, refreshModule) {
+function mockDisputeResolver(
+  assistantAddress,
+  adminAddress,
+  clerkAddress = ZeroAddress,
+  treasuryAddress,
+  active,
+  refreshModule
+) {
   if (refreshModule) {
     decache("../../scripts/domain/DisputeResolver.js");
     DisputeResolver = require("../../scripts/domain/DisputeResolver.js");
   }
-
   const metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
   return new DisputeResolver(
     accountId.next().value,

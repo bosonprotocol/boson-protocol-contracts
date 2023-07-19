@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import "hardhat/console.sol";
 import { IBosonOfferEvents } from "../../interfaces/events/IBosonOfferEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
@@ -250,7 +249,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // Get storage location for offer
         (, Offer storage offer) = fetchOffer(_offer.id);
 
-
         // Set offer props individually since memory structs can't be copied to storage
         offer.id = _offer.id;
         offer.sellerId = _offer.sellerId;
@@ -261,7 +259,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.exchangeToken = _offer.exchangeToken;
         offer.metadataUri = _offer.metadataUri;
         offer.metadataHash = _offer.metadataHash;
-        _offer.collectionIndex = 1;
         offer.collectionIndex = _offer.collectionIndex;
 
         // Get storage location for offer dates

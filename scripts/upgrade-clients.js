@@ -46,7 +46,6 @@ async function main(env, clientConfig, version) {
     process.exit(1);
   }
 
-  console.log(provider);
   // Get list of accounts managed by node
   const nodeAccountList = (await listAccounts()).map((address) => address.toLowerCase());
 
