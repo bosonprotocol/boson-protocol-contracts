@@ -341,7 +341,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       // Deploy a random contract
       const MockSimpleContract = await getContractFactory("MockSimpleContract");
       const mockSimpleContract = await MockSimpleContract.deploy();
-      await mockSimpleContract.deployed();
+      await mockSimpleContract.waitForDeployment();
 
       // Generate calldata
       const calldata = mockSimpleContract.interface.encodeFunctionData("testEvent");

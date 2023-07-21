@@ -121,7 +121,7 @@ async function migrate(env) {
     await hre.run("upgrade-clients", {
       env,
       clientConfig: JSON.stringify(clientConfig),
-      newVersion: tag.replace("v", ""),
+      newVersion: version,
     });
 
     shell.exec(`git checkout HEAD`);

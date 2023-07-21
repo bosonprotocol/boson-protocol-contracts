@@ -12,7 +12,6 @@ function delay(ms) {
 }
 
 function deploymentComplete(name, address, args, interfaceId, contracts) {
-  console.log("address", address);
   contracts.push({ name, address, args, interfaceId });
   console.log(`✅ ${name} deployed to: ${address}`);
 }

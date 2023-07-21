@@ -429,7 +429,8 @@ async function populateProtocolContract(
         const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
         await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
 
-        const voucherContractAddress = calculateContractAddress(await accountHandler.getAddress(), voucherIndex++); // ToDo: make version based calculation
+        const voucherContractAddress = calculateContractAddress(await accountHandler.getAddress(), voucherIndex++); // TODO: make version based calculation
+
         sellers.push({
           wallet: connectedWallet,
           id,
@@ -481,12 +482,14 @@ async function populateProtocolContract(
   let offerId = Number(await offerHandler.getNextOfferId());
   for (let i = 0; i < sellers.length; i++) {
     for (let j = i; j >= 0; j--) {
+      console.log(`Creating offer ${offerId} for seller ${j}, looup ${i}`);
       // Mock offer, offerDates and offerDurations
       const { offer, offerDates, offerDurations } = await mockOffer();
 
       // Set unique offer properties based on offer id
       offer.id = `${offerId}`;
       offer.sellerId = sellers[j].seller.id;
+      console.log(`sellerId: ${offer.sellerId}`);
       offer.price = `${offerId * 1000}`;
       offer.sellerDeposit = `${offerId * 100}`;
       offer.buyerCancelPenalty = `${offerId * 50}`;
@@ -555,7 +558,6 @@ async function populateProtocolContract(
       const sellerId = seller.id;
       let twinIds = []; // used for bundle
 
-      console.log("557");
       // non fungible token
       await mockTwinTokens[0].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
       await mockTwinTokens[1].connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
@@ -563,7 +565,6 @@ async function populateProtocolContract(
       // create multiple ranges
       const twin721 = mockTwin(ZeroAddress, TokenType.NonFungibleToken);
       twin721.amount = "0";
-      console.log("565");
 
       // min supply available for twin721 is the total amount to cover all offers bundled
       const minSupplyAvailable = offers
@@ -579,10 +580,8 @@ async function populateProtocolContract(
 
         // mint tokens to be transferred on redeem
         await mockTwinTokens[j % 2].connect(seller.wallet).mint(twin721.tokenId, twin721.supplyAvailable);
-        console.log("581");
         await twinHandler.connect(seller.wallet).createTwin(twin721);
 
-        console.log("584");
         twins.push(twin721);
         twinIds.push(twinId);
 
@@ -592,13 +591,11 @@ async function populateProtocolContract(
       // fungible
       const twin20 = mockTwin(await mockTwin20.getAddress(), TokenType.FungibleToken);
 
-      console.log("593");
       twin20.id = twinId;
       twin20.amount = sellerId;
       twin20.supplyAvailable = twin20.amount * 100000000;
 
       await mockTwin20.connect(seller.wallet).approve(protocolDiamondAddress, twin20.supplyAvailable);
-      console.log("598");
 
       // mint tokens to be transferred on redeem
       await mockTwin20.connect(seller.wallet).mint(seller.wallet, twin20.supplyAvailable * twin20.amount);
