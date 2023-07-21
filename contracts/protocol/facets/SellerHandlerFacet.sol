@@ -375,6 +375,7 @@ contract SellerHandlerFacet is SellerBase {
             _voucherInitValues,
             _externalId
         );
+        console.log("voucherCloneAddress: %s", voucherCloneAddress);
 
         // Store collection details
         Collection storage newCollection = sellersAdditionalCollections.push();

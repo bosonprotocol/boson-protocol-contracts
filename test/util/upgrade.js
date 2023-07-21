@@ -95,7 +95,7 @@ async function deploySuite(deployer, newVersion) {
 
   console.log(`Checking out version ${tag}`);
   shell.exec(`rm -rf contracts/*`);
-  // @TODO check subfolders
+  // TODO check subfolders
   //shell.exec(`find contracts -type f | xargs git checkout ${tag} --`);
   shell.exec(`git checkout ${tag} contracts/**`);
 
@@ -482,14 +482,12 @@ async function populateProtocolContract(
   let offerId = Number(await offerHandler.getNextOfferId());
   for (let i = 0; i < sellers.length; i++) {
     for (let j = i; j >= 0; j--) {
-      console.log(`Creating offer ${offerId} for seller ${j}, looup ${i}`);
       // Mock offer, offerDates and offerDurations
       const { offer, offerDates, offerDurations } = await mockOffer();
 
       // Set unique offer properties based on offer id
       offer.id = `${offerId}`;
       offer.sellerId = sellers[j].seller.id;
-      console.log(`sellerId: ${offer.sellerId}`);
       offer.price = `${offerId * 1000}`;
       offer.sellerDeposit = `${offerId * 100}`;
       offer.buyerCancelPenalty = `${offerId * 50}`;

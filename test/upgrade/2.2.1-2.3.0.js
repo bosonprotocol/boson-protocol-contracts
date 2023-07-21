@@ -1101,13 +1101,16 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             const { wallet: buyer } = buyers[0];
             // find a DR with no allowlist
             const { disputeResolver } = DRs.find((DR) => DR.sellerAllowList.length == 0);
-            const { mockTwin20, mockToken } = mockContracts;
+            const { mockTwin20, mockToken, mockTwinTokens } = mockContracts;
+            const [mockTwin721Contract] = mockTwinTokens;
 
             // Create twin
             const twinId = await twinHandler.getNextTwinId();
-            const twin = mockTwin(await mockTwin20.getAddress(), TokenType.FungibleToken);
-            await mockTwin20.connect(sellerWallet).mint(sellerWallet, twin.amount);
-            await mockTwin20.connect(sellerWallet).approve(await twinHandler.getAddress(), twin.amount);
+            const twin = mockTwin(await mockTwin721Contract.getAddress(), TokenType.NonFungibleToken);
+            twin.amount = "0";
+            twin.tokenId = "1";
+            await mockTwin721Contract.connect(sellerWallet).mint(twin.tokenId, twin.supplyAvailable);
+            await mockTwin721Contract.connect(sellerWallet).setApprovalForAll(await twinHandler.getAddress(), true);
             await twinHandler.connect(sellerWallet).createTwin(twin);
 
             // Create offer
@@ -1117,6 +1120,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             await expect(
               offerHandler.connect(sellerWallet).createOffer(offer, offerDates, offerDurations, disputeResolver.id, "0")
             ).to.emit(offerHandler, "OfferCreated");
+
+            // Deposit seller funds so the commit will succeed
+            const sellerPool = BigInt(offer.quantityAvailable) * BigInt(offer.price);
+            await fundsHandler
+              .connect(sellerWallet)
+              .depositFunds(sellerId, offer.exchangeToken, sellerPool, { value: sellerPool });
 
             // Bundle: Required constructor params
             const bundleId = await bundleHandler.getNextBundleId();
@@ -1152,6 +1161,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             // create a new twin with the transferred token
             twin721.id = tokenId;
             twin721.supplyAvailable = 1;
+            twin721.amount = "0";
             await expect(twinHandler.connect(sellerWallet).createTwin(twin721)).to.emit(twinHandler, "TwinCreated");
           });
 
@@ -1195,7 +1205,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             await foreign20gt_2.connect(wallet).approve(protocolDiamondAddress, "100");
 
             // Create two ERC20 twins that will consume all available gas
-            const twin20 = mockTwin(foreign20gt.address);
+            const twin20 = mockTwin(foreign20.address);
             twin20.amount = "1";
             twin20.supplyAvailable = "100";
             twin20.id = "1";
@@ -1266,16 +1276,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const { groups, buyers, offers } = preUpgradeEntities;
           const { wallet: buyer } = buyers[0];
           const { offerIds } = groups[0];
-          console.log(offerIds);
           const { offer } = offers[offerIds[0] - 1];
-          console.log(offer);
 
           const tx = await exchangeHandler
             .connect(buyer)
             .commitToConditionalOffer(buyer.address, offer.id, "0", { value: offer.price });
 
           const receipt = await tx.wait();
-          console.log(receipt);
           // Commit to offer, retrieving the event
           await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
         });
@@ -1316,8 +1323,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
             const tokenList = await fundsHandler.getTokenList(id);
             const tokenListSet = new Set(tokenList);
-            console.log("sellerId", id);
-            expect(tokenListSet).to.deep.equal(expectedTokenListSet);
+
+            if (seller.id == 10) {
+              // last seller has only 1 offer with native token
+              expect(tokenListSet).to.deep.equal(new Set([ZeroAddress]));
+            } else {
+              expect(tokenListSet).to.deep.equal(expectedTokenListSet);
+            }
 
             const tokenListPaginated = await fundsHandler.getTokenListPaginated(id, tokenList.length, "0");
 
@@ -1326,12 +1338,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             const allAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(id));
             const tokenListFromAvailableFunds = allAvailableFunds.funds.map((f) => f.tokenAddress);
             expect(tokenListFromAvailableFunds).to.deep.equal(tokenList);
-            console.log("tokenList", tokenList);
 
             const av = await fundsHandler.getAvailableFunds(id, [...tokenList]);
-            console.log("av", av);
             const availableFunds = FundsList.fromStruct(av);
-            console.log("availableFunds", availableFunds);
             expect(availableFunds).to.deep.equal(allAvailableFunds);
           }
         });
@@ -1440,7 +1449,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         ({ voucherContractAddress } = sellers[0]);
 
         bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
-        console.log(bosonVoucher);
         console.log(bosonVoucher.getFunction("tokenURI(uint256)"));
         console.log(bosonVoucher.getFunction("callExternalContract(address,bytes)"));
       });
@@ -1462,7 +1470,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       it("tokenURI function should revert if tokenId does not exist", async function () {
         const tx = await bosonVoucher.tokenURI(666);
-        console.log(tx);
         await expect(tx).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
       });
     });
