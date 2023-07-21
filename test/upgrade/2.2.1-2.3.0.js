@@ -95,6 +95,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       accessController,
     } = await deploySuite(deployer, version));
 
+    const { twinHandler } = contractsBefore;
+
+    console.log(contractsBefore);
+
     // Populate protocol with data
     preUpgradeEntities = await populateProtocolContract(
       deployer,
@@ -1075,7 +1079,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
       });
 
-      context.only("ExchangeHandler", async function () {
+      context("ExchangeHandler", async function () {
         context("Twin transfers", async function () {
           let mockTwin721Contract, twin721;
           let buyer, buyerId;
@@ -1227,10 +1231,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         it("commit exactly at offer expiration timestamp", async function () {
           const { offers, buyers } = preUpgradeEntities;
-          const { offer, offerDates } = offers[1]; //offer 0 has a condition
+          const { offer } = offers[1]; //offer 0 has a condition
           const { wallet: buyer } = buyers[0];
+          const { mockToken } = mockContracts;
 
-          await mockContracts.mockToken.mint(buyer.address, offer.price);
+          await mockToken.mint(buyer.address, offer.price);
+
+          // allow the protocol to transfer the buyer's tokens
+          await mockToken.connect(buyer).approve(protocolDiamondAddress, offer.price);
 
           // Commit to offer, retrieving the event
           await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id)).to.emit(
@@ -1243,7 +1251,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const { groups, buyers, offers } = preUpgradeEntities;
           const { wallet: buyer } = buyers[0];
           const { offerIds } = groups[0];
-          console.log(groups[0]);
           const offer = offers[offerIds[0]];
 
           const tx = await exchangeHandler
