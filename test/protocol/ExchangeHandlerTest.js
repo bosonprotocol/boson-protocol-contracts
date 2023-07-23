@@ -3334,7 +3334,7 @@ describe("IBosonExchangeHandler", function () {
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+          it("if twin transfers consume all available gas, redeem still succeeds, but dispute is raised", async function () {
             const [foreign20gt, foreign20gt_2] = await deployMockTokens(["Foreign20GasTheft", "Foreign20GasTheft"]);
 
             // Approve the protocol diamond to transfer seller's tokens
@@ -3370,7 +3370,7 @@ describe("IBosonExchangeHandler", function () {
             // Redeem the voucher
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
-            // Voucher should be revoked and both transfers should fail
+            // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
               .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
@@ -3876,7 +3876,7 @@ describe("IBosonExchangeHandler", function () {
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+          it("if twin transfers consume all available gas, redeem still succeeds, but dispute is raised", async function () {
             const [foreign721gt, foreign721gt_2] = await deployMockTokens(["Foreign721GasTheft", "Foreign721GasTheft"]);
 
             // Approve the protocol diamond to transfer seller's tokens
@@ -3912,7 +3912,7 @@ describe("IBosonExchangeHandler", function () {
             // Redeem the voucher
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
-            // Voucher should be revoked and both transfers should fail
+            // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
               .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
@@ -4146,7 +4146,7 @@ describe("IBosonExchangeHandler", function () {
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+          it("if twin transfers consume all available gas, redeem still succeeds, but dispute is raised", async function () {
             const [foreign1155gt, foreign1155gt_2] = await deployMockTokens([
               "Foreign1155GasTheft",
               "Foreign1155GasTheft",
@@ -4185,6 +4185,11 @@ describe("IBosonExchangeHandler", function () {
 
             // Redeem the voucher
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
+
+            // Dispute should be raised and both transfers should fail
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -4635,7 +4640,7 @@ describe("IBosonExchangeHandler", function () {
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+          it("if twin transfers consume all available gas, redeem still succeeds, but dispute is raised", async function () {
             const [foreign20gt, foreign721gt, foreign1155gt] = await deployMockTokens([
               "Foreign20GasTheft",
               "Foreign721GasTheft",
@@ -4684,7 +4689,7 @@ describe("IBosonExchangeHandler", function () {
             // Redeem the voucher
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
-            // Voucher should be revoked and both transfers should fail
+            // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
               .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);

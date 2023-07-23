@@ -638,6 +638,7 @@ async function populateProtocolContract(
       const offer = offers[i + j].offer; // some offers will be picked multiple times, some never.
       const offerPrice = offer.price;
       const buyerWallet = buyers[j].wallet;
+
       let msgValue;
       if (offer.exchangeToken == ZeroAddress) {
         msgValue = offerPrice;

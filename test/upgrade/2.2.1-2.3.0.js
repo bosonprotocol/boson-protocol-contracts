@@ -56,7 +56,7 @@ const { migrate } = require(`../../scripts/migrations/migrate_${version}.js`);
 /**
  *  Upgrade test case - After upgrade from 2.2.1 to 2.3.0 everything is still operational
  */
-describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
+describe("[-on-coverage] After facet upgrade, everything is still operational", function () {
   this.timeout(1000000);
   // Common vars
   let deployer, rando, clerk, pauser, assistant;
@@ -344,7 +344,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
       });
 
-      context.skip("Protocol limits", async function () {
+      context("Protocol limits", async function () {
         let wallets;
         let sellers, DRs, sellerWallet;
 
@@ -787,7 +787,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           let beaconProxyAddress;
           before(async function () {
             // Get the beacon proxy address
-            beaconProxyAddress = await calculateBosonProxyAddress(await configHandler.getAddress());
+            beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
           });
 
           it("New seller can create a new collection", async function () {
@@ -798,7 +798,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
             const tx1 = await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
             const receipt1 = await tx1.wait();
-            console.log(receipt1.logs);
 
             const externalId = "new-collection";
 
@@ -808,21 +807,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               seller.admin,
               ""
             ); // default
-
-            const tx = await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
-            const receipt = await tx.wait();
-            console.log(receipt.logs);
-            const event = getEvent(receipt, accountHandler, "CollectionCreated");
-
-            await expect(tx).to.emit(accountHandler, "CollectionCreated");
-            //.withArgs(Number(seller.Id), 1, expectedCollectionAddress, id(externalId), assistant.address); TODO fix this
-
             const expectedCollectionAddress = calculateCloneAddress(
               await accountHandler.getAddress(),
               beaconProxyAddress,
               seller.admin,
               externalId
             );
+            const tx = await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+            await expect(tx)
+              .to.emit(accountHandler, "CollectionCreated")
+              .withArgs(Number(seller.id), 1, expectedCollectionAddress, externalId, assistant.address);
+
             const expectedCollections = new CollectionList([new Collection(expectedCollectionAddress, externalId)]);
 
             // Get the collections information
@@ -831,11 +827,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               .getSellersCollections(seller.id);
             const additionalCollections = CollectionList.fromStruct(collections);
 
-            console.log("defaultVoucherAddress", defaultVoucherAddress);
-            console.log("expectedDefaultAddress", expectedDefaultAddress);
             expect(defaultVoucherAddress).to.equal(expectedDefaultAddress, "Wrong default voucher address");
-            console.log("additionalCollections", additionalCollections);
-            console.log("expectedCollections", expectedCollections);
             expect(additionalCollections).to.deep.equal(expectedCollections, "Wrong additional collections");
 
             // Voucher clone contract
@@ -884,8 +876,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
             const additionalCollections = CollectionList.fromStruct(collections);
 
-            console.log("additionalCollections", additionalCollections);
-            console.log("expectedCollections", expectedCollections);
             expect(defaultVoucherAddress).to.equal(expectedDefaultAddress, "Wrong default voucher address");
             expect(additionalCollections).to.deep.equal(expectedCollections, "Wrong additional collections");
 
@@ -908,7 +898,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
       });
 
-      context.skip("DisputeResolverHandler", async function () {
+      context("DisputeResolverHandler", async function () {
         let disputeResolver, disputeResolverFees, sellerAllowList;
 
         beforeEach(async function () {
@@ -984,7 +974,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         it("getPausedRegions function should be available", async function () {
           const pausedRegions = await pauseHandler.getPausedRegions();
-          console.log("pausedRegions", pausedRegions);
           expect(pausedRegions).to.not.reverted;
         });
       });
@@ -1068,7 +1057,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             .connect(sellerWallet)
             .depositFunds(seller.id, offer.exchangeToken, sellerPool, { value: sellerPool });
 
-          const beaconProxyAddress = await calculateBosonProxyAddress(await configHandler.getAddress());
+          const beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
+
           // Collection voucher contract
           const expectedCollectionAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
@@ -1082,6 +1072,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const tx = await exchangeHandler
             .connect(buyerWallet)
             .commitToOffer(buyerWallet.address, offerId, { value: offer.price });
+          const receipt = await tx.wait();
 
           // Voucher should be minted on a new collection contract
           await expect(tx).to.emit(bosonVoucher, "Transfer").withArgs(ZeroAddress, buyerWallet.address, tokenId);
@@ -1091,27 +1082,30 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       context("ExchangeHandler", async function () {
         context("Twin transfers", async function () {
           let mockTwin721Contract, twin721;
-          let buyer, buyerId;
+          let buyer;
           let exchangeId;
-          let seller, sellerWallet, sellerId;
+          let sellerWallet, sellerId;
 
           beforeEach(async function () {
-            const { buyers, offers, sellers, DRs } = preUpgradeEntities;
-            ({ wallet: sellerWallet, seller, id: sellerId } = sellers[0]);
-            const { wallet: buyer } = buyers[0];
+            const { buyers, sellers, DRs } = preUpgradeEntities;
+            ({ wallet: sellerWallet, id: sellerId } = sellers[0]);
+            ({ wallet: buyer } = buyers[0]);
             // find a DR with no allowlist
             const { disputeResolver } = DRs.find((DR) => DR.sellerAllowList.length == 0);
-            const { mockTwin20, mockToken, mockTwinTokens } = mockContracts;
-            const [mockTwin721Contract] = mockTwinTokens;
+            const { mockToken, mockTwinTokens } = mockContracts;
+            [mockTwin721Contract] = mockTwinTokens;
 
             // Create twin
             const twinId = await twinHandler.getNextTwinId();
-            const twin = mockTwin(await mockTwin721Contract.getAddress(), TokenType.NonFungibleToken);
-            twin.amount = "0";
-            twin.tokenId = "1";
-            await mockTwin721Contract.connect(sellerWallet).mint(twin.tokenId, twin.supplyAvailable);
-            await mockTwin721Contract.connect(sellerWallet).setApprovalForAll(await twinHandler.getAddress(), true);
-            await twinHandler.connect(sellerWallet).createTwin(twin);
+            twin721 = mockTwin(await mockTwin721Contract.getAddress(), TokenType.NonFungibleToken);
+            twin721.supplyAvailable = "1";
+            twin721.sellerId = sellerId;
+            twin721.amount = "0";
+            twin721.tokenId = "1";
+            // mint last token as will be the one used for the offer
+            await mockTwin721Contract.connect(sellerWallet).mint(twin721.supplyAvailable, 1);
+            await mockTwin721Contract.connect(sellerWallet).setApprovalForAll(protocolDiamondAddress, true);
+            await twinHandler.connect(sellerWallet).createTwin(twin721);
 
             // Create offer
             const { offer, offerDates, offerDurations } = await mockOffer();
@@ -1148,11 +1142,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             }
             // Commit to offer
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: msgValue });
+
+            await setNextBlockTimestamp(Number(offerDates.voucherRedeemableFrom));
           });
 
           it("If a twin is transferred it could be used in a new twin", async function () {
-            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-            const event = getEvent(await tx.wait(), exchangeHandler, "TwinTransferred");
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId, { gasLimit: 10000000 });
+            const receipt = await tx.wait();
+            const event = getEvent(receipt, exchangeHandler, "TwinTransferred");
+
             const { tokenId } = event;
 
             // transfer the twin to the original seller
@@ -1167,13 +1165,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
           it("if twin transfer fail, dispute is raised even when buyer is EOA", async function () {
             // Remove the approval for the protocol to transfer the seller's tokens
-            await mockTwin721Contract.connect(assistant).setApprovalForAll(protocolDiamondAddress, false);
+            await mockTwin721Contract.connect(sellerWallet).setApprovalForAll(protocolDiamondAddress, false);
 
-            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
-            await expect(tx)
-              .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchangeId, buyerId, seller.id, buyer.address);
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId, { gasLimit: 100000000 });
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -1186,17 +1180,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+          it("if twin transfers consume all available gas, redeem still succeeds, but dispute is raised", async function () {
             const { sellers, offers, buyers } = preUpgradeEntities;
+            const { wallet, id: sellerId, offerIds } = sellers[1]; // first seller has condition to all offers
+            const offerId = offerIds[offerIds.length - 1];
             const {
-              wallet,
-              id: sellerId,
-              offerIds: [offerId],
-            } = sellers[0];
-            const {
-              offer: { price },
+              offer: { price, quantityAvailable },
             } = offers[offerId - 1];
-            const { wallet: buyer } = buyers[0];
+            const { wallet: buyer, id: buyerId } = buyers[0];
 
             const [foreign20gt, foreign20gt_2] = await deployMockTokens(["Foreign20GasTheft", "Foreign20GasTheft"]);
 
@@ -1205,52 +1196,61 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             await foreign20gt_2.connect(wallet).approve(protocolDiamondAddress, "100");
 
             // Create two ERC20 twins that will consume all available gas
-            const twin20 = mockTwin(foreign20.address);
+            const twin20 = mockTwin(await foreign20gt.getAddress());
             twin20.amount = "1";
-            twin20.supplyAvailable = "100";
-            twin20.id = "1";
+            twin20.supplyAvailable = quantityAvailable;
+            twin20.id = Number(await twinHandler.getNextTwinId());
 
             await twinHandler.connect(wallet).createTwin(twin20.toStruct());
 
             const twin20_2 = twin20.clone();
-            twin20_2.id = "5";
-            twin20_2.tokenAddress = foreign20gt_2.address;
+            twin20_2.id = twin20.id + 1;
+            twin20_2.tokenAddress = await foreign20gt_2.getAddress();
             await twinHandler.connect(wallet).createTwin(twin20_2.toStruct());
 
             // Create a new bundle
             const bundle = new Bundle("2", sellerId, [offerId], [twin20.id, twin20_2.id]);
             await bundleHandler.connect(wallet).createBundle(bundle.toStruct());
 
+            // mint exchange tokens for the buyer
+            const { mockToken } = mockContracts;
+            await mockToken.mint(buyer.address, price);
+
+            // approve token transfer
+            await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
+
             // Commit to offer
             const exchangeId = await exchangeHandler.getNextExchangeId();
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
 
             // Redeem the voucher
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId, { gasLimit: 1000000 }); // limit gas to speed up test
 
-            // Voucher should be revoked and both transfers should fail
-            await expect(tx).to.emit(exchangeHandler, "VoucherRevoked").withArgs(offerId, exchangeId, buyer.address);
+            const receipt = await tx.wait();
+            // Dispute should be raised and both transfers should fail
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchangeId, buyerId, sellerId, buyer.address);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(twin20.id, twin20.tokenAddress, exchangeId, twin20.tokenId, twin20.amount, buyer.address);
 
-            await expect(tx)
-              .to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(
-                twin20_2.id,
-                twin20_2.tokenAddress,
-                exchangeId,
-                twin20_2.tokenId,
-                twin20_2.amount,
-                buyer.address
-              );
+            await expect(tx).to.emit(exchangeHandler, "TwinTransferFailed").withArgs(
+              twin20_2.id,
+              twin20_2.tokenAddress,
+              exchangeId,
+
+              twin20_2.tokenId,
+              twin20_2.amount,
+              buyer.address
+            );
 
             // Get the exchange state
             const [, response] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
 
             // It should match ExchangeState.Revoked
-            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
         });
 
@@ -1395,7 +1395,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
       });
 
-      context.skip("MetaTransactionHandler", async function () {
+      context("MetaTransactionHandler", async function () {
         it("Function hashes from removedFunctionsHashes list should not be allowlisted", async function () {
           for (const hash of removedFunctionHashes) {
             const isFunctionAllowlisted = contractsAfter.metaTransactionsHandler.getFunction(
@@ -1443,11 +1443,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     });
 
     context("BosonVoucher", async function () {
-      let bosonVoucher;
+      let bosonVoucher, sellerWallet;
       before(async function () {
         const { sellers } = preUpgradeEntities;
-        ({ voucherContractAddress } = sellers[0]);
+        let voucherContractAddress;
+        ({ voucherContractAddress, wallet: sellerWallet } = sellers[0]);
 
+        console.log("voucherContractAddress", voucherContractAddress);
+        console.log("verify if voucherContractAddress has changed");
         bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
         console.log(bosonVoucher.getFunction("tokenURI(uint256)"));
         console.log(bosonVoucher.getFunction("callExternalContract(address,bytes)"));
@@ -1461,7 +1464,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         const calldata = mockSimpleContract.interface.encodeFunctionData("testReturn");
         const returnedValueRaw = await bosonVoucher
-          .connect(assistant)
+          .connect(sellerWallet)
           .callExternalContract.staticCall(await mockSimpleContract.getAddress(), calldata);
         const abiCoder = new ethers.AbiCoder();
         const [returnedValue] = abiCoder.decode(["string"], returnedValueRaw);
