@@ -784,18 +784,16 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
   let nextAccountId;
   let sellersCollections = [];
 
+  console.log("Getting account contract state");
   // Query even the ids where it's not expected to get the entity
   for (const account of accounts) {
     const id = account.id;
 
     DRsState.push(await getDisputeResolver(accountHandlerRando, id, { getBy: "id" }));
-    try {
-      sellerState.push(await getSeller(accountHandlerRando, id, { getBy: "id" }));
-    } catch (e) {
-      console.log(e);
-    }
+    sellerState.push(await getSeller(accountHandlerRando, id, { getBy: "id" }));
     agentsState.push(await getAgent(accountHandlerRando, id));
     buyersState.push(await getBuyer(accountHandlerRando, id));
+
     if (!versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
       sellersCollections.push(await accountHandlerRando.getSellersCollections(id));
     } else {

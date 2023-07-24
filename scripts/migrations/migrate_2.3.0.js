@@ -1,5 +1,7 @@
 const shell = require("shelljs");
+const axios = require("axios");
 const environments = require("../../environments");
+const Role = require("../domain/Role");
 const tipMultiplier = BigInt(environments.tipMultiplier);
 const tipSuggestion = 1500000000n; // js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = tipSuggestion + tipMultiplier;
@@ -8,7 +10,7 @@ const hre = require("hardhat");
 const { oneWeek } = require("../../test/util/constants.js");
 const PausableRegion = require("../domain/PausableRegion.js");
 const ethers = hre.ethers;
-const { getContractFactory, getContractAt } = ethers;
+const { getContractFactory, getContractAt, getSigners } = ethers;
 const network = hre.network.name;
 const abiCoder = new ethers.AbiCoder();
 // const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
@@ -53,30 +55,32 @@ async function migrate(env) {
     //      throw new Error("Local changes found. Please stash them before upgrading");
     //    }
 
-    console.log("Installing dependencies");
-    shell.exec(`npm install`);
-
     const { chainId } = await ethers.provider.getNetwork();
     const contractsFile = readContracts(chainId, network, env);
 
-    if (contractsFile?.protocolVersion != "2.2.1") {
-      throw new Error("Current contract version must be 2.2.1");
-    }
+    //    if (contractsFile?.protocolVersion != "2.2.1") {
+    //      throw new Error("Current contract version must be 2.2.1");
+    //    }
 
     let contracts = contractsFile?.contracts;
 
     // Get addresses of currently deployed contracts
-    const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
+    const accessControllerAddress = contracts.find((c) => c.name === "AccessController")?.address;
 
-    if (env == "upgrade-test") {
+    const accessController = await getContractAt("AccessController", accessControllerAddress);
+
+    if (env == "upgrade-test" || env == "dry-run") {
+      // TODO remove dry run from here
+      const signer = (await getSigners())[0].address;
       // Grant PAUSER role to the deployer
-      await accessController.grantRole(Role.PAUSER, (await getSigners())[0].address);
+      await accessController.grantRole(Role.PAUSER, signer);
     }
 
-    // Pause the exchanges region of the protocol
-    console.log("Pausing the protocol...");
-    const pauseHandler = await getContractAt("IBosonPauseHandler", protocolAddress);
-    await pauseHandler.pause([PausableRegion.Exchanges], await getFees(maxPriorityFeePerGas));
+    const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
+
+    //    console.log("Pausing the Seller region...");
+    //    let pauseHandler = await getContractAt("IBosonPauseHandler", protocolAddress);
+    //    await pauseHandler.pause([PausableRegion.Sellers], await getFees(maxPriorityFeePerGas));
 
     // Checking old version contracts to get selectors to remove
     // ToDo: at 451dc3d, no selectors to remove. Comment out this section. It will be needed when other changes are merged into main
@@ -96,7 +100,10 @@ async function migrate(env) {
 
     // const selectorsToRemove = await getFunctionHashesClosure();
 
-    const creators = await fetchSellerCreators();
+    if (env != "upgrade-test") {
+      const creators = await fetchSellerCreators();
+      console.log("creators", creators);
+    }
 
     console.log(`Checking out contracts on version ${tag}`);
     shell.exec(`rm -rf contracts/*`);
@@ -141,6 +148,10 @@ async function migrate(env) {
       newVersion: version,
     });
 
+    //    console.log("Unpausing all regions...");
+    //    pauseHandler = await getContractAt("IBosonPauseHandler", protocolAddress);
+    //    await pauseHandler.unpause([], await getFees(maxPriorityFeePerGas));
+
     shell.exec(`git checkout HEAD`);
     console.log(`Migration ${tag} completed`);
   } catch (e) {
@@ -151,38 +162,38 @@ async function migrate(env) {
 }
 
 async function fetchSellerCreators() {
+  // TODO make this based on the network
   const url = "https://api.thegraph.com/subgraphs/name/bosonprotocol/polygon";
 
-  let headers = new Headers();
-  headers.append("Content-Type", "application/json");
-
-  let requestOptions = {
-    method: "POST",
-    headers: headers,
-    body: JSON.stringify({
-      query: `query MyQuery {
-      sellers(first: 500, orderBy: sellerId, orderDirection: desc) {
-        assistant
-        sellerId
-        logs(where: {type: SELLER_CREATED}) {
-          type
-          executedBy
-        }
+  const data = {
+    query: `query GetSellers {
+    sellers(first: 500, orderBy: sellerId, orderDirection: desc) {
+      assistant
+      sellerId
+      logs(where: {type: SELLER_CREATED}) {
+        type
+        executedBy
       }
-    }`,
-      variables: null,
-      operationName: "MyQuery",
-      extensions: {
-        headers: null,
-      },
-    }),
-    redirect: "follow",
+    }
+  }`,
+    variables: null,
+    operationName: "GetSellers",
+    extensions: {
+      headers: null,
+    },
   };
 
-  const response = await fetch(url, requestOptions);
-  const json = await response.json();
-  console.log(json);
-  return json;
+  const headers = {
+    Accept: "application/json, multipart/mixed",
+  };
+  const {
+    data: {
+      data: { sellers },
+    },
+  } = await axios.post(url, data, { headers });
+  return sellers.map((s) => {
+    return { id: s.sellerId, creator: s.logs[0].executedBy };
+  });
 }
 
 exports.migrate = migrate;

@@ -249,6 +249,8 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
       "protocolLookupsPrivateContractState",
     ];
 
+    console.log("before get protocol state after upgrade");
+
     // Get protocol state after the upgrade
     protocolContractStateAfter = await getProtocolContractState(
       protocolDiamondAddress,
@@ -659,7 +661,10 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
           const { voucherContractAddress } = sellers[0];
 
           const bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
-          await expect(bosonVoucher.connect(sellerWallet).preMint(offerId, voucherCount)).to.not.be.reverted;
+          const tx = await bosonVoucher.connect(sellerWallet).preMint(offerId, voucherCount);
+
+          console.log("tx", await tx.wait());
+          await expect(tx).to.not.be.reverted;
         });
       });
 
@@ -814,8 +819,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
             const emptyAuthToken = mockAuthToken();
             const voucherInitValues = mockVoucherInitValues();
 
-            const tx1 = await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
-            const receipt1 = await tx1.wait();
+            await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
             const externalId = "new-collection";
 
@@ -1090,7 +1094,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
           const tx = await exchangeHandler
             .connect(buyerWallet)
             .commitToOffer(buyerWallet.address, offerId, { value: offer.price });
-          const receipt = await tx.wait();
 
           // Voucher should be minted on a new collection contract
           await expect(tx).to.emit(bosonVoucher, "Transfer").withArgs(ZeroAddress, buyerWallet.address, tokenId);
@@ -1485,9 +1488,38 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
         });
 
         it("tokenURI function should revert if tokenId does not exist", async function () {
-          bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
-          const tx = await bosonVoucher.tokenURI(666);
-          await expect(tx).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
+          const seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
+          seller.id = await accountHandler.getNextAccountId();
+          const emptyAuthToken = mockAuthToken();
+          const voucherInitValues = mockVoucherInitValues();
+
+          await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          const externalId = "new-collection";
+
+          const beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
+
+          const expectedDefaultAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            seller.admin,
+            ""
+          ); // default
+          const expectedCollectionAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            seller.admin,
+            externalId
+          );
+          const tx = await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+          await expect(tx)
+            .to.emit(accountHandler, "CollectionCreated")
+            .withArgs(Number(seller.id), 1, expectedCollectionAddress, externalId, assistant.address);
+
+          bosonVoucher = await getContractAt("BosonVoucher", expectedDefaultAddress);
+          console.log(await bosonVoucher.tokenURI(666));
+          await expect(bosonVoucher.tokenURI(666)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
         });
       });
     });
