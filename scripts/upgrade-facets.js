@@ -135,7 +135,6 @@ async function main(env, facetConfig, version) {
 
   // Deploy new facets
   let deployedFacets = await deployProtocolFacets(facets.addOrUpgrade, facets.facetsToInit, maxPriorityFeePerGas);
-  console.log("📋Deployed facets: ", deployedFacets.map((f) => f.name).join(", "));
 
   // Cast Diamond to DiamondCutFacet, DiamondLoupeFacet and IERC165Extended
   const diamondCutFacet = await getContractAt("DiamondCutFacet", protocolAddress);
@@ -145,6 +144,7 @@ async function main(env, facetConfig, version) {
   const interfacesToRemove = {},
     interfacesToAdd = {};
   const removedSelectors = []; // global list of selectors to be removed
+  let selectorsToNameMapping = {};
 
   // Remove facets
   for (const facetToRemove of facets.remove) {
@@ -154,11 +154,14 @@ async function main(env, facetConfig, version) {
     let registeredSelectors;
     if (oldFacet) {
       // Facet exists, so all selectors should be removed
-      [...registeredSelectors] = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
+      registeredSelectors = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
     } else {
       // Facet does not exist, skip next steps
       continue;
     }
+
+    const { signatureToNameMapping } = getSelectors(oldFacet, true);
+    selectorsToNameMapping = { ...selectorsToNameMapping, ...signatureToNameMapping };
 
     // Remove old entry from contracts
     contracts = contracts.filter((i) => i.name !== facetToRemove);
@@ -199,7 +202,7 @@ async function main(env, facetConfig, version) {
 
     if (oldFacet) {
       // Facet already exists and is only upgraded
-      [...registeredSelectors] = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
+      registeredSelectors = await diamondLoupe.facetFunctionSelectors(oldFacet.address);
     } else {
       // Facet is new
       registeredSelectors = [];
@@ -218,13 +221,13 @@ async function main(env, facetConfig, version) {
     );
 
     // Get new selectors from compiled contract
-    const selectors = getSelectors(newFacet.contract, true);
-    let newSelectors = selectors.selectors;
+    let { selectors: newSelectors, signatureToNameMapping } = getSelectors(newFacet.contract, true);
+    selectorsToNameMapping = { ...selectorsToNameMapping, ...signatureToNameMapping };
 
     // Initialize selectors should not be added
     const facetFactory = await getContractFactory(newFacet.name);
     const { selector } = facetFactory.interface.getFunction("initialize");
-    newSelectors = selectors.selectors.remove([selector]);
+    newSelectors = newSelectors.remove([selector]);
 
     // Determine actions to be made
     let selectorsToReplace = registeredSelectors.filter((value) => newSelectors.includes(value));
@@ -242,13 +245,14 @@ async function main(env, facetConfig, version) {
     // Check if selectors that are being added are not registered yet on some other facet
     // If collision is found, user must choose to either (s)kip it or (r)eplace it.
     let skipAll, replaceAll;
+
     for (const selectorToAdd of selectorsToAdd) {
       if (removedSelectors.flat().includes(selectorToAdd)) continue; // skip if selector is already marked for removal from another facet
 
       const existingFacetAddress = await diamondLoupe.facetAddress(selectorToAdd);
       if (existingFacetAddress != ZeroAddress) {
         // Selector exist on some other facet
-        const selectorName = selectors.signatureToNameMapping[selectorToAdd];
+        const selectorName = signatureToNameMapping[selectorToAdd];
         let answer;
         if (!(skipAll || replaceAll)) {
           const prompt = `Selector ${selectorName} is already registered on facet ${existingFacetAddress}. Do you want to (r)eplace or (s)kip it?\nUse "R" os "S" to apply the same choice to all remaining selectors in this facet. `;
@@ -272,14 +276,15 @@ async function main(env, facetConfig, version) {
     }
 
     const newFacetAddress = await newFacet.contract.getAddress();
+
     if (selectorsToAdd.length > 0) {
-      deployedFacets[index].cut.push([newFacetAddress, FacetCutAction.Add, selectorsToAdd]);
+      deployedFacets[index].cut.push([newFacetAddress, FacetCutAction.Add, [...selectorsToAdd]]);
     }
     if (selectorsToReplace.length > 0) {
-      deployedFacets[index].cut.push([newFacetAddress, FacetCutAction.Replace, selectorsToReplace]);
+      deployedFacets[index].cut.push([newFacetAddress, FacetCutAction.Replace, [...selectorsToReplace]]);
     }
     if (selectorsToRemove.length > 0) {
-      deployedFacets[index].cut.push([ZeroAddress, FacetCutAction.Remove, selectorsToRemove]);
+      deployedFacets[index].cut.push([ZeroAddress, FacetCutAction.Remove, [...selectorsToRemove]]);
     }
 
     if (oldFacet && (selectorsToAdd.length > 0 || selectorsToRemove.length > 0)) {
@@ -311,6 +316,8 @@ async function main(env, facetConfig, version) {
       }
     }
   }
+
+  console.log("3");
 
   // Get ProtocolInitializationHandlerFacet from deployedFacets when added/replaced in this upgrade or get it from contracts if already deployed
   let protocolInitializationFacet = await getInitializationFacet(deployedFacets, contracts);
@@ -344,8 +351,7 @@ async function main(env, facetConfig, version) {
       return facetCut.toObject();
     });
 
-    const selectors = getSelectors(facet.contract, true);
-    logFacetCut(cut, selectors);
+    logFacetCut(cut, selectorsToNameMapping);
   }
 
   console.log(`\n💀 Removed facets:\n\t${facets.remove.join("\n\t")}`);
@@ -363,6 +369,7 @@ async function main(env, facetConfig, version) {
         .join("\n\t")}`
     );
 
+  console.log("5");
   console.log(divider);
 
   if (postUpgrade) {
@@ -427,14 +434,14 @@ const getInitializationFacet = async (deployedFacets, contracts) => {
   return protocolInitializationFacet;
 };
 
-const logFacetCut = (cut, selectors) => {
+const logFacetCut = (cut, selectorsToNameMapping) => {
   for (const action in FacetCutAction) {
     cut
       .filter((c) => c.action == FacetCutAction[action])
       .forEach((c) => {
         console.log(
           `💎 ${action} selectors:\n\t${c.functionSelectors
-            .map((selector) => `${selectors.signatureToNameMapping[selector]}: ${selector}`)
+            .map((selector) => `${selectorsToNameMapping[selector]}: ${selector}`)
             .join("\n\t")}`
         );
       });

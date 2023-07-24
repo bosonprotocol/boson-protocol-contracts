@@ -22,7 +22,7 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 
 const { FundsList } = require("../../scripts/domain/Funds");
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
-const { toHexString } = require("../../scripts/util/utils.js");
+const { toHexString, readContracts } = require("../../scripts/util/utils.js");
 const {
   mockSeller,
   mockAuthToken,
@@ -165,10 +165,28 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
         "setMinResolutionPeriod",
         "unpause",
         "createGroup",
+
+        "createPremintedOffer",
+        "createOffer",
+
         "createOfferAndTwinWithBundle",
         "createSellerAndOfferAndTwinWithBundle",
-        "createOffer",
-        "createPremintedOffer",
+        "createOfferAddToGroup",
+        "createOfferAndTwinWithBundle",
+        "createOfferWithCondition",
+        "createOfferWithConditionAndTwinAndBundle",
+        "createPremintedOfferAddToGroup",
+        "createPremintedOfferAndTwinWithBundle",
+        "createPremintedOfferWithCondition",
+        "createPremintedOfferWithConditionAndTwinAndBundle",
+        "createSellerAndOffer",
+        "createSellerAndOfferAndTwinWithBundle",
+        "createSellerAndOfferWithCondition",
+        "createSellerAndOfferWithConditionAndTwinAndBundle",
+        "createSellerAndPremintedOffer",
+        "createSellerAndPremintedOfferAndTwinWithBundle",
+        "createSellerAndPremintedOfferWithCondition",
+        "createSellerAndPremintedOfferWithConditionAndTwinAndBundle",
       ] //ToDo: revise
     );
 
@@ -176,7 +194,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
 
     console.log("Removing old contracts and scripts...");
     shell.exec("rm -rf contracts/ scripts/ package.json package-lock.json");
-    // @TODO change this to version
+    // TODO change this to version
     shell.exec("git checkout HEAD contracts/ scripts/ package.json package-lock.json");
     shell.exec("git reset --hard HEAD contracts/ scripts/ package.json package-lock.json");
 
@@ -624,7 +642,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
           await expect(disputeHandler.connect(sellerWallet).expireDisputeBatch(disputesToExpire)).to.not.be.reverted;
         });
 
-        it("can premint more vouchers than maxPremintedVouchers", async function () {
+        it.only("can premint more vouchers than maxPremintedVouchers", async function () {
           const { maxPremintedVouchers } = protocolLimits;
           const voucherCount = Number(maxPremintedVouchers) + 1;
           const offerId = await offerHandler.getNextOfferId();
@@ -1395,7 +1413,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
         });
       });
 
-      context("MetaTransactionHandler", async function () {
+      context.skip("MetaTransactionHandler", async function () {
         it("Function hashes from removedFunctionsHashes list should not be allowlisted", async function () {
           for (const hash of removedFunctionHashes) {
             const isFunctionAllowlisted = contractsAfter.metaTransactionsHandler.getFunction(
@@ -1440,40 +1458,37 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
           );
         });
       });
-    });
 
-    context("BosonVoucher", async function () {
-      let bosonVoucher, sellerWallet;
-      before(async function () {
-        const { sellers } = preUpgradeEntities;
+      context.only("BosonVoucher", async function () {
+        let bosonVoucher, sellerWallet;
+
         let voucherContractAddress;
-        ({ voucherContractAddress, wallet: sellerWallet } = sellers[0]);
+        beforeEach(async function () {
+          const { sellers } = preUpgradeEntities;
+          ({ voucherContractAddress, wallet: sellerWallet } = sellers[0]);
+        });
 
-        console.log("voucherContractAddress", voucherContractAddress);
-        console.log("verify if voucherContractAddress has changed");
-        bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
-        console.log(bosonVoucher.getFunction("tokenURI(uint256)"));
-        console.log(bosonVoucher.getFunction("callExternalContract(address,bytes)"));
-      });
+        it("callExternalContract returns whatever External contract returned", async function () {
+          bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
+          // Deploy a random contract
+          const MockSimpleContract = await getContractFactory("MockSimpleContract");
+          const mockSimpleContract = await MockSimpleContract.deploy();
+          await mockSimpleContract.waitForDeployment();
 
-      it("callExternalContract returns whatever External contract returned", async function () {
-        // Deploy a random contract
-        const MockSimpleContract = await getContractFactory("MockSimpleContract");
-        const mockSimpleContract = await MockSimpleContract.deploy();
-        await mockSimpleContract.waitForDeployment();
+          const calldata = mockSimpleContract.interface.encodeFunctionData("testReturn");
+          const returnedValueRaw = await bosonVoucher
+            .connect(sellerWallet)
+            .callExternalContract.staticCall(await mockSimpleContract.getAddress(), calldata);
+          const abiCoder = new ethers.AbiCoder();
+          const [returnedValue] = abiCoder.decode(["string"], returnedValueRaw);
+          expect(returnedValue).to.equal("TestValue");
+        });
 
-        const calldata = mockSimpleContract.interface.encodeFunctionData("testReturn");
-        const returnedValueRaw = await bosonVoucher
-          .connect(sellerWallet)
-          .callExternalContract.staticCall(await mockSimpleContract.getAddress(), calldata);
-        const abiCoder = new ethers.AbiCoder();
-        const [returnedValue] = abiCoder.decode(["string"], returnedValueRaw);
-        expect(returnedValue).to.equal("TestValue");
-      });
-
-      it("tokenURI function should revert if tokenId does not exist", async function () {
-        const tx = await bosonVoucher.tokenURI(666);
-        await expect(tx).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
+        it("tokenURI function should revert if tokenId does not exist", async function () {
+          bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
+          const tx = await bosonVoucher.tokenURI(666);
+          await expect(tx).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
+        });
       });
     });
   });

@@ -1,9 +1,14 @@
 const shell = require("shelljs");
-const { readContracts } = require("../util/utils.js");
+const environments = require("../../environments");
+const tipMultiplier = BigInt(environments.tipMultiplier);
+const tipSuggestion = 1500000000n; // js always returns this constant, it does not vary per block
+const maxPriorityFeePerGas = tipSuggestion + tipMultiplier;
+const { readContracts, getFees } = require("../util/utils.js");
 const hre = require("hardhat");
 const { oneWeek } = require("../../test/util/constants.js");
+const PausableRegion = require("../domain/PausableRegion.js");
 const ethers = hre.ethers;
-const { getContractFactory } = ethers;
+const { getContractFactory, getContractAt } = ethers;
 const network = hre.network.name;
 const abiCoder = new ethers.AbiCoder();
 // const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
@@ -58,10 +63,20 @@ async function migrate(env) {
       throw new Error("Current contract version must be 2.2.1");
     }
 
-    // let contracts = contractsFile?.contracts;
+    let contracts = contractsFile?.contracts;
 
     // Get addresses of currently deployed contracts
-    // const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
+    const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
+
+    if (env == "upgrade-test") {
+      // Grant PAUSER role to the deployer
+      await accessController.grantRole(Role.PAUSER, (await getSigners())[0].address);
+    }
+
+    // Pause the exchanges region of the protocol
+    console.log("Pausing the protocol...");
+    const pauseHandler = await getContractAt("IBosonPauseHandler", protocolAddress);
+    await pauseHandler.pause([PausableRegion.Exchanges], await getFees(maxPriorityFeePerGas));
 
     // Checking old version contracts to get selectors to remove
     // ToDo: at 451dc3d, no selectors to remove. Comment out this section. It will be needed when other changes are merged into main
@@ -80,6 +95,8 @@ async function migrate(env) {
     // );
 
     // const selectorsToRemove = await getFunctionHashesClosure();
+
+    const creators = await fetchSellerCreators();
 
     console.log(`Checking out contracts on version ${tag}`);
     shell.exec(`rm -rf contracts/*`);
@@ -131,6 +148,41 @@ async function migrate(env) {
     shell.exec(`git checkout HEAD`);
     throw `Migration failed with: ${e}`;
   }
+}
+
+async function fetchSellerCreators() {
+  const url = "https://api.thegraph.com/subgraphs/name/bosonprotocol/polygon";
+
+  let headers = new Headers();
+  headers.append("Content-Type", "application/json");
+
+  let requestOptions = {
+    method: "POST",
+    headers: headers,
+    body: JSON.stringify({
+      query: `query MyQuery {
+      sellers(first: 500, orderBy: sellerId, orderDirection: desc) {
+        assistant
+        sellerId
+        logs(where: {type: SELLER_CREATED}) {
+          type
+          executedBy
+        }
+      }
+    }`,
+      variables: null,
+      operationName: "MyQuery",
+      extensions: {
+        headers: null,
+      },
+    }),
+    redirect: "follow",
+  };
+
+  const response = await fetch(url, requestOptions);
+  const json = await response.json();
+  console.log(json);
+  return json;
 }
 
 exports.migrate = migrate;

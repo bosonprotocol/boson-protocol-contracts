@@ -41,6 +41,8 @@ const {
   paddingType,
   getMappingStoragePosition,
   calculateContractAddress,
+  calculateCloneAddress,
+  calculateBosonProxyAddress,
 } = require("./utils.js");
 const { oneMonth, oneDay } = require("./constants");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -429,7 +431,18 @@ async function populateProtocolContract(
         const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
         await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
 
-        const voucherContractAddress = calculateContractAddress(await accountHandler.getAddress(), voucherIndex++); // TODO: make version based calculation
+        let voucherContractAddress;
+        if (versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
+          voucherContractAddress = calculateContractAddress(await accountHandler.getAddress(), voucherIndex++);
+        } else {
+          const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
+          voucherContractAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            seller.admin,
+            ""
+          );
+        }
 
         sellers.push({
           wallet: connectedWallet,
@@ -1703,7 +1716,19 @@ async function populateVoucherContract(
           await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
 
           // calculate voucher contract address and cast it to contract instance
-          const voucherContractAddress = calculateContractAddress(await accountHandler.getAddress(), voucherIndex++);
+          let voucherContractAddress;
+          if (versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
+            voucherContractAddress = calculateContractAddress(await accountHandler.getAddress(), voucherIndex++);
+          } else {
+            const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
+            voucherContractAddress = calculateCloneAddress(
+              await accountHandler.getAddress(),
+              beaconProxyAddress,
+              seller.admin,
+              ""
+            );
+          }
+
           const bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
 
           sellers.push({
