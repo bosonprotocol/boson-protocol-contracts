@@ -154,6 +154,12 @@ async function getStateModifyingFunctions(facetNames, omitFunctions = [], onlyFu
           if (onlyFunctions.length === 0) {
             return true;
           }
+          console.log("fn.name", fn.name);
+          console.log("onlyFunctions", onlyFunctions);
+          console.log(
+            "onlyFunctions",
+            onlyFunctions.some((f) => f.includes(fn.name))
+          );
           if (onlyFunctions.some((f) => f.includes(fn.name))) {
             return true;
           }

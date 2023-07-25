@@ -15,7 +15,6 @@ const ethers = hre.ethers;
 const { getContractFactory, getContractAt, getSigners } = ethers;
 const network = hre.network.name;
 const abiCoder = new ethers.AbiCoder();
-// const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const tag = "HEAD";
 const version = "2.3.0";
 
