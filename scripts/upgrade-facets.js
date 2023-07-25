@@ -47,9 +47,9 @@ const rl = readline.createInterface({
  *  2. Run the appropriate npm script in package.json to upgrade facets for a given network
  *  3. Save changes to the repo as a record of what was upgraded
  */
-async function main(env, facetConfig, version) {
+async function main(env, facetConfig, version, functionNamesToSelector) {
   // Bail now if hardhat network, unless the upgrade is tested
-  if (network === "hardhat" && env !== "upgrade-test") process.exit();
+  if (network === "hardhat" && env !== "upgrade-test" && env != "dry-run") process.exit();
 
   const { chainId } = await provider.getNetwork();
   const contractsFile = readContracts(chainId, network, env);
@@ -144,7 +144,8 @@ async function main(env, facetConfig, version) {
   const interfacesToRemove = {},
     interfacesToAdd = {};
   const removedSelectors = []; // global list of selectors to be removed
-  let selectorsToNameMapping = {};
+
+  functionNamesToSelector = JSON.parse(functionNamesToSelector);
 
   // Remove facets
   for (const facetToRemove of facets.remove) {
@@ -159,9 +160,6 @@ async function main(env, facetConfig, version) {
       // Facet does not exist, skip next steps
       continue;
     }
-
-    const { signatureToNameMapping } = getSelectors(oldFacet, true);
-    selectorsToNameMapping = { ...selectorsToNameMapping, ...signatureToNameMapping };
 
     // Remove old entry from contracts
     contracts = contracts.filter((i) => i.name !== facetToRemove);
@@ -222,7 +220,7 @@ async function main(env, facetConfig, version) {
 
     // Get new selectors from compiled contract
     let { selectors: newSelectors, signatureToNameMapping } = getSelectors(newFacet.contract, true);
-    selectorsToNameMapping = { ...selectorsToNameMapping, ...signatureToNameMapping };
+    functionNamesToSelector = { ...functionNamesToSelector, ...signatureToNameMapping };
 
     // Initialize selectors should not be added
     const facetFactory = await getContractFactory(newFacet.name);
@@ -317,8 +315,6 @@ async function main(env, facetConfig, version) {
     }
   }
 
-  console.log("3");
-
   // Get ProtocolInitializationHandlerFacet from deployedFacets when added/replaced in this upgrade or get it from contracts if already deployed
   let protocolInitializationFacet = await getInitializationFacet(deployedFacets, contracts);
   const facetsToInit = deployedFacets.filter((facet) => facet.initialize) ?? [];
@@ -351,7 +347,7 @@ async function main(env, facetConfig, version) {
       return facetCut.toObject();
     });
 
-    logFacetCut(cut, selectorsToNameMapping);
+    logFacetCut(cut, functionNamesToSelector);
   }
 
   console.log(`\n💀 Removed facets:\n\t${facets.remove.join("\n\t")}`);
@@ -369,7 +365,6 @@ async function main(env, facetConfig, version) {
         .join("\n\t")}`
     );
 
-  console.log("5");
   console.log(divider);
 
   if (postUpgrade) {
@@ -434,14 +429,14 @@ const getInitializationFacet = async (deployedFacets, contracts) => {
   return protocolInitializationFacet;
 };
 
-const logFacetCut = (cut, selectorsToNameMapping) => {
+const logFacetCut = (cut, functionNamesToSelector) => {
   for (const action in FacetCutAction) {
     cut
       .filter((c) => c.action == FacetCutAction[action])
       .forEach((c) => {
         console.log(
           `💎 ${action} selectors:\n\t${c.functionSelectors
-            .map((selector) => `${selectorsToNameMapping[selector]}: ${selector}`)
+            .map((selector) => `${functionNamesToSelector[selector]}: ${selector}`)
             .join("\n\t")}`
         );
       });

@@ -1,4 +1,6 @@
 const shell = require("shelljs");
+
+const { getStateModifyingFunctionsHashes, getSelectors } = require("../../scripts/util/diamond-utils.js");
 const axios = require("axios");
 const environments = require("../../environments");
 const Role = require("../domain/Role");
@@ -78,57 +80,67 @@ async function migrate(env) {
 
     const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
 
-    //    console.log("Pausing the Seller region...");
-    //    let pauseHandler = await getContractAt("IBosonPauseHandler", protocolAddress);
-    //    await pauseHandler.pause([PausableRegion.Sellers], await getFees(maxPriorityFeePerGas));
+    console.log("Pausing the Seller region...");
+    let pauseHandler = await getContractAt("IBosonPauseHandler", protocolAddress);
+    await pauseHandler.pause([PausableRegion.Sellers], await getFees(maxPriorityFeePerGas));
 
     // Checking old version contracts to get selectors to remove
     // ToDo: at 451dc3d, no selectors to remove. Comment out this section. It will be needed when other changes are merged into main
-    // console.log("Checking out contracts on version 2.2.1");
-    // shell.exec(`rm -rf contracts/*`);
-    // shell.exec(`git checkout v2.2.1 contracts`);
+    const oldTag = "v2.2.1";
+    console.log("Checking out contracts on version 2.2.1");
+    shell.exec(`rm -rf contracts/*`);
+    shell.exec(`git checkout ${oldTag} contracts package.json package-lock.json`);
 
-    // console.log("Compiling old contracts");
-    // await hre.run("clean");
-    // await hre.run("compile");
+    shell.exec("npm install");
 
-    // const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
-    //   ["SellerHandlerFacet", "OrchestrationHandlerFacet1"],
-    //   undefined,
-    //   ["createSeller", "updateSeller"]
-    // );
+    console.log("Compiling old contracts");
+    await hre.run("clean");
+    await hre.run("compile");
 
-    // const selectorsToRemove = await getFunctionHashesClosure();
+    let functionNamesToSelector = {};
+
+    for (const facet of config.addOrUpgrade) {
+      const facetContract = await getContractAt(facet, protocolAddress);
+      const { signatureToNameMapping } = getSelectors(facetContract, true);
+      functionNamesToSelector = { ...functionNamesToSelector, ...signatureToNameMapping };
+    }
+
+    const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
+      ["SellerHandlerFacet", "OrchestrationHandlerFacet1", "OfferHandlerFacet", "ConfigHandlerFacet"],
+      undefined,
+      ["createSeller", "updateSeller", "createOffer", "createPremintedOffer"]
+    );
+
+    const selectorsToRemove = await getFunctionHashesClosure();
+    console.log("selectorsToRemove", selectorsToRemove);
 
     if (env != "upgrade-test") {
       const creators = await fetchSellerCreators();
-      console.log("creators", creators);
+      //console.log("creators", creators);
     }
 
     console.log(`Checking out contracts on version ${tag}`);
     shell.exec(`rm -rf contracts/*`);
-    shell.exec(`git checkout ${tag} contracts`);
+    shell.exec(`git checkout ${tag} contracts package.json package-lock.json`);
+
+    shell.exec("npm install");
 
     console.log("Compiling contracts");
     await hre.run("clean");
     await hre.run("compile");
-
     console.log("Executing upgrade facets script");
     await hre.run("upgrade-facets", {
       env,
       facetConfig: JSON.stringify(config),
       newVersion: version,
+      functionNamesToSelector: JSON.stringify(functionNamesToSelector),
     });
 
-    // const selectorsToAdd = await getFunctionHashesClosure();
-
-    // const metaTransactionHandlerFacet = await ethers.getContractAt("MetaTransactionsHandlerFacet", protocolAddress);
-
-    // console.log("Removing selectors", selectorsToRemove.join(","));
-    // await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToRemove, false);
-    // console.log("Adding selectors", selectorsToAdd.join(","));
-    // await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToAdd, true);
-    //
+    const metaTransactionHandlerFacet = await getContractAt("MetaTransactionsHandlerFacet", protocolAddress);
+    console.log("Removing selectors", selectorsToRemove.join(","));
+    await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToRemove, false);
+    console.log("Adding selectors", selectorsToAdd.join(","));
+    await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToAdd, true);
 
     console.log("Executing upgrade clients script");
     // TODO get correct forwarder address
@@ -148,9 +160,11 @@ async function migrate(env) {
       newVersion: version,
     });
 
-    //    console.log("Unpausing all regions...");
-    //    pauseHandler = await getContractAt("IBosonPauseHandler", protocolAddress);
-    //    await pauseHandler.unpause([], await getFees(maxPriorityFeePerGas));
+    const selectorsToAdd = await getFunctionHashesClosure();
+
+    console.log("Unpausing all regions...");
+    pauseHandler = await getContractAt("IBosonPauseHandler", protocolAddress);
+    await pauseHandler.unpause([], await getFees(maxPriorityFeePerGas));
 
     shell.exec(`git checkout HEAD`);
     console.log(`Migration ${tag} completed`);

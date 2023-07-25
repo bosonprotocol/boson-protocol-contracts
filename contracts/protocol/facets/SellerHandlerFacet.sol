@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.18;
 
-import "hardhat/console.sol";
 import "../../domain/BosonConstants.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { SellerBase } from "../bases/SellerBase.sol";
@@ -364,8 +363,6 @@ contract SellerHandlerFacet is SellerBase {
         Collection[] storage sellersAdditionalCollections = lookups.additionalCollections[sellerId];
         uint256 collectionIndex = sellersAdditionalCollections.length + 1; // 0 is reserved for the original collection
 
-        console.log("collectionIndex: %s", collectionIndex);
-        console.log("_externalId: %s", _externalId);
         // Create clone and store its address to additionalCollections
         address voucherCloneAddress = cloneBosonVoucher(
             sellerId,
@@ -375,7 +372,6 @@ contract SellerHandlerFacet is SellerBase {
             _voucherInitValues,
             _externalId
         );
-        console.log("voucherCloneAddress: %s", voucherCloneAddress);
 
         // Store collection details
         Collection storage newCollection = sellersAdditionalCollections.push();

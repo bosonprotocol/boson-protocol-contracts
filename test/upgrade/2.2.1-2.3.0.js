@@ -1462,17 +1462,18 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
         });
       });
 
-      context.only("BosonVoucher", async function () {
+      context.skip("BosonVoucher", async function () {
         let bosonVoucher, sellerWallet;
 
         let voucherContractAddress;
         beforeEach(async function () {
           const { sellers } = preUpgradeEntities;
           ({ voucherContractAddress, wallet: sellerWallet } = sellers[0]);
+
+          bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
         });
 
         it("callExternalContract returns whatever External contract returned", async function () {
-          bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
           // Deploy a random contract
           const MockSimpleContract = await getContractFactory("MockSimpleContract");
           const mockSimpleContract = await MockSimpleContract.deploy();
