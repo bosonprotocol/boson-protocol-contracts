@@ -43,7 +43,6 @@ const config = {
     // @TODO get correct constructor args
     ExchangeHandlerFacet: { init: [], constructorArgs: [1] },
   }, // must match nextExchangeId at the time of the upgrade
-  initializationData: abiCoder.encode(["uint256", "uint256[]", "address[]"], [oneWeek, [], []]),
 };
 
 async function migrate(env) {
@@ -116,7 +115,11 @@ async function migrate(env) {
 
     if (env != "upgrade-test") {
       const creators = await fetchSellerCreators();
-      //console.log("creators", creators);
+      config.initializationData = abiCoder.encode(
+        ["uint256", "uint256[]", "address[]"],
+        [oneWeek, creators.map((c) => c.id), creators.map((c) => c.creator)]
+      );
+      console.log("config.initializationData", config.initializationData);
     }
 
     console.log(`Checking out contracts on version ${tag}`);
@@ -136,6 +139,7 @@ async function migrate(env) {
       functionNamesToSelector: JSON.stringify(functionNamesToSelector),
     });
 
+    const selectorsToAdd = await getFunctionHashesClosure();
     const metaTransactionHandlerFacet = await getContractAt("MetaTransactionsHandlerFacet", protocolAddress);
     console.log("Removing selectors", selectorsToRemove.join(","));
     await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToRemove, false);
@@ -159,8 +163,6 @@ async function migrate(env) {
       clientConfig: JSON.stringify(clientConfig),
       newVersion: version,
     });
-
-    const selectorsToAdd = await getFunctionHashesClosure();
 
     console.log("Unpausing all regions...");
     pauseHandler = await getContractAt("IBosonPauseHandler", protocolAddress);
