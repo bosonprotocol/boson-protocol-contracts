@@ -17,6 +17,8 @@ const network = hre.network.name;
 const abiCoder = new ethers.AbiCoder();
 const tag = "HEAD";
 const version = "2.3.0";
+const { EXCHANGE_ID_2_2_0 } = require("../config/protocol-parameters");
+const { META_TRANSACTION_FORWARDER } = require("../config/client-upgrade");
 
 const config = {
   // status at 451dc3d. ToDo: update this to the latest commit
@@ -40,7 +42,7 @@ const config = {
   skipSelectors: {},
   facetsToInit: {
     // @TODO get correct constructor args
-    ExchangeHandlerFacet: { init: [], constructorArgs: [1] },
+    ExchangeHandlerFacet: { init: [], constructorArgs: [EXCHANGE_ID_2_2_0[network]] },
   }, // must match nextExchangeId at the time of the upgrade
 };
 
@@ -146,15 +148,11 @@ async function migrate(env) {
     await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToAdd, true);
 
     console.log("Executing upgrade clients script");
-    // TODO get correct forwarder address
-    const MockForwarder = await getContractFactory("MockForwarder");
-    const forwarder = await MockForwarder.deploy();
 
     const clientConfig = {
-      META_TRANSACTION_FORWARDER: {
-        hardhat: await forwarder.getAddress(),
-      },
+      META_TRANSACTION_FORWARDER,
     };
+    console.log(clientConfig);
 
     // Upgrade clients
     await hre.run("upgrade-clients", {
@@ -177,21 +175,18 @@ async function migrate(env) {
 }
 
 async function fetchSellerCreators(env) {
-const network =
-    switch(true) {
-      case env.includes("prod"):
-        return "polygon";
-      case env.includes("staging"):
-        return 'mumbai-staging';
-      case env.includes("test"):
-        return 'mumbai-testing';
-      default:
-        throw new Error("There is no subgraph for this environment");
-    }
+  let network;
+  if (env.includes("prod")) {
+    network = "polygon";
+  } else if (env.includes("staging")) {
+    network = "mumbai-staging";
+  } else if (env.includes("test")) {
+    network = "mumbai-testing";
+  } else {
+    throw new Error("There is no subgraph for this chain");
+  }
+  console.log(network);
 
-  console.log(network)
-
-  // TODO make this based on the network
   const url = `https://api.thegraph.com/subgraphs/name/bosonprotocol/${network}`;
 
   const data = {

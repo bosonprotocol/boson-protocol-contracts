@@ -22,7 +22,7 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 
 const { FundsList } = require("../../scripts/domain/Funds");
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
-const { toHexString, readContracts } = require("../../scripts/util/utils.js");
+const { toHexString } = require("../../scripts/util/utils.js");
 const {
   mockSeller,
   mockAuthToken,
@@ -403,7 +403,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
 
           // Commit to offer and redeem voucher
           // Use unique wallets to avoid nonce issues
-          // TODO use nonce manager
           const walletSet = wallets.slice(0, exchangesCount);
 
           for (let i = 0; i < exchangesCount; i++) {
@@ -884,10 +883,9 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
             );
 
             // TODO fix withArgs
-            await expect(
-              accountHandler.connect(sellerWallet).createNewCollection(externalId, voucherInitValues)
-            ).to.emit(accountHandler, "CollectionCreated");
-            //             .withArgs(sellerId, 1, expectedCollectionAddress, externalId, sellerawait wallet.getAddress());
+            await expect(accountHandler.connect(sellerWallet).createNewCollection(externalId, voucherInitValues))
+              .to.emit(accountHandler, "CollectionCreated")
+              .withArgs(sellerId, 1, expectedCollectionAddress, externalId, seller.wallet);
 
             const expectedCollections = new CollectionList([new Collection(expectedCollectionAddress, externalId)]);
 
@@ -1416,7 +1414,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
         });
       });
 
-      context.skip("MetaTransactionHandler", async function () {
+      context("MetaTransactionHandler", async function () {
         it("Function hashes from removedFunctionsHashes list should not be allowlisted", async function () {
           for (const hash of removedFunctionHashes) {
             const isFunctionAllowlisted = contractsAfter.metaTransactionsHandler.getFunction(
@@ -1462,7 +1460,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
         });
       });
 
-      context.skip("BosonVoucher", async function () {
+      context("BosonVoucher", async function () {
         let bosonVoucher, sellerWallet;
 
         let voucherContractAddress;
@@ -1519,7 +1517,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
             .withArgs(Number(seller.id), 1, expectedCollectionAddress, externalId, assistant.address);
 
           bosonVoucher = await getContractAt("BosonVoucher", expectedDefaultAddress);
-          console.log(await bosonVoucher.tokenURI(666));
           await expect(bosonVoucher.tokenURI(666)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
         });
       });

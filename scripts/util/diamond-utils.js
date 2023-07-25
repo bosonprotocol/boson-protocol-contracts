@@ -150,17 +150,11 @@ async function getStateModifyingFunctions(facetNames, omitFunctions = [], onlyFu
     const functions = FacetContractFactory.interface.fragments;
     const facetStateModifyingFunctions = functions
       .filter((fn) => {
-        if (fn.type == "function" && fn.stateMutability !== "view" && !omitFunctions.some((f) => f.includes(fn.name))) {
+        if (fn.type == "function" && fn.stateMutability !== "view" && !omitFunctions.some((f) => fn.name.includes(f))) {
           if (onlyFunctions.length === 0) {
             return true;
           }
-          console.log("fn.name", fn.name);
-          console.log("onlyFunctions", onlyFunctions);
-          console.log(
-            "onlyFunctions",
-            onlyFunctions.some((f) => f.includes(fn.name))
-          );
-          if (onlyFunctions.some((f) => f.includes(fn.name))) {
+          if (onlyFunctions.some((f) => fn.name.includes(f))) {
             return true;
           }
         }
