@@ -69,7 +69,7 @@ async function migrate(env) {
 
     const accessController = await getContractAt("AccessController", accessControllerAddress);
 
-    if (env == "upgrade-test" || env == "dry-run") {
+    if (env == "upgrade-test" || env.includes("dry-run")) {
       // TODO remove dry run from here
       const signer = (await getSigners())[0].address;
       // Grant PAUSER role to the deployer
@@ -113,7 +113,7 @@ async function migrate(env) {
     console.log("selectorsToRemove", selectorsToRemove);
 
     if (env != "upgrade-test") {
-      const creators = await fetchSellerCreators();
+      const creators = await fetchSellerCreators(env);
       config.initializationData = abiCoder.encode(
         ["uint256", "uint256[]", "address[]"],
         [oneWeek, creators.map((c) => c.id), creators.map((c) => c.creator)]
@@ -176,9 +176,23 @@ async function migrate(env) {
   }
 }
 
-async function fetchSellerCreators() {
+async function fetchSellerCreators(env) {
+const network =
+    switch(true) {
+      case env.includes("prod"):
+        return "polygon";
+      case env.includes("staging"):
+        return 'mumbai-staging';
+      case env.includes("test"):
+        return 'mumbai-testing';
+      default:
+        throw new Error("There is no subgraph for this environment");
+    }
+
+  console.log(network)
+
   // TODO make this based on the network
-  const url = "https://api.thegraph.com/subgraphs/name/bosonprotocol/polygon";
+  const url = `https://api.thegraph.com/subgraphs/name/bosonprotocol/${network}`;
 
   const data = {
     query: `query GetSellers {

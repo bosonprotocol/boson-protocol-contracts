@@ -29,7 +29,7 @@ async function setupDryRun(env) {
 
   await hre.changeNetwork("hardhat");
 
-  env = "dry-run";
+  env = `${env}-dry-run`;
 
   const { chainId } = await ethers.provider.getNetwork();
   if (chainId != "31337") process.exit(1); // make sure network is hardhat

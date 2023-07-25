@@ -28,7 +28,7 @@ const Role = require("./domain/Role");
  */
 async function main(env, clientConfig, version) {
   // Bail now if hardhat network, unless the upgrade is tested
-  if (network === "hardhat" && env !== "upgrade-test" && env != "dry-run") process.exit();
+  if (network === "hardhat" && env !== "upgrade-test" && !env.includes("dry-run")) process.exit();
 
   const { chainId } = await provider.getNetwork();
   let { contracts } = readContracts(chainId, network, env);
