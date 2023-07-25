@@ -1,0 +1,1143 @@
+Migration HEAD started
+Removing any local changes before upgrading
+Pausing the Seller region...
+Checking out contracts on version 2.2.1
+
+added 977 packages, removed 207 packages, changed 87 packages, and audited 2479 packages in 17s
+
+234 packages are looking for funding
+  run `npm fund` for details
+
+103 vulnerabilities (45 moderate, 31 high, 27 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+dependencies installed
+Compiled 154 Solidity files successfully
+Getting selectors for ConfigHandlerFacet
+{
+  '0x694ca8ab': 'getAccessControllerAddress',
+  '0x6c2c13c2': 'getAuthTokenContract',
+  '0xc2f73795': 'getBeaconProxyAddress',
+  '0x36ee008c': 'getBuyerEscalationDepositPercentage',
+  '0x899b1233': 'getMaxAllowedSellers',
+  '0x323adcce': 'getMaxDisputesPerBatch',
+  '0xeb04d54b': 'getMaxEscalationResponsePeriod',
+  '0x3d609473': 'getMaxExchangesPerBatch',
+  '0x862c6c8b': 'getMaxFeesPerDisputeResolver',
+  '0xd619f044': 'getMaxOffersPerBatch',
+  '0x942a61b4': 'getMaxOffersPerBundle',
+  '0x863b80fa': 'getMaxOffersPerGroup',
+  '0x753901b0': 'getMaxPremintedVouchers',
+  '0x32cf96ff': 'getMaxResolutionPeriod',
+  '0xa7f7801a': 'getMaxRoyaltyPecentage',
+  '0x59c75653': 'getMaxTokensPerWithdrawal',
+  '0xd3ab3d25': 'getMaxTotalOfferFeePercentage',
+  '0x8cfc4975': 'getMaxTwinsPerBundle',
+  '0xbe620a41': 'getMinDisputePeriod',
+  '0x23bbe5d5': 'getProtocolFeeFlatBoson',
+  '0x706d9f78': 'getProtocolFeePercentage',
+  '0x10fe9ae8': 'getTokenAddress',
+  '0xe0024604': 'getTreasuryAddress',
+  '0xf8aaad60': 'getVoucherBeaconAddress',
+  '0x01fa1497': 'initialize',
+  '0x6cb84158': 'setAccessControllerAddress',
+  '0x250664d4': 'setAuthTokenContract',
+  '0x31cd131e': 'setBeaconProxyAddress',
+  '0x6ba0f545': 'setBuyerEscalationDepositPercentage',
+  '0xd38416ff': 'setMaxAllowedSellers',
+  '0x65a10c2c': 'setMaxDisputesPerBatch',
+  '0x37987b52': 'setMaxEscalationResponsePeriod',
+  '0xd6134aaf': 'setMaxExchangesPerBatch',
+  '0x70d24d63': 'setMaxFeesPerDisputeResolver',
+  '0xd7ac2c47': 'setMaxOffersPerBatch',
+  '0xb54767f6': 'setMaxOffersPerBundle',
+  '0x94413c54': 'setMaxOffersPerGroup',
+  '0xbc799909': 'setMaxPremintedVouchers',
+  '0xf920fc17': 'setMaxResolutionPeriod',
+  '0x84bf1ac2': 'setMaxRoyaltyPecentage',
+  '0x0096aa98': 'setMaxTokensPerWithdrawal',
+  '0x589e4e58': 'setMaxTotalOfferFeePercentage',
+  '0xa70fdde1': 'setMaxTwinsPerBundle',
+  '0x84a91ce6': 'setMinDisputePeriod',
+  '0x4dbcca7e': 'setProtocolFeeFlatBoson',
+  '0xd8a5e936': 'setProtocolFeePercentage',
+  '0x26a4e8d2': 'setTokenAddress',
+  '0x6605bfda': 'setTreasuryAddress',
+  '0x938d1b27': 'setVoucherBeaconAddress'
+}
+Getting selectors for DisputeResolverHandlerFacet
+{
+  '0xa880fd89': 'addFeesToDisputeResolver',
+  '0x1227dbbb': 'addSellersToAllowList',
+  '0x8236d3c0': 'areSellersAllowed',
+  '0x1843b3a9': 'createDisputeResolver',
+  '0x9b646e88': 'getDisputeResolver',
+  '0x6f4fbc16': 'getDisputeResolverByAddress',
+  '0x8129fc1c': 'initialize',
+  '0x2230dd12': 'optInToDisputeResolverUpdate',
+  '0x4e534c96': 'removeFeesFromDisputeResolver',
+  '0xfa92792a': 'removeSellersFromAllowList',
+  '0x125e35ec': 'updateDisputeResolver'
+}
+Getting selectors for ExchangeHandlerFacet
+{
+  '0xbed3ac50': 'cancelVoucher',
+  '0x1f317d1c': 'commitToOffer',
+  '0x5f119c40': 'commitToPreMintedOffer',
+  '0x58477db8': 'completeExchange',
+  '0x492edd28': 'completeExchangeBatch',
+  '0x18170b73': 'expireVoucher',
+  '0x229f6943': 'extendVoucher',
+  '0x0b9d5847': 'getExchange',
+  '0xe0cdab47': 'getExchangeState',
+  '0x452ddd66': 'getNextExchangeId',
+  '0xb63e6ac3': 'getReceipt',
+  '0x8129fc1c': 'initialize',
+  '0x309bb762': 'isExchangeFinalized',
+  '0x7b02365d': 'onVoucherTransferred',
+  '0x1c6d6b5e': 'redeemVoucher',
+  '0x79a5fea9': 'revokeVoucher'
+}
+Getting selectors for FundsHandlerFacet
+{
+  '0xa07fcc70': 'depositFunds',
+  '0xc14eff97': 'getAvailableFunds',
+  '0x8129fc1c': 'initialize',
+  '0x685ef733': 'withdrawFunds',
+  '0x11ec8693': 'withdrawProtocolFees'
+}
+Getting selectors for MetaTransactionsHandlerFacet
+{
+  '0xdcb9c266': 'executeMetaTransaction',
+  '0x37ea92f5': 'initialize',
+  '0x6759b8f1': 'isFunctionAllowlisted',
+  '0xbc4d3dd0': 'isFunctionAllowlisted',
+  '0x0ee60fa7': 'isUsedNonce',
+  '0xbaafa0e3': 'setAllowlistedFunctions'
+}
+Getting selectors for OfferHandlerFacet
+{
+  '0x44c64d38': 'createOffer',
+  '0xdf3ce320': 'createOfferBatch',
+  '0xcc00c061': 'extendOffer',
+  '0xdb7af92f': 'extendOfferBatch',
+  '0x1ac3e64a': 'getAgentIdByOffer',
+  '0x1d73add8': 'getNextOfferId',
+  '0x4579268a': 'getOffer',
+  '0x8129fc1c': 'initialize',
+  '0x4bec59f4': 'isOfferVoided',
+  '0x7f5c9236': 'reserveRange',
+  '0x4915907b': 'voidOffer',
+  '0x12b52cf5': 'voidOfferBatch'
+}
+Getting selectors for OrchestrationHandlerFacet1
+{
+  '0x34fa96a6': 'createOfferAddToGroup',
+  '0x36358824': 'createOfferAndTwinWithBundle',
+  '0x1b002277': 'createOfferWithCondition',
+  '0x3e03b0f6': 'createOfferWithConditionAndTwinAndBundle',
+  '0x6c943896': 'createPremintedOfferAddToGroup',
+  '0x34e80651': 'createPremintedOfferAndTwinWithBundle',
+  '0xf69c9a40': 'createPremintedOfferWithCondition',
+  '0xf9384c29': 'createPremintedOfferWithConditionAndTwinAndBundle',
+  '0xfbf346df': 'createSellerAndOffer',
+  '0x2220dd97': 'createSellerAndOfferAndTwinWithBundle',
+  '0xcd6047e8': 'createSellerAndOfferWithCondition',
+  '0xbe5a64d2': 'createSellerAndOfferWithConditionAndTwinAndBundle',
+  '0x33e9eeeb': 'createSellerAndPremintedOffer',
+  '0xcfad2304': 'createSellerAndPremintedOfferAndTwinWithBundle',
+  '0x30b668e5': 'createSellerAndPremintedOfferWithCondition',
+  '0xe272d776': 'createSellerAndPremintedOfferWithConditionAndTwinAndBundle',
+  '0x8129fc1c': 'initialize'
+}
+Getting selectors for PauseHandlerFacet
+{
+  '0x8129fc1c': 'initialize',
+  '0xa290249c': 'pause',
+  '0x3f4ba83a': 'unpause'
+}
+Getting selectors for DisputeHandlerFacet
+{
+  '0x04f63e12': 'decideDispute',
+  '0x20a68d25': 'escalateDispute',
+  '0x42443efd': 'expireDispute',
+  '0xae707f1e': 'expireDisputeBatch',
+  '0xf7d95f3b': 'expireEscalatedDispute',
+  '0xfb50e235': 'extendDisputeTimeout',
+  '0xe3a96cbd': 'getDispute',
+  '0xc6a470e2': 'getDisputeState',
+  '0x50f5e643': 'getDisputeTimeout',
+  '0x8129fc1c': 'initialize',
+  '0xc3c834b7': 'isDisputeFinalized',
+  '0xa5c1674e': 'raiseDispute',
+  '0xdfdcd613': 'refuseEscalatedDispute',
+  '0xb4dcefaf': 'resolveDispute',
+  '0x65f65c94': 'retractDispute'
+}
+Getting selectors for ProtocolInitializationHandlerFacet
+{ '0x0d8e6e2c': 'getVersion', '0x604d5225': 'initialize' }
+Getting selectors for SellerHandlerFacet
+{
+  '0x59b37742': 'createSeller',
+  '0xd6a9de51': 'getSeller',
+  '0x2e1528ae': 'getSellerByAddress',
+  '0x135bdebd': 'getSellerByAuthToken',
+  '0x8129fc1c': 'initialize',
+  '0xf7e469fd': 'optInToSellerUpdate',
+  '0x695ac7c9': 'updateSeller'
+}
+Getting selectors for BundleHandlerFacet
+{
+  '0x7c016ad5': 'createBundle',
+  '0x2d0821b7': 'getBundle',
+  '0xa8e31107': 'getBundleIdByOffer',
+  '0xc6cce096': 'getBundleIdByTwin',
+  '0x4475643d': 'getNextBundleId',
+  '0x8129fc1c': 'initialize'
+}
+Getting selectors for TwinHandlerFacet
+{
+  '0xb44d17eb': 'createTwin',
+  '0xa7c078d6': 'getNextTwinId',
+  '0x164a82f7': 'getTwin',
+  '0x8129fc1c': 'initialize',
+  '0x6574e3ba': 'removeTwin'
+}
+Getting selectors for GroupHandlerFacet
+{
+  '0x4ff2e056': 'addOffersToGroup',
+  '0xc1c96af8': 'createGroup',
+  '0xceb60654': 'getGroup',
+  '0x49b3cccf': 'getNextGroupId',
+  '0x8129fc1c': 'initialize',
+  '0x20dead55': 'removeOffersFromGroup',
+  '0xcb5fcf36': 'setGroupCondition'
+}
+facetName SellerHandlerFacet
+facetName OrchestrationHandlerFacet1
+facetName OfferHandlerFacet
+facetName ConfigHandlerFacet
+Checking out contracts on version HEAD
+
+added 207 packages, removed 980 packages, changed 87 packages, and audited 1706 packages in 12s
+
+202 packages are looking for funding
+  run `npm fund` for details
+
+37 vulnerabilities (30 moderate, 4 high, 3 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+Compiling contracts
+Compiled 160 Solidity files successfully
+Executing upgrade facets script
+--------------------------------------------------------------------------------
+Boson Protocol Contract Suite Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Tue Jul 25 2023 21:26:49 GMT-0300 (Brasilia Standard Time)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+✅ ConfigHandlerFacet deployed to: 0xc7A99939D8B63A02c78f1Cc9E7f0D334722EA027
+✅ DisputeResolverHandlerFacet deployed to: 0x28314F6F13AeA90865D81ca5195F7eFA870b88d9
+✅ ExchangeHandlerFacet deployed to: 0x4E34D650457953E87B308CE0848D42CD027cab3c
+✅ FundsHandlerFacet deployed to: 0x9b8c9C125FF110a54F7E7Eb257088cb6825ED637
+✅ MetaTransactionsHandlerFacet deployed to: 0x3dB93Af53e31D17C2715B31835bCd0175179cD0f
+✅ OfferHandlerFacet deployed to: 0xaCbaf088C1D7E14aF68E739c5cc2039F20911889
+✅ OrchestrationHandlerFacet1 deployed to: 0x98Eb77D8b2037FD1878B3eC3004AA663e852D740
+✅ PauseHandlerFacet deployed to: 0x59BC00faa19B44D85df7EBF92B87Ac247C4fE262
+✅ DisputeHandlerFacet deployed to: 0x45f3a0f6a65fc63f6a630ecc7937f34365878a51
+✅ ProtocolInitializationHandlerFacet deployed to: 0x5A3fdE5831862dA58CC8909C00f9C48126a658bD
+✅ SellerHandlerFacet deployed to: 0xe3CA6f621160140A4dDF641Dd4B80dABFd9c640D
+✅ BundleHandlerFacet deployed to: 0x5Edf55880be0d400cB70988f985aC9eb7cE24F82
+✅ TwinHandlerFacet deployed to: 0xC7F37f79E3dABFC55a445267C39F7C5fF2Ab70fB
+✅ GroupHandlerFacet deployed to: 0xf8Eaf433db3a17002856dC220caA31EB21b32b82
+
+📋 Facet: ConfigHandlerFacet
+💎 Add selectors:
+	getMinResolutionPeriod: 0x1b57b63d
+	setMinResolutionPeriod: 0xdda575c9
+💎 Replace selectors:
+	getAccessControllerAddress: 0x694ca8ab
+	getAuthTokenContract: 0x6c2c13c2
+	getBeaconProxyAddress: 0xc2f73795
+	getBuyerEscalationDepositPercentage: 0x36ee008c
+	getMaxEscalationResponsePeriod: 0xeb04d54b
+	getMaxResolutionPeriod: 0x32cf96ff
+	getMaxRoyaltyPecentage: 0xa7f7801a
+	getMaxTotalOfferFeePercentage: 0xd3ab3d25
+	getMinDisputePeriod: 0xbe620a41
+	getProtocolFeeFlatBoson: 0x23bbe5d5
+	getProtocolFeePercentage: 0x706d9f78
+	getTokenAddress: 0x10fe9ae8
+	getTreasuryAddress: 0xe0024604
+	getVoucherBeaconAddress: 0xf8aaad60
+	setAccessControllerAddress: 0x6cb84158
+	setAuthTokenContract: 0x250664d4
+	setBeaconProxyAddress: 0x31cd131e
+	setBuyerEscalationDepositPercentage: 0x6ba0f545
+	setMaxEscalationResponsePeriod: 0x37987b52
+	setMaxResolutionPeriod: 0xf920fc17
+	setMaxRoyaltyPecentage: 0x84bf1ac2
+	setMaxTotalOfferFeePercentage: 0x589e4e58
+	setMinDisputePeriod: 0x84a91ce6
+	setProtocolFeeFlatBoson: 0x4dbcca7e
+	setProtocolFeePercentage: 0xd8a5e936
+	setTokenAddress: 0x26a4e8d2
+	setTreasuryAddress: 0x6605bfda
+	setVoucherBeaconAddress: 0x938d1b27
+💎 Remove selectors:
+	getMaxAllowedSellers: 0x899b1233
+	getMaxDisputesPerBatch: 0x323adcce
+	getMaxExchangesPerBatch: 0x3d609473
+	getMaxFeesPerDisputeResolver: 0x862c6c8b
+	getMaxOffersPerBatch: 0xd619f044
+	getMaxOffersPerBundle: 0x942a61b4
+	getMaxOffersPerGroup: 0x863b80fa
+	getMaxPremintedVouchers: 0x753901b0
+	getMaxTokensPerWithdrawal: 0x59c75653
+	getMaxTwinsPerBundle: 0x8cfc4975
+	setMaxAllowedSellers: 0xd38416ff
+	setMaxDisputesPerBatch: 0x65a10c2c
+	setMaxExchangesPerBatch: 0xd6134aaf
+	setMaxFeesPerDisputeResolver: 0x70d24d63
+	setMaxOffersPerBatch: 0xd7ac2c47
+	setMaxOffersPerBundle: 0xb54767f6
+	setMaxOffersPerGroup: 0x94413c54
+	setMaxPremintedVouchers: 0xbc799909
+	setMaxTokensPerWithdrawal: 0x0096aa98
+	setMaxTwinsPerBundle: 0xa70fdde1
+
+📋 Facet: DisputeResolverHandlerFacet
+💎 Replace selectors:
+	addFeesToDisputeResolver: 0xa880fd89
+	addSellersToAllowList: 0x1227dbbb
+	areSellersAllowed: 0x8236d3c0
+	createDisputeResolver: 0x1843b3a9
+	getDisputeResolver: 0x9b646e88
+	getDisputeResolverByAddress: 0x6f4fbc16
+	optInToDisputeResolverUpdate: 0x2230dd12
+	removeFeesFromDisputeResolver: 0x4e534c96
+	removeSellersFromAllowList: 0xfa92792a
+	updateDisputeResolver: 0x125e35ec
+
+📋 Facet: ExchangeHandlerFacet
+💎 Add selectors:
+	commitToConditionalOffer: 0x2334fd56
+💎 Replace selectors:
+	cancelVoucher: 0xbed3ac50
+	commitToOffer: 0x1f317d1c
+	commitToPreMintedOffer: 0x5f119c40
+	completeExchange: 0x58477db8
+	completeExchangeBatch: 0x492edd28
+	expireVoucher: 0x18170b73
+	extendVoucher: 0x229f6943
+	getExchange: 0x0b9d5847
+	getExchangeState: 0xe0cdab47
+	getNextExchangeId: 0x452ddd66
+	getReceipt: 0xb63e6ac3
+	isExchangeFinalized: 0x309bb762
+	onVoucherTransferred: 0x7b02365d
+	redeemVoucher: 0x1c6d6b5e
+	revokeVoucher: 0x79a5fea9
+
+📋 Facet: FundsHandlerFacet
+💎 Add selectors:
+	getAllAvailableFunds: 0x573f625a
+	getAvailableFunds: 0x6c48b1fa
+	getTokenList: 0x41b63bd8
+	getTokenListPaginated: 0x8c46317f
+💎 Replace selectors:
+	depositFunds: 0xa07fcc70
+	withdrawFunds: 0x685ef733
+	withdrawProtocolFees: 0x11ec8693
+💎 Remove selectors:
+	getAvailableFunds: 0xc14eff97
+
+📋 Facet: MetaTransactionsHandlerFacet
+💎 Replace selectors:
+	executeMetaTransaction: 0xdcb9c266
+	isFunctionAllowlisted: 0x6759b8f1
+	isFunctionAllowlisted: 0xbc4d3dd0
+	isUsedNonce: 0x0ee60fa7
+	setAllowlistedFunctions: 0xbaafa0e3
+
+📋 Facet: OfferHandlerFacet
+💎 Add selectors:
+	createOffer: 0xbd0e4b3c
+	createOfferBatch: 0x264ed13a
+💎 Replace selectors:
+	extendOffer: 0xcc00c061
+	extendOfferBatch: 0xdb7af92f
+	getAgentIdByOffer: 0x1ac3e64a
+	getNextOfferId: 0x1d73add8
+	getOffer: 0x4579268a
+	isOfferVoided: 0x4bec59f4
+	reserveRange: 0x7f5c9236
+	voidOffer: 0x4915907b
+	voidOfferBatch: 0x12b52cf5
+💎 Remove selectors:
+	createOffer: 0x44c64d38
+	createOfferBatch: 0xdf3ce320
+
+📋 Facet: OrchestrationHandlerFacet1
+💎 Add selectors:
+	createOfferAddToGroup: 0x707d33af
+	createOfferAndTwinWithBundle: 0xc6c9d615
+	createOfferWithCondition: 0x8b388363
+	createOfferWithConditionAndTwinAndBundle: 0x17c92c86
+	createPremintedOfferAddToGroup: 0x041d740b
+	createPremintedOfferAndTwinWithBundle: 0x5cace001
+	createPremintedOfferWithCondition: 0xaa4ec1cb
+	createPremintedOfferWithConditionAndTwinAndBundle: 0x73e6c0a0
+	createSellerAndOffer: 0x0cd71e19
+	createSellerAndOfferAndTwinWithBundle: 0x6a676392
+	createSellerAndOfferWithCondition: 0xa1cfa742
+	createSellerAndOfferWithConditionAndTwinAndBundle: 0x20c80950
+	createSellerAndPremintedOffer: 0xb685f766
+	createSellerAndPremintedOfferAndTwinWithBundle: 0x6eed94a2
+	createSellerAndPremintedOfferWithCondition: 0x9c6ee13a
+	createSellerAndPremintedOfferWithConditionAndTwinAndBundle: 0x26926cc5
+💎 Remove selectors:
+	createOfferAddToGroup: 0x34fa96a6
+	createOfferAndTwinWithBundle: 0x36358824
+	createOfferWithCondition: 0x1b002277
+	createOfferWithConditionAndTwinAndBundle: 0x3e03b0f6
+	createPremintedOfferAddToGroup: 0x6c943896
+	createPremintedOfferAndTwinWithBundle: 0x34e80651
+	createPremintedOfferWithCondition: 0xf69c9a40
+	createPremintedOfferWithConditionAndTwinAndBundle: 0xf9384c29
+	createSellerAndOffer: 0xfbf346df
+	createSellerAndOfferAndTwinWithBundle: 0x2220dd97
+	createSellerAndOfferWithCondition: 0xcd6047e8
+	createSellerAndOfferWithConditionAndTwinAndBundle: 0xbe5a64d2
+	createSellerAndPremintedOffer: 0x33e9eeeb
+	createSellerAndPremintedOfferAndTwinWithBundle: 0xcfad2304
+	createSellerAndPremintedOfferWithCondition: 0x30b668e5
+	createSellerAndPremintedOfferWithConditionAndTwinAndBundle: 0xe272d776
+
+📋 Facet: PauseHandlerFacet
+💎 Add selectors:
+	getPausedRegions: 0x5e086f2f
+	unpause: 0x8b93dd63
+💎 Replace selectors:
+	pause: 0xa290249c
+💎 Remove selectors:
+	unpause: 0x3f4ba83a
+
+📋 Facet: DisputeHandlerFacet
+💎 Replace selectors:
+	decideDispute: 0x04f63e12
+	escalateDispute: 0x20a68d25
+	expireDispute: 0x42443efd
+	expireDisputeBatch: 0xae707f1e
+	expireEscalatedDispute: 0xf7d95f3b
+	extendDisputeTimeout: 0xfb50e235
+	getDispute: 0xe3a96cbd
+	getDisputeState: 0xc6a470e2
+	getDisputeTimeout: 0x50f5e643
+	isDisputeFinalized: 0xc3c834b7
+	raiseDispute: 0xa5c1674e
+	refuseEscalatedDispute: 0xdfdcd613
+	resolveDispute: 0xb4dcefaf
+	retractDispute: 0x65f65c94
+
+📋 Facet: ProtocolInitializationHandlerFacet
+💎 Replace selectors:
+	getVersion: 0x0d8e6e2c
+
+📋 Facet: SellerHandlerFacet
+💎 Add selectors:
+	createNewCollection: 0x83e6584a
+	getSellersCollections: 0x1058e0c6
+💎 Replace selectors:
+	createSeller: 0x59b37742
+	getSeller: 0xd6a9de51
+	getSellerByAddress: 0x2e1528ae
+	getSellerByAuthToken: 0x135bdebd
+	optInToSellerUpdate: 0xf7e469fd
+	updateSeller: 0x695ac7c9
+
+📋 Facet: BundleHandlerFacet
+💎 Replace selectors:
+	createBundle: 0x7c016ad5
+	getBundle: 0x2d0821b7
+	getBundleIdByOffer: 0xa8e31107
+	getBundleIdByTwin: 0xc6cce096
+	getNextBundleId: 0x4475643d
+
+📋 Facet: TwinHandlerFacet
+💎 Replace selectors:
+	createTwin: 0xb44d17eb
+	getNextTwinId: 0xa7c078d6
+	getTwin: 0x164a82f7
+	removeTwin: 0x6574e3ba
+
+📋 Facet: GroupHandlerFacet
+💎 Add selectors:
+	createGroup: 0x165a8b07
+	setGroupCondition: 0xec138990
+💎 Replace selectors:
+	addOffersToGroup: 0x4ff2e056
+	getGroup: 0xceb60654
+	getNextGroupId: 0x49b3cccf
+	removeOffersFromGroup: 0x20dead55
+💎 Remove selectors:
+	createGroup: 0xc1c96af8
+	setGroupCondition: 0xcb5fcf36
+
+💀 Removed facets:
+	
+📋 Added interfaces:
+	0xbc28d3e6 (ConfigHandlerFacet)
+	0xc0342297 (ExchangeHandlerFacet)
+	0x2f4a64d7 (FundsHandlerFacet)
+	0xa1e3b91c (OfferHandlerFacet)
+	0xd66094dc (OrchestrationHandlerFacet1)
+	0x770b96d0 (PauseHandlerFacet)
+	0x868de65b (SellerHandlerFacet)
+	0x1260850f (GroupHandlerFacet)
+💀 Removed interfaces:
+	0xe393ad01 (ConfigHandlerFacet)
+	0xe300dfc1 (ExchangeHandlerFacet)
+	0x18834247 (FundsHandlerFacet)
+	0xa1598d02 (OfferHandlerFacet)
+	0x0c62d8e3 (OrchestrationHandlerFacet1)
+	0x9ddb8ca6 (PauseHandlerFacet)
+	0x15335ed7 (SellerHandlerFacet)
+	0xe2bf2256 (GroupHandlerFacet)
+--------------------------------------------------------------------------------
+
+📋 New version: 2.3.0
+--------------------------------------------------------------------------------
+✅ Contracts written to /Users/anajulia/dev/code/boson-protocol-contracts/scripts/util/../../addresses/80001-hardhat-test-dry-run.json
+--------------------------------------------------------------------------------
+
+📋 Diamond upgraded.
+
+
+facetName SellerHandlerFacet
+facetName OrchestrationHandlerFacet1
+facetName OfferHandlerFacet
+facetName ConfigHandlerFacet
+Removing selectors 0x59b3774271ad2ce7cc4a964dd442fdde6a809e8dfd3eb4ac5f6e579fa898cf69,0x695ac7c9eb6f7d89e6bf0dd7799049908d2c07e3178d254632f239a807c51cd3,0x34fa96a697bb35f3a16a0ecd1fbbca12f084d2fe335fc54eb4a7032092c74c33,0x3635882429ecf7427e1d090edff7038f6d8b32e69247f4dfcc8bb1aea18e7617,0x1b002277f50ea47601c7446146c19b0603fc425d8b3db37aa07e12271713db19,0x3e03b0f6491639aad746484d776881edb4b355319b1a7fbf77e1a05d5c0139a2,0x6c9438963ac3ab915f3ed3989682db91152b626badcb0f5912ee6ab094d22fae,0x34e80651930420944e6cd28627fdd6be582c32c487b038e3ca233c110f99c360,0xf69c9a40831710bc6151c351c2487c5691ad9933e9e6f885080690d7888342f1,0xf9384c29daa2f0aff169fc2062cd19d14da2dd568f027aec4d99c8e3d25b688b,0xfbf346df886f09306aa58642ed3d51dac939d9530e9a964a6709df6c1fe095ce,0x2220dd970bc6c8a043ce33fac30e3fadfd1566d3883da9e23d8503fd472fc6f6,0xcd6047e82d2d8d14fdf1bf3de4097f00bc6f1d342e8cb1ac72e13df6e75465fa,0xbe5a64d26f6fb5e8d6c406b1920da649830283ce454c2f66f1450d3aeaa5951f,0x33e9eeeb875164148e64881660776c51e37b91bf88d121dd594559158a6826b0,0xcfad23046ca3f5712a8d3a12867efe841d9d9092978cb8cddd0ff11ec302e493,0x30b668e56aef5dae1f32985f6da701092fe97a1cd9c650d401c51cfc4507b6b1,0xe272d77605996cc5fb44fed0b5a9e9bc916eba4cb81f14fe6baae7a11bd8a852,0x44c64d38103a262e536c7d44b00850ee7d39568e0a5e23a07cc0db96d8ca588b,0xdf3ce320c0a4e7295bf81a5ad49769fcb25784d66f5d4a39b978501163fda0dd
+Adding selectors 0x59b3774271ad2ce7cc4a964dd442fdde6a809e8dfd3eb4ac5f6e579fa898cf69,0x695ac7c9eb6f7d89e6bf0dd7799049908d2c07e3178d254632f239a807c51cd3,0x707d33af04d7f029de0fe3eaf65fda22ec27c241a62bcd8239df84ff6d59010e,0xc6c9d61561df4f5cb050c847c564d0e70f99a37fdf35d0fc4cf2b6d6e3a9ef45,0x8b3883630c5bfd7a202e746e0f7e10a875896857ca25ef939d88117183afc939,0x17c92c8656de5f324d5849fce2244ad5ba94527f3e8a15ddb90766415ceeefa2,0x041d740bc5e6e8d6255ca844d13c30ed58a3ee7ee1be3f0fbf7b516cc68c73e7,0x5cace0016db70007238743a6aa35521b897e6c2dcc4f9e67cac4b578ec37a3ca,0xaa4ec1cbe7e16341baae296e9f377f7208a41ff118ebdab943342b7cf9c358e4,0x73e6c0a09bf80d99045b8b84777a4935bd5afc88d354aeddf7f98cb2694b28c9,0x0cd71e191d429be0da8fca40c5a0b5e6bad0f98bec2d9c0297ca362d3ea203b0,0x6a6763924d1c66b17df8a79a6be27c903a3f42251df1a4ca5845a44b749c8423,0xa1cfa742272450bb9f3da42c16fcfb88987399f9f4f767bdf1ecad175fee2abb,0x20c80950204753ebbd44ec2f686b432474d00ae81b7dcb09577d6a6048345764,0xb685f7661130fb18440e26d70bfb8f8f3b681ea2dc286f2c101d7f024dfedc31,0x6eed94a2c1d9879f492c69081bbd7a7bc9acf6cf3ed1814a1460f76136862efb,0x9c6ee13abd4964bd3b086f65c2af80139257d6f33353d0865c1fb7376cc6e403,0x26926cc53b85a430e68912ccae8b72df6b895862929c889341b965ba46217770,0xbd0e4b3ca96bfe7d7c028498fe528902d696f09580c032f7792d2ed450fe60a5,0x264ed13a1ee4bde6beca80843165a845c53ebc1f7ff0a9d4bda6f33392efc848
+Executing upgrade clients script
+--------------------------------------------------------------------------------
+Boson Protocol Client Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Tue Jul 25 2023 21:28:21 GMT-0300 (Brasilia Standard Time)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+
+📋 Deploying new logic contract
+
+📋 Updating implementation address on beacon
+✅ BosonVoucher Logic deployed to: 0xBc0531d17c7576d20C4D7eE65A6A0671e9b2491B
+--------------------------------------------------------------------------------
+✅ Contracts written to /Users/anajulia/dev/code/boson-protocol-contracts/scripts/util/../../addresses/80001-hardhat-test-dry-run.json
+--------------------------------------------------------------------------------
+
+📋 Client upgraded.
+
+
+Unpausing all regions...
+Your branch and 'origin/upgrade-2.3.0-tests' have diverged,
+and have 1 and 1 different commits each, respectively.
+  (use "git pull" to merge the remote branch into yours)
+Migration HEAD completed
+Ether spent:  0.0
+Migration HEAD started
+Removing any local changes before upgrading
+Pausing the Seller region...
+Checking out contracts on version 2.2.1
+access
+diamond
+domain
+example
+ext_libs
+interfaces
+mock
+protocol
+
+added 977 packages, removed 207 packages, changed 87 packages, and audited 2479 packages in 58s
+
+234 packages are looking for funding
+  run `npm fund` for details
+
+103 vulnerabilities (45 moderate, 31 high, 27 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+dependencies installed
+Compiled 154 Solidity files successfully
+Getting selectors for ConfigHandlerFacet
+{
+  '0x694ca8ab': 'getAccessControllerAddress',
+  '0x6c2c13c2': 'getAuthTokenContract',
+  '0xc2f73795': 'getBeaconProxyAddress',
+  '0x36ee008c': 'getBuyerEscalationDepositPercentage',
+  '0x899b1233': 'getMaxAllowedSellers',
+  '0x323adcce': 'getMaxDisputesPerBatch',
+  '0xeb04d54b': 'getMaxEscalationResponsePeriod',
+  '0x3d609473': 'getMaxExchangesPerBatch',
+  '0x862c6c8b': 'getMaxFeesPerDisputeResolver',
+  '0xd619f044': 'getMaxOffersPerBatch',
+  '0x942a61b4': 'getMaxOffersPerBundle',
+  '0x863b80fa': 'getMaxOffersPerGroup',
+  '0x753901b0': 'getMaxPremintedVouchers',
+  '0x32cf96ff': 'getMaxResolutionPeriod',
+  '0xa7f7801a': 'getMaxRoyaltyPecentage',
+  '0x59c75653': 'getMaxTokensPerWithdrawal',
+  '0xd3ab3d25': 'getMaxTotalOfferFeePercentage',
+  '0x8cfc4975': 'getMaxTwinsPerBundle',
+  '0xbe620a41': 'getMinDisputePeriod',
+  '0x23bbe5d5': 'getProtocolFeeFlatBoson',
+  '0x706d9f78': 'getProtocolFeePercentage',
+  '0x10fe9ae8': 'getTokenAddress',
+  '0xe0024604': 'getTreasuryAddress',
+  '0xf8aaad60': 'getVoucherBeaconAddress',
+  '0x01fa1497': 'initialize',
+  '0x6cb84158': 'setAccessControllerAddress',
+  '0x250664d4': 'setAuthTokenContract',
+  '0x31cd131e': 'setBeaconProxyAddress',
+  '0x6ba0f545': 'setBuyerEscalationDepositPercentage',
+  '0xd38416ff': 'setMaxAllowedSellers',
+  '0x65a10c2c': 'setMaxDisputesPerBatch',
+  '0x37987b52': 'setMaxEscalationResponsePeriod',
+  '0xd6134aaf': 'setMaxExchangesPerBatch',
+  '0x70d24d63': 'setMaxFeesPerDisputeResolver',
+  '0xd7ac2c47': 'setMaxOffersPerBatch',
+  '0xb54767f6': 'setMaxOffersPerBundle',
+  '0x94413c54': 'setMaxOffersPerGroup',
+  '0xbc799909': 'setMaxPremintedVouchers',
+  '0xf920fc17': 'setMaxResolutionPeriod',
+  '0x84bf1ac2': 'setMaxRoyaltyPecentage',
+  '0x0096aa98': 'setMaxTokensPerWithdrawal',
+  '0x589e4e58': 'setMaxTotalOfferFeePercentage',
+  '0xa70fdde1': 'setMaxTwinsPerBundle',
+  '0x84a91ce6': 'setMinDisputePeriod',
+  '0x4dbcca7e': 'setProtocolFeeFlatBoson',
+  '0xd8a5e936': 'setProtocolFeePercentage',
+  '0x26a4e8d2': 'setTokenAddress',
+  '0x6605bfda': 'setTreasuryAddress',
+  '0x938d1b27': 'setVoucherBeaconAddress'
+}
+Getting selectors for DisputeResolverHandlerFacet
+{
+  '0xa880fd89': 'addFeesToDisputeResolver',
+  '0x1227dbbb': 'addSellersToAllowList',
+  '0x8236d3c0': 'areSellersAllowed',
+  '0x1843b3a9': 'createDisputeResolver',
+  '0x9b646e88': 'getDisputeResolver',
+  '0x6f4fbc16': 'getDisputeResolverByAddress',
+  '0x8129fc1c': 'initialize',
+  '0x2230dd12': 'optInToDisputeResolverUpdate',
+  '0x4e534c96': 'removeFeesFromDisputeResolver',
+  '0xfa92792a': 'removeSellersFromAllowList',
+  '0x125e35ec': 'updateDisputeResolver'
+}
+Getting selectors for ExchangeHandlerFacet
+{
+  '0xbed3ac50': 'cancelVoucher',
+  '0x1f317d1c': 'commitToOffer',
+  '0x5f119c40': 'commitToPreMintedOffer',
+  '0x58477db8': 'completeExchange',
+  '0x492edd28': 'completeExchangeBatch',
+  '0x18170b73': 'expireVoucher',
+  '0x229f6943': 'extendVoucher',
+  '0x0b9d5847': 'getExchange',
+  '0xe0cdab47': 'getExchangeState',
+  '0x452ddd66': 'getNextExchangeId',
+  '0xb63e6ac3': 'getReceipt',
+  '0x8129fc1c': 'initialize',
+  '0x309bb762': 'isExchangeFinalized',
+  '0x7b02365d': 'onVoucherTransferred',
+  '0x1c6d6b5e': 'redeemVoucher',
+  '0x79a5fea9': 'revokeVoucher'
+}
+Getting selectors for FundsHandlerFacet
+{
+  '0xa07fcc70': 'depositFunds',
+  '0xc14eff97': 'getAvailableFunds',
+  '0x8129fc1c': 'initialize',
+  '0x685ef733': 'withdrawFunds',
+  '0x11ec8693': 'withdrawProtocolFees'
+}
+Getting selectors for MetaTransactionsHandlerFacet
+{
+  '0xdcb9c266': 'executeMetaTransaction',
+  '0x37ea92f5': 'initialize',
+  '0x6759b8f1': 'isFunctionAllowlisted',
+  '0xbc4d3dd0': 'isFunctionAllowlisted',
+  '0x0ee60fa7': 'isUsedNonce',
+  '0xbaafa0e3': 'setAllowlistedFunctions'
+}
+Getting selectors for OfferHandlerFacet
+{
+  '0x44c64d38': 'createOffer',
+  '0xdf3ce320': 'createOfferBatch',
+  '0xcc00c061': 'extendOffer',
+  '0xdb7af92f': 'extendOfferBatch',
+  '0x1ac3e64a': 'getAgentIdByOffer',
+  '0x1d73add8': 'getNextOfferId',
+  '0x4579268a': 'getOffer',
+  '0x8129fc1c': 'initialize',
+  '0x4bec59f4': 'isOfferVoided',
+  '0x7f5c9236': 'reserveRange',
+  '0x4915907b': 'voidOffer',
+  '0x12b52cf5': 'voidOfferBatch'
+}
+Getting selectors for OrchestrationHandlerFacet1
+{
+  '0x34fa96a6': 'createOfferAddToGroup',
+  '0x36358824': 'createOfferAndTwinWithBundle',
+  '0x1b002277': 'createOfferWithCondition',
+  '0x3e03b0f6': 'createOfferWithConditionAndTwinAndBundle',
+  '0x6c943896': 'createPremintedOfferAddToGroup',
+  '0x34e80651': 'createPremintedOfferAndTwinWithBundle',
+  '0xf69c9a40': 'createPremintedOfferWithCondition',
+  '0xf9384c29': 'createPremintedOfferWithConditionAndTwinAndBundle',
+  '0xfbf346df': 'createSellerAndOffer',
+  '0x2220dd97': 'createSellerAndOfferAndTwinWithBundle',
+  '0xcd6047e8': 'createSellerAndOfferWithCondition',
+  '0xbe5a64d2': 'createSellerAndOfferWithConditionAndTwinAndBundle',
+  '0x33e9eeeb': 'createSellerAndPremintedOffer',
+  '0xcfad2304': 'createSellerAndPremintedOfferAndTwinWithBundle',
+  '0x30b668e5': 'createSellerAndPremintedOfferWithCondition',
+  '0xe272d776': 'createSellerAndPremintedOfferWithConditionAndTwinAndBundle',
+  '0x8129fc1c': 'initialize'
+}
+Getting selectors for PauseHandlerFacet
+{
+  '0x8129fc1c': 'initialize',
+  '0xa290249c': 'pause',
+  '0x3f4ba83a': 'unpause'
+}
+Getting selectors for DisputeHandlerFacet
+{
+  '0x04f63e12': 'decideDispute',
+  '0x20a68d25': 'escalateDispute',
+  '0x42443efd': 'expireDispute',
+  '0xae707f1e': 'expireDisputeBatch',
+  '0xf7d95f3b': 'expireEscalatedDispute',
+  '0xfb50e235': 'extendDisputeTimeout',
+  '0xe3a96cbd': 'getDispute',
+  '0xc6a470e2': 'getDisputeState',
+  '0x50f5e643': 'getDisputeTimeout',
+  '0x8129fc1c': 'initialize',
+  '0xc3c834b7': 'isDisputeFinalized',
+  '0xa5c1674e': 'raiseDispute',
+  '0xdfdcd613': 'refuseEscalatedDispute',
+  '0xb4dcefaf': 'resolveDispute',
+  '0x65f65c94': 'retractDispute'
+}
+Getting selectors for ProtocolInitializationHandlerFacet
+{ '0x0d8e6e2c': 'getVersion', '0x604d5225': 'initialize' }
+Getting selectors for SellerHandlerFacet
+{
+  '0x59b37742': 'createSeller',
+  '0xd6a9de51': 'getSeller',
+  '0x2e1528ae': 'getSellerByAddress',
+  '0x135bdebd': 'getSellerByAuthToken',
+  '0x8129fc1c': 'initialize',
+  '0xf7e469fd': 'optInToSellerUpdate',
+  '0x695ac7c9': 'updateSeller'
+}
+Getting selectors for BundleHandlerFacet
+{
+  '0x7c016ad5': 'createBundle',
+  '0x2d0821b7': 'getBundle',
+  '0xa8e31107': 'getBundleIdByOffer',
+  '0xc6cce096': 'getBundleIdByTwin',
+  '0x4475643d': 'getNextBundleId',
+  '0x8129fc1c': 'initialize'
+}
+Getting selectors for TwinHandlerFacet
+{
+  '0xb44d17eb': 'createTwin',
+  '0xa7c078d6': 'getNextTwinId',
+  '0x164a82f7': 'getTwin',
+  '0x8129fc1c': 'initialize',
+  '0x6574e3ba': 'removeTwin'
+}
+Getting selectors for GroupHandlerFacet
+{
+  '0x4ff2e056': 'addOffersToGroup',
+  '0xc1c96af8': 'createGroup',
+  '0xceb60654': 'getGroup',
+  '0x49b3cccf': 'getNextGroupId',
+  '0x8129fc1c': 'initialize',
+  '0x20dead55': 'removeOffersFromGroup',
+  '0xcb5fcf36': 'setGroupCondition'
+}
+facetName SellerHandlerFacet
+facetName OrchestrationHandlerFacet1
+facetName OfferHandlerFacet
+facetName ConfigHandlerFacet
+Checking out contracts on version HEAD
+
+added 207 packages, removed 980 packages, changed 87 packages, and audited 1706 packages in 10s
+
+202 packages are looking for funding
+  run `npm fund` for details
+
+37 vulnerabilities (30 moderate, 4 high, 3 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+Compiling contracts
+Compiled 160 Solidity files successfully
+Executing upgrade facets script
+--------------------------------------------------------------------------------
+Boson Protocol Contract Suite Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Tue Jul 25 2023 21:38:06 GMT-0300 (Brasilia Standard Time)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+✅ ConfigHandlerFacet deployed to: 0xc7A99939D8B63A02c78f1Cc9E7f0D334722EA027
+✅ DisputeResolverHandlerFacet deployed to: 0x28314F6F13AeA90865D81ca5195F7eFA870b88d9
+✅ ExchangeHandlerFacet deployed to: 0x4E34D650457953E87B308CE0848D42CD027cab3c
+✅ FundsHandlerFacet deployed to: 0x9b8c9C125FF110a54F7E7Eb257088cb6825ED637
+✅ MetaTransactionsHandlerFacet deployed to: 0x3dB93Af53e31D17C2715B31835bCd0175179cD0f
+✅ OfferHandlerFacet deployed to: 0xaCbaf088C1D7E14aF68E739c5cc2039F20911889
+✅ OrchestrationHandlerFacet1 deployed to: 0x98Eb77D8b2037FD1878B3eC3004AA663e852D740
+✅ PauseHandlerFacet deployed to: 0x59BC00faa19B44D85df7EBF92B87Ac247C4fE262
+✅ DisputeHandlerFacet deployed to: 0x45f3a0f6a65fc63f6a630ecc7937f34365878a51
+✅ ProtocolInitializationHandlerFacet deployed to: 0x5A3fdE5831862dA58CC8909C00f9C48126a658bD
+✅ SellerHandlerFacet deployed to: 0xe3CA6f621160140A4dDF641Dd4B80dABFd9c640D
+✅ BundleHandlerFacet deployed to: 0x5Edf55880be0d400cB70988f985aC9eb7cE24F82
+✅ TwinHandlerFacet deployed to: 0xC7F37f79E3dABFC55a445267C39F7C5fF2Ab70fB
+✅ GroupHandlerFacet deployed to: 0xf8Eaf433db3a17002856dC220caA31EB21b32b82
+
+📋 Facet: ConfigHandlerFacet
+💎 Add selectors:
+	getMinResolutionPeriod: 0x1b57b63d
+	setMinResolutionPeriod: 0xdda575c9
+💎 Replace selectors:
+	getAccessControllerAddress: 0x694ca8ab
+	getAuthTokenContract: 0x6c2c13c2
+	getBeaconProxyAddress: 0xc2f73795
+	getBuyerEscalationDepositPercentage: 0x36ee008c
+	getMaxEscalationResponsePeriod: 0xeb04d54b
+	getMaxResolutionPeriod: 0x32cf96ff
+	getMaxRoyaltyPecentage: 0xa7f7801a
+	getMaxTotalOfferFeePercentage: 0xd3ab3d25
+	getMinDisputePeriod: 0xbe620a41
+	getProtocolFeeFlatBoson: 0x23bbe5d5
+	getProtocolFeePercentage: 0x706d9f78
+	getTokenAddress: 0x10fe9ae8
+	getTreasuryAddress: 0xe0024604
+	getVoucherBeaconAddress: 0xf8aaad60
+	setAccessControllerAddress: 0x6cb84158
+	setAuthTokenContract: 0x250664d4
+	setBeaconProxyAddress: 0x31cd131e
+	setBuyerEscalationDepositPercentage: 0x6ba0f545
+	setMaxEscalationResponsePeriod: 0x37987b52
+	setMaxResolutionPeriod: 0xf920fc17
+	setMaxRoyaltyPecentage: 0x84bf1ac2
+	setMaxTotalOfferFeePercentage: 0x589e4e58
+	setMinDisputePeriod: 0x84a91ce6
+	setProtocolFeeFlatBoson: 0x4dbcca7e
+	setProtocolFeePercentage: 0xd8a5e936
+	setTokenAddress: 0x26a4e8d2
+	setTreasuryAddress: 0x6605bfda
+	setVoucherBeaconAddress: 0x938d1b27
+💎 Remove selectors:
+	getMaxAllowedSellers: 0x899b1233
+	getMaxDisputesPerBatch: 0x323adcce
+	getMaxExchangesPerBatch: 0x3d609473
+	getMaxFeesPerDisputeResolver: 0x862c6c8b
+	getMaxOffersPerBatch: 0xd619f044
+	getMaxOffersPerBundle: 0x942a61b4
+	getMaxOffersPerGroup: 0x863b80fa
+	getMaxPremintedVouchers: 0x753901b0
+	getMaxTokensPerWithdrawal: 0x59c75653
+	getMaxTwinsPerBundle: 0x8cfc4975
+	setMaxAllowedSellers: 0xd38416ff
+	setMaxDisputesPerBatch: 0x65a10c2c
+	setMaxExchangesPerBatch: 0xd6134aaf
+	setMaxFeesPerDisputeResolver: 0x70d24d63
+	setMaxOffersPerBatch: 0xd7ac2c47
+	setMaxOffersPerBundle: 0xb54767f6
+	setMaxOffersPerGroup: 0x94413c54
+	setMaxPremintedVouchers: 0xbc799909
+	setMaxTokensPerWithdrawal: 0x0096aa98
+	setMaxTwinsPerBundle: 0xa70fdde1
+
+📋 Facet: DisputeResolverHandlerFacet
+💎 Replace selectors:
+	addFeesToDisputeResolver: 0xa880fd89
+	addSellersToAllowList: 0x1227dbbb
+	areSellersAllowed: 0x8236d3c0
+	createDisputeResolver: 0x1843b3a9
+	getDisputeResolver: 0x9b646e88
+	getDisputeResolverByAddress: 0x6f4fbc16
+	optInToDisputeResolverUpdate: 0x2230dd12
+	removeFeesFromDisputeResolver: 0x4e534c96
+	removeSellersFromAllowList: 0xfa92792a
+	updateDisputeResolver: 0x125e35ec
+
+📋 Facet: ExchangeHandlerFacet
+💎 Add selectors:
+	commitToConditionalOffer: 0x2334fd56
+💎 Replace selectors:
+	cancelVoucher: 0xbed3ac50
+	commitToOffer: 0x1f317d1c
+	commitToPreMintedOffer: 0x5f119c40
+	completeExchange: 0x58477db8
+	completeExchangeBatch: 0x492edd28
+	expireVoucher: 0x18170b73
+	extendVoucher: 0x229f6943
+	getExchange: 0x0b9d5847
+	getExchangeState: 0xe0cdab47
+	getNextExchangeId: 0x452ddd66
+	getReceipt: 0xb63e6ac3
+	isExchangeFinalized: 0x309bb762
+	onVoucherTransferred: 0x7b02365d
+	redeemVoucher: 0x1c6d6b5e
+	revokeVoucher: 0x79a5fea9
+
+📋 Facet: FundsHandlerFacet
+💎 Add selectors:
+	getAllAvailableFunds: 0x573f625a
+	getAvailableFunds: 0x6c48b1fa
+	getTokenList: 0x41b63bd8
+	getTokenListPaginated: 0x8c46317f
+💎 Replace selectors:
+	depositFunds: 0xa07fcc70
+	withdrawFunds: 0x685ef733
+	withdrawProtocolFees: 0x11ec8693
+💎 Remove selectors:
+	getAvailableFunds: 0xc14eff97
+
+📋 Facet: MetaTransactionsHandlerFacet
+💎 Replace selectors:
+	executeMetaTransaction: 0xdcb9c266
+	isFunctionAllowlisted: 0x6759b8f1
+	isFunctionAllowlisted: 0xbc4d3dd0
+	isUsedNonce: 0x0ee60fa7
+	setAllowlistedFunctions: 0xbaafa0e3
+
+📋 Facet: OfferHandlerFacet
+💎 Add selectors:
+	createOffer: 0xbd0e4b3c
+	createOfferBatch: 0x264ed13a
+💎 Replace selectors:
+	extendOffer: 0xcc00c061
+	extendOfferBatch: 0xdb7af92f
+	getAgentIdByOffer: 0x1ac3e64a
+	getNextOfferId: 0x1d73add8
+	getOffer: 0x4579268a
+	isOfferVoided: 0x4bec59f4
+	reserveRange: 0x7f5c9236
+	voidOffer: 0x4915907b
+	voidOfferBatch: 0x12b52cf5
+💎 Remove selectors:
+	createOffer: 0x44c64d38
+	createOfferBatch: 0xdf3ce320
+
+📋 Facet: OrchestrationHandlerFacet1
+💎 Add selectors:
+	createOfferAddToGroup: 0x707d33af
+	createOfferAndTwinWithBundle: 0xc6c9d615
+	createOfferWithCondition: 0x8b388363
+	createOfferWithConditionAndTwinAndBundle: 0x17c92c86
+	createPremintedOfferAddToGroup: 0x041d740b
+	createPremintedOfferAndTwinWithBundle: 0x5cace001
+	createPremintedOfferWithCondition: 0xaa4ec1cb
+	createPremintedOfferWithConditionAndTwinAndBundle: 0x73e6c0a0
+	createSellerAndOffer: 0x0cd71e19
+	createSellerAndOfferAndTwinWithBundle: 0x6a676392
+	createSellerAndOfferWithCondition: 0xa1cfa742
+	createSellerAndOfferWithConditionAndTwinAndBundle: 0x20c80950
+	createSellerAndPremintedOffer: 0xb685f766
+	createSellerAndPremintedOfferAndTwinWithBundle: 0x6eed94a2
+	createSellerAndPremintedOfferWithCondition: 0x9c6ee13a
+	createSellerAndPremintedOfferWithConditionAndTwinAndBundle: 0x26926cc5
+💎 Remove selectors:
+	createOfferAddToGroup: 0x34fa96a6
+	createOfferAndTwinWithBundle: 0x36358824
+	createOfferWithCondition: 0x1b002277
+	createOfferWithConditionAndTwinAndBundle: 0x3e03b0f6
+	createPremintedOfferAddToGroup: 0x6c943896
+	createPremintedOfferAndTwinWithBundle: 0x34e80651
+	createPremintedOfferWithCondition: 0xf69c9a40
+	createPremintedOfferWithConditionAndTwinAndBundle: 0xf9384c29
+	createSellerAndOffer: 0xfbf346df
+	createSellerAndOfferAndTwinWithBundle: 0x2220dd97
+	createSellerAndOfferWithCondition: 0xcd6047e8
+	createSellerAndOfferWithConditionAndTwinAndBundle: 0xbe5a64d2
+	createSellerAndPremintedOffer: 0x33e9eeeb
+	createSellerAndPremintedOfferAndTwinWithBundle: 0xcfad2304
+	createSellerAndPremintedOfferWithCondition: 0x30b668e5
+	createSellerAndPremintedOfferWithConditionAndTwinAndBundle: 0xe272d776
+
+📋 Facet: PauseHandlerFacet
+💎 Add selectors:
+	getPausedRegions: 0x5e086f2f
+	unpause: 0x8b93dd63
+💎 Replace selectors:
+	pause: 0xa290249c
+💎 Remove selectors:
+	unpause: 0x3f4ba83a
+
+📋 Facet: DisputeHandlerFacet
+💎 Replace selectors:
+	decideDispute: 0x04f63e12
+	escalateDispute: 0x20a68d25
+	expireDispute: 0x42443efd
+	expireDisputeBatch: 0xae707f1e
+	expireEscalatedDispute: 0xf7d95f3b
+	extendDisputeTimeout: 0xfb50e235
+	getDispute: 0xe3a96cbd
+	getDisputeState: 0xc6a470e2
+	getDisputeTimeout: 0x50f5e643
+	isDisputeFinalized: 0xc3c834b7
+	raiseDispute: 0xa5c1674e
+	refuseEscalatedDispute: 0xdfdcd613
+	resolveDispute: 0xb4dcefaf
+	retractDispute: 0x65f65c94
+
+📋 Facet: ProtocolInitializationHandlerFacet
+💎 Replace selectors:
+	getVersion: 0x0d8e6e2c
+
+📋 Facet: SellerHandlerFacet
+💎 Add selectors:
+	createNewCollection: 0x83e6584a
+	getSellersCollections: 0x1058e0c6
+💎 Replace selectors:
+	createSeller: 0x59b37742
+	getSeller: 0xd6a9de51
+	getSellerByAddress: 0x2e1528ae
+	getSellerByAuthToken: 0x135bdebd
+	optInToSellerUpdate: 0xf7e469fd
+	updateSeller: 0x695ac7c9
+
+📋 Facet: BundleHandlerFacet
+💎 Replace selectors:
+	createBundle: 0x7c016ad5
+	getBundle: 0x2d0821b7
+	getBundleIdByOffer: 0xa8e31107
+	getBundleIdByTwin: 0xc6cce096
+	getNextBundleId: 0x4475643d
+
+📋 Facet: TwinHandlerFacet
+💎 Replace selectors:
+	createTwin: 0xb44d17eb
+	getNextTwinId: 0xa7c078d6
+	getTwin: 0x164a82f7
+	removeTwin: 0x6574e3ba
+
+📋 Facet: GroupHandlerFacet
+💎 Add selectors:
+	createGroup: 0x165a8b07
+	setGroupCondition: 0xec138990
+💎 Replace selectors:
+	addOffersToGroup: 0x4ff2e056
+	getGroup: 0xceb60654
+	getNextGroupId: 0x49b3cccf
+	removeOffersFromGroup: 0x20dead55
+💎 Remove selectors:
+	createGroup: 0xc1c96af8
+	setGroupCondition: 0xcb5fcf36
+
+💀 Removed facets:
+	
+📋 Added interfaces:
+	0xbc28d3e6 (ConfigHandlerFacet)
+	0xc0342297 (ExchangeHandlerFacet)
+	0x2f4a64d7 (FundsHandlerFacet)
+	0xa1e3b91c (OfferHandlerFacet)
+	0xd66094dc (OrchestrationHandlerFacet1)
+	0x770b96d0 (PauseHandlerFacet)
+	0x868de65b (SellerHandlerFacet)
+	0x1260850f (GroupHandlerFacet)
+💀 Removed interfaces:
+	0xe393ad01 (ConfigHandlerFacet)
+	0xe300dfc1 (ExchangeHandlerFacet)
+	0x18834247 (FundsHandlerFacet)
+	0xa1598d02 (OfferHandlerFacet)
+	0x0c62d8e3 (OrchestrationHandlerFacet1)
+	0x9ddb8ca6 (PauseHandlerFacet)
+	0x15335ed7 (SellerHandlerFacet)
+	0xe2bf2256 (GroupHandlerFacet)
+--------------------------------------------------------------------------------
+
+📋 New version: 2.3.0
+--------------------------------------------------------------------------------
+✅ Contracts written to /Users/anajulia/dev/code/boson-protocol-contracts/scripts/util/../../addresses/80001-hardhat-test-dry-run.json
+--------------------------------------------------------------------------------
+
+📋 Diamond upgraded.
+
+
+facetName SellerHandlerFacet
+facetName OrchestrationHandlerFacet1
+facetName OfferHandlerFacet
+facetName ConfigHandlerFacet
+Removing selectors 0x59b3774271ad2ce7cc4a964dd442fdde6a809e8dfd3eb4ac5f6e579fa898cf69,0x695ac7c9eb6f7d89e6bf0dd7799049908d2c07e3178d254632f239a807c51cd3,0x34fa96a697bb35f3a16a0ecd1fbbca12f084d2fe335fc54eb4a7032092c74c33,0x3635882429ecf7427e1d090edff7038f6d8b32e69247f4dfcc8bb1aea18e7617,0x1b002277f50ea47601c7446146c19b0603fc425d8b3db37aa07e12271713db19,0x3e03b0f6491639aad746484d776881edb4b355319b1a7fbf77e1a05d5c0139a2,0x6c9438963ac3ab915f3ed3989682db91152b626badcb0f5912ee6ab094d22fae,0x34e80651930420944e6cd28627fdd6be582c32c487b038e3ca233c110f99c360,0xf69c9a40831710bc6151c351c2487c5691ad9933e9e6f885080690d7888342f1,0xf9384c29daa2f0aff169fc2062cd19d14da2dd568f027aec4d99c8e3d25b688b,0xfbf346df886f09306aa58642ed3d51dac939d9530e9a964a6709df6c1fe095ce,0x2220dd970bc6c8a043ce33fac30e3fadfd1566d3883da9e23d8503fd472fc6f6,0xcd6047e82d2d8d14fdf1bf3de4097f00bc6f1d342e8cb1ac72e13df6e75465fa,0xbe5a64d26f6fb5e8d6c406b1920da649830283ce454c2f66f1450d3aeaa5951f,0x33e9eeeb875164148e64881660776c51e37b91bf88d121dd594559158a6826b0,0xcfad23046ca3f5712a8d3a12867efe841d9d9092978cb8cddd0ff11ec302e493,0x30b668e56aef5dae1f32985f6da701092fe97a1cd9c650d401c51cfc4507b6b1,0xe272d77605996cc5fb44fed0b5a9e9bc916eba4cb81f14fe6baae7a11bd8a852,0x44c64d38103a262e536c7d44b00850ee7d39568e0a5e23a07cc0db96d8ca588b,0xdf3ce320c0a4e7295bf81a5ad49769fcb25784d66f5d4a39b978501163fda0dd
+Adding selectors 0x59b3774271ad2ce7cc4a964dd442fdde6a809e8dfd3eb4ac5f6e579fa898cf69,0x695ac7c9eb6f7d89e6bf0dd7799049908d2c07e3178d254632f239a807c51cd3,0x707d33af04d7f029de0fe3eaf65fda22ec27c241a62bcd8239df84ff6d59010e,0xc6c9d61561df4f5cb050c847c564d0e70f99a37fdf35d0fc4cf2b6d6e3a9ef45,0x8b3883630c5bfd7a202e746e0f7e10a875896857ca25ef939d88117183afc939,0x17c92c8656de5f324d5849fce2244ad5ba94527f3e8a15ddb90766415ceeefa2,0x041d740bc5e6e8d6255ca844d13c30ed58a3ee7ee1be3f0fbf7b516cc68c73e7,0x5cace0016db70007238743a6aa35521b897e6c2dcc4f9e67cac4b578ec37a3ca,0xaa4ec1cbe7e16341baae296e9f377f7208a41ff118ebdab943342b7cf9c358e4,0x73e6c0a09bf80d99045b8b84777a4935bd5afc88d354aeddf7f98cb2694b28c9,0x0cd71e191d429be0da8fca40c5a0b5e6bad0f98bec2d9c0297ca362d3ea203b0,0x6a6763924d1c66b17df8a79a6be27c903a3f42251df1a4ca5845a44b749c8423,0xa1cfa742272450bb9f3da42c16fcfb88987399f9f4f767bdf1ecad175fee2abb,0x20c80950204753ebbd44ec2f686b432474d00ae81b7dcb09577d6a6048345764,0xb685f7661130fb18440e26d70bfb8f8f3b681ea2dc286f2c101d7f024dfedc31,0x6eed94a2c1d9879f492c69081bbd7a7bc9acf6cf3ed1814a1460f76136862efb,0x9c6ee13abd4964bd3b086f65c2af80139257d6f33353d0865c1fb7376cc6e403,0x26926cc53b85a430e68912ccae8b72df6b895862929c889341b965ba46217770,0xbd0e4b3ca96bfe7d7c028498fe528902d696f09580c032f7792d2ed450fe60a5,0x264ed13a1ee4bde6beca80843165a845c53ebc1f7ff0a9d4bda6f33392efc848
+Executing upgrade clients script
+--------------------------------------------------------------------------------
+Boson Protocol Client Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Tue Jul 25 2023 21:39:38 GMT-0300 (Brasilia Standard Time)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+
+📋 Deploying new logic contract
+
+📋 Updating implementation address on beacon
+✅ BosonVoucher Logic deployed to: 0xBc0531d17c7576d20C4D7eE65A6A0671e9b2491B
+--------------------------------------------------------------------------------
+✅ Contracts written to /Users/anajulia/dev/code/boson-protocol-contracts/scripts/util/../../addresses/80001-hardhat-test-dry-run.json
+--------------------------------------------------------------------------------
+
+📋 Client upgraded.
+
+
+Unpausing all regions...
+M	logs/-migrate.contracts.txt
+Your branch and 'origin/upgrade-2.3.0-tests' have diverged,
+and have 1 and 1 different commits each, respectively.
+  (use "git pull" to merge the remote branch into yours)
+Migration HEAD completed
+Ether spent:  0.0

@@ -1,6 +1,8 @@
 const shell = require("shelljs");
+const co = require("co");
 
 const { getStateModifyingFunctionsHashes, getSelectors } = require("../../scripts/util/diamond-utils.js");
+const { execSync } = require("child_process");
 const axios = require("axios");
 const environments = require("../../environments");
 const Role = require("../domain/Role");
@@ -19,7 +21,17 @@ const tag = "HEAD";
 const version = "2.3.0";
 const { EXCHANGE_ID_2_2_0 } = require("../config/protocol-parameters");
 const { META_TRANSACTION_FORWARDER } = require("../config/client-upgrade");
-
+function execPromise(command) {
+  return new Promise((resolve, reject) => {
+    shell.exec(command, (code, stdout, stderr) => {
+      if (code != 0) {
+        reject(new Error(stderr));
+      } else {
+        resolve(stdout);
+      }
+    });
+  });
+}
 const config = {
   // status at 451dc3d. ToDo: update this to the latest commit
   addOrUpgrade: [
@@ -44,6 +56,7 @@ const config = {
     // @TODO get correct constructor args
     ExchangeHandlerFacet: { init: [], constructorArgs: [EXCHANGE_ID_2_2_0[network]] },
   }, // must match nextExchangeId at the time of the upgrade
+  initializationData: abiCoder.encode(["uint256", "uint256[]", "address[]"], [oneWeek, [], []]),
 };
 
 async function migrate(env) {
@@ -86,33 +99,36 @@ async function migrate(env) {
 
     // Checking old version contracts to get selectors to remove
     // ToDo: at 451dc3d, no selectors to remove. Comment out this section. It will be needed when other changes are merged into main
-    const oldTag = "v2.2.1";
-    console.log("Checking out contracts on version 2.2.1");
-    shell.exec(`rm -rf contracts/*`);
-    shell.exec(`git checkout ${oldTag} contracts package.json package-lock.json`);
-
-    shell.exec("npm install");
-
-    console.log("Compiling old contracts");
-    await hre.run("clean");
-    await hre.run("compile");
-
-    let functionNamesToSelector = {};
-
-    for (const facet of config.addOrUpgrade) {
-      const facetContract = await getContractAt(facet, protocolAddress);
-      const { signatureToNameMapping } = getSelectors(facetContract, true);
-      functionNamesToSelector = { ...functionNamesToSelector, ...signatureToNameMapping };
-    }
-
-    const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
-      ["SellerHandlerFacet", "OrchestrationHandlerFacet1", "OfferHandlerFacet", "ConfigHandlerFacet"],
-      undefined,
-      ["createSeller", "updateSeller", "createOffer", "createPremintedOffer"]
-    );
-
-    const selectorsToRemove = await getFunctionHashesClosure();
-    console.log("selectorsToRemove", selectorsToRemove);
+    //    const oldTag = "v2.2.1";
+    //    console.log("Checking out contracts on version 2.2.1");
+    //
+    //    await co(function* () {
+    //      yield execPromise(`ls contracts`);
+    //      yield execPromise(`rm -rf contracts/** `);
+    //      yield execPromise(`ls contracts`);
+    //      yield execPromise(`git checkout ${oldTag} contracts/** package.json package-lock.json`);
+    //      yield execPromise("npm install");
+    //    });
+    //
+    //    console.log("dependencies installed");
+    //    await hre.run("clean");
+    //    await hre.run("compile");
+    //
+    //    let functionNamesToSelector = {};
+    //
+    //    for (const facet of config.addOrUpgrade) {
+    //      const facetContract = await getContractAt(facet, protocolAddress);
+    //      const { signatureToNameMapping } = getSelectors(facetContract, true);
+    //      functionNamesToSelector = { ...functionNamesToSelector, ...signatureToNameMapping };
+    //    }
+    //
+    //    const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
+    //      ["SellerHandlerFacet", "OrchestrationHandlerFacet1", "OfferHandlerFacet", "ConfigHandlerFacet"],
+    //      undefined,
+    //      ["createSeller", "updateSeller", "createOffer", "createPremintedOffer"]
+    //    );
+    //
+    //    const selectorsToRemove = await getFunctionHashesClosure();
 
     if (env != "upgrade-test") {
       const creators = await fetchSellerCreators(env);
@@ -120,12 +136,12 @@ async function migrate(env) {
         ["uint256", "uint256[]", "address[]"],
         [oneWeek, creators.map((c) => c.id), creators.map((c) => c.creator)]
       );
-      console.log("config.initializationData", config.initializationData);
     }
 
     console.log(`Checking out contracts on version ${tag}`);
-    shell.exec(`rm -rf contracts/*`);
-    shell.exec(`git checkout ${tag} contracts package.json package-lock.json`);
+    shell.exec(`rm -rf contracts/** package.json package-lock.json`);
+    shell.exec(`ls contracts`);
+    shell.exec(`git checkout ${tag} contracts/* package.json package-lock.json`);
 
     shell.exec("npm install");
 
@@ -137,22 +153,21 @@ async function migrate(env) {
       env,
       facetConfig: JSON.stringify(config),
       newVersion: version,
-      functionNamesToSelector: JSON.stringify(functionNamesToSelector),
+      functionNamesToSelector: JSON.stringify([]),
     });
 
-    const selectorsToAdd = await getFunctionHashesClosure();
-    const metaTransactionHandlerFacet = await getContractAt("MetaTransactionsHandlerFacet", protocolAddress);
-    console.log("Removing selectors", selectorsToRemove.join(","));
-    await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToRemove, false);
-    console.log("Adding selectors", selectorsToAdd.join(","));
-    await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToAdd, true);
+    //   const selectorsToAdd = await getFunctionHashesClosure();
+    //    const metaTransactionHandlerFacet = await getContractAt("MetaTransactionsHandlerFacet", protocolAddress);
+    //    console.log("Removing selectors", selectorsToRemove.join(","));
+    //    await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToRemove, false);
+    //    console.log("Adding selectors", selectorsToAdd.join(","));
+    //    await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToAdd, true);
 
     console.log("Executing upgrade clients script");
 
     const clientConfig = {
       META_TRANSACTION_FORWARDER,
     };
-    console.log(clientConfig);
 
     // Upgrade clients
     await hre.run("upgrade-clients", {
@@ -185,7 +200,6 @@ async function fetchSellerCreators(env) {
   } else {
     throw new Error("There is no subgraph for this chain");
   }
-  console.log(network);
 
   const url = `https://api.thegraph.com/subgraphs/name/bosonprotocol/${network}`;
 

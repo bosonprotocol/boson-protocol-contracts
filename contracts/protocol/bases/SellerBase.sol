@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import "hardhat/console.sol";
 import "./../../domain/BosonConstants.sol";
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
 import { ProtocolBase } from "./ProtocolBase.sol";

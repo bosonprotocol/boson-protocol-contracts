@@ -146,6 +146,7 @@ async function getFacetRemoveCut(facet, omitFunctions = []) {
 async function getStateModifyingFunctions(facetNames, omitFunctions = [], onlyFunctions = []) {
   let stateModifyingFunctions = [];
   for (const facetName of facetNames) {
+    console.log("facetName", facetName);
     let FacetContractFactory = await getContractFactory(facetName);
     const functions = FacetContractFactory.interface.fragments;
     const facetStateModifyingFunctions = functions

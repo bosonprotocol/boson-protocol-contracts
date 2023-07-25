@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.18;
 
-import "hardhat/console.sol";
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
@@ -444,7 +443,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     function tokenURI(
         uint256 _tokenId
     ) public view override(ERC721Upgradeable, IERC721MetadataUpgradeable) returns (string memory) {
-        console.log("inside otkenURI");
         uint256 exchangeId = _tokenId & type(uint128).max;
         (bool exists, Offer memory offer) = getBosonOfferByExchangeId(exchangeId);
 
@@ -457,7 +455,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             }
         }
 
-        console.log("exists: %s", exists);
         require(exists, ERC721_INVALID_TOKEN_ID);
         return offer.metadataUri;
     }

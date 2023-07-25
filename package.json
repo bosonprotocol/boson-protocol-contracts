@@ -12,7 +12,14 @@
     "url": "https://github.com/bosonprotocol/boson-protocol-contracts/issues"
   },
   "homepage": "https://github.com/bosonprotocol/boson-protocol-contracts",
-  "keywords": ["blockchain", "boson", "ethereum", "nft", "solidity", "web3"],
+  "keywords": [
+    "blockchain",
+    "boson",
+    "ethereum",
+    "nft",
+    "solidity",
+    "web3"
+  ],
   "scripts": {
     "build": "npx hardhat compile",
     "test": "npx hardhat test test/domain/** test/access/** test/protocol/**.js test/protocol/clients/** --parallel",
@@ -65,7 +72,8 @@
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.0",
     "@openzeppelin/contracts-upgradeable": "4.9.0",
-    "axios": "^1.4.0"
+    "axios": "^1.4.0",
+    "co": "^4.6.0"
   },
   "devDependencies": {
     "@bosonprotocol/solidoc": "3.0.3",

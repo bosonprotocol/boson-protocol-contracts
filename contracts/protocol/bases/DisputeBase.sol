@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import "hardhat/console.sol";
 import { IBosonDisputeEvents } from "../../interfaces/events/IBosonDisputeEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
@@ -51,9 +50,6 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
         disputeDates.disputed = block.timestamp;
         disputeDates.timeout = block.timestamp + offerDurations.resolutionPeriod;
 
-        console.log("Dispute raised");
-        console.log(_exchange.id, _exchange.buyerId, _sellerId);
-        console.log(msgSender());
         // Notify watchers of state change
         emit DisputeRaised(_exchange.id, _exchange.buyerId, _sellerId, msgSender());
     }

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.18;
 
-import "hardhat/console.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
@@ -863,8 +862,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         );
                     }
 
-                    console.log('gasleft() before call: %s', gasleft());
-                    console.log("reservedGas", reservedGas);
 
                     // Make call only if there is enough gas and code at address exists.
                     // If not, skip the call and mark the transfer as failed
@@ -872,12 +869,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         bytes memory result;
                         (success, result) = twin.tokenAddress.call{ gas: gasleft() - reservedGas }(data);
 
-                        console.log(string(result));
                         success = success && (result.length == 0 || abi.decode(result, (bool)));
                     }
-                    console.log('success: %s', success);
                 }
-                console.log('success after call: %s', success);
 
                 // Reduce minimum gas required for succesful execution
                 reservedGas -= SINGLE_TWIN_RESERVED_GAS;
