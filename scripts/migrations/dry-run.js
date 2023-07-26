@@ -20,7 +20,7 @@ async function setupDryRun(env) {
   hre.config.networks["hardhat"].forking = {
     url: hre.config.networks[network].url,
     enabled: true,
-    //blockNumber: blockNumber.toString(), // if performance is too slow, try commenting this line out
+    blockNumber: blockNumber.toString(), // if performance is too slow, try commenting this line out
   };
 
   hre.config.networks["hardhat"].accounts = [

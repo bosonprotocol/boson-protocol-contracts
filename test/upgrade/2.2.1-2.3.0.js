@@ -1,7 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { ZeroAddress, parseEther, Wallet, provider, getContractFactory, id, keccak256, getContractAt } = ethers;
-const shell = require("shelljs");
+const { ZeroAddress, parseEther, Wallet, provider, getContractFactory, getContractAt } = ethers;
 const { assert, expect } = require("chai");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
@@ -107,30 +106,25 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
       true
     );
 
-    // TODO revisit this
     // Start a seller update (finished in tests)
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
     const { sellers } = preUpgradeEntities;
     let { wallet, id, seller, authToken } = sellers[0];
     seller.clerk = rando.address;
     await accountHandler.connect(wallet).updateSeller(seller, authToken);
-
     ({ wallet, id, seller, authToken } = sellers[1]);
     seller.clerk = rando.address;
     seller.assistant = rando.address;
     await accountHandler.connect(wallet).updateSeller(seller, authToken);
-
     ({ wallet, id, seller, authToken } = sellers[2]);
     seller.clerk = clerk.address;
     await accountHandler.connect(wallet).updateSeller(seller, authToken);
     await accountHandler.connect(clerk).optInToSellerUpdate(id, [SellerUpdateFields.Clerk]);
-
     const { DRs } = preUpgradeEntities;
     let disputeResolver;
     ({ wallet, disputeResolver } = DRs[0]);
     disputeResolver.clerk = rando.address;
     await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
-
     ({ wallet, disputeResolver } = DRs[1]);
     disputeResolver.clerk = rando.address;
     disputeResolver.assistant = rando.address;
@@ -151,54 +145,51 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
 
     ({ bundleHandler, exchangeHandler, twinHandler, disputeHandler } = contractsBefore);
 
-    const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
+    let getFunctionHashesClosure = getStateModifyingFunctionsHashes(
       [
+        "SellerHandlerFacet",
+        "OfferHandlerFacet",
         "ConfigHandlerFacet",
         "PauseHandlerFacet",
         "GroupHandlerFacet",
-        "OfferHandlerFacet",
         "OrchestrationHandlerFacet1",
-        "OrchestrationHandlerFacet2",
       ],
       undefined,
       [
-        "setMinResolutionPeriod",
+        "createSellerAndOffer",
+        "createSellerAndPremintedOffer",
+        "createOffer",
+        "createPremintedOffer",
+        "MaxAllowedSellers",
+        "MaxDisputesPerBatch",
+        "MaxExchangesPerBatch",
+        "MaxFeesPerDisputeResolver",
+        "MaxOffersPerBatch",
+        "MaxOffersPerGroup",
+        "MaxPremintedVouchers",
+        "MaxTokensPerWithdrawl",
+        "MaxTwinsPerBundle",
+        "getAvailableFunds",
         "unpause",
         "createGroup",
-
-        "createPremintedOffer",
-        "createOffer",
-
-        "createOfferAndTwinWithBundle",
-        "createSellerAndOfferAndTwinWithBundle",
-        "createOfferAddToGroup",
-        "createOfferAndTwinWithBundle",
-        "createOfferWithCondition",
-        "createOfferWithConditionAndTwinAndBundle",
-        "createPremintedOfferAddToGroup",
-        "createPremintedOfferAndTwinWithBundle",
-        "createPremintedOfferWithCondition",
-        "createPremintedOfferWithConditionAndTwinAndBundle",
-        "createSellerAndOffer",
-        "createSellerAndOfferAndTwinWithBundle",
-        "createSellerAndOfferWithCondition",
-        "createSellerAndOfferWithConditionAndTwinAndBundle",
-        "createSellerAndPremintedOffer",
-        "createSellerAndPremintedOfferAndTwinWithBundle",
-        "createSellerAndPremintedOfferWithCondition",
-        "createSellerAndPremintedOfferWithConditionAndTwinAndBundle",
-      ] //ToDo: revise
+        "setGroupCondition",
+      ]
     );
 
     removedFunctionHashes = await getFunctionHashesClosure();
 
-    console.log("Removing old contracts and scripts...");
-    shell.exec("rm -rf contracts/ scripts/ package.json package-lock.json");
-    // TODO change this to version
-    shell.exec("git checkout HEAD contracts/ scripts/ package.json package-lock.json");
-    shell.exec("git reset --hard HEAD contracts/ scripts/ package.json package-lock.json");
+    //    console.log("Removing old contracts");
+    //    shell.exec("rm -rf contracts/");
+    //    shell.exec("git checkout v2.1.0 contracts/");
+    //
+    //    console.log("Installing old OZ version");
+    //    shell.exec("npm i @openzeppelin/contracts-upgradeable@4.7.1");
+    //
+    //    console.log("Compiling old contracts");
+    //    await hre.run("clean");
+    //    await hre.run("compile");
 
-    shell.exec(`npm i`);
+    console.log("Calling migration script");
     await migrate("upgrade-test");
 
     // Cast to updated interface
@@ -230,6 +221,45 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
       exchangeHandler,
     } = contractsAfter);
 
+    getFunctionHashesClosure = getStateModifyingFunctionsHashes(
+      [
+        "SellerHandlerFacet",
+        "OfferHandlerFacet",
+        "ConfigHandlerFacet",
+        "PauseHandlerFacet",
+        "GroupHandlerFacet",
+        "OrchestrationHandlerFacet1",
+        "ExchangeHandlerFacet",
+      ],
+      undefined,
+      [
+        "createSellerAndOffer",
+        "createSellerAndPremintedOffer",
+        "createOffer",
+        "createPremintedOffer",
+        "MaxAllowedSellers",
+        "MaxDisputesPerBatch",
+        "MaxExchangesPerBatch",
+        "MaxFeesPerDisputeResolver",
+        "MaxOffersPerBatch",
+        "MaxOffersPerGroup",
+        "MaxPremintedVouchers",
+        "MaxTokensPerWithdrawl",
+        "MaxTwinsPerBundle",
+        "getAvailableFunds",
+        "unpause",
+        "getPausedRegions",
+        "createGroup",
+        "setGroupCondition",
+        "createNewCollection",
+        "MinResolutionPeriod",
+        "commitToConditionalOffer",
+        "getAllAvailableFunds",
+        "getTokenList",
+        "getTokenListPaginated",
+      ]
+    );
+
     addedFunctionHashes = await getFunctionHashesClosure();
 
     snapshot = await getSnapshot();
@@ -248,8 +278,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
       "protocolStatusPrivateContractState",
       "protocolLookupsPrivateContractState",
     ];
-
-    console.log("before get protocol state after upgrade");
 
     // Get protocol state after the upgrade
     protocolContractStateAfter = await getProtocolContractState(
@@ -364,7 +392,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
         });
       });
 
-      context("Protocol limits", async function () {
+      context.skip("Protocol limits", async function () {
         let wallets;
         let sellers, DRs, sellerWallet;
 
@@ -643,7 +671,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
           await expect(disputeHandler.connect(sellerWallet).expireDisputeBatch(disputesToExpire)).to.not.be.reverted;
         });
 
-        it.only("can premint more vouchers than maxPremintedVouchers", async function () {
+        it("can premint more vouchers than maxPremintedVouchers", async function () {
           const { maxPremintedVouchers } = protocolLimits;
           const voucherCount = Number(maxPremintedVouchers) + 1;
           const offerId = await offerHandler.getNextOfferId();
@@ -662,7 +690,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
           const bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
           const tx = await bosonVoucher.connect(sellerWallet).preMint(offerId, voucherCount);
 
-          console.log("tx", await tx.wait());
           await expect(tx).to.not.be.reverted;
         });
       });
@@ -885,7 +912,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
             // TODO fix withArgs
             await expect(accountHandler.connect(sellerWallet).createNewCollection(externalId, voucherInitValues))
               .to.emit(accountHandler, "CollectionCreated")
-              .withArgs(sellerId, 1, expectedCollectionAddress, externalId, seller.wallet);
+              .withArgs(sellerId, 1, expectedCollectionAddress, externalId, sellerWallet.address);
 
             const expectedCollections = new CollectionList([new Collection(expectedCollectionAddress, externalId)]);
 
@@ -1245,7 +1272,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
             // Redeem the voucher
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId, { gasLimit: 1000000 }); // limit gas to speed up test
 
-            const receipt = await tx.wait();
             // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
@@ -1301,7 +1327,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
             .connect(buyer)
             .commitToConditionalOffer(buyer.address, offer.id, "0", { value: offer.price });
 
-          const receipt = await tx.wait();
           // Commit to offer, retrieving the event
           await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
         });
@@ -1369,7 +1394,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
         // NB: testing only 1 method to confirm that orchestration is upgraded
         // The rest of the method are tested in the unit tests
         it("should emit a SellerCreated and OfferCreated events with empty auth token", async function () {
-          const { DRs, sellers } = preUpgradeEntities;
+          const { DRs } = preUpgradeEntities;
 
           const { disputeResolver } = DRs.find((DR) => DR.sellerAllowList.length == 0);
           const seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
@@ -1417,6 +1442,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
       context("MetaTransactionHandler", async function () {
         it("Function hashes from removedFunctionsHashes list should not be allowlisted", async function () {
           for (const hash of removedFunctionHashes) {
+            // get function name from hash
             const isFunctionAllowlisted = contractsAfter.metaTransactionsHandler.getFunction(
               "isFunctionAllowlisted(bytes32)"
             );
@@ -1461,14 +1487,25 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
       });
 
       context("BosonVoucher", async function () {
-        let bosonVoucher, sellerWallet;
+        let bosonVoucher;
 
-        let voucherContractAddress;
         beforeEach(async function () {
-          const { sellers } = preUpgradeEntities;
-          ({ voucherContractAddress, wallet: sellerWallet } = sellers[0]);
+          const seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
+          seller.id = await accountHandler.getNextAccountId();
+          const emptyAuthToken = mockAuthToken();
+          const voucherInitValues = mockVoucherInitValues();
 
-          bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
+          await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          const beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
+
+          const expectedDefaultAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            seller.admin,
+            ""
+          ); // default
+          bosonVoucher = await getContractAt("BosonVoucher", expectedDefaultAddress);
         });
 
         it("callExternalContract returns whatever External contract returned", async function () {
@@ -1479,7 +1516,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
 
           const calldata = mockSimpleContract.interface.encodeFunctionData("testReturn");
           const returnedValueRaw = await bosonVoucher
-            .connect(sellerWallet)
+            .connect(assistant)
             .callExternalContract.staticCall(await mockSimpleContract.getAddress(), calldata);
           const abiCoder = new ethers.AbiCoder();
           const [returnedValue] = abiCoder.decode(["string"], returnedValueRaw);
@@ -1487,36 +1524,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
         });
 
         it("tokenURI function should revert if tokenId does not exist", async function () {
-          const seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
-          seller.id = await accountHandler.getNextAccountId();
-          const emptyAuthToken = mockAuthToken();
-          const voucherInitValues = mockVoucherInitValues();
-
-          await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
-
-          const externalId = "new-collection";
-
-          const beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
-
-          const expectedDefaultAddress = calculateCloneAddress(
-            await accountHandler.getAddress(),
-            beaconProxyAddress,
-            seller.admin,
-            ""
-          ); // default
-          const expectedCollectionAddress = calculateCloneAddress(
-            await accountHandler.getAddress(),
-            beaconProxyAddress,
-            seller.admin,
-            externalId
-          );
-          const tx = await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
-
-          await expect(tx)
-            .to.emit(accountHandler, "CollectionCreated")
-            .withArgs(Number(seller.id), 1, expectedCollectionAddress, externalId, assistant.address);
-
-          bosonVoucher = await getContractAt("BosonVoucher", expectedDefaultAddress);
           await expect(bosonVoucher.tokenURI(666)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
         });
       });

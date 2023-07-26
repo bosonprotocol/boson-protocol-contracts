@@ -173,10 +173,10 @@ async function deploySuite(deployer, newVersion) {
     await deployMockTokens(["Foreign20", "Foreign20", "Foreign721", "Foreign721", "Foreign20", "Foreign1155"]);
   const mockTwinTokens = [mockTwin721_1, mockTwin721_2];
 
-  if (isOldOZVersion) {
-    shell.exec(`git checkout ${tag} package.json package-lock.json`);
-    shell.exec("npm i");
-  }
+  //  if (isOldOZVersion) {
+  //    shell.exec(`git checkout ${tag} package.json package-lock.json`);
+  //    shell.exec("npm i");
+  //  }
 
   return {
     protocolDiamondAddress,

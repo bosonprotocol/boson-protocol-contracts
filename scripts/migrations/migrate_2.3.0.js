@@ -1,8 +1,6 @@
 const shell = require("shelljs");
-const co = require("co");
 
 const { getStateModifyingFunctionsHashes, getSelectors } = require("../../scripts/util/diamond-utils.js");
-const { execSync } = require("child_process");
 const axios = require("axios");
 const environments = require("../../environments");
 const Role = require("../domain/Role");
@@ -14,24 +12,14 @@ const hre = require("hardhat");
 const { oneWeek } = require("../../test/util/constants.js");
 const PausableRegion = require("../domain/PausableRegion.js");
 const ethers = hre.ethers;
-const { getContractFactory, getContractAt, getSigners } = ethers;
+const { getContractAt, getSigners } = ethers;
 const network = hre.network.name;
 const abiCoder = new ethers.AbiCoder();
 const tag = "HEAD";
 const version = "2.3.0";
 const { EXCHANGE_ID_2_2_0 } = require("../config/protocol-parameters");
 const { META_TRANSACTION_FORWARDER } = require("../config/client-upgrade");
-function execPromise(command) {
-  return new Promise((resolve, reject) => {
-    shell.exec(command, (code, stdout, stderr) => {
-      if (code != 0) {
-        reject(new Error(stderr));
-      } else {
-        resolve(stdout);
-      }
-    });
-  });
-}
+
 const config = {
   // status at 451dc3d. ToDo: update this to the latest commit
   addOrUpgrade: [
@@ -84,8 +72,7 @@ async function migrate(env) {
 
     const accessController = await getContractAt("AccessController", accessControllerAddress);
 
-    if (env == "upgrade-test" || env.includes("dry-run")) {
-      // TODO remove dry run from here
+    if (env == "upgrade-test") {
       const signer = (await getSigners())[0].address;
       // Grant PAUSER role to the deployer
       await accessController.grantRole(Role.PAUSER, signer);
@@ -99,36 +86,58 @@ async function migrate(env) {
 
     // Checking old version contracts to get selectors to remove
     // ToDo: at 451dc3d, no selectors to remove. Comment out this section. It will be needed when other changes are merged into main
-    //    const oldTag = "v2.2.1";
-    //    console.log("Checking out contracts on version 2.2.1");
-    //
-    //    await co(function* () {
-    //      yield execPromise(`ls contracts`);
-    //      yield execPromise(`rm -rf contracts/** `);
-    //      yield execPromise(`ls contracts`);
-    //      yield execPromise(`git checkout ${oldTag} contracts/** package.json package-lock.json`);
-    //      yield execPromise("npm install");
-    //    });
-    //
-    //    console.log("dependencies installed");
-    //    await hre.run("clean");
-    //    await hre.run("compile");
-    //
-    //    let functionNamesToSelector = {};
-    //
-    //    for (const facet of config.addOrUpgrade) {
-    //      const facetContract = await getContractAt(facet, protocolAddress);
-    //      const { signatureToNameMapping } = getSelectors(facetContract, true);
-    //      functionNamesToSelector = { ...functionNamesToSelector, ...signatureToNameMapping };
-    //    }
-    //
-    //    const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
-    //      ["SellerHandlerFacet", "OrchestrationHandlerFacet1", "OfferHandlerFacet", "ConfigHandlerFacet"],
-    //      undefined,
-    //      ["createSeller", "updateSeller", "createOffer", "createPremintedOffer"]
-    //    );
-    //
-    //    const selectorsToRemove = await getFunctionHashesClosure();
+
+    if (env != "upgrade-test") {
+      console.log("Checking out contracts on version 2.2.1");
+      shell.exec(`rm -rf contracts/*`);
+      shell.exec(`git checkout v2.2.1 contracts package.json package-lock.json`);
+      console.log("Installing dependencies");
+      shell.exec("npm install");
+      console.log("Compiling old contracts");
+      await hre.run("clean");
+      await hre.run("compile");
+    }
+
+    let functionNamesToSelector = {};
+
+    for (const facet of config.addOrUpgrade) {
+      const facetContract = await getContractAt(facet, protocolAddress);
+      const { signatureToNameMapping } = getSelectors(facetContract, true);
+      functionNamesToSelector = { ...functionNamesToSelector, ...signatureToNameMapping };
+    }
+
+    let getFunctionHashesClosure = getStateModifyingFunctionsHashes(
+      [
+        "SellerHandlerFacet",
+        "OfferHandlerFacet",
+        "ConfigHandlerFacet",
+        "PauseHandlerFacet",
+        "GroupHandlerFacet",
+        "OrchestrationHandlerFacet1",
+      ],
+      undefined,
+      [
+        "createSellerAndOffer",
+        "createSellerAndPremintedOffer",
+        "createOffer",
+        "createPremintedOffer",
+        "MaxAllowedSellers",
+        "MaxDisputesPerBatch",
+        "MaxExchangesPerBatch",
+        "MaxFeesPerDisputeResolver",
+        "MaxOffersPerBatch",
+        "MaxOffersPerGroup",
+        "MaxPremintedVouchers",
+        "MaxTokensPerWithdrawl",
+        "MaxTwinsPerBundle",
+        "getAvailableFunds",
+        "unpause",
+        "createGroup",
+        "setGroupCondition",
+      ]
+    );
+
+    const selectorsToRemove = await getFunctionHashesClosure();
 
     if (env != "upgrade-test") {
       const creators = await fetchSellerCreators(env);
@@ -139,29 +148,79 @@ async function migrate(env) {
     }
 
     console.log(`Checking out contracts on version ${tag}`);
-    shell.exec(`rm -rf contracts/** package.json package-lock.json`);
-    shell.exec(`ls contracts`);
-    shell.exec(`git checkout ${tag} contracts/* package.json package-lock.json`);
+    shell.exec(`rm -rf contracts/*`);
+    shell.exec(`git checkout ${tag} contracts package.json package-lock.json`);
 
-    shell.exec("npm install");
+    console.log("Installing dependencies");
+    shell.exec(`npm install`);
 
     console.log("Compiling contracts");
     await hre.run("clean");
     await hre.run("compile");
+
     console.log("Executing upgrade facets script");
     await hre.run("upgrade-facets", {
       env,
       facetConfig: JSON.stringify(config),
       newVersion: version,
-      functionNamesToSelector: JSON.stringify([]),
+      functionNamesToSelector: JSON.stringify(functionNamesToSelector),
     });
 
-    //   const selectorsToAdd = await getFunctionHashesClosure();
-    //    const metaTransactionHandlerFacet = await getContractAt("MetaTransactionsHandlerFacet", protocolAddress);
-    //    console.log("Removing selectors", selectorsToRemove.join(","));
-    //    await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToRemove, false);
-    //    console.log("Adding selectors", selectorsToAdd.join(","));
-    //    await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToAdd, true);
+    getFunctionHashesClosure = getStateModifyingFunctionsHashes(
+      [
+        "SellerHandlerFacet",
+        "OfferHandlerFacet",
+        "ConfigHandlerFacet",
+        "PauseHandlerFacet",
+        "GroupHandlerFacet",
+        "OrchestrationHandlerFacet1",
+        "ExchangeHandlerFacet",
+      ],
+      undefined,
+      [
+        "createSellerAndOffer",
+        "createSellerAndPremintedOffer",
+        "createOffer",
+        "createPremintedOffer",
+        "MaxAllowedSellers",
+        "MaxDisputesPerBatch",
+        "MaxExchangesPerBatch",
+        "MaxFeesPerDisputeResolver",
+        "MaxOffersPerBatch",
+        "MaxOffersPerGroup",
+        "MaxPremintedVouchers",
+        "MaxTokensPerWithdrawl",
+        "MaxTwinsPerBundle",
+        "getAvailableFunds",
+        "unpause",
+        "getPausedRegions",
+        "createGroup",
+        "setGroupCondition",
+        "createNewCollection",
+        "MinResolutionPeriod",
+        "commitToConditionalOffer",
+        "getAllAvailableFunds",
+        "getTokenList",
+        "getTokenListPaginated",
+      ]
+    );
+
+    const selectorsToAdd = await getFunctionHashesClosure();
+    const metaTransactionHandlerFacet = await getContractAt("MetaTransactionsHandlerFacet", protocolAddress);
+    console.log("Removing selectors", selectorsToRemove.join(","));
+    await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToRemove, false);
+
+    // check if functions were removed
+    for (const selector of selectorsToRemove) {
+      const isFunctionAllowlisted = await metaTransactionHandlerFacet.getFunction("isFunctionAllowlisted(bytes32)");
+      const isAllowed = await isFunctionAllowlisted.staticCall(selector);
+      if (isAllowed) {
+        console.error(`Selector ${selector} was not removed`);
+      }
+    }
+
+    console.log("Adding selectors", selectorsToAdd.join(","));
+    await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToAdd, true);
 
     console.log("Executing upgrade clients script");
 

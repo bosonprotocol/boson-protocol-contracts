@@ -146,7 +146,6 @@ async function getFacetRemoveCut(facet, omitFunctions = []) {
 async function getStateModifyingFunctions(facetNames, omitFunctions = [], onlyFunctions = []) {
   let stateModifyingFunctions = [];
   for (const facetName of facetNames) {
-    console.log("facetName", facetName);
     let FacetContractFactory = await getContractFactory(facetName);
     const functions = FacetContractFactory.interface.fragments;
     const facetStateModifyingFunctions = functions
@@ -155,6 +154,7 @@ async function getStateModifyingFunctions(facetNames, omitFunctions = [], onlyFu
           if (onlyFunctions.length === 0) {
             return true;
           }
+
           if (onlyFunctions.some((f) => fn.name.includes(f))) {
             return true;
           }
@@ -226,8 +226,8 @@ async function cutDiamond(
   const transactionResponse = await diamondCutFacet.diamondCut(
     [...facetsToRemove, ...cut],
     initializationAddress,
-    initializeCalldata
-    //await getFees(maxPriorityFeePerGas)
+    initializeCalldata,
+    await getFees(maxPriorityFeePerGas)
   );
 
   await transactionResponse.wait(confirmations);
