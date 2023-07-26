@@ -46,7 +46,7 @@ const { limits: protocolLimits } = require("../../scripts/config/protocol-parame
 
 const { deploySuite, populateProtocolContract, getProtocolContractState, revertState } = require("../util/upgrade");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { getGenericContext } = require("./01_generic");
+//const { getGenericContext } = require("./01_generic");
 const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
 
 const version = "2.3.0";
@@ -133,6 +133,10 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
     // Add twin handler back
     contractsBefore.twinHandler = twinHandler;
 
+    // Remove configHandler since has changed
+    ({ configHandler } = contractsBefore);
+    console.log(contractsBefore);
+
     // Get current protocol state, which serves as the reference
     // We assume that this state is a true one, relying on our unit and integration tests
     protocolContractStateBefore = await getProtocolContractState(
@@ -178,18 +182,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
 
     removedFunctionHashes = await getFunctionHashesClosure();
 
-    //    console.log("Removing old contracts");
-    //    shell.exec("rm -rf contracts/");
-    //    shell.exec("git checkout v2.1.0 contracts/");
-    //
-    //    console.log("Installing old OZ version");
-    //    shell.exec("npm i @openzeppelin/contracts-upgradeable@4.7.1");
-    //
-    //    console.log("Compiling old contracts");
-    //    await hre.run("clean");
-    //    await hre.run("compile");
-
-    console.log("Calling migration script");
     await migrate("upgrade-test");
 
     // Cast to updated interface
@@ -263,21 +255,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
     addedFunctionHashes = await getFunctionHashesClosure();
 
     snapshot = await getSnapshot();
-
-    const includeTests = [
-      // "accountContractState", // Clerk deprecated
-      "offerContractState",
-      "exchangeContractState",
-      "bundleContractState",
-      // "configContractState", // minResolutionPeriod changed
-      "disputeContractState",
-      "fundsContractState",
-      "groupContractState",
-      "twinContractState",
-      // "metaTxPrivateContractState", // isAllowlisted changed
-      "protocolStatusPrivateContractState",
-      "protocolLookupsPrivateContractState",
-    ];
 
     // Get protocol state after the upgrade
     protocolContractStateAfter = await getProtocolContractState(
@@ -392,7 +369,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
         });
       });
 
-      context.skip("Protocol limits", async function () {
+      context("Protocol limits", async function () {
         let wallets;
         let sellers, DRs, sellerWallet;
 

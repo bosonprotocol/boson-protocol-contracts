@@ -41,7 +41,6 @@ const config = {
   remove: [],
   skipSelectors: {},
   facetsToInit: {
-    // @TODO get correct constructor args
     ExchangeHandlerFacet: { init: [], constructorArgs: [EXCHANGE_ID_2_2_0[network]] },
   }, // must match nextExchangeId at the time of the upgrade
   initializationData: abiCoder.encode(["uint256", "uint256[]", "address[]"], [oneWeek, [], []]),
@@ -54,16 +53,16 @@ async function migrate(env) {
     //shell.exec(`git reset @{u}`);
     const statusOutput = shell.exec("git status -s -uno scripts package.json");
 
-    //    if (statusOutput.stdout) {
-    //      throw new Error("Local changes found. Please stash them before upgrading");
-    //    }
+    if (statusOutput.stdout) {
+      throw new Error("Local changes found. Please stash them before upgrading");
+    }
 
     const { chainId } = await ethers.provider.getNetwork();
     const contractsFile = readContracts(chainId, network, env);
 
-    //    if (contractsFile?.protocolVersion != "2.2.1") {
-    //      throw new Error("Current contract version must be 2.2.1");
-    //    }
+    if (contractsFile?.protocolVersion != "2.2.1") {
+      throw new Error("Current contract version must be 2.2.1");
+    }
 
     let contracts = contractsFile?.contracts;
 
@@ -84,10 +83,15 @@ async function migrate(env) {
     let pauseHandler = await getContractAt("IBosonPauseHandler", protocolAddress);
     await pauseHandler.pause([PausableRegion.Sellers], await getFees(maxPriorityFeePerGas));
 
-    // Checking old version contracts to get selectors to remove
-    // ToDo: at 451dc3d, no selectors to remove. Comment out this section. It will be needed when other changes are merged into main
-
     if (env != "upgrade-test") {
+      // Get the list of creators and their ids
+      const creators = await fetchSellerCreators(env);
+      config.initializationData = abiCoder.encode(
+        ["uint256", "uint256[]", "address[]"],
+        [oneWeek, creators.map((c) => c.id), creators.map((c) => c.creator)]
+      );
+
+      // Checking old version contracts to get selectors to remove
       console.log("Checking out contracts on version 2.2.1");
       shell.exec(`rm -rf contracts/*`);
       shell.exec(`git checkout v2.2.1 contracts package.json package-lock.json`);
@@ -138,14 +142,6 @@ async function migrate(env) {
     );
 
     const selectorsToRemove = await getFunctionHashesClosure();
-
-    if (env != "upgrade-test") {
-      const creators = await fetchSellerCreators(env);
-      config.initializationData = abiCoder.encode(
-        ["uint256", "uint256[]", "address[]"],
-        [oneWeek, creators.map((c) => c.id), creators.map((c) => c.creator)]
-      );
-    }
 
     console.log(`Checking out contracts on version ${tag}`);
     shell.exec(`rm -rf contracts/*`);

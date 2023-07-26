@@ -173,11 +173,6 @@ async function deploySuite(deployer, newVersion) {
     await deployMockTokens(["Foreign20", "Foreign20", "Foreign721", "Foreign721", "Foreign20", "Foreign1155"]);
   const mockTwinTokens = [mockTwin721_1, mockTwin721_2];
 
-  //  if (isOldOZVersion) {
-  //    shell.exec(`git checkout ${tag} package.json package-lock.json`);
-  //    shell.exec("npm i");
-  //  }
-
   return {
     protocolDiamondAddress,
     protocolContracts: {
@@ -736,8 +731,7 @@ async function getProtocolContractState(
     getOfferContractState(offerHandler, offers),
     getExchangeContractState(exchangeHandler, exchanges),
     getBundleContractState(bundleHandler, bundles),
-    // @TODO make this optional
-    Promise.resolve({}), //getConfigContractState(configHandler, isBefore),
+    configHandler ? getConfigContractState(configHandler, isBefore) : Promise.resolve({}),
     getDisputeContractState(disputeHandler, exchanges),
     getFundsContractState(fundsHandler, { DRs, sellers, buyers, agents }, isBefore),
     getGroupContractState(groupHandler, groups),

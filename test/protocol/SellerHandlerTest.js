@@ -2022,16 +2022,13 @@ describe("SellerHandler", function () {
       it("should clean pending auth token update when calling updateSeller again", async function () {
         seller.admin = ZeroAddress;
 
-        console.log("authToken", authToken);
         // Calling updateSeller for the first time, request to replace the admin with an auth token
         await expect(accountHandler.connect(admin).updateSeller(seller, authToken))
           .to.emit(accountHandler, "SellerUpdatePending")
           .withArgs(seller.id, pendingSellerUpdateStruct, authTokenStruct, admin.address);
 
         seller.admin = pendingSellerUpdate.admin = other1.address;
-        console.log(other1.address);
         pendingSellerUpdateStruct = pendingSellerUpdate.toStruct();
-        console.log("pendingSellerUpdateStruct", pendingSellerUpdateStruct);
 
         // Calling updateSeller for the second time, request to replace auth token with admin
         await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
