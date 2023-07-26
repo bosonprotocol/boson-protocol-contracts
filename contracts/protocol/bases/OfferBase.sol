@@ -197,7 +197,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                 }
             }
 
-
             // Collection must exist. Collections with index 0 exist by default.
             if (_offer.collectionIndex > 0) {
                 require(
@@ -234,7 +233,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
             uint256 totalOfferFeeLimit = (protocolLimits().maxTotalOfferFeePercentage * offerPrice) / 10000;
 
-
             // Sum of agent fee amount and protocol fee amount should be <= offer fee limit
             require((agentFeeAmount + protocolFee) <= totalOfferFeeLimit, AGENT_FEE_AMOUNT_TOO_HIGH);
 
@@ -264,7 +262,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // Get storage location for offer dates
         OfferDates storage offerDates = fetchOfferDates(_offer.id);
 
-
         // Set offer dates props individually since calldata structs can't be copied to storage
         offerDates.validFrom = _offerDates.validFrom;
         offerDates.validUntil = _offerDates.validUntil;
@@ -273,7 +270,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
         // Get storage location for offer durations
         OfferDurations storage offerDurations = fetchOfferDurations(_offer.id);
-
 
         // Set offer durations props individually since calldata structs can't be copied to storage
         offerDurations.disputePeriod = _offerDurations.disputePeriod;

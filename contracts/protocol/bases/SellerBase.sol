@@ -95,7 +95,6 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         _seller.id = sellerId;
         storeSeller(_seller, _authToken, lookups);
 
-
         // Create clone and store its address cloneAddress
         address voucherCloneAddress = cloneBosonVoucher(sellerId, 0, sender, _seller.assistant, _voucherInitValues, "");
         lookups.cloneAddress[sellerId] = voucherCloneAddress;

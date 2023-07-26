@@ -49,12 +49,14 @@ const config = {
 async function migrate(env) {
   console.log(`Migration ${tag} started`);
   try {
-    console.log("Removing any local changes before upgrading");
-    //shell.exec(`git reset @{u}`);
-    const statusOutput = shell.exec("git status -s -uno scripts package.json");
+    if (env != "upgrade-test") {
+      console.log("Removing any local changes before upgrading");
+      shell.exec(`git reset @{u}`);
+      const statusOutput = shell.exec("git status -s -uno scripts package.json");
 
-    if (statusOutput.stdout) {
-      throw new Error("Local changes found. Please stash them before upgrading");
+      if (statusOutput.stdout) {
+        throw new Error("Local changes found. Please stash them before upgrading");
+      }
     }
 
     const { chainId } = await ethers.provider.getNetwork();

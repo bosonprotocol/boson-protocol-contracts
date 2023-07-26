@@ -152,10 +152,9 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      */
     function initV2_3_0(bytes calldata _initializationData) internal {
         // Current version must be 2.2.1
-       require(protocolStatus().version == bytes32("2.2.1"), WRONG_CURRENT_VERSION);
+        require(protocolStatus().version == bytes32("2.2.1"), WRONG_CURRENT_VERSION);
 
         require(protocolCounters().nextTwinId == 1, TWINS_ALREADY_EXIST);
-
 
         // Decode initialization data
         (uint256 _minResolutionPeriod, uint256[] memory sellerIds, address[] memory sellerCreators) = abi.decode(

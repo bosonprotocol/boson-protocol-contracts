@@ -97,8 +97,6 @@ async function deploySuite(deployer, newVersion) {
 
   console.log(`Checking out version ${tag}`);
   shell.exec(`rm -rf contracts/*`);
-  // TODO check subfolders
-  //shell.exec(`find contracts -type f | xargs git checkout ${tag} --`);
   shell.exec(`git checkout ${tag} contracts/**`);
 
   if (scriptsTag) {

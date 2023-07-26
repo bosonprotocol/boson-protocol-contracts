@@ -377,7 +377,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         // set new values
         for (uint256 i = 0; i < _functionNameHashes.length; i++) {
             pmti.isAllowlisted[_functionNameHashes[i]] = _isAllowlisted;
-
         }
 
         // Notify external observers

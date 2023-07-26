@@ -135,7 +135,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
 
     // Remove configHandler since has changed
     ({ configHandler } = contractsBefore);
-    console.log(contractsBefore);
 
     // Get current protocol state, which serves as the reference
     // We assume that this state is a true one, relying on our unit and integration tests
@@ -1017,7 +1016,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
             .withArgs(minResolutionPeriod, deployer.address);
 
           // Verify that new value is stored
-          expect(await configHandler.connect(rando).getMinResolutionPeriod()).to.equal(minResolutionPeriod);
+          await expect(configHandler.connect(rando).getMinResolutionPeriod()).to.equal(minResolutionPeriod);
         });
       });
 
