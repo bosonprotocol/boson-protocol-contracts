@@ -220,6 +220,7 @@ describe("IBosonOfferHandler", function () {
 
       // Mock offer
       ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
+      console.log("offer", offer);
 
       // Check if domais are valid
       expect(offer.isValid()).is.true;
@@ -293,6 +294,7 @@ describe("IBosonOfferHandler", function () {
 
         // Returned values should match the input in createOffer
         for ([key, value] of Object.entries(offer)) {
+          console.log(key, returnedOffer[key], value);
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
         for ([key, value] of Object.entries(offerDates)) {

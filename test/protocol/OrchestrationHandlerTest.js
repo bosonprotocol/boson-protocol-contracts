@@ -7941,6 +7941,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Returned values should match the input in createSellerAndOffer
           for ([key, value] of Object.entries(offer)) {
+            console.log(key, value, returnedOffer[key]);
             expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
           }
           for ([key, value] of Object.entries(offerDates)) {

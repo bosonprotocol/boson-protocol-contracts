@@ -115,6 +115,9 @@ class Offer {
       voided,
       collectionIndex,
     ] = struct;
+    if (!collectionIndex) {
+      collectionIndex = 0;
+    }
 
     return Offer.fromObject({
       id: id.toString(),
@@ -127,7 +130,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
-      collectionIndex: collectionIndex && collectionIndex.toString(),
+      collectionIndex: collectionIndex.toString(),
     });
   }
 
