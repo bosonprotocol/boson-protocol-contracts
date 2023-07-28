@@ -24,7 +24,7 @@
     "tidy:contracts": "solhint --fix contracts/**/*.sol && prettier --write contracts/**",
     "tidy:scripts": "eslint --fix test/** scripts/** '*.js' && prettier --write test/** scripts/** '*.js'",
     "size": "npx hardhat size-contracts",
-    "coverage": "npx hardhat clean && npx hardhat coverage",
+    "coverage": "npx hardhat clean && npx hardhat coverage --testfiles '{test/domain/*.js,test/access/*.js,test/protocol/*.js,test/protocol/clients/*.js}'",
     "deploy-suite:hardhat": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network hardhat",
     "deploy-suite:local": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network localhost",
     "deploy-suite:test": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network test --env test >> logs/test.deploy.contracts.txt",
