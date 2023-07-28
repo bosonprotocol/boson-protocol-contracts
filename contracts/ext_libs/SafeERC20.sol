@@ -3,7 +3,7 @@
 pragma solidity 0.8.18;
 
 import "./Address.sol";
-import {IERC20} from "../interfaces/IERC20.sol";
+import { IERC20 } from "../interfaces/IERC20.sol";
 
 /**
  * @title SafeERC20
