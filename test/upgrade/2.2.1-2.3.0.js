@@ -1032,7 +1032,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
         });
 
         it("It is possible to change minimal resolution period", async function () {
-          const minResolutionPeriod = oneMonth;
+          const minResolutionPeriod = BigInt(oneMonth);
           // Set new resolution period
           await expect(configHandler.connect(deployer).setMinResolutionPeriod(minResolutionPeriod))
             .to.emit(configHandler, "MinResolutionPeriodChanged")
@@ -1058,18 +1058,55 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
           ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
-        it("State of configContractState is not affected apart from minResolutionPeriod", async function () {
+        it("State of configContractState is not affected apart from minResolutionPeriod and removed limits", async function () {
           // make a shallow copy to not modify original protocolContractState as it's used on getGenericContext
           const configContractStateBefore = { ...protocolContractStateBefore.configContractState };
           const configContractStateAfter = { ...protocolContractStateAfter.configContractState };
 
           const { minResolutionPeriod: minResolutionPeriodBefore } = configContractStateBefore;
-          const { minResolutionPeriod: minResolutionPeriodAfter } = configContractStateAfter;
+          const {
+            minResolutionPeriod: minResolutionPeriodAfter,
+            maxOffersPerBatch,
+            maxOffersPerGroup,
+            maxTwinsPerBundle,
+            maxOffersPerBundle,
+            maxTokensPerWithdrawal,
+            maxFeesPerDisputeResolver,
+            maxEscalationResponsePeriod,
+            maxDisputesPerBatch,
+            maxAllowedSellers,
+            maxExchangesPerBatch,
+            maxPremintedVouchers,
+          } = configContractStateAfter;
 
+          delete configContractStateBefore.minResolutionPeriod;
+          delete configContractStateBefore.maxOffersPerBatch;
+          delete configContractStateBefore.maxOffersPerGroup;
+          delete configContractStateBefore.maxTwinsPerBundle;
+          delete configContractStateBefore.maxOffersPerBundle;
+          delete configContractStateBefore.maxTokensPerWithdrawal;
+          delete configContractStateBefore.maxFeesPerDisputeResolver;
+          delete configContractStateBefore.maxEscalationResponsePeriod;
+          delete configContractStateBefore.maxDisputesPerBatch;
+          delete configContractStateBefore.maxAllowedSellers;
+          delete configContractStateBefore.maxExchangesPerBatch;
+          delete configContractStateBefore.maxPremintedVouchers;
           delete configContractStateBefore.minResolutionPeriod;
           delete configContractStateAfter.minResolutionPeriod;
 
           expect(minResolutionPeriodAfter).to.deep.equal(minResolutionPeriodBefore);
+          expect(maxOffersPerBatch).to.deep.equal(0n);
+          expect(maxOffersPerGroup).to.deep.equal(0n);
+          expect(maxTwinsPerBundle).to.deep.equal(0n);
+          expect(maxOffersPerBundle).to.deep.equal(0n);
+          expect(maxTokensPerWithdrawal).to.deep.equal(0n);
+          expect(maxFeesPerDisputeResolver).to.deep.equal(0n);
+          expect(maxEscalationResponsePeriod).to.deep.equal(0n);
+          expect(maxDisputesPerBatch).to.deep.equal(0n);
+          expect(maxAllowedSellers).to.deep.equal(0n);
+          expect(maxExchangesPerBatch).to.deep.equal(0n);
+          expect(maxPremintedVouchers).to.deep.equal(0n);
+
           expect(protocolContractStateAfter.configContractState).to.deep.equal(
             protocolContractStateBefore.configContractState
           );
