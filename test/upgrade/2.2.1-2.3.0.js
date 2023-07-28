@@ -133,9 +133,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
     // Add twin handler back
     contractsBefore.twinHandler = twinHandler;
 
-    // Remove configHandler since has changed
-    ({ configHandler } = contractsBefore);
-
     // Get current protocol state, which serves as the reference
     // We assume that this state is a true one, relying on our unit and integration tests
     protocolContractStateBefore = await getProtocolContractState(
@@ -885,7 +882,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
               externalId
             );
 
-            // TODO fix withArgs
             await expect(accountHandler.connect(sellerWallet).createNewCollection(externalId, voucherInitValues))
               .to.emit(accountHandler, "CollectionCreated")
               .withArgs(sellerId, 1, expectedCollectionAddress, externalId, sellerWallet.address);
@@ -918,6 +914,33 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
               "Wrong voucher client symbol"
             );
           });
+        });
+
+        it("New sellers uses create2 to calculate voucher address", async function () {
+          const seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
+          seller.id = await accountHandler.getNextAccountId();
+
+          const emptyAuthToken = mockAuthToken();
+          const voucherInitValues = mockVoucherInitValues();
+
+          const beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
+          const defaultVoucherAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            seller.admin,
+            ""
+          );
+
+          const tx = await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
+          await expect(tx)
+            .to.emit(accountHandler, "SellerCreated")
+            .withArgs(
+              seller.id,
+              seller.toStruct(),
+              defaultVoucherAddress,
+              emptyAuthToken.toStruct(),
+              assistant.address
+            );
         });
       });
 

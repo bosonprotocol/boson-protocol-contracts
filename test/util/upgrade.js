@@ -923,6 +923,7 @@ async function getBundleContractState(bundleHandler, bundles) {
 }
 
 async function getConfigContractState(configHandler, isBefore = false) {
+  const isBefore2_3_0 = versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion);
   const configHandlerRando = configHandler.connect(rando);
   const [
     tokenAddress,
@@ -960,29 +961,28 @@ async function getConfigContractState(configHandler, isBefore = false) {
     configHandlerRando.getBeaconProxyAddress(),
     configHandlerRando.getProtocolFeePercentage(),
     configHandlerRando.getProtocolFeeFlatBoson(),
-    configHandlerRando.getMaxOffersPerBatch(),
-    configHandlerRando.getMaxOffersPerGroup(),
-    configHandlerRando.getMaxTwinsPerBundle(),
-    configHandlerRando.getMaxOffersPerBundle(),
-    configHandlerRando.getMaxTokensPerWithdrawal(),
-    configHandlerRando.getMaxFeesPerDisputeResolver(),
-    configHandlerRando.getMaxEscalationResponsePeriod(),
-    configHandlerRando.getMaxDisputesPerBatch(),
+    isBefore2_3_0 && configHandlerRando.getMaxOffersPerBatch(),
+    isBefore2_3_0 && configHandlerRando.getMaxOffersPerGroup(),
+    isBefore2_3_0 && configHandlerRando.getMaxTwinsPerBundle(),
+    isBefore2_3_0 && configHandlerRando.getMaxOffersPerBundle(),
+    isBefore2_3_0 && configHandlerRando.getMaxTokensPerWithdrawal(),
+    isBefore2_3_0 && configHandlerRando.getMaxFeesPerDisputeResolver(),
+    isBefore2_3_0 && configHandlerRando.getMaxEscalationResponsePeriod(),
+    isBefore2_3_0 && configHandlerRando.getMaxDisputesPerBatch(),
     configHandlerRando.getMaxTotalOfferFeePercentage(),
-    configHandlerRando.getMaxAllowedSellers(),
+    isBefore2_3_0 && configHandlerRando.getMaxAllowedSellers(),
     configHandlerRando.getBuyerEscalationDepositPercentage(),
     configHandlerRando.getAuthTokenContract(AuthTokenType.None),
     configHandlerRando.getAuthTokenContract(AuthTokenType.Custom),
     configHandlerRando.getAuthTokenContract(AuthTokenType.Lens),
     configHandlerRando.getAuthTokenContract(AuthTokenType.ENS),
-    configHandlerRando.getMaxExchangesPerBatch(),
+    isBefore2_3_0 && configHandlerRando.getMaxExchangesPerBatch(),
     configHandlerRando.getMaxRoyaltyPecentage(),
     configHandlerRando.getMaxResolutionPeriod(),
     configHandlerRando.getMinDisputePeriod(),
     configHandlerRando.getAccessControllerAddress(),
-    configHandlerRando.getMaxPremintedVouchers(),
-    !versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion) &&
-      configHandlerRando.getMinResolutionPeriod(),
+    isBefore2_3_0 && configHandlerRando.getMaxPremintedVouchers(),
+    !isBefore2_3_0 && configHandlerRando.getMinResolutionPeriod(),
   ]);
 
   return {
