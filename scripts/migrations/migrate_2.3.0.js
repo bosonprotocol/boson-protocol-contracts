@@ -19,6 +19,7 @@ const tag = "HEAD";
 const version = "2.3.0";
 const { EXCHANGE_ID_2_2_0 } = require("../config/protocol-parameters");
 const { META_TRANSACTION_FORWARDER } = require("../config/client-upgrade");
+const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
 
 const config = {
   // status at 451dc3d. ToDo: update this to the latest commit
@@ -46,7 +47,7 @@ const config = {
   initializationData: abiCoder.encode(["uint256", "uint256[]", "address[]"], [oneWeek, [], []]),
 };
 
-async function migrate(env) {
+async function migrate(env, sellerCreators) {
   console.log(`Migration ${tag} started`);
   try {
     if (env != "upgrade-test") {
@@ -83,16 +84,12 @@ async function migrate(env) {
 
     console.log("Pausing the Seller region...");
     let pauseHandler = await getContractAt("IBosonPauseHandler", protocolAddress);
-    await pauseHandler.pause([PausableRegion.Sellers], await getFees(maxPriorityFeePerGas));
+    const pauseTransaction = await pauseHandler.pause([PausableRegion.Sellers], await getFees(maxPriorityFeePerGas));
+
+    // await 1 block to ensure the pause is effective
+    await pauseTransaction.wait(confirmations);
 
     if (env != "upgrade-test") {
-      // Get the list of creators and their ids
-      const creators = await fetchSellerCreators(env);
-      config.initializationData = abiCoder.encode(
-        ["uint256", "uint256[]", "address[]"],
-        [oneWeek, creators.map((c) => c.id), creators.map((c) => c.creator)]
-      );
-
       // Checking old version contracts to get selectors to remove
       console.log("Checking out contracts on version 2.2.1");
       shell.exec(`rm -rf contracts/*`);
@@ -103,6 +100,14 @@ async function migrate(env) {
       await hre.run("clean");
       await hre.run("compile");
     }
+
+    // Get the list of creators and their ids
+    sellerCreators = sellerCreators || (await fetchSellerCreators(env));
+    config.initializationData = abiCoder.encode(
+      ["uint256", "uint256[]", "address[]"],
+      [oneWeek, sellerCreators.map((c) => c.id), sellerCreators.map((c) => c.creator)]
+    );
+    console.log("Initialization data: ", config.initializationData);
 
     let functionNamesToSelector = {};
 

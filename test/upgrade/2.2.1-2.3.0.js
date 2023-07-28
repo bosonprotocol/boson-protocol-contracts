@@ -106,30 +106,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
       true
     );
 
-    // Start a seller update (finished in tests)
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
-    const { sellers } = preUpgradeEntities;
-    let { wallet, id, seller, authToken } = sellers[0];
-    seller.clerk = rando.address;
-    await accountHandler.connect(wallet).updateSeller(seller, authToken);
-    ({ wallet, id, seller, authToken } = sellers[1]);
-    seller.clerk = rando.address;
-    seller.assistant = rando.address;
-    await accountHandler.connect(wallet).updateSeller(seller, authToken);
-    ({ wallet, id, seller, authToken } = sellers[2]);
-    seller.clerk = clerk.address;
-    await accountHandler.connect(wallet).updateSeller(seller, authToken);
-    await accountHandler.connect(clerk).optInToSellerUpdate(id, [SellerUpdateFields.Clerk]);
-    const { DRs } = preUpgradeEntities;
-    let disputeResolver;
-    ({ wallet, disputeResolver } = DRs[0]);
-    disputeResolver.clerk = rando.address;
-    await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
-    ({ wallet, disputeResolver } = DRs[1]);
-    disputeResolver.clerk = rando.address;
-    disputeResolver.assistant = rando.address;
-    await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
-
     // Add twin handler back
     contractsBefore.twinHandler = twinHandler;
 
@@ -178,7 +154,36 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
 
     removedFunctionHashes = await getFunctionHashesClosure();
 
-    await migrate("upgrade-test");
+    // prepare seller creators
+    const { sellers } = preUpgradeEntities;
+    const sellerCreators = sellers.map((seller) => {
+      return { id: seller.id, creator: seller.seller.assistant };
+    });
+
+    // Start a seller update (finished in tests)
+    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
+    let { wallet, id, seller, authToken } = sellers[0];
+    seller.clerk = rando.address;
+    await accountHandler.connect(wallet).updateSeller(seller, authToken);
+    ({ wallet, id, seller, authToken } = sellers[1]);
+    seller.clerk = rando.address;
+    seller.assistant = rando.address;
+    await accountHandler.connect(wallet).updateSeller(seller, authToken);
+    ({ wallet, id, seller, authToken } = sellers[2]);
+    seller.clerk = clerk.address;
+    await accountHandler.connect(wallet).updateSeller(seller, authToken);
+    await accountHandler.connect(clerk).optInToSellerUpdate(id, [SellerUpdateFields.Clerk]);
+    const { DRs } = preUpgradeEntities;
+    let disputeResolver;
+    ({ wallet, disputeResolver } = DRs[0]);
+    disputeResolver.clerk = rando.address;
+    await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
+    ({ wallet, disputeResolver } = DRs[1]);
+    disputeResolver.clerk = rando.address;
+    disputeResolver.assistant = rando.address;
+    await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
+
+    await migrate("upgrade-test", sellerCreators);
 
     // Cast to updated interface
     let newHandlers = {
@@ -875,6 +880,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
             const externalId = "new-collection";
 
             const expectedDefaultAddress = calculateContractAddress(await accountHandler.getAddress(), "1");
+
             const expectedCollectionAddress = calculateCloneAddress(
               await accountHandler.getAddress(),
               beaconProxyAddress,
@@ -1038,8 +1044,9 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
             .to.emit(configHandler, "MinResolutionPeriodChanged")
             .withArgs(minResolutionPeriod, deployer.address);
 
+          const tx = await configHandler.connect(rando).getMinResolutionPeriod();
           // Verify that new value is stored
-          await expect(configHandler.connect(rando).getMinResolutionPeriod()).to.equal(minResolutionPeriod);
+          await expect(tx).to.equal(minResolutionPeriod);
         });
       });
 
@@ -1058,58 +1065,35 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
           ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
-        it("State of configContractState is not affected apart from minResolutionPeriod and removed limits", async function () {
+        it("State of configContractState is not affected apart from minResolutionPeriod, removed limits and beaconProxy", async function () {
           // make a shallow copy to not modify original protocolContractState as it's used on getGenericContext
           const configContractStateBefore = { ...protocolContractStateBefore.configContractState };
           const configContractStateAfter = { ...protocolContractStateAfter.configContractState };
 
-          const { minResolutionPeriod: minResolutionPeriodBefore } = configContractStateBefore;
-          const {
-            minResolutionPeriod: minResolutionPeriodAfter,
-            maxOffersPerBatch,
-            maxOffersPerGroup,
-            maxTwinsPerBundle,
-            maxOffersPerBundle,
-            maxTokensPerWithdrawal,
-            maxFeesPerDisputeResolver,
-            maxEscalationResponsePeriod,
-            maxDisputesPerBatch,
-            maxAllowedSellers,
-            maxExchangesPerBatch,
-            maxPremintedVouchers,
-          } = configContractStateAfter;
+          const { minResolutionPeriod: minResolutionPeriodAfter, beaconProxyAddress } = configContractStateAfter;
 
-          delete configContractStateBefore.minResolutionPeriod;
-          delete configContractStateBefore.maxOffersPerBatch;
-          delete configContractStateBefore.maxOffersPerGroup;
-          delete configContractStateBefore.maxTwinsPerBundle;
-          delete configContractStateBefore.maxOffersPerBundle;
-          delete configContractStateBefore.maxTokensPerWithdrawal;
-          delete configContractStateBefore.maxFeesPerDisputeResolver;
-          delete configContractStateBefore.maxEscalationResponsePeriod;
-          delete configContractStateBefore.maxDisputesPerBatch;
-          delete configContractStateBefore.maxAllowedSellers;
-          delete configContractStateBefore.maxExchangesPerBatch;
-          delete configContractStateBefore.maxPremintedVouchers;
+          configContractStateBefore.maxOffersPerBatch = "0";
+          configContractStateBefore.maxOffersPerGroup = "0";
+          configContractStateBefore.maxOffersPerBundle = "0";
+          configContractStateBefore.maxTwinsPerBundle = "0";
+          configContractStateBefore.maxTokensPerWithdrawal = "0";
+          configContractStateBefore.maxFeesPerDisputeResolver = "0";
+          configContractStateBefore.maxEscalationResponsePeriod = "0";
+          configContractStateBefore.maxDisputesPerBatch = "0";
+          configContractStateBefore.maxAllowedSellers = "0";
+          configContractStateBefore.maxExchangesPerBatch = "0";
+          configContractStateBefore.maxPremintedVouchers = "0";
+
           delete configContractStateBefore.minResolutionPeriod;
           delete configContractStateAfter.minResolutionPeriod;
+          delete configContractStateBefore.beaconProxyAddress;
+          delete configContractStateAfter.beaconProxyAddress;
 
-          expect(minResolutionPeriodAfter).to.deep.equal(minResolutionPeriodBefore);
-          expect(maxOffersPerBatch).to.deep.equal(0n);
-          expect(maxOffersPerGroup).to.deep.equal(0n);
-          expect(maxTwinsPerBundle).to.deep.equal(0n);
-          expect(maxOffersPerBundle).to.deep.equal(0n);
-          expect(maxTokensPerWithdrawal).to.deep.equal(0n);
-          expect(maxFeesPerDisputeResolver).to.deep.equal(0n);
-          expect(maxEscalationResponsePeriod).to.deep.equal(0n);
-          expect(maxDisputesPerBatch).to.deep.equal(0n);
-          expect(maxAllowedSellers).to.deep.equal(0n);
-          expect(maxExchangesPerBatch).to.deep.equal(0n);
-          expect(maxPremintedVouchers).to.deep.equal(0n);
+          const expectedBeaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
+          expect(minResolutionPeriodAfter).to.equal(oneWeek);
+          expect(beaconProxyAddress).to.equal(expectedBeaconProxyAddress);
 
-          expect(protocolContractStateAfter.configContractState).to.deep.equal(
-            protocolContractStateBefore.configContractState
-          );
+          expect(configContractStateAfter).to.deep.equal(configContractStateBefore);
         });
 
         it("Create an offer with a new collection", async function () {
