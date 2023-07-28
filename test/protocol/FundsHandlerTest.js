@@ -367,12 +367,15 @@ describe("IBosonFundsHandler", function () {
 
           await foreign20ReturnFalse.connect(assistant).mint(await assistant.getAddress(), depositAmount);
           await foreign20ReturnFalse.connect(assistant).approve(protocolDiamondAddress, depositAmount);
+          const safeERC20 = await ethers.getContractAt("SafeERC20", protocolDiamondAddress);
 
           await expect(
             fundsHandler
               .connect(assistant)
               .depositFunds(seller.id, await foreign20ReturnFalse.getAddress(), depositAmount)
-          ).to.revertedWith(RevertReasons.SAFE_ERC20_NOT_SUCCEEDED);
+          )
+            .to.revertedWithCustomError(safeERC20, "SafeERC20FailedOperation")
+            .withArgs(await foreign20ReturnFalse.getAddress());
         });
       });
     });
@@ -964,6 +967,7 @@ describe("IBosonFundsHandler", function () {
             await foreign20ReturnFalse.connect(assistant).mint(await assistant.getAddress(), sellerDeposit);
             await foreign20ReturnFalse.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
 
+            const safeERC20 = await ethers.getContractAt("SafeERC20", protocolDiamondAddress);
             await fundsHandler
               .connect(assistant)
               .depositFunds(seller.id, await foreign20ReturnFalse.getAddress(), sellerDeposit);
@@ -972,7 +976,9 @@ describe("IBosonFundsHandler", function () {
               fundsHandler
                 .connect(assistant)
                 .withdrawFunds(seller.id, [await foreign20ReturnFalse.getAddress()], [sellerDeposit])
-            ).to.revertedWith(RevertReasons.SAFE_ERC20_NOT_SUCCEEDED);
+            )
+              .to.revertedWithCustomError(safeERC20, "SafeERC20FailedOperation")
+              .withArgs(await foreign20ReturnFalse.getAddress());
           });
         });
       });

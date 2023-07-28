@@ -92,7 +92,7 @@ contract ERC20Basic {
  * @title ERC20 interface
  * @dev see https://github.com/ethereum/EIPs/issues/20
  */
-contract ERC20 is ERC20Basic {
+contract ERC20Tether is ERC20Basic {
     function allowance(address owner, address spender) public constant returns (uint);
 
     function transferFrom(address from, address to, uint value) public;
@@ -160,7 +160,7 @@ contract BasicToken is Ownable, ERC20Basic {
  * @dev https://github.com/ethereum/EIPs/issues/20
  * @dev Based oncode by FirstBlood: https://github.com/Firstbloodio/token/blob/master/smart_contract/FirstBloodToken.sol
  */
-contract StandardToken is BasicToken, ERC20 {
+contract StandardToken is BasicToken, ERC20Tether {
     mapping(address => mapping(address => uint)) public allowed;
 
     uint public constant MAX_UINT = 2 ** 256 - 1;
