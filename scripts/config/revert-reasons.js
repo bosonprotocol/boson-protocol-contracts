@@ -166,6 +166,7 @@ exports.RevertReasons = {
   OWNABLE_ZERO_ADDRESS: "Ownable: new owner is the zero address",
   SAFE_ERC20_LOW_LEVEL_CALL: "Address: low-level call failed",
   INITIALIZABLE_ALREADY_INITIALIZED: "Initializable: contract is already initialized",
+  SAFE_ERC20_FAILED_OPERATION: "SafeERC20FailedOperation",
 
   // Meta-Transactions related
   NONCE_USED_ALREADY: "Nonce used already",

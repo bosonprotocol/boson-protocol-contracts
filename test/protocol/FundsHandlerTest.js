@@ -374,7 +374,7 @@ describe("IBosonFundsHandler", function () {
               .connect(assistant)
               .depositFunds(seller.id, await foreign20ReturnFalse.getAddress(), depositAmount)
           )
-            .to.revertedWithCustomError(safeERC20, "SafeERC20FailedOperation")
+            .to.revertedWithCustomError(safeERC20, RevertReasons.SAFE_ERC20_FAILED_OPERATION)
             .withArgs(await foreign20ReturnFalse.getAddress());
         });
       });

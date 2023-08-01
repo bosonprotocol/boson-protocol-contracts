@@ -13,8 +13,8 @@ import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Co
 import { ERC2771ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-import { IERC20 } from "../../../interfaces/IERC20.sol";
-import { SafeERC20 } from "../../../ext_libs/SafeERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
 import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
@@ -773,16 +773,20 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             address token = _tokenList[i];
             if (token == address(0)) {
                 uint256 balance = address(this).balance;
-                IBosonFundsHandler(protocolDiamond).depositFunds{ value: balance }(sellerId, token, balance);
+
+                if (balance > 0) {
+                    IBosonFundsHandler(protocolDiamond).depositFunds{ value: balance }(sellerId, token, balance);
+                }
             } else {
                 uint256 balance = IERC20(token).balanceOf(address(this));
-                // get current allowance
-                uint256 allowance = IERC20(token).allowance(address(this), protocolDiamond);
-                if (allowance < balance) {
-                    // increase allowance if needed
-                    IERC20(token).safeIncreaseAllowance(protocolDiamond, balance - allowance);
+                if (balance > 0) {
+                    // get current allowance
+                    uint256 allowance = IERC20(token).allowance(address(this), protocolDiamond);
+                    if (allowance < balance) {
+                        IERC20(token).forceApprove(protocolDiamond, balance);
+                    }
+                    IBosonFundsHandler(protocolDiamond).depositFunds(sellerId, token, balance);
                 }
-                IBosonFundsHandler(protocolDiamond).depositFunds(sellerId, token, balance);
             }
         }
     }
