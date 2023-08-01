@@ -164,9 +164,9 @@ exports.RevertReasons = {
   ERC721_CALLER_NOT_OWNER_OR_APPROVED: "ERC721: caller is not token owner or approved",
   OWNABLE_NOT_OWNER: "Ownable: caller is not the owner",
   OWNABLE_ZERO_ADDRESS: "Ownable: new owner is the zero address",
-  SAFE_ERC20_LOW_LEVEL_CALL: "Address: low-level call failed",
+  SAFE_ERC20_LOW_LEVEL_CALL: "SafeERC20: low-level call failed",
+  SAFE_ERC20_OPERATION_FAILED: "SafeERC20: ERC20 operation did not succeed",
   INITIALIZABLE_ALREADY_INITIALIZED: "Initializable: contract is already initialized",
-  SAFE_ERC20_FAILED_OPERATION: "SafeERC20FailedOperation",
 
   // Meta-Transactions related
   NONCE_USED_ALREADY: "Nonce used already",
