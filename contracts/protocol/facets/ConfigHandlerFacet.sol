@@ -427,6 +427,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function setMinResolutionPeriod(uint256 _minResolutionPeriod) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxResolutionPeriod is greater than 0
         checkNonZero(_minResolutionPeriod);
+        // Make sure _minResolutionPeriod is less than _maxResolutionPeriod
+        require(_minResolutionPeriod < protocolLimits().maxResolutionPeriod, MIN_RESOLUTION_PERIOD_INVALID);
 
         protocolLimits().minResolutionPeriod = _minResolutionPeriod;
         emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
@@ -455,6 +457,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function setMaxResolutionPeriod(uint256 _maxResolutionPeriod) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxResolutionPeriod is greater than 0
         checkNonZero(_maxResolutionPeriod);
+        // Make sure _maxResolutionPeriod is greater than _minResolutionPeriod
+        require(_maxResolutionPeriod > protocolLimits().minResolutionPeriod, INVALID_RESOLUTION_PERIOD);
 
         protocolLimits().maxResolutionPeriod = _maxResolutionPeriod;
         emit MaxResolutionPeriodChanged(_maxResolutionPeriod, msgSender());
