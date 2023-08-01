@@ -776,7 +776,12 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
                 IBosonFundsHandler(protocolDiamond).depositFunds{ value: balance }(sellerId, token, balance);
             } else {
                 uint256 balance = IERC20(token).balanceOf(address(this));
-                IERC20(token).safeIncreaseAllowance(protocolDiamond, balance);
+                // get current allowance
+                uint256 allowance = IERC20(token).allowance(address(this), protocolDiamond);
+                if (allowance < balance) {
+                    // increase allowance if needed
+                    IERC20(token).safeIncreaseAllowance(protocolDiamond, balance - allowance);
+                }
                 IBosonFundsHandler(protocolDiamond).depositFunds(sellerId, token, balance);
             }
         }
