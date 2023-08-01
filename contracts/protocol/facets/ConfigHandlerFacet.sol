@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.18;
 
+import "hardhat/console.sol";
 import "../../domain/BosonConstants.sol";
 import { IBosonConfigHandler } from "../../interfaces/handlers/IBosonConfigHandler.sol";
 import { IAccessControl } from "../../interfaces/IAccessControl.sol";
@@ -43,8 +44,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setBuyerEscalationDepositPercentage(_fees.buyerEscalationDepositPercentage);
         setMaxTotalOfferFeePercentage(_limits.maxTotalOfferFeePercentage);
         setMaxRoyaltyPecentage(_limits.maxRoyaltyPecentage);
-        setMinResolutionPeriod(_limits.minResolutionPeriod);
         setMaxResolutionPeriod(_limits.maxResolutionPeriod);
+        setMinResolutionPeriod(_limits.minResolutionPeriod);
         setMinDisputePeriod(_limits.minDisputePeriod);
 
         // Initialize protocol counters
@@ -428,7 +429,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         // Make sure _maxResolutionPeriod is greater than 0
         checkNonZero(_minResolutionPeriod);
         // Make sure _minResolutionPeriod is less than _maxResolutionPeriod
-        require(_minResolutionPeriod < protocolLimits().maxResolutionPeriod, MIN_RESOLUTION_PERIOD_INVALID);
+        require(_minResolutionPeriod < protocolLimits().maxResolutionPeriod, INVALID_RESOLUTION_PERIOD);
 
         protocolLimits().minResolutionPeriod = _minResolutionPeriod;
         emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());

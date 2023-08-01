@@ -61,6 +61,10 @@ contract Foreign20 is ERC20Pausable, MockNativeMetaTransaction {
     function destruct() public {
         selfdestruct(payable(msg.sender));
     }
+
+    function allowance(address owner, address spender) public view override returns (uint256) {
+        return super.allowance(owner, spender);
+    }
 }
 
 /**
