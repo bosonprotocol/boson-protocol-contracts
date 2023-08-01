@@ -143,10 +143,11 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      * Reverts if:
      *  - Current version is not 2.2.1
      *  - There are already twins. This version adds a new mapping for twins which make it incompatible with previous versions.
-     *  - minResolutionPeriond is not present in _initializationData parameter
+     *  - minResolutionPeriod is not present in _initializationData parameter
      *  - length of seller creators does not match the length of seller ids
      *  - if some of seller creators is zero address
      *  - if some of seller ids does not bellong to a seller
+     *  - if minResolutionPeriod is greater than maxResolutionPeriod
      *
      * @param _initializationData - data representing uint256 _minResolutionPeriod, uint256[] memory sellerIds, address[] memory sellerCreators
      */
@@ -160,6 +161,9 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             _initializationData,
             (uint256, uint256[], address[])
         );
+
+        // make sure _minResolutionPeriod is less than maxResolutionPeriod
+        require(protocolLimits().maxResolutionPeriod > _minResolutionPeriod, INVALID_RESOLUTION_PERIOD);
 
         // Initialize limits.maxPremintedVouchers (configHandlerFacet initializer)
         require(_minResolutionPeriod != 0, VALUE_ZERO_NOT_ALLOWED);
