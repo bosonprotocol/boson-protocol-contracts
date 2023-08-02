@@ -95,8 +95,11 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         _seller.id = sellerId;
         storeSeller(_seller, _authToken, lookups);
 
+        bytes32 sellerSalt = keccak256(abi.encodePacked(sender, _voucherInitValues.collectionSalt));
+        lookups.sellerSalt[sellerId] = sellerSalt;
+
         // Create clone and store its address cloneAddress
-        address voucherCloneAddress = cloneBosonVoucher(sellerId, 0, sender, _seller.assistant, _voucherInitValues, "");
+        address voucherCloneAddress = cloneBosonVoucher(sellerId, 0, sellerSalt, _seller.assistant, _voucherInitValues);
         lookups.cloneAddress[sellerId] = voucherCloneAddress;
 
         // Notify watchers of state change
@@ -142,7 +145,6 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Map the seller's other addresses to the seller id. It's not necessary to map the treasury address, as it only receives funds
         _lookups.sellerIdByAssistant[_seller.assistant] = _seller.id;
-        _lookups.sellerCreator[_seller.id] = msgSender();
     }
 
     /**
@@ -150,26 +152,24 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      *
      * @param _sellerId - id of the seller
      * @param _collectionIndex - index of the collection.
-     * @param _creator - address of the seller creator
+     * @param _sellerSalt - seller dependent salt, used to create the clone address
      * @param _assistant - address of the assistant
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
-     * @param _externalId - external collection id ("" for the default collection)
      * @return cloneAddress - the address of newly created clone
      */
     function cloneBosonVoucher(
         uint256 _sellerId,
         uint256 _collectionIndex,
-        address _creator,
+        bytes32 _sellerSalt,
         address _assistant,
-        VoucherInitValues calldata _voucherInitValues,
-        string memory _externalId
+        VoucherInitValues calldata _voucherInitValues
     ) internal returns (address cloneAddress) {
         // Pointer to stored addresses
         ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
 
         // Load beacon proxy contract address
         bytes20 targetBytes = bytes20(pa.beaconProxy);
-        bytes32 salt = keccak256(abi.encodePacked(_creator, _externalId));
+        bytes32 collectionSalt = keccak256(abi.encodePacked(_sellerSalt, _voucherInitValues.collectionSalt));
 
         // create a minimal clone
         assembly {
@@ -177,7 +177,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
             mstore(add(clone, 0x14), targetBytes)
             mstore(add(clone, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
-            cloneAddress := create2(0, clone, 0x37, salt)
+            cloneAddress := create2(0, clone, 0x37, collectionSalt)
         }
 
         // Initialize the clone

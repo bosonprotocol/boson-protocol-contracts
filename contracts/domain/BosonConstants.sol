@@ -74,6 +74,7 @@ string constant INVALID_AGENT_FEE_PERCENTAGE = "Sum of agent fee percentage and 
 string constant NO_PENDING_UPDATE_FOR_ACCOUNT = "No pending updates for the given account";
 string constant UNAUTHORIZED_CALLER_UPDATE = "Caller has no permission to approve this update";
 string constant NO_UPDATE_APPLIED = "No update applied or requested approval";
+string constant INVALID_SALT = "Invalid salt";
 
 // Revert Reasons: Offer related
 string constant NO_SUCH_OFFER = "No such offer";

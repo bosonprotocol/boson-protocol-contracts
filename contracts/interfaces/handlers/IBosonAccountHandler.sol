@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x868de65b
+ * The ERC-165 identifier for this interface is: 0x91f6281a
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -310,7 +310,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a CollectionCreated event if successful.
      *
      *  Reverts if:
-     *  - The offers region of protocol is paused
+     *  - The sellers region of protocol is paused
      *  - Caller is not the seller assistant
      *
      * @param _externalId - external collection id
@@ -320,6 +320,19 @@ interface IBosonAccountHandler is IBosonAccountEvents {
         string calldata _externalId,
         BosonTypes.VoucherInitValues calldata _voucherInitValues
     ) external;
+
+    /**
+     * @notice Updates a salt.
+     * Use this if the admin address is updated and there exist a possibility that old admin will try to create the vouchers
+     * with matching addresses on other chains.
+     *
+     *  Reverts if:
+     *  - The sellers region of protocol is paused
+     *  - Caller is not the admin of any seller
+     *
+     * @param _newSalt - new salt
+     */
+    function updateSellerSalt(bytes32 _newSalt) external;
 
     /**
      * @notice Gets the details about a seller.

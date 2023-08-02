@@ -144,11 +144,11 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      *  - Current version is not 2.2.1
      *  - There are already twins. This version adds a new mapping for twins which make it incompatible with previous versions.
      *  - minResolutionPeriond is not present in _initializationData parameter
-     *  - length of seller creators does not match the length of seller ids
-     *  - if some of seller creators is zero address
+     *  - length of seller salts does not match the length of seller ids
+     *  - if some of seller salts is zero address
      *  - if some of seller ids does not bellong to a seller
      *
-     * @param _initializationData - data representing uint256 _minResolutionPeriod, uint256[] memory sellerIds, address[] memory sellerCreators
+     * @param _initializationData - data representing uint256 _minResolutionPeriod, uint256[] memory sellerIds, address[] memory sellerSalts
      */
     function initV2_3_0(bytes calldata _initializationData) internal {
         // Current version must be 2.2.1
@@ -156,9 +156,9 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         require(protocolCounters().nextTwinId == 1, TWINS_ALREADY_EXIST);
 
         // Decode initialization data
-        (uint256 _minResolutionPeriod, uint256[] memory sellerIds, address[] memory sellerCreators) = abi.decode(
+        (uint256 _minResolutionPeriod, uint256[] memory sellerIds, bytes32[] memory sellerSalts) = abi.decode(
             _initializationData,
-            (uint256, uint256[], address[])
+            (uint256, uint256[], bytes32[])
         );
 
         // Initialize limits.maxPremintedVouchers (configHandlerFacet initializer)
@@ -166,15 +166,15 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         protocolLimits().minResolutionPeriod = _minResolutionPeriod;
         emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
 
-        // Initialize sellerCreators
-        require(sellerIds.length == sellerCreators.length, ARRAY_LENGTH_MISMATCH);
+        // Initialize sellerSalts
+        require(sellerIds.length == sellerSalts.length, ARRAY_LENGTH_MISMATCH);
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
         for (uint256 i = 0; i < sellerIds.length; i++) {
             (bool exists, , ) = fetchSeller(sellerIds[i]);
             require(exists, NO_SUCH_SELLER);
-            require(sellerCreators[i] != address(0), INVALID_ADDRESS);
+            require(sellerSalts[i] != 0, INVALID_SALT);
 
-            lookups.sellerCreator[sellerIds[i]] = sellerCreators[i];
+            lookups.sellerSalt[sellerIds[i]] = sellerSalts[i];
         }
 
         // Deploy a new voucher proxy

@@ -343,7 +343,7 @@ contract SellerHandlerFacet is SellerBase {
      * Emits a CollectionCreated event if successful.
      *
      *  Reverts if:
-     *  - The offers region of protocol is paused
+     *  - The sellers region of protocol is paused
      *  - Caller is not the seller assistant
      *
      * @param _externalId - external collection id
@@ -352,7 +352,7 @@ contract SellerHandlerFacet is SellerBase {
     function createNewCollection(
         string calldata _externalId,
         VoucherInitValues calldata _voucherInitValues
-    ) external sellersNotPaused {
+    ) external sellersNotPaused nonReentrant {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
         address assistant = msgSender();
 
@@ -366,10 +366,9 @@ contract SellerHandlerFacet is SellerBase {
         address voucherCloneAddress = cloneBosonVoucher(
             sellerId,
             collectionIndex,
-            lookups.sellerCreator[sellerId],
+            lookups.sellerSalt[sellerId],
             assistant,
-            _voucherInitValues,
-            _externalId
+            _voucherInitValues
         );
 
         // Store collection details
@@ -378,6 +377,26 @@ contract SellerHandlerFacet is SellerBase {
         newCollection.externalId = _externalId;
 
         emit CollectionCreated(sellerId, collectionIndex, voucherCloneAddress, _externalId, assistant);
+    }
+
+    /**
+     * @notice Updates a salt.
+     * Use this if the admin address is updated and there exist a possibility that old admin will try to create the vouchers
+     * with matching addresses on other chains.
+     *
+     *  Reverts if:
+     *  - The sellers region of protocol is paused
+     *  - Caller is not the admin of any seller
+     *
+     * @param _newSalt - new salt
+     */
+    function updateSellerSalt(bytes32 _newSalt) external sellersNotPaused nonReentrant {
+        address admin = msgSender();
+
+        (bool exists, uint256 sellerId) = getSellerIdByAdmin(admin);
+        require(exists, NO_SUCH_SELLER);
+
+        protocolLookups().sellerSalt[sellerId] = keccak256(abi.encodePacked(admin, _newSalt));
     }
 
     /**
