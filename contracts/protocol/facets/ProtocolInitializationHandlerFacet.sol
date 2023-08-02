@@ -48,7 +48,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      * - For upgrade to v2.2.0:
      *   - If versions is set already
      *   - If _initializationData cannot be decoded to uin256
-     *   - If _initializationData is represents value 0
+     *   - If _initializationData is represents value
      *
      * @param _version - version of the protocol
      * @param _addresses - array of facet addresses to call initialize methods
@@ -162,12 +162,15 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             (uint256, uint256[], address[])
         );
 
+        // cache protocol limits
+        ProtocolLib.ProtocolLimits storage limits = protocolLimits();
+
         // make sure _minResolutionPeriod is less than maxResolutionPeriod
-        require(protocolLimits().maxResolutionPeriod > _minResolutionPeriod, INVALID_RESOLUTION_PERIOD);
+        require(limits.maxResolutionPeriod >= _minResolutionPeriod, INVALID_RESOLUTION_PERIOD);
 
         // Initialize limits.maxPremintedVouchers (configHandlerFacet initializer)
         require(_minResolutionPeriod != 0, VALUE_ZERO_NOT_ALLOWED);
-        protocolLimits().minResolutionPeriod = _minResolutionPeriod;
+        limits.minResolutionPeriod = _minResolutionPeriod;
         emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
 
         // Initialize sellerCreators
