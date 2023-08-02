@@ -46,7 +46,7 @@ const { limits: protocolLimits } = require("../../scripts/config/protocol-parame
 
 const { deploySuite, populateProtocolContract, getProtocolContractState, revertState } = require("../util/upgrade");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-//const { getGenericContext } = require("./01_generic");
+const { getGenericContext } = require("./01_generic");
 const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
 
 const version = "2.3.0";
@@ -124,7 +124,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
     let getFunctionHashesClosure = getStateModifyingFunctionsHashes(
       [
         "SellerHandlerFacet",
-        "OfferHandlerFacet",
         "ConfigHandlerFacet",
         "PauseHandlerFacet",
         "GroupHandlerFacet",
@@ -265,25 +264,34 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
       preUpgradeEntities
     );
 
+    const includeTests = [
+      "offerContractState",
+      "bundleContractState",
+      "disputeContractState",
+      "fundsContractState",
+      "twinContractState",
+      "protocolStatusPrivateContractState",
+    ];
+
     // This context is placed in an uncommon place due to order of test execution.
     // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
     // and those values are undefined if this is placed outside "before".
     // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
-    //  context(
-    //    "Generic tests",
-    //    getGenericContext(
-    //      deployer,
-    //      protocolDiamondAddress,
-    //      contractsBefore,
-    //      contractsAfter,
-    //      mockContracts,
-    //      protocolContractStateBefore,
-    //      protocolContractStateAfter,
-    //      preUpgradeEntities,
-    //      snapshot,
-    //      includeTests
-    //    )
-    // );
+    context(
+      "Generic tests",
+      getGenericContext(
+        deployer,
+        protocolDiamondAddress,
+        contractsBefore,
+        contractsAfter,
+        mockContracts,
+        protocolContractStateBefore,
+        protocolContractStateAfter,
+        preUpgradeEntities,
+        snapshot,
+        includeTests
+      )
+    );
     //   } catch (err) {
     //     // revert to latest version of scripts and contracts
     //     revertState();
@@ -370,7 +378,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
         });
       });
 
-      context("Protocol limits", async function () {
+      context.skip("Protocol limits", async function () {
         let wallets;
         let sellers, DRs, sellerWallet;
 

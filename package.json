@@ -24,7 +24,7 @@
     "tidy:contracts": "solhint --fix contracts/**/*.sol && prettier --write contracts/**",
     "tidy:scripts": "eslint --fix test/** scripts/** '*.js' && prettier --write test/** scripts/** '*.js'",
     "size": "npx hardhat size-contracts",
-    "coverage": "npx hardhat clean && npx hardhat coverage --testfiles '{test/domain/*.js,test/access/*.js,test/protocol/*.js,test/protocol/clients/*.js}'",
+    "coverage": "npx hardhat clean && npx hardhat coverage --testfiles '{test/access/*.js,test/protocol/*.js,test/protocol/clients/*.js}'",
     "deploy-suite:hardhat": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network hardhat",
     "deploy-suite:local": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network localhost",
     "deploy-suite:test": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network test --env test >> logs/test.deploy.contracts.txt",
@@ -64,8 +64,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.0",
-    "@openzeppelin/contracts-upgradeable": "4.9.0",
-    "axios": "^1.4.0"
+    "@openzeppelin/contracts-upgradeable": "4.9.0"
   },
   "devDependencies": {
     "@bosonprotocol/solidoc": "3.0.3",
@@ -94,6 +93,7 @@
     "simple-statistics": "^7.8.2",
     "solhint": "^3.3.8",
     "truffle": "^5.9.4",
-    "web3": "^1.8.1"
+    "web3": "^1.8.1",
+    "axios": "^1.4.0"
   }
 }

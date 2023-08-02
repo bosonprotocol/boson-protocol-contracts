@@ -60,6 +60,7 @@ const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Agent = require("../../scripts/domain/Agent");
 const Buyer = require("../../scripts/domain/Buyer");
 const { tagsByVersion } = require("../upgrade/00_config");
+const Condition = require("../../scripts/domain/Condition");
 
 // Common vars
 const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
@@ -541,7 +542,8 @@ async function populateProtocolContract(
   let groupId = Number(await groupHandler.getNextGroupId());
   for (let i = 0; i < sellers.length; i = i + 2) {
     const seller = sellers[i];
-    const group = new Group(groupId, seller.seller.id, seller.offerIds); // group all seller's offers
+    const { offerIds } = seller;
+    const group = new Group(groupId, seller.seller.id, offerIds); // group all seller's offers
     const condition = mockCondition({
       tokenAddress: await mockConditionalToken.getAddress(),
       maxCommits: "10",
@@ -549,6 +551,11 @@ async function populateProtocolContract(
     await groupHandler.connect(seller.wallet).createGroup(group, condition);
 
     groups.push(group);
+    for (const offerId of offerIds) {
+      const offer = offers.find((o) => o.offer.id == offerId);
+      offer.groupId = groupId;
+      console.log(offers.find((o) => o.offer.id == offerId));
+    }
 
     groupId++;
   }
@@ -641,7 +648,7 @@ async function populateProtocolContract(
   let exchangeId = Number(await exchangeHandler.getNextExchangeId());
   for (let i = 0; i < buyers.length; i++) {
     for (let j = i; j < buyers.length; j++) {
-      const offer = offers[i + j].offer; // some offers will be picked multiple times, some never.
+      const { offer, groupId } = offers[i + j]; // some offers will be picked multiple times, some never.
       const offerPrice = offer.price;
       const buyerWallet = buyers[j].wallet;
 
@@ -654,9 +661,23 @@ async function populateProtocolContract(
         await mockToken.connect(buyerWallet).approve(protocolDiamondAddress, offerPrice);
         await mockToken.mint(await buyerWallet.getAddress(), offerPrice);
       }
-      await exchangeHandler
-        .connect(buyerWallet)
-        .commitToOffer(await buyerWallet.getAddress(), offer.id, { value: msgValue });
+      // v2.3.0 introduces commitToConditionalOffer method which should be used for conditional offers
+      const isAfterV2_3_0 = !versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion);
+      if (groupId && isAfterV2_3_0) {
+        // get condition
+        let [, , condition] = await groupHandler.getGroup(groupId);
+        condition = Condition.fromStruct(condition);
+
+        // commit to conditional offer
+        await exchangeHandler
+          .connect(buyerWallet)
+          .commitToConditionalOffer(await buyerWallet.getAddress(), offer.id, condition.tokenId, { value: msgValue });
+      } else {
+        await exchangeHandler
+          .connect(buyerWallet)
+          .commitToOffer(await buyerWallet.getAddress(), offer.id, { value: msgValue });
+      }
+
       exchanges.push({ exchangeId: exchangeId, offerId: offer.id, buyerIndex: j });
       exchangeId++;
     }
@@ -685,6 +706,9 @@ async function populateProtocolContract(
   // raise dispute on some exchanges #1
   const id = 5; // must be one of redeemed ones
   const exchange = exchanges[id - 1];
+
+  const [, response] = await exchangeHandler.getExchangeState(exchange.exchangeId);
+  console.log("Exchange state after dispute raised", response);
   await disputeHandler.connect(buyers[exchange.buyerIndex].wallet).raiseDispute(exchange.exchangeId);
 
   return { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins };

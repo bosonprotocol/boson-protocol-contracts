@@ -127,7 +127,7 @@ module.exports = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
-      blockGasLimit: 100000000,
+      //blockGasLimit: 100000000,
       accounts: { mnemonic: environments.hardhat.mnemonic },
     },
     localhost: {

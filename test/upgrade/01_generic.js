@@ -19,20 +19,7 @@ function getGenericContext(
   protocolContractStateAfterUpgrade,
   preUpgradeEntities,
   snapshot,
-  includeTests = [
-    "accountContractState",
-    "offerContractState",
-    "exchangeContractState",
-    "bundleContractState",
-    "configContractState",
-    "disputeContractState",
-    "fundsContractState",
-    "groupContractState",
-    "twinContractState",
-    "metaTxPrivateContractState",
-    "protocolStatusPrivateContractState",
-    "protocolLookupsPrivateContractState",
-  ]
+  includeTests
 ) {
   let postUpgradeEntities;
   let { exchangeHandler, offerHandler, fundsHandler, disputeHandler } = contractsBefore;
@@ -243,7 +230,9 @@ function getGenericContext(
       it("Old buyer commits to new offer", async function () {
         const buyer = preUpgradeEntities.buyers[2];
         const offerId = await offerHandler.getNextOfferId();
+        console.log("Next offer id", offerId.toString());
         const exchangeId = await exchangeHandler.getNextExchangeId();
+        console.log("Next exchange id", exchangeId.toString());
 
         // Create some new offer
         const { offer, offerDates, offerDurations } = await mockOffer();
@@ -255,17 +244,20 @@ function getGenericContext(
         await offerHandler
           .connect(seller.wallet)
           .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        console.log("Created offer", offer);
         await fundsHandler
           .connect(seller.wallet)
           .depositFunds(seller.seller.id, offer.exchangeToken, offer.sellerDeposit, {
             value: offer.sellerDeposit,
           });
+        console.log("Deposited funds");
 
         // Commit to offer
         const offerPrice = offer.price;
         const tx = await exchangeHandler
           .connect(buyer.wallet)
           .commitToOffer(buyer.wallet, offer.id, { value: offerPrice });
+        console.log("committed to offer");
         const txReceipt = await tx.wait();
         const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
