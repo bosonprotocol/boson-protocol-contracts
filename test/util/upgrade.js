@@ -554,7 +554,6 @@ async function populateProtocolContract(
     for (const offerId of offerIds) {
       const offer = offers.find((o) => o.offer.id == offerId);
       offer.groupId = groupId;
-      console.log(offers.find((o) => o.offer.id == offerId));
     }
 
     groupId++;
@@ -708,6 +707,7 @@ async function populateProtocolContract(
   const exchange = exchanges[id - 1];
 
   const [, response] = await exchangeHandler.getExchangeState(exchange.exchangeId);
+  console.log("exchangId", exchange.exchangeId);
   console.log("Exchange state after dispute raised", response);
   await disputeHandler.connect(buyers[exchange.buyerIndex].wallet).raiseDispute(exchange.exchangeId);
 

@@ -55,7 +55,7 @@ const { migrate } = require(`../../scripts/migrations/migrate_${version}.js`);
 /**
  *  Upgrade test case - After upgrade from 2.2.1 to 2.3.0 everything is still operational
  */
-describe("[-on-coverage] After facet upgrade, everything is still operational", function () {
+describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   this.timeout(1000000);
   // Common vars
   let deployer, rando, clerk, pauser, assistant;
@@ -124,6 +124,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
     let getFunctionHashesClosure = getStateModifyingFunctionsHashes(
       [
         "SellerHandlerFacet",
+        "OfferHandlerFacet",
         "ConfigHandlerFacet",
         "PauseHandlerFacet",
         "GroupHandlerFacet",
@@ -1056,22 +1057,6 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
           // Verify that new value is stored
           await expect(tx).to.equal(minResolutionPeriod);
         });
-      });
-
-      context("OfferHandler", async function () {
-        it("Cannot make an offer with too short resolution period", async function () {
-          const { sellers, DRs } = preUpgradeEntities;
-          const { wallet } = sellers[0];
-
-          // Set dispute duration period to 0
-          const { offer, offerDates, offerDurations } = await mockOffer();
-          offerDurations.resolutionPeriod = (BigInt(oneWeek) - 10n).toString();
-
-          // Attempt to Create an offer, expecting revert
-          await expect(
-            offerHandler.connect(wallet).createOffer(offer, offerDates, offerDurations, DRs[0].id, "0")
-          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
-        });
 
         it("State of configContractState is not affected apart from minResolutionPeriod, removed limits and beaconProxy", async function () {
           // make a shallow copy to not modify original protocolContractState as it's used on getGenericContext
@@ -1102,6 +1087,22 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
           expect(beaconProxyAddress).to.equal(expectedBeaconProxyAddress);
 
           expect(configContractStateAfter).to.deep.equal(configContractStateBefore);
+        });
+      });
+
+      context("OfferHandler", async function () {
+        it("Cannot make an offer with too short resolution period", async function () {
+          const { sellers, DRs } = preUpgradeEntities;
+          const { wallet } = sellers[0];
+
+          // Set dispute duration period to 0
+          const { offer, offerDates, offerDurations } = await mockOffer();
+          offerDurations.resolutionPeriod = (BigInt(oneWeek) - 10n).toString();
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(wallet).createOffer(offer, offerDates, offerDurations, DRs[0].id, "0")
+          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
         it("Create an offer with a new collection", async function () {
@@ -1241,7 +1242,7 @@ describe("[-on-coverage] After facet upgrade, everything is still operational", 
             // Remove the approval for the protocol to transfer the seller's tokens
             await mockTwin721Contract.connect(sellerWallet).setApprovalForAll(protocolDiamondAddress, false);
 
-            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId, { gasLimit: 100000000 });
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId, { gasLimit: 10000000 });
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
