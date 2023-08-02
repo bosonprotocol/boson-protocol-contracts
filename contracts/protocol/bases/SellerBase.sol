@@ -150,6 +150,8 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
     /**
      * @notice Creates a minimal clone of the Boson Voucher Contract.
      *
+     * Reverts if clone creation fails.
+     *
      * @param _sellerId - id of the seller
      * @param _collectionIndex - index of the collection.
      * @param _sellerSalt - seller dependent salt, used to create the clone address
@@ -179,6 +181,8 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             mstore(add(clone, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
             cloneAddress := create2(0, clone, 0x37, collectionSalt)
         }
+
+        require(cloneAddress != address(0), CLONE_CREATION_FAILED);
 
         // Initialize the clone
         IInitializableVoucherClone(cloneAddress).initialize(pa.voucherBeacon);

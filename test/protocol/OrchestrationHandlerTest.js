@@ -603,8 +603,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
 
         await expect(tx)
@@ -660,8 +659,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
 
         await expect(tx)
@@ -761,8 +759,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -809,8 +806,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -872,8 +868,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -934,7 +929,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             sellerId,
             sellerStruct,
-            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address, ""),
+            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address),
             emptyAuthTokenStruct,
             await assistant.getAddress()
           );
@@ -1260,8 +1255,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
 
           await expect(tx)
@@ -1379,8 +1373,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           const [defaultVoucherAddress, additionalCollections] = await accountHandler
             .connect(rando)
@@ -2246,7 +2239,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               seller.id,
               sellerStruct,
-              calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address, ""),
+              calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address),
               emptyAuthTokenStruct,
               await assistant.getAddress()
             );
@@ -2738,8 +2731,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
@@ -3457,8 +3449,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         });
@@ -4148,8 +4139,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
@@ -5086,8 +5076,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         });
@@ -5435,8 +5424,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
 
         // SellerCreated and OfferCreated events
@@ -5567,8 +5555,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -5614,8 +5601,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -5677,8 +5663,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -5742,7 +5727,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             sellerId,
             sellerStruct,
-            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address, ""),
+            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address),
             emptyAuthTokenStruct,
             await assistant.getAddress()
           );
@@ -5821,7 +5806,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               seller.id,
               sellerStruct,
-              calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address, ""),
+              calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address),
               emptyAuthTokenStruct,
               await assistant.getAddress()
             );
@@ -5894,8 +5879,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
 
           // SellerCreated and OfferCreated RangeReserved events
@@ -6050,8 +6034,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           const [defaultVoucherAddress, additionalCollections] = await accountHandler
             .connect(rando)
@@ -6247,8 +6230,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
 
         // SellerCreated and OfferCreated events
@@ -6401,8 +6383,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -6451,8 +6432,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -6517,8 +6497,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -6586,7 +6565,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             sellerId,
             sellerStruct,
-            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address, ""),
+            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address),
             emptyAuthTokenStruct,
             await assistant.getAddress()
           );
@@ -6683,7 +6662,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               seller.id,
               sellerStruct,
-              calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address, ""),
+              calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address),
               emptyAuthTokenStruct,
               await assistant.getAddress()
             );
@@ -6779,8 +6758,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
 
           // SellerCreated, OfferCreated and RangeReserved events
@@ -6961,8 +6939,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           const [defaultVoucherAddress, additionalCollections] = await accountHandler
             .connect(rando)
@@ -7203,8 +7180,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
 
         // SellerCreated and OfferCreated events
@@ -7381,8 +7357,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -7432,8 +7407,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -7499,8 +7473,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -7569,7 +7542,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             sellerId,
             sellerStruct,
-            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address, ""),
+            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address),
             emptyAuthTokenStruct,
             await assistant.getAddress()
           );
@@ -7659,8 +7632,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
 
           // Create a seller, an offer with condition, twin and bundle
@@ -7796,8 +7768,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
 
           // SellerCreated, OfferCreated and RangeReserved events
@@ -7998,8 +7969,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           const [defaultVoucherAddress, additionalCollections] = await accountHandler
             .connect(rando)

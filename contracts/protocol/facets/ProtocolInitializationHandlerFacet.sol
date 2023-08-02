@@ -144,11 +144,8 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      *  - Current version is not 2.2.1
      *  - There are already twins. This version adds a new mapping for twins which make it incompatible with previous versions.
      *  - minResolutionPeriond is not present in _initializationData parameter
-     *  - length of seller salts does not match the length of seller ids
-     *  - if some of seller salts is zero address
-     *  - if some of seller ids does not bellong to a seller
      *
-     * @param _initializationData - data representing uint256 _minResolutionPeriod, uint256[] memory sellerIds, address[] memory sellerSalts
+     * @param _initializationData - data representing uint256 _minResolutionPeriod
      */
     function initV2_3_0(bytes calldata _initializationData) internal {
         // Current version must be 2.2.1
@@ -156,26 +153,12 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         require(protocolCounters().nextTwinId == 1, TWINS_ALREADY_EXIST);
 
         // Decode initialization data
-        (uint256 _minResolutionPeriod, uint256[] memory sellerIds, bytes32[] memory sellerSalts) = abi.decode(
-            _initializationData,
-            (uint256, uint256[], bytes32[])
-        );
+        uint256 _minResolutionPeriod = abi.decode(_initializationData, (uint256));
 
         // Initialize limits.maxPremintedVouchers (configHandlerFacet initializer)
         require(_minResolutionPeriod != 0, VALUE_ZERO_NOT_ALLOWED);
         protocolLimits().minResolutionPeriod = _minResolutionPeriod;
         emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
-
-        // Initialize sellerSalts
-        require(sellerIds.length == sellerSalts.length, ARRAY_LENGTH_MISMATCH);
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-        for (uint256 i = 0; i < sellerIds.length; i++) {
-            (bool exists, , ) = fetchSeller(sellerIds[i]);
-            require(exists, NO_SUCH_SELLER);
-            require(sellerSalts[i] != 0, INVALID_SALT);
-
-            lookups.sellerSalt[sellerIds[i]] = sellerSalts[i];
-        }
 
         // Deploy a new voucher proxy
         protocolAddresses().beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());

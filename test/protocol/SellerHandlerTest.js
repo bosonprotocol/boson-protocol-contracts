@@ -18,6 +18,7 @@ const { VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockSeller, mockAuthToken, mockVoucherInitValues, accountId } = require("../util/mock");
 const { Collection, CollectionList } = require("../../scripts/domain/Collection");
+const { encodeBytes32String } = require("ethers");
 
 /**
  *  Test the Boson Seller Handler
@@ -141,8 +142,7 @@ describe("SellerHandler", function () {
       expectedCloneAddress = calculateCloneAddress(
         await accountHandler.getAddress(),
         beaconProxyAddress,
-        admin.address,
-        ""
+        admin.address
       );
 
       // AuthTokens
@@ -408,8 +408,7 @@ describe("SellerHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          other1.address,
-          ""
+          other1.address
         );
 
         // Create a seller, testing for the event
@@ -435,8 +434,7 @@ describe("SellerHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          seller.admin,
-          ""
+          seller.admin
         );
 
         // Create a seller, testing for the event
@@ -455,8 +453,7 @@ describe("SellerHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          other1.address,
-          ""
+          other1.address
         );
         seller = mockSeller(
           await other1.getAddress(),
@@ -507,8 +504,7 @@ describe("SellerHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          newAuthTokenOwner.address,
-          ""
+          newAuthTokenOwner.address
         );
 
         // Create a seller, testing for the event
@@ -588,8 +584,7 @@ describe("SellerHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          newAuthTokenOwner.address,
-          ""
+          newAuthTokenOwner.address
         );
 
         // Create a seller, testing for the event
@@ -1370,8 +1365,7 @@ describe("SellerHandler", function () {
         const bosonVoucherCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         bosonVoucher = await getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
 
@@ -1430,8 +1424,7 @@ describe("SellerHandler", function () {
         const bosonVoucherCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         bosonVoucher = await getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
 
@@ -1498,8 +1491,7 @@ describe("SellerHandler", function () {
         const bosonVoucherCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         bosonVoucher = await getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
 
@@ -1576,8 +1568,7 @@ describe("SellerHandler", function () {
         const bosonVoucherCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         bosonVoucher = await getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
 
@@ -1656,8 +1647,7 @@ describe("SellerHandler", function () {
         const bosonVoucherCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         bosonVoucher = await getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
 
@@ -2119,8 +2109,7 @@ describe("SellerHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            other1.address,
-            ""
+            other1.address
           );
 
           //Create second seller
@@ -2155,8 +2144,7 @@ describe("SellerHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            other1.address,
-            ""
+            other1.address
           );
 
           //Create second seller
@@ -2535,8 +2523,7 @@ describe("SellerHandler", function () {
         const expectedDefaultAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         ); // default
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedDefaultAddress);
 
@@ -2557,8 +2544,7 @@ describe("SellerHandler", function () {
         const expectedDefaultAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         ); // default
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedDefaultAddress);
 
@@ -2566,12 +2552,13 @@ describe("SellerHandler", function () {
         // create 3 additional collections
         for (let i = 0; i < 3; i++) {
           const externalId = `Brand${i}`;
+          voucherInitValues.collectionSalt = encodeBytes32String(externalId);
           voucherInitValues.contractURI = `https://brand${i}.com`;
           const expectedCollectionAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
             admin.address,
-            externalId
+            voucherInitValues.collectionSalt
           );
           await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
           additionalCollections.push(await getContractAt("OwnableUpgradeable", expectedCollectionAddress));
@@ -2764,17 +2751,17 @@ describe("SellerHandler", function () {
         externalId = "Brand1";
         voucherInitValues.contractURI = contractURI = "https://brand1.com";
         voucherInitValues.royaltyPercentage = royaltyPercentage = "100"; // 1%
+        voucherInitValues.collectionSalt = encodeBytes32String(externalId);
         expectedDefaultAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         ); // default
         expectedCollectionAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
           admin.address,
-          externalId
+          voucherInitValues.collectionSalt
         );
       });
 
@@ -2833,11 +2820,12 @@ describe("SellerHandler", function () {
 
         for (let i = 1; i < 4; i++) {
           externalId = `Brand${i}`;
+          voucherInitValues.collectionSalt = encodeBytes32String(externalId);
           expectedCollectionAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
             admin.address,
-            externalId
+            voucherInitValues.collectionSalt
           );
           voucherInitValues.contractURI = contractURI = `https://brand${i}.com`;
           voucherInitValues.royaltyPercentage = royaltyPercentage = (i * 100).toString(); // 1%, 2%, 3%
@@ -2899,11 +2887,12 @@ describe("SellerHandler", function () {
           .optInToSellerUpdate(seller.id, [SellerUpdateFields.Admin, SellerUpdateFields.Assistant]);
 
         externalId = "newSellerBrand";
+        voucherInitValues.collectionSalt = encodeBytes32String(externalId);
         expectedCollectionAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
           admin.address, // original admin address
-          externalId
+          voucherInitValues.collectionSalt
         );
 
         // Create a new collection, testing for the event
@@ -2957,8 +2946,7 @@ describe("SellerHandler", function () {
         expectedDefaultAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         ); // default
       });
 
@@ -2979,11 +2967,12 @@ describe("SellerHandler", function () {
 
         for (let i = 1; i < 4; i++) {
           externalId = `Brand${i}`;
+          voucherInitValues.collectionSalt = encodeBytes32String(externalId);
           expectedCollectionAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
             admin.address,
-            externalId
+            voucherInitValues.collectionSalt
           );
           voucherInitValues.contractURI = `https://brand${i}.com`;
 
