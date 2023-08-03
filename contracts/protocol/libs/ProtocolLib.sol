@@ -195,6 +195,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Collection[]) additionalCollections;
         // seller id => seller salt used to create collections
         mapping(uint256 => bytes32) sellerSalt;
+        // seller salt => is used
+        mapping(bytes32 => bool) isUsedSellerSalt;
     }
 
     // Incrementing id counters

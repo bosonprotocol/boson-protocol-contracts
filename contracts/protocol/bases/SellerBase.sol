@@ -32,6 +32,8 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - AuthTokenType is Custom
+     * - Seller salt is not unique
+     * - Clone creation fails
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -95,8 +97,11 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         _seller.id = sellerId;
         storeSeller(_seller, _authToken, lookups);
 
+        // Calculate seller salt and check that it is unique
         bytes32 sellerSalt = keccak256(abi.encodePacked(sender, _voucherInitValues.collectionSalt));
+        require(!lookups.isUsedSellerSalt[sellerSalt], SELLER_SALT_NOT_UNIQUE);
         lookups.sellerSalt[sellerId] = sellerSalt;
+        lookups.isUsedSellerSalt[sellerSalt] = true;
 
         // Create clone and store its address cloneAddress
         address voucherCloneAddress = cloneBosonVoucher(sellerId, 0, sellerSalt, _seller.assistant, _voucherInitValues);

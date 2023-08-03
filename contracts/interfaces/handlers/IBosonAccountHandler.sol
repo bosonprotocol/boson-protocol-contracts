@@ -28,6 +28,8 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - AuthTokenType is Custom
+     * - Seller salt is not unique
+     * - Clone creation fails
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -309,9 +311,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      *
      * Emits a CollectionCreated event if successful.
      *
-     *  Reverts if:
-     *  - The sellers region of protocol is paused
-     *  - Caller is not the seller assistant
+     * Reverts if:
+     * - The sellers region of protocol is paused
+     * - Caller is not the seller assistant
      *
      * @param _externalId - external collection id
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
@@ -326,9 +328,10 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Use this if the admin address is updated and there exist a possibility that old admin will try to create the vouchers
      * with matching addresses on other chains.
      *
-     *  Reverts if:
-     *  - The sellers region of protocol is paused
-     *  - Caller is not the admin of any seller
+     * Reverts if:
+     * - The sellers region of protocol is paused
+     * - Caller is not the admin of any seller
+     * - Seller salt is not unique
      *
      * @param _newSalt - new salt
      */

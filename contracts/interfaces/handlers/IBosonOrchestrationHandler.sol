@@ -71,6 +71,8 @@ interface IBosonOrchestrationHandler is
      * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -142,6 +144,8 @@ interface IBosonOrchestrationHandler is
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -692,6 +696,8 @@ interface IBosonOrchestrationHandler is
      * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -769,6 +775,8 @@ interface IBosonOrchestrationHandler is
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -850,6 +858,8 @@ interface IBosonOrchestrationHandler is
      * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -935,6 +945,8 @@ interface IBosonOrchestrationHandler is
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -1024,6 +1036,8 @@ interface IBosonOrchestrationHandler is
      * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -1114,6 +1128,8 @@ interface IBosonOrchestrationHandler is
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
