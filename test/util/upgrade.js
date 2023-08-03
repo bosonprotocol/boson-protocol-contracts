@@ -582,7 +582,7 @@ async function populateProtocolContract(
         .filter((o) => seller.offerIds.includes(Number(o.id)))
         .reduce((acc, o) => acc + Number(o.quantityAvailable), 0);
 
-      for (let j = 0; j < 7; j++) {
+      for (let j = 0; j < 3; j++) {
         twin721.tokenId = `${sellerId * 1000000 + j * 100000}`;
         twin721.supplyAvailable = minSupplyAvailable;
         twin721.tokenAddress = await mockTwinTokens[j % 2].getAddress(); // oscilate between twins
@@ -600,6 +600,7 @@ async function populateProtocolContract(
 
       // fungible
       const twin20 = mockTwin(await mockTwin20.getAddress(), TokenType.FungibleToken);
+      twin20.id = twinId;
 
       twin20.id = twinId;
       twin20.amount = sellerId;
@@ -617,6 +618,7 @@ async function populateProtocolContract(
 
       // multitoken twin
       const twin1155 = mockTwin(await mockTwin1155.getAddress(), TokenType.MultiToken);
+      twin1155.id = twinId;
 
       await mockTwin1155.connect(seller.wallet).setApprovalForAll(protocolDiamondAddress, true);
       for (let j = 0; j < 3; j++) {
@@ -672,6 +674,8 @@ async function populateProtocolContract(
           .connect(buyerWallet)
           .commitToConditionalOffer(await buyerWallet.getAddress(), offer.id, condition.tokenId, { value: msgValue });
       } else {
+        // log bundle
+
         await exchangeHandler
           .connect(buyerWallet)
           .commitToOffer(await buyerWallet.getAddress(), offer.id, { value: msgValue });
@@ -685,7 +689,9 @@ async function populateProtocolContract(
   // redeem some vouchers #4
   for (const id of [2, 5, 11, 8]) {
     const exchange = exchanges[id - 1];
-    await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).redeemVoucher(exchange.exchangeId);
+    await exchangeHandler
+      .connect(buyers[exchange.buyerIndex].wallet)
+      .redeemVoucher(exchange.exchangeId, { gasLimit: 10000000 });
   }
 
   // cancel some vouchers #3
@@ -706,9 +712,6 @@ async function populateProtocolContract(
   const id = 5; // must be one of redeemed ones
   const exchange = exchanges[id - 1];
 
-  const [, response] = await exchangeHandler.getExchangeState(exchange.exchangeId);
-  console.log("exchangId", exchange.exchangeId);
-  console.log("Exchange state after dispute raised", response);
   await disputeHandler.connect(buyers[exchange.buyerIndex].wallet).raiseDispute(exchange.exchangeId);
 
   return { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins };
@@ -800,7 +803,6 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
   let nextAccountId;
   let sellersCollections = [];
 
-  console.log("Getting account contract state");
   // Query even the ids where it's not expected to get the entity
   for (const account of accounts) {
     const id = account.id;

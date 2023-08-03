@@ -841,7 +841,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                             // Token transfer order is descending
                             tokenId += twin.supplyAvailable;
                         }
-
                         // ERC-721 style transfer
                         data = abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,bytes)",
@@ -861,7 +860,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                             ""
                         );
                     }
-
                     // Make call only if there is enough gas and code at address exists.
                     // If not, skip the call and mark the transfer as failed
                     if (gasleft() > reservedGas && twin.tokenAddress.isContract()) {
