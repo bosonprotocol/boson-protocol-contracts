@@ -366,11 +366,22 @@ contract SellerHandlerFacet is SellerBase {
         Collection[] storage sellersAdditionalCollections = lookups.additionalCollections[sellerId];
         uint256 collectionIndex = sellersAdditionalCollections.length + 1; // 0 is reserved for the original collection
 
+        bytes32 sellerSalt = lookups.sellerSalt[sellerId];
+
+        // Accounts created before v2.3.0 can be missing sellerSalt, so it's created here
+        if (sellerSalt == 0) {
+            (, Seller storage seller, ) = fetchSeller(sellerId);
+            sellerSalt = keccak256(abi.encodePacked(seller.admin, _voucherInitValues.collectionSalt));
+            require(!lookups.isUsedSellerSalt[sellerSalt], SELLER_SALT_NOT_UNIQUE);
+            lookups.sellerSalt[sellerId] = sellerSalt;
+            lookups.isUsedSellerSalt[sellerSalt] = true;
+        }
+
         // Create clone and store its address to additionalCollections
         address voucherCloneAddress = cloneBosonVoucher(
             sellerId,
             collectionIndex,
-            lookups.sellerSalt[sellerId],
+            sellerSalt,
             assistant,
             _voucherInitValues
         );
