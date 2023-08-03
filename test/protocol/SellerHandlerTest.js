@@ -254,9 +254,12 @@ describe("SellerHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
       });
@@ -271,9 +274,12 @@ describe("SellerHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -308,9 +314,12 @@ describe("SellerHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -372,9 +381,12 @@ describe("SellerHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
       });
@@ -2821,9 +2833,12 @@ describe("SellerHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCollectionAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_1", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C1",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_1",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C1",
           "Wrong voucher client symbol"
         );
       });
@@ -2879,11 +2894,11 @@ describe("SellerHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCollectionAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
           expect(await bosonVoucher.name()).to.equal(
-            VOUCHER_NAME + " " + seller.id + "_" + i,
+            VOUCHER_NAME + " S" + seller.id + "_C" + i,
             "Wrong voucher client name"
           );
           expect(await bosonVoucher.symbol()).to.equal(
-            VOUCHER_SYMBOL + "_" + seller.id + "_" + i,
+            VOUCHER_SYMBOL + "_S" + seller.id + "_C" + i,
             "Wrong voucher client symbol"
           );
         }
