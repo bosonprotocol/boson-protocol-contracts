@@ -2141,14 +2141,16 @@ describe("IBosonVoucher", function () {
         ).to.be.reverted;
       });
 
-      it("Owner tries to invoke method to transfer funds", async function () {
-        const erc20 = await getContractFactory("Foreign20");
+      it("Owner tries to interact with contract with assets", async function () {
+        // const erc20 = await getContractFactory("Foreign20");
+        const [erc20, erc721] = await deployMockTokens(["Foreign20", "Foreign721"]);
+        const erc20Address = await erc20.getAddress();
 
         // transfer
         calldata = erc20.interface.encodeFunctionData("transfer", [await assistant.getAddress(), 20]);
-        await expect(
-          bosonVoucher.connect(assistant).callExternalContract(await rando.getAddress(), calldata)
-        ).to.be.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
 
         // transferFrom
         calldata = erc20.interface.encodeFunctionData("transferFrom", [
@@ -2156,24 +2158,24 @@ describe("IBosonVoucher", function () {
           await assistant.getAddress(),
           20,
         ]);
-        await expect(
-          bosonVoucher.connect(assistant).callExternalContract(await rando.getAddress(), calldata)
-        ).to.be.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
 
         // approve
         calldata = erc20.interface.encodeFunctionData("approve", [await assistant.getAddress(), 20]);
-        await expect(
-          bosonVoucher.connect(assistant).callExternalContract(await rando.getAddress(), calldata)
-        ).to.be.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
 
         // DAI
         const dai = await getContractAt("DAIAliases", ZeroAddress);
 
         // push
         calldata = dai.interface.encodeFunctionData("push", [await assistant.getAddress(), 20]);
-        await expect(
-          bosonVoucher.connect(assistant).callExternalContract(await rando.getAddress(), calldata)
-        ).to.be.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
 
         // move
         calldata = dai.interface.encodeFunctionData("move", [
@@ -2181,9 +2183,43 @@ describe("IBosonVoucher", function () {
           await assistant.getAddress(),
           20,
         ]);
-        await expect(
-          bosonVoucher.connect(assistant).callExternalContract(await rando.getAddress(), calldata)
-        ).to.be.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
+
+        // ERC721
+        const erc721Address = await erc721.getAddress();
+        // transferFrom
+        calldata = erc721.interface.encodeFunctionData("transferFrom", [
+          await bosonVoucher.getAddress(),
+          await assistant.getAddress(),
+          20,
+        ]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
+
+        // transferFrom
+        calldata = erc721.interface.encodeFunctionData("safeTransferFrom(address,address,uint256)", [
+          await bosonVoucher.getAddress(),
+          await assistant.getAddress(),
+          20,
+        ]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
+
+        // approve
+        calldata = erc721.interface.encodeFunctionData("approve", [await assistant.getAddress(), 20]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
+
+        // setApprovalForAll
+        calldata = erc721.interface.encodeFunctionData("setApprovalForAll", [await assistant.getAddress(), true]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
       });
     });
   });

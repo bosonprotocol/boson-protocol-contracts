@@ -142,6 +142,7 @@ exports.RevertReasons = {
   NOT_COMMITTABLE: "Token not committable",
   INVALID_TO_ADDRESS: "Tokens can only be pre-mined to the contract or contract owner address",
   EXTERNAL_CALL_FAILED: "External call failed",
+  INTERACTION_NOT_ALLOWED: "Interaction not allowed",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",

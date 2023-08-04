@@ -522,7 +522,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * - _to is zero address
      * - call to external contract fails
      * - caller is not the owner
-     * - caller tries to call ERC20 method that would allow transfer of tokens from this contract
+     * - _to is a contract that represents some assets (all contracts that imeplement `balanceOf` method, including ERC20 and ERC721)
+     *
      *
      * @param _to - address of the contract to call
      * @param _data - data to pass to the external contract
@@ -531,16 +532,12 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     function callExternalContract(address _to, bytes calldata _data) external payable onlyOwner returns (bytes memory) {
         require(_to != address(0), INVALID_ADDRESS);
 
-        // Prevent invocation of functions that would allow transfer of tokens from this contract
-        bytes4 selector = bytes4(_data[:4]);
-        require(
-            selector != IERC20.transfer.selector &&
-                selector != IERC20.approve.selector &&
-                selector != IERC20.transferFrom.selector &&
-                selector != DAI.push.selector &&
-                selector != DAI.move.selector,
-            FUNCTION_NOT_ALLOWLISTED
-        );
+        // Check if _to supports `balanceOf` method and revert if it does
+        // This works with all contracts that implement this method even if they don't necessary implement ERC20 interface
+        uint256 balance;
+        try IERC20(_to).balanceOf(address(this)) returns (uint256 _balance) {
+            revert(INTERACTION_NOT_ALLOWED);
+        } catch {}
 
         return _to.functionCallWithValue(_data, msg.value, FUNCTION_CALL_NOT_SUCCESSFUL);
     }
