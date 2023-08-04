@@ -73,7 +73,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         require(_addresses.length == _calldata.length, ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH);
 
         // Delegate call to initialize methods of facets declared in _addresses
-        for (uint256 i = 0; i < _addresses.length; i++) {
+        for (uint256 i = 0; i < _addresses.length; ) {
             (bool success, bytes memory error) = _addresses[i].delegatecall(_calldata[i]);
 
             // Handle result
@@ -87,6 +87,10 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
                     // Reverts with default message
                     revert(PROTOCOL_INITIALIZATION_FAILED);
                 }
+            }
+
+            unchecked {
+                i++;
             }
         }
 
@@ -169,12 +173,16 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         // Initialize sellerCreators
         require(sellerIds.length == sellerCreators.length, ARRAY_LENGTH_MISMATCH);
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-        for (uint256 i = 0; i < sellerIds.length; i++) {
+        for (uint256 i = 0; i < sellerIds.length; ) {
             (bool exists, , ) = fetchSeller(sellerIds[i]);
             require(exists, NO_SUCH_SELLER);
             require(sellerCreators[i] != address(0), INVALID_ADDRESS);
 
             lookups.sellerCreator[sellerIds[i]] = sellerCreators[i];
+
+            unchecked {
+                i++;
+            }
         }
 
         // Deploy a new voucher proxy
@@ -191,14 +199,22 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
     }
 
     function addInterfaces(bytes4[] calldata _interfaces) internal {
-        for (uint256 i = 0; i < _interfaces.length; i++) {
+        for (uint256 i = 0; i < _interfaces.length; ) {
             DiamondLib.addSupportedInterface(_interfaces[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
     function removeInterfaces(bytes4[] calldata _interfaces) internal {
-        for (uint256 i = 0; i < _interfaces.length; i++) {
+        for (uint256 i = 0; i < _interfaces.length; ) {
             DiamondLib.removeSupportedInterface(_interfaces[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 }

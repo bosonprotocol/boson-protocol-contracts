@@ -140,7 +140,7 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
         uint256 entriesLength = _holders.length;
 
         // Map all the holders, creating the conditional tokens along the way
-        for (uint256 i = 0; i < entriesLength; i++) {
+        for (uint256 i = 0; i < entriesLength; ) {
             uint256 tokenId = _holders[i].tokenId;
             uint256 amount = _holders[i].amount;
             address owner = _holders[i].owner;
@@ -151,6 +151,10 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
             // If corresponding conditional token doesn't yet exist, mint it to custody of this contract
             if (!_exists(tokenId)) {
                 _mint(address(this), tokenId);
+            }
+
+            unchecked {
+                i++;
             }
         }
 

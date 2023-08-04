@@ -395,9 +395,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeIds - the array of exchanges ids
      */
     function completeExchangeBatch(uint256[] calldata _exchangeIds) external override exchangesNotPaused {
-        for (uint256 i = 0; i < _exchangeIds.length; i++) {
+        for (uint256 i = 0; i < _exchangeIds.length; ) {
             // complete the exchange
             completeExchange(_exchangeIds[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -808,7 +812,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             uint256 reservedGas = twinCount * SINGLE_TWIN_RESERVED_GAS + MINIMAL_RESIDUAL_GAS;
 
             // Visit the twins
-            for (uint256 i = 0; i < twinCount; i++) {
+            for (uint256 i = 0; i < twinCount; ) {
                 // Get the twin
                 (, Twin storage twin) = fetchTwin(twinIds[i]);
 
@@ -919,6 +923,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         }
                     }
                     emit TwinTransferred(twinId, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
+                }
+
+                unchecked {
+                    i++;
                 }
             }
         }
