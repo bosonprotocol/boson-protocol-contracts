@@ -350,7 +350,6 @@ async function populateProtocolContract(
   ];
 
   let nextAccountId = Number(await accountHandler.getNextAccountId());
-  let voucherIndex = 1;
 
   for (const entity of entities) {
     const wallet = Wallet.createRandom();
@@ -423,20 +422,10 @@ async function populateProtocolContract(
         }
         // set unique new voucherInitValues
         const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
-        await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
+        const tx = await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
 
-        let voucherContractAddress;
-        if (versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
-          voucherContractAddress = calculateContractAddress(await accountHandler.getAddress(), voucherIndex++);
-        } else {
-          const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
-          voucherContractAddress = calculateCloneAddress(
-            await accountHandler.getAddress(),
-            beaconProxyAddress,
-            seller.admin,
-            ""
-          );
-        }
+        const receipt = await tx.wait();
+        const [, , voucherContractAddress] = receipt.logs.find((e) => e.fragment.name === "SellerCreated").args;
 
         sellers.push({
           wallet: connectedWallet,
@@ -756,7 +745,7 @@ async function getProtocolContractState(
     getOfferContractState(offerHandler, offers),
     getExchangeContractState(exchangeHandler, exchanges),
     getBundleContractState(bundleHandler, bundles),
-    configHandler ? getConfigContractState(configHandler, isBefore) : Promise.resolve({}),
+    getConfigContractState(configHandler, isBefore),
     getDisputeContractState(disputeHandler, exchanges),
     getFundsContractState(fundsHandler, { DRs, sellers, buyers, agents }, isBefore),
     getGroupContractState(groupHandler, groups),
@@ -1521,9 +1510,8 @@ async function getProtocolLookupsPrivateContractState(
       // BosonTypes.Seller has 7 fields, but `address payable treasury` and `bool active` are packed into one slot
       structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot + i));
     }
-    // ToDo: make sure this gets the corrects slots
     const metadataUriLength = BigInt(await getStorageAt(protocolDiamondAddress, structStorageSlot + 6n));
-    const metadataUriSlot = BigInt(keccak256(ethersId(structStorageSlot + 6n)));
+    const metadataUriSlot = BigInt(ethersId(structStorageSlot + 6n));
     const occupiedSlots = metadataUriLength / 32n + 1n;
     const metadataUri = [];
     for (let i = 0n; i < occupiedSlots; i++) {
@@ -1637,8 +1625,6 @@ async function populateVoucherContract(
   let bosonVouchers = [];
   let exchanges = [];
 
-  let voucherIndex = 1;
-
   if (existingEntities) {
     // If existing entities are provided, we use them instead of creating new ones
     ({ DR, sellers, buyers, offers, bosonVouchers } = existingEntities);
@@ -1679,10 +1665,14 @@ async function populateVoucherContract(
       // create entities
       switch (entity) {
         case entityType.DR: {
+          const clerkAddress = versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)
+            ? wallet.address
+            : ZeroAddress;
+
           const disputeResolver = mockDisputeResolver(
             await wallet.getAddress(),
             await wallet.getAddress(),
-            await wallet.getAddress(),
+            clerkAddress,
             await wallet.getAddress(),
             true,
             true
@@ -1698,6 +1688,7 @@ async function populateVoucherContract(
           await accountHandler
             .connect(connectedWallet)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
           DR = {
             wallet: connectedWallet,
             id: disputeResolver.id,
@@ -1729,22 +1720,9 @@ async function populateVoucherContract(
 
           // set unique new voucherInitValues
           const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
-          await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
-
-          // calculate voucher contract address and cast it to contract instance
-          let voucherContractAddress;
-          if (versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
-            voucherContractAddress = calculateContractAddress(await accountHandler.getAddress(), voucherIndex++);
-          } else {
-            const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
-            voucherContractAddress = calculateCloneAddress(
-              await accountHandler.getAddress(),
-              beaconProxyAddress,
-              seller.admin,
-              ""
-            );
-          }
-
+          const tx = await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
+          const receipt = await tx.wait();
+          const [, , voucherContractAddress] = receipt.logs.find((e) => e.fragment.name === "SellerCreated").args;
           const bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
 
           sellers.push({
@@ -1802,9 +1780,9 @@ async function populateVoucherContract(
       offerDates.validUntil = (BigInt(now) + oneMonth * 6n * BigInt(offerId + 1)).toString();
 
       // Set unique offerDurations based on offer id
-      offerDurations.disputePeriod = `${(offerId + 1) * oneMonth}`;
-      offerDurations.voucherValid = `${(offerId + 1) * oneMonth}`;
-      offerDurations.resolutionPeriod = `${(offerId + 1) * oneDay}`;
+      offerDurations.disputePeriod = `${(offerId + 1) * Number(oneMonth)}`;
+      offerDurations.voucherValid = `${(offerId + 1) * Number(oneMonth)}`;
+      offerDurations.resolutionPeriod = `${(offerId + 1) * Number(oneDay)}`;
 
       // choose one DR and agent
       const disputeResolverId = DR.disputeResolver.id;
@@ -1862,7 +1840,8 @@ async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buye
   for (const bosonVoucher of bosonVouchers) {
     // supports interface
     const interfaceIds = await getInterfaceIds(false);
-    const suppportstInterface = await Promise.all(
+
+    const supportstInterface = await Promise.all(
       [interfaceIds["IBosonVoucher"], interfaceIds["IERC721"], interfaceIds["IERC2981"]].map((i) =>
         bosonVoucher.supportsInterface(i)
       )
@@ -1904,7 +1883,7 @@ async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buye
     );
 
     bosonVouchersState.push({
-      suppportstInterface,
+      supportstInterface,
       sellerId,
       contractURI,
       getRoyaltyPercentage,

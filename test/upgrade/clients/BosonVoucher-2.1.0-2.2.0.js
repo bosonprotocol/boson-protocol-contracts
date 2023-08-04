@@ -89,7 +89,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         protocolContracts,
         mockContracts,
         undefined, // no existing entities
-        oldVersion
+        true
       );
       voucherContractState = await getVoucherContractState(preUpgradeEntities);
 

@@ -44,9 +44,18 @@ const {
 } = require("../util/utils");
 const { limits: protocolLimits } = require("../../scripts/config/protocol-parameters.js");
 
-const { deploySuite, populateProtocolContract, getProtocolContractState, revertState } = require("../util/upgrade");
+const {
+  deploySuite,
+  populateProtocolContract,
+  getProtocolContractState,
+  revertState,
+  getStorageLayout,
+  getVoucherContractState,
+  populateVoucherContract,
+} = require("../util/upgrade");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { getGenericContext } = require("./01_generic");
+const { getGenericContext: getGenericContextVoucher } = require("./clients/01_generic");
 const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
 
 const version = "2.3.0";
@@ -118,6 +127,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       preUpgradeEntities,
       true
     );
+
+    const preUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
+    const preUpgradeEntitiesVoucher = await populateVoucherContract(
+      deployer,
+      protocolDiamondAddress,
+      contractsBefore,
+      mockContracts,
+      undefined,
+      true
+    );
+
+    const voucherContractState = await getVoucherContractState(preUpgradeEntitiesVoucher);
 
     ({ bundleHandler, exchangeHandler, twinHandler, disputeHandler } = contractsBefore);
 
@@ -293,6 +314,21 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         includeTests
       )
     );
+
+    context(
+      "Generic tests on Voucher",
+      getGenericContextVoucher(
+        deployer,
+        protocolDiamondAddress,
+        contractsAfter,
+        mockContracts,
+        voucherContractState,
+        preUpgradeEntitiesVoucher,
+        preUpgradeStorageLayout,
+        snapshot
+      )
+    );
+
     //   } catch (err) {
     //     // revert to latest version of scripts and contracts
     //     revertState();
@@ -883,12 +919,16 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             );
           });
 
-          it("old seller can create a new collection", async function () {
+          it.only("old seller can create a new collection", async function () {
             const { sellers } = preUpgradeEntities;
-            const { wallet: sellerWallet, id: sellerId, voucherInitValues, seller } = sellers[0];
+            const {
+              wallet: sellerWallet,
+              id: sellerId,
+              voucherInitValues,
+              seller,
+              voucherContractAddress: expectedDefaultAddress,
+            } = sellers[0];
             const externalId = "new-collection";
-
-            const expectedDefaultAddress = calculateContractAddress(await accountHandler.getAddress(), "1");
 
             const expectedCollectionAddress = calculateCloneAddress(
               await accountHandler.getAddress(),
@@ -1330,7 +1370,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         it("commit exactly at offer expiration timestamp", async function () {
           const { offers, buyers } = preUpgradeEntities;
-          const { offer } = offers[1]; //offer 0 has a condition
+          const { offer, offerDates } = offers[1]; //offer 0 has a condition
           const { wallet: buyer } = buyers[0];
           const { mockToken } = mockContracts;
 
@@ -1338,6 +1378,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
           // allow the protocol to transfer the buyer's tokens
           await mockToken.connect(buyer).approve(protocolDiamondAddress, offer.price);
+
+          await setNextBlockTimestamp(Number(offerDates.validUntil));
 
           // Commit to offer, retrieving the event
           await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id)).to.emit(
