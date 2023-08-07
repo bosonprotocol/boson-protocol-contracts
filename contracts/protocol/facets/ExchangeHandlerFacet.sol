@@ -780,24 +780,31 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchange - the exchange for which twins should be transferred
      */
     function transferTwins(Exchange storage _exchange, Voucher storage _voucher) internal {
-        // See if there is an associated bundle
-        (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
+        Seller storage seller;
+        uint256[] storage twinIds;
 
-        // Transfer the twins
-        if (exists) {
+        // See if there is an associated bundle
+        {
+            (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
+            if (!exists) return;
+
             // Get storage location for bundle
             (, Bundle storage bundle) = fetchBundle(bundleId);
 
             // Get the twin Ids in the bundle
-            uint256[] storage twinIds = bundle.twinIds;
+            twinIds = bundle.twinIds;
 
             // Get seller account
-            (, Seller storage seller, ) = fetchSeller(bundle.sellerId);
+            (, seller, ) = fetchSeller(bundle.sellerId);
+        }
 
-            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        bool transferFailed; // Flag to indicate if some twin transfer failed and a dispute should be raised
+        uint256 sellerId = seller.id;
 
+        // Transfer the twins
+        {
+            // Cache values
             address sender = msgSender();
-
             uint256 twinCount = twinIds.length;
 
             // Fetch twin: up to 20,000 gas
@@ -812,10 +819,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 // Get the twin
                 (, Twin storage twin) = fetchTwin(twinIds[i]);
 
-                bool success;
-
                 uint256 tokenId = twin.tokenId;
 
+                bool success;
                 {
                     TokenType tokenType = twin.tokenType;
 
@@ -872,15 +878,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     }
                 }
 
-                // Reduce minimum gas required for succesful execution
-                reservedGas -= SINGLE_TWIN_RESERVED_GAS;
-
                 // If token transfer failed
                 if (!success) {
-                    raiseDisputeInternal(_exchange, _voucher, seller.id);
+                    transferFailed = true;
 
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, twin.amount, sender);
                 } else {
+                    ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
                     uint256 exchangeId = _exchange.id;
                     uint256 twinId = twin.id;
                     {
@@ -893,34 +897,19 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         twinReceipt.tokenType = twin.tokenType;
                     }
                     if (twin.tokenType == TokenType.NonFungibleToken) {
-                        // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
-                        TokenRange[] storage twinRanges = lookups.twinRangesBySeller[seller.id][twin.tokenAddress];
-
-                        bool unlimitedSupply = twin.supplyAvailable == type(uint256).max;
-
-                        uint256 rangeIndex = lookups.rangeIdByTwin[twinId] - 1;
-                        TokenRange storage range = twinRanges[rangeIndex];
-
-                        if (unlimitedSupply ? range.end == tokenId : range.start == tokenId) {
-                            uint256 lastIndex = twinRanges.length - 1;
-
-                            if (rangeIndex != lastIndex) {
-                                // Replace range with last range
-                                twinRanges[rangeIndex] = twinRanges[lastIndex];
-                            }
-
-                            // Remove from ranges mapping
-                            twinRanges.pop();
-
-                            // Delete rangeId from rangeIdByTwin mapping
-                            lookups.rangeIdByTwin[twinId] = 0;
-                        } else {
-                            unlimitedSupply ? range.start++ : range.end--;
-                        }
+                        updateNFTRanges(lookups, twin, sellerId, tokenId);
                     }
                     emit TwinTransferred(twinId, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 }
+
+                // Reduce minimum gas required for succesful execution
+                reservedGas -= SINGLE_TWIN_RESERVED_GAS;
             }
+        }
+
+        // Some twin transfer was not successful, raise dispute
+        if (transferFailed) {
+            raiseDisputeInternal(_exchange, _voucher, sellerId);
         }
     }
 
@@ -1144,6 +1133,47 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Add condition to receipt if exists
         if (conditionExists) {
             receipt.condition = condition;
+        }
+    }
+
+    /**
+     * @notice Updates NFT ranges, so it's possible to reuse the tokens in other twins and to make
+     * creation of new ranges viable
+     *
+     * @param _lookups - storage pointer to the protocol lookups
+     * @param _sellerId - the seller id
+     * @param _twin - storage pointer to the twin
+     * @param _tokenId - the token id
+     */
+    function updateNFTRanges(
+        ProtocolLib.ProtocolLookups storage _lookups,
+        Twin storage _twin,
+        uint256 _sellerId,
+        uint256 _tokenId
+    ) internal {
+        // Get all ranges of twins that belong to the seller and to the same token address.
+        TokenRange[] storage twinRanges = _lookups.twinRangesBySeller[_sellerId][_twin.tokenAddress];
+        uint256 twinId = _twin.id;
+        bool unlimitedSupply = _twin.supplyAvailable == type(uint256).max;
+
+        uint256 rangeIndex = _lookups.rangeIdByTwin[twinId] - 1;
+        TokenRange storage range = twinRanges[rangeIndex];
+
+        if (unlimitedSupply ? range.end == _tokenId : range.start == _tokenId) {
+            uint256 lastIndex = twinRanges.length - 1;
+
+            if (rangeIndex != lastIndex) {
+                // Replace range with last range
+                twinRanges[rangeIndex] = twinRanges[lastIndex];
+            }
+
+            // Remove from ranges mapping
+            twinRanges.pop();
+
+            // Delete rangeId from rangeIdByTwin mapping
+            _lookups.rangeIdByTwin[twinId] = 0;
+        } else {
+            unlimitedSupply ? range.start++ : range.end--;
         }
     }
 }
