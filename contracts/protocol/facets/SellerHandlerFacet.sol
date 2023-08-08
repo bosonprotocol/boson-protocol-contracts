@@ -278,9 +278,9 @@ contract SellerHandlerFacet is SellerBase {
                 IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender); // default voucher contract
                 Collection[] storage sellersAdditionalCollections = lookups.additionalCollections[_sellerId];
                 uint256 collectionCount = sellersAdditionalCollections.length;
-                for (i = 0; i < collectionCount; i++) {
+                for (uint256 j = 0; j < collectionCount; j++) {
                     // Additional collections (if they exist)
-                    IBosonVoucher(sellersAdditionalCollections[i].collectionAddress).transferOwnership(sender);
+                    IBosonVoucher(sellersAdditionalCollections[j].collectionAddress).transferOwnership(sender);
                 }
 
                 // Store new seller id by assistant mapping
