@@ -172,6 +172,17 @@ async function deploySuite(deployer, newVersion) {
     await deployMockTokens(["Foreign20", "Foreign20", "Foreign721", "Foreign721", "Foreign20", "Foreign1155"]);
   const mockTwinTokens = [mockTwin721_1, mockTwin721_2];
 
+  // After v2.3.0, the deploy suite does deploy beacon proxy anymore, since it's deployed by the protocol itself
+  // To make upgrade tests consistent, we deploy it here
+  if (versionsBelowV2_3.includes(tag)) {
+    const ClientProxy = await getContractFactory("BeaconClientProxy");
+    const bosonVoucherProxy = await ClientProxy.deploy();
+
+    await configHandler.setBeaconProxyAddress(
+      await bosonVoucherProxy.getAddress(),
+    );
+  }
+
   return {
     protocolDiamondAddress,
     protocolContracts: {
@@ -425,7 +436,7 @@ async function populateProtocolContract(
         const tx = await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
 
         const receipt = await tx.wait();
-        const [, , voucherContractAddress] = receipt.logs.find((e) => e.fragment.name === "SellerCreated").args;
+        const [, , voucherContractAddress] = receipt.logs.find((e) => e?.fragment?.name === "SellerCreated").args;
 
         sellers.push({
           wallet: connectedWallet,
@@ -1722,7 +1733,7 @@ async function populateVoucherContract(
           const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
           const tx = await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
           const receipt = await tx.wait();
-          const [, , voucherContractAddress] = receipt.logs.find((e) => e.fragment.name === "SellerCreated").args;
+          const [, , voucherContractAddress] = receipt.logs.find((e) => e?.fragment?.name === "SellerCreated").args;
           const bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
 
           sellers.push({
