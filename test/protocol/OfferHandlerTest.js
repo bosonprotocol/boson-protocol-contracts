@@ -740,6 +740,7 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("Resolution period is greater than protocol max resolution period", async function () {
+          await configHandler.setMinResolutionPeriod(oneDay - 1n);
           // Set max resolution period to 1 day
           await configHandler.setMaxResolutionPeriod(oneDay); // 24 hours
 

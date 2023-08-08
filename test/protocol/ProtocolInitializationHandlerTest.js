@@ -18,7 +18,7 @@ const { mockTwin, mockSeller, mockAuthToken, mockVoucherInitValues } = require("
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployAndCutFacets, deployProtocolFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const { getInterfaceIds, interfaceImplementers } = require("../../scripts/config/supported-interfaces");
-const { maxPriorityFeePerGas, oneWeek } = require("../util/constants");
+const { maxPriorityFeePerGas, oneWeek, oneMonth } = require("../util/constants");
 
 const { getFees } = require("../../scripts/util/utils");
 const { getFacetAddCut, getFacetReplaceCut } = require("../../scripts/util/diamond-utils");
@@ -824,6 +824,27 @@ describe("ProtocolInitializationHandler", async function () {
             calldataProtocolInitialization
           )
         ).to.be.revertedWith(RevertReasons.VALUE_ZERO_NOT_ALLOWED);
+      });
+
+      it("Min resolution period is greater than max resolution period", async function () {
+        version = "2.3.0";
+        console.log("oneMonth", oneMonth);
+        await configHandler.connect(deployer).setMaxResolutionPeriod(oneMonth);
+        minResolutionPeriod = oneMonth + 1n;
+        console.log("minResolutionPeriod", minResolutionPeriod);
+        initializationData = abiCoder.encode(["uint256", "uint256[]", "address[]"], [minResolutionPeriod, [], []]);
+        calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+          "initialize",
+          [encodeBytes32String(version), [], [], true, initializationData, [], []]
+        );
+
+        await expect(
+          diamondCutFacet.diamondCut(
+            [facetCut],
+            deployedProtocolInitializationHandlerFacetAddress,
+            calldataProtocolInitialization
+          )
+        ).to.be.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
       });
 
       it("Current version is not 2.2.1", async () => {
