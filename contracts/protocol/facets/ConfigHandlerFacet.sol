@@ -43,8 +43,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setBuyerEscalationDepositPercentage(_fees.buyerEscalationDepositPercentage);
         setMaxTotalOfferFeePercentage(_limits.maxTotalOfferFeePercentage);
         setMaxRoyaltyPecentage(_limits.maxRoyaltyPecentage);
-        setMinResolutionPeriod(_limits.minResolutionPeriod);
         setMaxResolutionPeriod(_limits.maxResolutionPeriod);
+        setMinResolutionPeriod(_limits.minResolutionPeriod);
         setMinDisputePeriod(_limits.minDisputePeriod);
 
         // Initialize protocol counters
@@ -428,7 +428,13 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         // Make sure _maxResolutionPeriod is greater than 0
         checkNonZero(_minResolutionPeriod);
 
-        protocolLimits().minResolutionPeriod = _minResolutionPeriod;
+        // cache protocol limits
+        ProtocolLib.ProtocolLimits storage limits = protocolLimits();
+
+        // Make sure _minResolutionPeriod is less than _maxResolutionPeriod
+        require(_minResolutionPeriod <= limits.maxResolutionPeriod, INVALID_RESOLUTION_PERIOD);
+
+        limits.minResolutionPeriod = _minResolutionPeriod;
         emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
     }
 
@@ -456,7 +462,13 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         // Make sure _maxResolutionPeriod is greater than 0
         checkNonZero(_maxResolutionPeriod);
 
-        protocolLimits().maxResolutionPeriod = _maxResolutionPeriod;
+        // cache protocol limits
+        ProtocolLib.ProtocolLimits storage limits = protocolLimits();
+
+        // Make sure _maxResolutionPeriod is greater than _minResolutionPeriod
+        require(_maxResolutionPeriod >= limits.minResolutionPeriod, INVALID_RESOLUTION_PERIOD);
+
+        limits.maxResolutionPeriod = _maxResolutionPeriod;
         emit MaxResolutionPeriodChanged(_maxResolutionPeriod, msgSender());
     }
 
