@@ -37,7 +37,6 @@ const {
   revertToSnapshot,
   setNextBlockTimestamp,
   getEvent,
-  calculateContractAddress,
   calculateCloneAddress,
   deriveTokenId,
   calculateBosonProxyAddress,
@@ -118,15 +117,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // Add twin handler back
     contractsBefore.twinHandler = twinHandler;
 
-    // Get current protocol state, which serves as the reference
-    // We assume that this state is a true one, relying on our unit and integration tests
-    protocolContractStateBefore = await getProtocolContractState(
-      protocolDiamondAddress,
-      contractsBefore,
-      mockContracts,
-      preUpgradeEntities,
-      true
-    );
+    // temporary update config, so compiler outputs storage layout
+    for (const compiler of hre.config.solidity.compilers) {
+      if (compiler.settings.outputSelection["*"]["BosonVoucher"]) {
+        compiler.settings.outputSelection["*"]["BosonVoucher"].push("storageLayout");
+      } else {
+        compiler.settings.outputSelection["*"]["BosonVoucher"] = ["storageLayout"];
+      }
+    }
 
     const preUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
     const preUpgradeEntitiesVoucher = await populateVoucherContract(
@@ -134,7 +132,17 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       protocolDiamondAddress,
       contractsBefore,
       mockContracts,
-      undefined,
+      preUpgradeEntities,
+      true
+    );
+
+    // Get current protocol state, which serves as the reference
+    // We assume that this state is a true one, relying on our unit and integration tests
+    protocolContractStateBefore = await getProtocolContractState(
+      protocolDiamondAddress,
+      contractsBefore,
+      mockContracts,
+      preUpgradeEntities,
       true
     );
 
@@ -314,6 +322,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         includeTests
       )
     );
+
+    console.log("2.2.1-2.2.3 preUpgradeStorageLayout", preUpgradeStorageLayout);
 
     context(
       "Generic tests on Voucher",
@@ -919,7 +929,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             );
           });
 
-          it.only("old seller can create a new collection", async function () {
+          it("old seller can create a new collection", async function () {
             const { sellers } = preUpgradeEntities;
             const {
               wallet: sellerWallet,

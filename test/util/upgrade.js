@@ -36,14 +36,7 @@ const {
   mockCondition,
   mockTwin,
 } = require("./mock");
-const {
-  setNextBlockTimestamp,
-  paddingType,
-  getMappingStoragePosition,
-  calculateContractAddress,
-  calculateCloneAddress,
-  calculateBosonProxyAddress,
-} = require("./utils.js");
+const { setNextBlockTimestamp, paddingType, getMappingStoragePosition } = require("./utils.js");
 const { oneMonth, oneDay } = require("./constants");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -178,9 +171,7 @@ async function deploySuite(deployer, newVersion) {
     const ClientProxy = await getContractFactory("BeaconClientProxy");
     const bosonVoucherProxy = await ClientProxy.deploy();
 
-    await configHandler.setBeaconProxyAddress(
-      await bosonVoucherProxy.getAddress(),
-    );
+    await configHandler.setBeaconProxyAddress(await bosonVoucherProxy.getAddress());
   }
 
   return {
@@ -334,6 +325,7 @@ async function populateProtocolContract(
   let twins = [];
   let exchanges = [];
   let bundles = [];
+  let bosonVouchers = [];
 
   const entityType = {
     SELLER: 0,
@@ -447,6 +439,9 @@ async function populateProtocolContract(
           offerIds: [],
           voucherContractAddress,
         });
+
+        const bosonVoucher = await getContractAt("BosonVoucher", voucherContractAddress);
+        bosonVouchers.push(bosonVoucher);
 
         // mint mock token to sellers just in case they need them
         await mockToken.mint(await connectedWallet.getAddress(), "10000000000");
@@ -674,8 +669,6 @@ async function populateProtocolContract(
           .connect(buyerWallet)
           .commitToConditionalOffer(await buyerWallet.getAddress(), offer.id, condition.tokenId, { value: msgValue });
       } else {
-        // log bundle
-
         await exchangeHandler
           .connect(buyerWallet)
           .commitToOffer(await buyerWallet.getAddress(), offer.id, { value: msgValue });
@@ -699,7 +692,6 @@ async function populateProtocolContract(
     const exchange = exchanges[id - 1];
     await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).cancelVoucher(exchange.exchangeId);
   }
-
   // revoke some vouchers #2
   for (const id of [4, 6]) {
     const exchange = exchanges[id - 1];
@@ -714,7 +706,7 @@ async function populateProtocolContract(
 
   await disputeHandler.connect(buyers[exchange.buyerIndex].wallet).raiseDispute(exchange.exchangeId);
 
-  return { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins };
+  return { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins, bosonVouchers };
 }
 
 // Returns protocol state for provided entities
@@ -1624,12 +1616,12 @@ function compareStorageLayouts(storageBefore, storageAfter) {
 async function populateVoucherContract(
   deployer,
   protocolDiamondAddress,
-  { accountHandler, exchangeHandler, offerHandler, fundsHandler },
+  { accountHandler, exchangeHandler, offerHandler, fundsHandler, groupHandler },
   { mockToken },
   existingEntities,
   isBefore = false
 ) {
-  let DR;
+  let DRs;
   let sellers = [];
   let buyers = [];
   let offers = [];
@@ -1638,7 +1630,7 @@ async function populateVoucherContract(
 
   if (existingEntities) {
     // If existing entities are provided, we use them instead of creating new ones
-    ({ DR, sellers, buyers, offers, bosonVouchers } = existingEntities);
+    ({ DRs, sellers, buyers, offers, bosonVouchers } = existingEntities);
   } else {
     const entityType = {
       SELLER: 0,
@@ -1700,13 +1692,13 @@ async function populateVoucherContract(
             .connect(connectedWallet)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
-          DR = {
+          DRs.push({
             wallet: connectedWallet,
             id: disputeResolver.id,
             disputeResolver,
             disputeResolverFees,
             sellerAllowList,
-          };
+          });
 
           if (versionsWithActivateDRFunction.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
             //ADMIN role activates Dispute Resolver
@@ -1796,7 +1788,7 @@ async function populateVoucherContract(
       offerDurations.resolutionPeriod = `${(offerId + 1) * Number(oneDay)}`;
 
       // choose one DR and agent
-      const disputeResolverId = DR.disputeResolver.id;
+      const disputeResolverId = DRs[0].disputeResolver.id;
       const agentId = "0";
 
       // create an offer
@@ -1823,7 +1815,7 @@ async function populateVoucherContract(
   let exchangeId = Number(await exchangeHandler.getNextExchangeId());
   for (let i = 0; i < buyers.length; i++) {
     for (let j = i; j < buyers.length; j++) {
-      const offer = offers[i + j].offer; // some offers will be picked multiple times, some never.
+      const { offer, groupId } = offers[i + j]; // some offers will be picked multiple times, some never.
       const offerPrice = offer.price;
       const buyerWallet = buyers[j].wallet;
       let msgValue;
@@ -1835,15 +1827,30 @@ async function populateVoucherContract(
         await mockToken.connect(buyerWallet).approve(protocolDiamondAddress, offerPrice);
         await mockToken.mint(await buyerWallet.getAddress(), offerPrice);
       }
-      await exchangeHandler
-        .connect(buyerWallet)
-        .commitToOffer(await buyerWallet.getAddress(), offer.id, { value: msgValue });
+
+      // v2.3.0 introduces commitToConditionalOffer method which should be used for conditional offers
+      const isAfterV2_3_0 = !versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion);
+      if (groupId && isAfterV2_3_0) {
+        // get condition
+        let [, , condition] = await groupHandler.getGroup(groupId);
+        condition = Condition.fromStruct(condition);
+
+        // commit to conditional offer
+        await exchangeHandler
+          .connect(buyerWallet)
+          .commitToConditionalOffer(await buyerWallet.getAddress(), offer.id, condition.tokenId, { value: msgValue });
+      } else {
+        await exchangeHandler
+          .connect(buyerWallet)
+          .commitToOffer(await buyerWallet.getAddress(), offer.id, { value: msgValue });
+      }
+
       exchanges.push({ exchangeId: exchangeId, offerId: offer.id, buyerIndex: j });
       exchangeId++;
     }
   }
 
-  return { DR, sellers, buyers, offers, exchanges, bosonVouchers };
+  return { DRs, sellers, buyers, offers, exchanges, bosonVouchers };
 }
 
 async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buyers }) {

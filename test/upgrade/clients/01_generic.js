@@ -42,6 +42,7 @@ function getGenericContext(
       it("Old storage layout should be unaffected", async function () {
         const postUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
 
+        console.log("preUpgradeStorageLayout", preUpgradeStorageLayout);
         assert(
           compareStorageLayouts(preUpgradeStorageLayout, postUpgradeStorageLayout),
           "Upgrade breaks storage layout"
@@ -90,7 +91,7 @@ function getGenericContext(
             const buyerIndex = entities.findIndex((e) => e.wallet == buyerWallet);
 
             // Update the balance of the buyer
-            voucherData.balanceOf[buyerIndex] = voucherData.balanceOf[buyerIndex] - 1;
+            voucherData.balanceOf[buyerIndex] = voucherData.balanceOf[buyerIndex] - 1n;
           }
         }
 
