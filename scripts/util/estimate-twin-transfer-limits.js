@@ -23,17 +23,43 @@ This script does the following:
 */
 async function estimateTwinTransferLimits() {
   // 1. Preprocess the `twinTransfer` to add the `gasLeft()` markers
-  // hre.config.preprocess = {
-  //   eachLine: () => ({
-  //     transform: (line) => {
-  //       if (line.match(/^\s*pragma /i)) {
-  //         //
-  //         line = line.replace(/solidity\s+0\.8\.9/i, "solidity 0.8.18");
-  //       }
-  //       return line;
-  //     },
-  //   }),
-  // };
+  let startFound = false;
+  let invokeFound = false;
+  const ExchangeHandlerPath = process.cwd() + "/contracts/protocol/facets/ExchangeHandlerFacet.sol";
+  hre.config.preprocess = {
+    eachLine: () => ({
+      transform: (line, { absolutePath }) => {
+        // Filter paths here, since preprocessor's options "files" doesn't work
+        if (absolutePath !== ExchangeHandlerPath) {
+          return line;
+        }
+
+        // 1. add console.sol import
+        if (line.includes("pragma solidity")) {
+          line = line + "import 'hardhat/console.sol';";
+          console.log("import path");
+          console.log(absolutePath);
+        }
+
+        if (line.includes("transferTwins")) {
+          if (line.includes("function")) {
+            startFound = true;
+          } else {
+            invokeFound = true;
+          }
+        }
+
+        if (startFound && line.includes("{")) {
+          line = line + 'console.log("start", gasleft());';
+          startFound = false;
+        } else if (invokeFound && line.includes("}")) {
+          line = 'console.log("final event", gasleft());' + line;
+          invokeFound = false;
+        }
+        return line;
+      },
+    }),
+  };
 
   // 2. Run tests that cover the bundles and capture the output
   hre.config.mocha = {
