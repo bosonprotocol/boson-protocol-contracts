@@ -16,8 +16,6 @@ import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title ExchangeHandlerFacet
  *
@@ -599,8 +597,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         // Notify watchers of state change
         emit VoucherRedeemed(offerId, _exchangeId, msgSender());
-
-        console.log("TwinGasEstimate5,0,%s", gasleft());
     }
 
     /**
@@ -836,7 +832,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             // Visit the twins
             for (uint256 i = 0; i < twinCount;) {
-                console.log("TwinGasEstimate1,%s,%s", i, gasleft());
                 // Get the twin
                 (, Twin storage twinS) = fetchTwin(twinIds[i]);
 
@@ -901,14 +896,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     twinM.tokenAddress = twinS.tokenAddress;
 
                     uint256 gasLeft = gasleft();
-                    console.log("TwinGasEstimate2,%s,%s", i, gasleft());
                     if (gasLeft > reservedGas && twinM.tokenAddress.isContract()) {
                         bytes memory result;
                         (success, result) = twinM.tokenAddress.call{ gas: gasLeft - reservedGas }(data);
 
                         success = success && (result.length == 0 || abi.decode(result, (bool)));
                     }
-                    console.log("TwinGasEstimate3,%s,%s", i, gasleft());
                 }
 
                 twinM.id = twinS.id;
@@ -950,7 +943,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 unchecked {
                     i++;
                 }
-                console.log("TwinGasEstimate4,%s,%s", i, gasleft());
             }
         }
 
