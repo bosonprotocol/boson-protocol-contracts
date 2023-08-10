@@ -14,15 +14,15 @@ Estimates the values for SINGLE_TWIN_RESERVED_GAS, MINIMAL_RESIDUAL_GAS
 Use with caution if `transferTwins` or other methods that call it changed a lot. Please, refer to docs/twin-transfer-limits.md for more information.
 
 This script does the following:
-1. Preprocesses the `transferTwins` method to add the `gasLeft()` measure points
-   If it cannot reliably position the measure points, it will throw an error
-2  Runs the tests that cover the `transferTwins` method
+1. Preprocesses the `transferTwins` method to add the `gasLeft()` measurement points
+   If it cannot reliably position the measurement points, it throws an error
+2. Runs the unit tests that cover the `transferTwins` method
 3. Captures the console.log output
 4. Analyzes the output and estimates SINGLE_TWIN_RESERVED_GAS and MINIMAL_RESIDUAL_GAS
 
 */
 async function estimateTwinTransferLimits() {
-  // 1. Preprocess the `twinTransfer` to add the `gasLeft()` measure points
+  // 1. Preprocess the `twinTransfer` to add the `gasLeft()` measurement points
   let invokeFound = false;
   let loopFound = false;
   let externalCallFound = false;

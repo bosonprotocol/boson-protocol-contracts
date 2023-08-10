@@ -264,7 +264,7 @@ npx hardhat detect-changed-contracts v2.1.0 branch-1  // get changes a tag and a
 Run unit tests and generates chunks of tests with approximately the same execution time in order to run them in parallel on Github Actions.
 This script must be run wherever we add new unit test files.
 
-Run script with
+Run the script with  
 `npx hardhat split-unit-tests-into-chunks <chunks>`
 
 Parameters:
@@ -272,3 +272,12 @@ Parameters:
 - chunks [required] - Number of chunks to divide the tests into
 
 Example: `npx hardhat split-unit-tests-into-chunks 4`
+
+### Estimate twin transfer limits
+
+Estimates the values `SINGLE_TWIN_RESERVED_GAS` and `MINIMAL_RESIDUAL_GAS` used during twins transfers.  
+More information about the procedure is available on a dedicated page: [Estimating the twin transfer limits](twin-transfer-limits.md).
+
+Run the script with  
+
+`node ./scripts/util/estimate-twin-transfer-limits.js`
