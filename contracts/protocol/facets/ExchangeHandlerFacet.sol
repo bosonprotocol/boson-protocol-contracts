@@ -16,7 +16,7 @@ import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 
 /**
  * @title ExchangeHandlerFacet
@@ -600,7 +600,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Notify watchers of state change
         emit VoucherRedeemed(offerId, _exchangeId, msgSender());
 
-        // console.log("final event", gasleft()); // add a bit more to toggle reentrancy
+        console.log("TwinGasEstimate5,0,%s", gasleft());
     }
 
     /**
@@ -834,12 +834,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // Oveflow happens for twinCount ~ 9.6x10^71, which is impossible to achieve
             uint256 reservedGas = twinCount * SINGLE_TWIN_RESERVED_GAS + MINIMAL_RESIDUAL_GAS;
 
-            console.log("before loop", gasleft());
-
             // Visit the twins
-            for (uint256 i = 0; i < twinCount; ) {
-                console.log("loop start", i, gasleft());
-
+            for (uint256 i = 0; i < twinCount;) {
+                console.log("TwinGasEstimate1,%s,%s", i, gasleft());
                 // Get the twin
                 (, Twin storage twinS) = fetchTwin(twinIds[i]);
 
@@ -903,17 +900,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     // If not, skip the call and mark the transfer as failed
                     twinM.tokenAddress = twinS.tokenAddress;
 
-                    console.log("loop constant cost #1", i, gasleft());
-
                     uint256 gasLeft = gasleft();
+                    console.log("TwinGasEstimate2,%s,%s", i, gasleft());
                     if (gasLeft > reservedGas && twinM.tokenAddress.isContract()) {
                         bytes memory result;
                         (success, result) = twinM.tokenAddress.call{ gas: gasLeft - reservedGas }(data);
 
                         success = success && (result.length == 0 || abi.decode(result, (bool)));
                     }
-
-                    console.log("loop variable cost", i, gasleft());
+                    console.log("TwinGasEstimate3,%s,%s", i, gasleft());
                 }
 
                 twinM.id = twinS.id;
@@ -955,7 +950,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 unchecked {
                     i++;
                 }
-                console.log("loop constant cost #2", i, gasleft());
+                console.log("TwinGasEstimate4,%s,%s", i, gasleft());
             }
         }
 
@@ -963,7 +958,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         if (transferFailed) {
             raiseDisputeInternal(_exchange, _voucher, sellerId);
         }
-        console.log("redisual cost", gasleft());
     }
 
     /**
