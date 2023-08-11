@@ -3396,7 +3396,7 @@ describe("IBosonExchangeHandler", function () {
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it.only("if twin returns a bomb, redeem still succeeds, but exchange is disputed", async function () {
+          it("if twin returns a bomb, redeem still succeeds, but exchange is disputed", async function () {
             // testing the twin, which implements returnbomb.
             // currently, the protocol is not protected against this attack.
 
@@ -3445,7 +3445,7 @@ describe("IBosonExchangeHandler", function () {
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it.only("if twin returns a malformed return, redeem still succeeds, but exchange is disputed", async function () {
+          it.skip("if twin returns a malformed return, redeem still succeeds, but exchange is disputed", async function () {
             // testing the twin, which returns malformed data.
             // currently, the protocol is not protected against this attack.
 

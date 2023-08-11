@@ -15,7 +15,6 @@ import { IERC1155 } from "../../interfaces/IERC1155.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
 import { Address } from "../../ext_libs/Address.sol";
-import "hardhat/console.sol";
 
 /**
  * @title ExchangeHandlerFacet
@@ -866,11 +865,34 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     // Make call only if there is enough gas and code at address exists.
                     // If not, skip the call and mark the transfer as failed
                     if (gasleft() > reservedGas && twin.tokenAddress.isContract()) {
+                        address to = twin.tokenAddress;
+
+                        // Handle the return value with assembly to avoid return bomb attack
                         bytes memory result;
-                        (success, result) = twin.tokenAddress.call{ gas: gasleft() - reservedGas }(data);
-                        console.log("result");
-                        console.log(success);
-                        console.log(result.length);
+                        assembly {
+                            success := call(
+                                sub(gas(), reservedGas), // gasleft()-reservedGas
+                                to, // twin contract
+                                0, // ether value
+                                add(data, 0x20), // invocation calldata
+                                mload(data), // calldata length
+                                add(result, 0x20), // store return data at result
+                                0x20 // store at most 32 bytes
+                            )
+
+                            let returndataSize := returndatasize()
+
+                            switch gt(returndataSize, 0x20)
+                            case 0 {
+                                // Adjust result length in case it's shorter than 32 bytes
+                                mstore(result, returndataSize)
+                            }
+                            case 1 {
+                                // If return data is longer than 32 bytes, consider transfer unsuccesful
+                                success := false
+                            }
+                        }
+
                         success = success && (result.length == 0 || abi.decode(result, (bool)));
                     }
                 }
