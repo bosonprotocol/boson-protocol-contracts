@@ -246,3 +246,33 @@ contract Foreign20GasTheft is Foreign20 {
         return false;
     }
 }
+
+/*
+ * @title Foreign20 that returns an absurdly long return data
+ *
+ * @notice Mock ERC-(20) for Unit Testing
+ */
+contract Foreign20ReturnBomb is Foreign20 {
+    function transferFrom(address, address, uint256) public virtual override returns (bool) {
+        assembly {
+            revert(0, 3000000)
+            // This is carefully chosen. If it's too low, not enough gas is consumed and contract that call it does not run out of gas.
+            // If it's too high, then this contract runs out of gas before the return data is returned.
+        }
+    }
+}
+
+/*
+ * @title Foreign20 that returns true, but the data cannot be decoded into a boolean
+ *
+ * @notice Mock ERC-(20) for Unit Testing
+ */
+contract Foreign20MalformedReturn is Foreign20 {
+    function transferFrom(address, address, uint256) public virtual override returns (bool) {
+        assembly {
+            return(0, 31) // return too short data
+            // return(0, 33) // return too long data
+            // return(0x40, 32) // return a value that is not 0 or 1
+        }
+    }
+}

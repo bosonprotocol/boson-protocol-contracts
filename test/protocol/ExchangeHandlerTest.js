@@ -3330,11 +3330,11 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
+            // It should match ExchangeState.Disputed
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is disputed", async function () {
             const [foreign20gt, foreign20gt_2] = await deployMockTokens(["Foreign20GasTheft", "Foreign20GasTheft"]);
 
             // Approve the protocol diamond to transfer seller's tokens
@@ -3370,7 +3370,7 @@ describe("IBosonExchangeHandler", function () {
             // Redeem the voucher
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
-            // Voucher should be revoked and both transfers should fail
+            // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
               .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
@@ -3389,6 +3389,104 @@ describe("IBosonExchangeHandler", function () {
                 twin20_2.amount,
                 await buyer.getAddress()
               );
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
+
+          it.only("if twin returns a bomb, redeem still succeeds, but exchange is disputed", async function () {
+            // testing the twin, which implements returnbomb.
+            // currently, the protocol is not protected against this attack.
+
+            const [foreign20rb] = await deployMockTokens(["Foreign20ReturnBomb"]);
+
+            // Approve the protocol diamond to transfer seller's tokens
+            await foreign20rb.connect(assistant).approve(protocolDiamondAddress, "100");
+
+            // Create two ERC20 twins that will consume all available gas
+            twin20 = mockTwin(await foreign20rb.getAddress());
+            twin20.amount = "1";
+            twin20.supplyAvailable = "100";
+            twin20.id = "4";
+
+            await twinHandler.connect(assistant).createTwin(twin20.toStruct());
+
+            // Create a new offer and bundle
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin20.id]);
+            await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
+
+            // Commit to offer
+            const buyerAddress = await buyer.getAddress();
+            await exchangeHandler.connect(buyer).commitToOffer(buyerAddress, offerId, { value: price });
+
+            exchange.id = Number(exchange.id) + 1;
+
+            // Redeem the voucher
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+            // Dispute should be raised and both transfers should fail
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyerAddress);
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
+
+          it.only("if twin returns a malformed return, redeem still succeeds, but exchange is disputed", async function () {
+            // testing the twin, which returns malformed data.
+            // currently, the protocol is not protected against this attack.
+
+            const [foreign20mr] = await deployMockTokens(["Foreign20MalformedReturn"]);
+
+            // Approve the protocol diamond to transfer seller's tokens
+            await foreign20mr.connect(assistant).approve(protocolDiamondAddress, "100");
+
+            // Create two ERC20 twins that will consume all available gas
+            twin20 = mockTwin(await foreign20mr.getAddress());
+            twin20.amount = "1";
+            twin20.supplyAvailable = "100";
+            twin20.id = "4";
+
+            await twinHandler.connect(assistant).createTwin(twin20.toStruct());
+
+            // Create a new offer and bundle
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin20.id]);
+            await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
+
+            // Commit to offer
+            const buyerAddress = await buyer.getAddress();
+            await exchangeHandler.connect(buyer).commitToOffer(buyerAddress, offerId, { value: price });
+
+            exchange.id = Number(exchange.id) + 1;
+
+            // Redeem the voucher
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+            // Dispute should be raised and both transfers should fail
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyerAddress);
+
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
@@ -3872,11 +3970,11 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
+            // It should match ExchangeState.Disputed
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is disputed", async function () {
             const [foreign721gt, foreign721gt_2] = await deployMockTokens(["Foreign721GasTheft", "Foreign721GasTheft"]);
 
             // Approve the protocol diamond to transfer seller's tokens
@@ -3912,7 +4010,7 @@ describe("IBosonExchangeHandler", function () {
             // Redeem the voucher
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
-            // Voucher should be revoked and both transfers should fail
+            // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
               .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
@@ -4142,11 +4240,11 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
+            // It should match ExchangeState.Disputed
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is disputed", async function () {
             const [foreign1155gt, foreign1155gt_2] = await deployMockTokens([
               "Foreign1155GasTheft",
               "Foreign1155GasTheft",
@@ -4631,11 +4729,11 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
+            // It should match ExchangeState.Disputed
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is disputed", async function () {
             const [foreign20gt, foreign721gt, foreign1155gt] = await deployMockTokens([
               "Foreign20GasTheft",
               "Foreign721GasTheft",
@@ -4684,7 +4782,7 @@ describe("IBosonExchangeHandler", function () {
             // Redeem the voucher
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
-            // Voucher should be revoked and both transfers should fail
+            // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
               .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
