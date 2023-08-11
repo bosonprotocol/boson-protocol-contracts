@@ -263,7 +263,7 @@ contract Foreign20ReturnBomb is Foreign20 {
 }
 
 /*
- * @title Foreign20 that returns true, but the data cannot be decoded into a boolean
+ * @title Foreign20 that succeeds, but the data cannot be decoded into a boolean
  *
  * @notice Mock ERC-(20) for Unit Testing
  */
