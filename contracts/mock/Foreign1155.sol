@@ -38,3 +38,18 @@ contract Foreign1155GasTheft is Foreign1155 {
         }
     }
 }
+
+/*
+ * @title Foreign1155 that returns an absurdly long return data
+ *
+ * @notice Mock ERC-(1155) for Unit Testing
+ */
+contract Foreign1155ReturnBomb is Foreign1155 {
+    function safeTransferFrom(address, address, uint256, uint256, bytes memory) public virtual override {
+        assembly {
+            revert(0, 3000000)
+            // This is carefully chosen. If it's too low, not enough gas is consumed and contract that call it does not run out of gas.
+            // If it's too high, then this contract runs out of gas before the return data is returned.
+        }
+    }
+}
