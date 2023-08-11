@@ -15,7 +15,6 @@ import { IERC1155 } from "../../interfaces/IERC1155.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
 import { Address } from "../../ext_libs/Address.sol";
-import "hardhat/console.sol";
 
 /**
  * @title ExchangeHandlerFacet
@@ -868,10 +867,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     if (gasleft() > reservedGas && twin.tokenAddress.isContract()) {
                         bytes memory result;
                         (success, result) = twin.tokenAddress.call{ gas: gasleft() - reservedGas }(data);
-                        console.log("result");
-                        console.log(success);
-                        console.log(result.length);
-                        success = success && (result.length == 0 || abi.decode(result, (bool)));
+
+                        success =
+                            success &&
+                            (result.length == 0 || (result.length == 32 && abi.decode(result, (uint256)) == 1));
                     }
                 }
 

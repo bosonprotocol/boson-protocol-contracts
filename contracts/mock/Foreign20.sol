@@ -268,11 +268,31 @@ contract Foreign20ReturnBomb is Foreign20 {
  * @notice Mock ERC-(20) for Unit Testing
  */
 contract Foreign20MalformedReturn is Foreign20 {
+    enum AttackType {
+        ReturnTooShort,
+        ReturnTooLong,
+        ReturnInvalid
+    }
+
+    AttackType public attackType;
+
+    function setAttackType(AttackType _attackType) external {
+        attackType = _attackType;
+    }
+
     function transferFrom(address, address, uint256) public virtual override returns (bool) {
-        assembly {
-            return(0, 31) // return too short data
-            // return(0, 33) // return too long data
-            // return(0x40, 32) // return a value that is not 0 or 1
+        if (attackType == AttackType.ReturnTooShort) {
+            assembly {
+                return(0, 31) // return too short data
+            }
+        } else if (attackType == AttackType.ReturnTooLong) {
+            assembly {
+                return(0, 33) // return too long data
+            }
+        } else if (attackType == AttackType.ReturnInvalid) {
+            assembly {
+                return(0x40, 32) // return a value that is not 0 or 1
+            }
         }
     }
 }
