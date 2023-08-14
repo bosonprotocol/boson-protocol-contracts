@@ -1,5 +1,3 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
 const { expect } = require("chai");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const { oneWeek, oneMonth } = require("../util/constants");
@@ -14,10 +12,10 @@ describe("OfferDates", function () {
 
   beforeEach(async function () {
     // Required constructor params
-    validFrom = ethers.BigNumber.from(Date.now()).toString(); // valid from now
-    validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // until 6 months
-    voucherRedeemableFrom = ethers.BigNumber.from(Date.now() + oneWeek).toString(); // redeemable in 1 week
-    voucherRedeemableUntil = ethers.BigNumber.from(Date.now() + oneWeek * 3).toString(); // redeemable for 2 weeks
+    validFrom = BigInt(Date.now()).toString(); // valid from now
+    validUntil = (BigInt(Date.now()) + oneMonth * 6n).toString(); // until 6 months
+    voucherRedeemableFrom = (BigInt(Date.now()) + oneWeek).toString(); // redeemable in 1 week
+    voucherRedeemableUntil = (BigInt(Date.now()) + oneWeek * 3n).toString(); // redeemable for 2 weeks
   });
 
   context("📋 Constructor", async function () {
@@ -45,20 +43,15 @@ describe("OfferDates", function () {
       expect(offerDates.validFromIsValid()).is.false;
       expect(offerDates.isValid()).is.false;
 
-      // Invalid field value
-      offerDates.validFrom = new Date();
-      expect(offerDates.validFromIsValid()).is.false;
-      expect(offerDates.isValid()).is.false;
-
-      // Invalid field value
-      offerDates.validFrom = 12;
-      expect(offerDates.validFromIsValid()).is.false;
-      expect(offerDates.isValid()).is.false;
-
       // Valid field value
       offerDates.validFrom = "0";
       expect(offerDates.validFromIsValid()).is.true;
       expect(offerDates.isValid()).is.true;
+
+      // Invalid field value
+      offerDates.validFrom = new Date();
+      expect(offerDates.validFromIsValid()).is.false;
+      expect(offerDates.isValid()).is.false;
 
       // Valid field value
       offerDates.validFrom = "126";
@@ -72,16 +65,6 @@ describe("OfferDates", function () {
       expect(offerDates.validUntilIsValid()).is.false;
       expect(offerDates.isValid()).is.false;
 
-      // Invalid field value
-      offerDates.validUntil = new Date();
-      expect(offerDates.validUntilIsValid()).is.false;
-      expect(offerDates.isValid()).is.false;
-
-      // Invalid field value
-      offerDates.validUntil = 12;
-      expect(offerDates.validUntilIsValid()).is.false;
-      expect(offerDates.isValid()).is.false;
-
       // Valid field value
       offerDates.validUntil = "0";
       expect(offerDates.validUntilIsValid()).is.true;
@@ -91,21 +74,16 @@ describe("OfferDates", function () {
       offerDates.validUntil = "126";
       expect(offerDates.validUntilIsValid()).is.true;
       expect(offerDates.isValid()).is.true;
+
+      // Invalid field value
+      offerDates.validUntil = new Date();
+      expect(offerDates.validUntilIsValid()).is.false;
+      expect(offerDates.isValid()).is.false;
     });
 
     it("Always present, voucherRedeemableFrom must be the string representation of a BigNumber", async function () {
       // Invalid field value
       offerDates.voucherRedeemableFrom = "zedzdeadbaby";
-      expect(offerDates.voucherRedeemableFromIsValid()).is.false;
-      expect(offerDates.isValid()).is.false;
-
-      // Invalid field value
-      offerDates.voucherRedeemableFrom = new Date();
-      expect(offerDates.voucherRedeemableFromIsValid()).is.false;
-      expect(offerDates.isValid()).is.false;
-
-      // Invalid field value
-      offerDates.voucherRedeemableFrom = 12;
       expect(offerDates.voucherRedeemableFromIsValid()).is.false;
       expect(offerDates.isValid()).is.false;
 
@@ -128,11 +106,6 @@ describe("OfferDates", function () {
 
       // Invalid field value
       offerDates.voucherRedeemableUntil = new Date();
-      expect(offerDates.voucherRedeemableUntilIsValid()).is.false;
-      expect(offerDates.isValid()).is.false;
-
-      // Invalid field value
-      offerDates.voucherRedeemableUntil = 12;
       expect(offerDates.voucherRedeemableUntilIsValid()).is.false;
       expect(offerDates.isValid()).is.false;
 

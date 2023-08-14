@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getSigners } = hre.ethers;
 const { expect } = require("chai");
 const Agent = require("../../scripts/domain/Agent");
 
@@ -14,7 +14,7 @@ describe("Agent", function () {
   context("📋 Constructor", async function () {
     beforeEach(async function () {
       // Get a list of accounts
-      accounts = await ethers.getSigners();
+      accounts = await getSigners();
       wallet = accounts[1].address;
 
       // Required constructor params
@@ -39,7 +39,7 @@ describe("Agent", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Get a list of accounts
-      accounts = await ethers.getSigners();
+      accounts = await getSigners();
       wallet = accounts[1].address;
 
       // Required constructor params
@@ -63,11 +63,6 @@ describe("Agent", function () {
       expect(agent.idIsValid()).is.false;
       expect(agent.isValid()).is.false;
 
-      // Invalid field value
-      agent.id = 12;
-      expect(agent.idIsValid()).is.false;
-      expect(agent.isValid()).is.false;
-
       // Valid field value
       agent.id = "0";
       expect(agent.idIsValid()).is.true;
@@ -87,11 +82,6 @@ describe("Agent", function () {
 
       // Invalid field value
       agent.feePercentage = new Date();
-      expect(agent.feePercentageIsValid()).is.false;
-      expect(agent.isValid()).is.false;
-
-      // Invalid field value
-      agent.feePercentage = 12;
       expect(agent.feePercentageIsValid()).is.false;
       expect(agent.isValid()).is.false;
 
@@ -159,7 +149,7 @@ describe("Agent", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Get a list of accounts
-      accounts = await ethers.getSigners();
+      accounts = await getSigners();
       wallet = accounts[1].address;
 
       // Required constructor params

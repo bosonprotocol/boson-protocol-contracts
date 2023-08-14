@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import "./../../domain/BosonConstants.sol";
 import { IBosonBundleEvents } from "../../interfaces/events/IBosonBundleEvents.sol";
@@ -24,10 +24,8 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
      * - Any of the offers belongs to different seller
      * - Any of the offers does not exist
      * - Offer exists in a different bundle
-     * - Number of offers exceeds maximum allowed number per bundle
      * - Any of the twins belongs to different seller
      * - Any of the twins does not exist
-     * - Number of twins exceeds maximum allowed number per bundle
      * - Duplicate twins added in same bundle
      * - Exchange already exists for the offer id in bundle
      * - Offers' total quantity is greater than twin supply when token is nonfungible
@@ -38,7 +36,6 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
     function createBundleInternal(Bundle memory _bundle) internal {
         // Cache protocol lookups and limits for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-        ProtocolLib.ProtocolLimits storage limits = protocolLimits();
 
         // get message sender
         address sender = msgSender();
@@ -52,12 +49,6 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             _bundle.offerIds.length > 0 && _bundle.twinIds.length > 0,
             BUNDLE_REQUIRES_AT_LEAST_ONE_TWIN_AND_ONE_OFFER
         );
-
-        // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_bundle.offerIds.length <= limits.maxOffersPerBundle, TOO_MANY_OFFERS);
-
-        // limit maximum number of twins to avoid running into block gas limit in a loop
-        require(_bundle.twinIds.length <= limits.maxTwinsPerBundle, TOO_MANY_TWINS);
 
         // Get the next bundle and increment the counter
         uint256 bundleId = protocolCounters().nextBundleId++;
@@ -138,22 +129,22 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
      * - Offers' total quantity is greater than twin supply when token is nonfungible
      * - Offers' total quantity multiplied by twin amount is greater than twin supply when token is fungible or multitoken
      *
-     * @param offersTotalQuantity - sum of offers' total quantity available
+     * @param _offersTotalQuantity - sum of offers' total quantity available
      * @param _twinId - twin id to compare
      */
-    function bundleSupplyChecks(uint256 offersTotalQuantity, uint256 _twinId) internal view {
+    function bundleSupplyChecks(uint256 _offersTotalQuantity, uint256 _twinId) internal view {
         // make sure twin exist and belong to the seller
         Twin storage twin = getValidTwin(_twinId);
 
         // twin is NonFungibleToken or bundle has an unlimited offer
-        if (twin.tokenType == TokenType.NonFungibleToken || offersTotalQuantity == type(uint256).max) {
+        if (twin.tokenType == TokenType.NonFungibleToken || _offersTotalQuantity == type(uint256).max) {
             // the sum of all offers quantity should be less or equal twin supply
-            require(offersTotalQuantity <= twin.supplyAvailable, INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS);
+            require(_offersTotalQuantity <= twin.supplyAvailable, INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS);
         } else {
             // twin is FungibleToken or MultiToken
             // the sum of all offers quantity multiplied by twin amount should be less or equal twin supply
             require(
-                offersTotalQuantity * twin.amount <= twin.supplyAvailable,
+                _offersTotalQuantity * twin.amount <= twin.supplyAvailable,
                 INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
             );
         }
@@ -162,22 +153,21 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
     /**
      *
      * @notice Calculates bundled offers' total quantity available.
-     * @param previousTotal - previous offers' total quantity or initial value
+     * @param _previousTotal - previous offers' total quantity or initial value
      * @param _offerId - offer id to add to total quantity
      * @return offersTotalQuantity - previous offers' total quantity plus the current offer quantityAvailable
      */
-    function calculateOffersTotalQuantity(uint256 previousTotal, uint256 _offerId)
-        internal
-        view
-        returns (uint256 offersTotalQuantity)
-    {
+    function calculateOffersTotalQuantity(
+        uint256 _previousTotal,
+        uint256 _offerId
+    ) internal view returns (uint256 offersTotalQuantity) {
         // make sure all offers exist and belong to the seller
-        Offer storage offer = getValidOffer(_offerId);
+        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
 
         // Unchecked because we're handling overflow below
         unchecked {
             // Calculate the bundle offers total quantity available.
-            offersTotalQuantity = previousTotal + offer.quantityAvailable;
+            offersTotalQuantity = _previousTotal + offer.quantityAvailable;
         }
 
         // offersTotalQuantity should be max uint if overflow happens

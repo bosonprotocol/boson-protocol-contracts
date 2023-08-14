@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 
@@ -21,6 +21,26 @@ contract Foreign721 is ERC721Upgradeable {
         for (uint256 index = 0; index < _supply; index++) {
             _mint(msg.sender, _tokenId);
             _tokenId++;
+        }
+    }
+
+    /**
+     * Deletes the contract code
+     */
+    function destruct() public {
+        selfdestruct(payable(msg.sender));
+    }
+}
+
+/*
+ * @title Foreign721 that consumes all gas when transfer is called
+ *
+ * @notice Mock ERC-(721) for Unit Testing
+ */
+contract Foreign721GasTheft is Foreign721 {
+    function safeTransferFrom(address, address, uint256, bytes memory) public virtual override {
+        while (true) {
+            // consume all gas
         }
     }
 }

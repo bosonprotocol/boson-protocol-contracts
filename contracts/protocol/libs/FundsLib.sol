@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import "../../domain/BosonConstants.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
@@ -62,11 +62,7 @@ library FundsLib {
      * @param _buyerId - id of the buyer
      * @param _isPreminted - flag indicating if the offer is preminted
      */
-    function encumberFunds(
-        uint256 _offerId,
-        uint256 _buyerId,
-        bool _isPreminted
-    ) internal {
+    function encumberFunds(uint256 _offerId, uint256 _buyerId, bool _isPreminted) internal {
         // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
 
@@ -385,11 +381,7 @@ library FundsLib {
      * @param _from - address to transfer funds from
      * @param _amount - amount to be transferred
      */
-    function transferFundsToProtocol(
-        address _tokenAddress,
-        address _from,
-        uint256 _amount
-    ) internal {
+    function transferFundsToProtocol(address _tokenAddress, address _from, uint256 _amount) internal {
         if (_amount > 0) {
             // protocol balance before the transfer
             uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
@@ -440,11 +432,7 @@ library FundsLib {
         emit FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, EIP712Lib.msgSender());
     }
 
-    function transferFundsFromProtocol(
-        address _tokenAddress,
-        address payable _to,
-        uint256 _amount
-    ) internal {
+    function transferFundsFromProtocol(address _tokenAddress, address payable _to, uint256 _amount) internal {
         // try to transfer the funds
         if (_tokenAddress == address(0)) {
             // transfer native currency
@@ -463,11 +451,7 @@ library FundsLib {
      * @param _tokenAddress - funds contract address or zero address for native currency
      * @param _amount - amount to be credited
      */
-    function increaseAvailableFunds(
-        uint256 _entityId,
-        address _tokenAddress,
-        uint256 _amount
-    ) internal {
+    function increaseAvailableFunds(uint256 _entityId, address _tokenAddress, uint256 _amount) internal {
         ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
 
         // if the current amount of token is 0, the token address must be added to the token list
@@ -493,11 +477,7 @@ library FundsLib {
      * @param _tokenAddress - funds contract address or zero address for native currency
      * @param _amount - amount to be taken away
      */
-    function decreaseAvailableFunds(
-        uint256 _entityId,
-        address _tokenAddress,
-        uint256 _amount
-    ) internal {
+    function decreaseAvailableFunds(uint256 _entityId, address _tokenAddress, uint256 _amount) internal {
         if (_amount > 0) {
             ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
 

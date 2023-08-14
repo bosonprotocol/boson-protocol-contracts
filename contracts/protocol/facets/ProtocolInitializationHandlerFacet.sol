@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonProtocolInitializationHandler } from "../../interfaces/handlers/IBosonProtocolInitializationHandler.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { BeaconClientProxy } from "../../protocol/clients/proxy/BeaconClientProxy.sol";
 
 /**
  * @title BosonProtocolInitializationHandler
@@ -47,7 +48,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      * - For upgrade to v2.2.0:
      *   - If versions is set already
      *   - If _initializationData cannot be decoded to uin256
-     *   - If _initializationData is represents value 0
+     *   - If _initializationData is represents value
      *
      * @param _version - version of the protocol
      * @param _addresses - array of facet addresses to call initialize methods
@@ -79,7 +80,9 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             if (!success) {
                 if (error.length > 0) {
                     // bubble up the error
-                    revert(string(error));
+                    assembly {
+                        revert(add(32, error), mload(error))
+                    }
                 } else {
                     // Reverts with default message
                     revert(PROTOCOL_INITIALIZATION_FAILED);
@@ -91,6 +94,10 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         if (_isUpgrade) {
             if (_version == bytes32("2.2.0")) {
                 initV2_2_0(_initializationData);
+            } else if (_version == bytes32("2.2.1")) {
+                initV2_2_1();
+            } else if (_version == bytes32("2.3.0")) {
+                initV2_3_0(_initializationData);
             }
         }
 
@@ -98,6 +105,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         addInterfaces(_interfacesToAdd);
 
         status.version = _version;
+
         emit ProtocolInitialized(string(abi.encodePacked(_version)));
     }
 
@@ -117,6 +125,67 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         require(_maxPremintedVouchers != 0, VALUE_ZERO_NOT_ALLOWED);
         protocolLimits().maxPremintedVouchers = _maxPremintedVouchers;
         emit MaxPremintedVouchersChanged(_maxPremintedVouchers, msgSender());
+    }
+
+    /**
+     * @notice Initializes the version 2.2.0.
+     */
+    function initV2_2_1() internal view {
+        // Current version must be 2.2.0
+        require(protocolStatus().version == bytes32("2.2.0"), WRONG_CURRENT_VERSION);
+    }
+
+    /**
+     * @notice Initializes the version 2.3.0.
+     *
+     * V2.3.0 adds the minimal resolution period. Cannot be initialized with ConfigHandlerFacet.initialize since it would reset the counters.
+     *
+     * Reverts if:
+     *  - Current version is not 2.2.1
+     *  - There are already twins. This version adds a new mapping for twins which make it incompatible with previous versions.
+     *  - minResolutionPeriod is not present in _initializationData parameter
+     *  - length of seller creators does not match the length of seller ids
+     *  - if some of seller creators is zero address
+     *  - if some of seller ids does not bellong to a seller
+     *  - if minResolutionPeriod is greater than maxResolutionPeriod
+     *
+     * @param _initializationData - data representing uint256 _minResolutionPeriod, uint256[] memory sellerIds, address[] memory sellerCreators
+     */
+    function initV2_3_0(bytes calldata _initializationData) internal {
+        // Current version must be 2.2.1
+        require(protocolStatus().version == bytes32("2.2.1"), WRONG_CURRENT_VERSION);
+        require(protocolCounters().nextTwinId == 1, TWINS_ALREADY_EXIST);
+
+        // Decode initialization data
+        (uint256 _minResolutionPeriod, uint256[] memory sellerIds, address[] memory sellerCreators) = abi.decode(
+            _initializationData,
+            (uint256, uint256[], address[])
+        );
+
+        // cache protocol limits
+        ProtocolLib.ProtocolLimits storage limits = protocolLimits();
+
+        // make sure _minResolutionPeriod is less than maxResolutionPeriod
+        require(limits.maxResolutionPeriod >= _minResolutionPeriod, INVALID_RESOLUTION_PERIOD);
+
+        // Initialize limits.maxPremintedVouchers (configHandlerFacet initializer)
+        require(_minResolutionPeriod != 0, VALUE_ZERO_NOT_ALLOWED);
+        limits.minResolutionPeriod = _minResolutionPeriod;
+        emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
+
+        // Initialize sellerCreators
+        require(sellerIds.length == sellerCreators.length, ARRAY_LENGTH_MISMATCH);
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        for (uint256 i = 0; i < sellerIds.length; i++) {
+            (bool exists, , ) = fetchSeller(sellerIds[i]);
+            require(exists, NO_SUCH_SELLER);
+            require(sellerCreators[i] != address(0), INVALID_ADDRESS);
+
+            lookups.sellerCreator[sellerIds[i]] = sellerCreators[i];
+        }
+
+        // Deploy a new voucher proxy
+        protocolAddresses().beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());
     }
 
     /**

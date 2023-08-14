@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import "./../../domain/BosonConstants.sol";
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
@@ -21,7 +21,8 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
+     * - Supplied clerk is not a zero address
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
@@ -45,10 +46,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         require(_seller.active, MUST_BE_ACTIVE);
 
         // Check for zero address
-        require(
-            _seller.assistant != address(0) && _seller.clerk != address(0) && _seller.treasury != address(0),
-            INVALID_ADDRESS
-        );
+        require(_seller.assistant != address(0) && _seller.treasury != address(0), INVALID_ADDRESS);
 
         // Admin address or AuthToken data must be present. A seller can have one or the other
         require(
@@ -63,8 +61,9 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         // Get message sender
         address sender = msgSender();
 
-        // Check that caller is the supplied assistant and clerk
-        require(_seller.assistant == sender && _seller.clerk == sender, NOT_ASSISTANT_AND_CLERK);
+        // Check that caller is the supplied assistant
+        require(_seller.assistant == sender, NOT_ASSISTANT);
+        require(_seller.clerk == address(0), CLERK_DEPRECATED);
 
         // Do caller and uniqueness checks based on auth type
         if (_authToken.tokenType != AuthTokenType.None) {
@@ -87,9 +86,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Check that the sender address is unique to one seller id, across all roles
         require(
-            lookups.sellerIdByAdmin[sender] == 0 &&
-                lookups.sellerIdByAssistant[sender] == 0 &&
-                lookups.sellerIdByClerk[sender] == 0,
+            lookups.sellerIdByAdmin[sender] == 0 && lookups.sellerIdByAssistant[sender] == 0,
             SELLER_ADDRESS_MUST_BE_UNIQUE
         );
 
@@ -99,7 +96,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         storeSeller(_seller, _authToken, lookups);
 
         // Create clone and store its address cloneAddress
-        address voucherCloneAddress = cloneBosonVoucher(sellerId, _seller.assistant, _voucherInitValues);
+        address voucherCloneAddress = cloneBosonVoucher(sellerId, 0, sender, _seller.assistant, _voucherInitValues, "");
         lookups.cloneAddress[sellerId] = voucherCloneAddress;
 
         // Notify watchers of state change
@@ -125,9 +122,9 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         seller.id = _seller.id;
         seller.assistant = _seller.assistant;
         seller.admin = _seller.admin;
-        seller.clerk = _seller.clerk;
         seller.treasury = _seller.treasury;
         seller.active = _seller.active;
+        seller.metadataUri = _seller.metadataUri;
 
         // Auth token passed in
         if (_authToken.tokenType != AuthTokenType.None) {
@@ -145,27 +142,34 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Map the seller's other addresses to the seller id. It's not necessary to map the treasury address, as it only receives funds
         _lookups.sellerIdByAssistant[_seller.assistant] = _seller.id;
-        _lookups.sellerIdByClerk[_seller.clerk] = _seller.id;
+        _lookups.sellerCreator[_seller.id] = msgSender();
     }
 
     /**
      * @notice Creates a minimal clone of the Boson Voucher Contract.
      *
      * @param _sellerId - id of the seller
+     * @param _collectionIndex - index of the collection.
+     * @param _creator - address of the seller creator
      * @param _assistant - address of the assistant
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
+     * @param _externalId - external collection id ("" for the default collection)
      * @return cloneAddress - the address of newly created clone
      */
     function cloneBosonVoucher(
         uint256 _sellerId,
+        uint256 _collectionIndex,
+        address _creator,
         address _assistant,
-        VoucherInitValues calldata _voucherInitValues
+        VoucherInitValues calldata _voucherInitValues,
+        string memory _externalId
     ) internal returns (address cloneAddress) {
         // Pointer to stored addresses
         ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
 
         // Load beacon proxy contract address
         bytes20 targetBytes = bytes20(pa.beaconProxy);
+        bytes32 salt = keccak256(abi.encodePacked(_creator, _externalId));
 
         // create a minimal clone
         assembly {
@@ -173,12 +177,17 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
             mstore(add(clone, 0x14), targetBytes)
             mstore(add(clone, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
-            cloneAddress := create(0, clone, 0x37)
+            cloneAddress := create2(0, clone, 0x37, salt)
         }
 
         // Initialize the clone
         IInitializableVoucherClone(cloneAddress).initialize(pa.voucherBeacon);
-        IInitializableVoucherClone(cloneAddress).initializeVoucher(_sellerId, _assistant, _voucherInitValues);
+        IInitializableVoucherClone(cloneAddress).initializeVoucher(
+            _sellerId,
+            _collectionIndex,
+            _assistant,
+            _voucherInitValues
+        );
     }
 
     /**
@@ -189,14 +198,12 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      * @return sellerPendingUpdate - the seller pending update details. See {BosonTypes.Seller}
      * @return authTokenPendingUpdate - auth token pending update details
      */
-    function fetchSellerPendingUpdate(uint256 _sellerId)
+    function fetchSellerPendingUpdate(
+        uint256 _sellerId
+    )
         internal
         view
-        returns (
-            bool exists,
-            Seller storage sellerPendingUpdate,
-            AuthToken storage authTokenPendingUpdate
-        )
+        returns (bool exists, Seller storage sellerPendingUpdate, AuthToken storage authTokenPendingUpdate)
     {
         // Cache protocol entities for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
@@ -211,7 +218,6 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         exists =
             sellerPendingUpdate.admin != address(0) ||
             sellerPendingUpdate.assistant != address(0) ||
-            sellerPendingUpdate.clerk != address(0) ||
             authTokenPendingUpdate.tokenType != AuthTokenType.None;
     }
 }

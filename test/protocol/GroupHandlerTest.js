@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { ZeroAddress, getSigners, parseUnits, getContractFactory, MaxUint256 } = ethers;
 const { assert, expect } = require("chai");
 
 const Group = require("../../scripts/domain/Group");
@@ -66,10 +67,11 @@ describe("IBosonGroupHandler", function () {
     } = await setupTestEnvironment(contracts));
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
+    clerk = clerkDR = { address: ZeroAddress };
 
-    accounts = await ethers.getSigners();
+    accounts = await getSigners();
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -102,7 +104,12 @@ describe("IBosonGroupHandler", function () {
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller, then set fields in tests directly
-      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        clerk.address,
+        await treasury.getAddress()
+      );
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
@@ -117,16 +124,16 @@ describe("IBosonGroupHandler", function () {
 
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
-        assistantDR.address,
-        adminDR.address,
+        await assistantDR.getAddress(),
+        await adminDR.getAddress(),
         clerkDR.address,
-        treasuryDR.address,
+        await treasuryDR.getAddress(),
         true
       );
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+      disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
 
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
@@ -146,12 +153,12 @@ describe("IBosonGroupHandler", function () {
 
         // Set unique offer properties based on index
         offer.id = `${i + 1}`;
-        offer.price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
-        offer.sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-        offer.buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
+        offer.price = parseUnits(`${1.5 + i * 1}`, "ether").toString();
+        offer.sellerDeposit = parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
+        offer.buyerCancelPenalty = parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
         offer.quantityAvailable = `${(i + 1) * 2}`;
-        offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
-        offerDates.validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
+        offerDates.validFrom = (BigInt(Date.now()) + oneMonth * BigInt(i)).toString();
+        offerDates.validUntil = (BigInt(Date.now()) + oneMonth * 6n * BigInt(i + 1)).toString();
 
         // Check if domains are valid
         expect(offer.isValid()).is.true;
@@ -170,7 +177,8 @@ describe("IBosonGroupHandler", function () {
       condition = mockCondition({
         tokenType: TokenType.MultiToken,
         tokenAddress: accounts[0].address,
-        tokenId: "5150",
+        length: "0",
+        method: EvaluationMethod.Threshold,
       });
       expect(condition.isValid()).to.be.true;
 
@@ -182,7 +190,7 @@ describe("IBosonGroupHandler", function () {
       groupStruct = group.toStruct();
 
       // initialize groupHandler
-      groupHandlerFacet_Factory = await ethers.getContractFactory("GroupHandlerFacet");
+      groupHandlerFacet_Factory = await getContractFactory("GroupHandlerFacet");
     });
 
     afterEach(async function () {
@@ -204,7 +212,7 @@ describe("IBosonGroupHandler", function () {
 
         assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
-        assert.equal(event.executedBy.toString(), assistant.address, "Executed by is incorrect");
+        assert.equal(event.executedBy.toString(), await assistant.getAddress(), "Executed by is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
 
@@ -239,7 +247,7 @@ describe("IBosonGroupHandler", function () {
 
         assert.equal(event.groupId.toString(), groupId, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
-        assert.equal(event.executedBy.toString(), assistant.address, "Executed by is incorrect");
+        assert.equal(event.executedBy.toString(), await assistant.getAddress(), "Executed by is incorrect");
         assert.equal(groupInstance.toStruct().toString(), groupStruct.toString(), "Group struct is incorrect");
 
         // wrong group id should not exist
@@ -279,7 +287,7 @@ describe("IBosonGroupHandler", function () {
 
         assert.equal(event.groupId.toString(), groupId, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), seller.id, "Seller Id is incorrect");
-        assert.equal(event.executedBy.toString(), assistant.address, "Executed by is incorrect");
+        assert.equal(event.executedBy.toString(), await assistant.getAddress(), "Executed by is incorrect");
         assert.equal(groupInstance.toStruct().toString(), groupStruct.toString(), "Group struct is incorrect");
       });
 
@@ -303,7 +311,12 @@ describe("IBosonGroupHandler", function () {
 
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
-          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          seller = mockSeller(
+            await rando.getAddress(),
+            await rando.getAddress(),
+            ZeroAddress,
+            await rando.getAddress()
+          );
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
@@ -358,23 +371,13 @@ describe("IBosonGroupHandler", function () {
           );
         });
 
-        it("Adding too many offers", async function () {
-          // Try to add the more than 100 offers
-          group.offerIds = [...Array(101).keys()];
-
-          // Attempt to create a group, expecting revert
-          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
-            RevertReasons.TOO_MANY_OFFERS
-          );
-        });
-
         context("Condition 'None' has some values in other fields", async function () {
           beforeEach(async function () {
             condition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
           });
 
           it("Token address is not zero", async function () {
-            condition.tokenAddress = rando.address;
+            condition.tokenAddress = await rando.getAddress();
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
@@ -408,20 +411,29 @@ describe("IBosonGroupHandler", function () {
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
+
+          it("Length is not zero", async function () {
+            condition.length = "5";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
         });
 
         context("Condition 'Threshold' has invalid fields", async function () {
           beforeEach(async function () {
             condition = mockCondition({
               method: EvaluationMethod.Threshold,
-              tokenAddress: rando.address,
+              tokenAddress: await rando.getAddress(),
               maxCommits: "10",
               threshold: "200",
             });
           });
 
           it("Condition 'Threshold' has zero token contract address", async function () {
-            condition.tokenAddress = ethers.constants.AddressZero;
+            condition.tokenAddress = ZeroAddress;
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
@@ -446,20 +458,11 @@ describe("IBosonGroupHandler", function () {
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
-        });
 
-        context("Condition 'SpecificToken' has invalid fields", async function () {
-          beforeEach(async function () {
-            condition = mockCondition({
-              method: EvaluationMethod.SpecificToken,
-              tokenAddress: rando.address,
-              threshold: "0",
-              maxCommits: "5",
-            });
-          });
-
-          it("Condition 'SpecificToken' has zero token contract address", async function () {
-            condition.tokenAddress = ethers.constants.AddressZero;
+          it("Condition 'Threshold' with MultiToken has non-zero tokenId and zero length", async function () {
+            condition.tokenType = TokenType.MultiToken;
+            condition.tokenId = "1";
+            condition.length = "0";
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
@@ -467,7 +470,38 @@ describe("IBosonGroupHandler", function () {
             );
           });
 
-          it("Condition 'SpecificToken' has non zero threshold", async function () {
+          it("Condition 'Threshold' with MultiToken has tokenId + length - 1 > max uint256", async function () {
+            condition.tokenType = TokenType.MultiToken;
+            condition.tokenId = 1;
+            condition.length = MaxUint256;
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+        });
+
+        context("Condition 'SpecificToken' has invalid fields", async function () {
+          beforeEach(async function () {
+            condition = mockCondition({
+              method: EvaluationMethod.SpecificToken,
+              tokenAddress: await rando.getAddress(),
+              threshold: "0",
+              maxCommits: "5",
+            });
+          });
+
+          it("Condition 'SpecificToken' has zero token contract address", async function () {
+            condition.tokenAddress = ZeroAddress;
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'SpecificToken' has non zero threshold when tokenType is NonFungibleToken", async function () {
             condition.threshold = "10";
 
             // Attempt to create the group, expecting revert
@@ -478,6 +512,25 @@ describe("IBosonGroupHandler", function () {
 
           it("Condition 'SpecificToken' has zero maxCommits", async function () {
             condition.maxCommits = "0";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Length is zero when tokenId is not zero", async function () {
+            condition.length = "0";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'SpecificToken' with MultiToken has zero threshold", async function () {
+            condition.tokenType = TokenType.MultiToken;
+            condition.threshold = "0";
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
@@ -513,7 +566,7 @@ describe("IBosonGroupHandler", function () {
 
         assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
-        assert.equal(event.executedBy.toString(), assistant.address, "Executed by is incorrect");
+        assert.equal(event.executedBy.toString(), await assistant.getAddress(), "Executed by is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
 
@@ -571,7 +624,12 @@ describe("IBosonGroupHandler", function () {
 
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
-          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+          seller = mockSeller(
+            await rando.getAddress(),
+            await rando.getAddress(),
+            ZeroAddress,
+            await rando.getAddress()
+          );
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
@@ -603,26 +661,6 @@ describe("IBosonGroupHandler", function () {
           // Attempt to add offers to a group, expecting revert
           await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
             RevertReasons.OFFER_MUST_BE_UNIQUE
-          );
-        });
-
-        it("Number of offers to add exceeds max", async function () {
-          // Try to add the more than 100 offers
-          offerIdsToAdd = [...Array(101).keys()];
-
-          // Attempt to add offers to a group, expecting revert
-          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.TOO_MANY_OFFERS
-          );
-        });
-
-        it("Current number of offers plus number of offers to add exceeds max", async function () {
-          // Try to add offers to that total is more than 100. Group currently has 3.
-          offerIdsToAdd = [...Array(98).keys()];
-
-          // Attempt to add offers to a group, expecting revert
-          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.TOO_MANY_OFFERS
           );
         });
 
@@ -681,7 +719,7 @@ describe("IBosonGroupHandler", function () {
         expect(groupInstance.isValid()).to.be.true;
 
         assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
-        assert.equal(event.executedBy.toString(), assistant.address, "Executed by is incorrect");
+        assert.equal(event.executedBy.toString(), await assistant.getAddress(), "Executed by is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
 
@@ -800,16 +838,6 @@ describe("IBosonGroupHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_NOT_IN_GROUP);
         });
 
-        it("Removing too many offers", async function () {
-          // Try to remove the more than 100 offers
-          offerIdsToRemove = [...Array(101).keys()];
-
-          // Attempt to remove offers from the group, expecting revert
-          await expect(
-            groupHandler.connect(assistant).removeOffersFromGroup(group.id, offerIdsToRemove)
-          ).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
-        });
-
         it("Removing nothing", async function () {
           // Try to remove nothing
           offerIdsToRemove = [];
@@ -827,9 +855,10 @@ describe("IBosonGroupHandler", function () {
         condition = mockCondition({
           tokenAddress: accounts[1].address,
           tokenId: "88775544",
-          threshold: "0",
+          threshold: "1",
           tokenType: TokenType.MultiToken,
           method: EvaluationMethod.SpecificToken,
+          length: "1",
         });
         expect(condition.isValid()).to.be.true;
 
@@ -855,7 +884,7 @@ describe("IBosonGroupHandler", function () {
 
         assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
-        assert.equal(event.executedBy.toString(), assistant.address, "Executed by is incorrect");
+        assert.equal(event.executedBy.toString(), await assistant.getAddress(), "Executed by is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
 
@@ -917,7 +946,7 @@ describe("IBosonGroupHandler", function () {
 
         it("Condition 'Threshold' has zero token contract address", async function () {
           condition.method = EvaluationMethod.Threshold;
-          condition.tokenAddress = ethers.constants.AddressZero;
+          condition.tokenAddress = ZeroAddress;
 
           // Attempt to update the group, expecting revert
           await expect(groupHandler.connect(assistant).setGroupCondition(group.id, condition)).to.revertedWith(
@@ -937,7 +966,7 @@ describe("IBosonGroupHandler", function () {
 
         it("Condition 'SpecificToken' has zero token contract address", async function () {
           condition.method = EvaluationMethod.SpecificToken;
-          condition.tokenAddress = ethers.constants.AddressZero;
+          condition.tokenAddress = ZeroAddress;
 
           // Attempt to update the group, expecting revert
           await expect(groupHandler.connect(assistant).setGroupCondition(group.id, condition)).to.revertedWith(

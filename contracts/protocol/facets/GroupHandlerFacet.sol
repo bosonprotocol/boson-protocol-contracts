@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import { IBosonGroupHandler } from "../../interfaces/handlers/IBosonGroupHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
@@ -31,17 +31,14 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
      * - Offer exists in a different group
-     * - Number of offers exceeds maximum allowed number per group
      *
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct
      */
-    function createGroup(Group memory _group, Condition calldata _condition)
-        external
-        override
-        groupsNotPaused
-        nonReentrant
-    {
+    function createGroup(
+        Group memory _group,
+        Condition calldata _condition
+    ) external override groupsNotPaused nonReentrant {
         createGroupInternal(_group, _condition);
     }
 
@@ -53,7 +50,6 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * Reverts if:
      * - Caller is not the seller
      * - Offer ids param is an empty list
-     * - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - Group does not exist
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
@@ -63,12 +59,10 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _groupId - the id of the group to be updated
      * @param _offerIds - array of offer ids to be added to the group
      */
-    function addOffersToGroup(uint256 _groupId, uint256[] calldata _offerIds)
-        external
-        override
-        groupsNotPaused
-        nonReentrant
-    {
+    function addOffersToGroup(
+        uint256 _groupId,
+        uint256[] calldata _offerIds
+    ) external override groupsNotPaused nonReentrant {
         addOffersToGroupInternal(_groupId, _offerIds);
     }
 
@@ -81,27 +75,21 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * - The groups region of protocol is paused
      * - Caller is not the seller
      * - Offer ids param is an empty list
-     * - Number of offers exceeds maximum allowed number per group
      * - Group does not exist
      * - Any offer is not part of the group
      *
      * @param _groupId - the id of the group to be updated
      * @param _offerIds - array of offer ids to be removed from the group
      */
-    function removeOffersFromGroup(uint256 _groupId, uint256[] calldata _offerIds)
-        external
-        override
-        groupsNotPaused
-        nonReentrant
-    {
+    function removeOffersFromGroup(
+        uint256 _groupId,
+        uint256[] calldata _offerIds
+    ) external override groupsNotPaused nonReentrant {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Check if group can be updated
         (uint256 sellerId, Group storage group) = preUpdateChecks(_groupId, _offerIds);
-
-        // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_offerIds.length <= protocolLimits().maxOffersPerGroup, TOO_MANY_OFFERS);
 
         for (uint256 i = 0; i < _offerIds.length; i++) {
             uint256 offerId = _offerIds[i];
@@ -155,12 +143,10 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _condition - fully populated condition struct
      *
      */
-    function setGroupCondition(uint256 _groupId, Condition calldata _condition)
-        external
-        override
-        groupsNotPaused
-        nonReentrant
-    {
+    function setGroupCondition(
+        uint256 _groupId,
+        Condition calldata _condition
+    ) external override groupsNotPaused nonReentrant {
         // Validate condition parameters
         require(validateCondition(_condition), INVALID_CONDITION_PARAMETERS);
 
@@ -192,16 +178,9 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @return group - the group details. See {BosonTypes.Group}
      * @return condition - the group's condition details. See {BosonTypes.Condition}
      */
-    function getGroup(uint256 _groupId)
-        external
-        view
-        override
-        returns (
-            bool exists,
-            Group memory group,
-            Condition memory condition
-        )
-    {
+    function getGroup(
+        uint256 _groupId
+    ) external view override returns (bool exists, Group memory group, Condition memory condition) {
         (exists, group) = fetchGroup(_groupId);
         if (exists) {
             condition = fetchCondition(_groupId);

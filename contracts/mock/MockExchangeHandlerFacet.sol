@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import { IBosonVoucher } from "../interfaces/clients/IBosonVoucher.sol";
 import { BuyerBase } from "../protocol/bases/BuyerBase.sol";
@@ -100,7 +100,6 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
      *
      * Reverts if:
      * - The exchanges region of protocol is paused
-     * - Number of exchanges exceeds maximum allowed number per batch
      * - For any exchange:
      *   - Exchange does not exist
      *   - Exchange is not in Redeemed state
@@ -109,9 +108,6 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
      * @param _exchangeIds - the array of exchanges ids
      */
     function completeExchangeBatch(uint256[] calldata _exchangeIds) external exchangesNotPaused {
-        // limit maximum number of exchanges to avoid running into block gas limit in a loop
-        require(_exchangeIds.length <= protocolLimits().maxExchangesPerBatch, TOO_MANY_EXCHANGES);
-
         for (uint256 i = 0; i < _exchangeIds.length; i++) {
             // complete the exchange
             completeExchange(_exchangeIds[i]);
@@ -379,10 +375,10 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
      * @param _exchange - the exchange for which twins should be transferred
      * @return shouldBurnVoucher - whether or not the voucher should be burned
      */
-    function transferTwins(Exchange storage _exchange, Voucher storage _voucher)
-        internal
-        returns (bool shouldBurnVoucher)
-    {
+    function transferTwins(
+        Exchange storage _exchange,
+        Voucher storage _voucher
+    ) internal returns (bool shouldBurnVoucher) {
         // See if there is an associated bundle
         (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
 

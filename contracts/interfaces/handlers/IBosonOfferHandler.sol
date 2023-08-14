@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
@@ -9,7 +9,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xa1598d02
+ * The ERC-165 identifier for this interface is: 0xa1e3b91c
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
     /**
@@ -27,7 +27,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
      * - Dispute period is less than minimum dispute period
-     * - Resolution period is set to zero or above the maximum resolution period
+     * - Resolution period is not between the minimum and the maximum resolution period
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -35,6 +35,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Seller is not on dispute resolver's seller allow list
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
+     * - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -60,7 +61,6 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Number of offers exceeds maximum allowed number per batch
      * - Number of elements in offers, offerDates and offerDurations do not match
      * - For any offer:
      *   - Caller is not an assistant
@@ -71,7 +71,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -79,6 +79,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When agent ids are non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -117,11 +118,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @param _length - the length of the range
      * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      */
-    function reserveRange(
-        uint256 _offerId,
-        uint256 _length,
-        address _to
-    ) external;
+    function reserveRange(uint256 _offerId, uint256 _length, address _to) external;
 
     /**
      * @notice Voids a given offer.
@@ -149,7 +146,6 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *
      * Reverts if, for any offer:
      * - The offers region of protocol is paused
-     * - Number of offers exceeds maximum allowed number per batch
      * - Offer id is invalid
      * - Caller is not the assistant of the offer
      * - Offer has already been voided
@@ -182,7 +178,6 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Number of offers exceeds maximum allowed number per batch
      * - For any of the offers:
      *   - Offer does not exist
      *   - Caller is not the assistant of the offer
@@ -205,7 +200,9 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
      * @return offerFees - the offer fees details. See {BosonTypes.OfferFees}
      */
-    function getOffer(uint256 _offerId)
+    function getOffer(
+        uint256 _offerId
+    )
         external
         view
         returns (

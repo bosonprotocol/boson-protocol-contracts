@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import { DiamondLib } from "./DiamondLib.sol";
 import { IDiamondCut } from "../interfaces/diamond/IDiamondCut.sol";
@@ -40,11 +40,7 @@ library JewelerLib {
      * @param _init - the address of the contract or facet to execute _calldata
      * @param _calldata - a function call, including function selector and arguments
      */
-    function diamondCut(
-        IDiamondCut.FacetCut[] memory _facetCuts,
-        address _init,
-        bytes memory _calldata
-    ) internal {
+    function diamondCut(IDiamondCut.FacetCut[] memory _facetCuts, address _init, bytes memory _calldata) internal {
         // Get the diamond storage slot
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 
@@ -288,7 +284,9 @@ library JewelerLib {
             if (!success) {
                 if (error.length > 0) {
                     // bubble up the error
-                    revert(string(error));
+                    assembly {
+                        revert(add(32, error), mload(error))
+                    }
                 } else {
                     revert("LibDiamondCut: _init function reverted");
                 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 /**
  * @title BosonTypes
@@ -73,14 +73,14 @@ contract BosonTypes {
     enum SellerUpdateFields {
         Admin,
         Assistant,
-        Clerk,
+        Clerk, // Deprecated.
         AuthToken
     }
 
     enum DisputeResolverUpdateFields {
         Admin,
         Assistant,
-        Clerk
+        Clerk // Deprecated.
     }
 
     struct AuthToken {
@@ -92,9 +92,10 @@ contract BosonTypes {
         uint256 id;
         address assistant;
         address admin;
-        address clerk;
+        address clerk; // Deprecated. Kept for backwards compatibility.
         address payable treasury;
         bool active;
+        string metadataUri;
     }
 
     struct Buyer {
@@ -108,7 +109,7 @@ contract BosonTypes {
         uint256 escalationResponsePeriod;
         address assistant;
         address admin;
-        address clerk;
+        address clerk; // Deprecated. Kept for backwards compatibility.
         address payable treasury;
         string metadataUri;
         bool active;
@@ -145,6 +146,7 @@ contract BosonTypes {
         string metadataUri;
         string metadataHash;
         bool voided;
+        uint256 collectionIndex;
     }
 
     struct OfferDates {
@@ -173,6 +175,7 @@ contract BosonTypes {
         uint256 tokenId;
         uint256 threshold;
         uint256 maxCommits;
+        uint256 length;
     }
 
     struct Exchange {
@@ -290,6 +293,11 @@ contract BosonTypes {
     struct VoucherInitValues {
         string contractURI;
         uint256 royaltyPercentage;
+    }
+
+    struct Collection {
+        address collectionAddress;
+        string externalId;
     }
 
     struct PriceDiscovery {

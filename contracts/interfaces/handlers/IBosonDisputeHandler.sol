@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonDisputeEvents } from "../events/IBosonDisputeEvents.sol";
@@ -87,7 +87,6 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      *
      * Reverts if:
      * - The disputes region of protocol is paused
-     * - Number of disputes exceeds maximum allowed number per batch
      * - For any dispute:
      *   - Exchange does not exist
      *   - Exchange is not in a Disputed state
@@ -216,14 +215,12 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @return dispute - the dispute details. See {BosonTypes.Dispute}
      * @return disputeDates - the dispute dates details {BosonTypes.DisputeDates}
      */
-    function getDispute(uint256 _exchangeId)
+    function getDispute(
+        uint256 _exchangeId
+    )
         external
         view
-        returns (
-            bool exists,
-            BosonTypes.Dispute memory dispute,
-            BosonTypes.DisputeDates memory disputeDates
-        );
+        returns (bool exists, BosonTypes.Dispute memory dispute, BosonTypes.DisputeDates memory disputeDates);
 
     /**
      * @notice Gets the state of a given dispute.

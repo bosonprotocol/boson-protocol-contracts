@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 contract MockSimpleContract {
     event TestEvent(uint256 indexed _value);
@@ -10,5 +10,9 @@ contract MockSimpleContract {
 
     function testRevert() external pure {
         revert("Reverted");
+    }
+
+    function testReturn() external pure returns (string memory) {
+        return "TestValue";
     }
 }

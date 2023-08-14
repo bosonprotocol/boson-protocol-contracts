@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonFundsHandler } from "../../interfaces/handlers/IBosonFundsHandler.sol";
@@ -83,7 +83,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * - The funds region of protocol is paused
      * - Caller is not associated with the entity id
      * - Token list length does not match amount list length
-     * - Token list length exceeds the maximum allowed number of tokens
      * - Caller tries to withdraw more that they have in available funds
      * - There is nothing to withdraw
      * - Transfer of funds is not successful
@@ -108,10 +107,10 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             // Caller is a buyer
             destinationAddress = sender;
         } else {
-            // Check if the caller is a clerk
-            (exists, callerId) = getSellerIdByClerk(sender);
+            // Check if the caller is an assistant
+            (exists, callerId) = getSellerIdByAssistant(sender);
             if (exists && callerId == _entityId) {
-                // Caller is a clerk. In this case funds are transferred to the treasury address
+                // Caller is an assistant. In this case funds are transferred to the treasury address
                 (, Seller storage seller, ) = fetchSeller(callerId);
                 destinationAddress = seller.treasury;
             } else {
@@ -120,7 +119,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
                     // Caller is an agent
                     destinationAddress = sender;
                 } else {
-                    // In this branch, caller is neither buyer, clerk or agent or does not match the _entityId
+                    // In this branch, caller is neither buyer, assistant or agent or does not match the _entityId
                     revert(NOT_AUTHORIZED);
                 }
             }
@@ -140,7 +139,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * - The funds region of protocol is paused
      * - Caller does not have the FEE_COLLECTOR role
      * - Token list length does not match amount list length
-     * - Token list length exceeds the maximum allowed number of tokens
      * - Caller tries to withdraw more that they have in available funds
      * - There is nothing to withdraw
      * - Transfer of funds is not successful
@@ -148,44 +146,96 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @param _tokenList - list of contract addresses of tokens that are being withdrawn
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */
-    function withdrawProtocolFees(address[] calldata _tokenList, uint256[] calldata _tokenAmounts)
-        external
-        override
-        fundsNotPaused
-        onlyRole(FEE_COLLECTOR)
-        nonReentrant
-    {
+    function withdrawProtocolFees(
+        address[] calldata _tokenList,
+        uint256[] calldata _tokenAmounts
+    ) external override fundsNotPaused onlyRole(FEE_COLLECTOR) nonReentrant {
         // Withdraw the funds
         withdrawFundsInternal(protocolAddresses().treasury, 0, _tokenList, _tokenAmounts);
     }
 
     /**
+     * @notice Returns list of addresses for which the entity has funds available.
+     * If the list is too long, it can be retrieved in chunks by using `getTokenListPaginated` and specifying _limit and _offset.
+     *
+     * @param _entityId - id of entity for which availability of funds should be checked
+     * @return tokenList - list of token addresses
+     */
+    function getTokenList(uint256 _entityId) external view override returns (address[] memory tokenList) {
+        return protocolLookups().tokenList[_entityId];
+    }
+
+    /**
+     * @notice Returns list of addresses for which the entity has funds available.
+     *
+     * @param _entityId - id of entity for which availability of funds should be checked
+     * @param _limit - the maximum number of token addresses that should be returned starting from the index defined by `_offset`. If `_offset` + `_limit` exceeds total tokens, `_limit` is adjusted to return all remaining tokens.
+     * @param _offset - the starting index from which to return token addresses. If `_offset` is greater than or equal to total tokens, an empty list is returned.
+     * @return tokenList - list of token addresses
+     */
+    function getTokenListPaginated(
+        uint256 _entityId,
+        uint256 _limit,
+        uint256 _offset
+    ) external view override returns (address[] memory tokenList) {
+        address[] storage tokens = protocolLookups().tokenList[_entityId];
+
+        if (_offset >= tokens.length) {
+            return new address[](0);
+        } else if (_offset + _limit > tokens.length) {
+            _limit = tokens.length - _offset;
+        }
+
+        tokenList = new address[](_limit);
+
+        for (uint i = 0; i < _limit; i++) {
+            tokenList[i] = tokens[_offset++];
+        }
+
+        return tokenList;
+    }
+
+    /**
      * @notice Returns the information about the funds that an entity can use as a sellerDeposit and/or withdraw from the protocol.
+     * It tries to get information about all tokens that the entity has in availableFunds storage.
+     * If the token list is too long, this call may run out of gas. In this case, the caller should use the function `getAvailableFunds` and pass the token list.
      *
      * @param _entityId - id of entity for which availability of funds should be checked
      * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
      */
-    function getAvailableFunds(uint256 _entityId) external view override returns (Funds[] memory availableFunds) {
-        // Cache protocol lookups for reference
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
+    function getAllAvailableFunds(uint256 _entityId) external view override returns (Funds[] memory availableFunds) {
         // get list of token addresses for the entity
-        address[] storage tokenList = lookups.tokenList[_entityId];
-        availableFunds = new Funds[](tokenList.length);
+        address[] memory tokenList = protocolLookups().tokenList[_entityId];
+        return getAvailableFunds(_entityId, tokenList);
+    }
+
+    /**
+     * @notice Returns the information about the funds that an entity can use as a sellerDeposit and/or withdraw from the protocol.
+     * To get a list of tokens that the entity has in availableFunds storage, use the function `getTokenList`.
+     *
+     * @param _entityId - id of entity for which availability of funds should be checked
+     * @param _tokenList - list of tokens addresses to get available funds
+     * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
+     */
+    function getAvailableFunds(
+        uint256 _entityId,
+        address[] memory _tokenList
+    ) public view override returns (Funds[] memory availableFunds) {
+        availableFunds = new Funds[](_tokenList.length);
 
         // Get entity's availableFunds storage pointer
-        mapping(address => uint256) storage entityFunds = lookups.availableFunds[_entityId];
+        mapping(address => uint256) storage entityFunds = protocolLookups().availableFunds[_entityId];
 
-        for (uint256 i = 0; i < tokenList.length; i++) {
-            address tokenAddress = tokenList[i];
+        for (uint256 i = 0; i < _tokenList.length; i++) {
+            address tokenAddress = _tokenList[i];
             string memory tokenName;
 
             if (tokenAddress == address(0)) {
                 // If tokenAddress is 0, it represents the native currency
                 tokenName = NATIVE_CURRENCY;
             } else {
-                // Try to get token name
-                try IERC20Metadata(tokenAddress).name() returns (string memory name) {
+                // Try to get token name. Typically, name consumes less than 30,000 gas, but we leave some extra gas just in case
+                try IERC20Metadata(tokenAddress).name{ gas: 40000 }() returns (string memory name) {
                     tokenName = name;
                 } catch {
                     tokenName = TOKEN_NAME_UNSPECIFIED;
@@ -207,7 +257,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * Reverts if:
      * - Caller is not associated with the entity id
      * - Token list length does not match amount list length
-     * - Token list length exceeds the maximum allowed number of tokens
      * - Caller tries to withdraw more that they have in available funds
      * - There is nothing to withdraw
      * - Transfer of funds is not successful
@@ -229,10 +278,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         // Make sure that the data is complete
         require(_tokenList.length == _tokenAmounts.length, TOKEN_AMOUNT_MISMATCH);
 
-        // Limit maximum number of tokens to avoid running into block gas limit in a loop
-        uint256 maxTokensPerWithdrawal = protocolLimits().maxTokensPerWithdrawal;
-        require(_tokenList.length <= maxTokensPerWithdrawal, TOO_MANY_TOKENS);
-
         // Two possible options: withdraw all, or withdraw only specified tokens and amounts
         if (_tokenList.length == 0) {
             // Withdraw everything
@@ -243,14 +288,11 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             // Make sure that at least something will be withdrawn
             require(tokenList.length != 0, NOTHING_TO_WITHDRAW);
 
-            // Make sure that tokenList is not too long
-            uint256 len = maxTokensPerWithdrawal <= tokenList.length ? maxTokensPerWithdrawal : tokenList.length;
-
             // Get entity's availableFunds storage pointer
             mapping(address => uint256) storage entityFunds = lookups.availableFunds[_entityId];
 
             // Transfer funds
-            for (uint256 i = 0; i < len; i++) {
+            for (uint256 i = 0; i < tokenList.length; i++) {
                 // Get available funds from storage
                 uint256 availableFunds = entityFunds[tokenList[i]];
                 FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], _destinationAddress, availableFunds);

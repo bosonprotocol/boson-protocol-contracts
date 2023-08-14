@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
 
@@ -16,5 +16,25 @@ contract Foreign1155 is ERC1155Upgradeable {
      */
     function mint(uint256 _tokenId, uint256 _supply) public {
         _mint(msg.sender, _tokenId, _supply, "");
+    }
+
+    /**
+     * Deletes the contract code
+     */
+    function destruct() public {
+        selfdestruct(payable(msg.sender));
+    }
+}
+
+/*
+ * @title Foreign1155 that consumes all gas when transfer is called
+ *
+ * @notice Mock ERC-(1155) for Unit Testing
+ */
+contract Foreign1155GasTheft is Foreign1155 {
+    function safeTransferFrom(address, address, uint256, uint256, bytes memory) public virtual override {
+        while (true) {
+            // consume all gas
+        }
     }
 }

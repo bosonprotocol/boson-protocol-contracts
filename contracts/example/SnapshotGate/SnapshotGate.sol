@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.9;
+pragma solidity 0.8.18;
 
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
@@ -78,10 +78,10 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
     TransactionDetails private txDetails;
 
     // Address of the Boson Protocol
-    address public protocol;
+    address public immutable protocol;
 
     // Id of the seller operating the snapshot
-    uint256 public sellerId;
+    uint256 public immutable sellerId;
 
     // Is the snapshot frozen
     bool public snapshotFrozen;
@@ -118,6 +118,7 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
         address _protocol,
         uint256 _sellerId
     ) ERC721(_name, _symbol) {
+        require(_protocol != address(0), "Protocol can't be zero address");
         protocol = _protocol;
         sellerId = _sellerId;
         txStatus = TransactionStatus.NotInTransaction;
@@ -247,13 +248,13 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
             require(msg.value == offer.price, "Incorrect payment amount");
 
             // Commit to the offer, passing the message value (native)
-            IBosonExchangeHandler(protocol).commitToOffer{ value: msg.value }(_buyer, _offerId);
+            IBosonExchangeHandler(protocol).commitToConditionalOffer{ value: msg.value }(_buyer, _offerId, _tokenId);
         } else {
             // Transfer the price into custody of this contract and approve protocol to transfer
             transferFundsToGateAndApproveProtocol(offer.exchangeToken, offer.price);
 
             // Commit to the offer on behalf of the buyer
-            IBosonExchangeHandler(protocol).commitToOffer(_buyer, _offerId);
+            IBosonExchangeHandler(protocol).commitToConditionalOffer(_buyer, _offerId, _tokenId);
         }
 
         // Remove the transaction details

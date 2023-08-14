@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonBundleHandler } from "../../interfaces/handlers/IBosonBundleHandler.sol";
@@ -32,10 +32,8 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * - Any of the offers belongs to different seller
      * - Any of the offers does not exist
      * - Offer exists in a different bundle
-     * - Number of offers exceeds maximum allowed number per bundle
      * - Any of the twins belongs to different seller
      * - Any of the twins does not exist
-     * - Number of twins exceeds maximum allowed number per bundle
      * - Duplicate twins added in same bundle
      * - Exchange already exists for the offer id in bundle
      * - Offers' total quantity is greater than twin supply when token is nonfungible

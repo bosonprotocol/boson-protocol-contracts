@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import { IBosonDisputeEvents } from "../../interfaces/events/IBosonDisputeEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
@@ -25,11 +25,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
      * @param _voucher - the associated voucher
      * @param _sellerId - the seller id
      */
-    function raiseDisputeInternal(
-        Exchange storage _exchange,
-        Voucher storage _voucher,
-        uint256 _sellerId
-    ) internal {
+    function raiseDisputeInternal(Exchange storage _exchange, Voucher storage _voucher, uint256 _sellerId) internal {
         // Fetch offer durations
         OfferDurations storage offerDurations = fetchOfferDurations(_exchange.offerId);
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import { IAccessControl } from "../../interfaces/IAccessControl.sol";
 import { IClientExternalAddresses } from "../../interfaces/clients/IClientExternalAddresses.sol";
@@ -52,14 +52,14 @@ library BeaconClientLib {
      *
      * See: {AccessController.hasRole}
      *
-     * @param role - the role to check
-     * @return  whether caller has role
+     * @param _role - the role to check
+     * @return whether caller has role
      */
-    function hasRole(bytes32 role) internal view returns (bool) {
+    function hasRole(bytes32 _role) internal view returns (bool) {
         // retrieve accessController from Beacon
         IAccessControl accessController = IClientExternalAddresses(_beacon()).getAccessController();
 
         // forward the check to accessController
-        return accessController.hasRole(role, msg.sender);
+        return accessController.hasRole(_role, msg.sender);
     }
 }

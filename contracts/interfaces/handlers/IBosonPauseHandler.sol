@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.18;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonPauseEvents } from "../events/IBosonPauseEvents.sol";
@@ -9,7 +9,7 @@ import { IBosonPauseEvents } from "../events/IBosonPauseEvents.sol";
  *
  * @notice Handles pausing all or part of the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x9ddb8ca6
+ * The ERC-165 identifier for this interface is: 0x770b96d0
  */
 interface IBosonPauseHandler is IBosonPauseEvents {
     /**
@@ -19,9 +19,6 @@ interface IBosonPauseHandler is IBosonPauseEvents {
      *
      * Reverts if:
      * - Caller does not have PAUSER role
-     * - No regions are specified
-     * - Protocol is already paused
-     * - A region is specified more than once
      *
      * @param _regions - an array of regions to pause. See: {BosonTypes.PausableRegion}
      */
@@ -35,6 +32,15 @@ interface IBosonPauseHandler is IBosonPauseEvents {
      * Reverts if:
      * - Caller does not have PAUSER role
      * - Protocol is not currently paused
+     *
+     * @param _regions - an array of regions to pause. See: {BosonTypes.PausableRegion}
      */
-    function unpause() external;
+    function unpause(BosonTypes.PausableRegion[] calldata _regions) external;
+
+    /**
+     * @notice Returns the regions paused
+     *
+     * @return regions - an array of regions that are currently paused. See: {BosonTypes.PausableRegion}
+     */
+    function getPausedRegions() external view returns (BosonTypes.PausableRegion[] memory regions);
 }

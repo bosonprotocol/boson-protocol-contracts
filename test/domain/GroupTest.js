@@ -44,20 +44,15 @@ describe("Group", function () {
       expect(group.idIsValid()).is.false;
       expect(group.isValid()).is.false;
 
-      // Invalid field value
-      group.id = new Date();
-      expect(group.idIsValid()).is.false;
-      expect(group.isValid()).is.false;
-
-      // Invalid field value
-      group.id = 12;
-      expect(group.idIsValid()).is.false;
-      expect(group.isValid()).is.false;
-
       // Valid field value
       group.id = "0";
       expect(group.idIsValid()).is.true;
       expect(group.isValid()).is.true;
+
+      // Invalid field value
+      group.id = new Date();
+      expect(group.idIsValid()).is.false;
+      expect(group.isValid()).is.false;
 
       // Valid field value
       group.id = "126";
@@ -71,20 +66,15 @@ describe("Group", function () {
       expect(group.sellerIdIsValid()).is.false;
       expect(group.isValid()).is.false;
 
-      // Invalid field value
-      group.sellerId = new Date();
-      expect(group.sellerIdIsValid()).is.false;
-      expect(group.isValid()).is.false;
-
-      // Invalid field value
-      group.sellerId = 12;
-      expect(group.sellerIdIsValid()).is.false;
-      expect(group.isValid()).is.false;
-
       // Valid field value
       group.sellerId = "0";
       expect(group.sellerIdIsValid()).is.true;
       expect(group.isValid()).is.true;
+
+      // Invalid field value
+      group.sellerId = new Date();
+      expect(group.sellerIdIsValid()).is.false;
+      expect(group.isValid()).is.false;
 
       // Valid field value
       group.sellerId = "126";
@@ -98,15 +88,6 @@ describe("Group", function () {
       expect(group.offerIdsIsValid()).is.false;
       expect(group.isValid()).is.false;
 
-      // Invalid field value
-      group.offerIds = new Date();
-      expect(group.offerIdsIsValid()).is.false;
-
-      // Invalid field value
-      group.offerIds = 12;
-      expect(group.offerIdsIsValid()).is.false;
-      expect(group.isValid()).is.false;
-
       // Valid field value
       group.offerIds = ["1", "2"];
       expect(group.offerIdsIsValid()).is.true;
@@ -116,6 +97,10 @@ describe("Group", function () {
       group.offerIds = ["126"];
       expect(group.offerIdsIsValid()).is.true;
       expect(group.isValid()).is.true;
+
+      // Invalid field value
+      group.offerIds = new Date();
+      expect(group.offerIdsIsValid()).is.false;
     });
   });
 
