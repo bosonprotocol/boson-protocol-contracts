@@ -1,10 +1,8 @@
-const hre = require("hardhat");
-const { ZeroAddress } = hre.ethers;
+const { ethers } = require("hardhat");
+const { ZeroAddress } = ethers;
 
 const { deployProtocolClientImpls } = require("./deploy-protocol-client-impls.js");
-const { deployProtocolClientProxies } = require("./deploy-protocol-client-proxies.js");
 const { deployProtocolClientBeacons } = require("./deploy-protocol-client-beacons.js");
-const { castProtocolClientProxies } = require("./cast-protocol-client-proxies.js");
 
 /**
  * Deploy the Protocol Client Implementation/Proxy pairs
@@ -33,13 +31,7 @@ async function deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas, i
     maxPriorityFeePerGas
   );
 
-  // Deploy Protocol Client proxy contracts
-  const protocolClientProxies = await deployProtocolClientProxies(protocolClientBeacons, maxPriorityFeePerGas);
-
-  // Cast the proxies to their implementation interfaces ?? ToDo: what is this even needed?
-  const protocolClients = await castProtocolClientProxies(protocolClientProxies);
-
-  return [protocolClientImpls, protocolClientBeacons, protocolClientProxies, protocolClients];
+  return [protocolClientImpls, protocolClientBeacons];
 }
 
 exports.deployProtocolClients = deployProtocolClients;
