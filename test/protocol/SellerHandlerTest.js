@@ -2565,47 +2565,65 @@ describe("SellerHandler", function () {
         expect(await bosonVoucher.owner()).to.equal(other1.address);
       });
 
-      it("Transfers ownerships of all additional collections", async function () {
-        const expectedDefaultAddress = calculateCloneAddress(
-          await accountHandler.getAddress(),
-          beaconProxyAddress,
-          admin.address,
-          ""
-        ); // default
-        bosonVoucher = await getContractAt("OwnableUpgradeable", expectedDefaultAddress);
-
-        const additionalCollections = [];
-        // create 3 additional collections
-        for (let i = 0; i < 3; i++) {
-          const externalId = `Brand${i}`;
-          voucherInitValues.contractURI = `https://brand${i}.com`;
-          const expectedCollectionAddress = calculateCloneAddress(
+      context("Multiple collections", async function () {
+        let additionalCollections = [];
+        beforeEach(async function () {
+          const expectedDefaultAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
             admin.address,
-            externalId
-          );
-          await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
-          additionalCollections.push(await getContractAt("OwnableUpgradeable", expectedCollectionAddress));
-        }
+            ""
+          ); // default
+          bosonVoucher = await getContractAt("OwnableUpgradeable", expectedDefaultAddress);
 
-        // original voucher and collections contract owner
-        expect(await bosonVoucher.owner()).to.equal(assistant.address);
-        for (const collection of additionalCollections) {
-          expect(await collection.owner()).to.equal(assistant.address);
-        }
+          // create 3 additional collections
+          for (let i = 0; i < 3; i++) {
+            const externalId = `Brand${i}`;
+            voucherInitValues.contractURI = `https://brand${i}.com`;
+            const expectedCollectionAddress = calculateCloneAddress(
+              await accountHandler.getAddress(),
+              beaconProxyAddress,
+              admin.address,
+              externalId
+            );
+            await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+            additionalCollections.push(await getContractAt("OwnableUpgradeable", expectedCollectionAddress));
+          }
+        });
 
-        seller.assistant = other1.address;
-        sellerStruct = seller.toStruct();
+        it("Transfers ownerships of all additional collections", async function () {
+          // original voucher and collections contract owner
+          expect(await bosonVoucher.owner()).to.equal(assistant.address);
+          for (const collection of additionalCollections) {
+            expect(await collection.owner()).to.equal(assistant.address);
+          }
 
-        await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
-        await accountHandler.connect(other1).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]);
+          seller.assistant = other1.address;
+          sellerStruct = seller.toStruct();
 
-        // new voucher and collections contract owner
-        expect(await bosonVoucher.owner()).to.equal(other1.address);
-        for (const collection of additionalCollections) {
-          expect(await collection.owner()).to.equal(other1.address);
-        }
+          await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+          await accountHandler.connect(other1).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]);
+
+          // new voucher and collections contract owner
+          expect(await bosonVoucher.owner()).to.equal(other1.address);
+          for (const collection of additionalCollections) {
+            expect(await collection.owner()).to.equal(other1.address);
+          }
+        });
+
+        it("Update of other fields work", async function () {
+          seller.assistant = seller.admin = other1.address;
+          sellerStruct = seller.toStruct();
+
+          await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+          await accountHandler
+            .connect(other1)
+            .optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant, SellerUpdateFields.Admin]);
+
+          const [, returnedSeller] = await accountHandler.getSeller(seller.id);
+          expect(returnedSeller.assistant).to.equal(seller.assistant);
+          expect(returnedSeller.admin).to.equal(seller.admin);
+        });
       });
 
       context("💔 Revert Reasons", async function () {
