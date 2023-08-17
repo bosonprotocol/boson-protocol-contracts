@@ -2142,7 +2142,6 @@ describe("IBosonVoucher", function () {
       });
 
       it("Owner tries to interact with contract with assets", async function () {
-        // const erc20 = await getContractFactory("Foreign20");
         const [erc20, erc721] = await deployMockTokens(["Foreign20", "Foreign721"]);
         const erc20Address = await erc20.getAddress();
 

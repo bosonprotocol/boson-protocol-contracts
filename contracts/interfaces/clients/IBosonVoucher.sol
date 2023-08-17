@@ -216,7 +216,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable, IERC7
      * - _to is zero address
      * - call to external contract fails
      * - caller is not the owner
-     * - _to is a contract that represents some assets (all contracts that imeplement `balanceOf` method, including ERC20 and ERC721)
+     * - _to is a contract that represents some assets (all contracts that implement `balanceOf` method, including ERC20 and ERC721)
      *
      * @param _to - address of the contract to call
      * @param _data - data to pass to the external contract
