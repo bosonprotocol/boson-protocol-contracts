@@ -997,8 +997,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         if (_condition.method == EvaluationMethod.SpecificToken) {
+            // Cache conditionalCommitsByTokenId mapping for reference
+            mapping(uint256 => uint256) storage conditionalCommitsByTokenId = lookups.conditionalCommitsByTokenId[
+                _tokenId
+            ];
+
             // How many times has this token id been used to commit to offers in the group?
-            uint256 commitCount = lookups.conditionalCommitsByTokenId[_tokenId][_groupId];
+            uint256 commitCount = conditionalCommitsByTokenId[_groupId];
 
             require(commitCount < _condition.maxCommits, MAX_COMMITS_TOKEN_REACHED);
 
@@ -1006,11 +1011,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             if (allow) {
                 // Increment number of commits to the group for this token id if they are allowed to commit
-                lookups.conditionalCommitsByTokenId[_tokenId][_groupId] = ++commitCount;
+                conditionalCommitsByTokenId[_groupId] = ++commitCount;
             }
         } else if (_condition.method == EvaluationMethod.Threshold) {
+            // Cache conditionalCommitsByAddress mapping for reference
+            mapping(uint256 => uint256) storage conditionalCommitsByAddress = lookups.conditionalCommitsByAddress[
+                _buyer
+            ];
+
             // How many times has this address committed to offers in the group?
-            uint256 commitCount = lookups.conditionalCommitsByAddress[_buyer][_groupId];
+            uint256 commitCount = conditionalCommitsByAddress[_groupId];
 
             require(commitCount < _condition.maxCommits, MAX_COMMITS_ADDRESS_REACHED);
 
@@ -1018,7 +1028,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             if (allow) {
                 // Increment number of commits to the group for this address if they are allowed to commit
-                lookups.conditionalCommitsByAddress[_buyer][_groupId] = ++commitCount;
+                conditionalCommitsByAddress[_groupId] = ++commitCount;
             }
         } else {
             allow = true;
@@ -1070,7 +1080,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             return IERC1155(_condition.tokenAddress).balanceOf(_buyer, _tokenId) >= _condition.threshold;
         } else {
             // no need to check if is NonFungible token there is no way to create a SpecifiedToken condition with a Fungible token
-            return (IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer);
+            return IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer;
         }
     }
 

@@ -73,7 +73,12 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         address _newOwner,
         VoucherInitValues calldata voucherInitValues
     ) public initializer {
-        string memory sellerId = string.concat(Strings.toString(_sellerId), "_", Strings.toString(_collectionIndex));
+        string memory sellerId = string.concat(
+            "S",
+            Strings.toString(_sellerId),
+            "_C",
+            Strings.toString(_collectionIndex)
+        );
         string memory voucherName = string.concat(VOUCHER_NAME, " ", sellerId);
         string memory voucherSymbol = string.concat(VOUCHER_SYMBOL, "_", sellerId);
 
@@ -110,7 +115,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Revert if exchange id falls within a reserved range
         uint256 rangeStart = range.start;
-        require((_tokenId < rangeStart) || (_tokenId >= rangeStart + range.length), EXCHANGE_ID_IN_RESERVED_RANGE);
+        require(_tokenId < rangeStart || _tokenId >= rangeStart + range.length, EXCHANGE_ID_IN_RESERVED_RANGE);
 
         // Issue voucher is called only during commitToOffer (in protocol), so token can be set as committed
         _committed[_tokenId] = true;
@@ -220,7 +225,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Make sure that offer is not expired or voided
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
-        require(!offer.voided && (block.timestamp <= offerDates.validUntil), OFFER_EXPIRED_OR_VOIDED);
+        require(!offer.voided && block.timestamp <= offerDates.validUntil, OFFER_EXPIRED_OR_VOIDED);
 
         // Get the first token to mint
         uint256 start = range.start + range.minted;
@@ -276,10 +281,10 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Make sure that offer is either expired or voided
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
-        require(offer.voided || (block.timestamp > offerDates.validUntil), OFFER_STILL_VALID);
+        require(offer.voided || block.timestamp > offerDates.validUntil, OFFER_STILL_VALID);
 
         // Get the first token to burn
-        uint256 start = (range.lastBurnedTokenId == 0) ? range.start : (range.lastBurnedTokenId + 1);
+        uint256 start = range.lastBurnedTokenId == 0 ? range.start : range.lastBurnedTokenId + 1;
 
         // Get the last token to burn
         uint256 end = start + _amount;
@@ -314,7 +319,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     function getAvailablePreMints(uint256 _offerId) external view returns (uint256 count) {
         // If offer is expired or voided, return 0
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
-        if (offer.voided || (block.timestamp > offerDates.validUntil)) {
+        if (offer.voided || block.timestamp > offerDates.validUntil) {
             return 0;
         }
 
