@@ -1,7 +1,6 @@
 const { ethers } = require("hardhat");
 const { getSigners, getContractAt, ZeroAddress, parseUnits } = ethers;
 const { expect } = require("chai");
-
 const Role = require("../../scripts/domain/Role");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -718,6 +717,55 @@ describe("IBosonConfigHandler", function () {
         });
       });
 
+      context("👉 setMinResolutionPeriod()", async function () {
+        let minResolutionPeriod;
+        beforeEach(async function () {
+          // set new value
+          minResolutionPeriod = oneWeek;
+        });
+
+        it("should emit a MinResolutionPeriodChanged event", async function () {
+          // Set new resolution period
+          await expect(configHandler.connect(deployer).setMinResolutionPeriod(minResolutionPeriod))
+            .to.emit(configHandler, "MinResolutionPeriodChanged")
+            .withArgs(minResolutionPeriod, await deployer.getAddress());
+        });
+
+        it("should update state", async function () {
+          // Set new resolution period
+          await configHandler.connect(deployer).setMinResolutionPeriod(minResolutionPeriod);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMinResolutionPeriod()).to.equal(minResolutionPeriod);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new value, expecting revert
+            await expect(configHandler.connect(rando).setMinResolutionPeriod(minResolutionPeriod)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+
+          it("minResolutionPeriod is zero", async function () {
+            minResolutionPeriod = 0;
+            await expect(configHandler.connect(deployer).setMinResolutionPeriod(minResolutionPeriod)).to.revertedWith(
+              RevertReasons.VALUE_ZERO_NOT_ALLOWED
+            );
+          });
+
+          it("minResolutionPeriod is greater than maxResolutionPeriod", async function () {
+            const maxResolutionPeriod = oneMonth;
+            await configHandler.connect(deployer).setMaxResolutionPeriod(maxResolutionPeriod);
+
+            minResolutionPeriod = maxResolutionPeriod + 1n;
+            await expect(configHandler.connect(deployer).setMinResolutionPeriod(minResolutionPeriod)).to.revertedWith(
+              RevertReasons.INVALID_RESOLUTION_PERIOD
+            );
+          });
+        });
+      });
+
       context("👉 setMaxResolutionPeriod()", async function () {
         let maxResolutionPeriod;
         beforeEach(async function () {
@@ -752,6 +800,16 @@ describe("IBosonConfigHandler", function () {
             maxResolutionPeriod = 0;
             await expect(configHandler.connect(deployer).setMaxResolutionPeriod(maxResolutionPeriod)).to.revertedWith(
               RevertReasons.VALUE_ZERO_NOT_ALLOWED
+            );
+          });
+
+          it("maxResolutionPeriod is less than minResolutionPeriod", async function () {
+            const minResolutionPeriod = oneWeek;
+            await configHandler.connect(deployer).setMinResolutionPeriod(minResolutionPeriod);
+
+            const maxResolutionPeriod = minResolutionPeriod - 1n;
+            await expect(configHandler.connect(deployer).setMaxResolutionPeriod(maxResolutionPeriod)).to.revertedWith(
+              RevertReasons.INVALID_RESOLUTION_PERIOD
             );
           });
         });
