@@ -1072,7 +1072,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             return IERC1155(_condition.tokenAddress).balanceOf(_buyer, _tokenId) >= _condition.threshold;
         } else {
             // no need to check if is NonFungible token there is no way to create a SpecifiedToken condition with a Fungible token
-            return (IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer);
+            return IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer;
         }
     }
 
