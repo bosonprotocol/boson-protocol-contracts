@@ -48,7 +48,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      * - For upgrade to v2.2.0:
      *   - If versions is set already
      *   - If _initializationData cannot be decoded to uin256
-     *   - If _initializationData is represents value 0
+     *   - If _initializationData is represents value
      *
      * @param _version - version of the protocol
      * @param _addresses - array of facet addresses to call initialize methods
@@ -143,10 +143,11 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      * Reverts if:
      *  - Current version is not 2.2.1
      *  - There are already twins. This version adds a new mapping for twins which make it incompatible with previous versions.
-     *  - minResolutionPeriond is not present in _initializationData parameter
+     *  - minResolutionPeriod is not present in _initializationData parameter
      *  - length of seller creators does not match the length of seller ids
      *  - if some of seller creators is zero address
      *  - if some of seller ids does not bellong to a seller
+     *  - if minResolutionPeriod is greater than maxResolutionPeriod
      *
      * @param _initializationData - data representing uint256 _minResolutionPeriod, uint256[] memory sellerIds, address[] memory sellerCreators
      */
@@ -161,9 +162,15 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             (uint256, uint256[], address[])
         );
 
+        // cache protocol limits
+        ProtocolLib.ProtocolLimits storage limits = protocolLimits();
+
+        // make sure _minResolutionPeriod is less than maxResolutionPeriod
+        require(limits.maxResolutionPeriod >= _minResolutionPeriod, INVALID_RESOLUTION_PERIOD);
+
         // Initialize limits.maxPremintedVouchers (configHandlerFacet initializer)
         require(_minResolutionPeriod != 0, VALUE_ZERO_NOT_ALLOWED);
-        protocolLimits().minResolutionPeriod = _minResolutionPeriod;
+        limits.minResolutionPeriod = _minResolutionPeriod;
         emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
 
         // Initialize sellerCreators
