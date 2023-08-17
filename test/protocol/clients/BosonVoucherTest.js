@@ -1895,10 +1895,10 @@ describe("IBosonVoucher", function () {
         );
 
         // Seller's available balance should increase
-        const expectedAvailableFunds = new Funds(await foreign20.getAddress(), "Foreign20", amount.toString());
+        const expectedAvailableFunds = new Funds(foreign20Address, "Foreign20", amount.toString());
 
         // first item is AddressZero
-        availableFundsAddresses.push(await foreign20.getAddress());
+        availableFundsAddresses.push(foreign20Address);
         const [, sellerFundsAfter] = FundsList.fromStruct(
           await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
         ).funds;
@@ -1935,6 +1935,39 @@ describe("IBosonVoucher", function () {
             return { ...f, availableAmount: (BigInt(f.availableAmount) + amount).toString() };
           })
         ).to.eql(sellerFundsAfter);
+      });
+
+      it("USDT withdraws correctly", async function () {
+        // deploy USDT
+        const usdtFactory = await getContractFactory("TetherToken");
+        // @param _balance Initial supply of the contract
+        // @param _name Token Name
+        // @param _symbol Token symbol
+        // @param _decimals Token decimals
+
+        const amount = parseUnits("1", "ether");
+        const usdtContract = await usdtFactory.connect(deployer).deploy(amount, "Tether USD", "USDT", 6);
+
+        // mint USDT
+        await usdtContract.connect(deployer).issue(amount);
+
+        // transfer USDT to bosonVoucher
+        await usdtContract.connect(deployer).transfer(await bosonVoucher.getAddress(), amount);
+
+        const usdtContractAddress = await usdtContract.getAddress();
+        await expect(() =>
+          bosonVoucher.connect(rando).withdrawToProtocol([usdtContractAddress])
+        ).to.changeTokenBalances(usdtContract, [bosonVoucher, fundsHandler], [amount * -1n, amount]);
+
+        // Seller's available balance should increase
+        const expectedAvailableFunds = new Funds(usdtContractAddress, "Tether USD", amount.toString());
+
+        // first item is AddressZero
+        availableFundsAddresses.push(usdtContractAddress);
+        const [, sellerFundsAfter] = FundsList.fromStruct(
+          await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+        ).funds;
+        expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
       });
     });
 

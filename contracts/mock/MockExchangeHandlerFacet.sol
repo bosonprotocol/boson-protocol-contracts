@@ -6,7 +6,7 @@ import { BuyerBase } from "../protocol/bases/BuyerBase.sol";
 import { DisputeBase } from "../protocol/bases/DisputeBase.sol";
 import { FundsLib } from "../protocol/libs/FundsLib.sol";
 import "../domain/BosonConstants.sol";
-import { Address } from "../ext_libs/Address.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title MockExchangeHandlerFacet
