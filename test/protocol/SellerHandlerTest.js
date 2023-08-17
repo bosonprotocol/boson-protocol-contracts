@@ -900,7 +900,7 @@ describe("SellerHandler", function () {
         it("seller salt is not unique [same as the updated salt]", async function () {
           // Create a seller
           await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
-          const newSalt = encodeBytes32String("newSalt")
+          const newSalt = encodeBytes32String("newSalt");
           await accountHandler.connect(admin).updateSellerSalt(newSalt);
 
           // Update seller fields to release unique address constraint
