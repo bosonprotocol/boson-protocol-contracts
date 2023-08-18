@@ -541,8 +541,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Check if _to supports `balanceOf` method and revert if it does
         // This works with all contracts that implement this method even if they don't necessary implement ERC20 interface
-        uint256 balance;
-        try IERC20(_to).balanceOf(address(this)) returns (uint256 _balance) {
+        try IERC20(_to).balanceOf(address(this)) returns (uint256) {
             revert(INTERACTION_NOT_ALLOWED);
         } catch {}
 
