@@ -87,10 +87,11 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         condition.method = _condition.method;
         condition.tokenType = _condition.tokenType;
         condition.tokenAddress = _condition.tokenAddress;
-        condition.tokenId = _condition.tokenId;
+        condition.gating = _condition.gating;
+        condition.minTokenId = _condition.minTokenId;
         condition.threshold = _condition.threshold;
         condition.maxCommits = _condition.maxCommits;
-        condition.length = _condition.length;
+        condition.maxTokenId = _condition.maxTokenId;
     }
 
     /**
@@ -120,40 +121,29 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
     function validateCondition(Condition calldata _condition) internal pure returns (bool) {
         bool valid = true;
         if (_condition.method == EvaluationMethod.None) {
+            // ToDo: alternatively OR everything or calculate empty condition keccak
             valid = (_condition.tokenAddress == address(0) &&
-                _condition.tokenId == 0 &&
+                _condition.minTokenId == 0 &&
                 _condition.threshold == 0 &&
                 _condition.maxCommits == 0 &&
-                _condition.length == 0);
+                _condition.maxTokenId == 0);
         } else {
-            if (_condition.tokenId != 0) {
-                valid = _condition.length != 0;
-                valid = valid && type(uint256).max - _condition.length >= _condition.tokenId;
-            }
+            valid =
+                _condition.maxCommits > 0 &&
+                _condition.tokenAddress != address(0) &&
+                _condition.minTokenId <= _condition.maxTokenId;
 
             if (_condition.method == EvaluationMethod.Threshold) {
-                valid =
-                    valid &&
-                    (_condition.tokenAddress != address(0) && _condition.maxCommits > 0 && _condition.threshold > 0);
+                valid = valid && _condition.threshold > 0;
 
                 if (_condition.tokenType != TokenType.MultiToken) {
-                    // NonFungibleToken and FungibleToken should not have length and tokenId
-                    valid = valid && _condition.length == 0 && _condition.tokenId == 0;
+                    // NonFungibleToken and FungibleToken should not the tokenId
+                    valid = _condition.minTokenId == 0; // don't need to explicitly check maxTokenId since checks above imply it
                 }
             } else {
-                valid =
-                    valid &&
-                    (_condition.tokenAddress != address(0) &&
-                        _condition.maxCommits > 0 &&
-                        _condition.tokenType != TokenType.FungibleToken); // FungibleToken not allowed for SpecificToken
-
-                // SpecificToken with NonFungibleToken should not have threshold
-                if (_condition.tokenType == TokenType.NonFungibleToken) {
-                    valid = valid && _condition.threshold == 0;
-                } else {
-                    // SpecificToken with MultiToken should have threshold
-                    valid = valid && _condition.threshold > 0;
-                }
+                // SpecificToken
+                // Only NonFungible is allowed
+                valid = valid && (_condition.tokenType == TokenType.NonFungibleToken && _condition.threshold == 0);
             }
         }
 

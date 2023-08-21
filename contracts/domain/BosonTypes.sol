@@ -30,6 +30,11 @@ contract BosonTypes {
         SpecificToken
     }
 
+    enum GatingType {
+        PerAddress,
+        PerTokenId
+    }
+
     enum ExchangeState {
         Committed,
         Revoked,
@@ -172,10 +177,11 @@ contract BosonTypes {
         EvaluationMethod method;
         TokenType tokenType;
         address tokenAddress;
-        uint256 tokenId;
+        GatingType gating; // aded in v2.3.0. All conditions created before that have default value of perAddress
+        uint256 minTokenId;
         uint256 threshold;
         uint256 maxCommits;
-        uint256 length;
+        uint256 maxTokenId;
     }
 
     struct Exchange {

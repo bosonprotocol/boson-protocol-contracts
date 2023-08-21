@@ -104,8 +104,7 @@ string constant NOTHING_UPDATED = "Nothing updated";
 string constant INVALID_CONDITION_PARAMETERS = "Invalid condition parameters";
 string constant GROUP_HAS_NO_CONDITION = "Offer belongs to a group without a condition. Use commitToOffer instead";
 string constant GROUP_HAS_CONDITION = "Offer belongs to a group with a condition. Use commitToConditionalOffer instead";
-string constant MAX_COMMITS_ADDRESS_REACHED = "Max commits per address reached";
-string constant MAX_COMMITS_TOKEN_REACHED = "Max commits per token id reached";
+string constant MAX_COMMITS_REACHED = "Max commits reached";
 string constant TOKEN_ID_NOT_IN_CONDITION_RANGE = "Token id not in condition range";
 string constant INVALID_TOKEN_ID = "ERC721 and ERC20 require zero tokenId";
 
