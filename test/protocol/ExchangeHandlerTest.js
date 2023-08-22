@@ -5564,6 +5564,8 @@ describe("IBosonExchangeHandler", function () {
     });
 
     context("getReceipt", async function () {
+      const noCondition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
+
       beforeEach(async () => {
         // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
@@ -5631,7 +5633,7 @@ describe("IBosonExchangeHandler", function () {
           agentId,
           offer.exchangeToken,
           exchange.finalizedDate,
-          undefined,
+          noCondition,
           voucher.committedDate,
           voucher.redeemedDate,
           voucher.expired
@@ -5743,7 +5745,7 @@ describe("IBosonExchangeHandler", function () {
           agentId,
           offer.exchangeToken,
           exchange.finalizedDate,
-          undefined,
+          noCondition,
           voucher.committedDate,
           voucher.redeemedDate,
           voucher.expired
@@ -5755,6 +5757,7 @@ describe("IBosonExchangeHandler", function () {
 
       context("Disputed was raised", async function () {
         let disputedDate;
+
         beforeEach(async function () {
           // Raise a dispute on the exchange
           const tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id);
@@ -5804,7 +5807,7 @@ describe("IBosonExchangeHandler", function () {
             agentId,
             offer.exchangeToken,
             exchange.finalizedDate,
-            undefined,
+            noCondition,
             voucher.committedDate,
             voucher.redeemedDate,
             voucher.expired,
@@ -5865,7 +5868,7 @@ describe("IBosonExchangeHandler", function () {
             agentId,
             offer.exchangeToken,
             exchange.finalizedDate,
-            undefined,
+            noCondition,
             voucher.committedDate,
             voucher.redeemedDate,
             voucher.expired,
@@ -6014,7 +6017,7 @@ describe("IBosonExchangeHandler", function () {
             agentId,
             offer.exchangeToken,
             exchange.finalizedDate,
-            undefined,
+            noCondition,
             voucher.committedDate,
             voucher.redeemedDate,
             voucher.expired,
@@ -6123,7 +6126,7 @@ describe("IBosonExchangeHandler", function () {
             agentId,
             offer.exchangeToken,
             exchange.finalizedDate,
-            undefined,
+            noCondition,
             voucher.committedDate,
             voucher.redeemedDate,
             voucher.expired,
@@ -6339,7 +6342,7 @@ describe("IBosonExchangeHandler", function () {
           agentId,
           offer.exchangeToken,
           exchange.finalizedDate,
-          undefined,
+          noCondition,
           voucher.committedDate,
           voucher.redeemedDate,
           voucher.expired

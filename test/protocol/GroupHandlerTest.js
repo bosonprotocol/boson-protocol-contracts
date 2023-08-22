@@ -919,7 +919,7 @@ describe("IBosonGroupHandler", function () {
           minTokenId: "88775544",
           threshold: "1",
           tokenType: TokenType.MultiToken,
-          method: EvaluationMethod.SpecificToken,
+          method: EvaluationMethod.Threshold,
           maxTokenId: "88775544",
         });
         expect(condition.isValid()).to.be.true;

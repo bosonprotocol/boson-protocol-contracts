@@ -117,7 +117,6 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      *
      */
     function validateCondition(Condition calldata _condition) internal pure returns (bool) {
-        bool valid = true;
         if (_condition.method == EvaluationMethod.None) {
             // bitwise OR of all fields should be zero
             return
@@ -143,7 +142,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
             // Fungible token and NonFungible token cannot have token id range or per token id gating
             if (
                 _condition.tokenType != TokenType.MultiToken &&
-                (_condition.minTokenId != 0 || _condition.gating != GatingType.PerTokenId)
+                (_condition.minTokenId != 0 || _condition.gating != GatingType.PerAddress)
             ) return false;
         } else {
             // SpecificToken

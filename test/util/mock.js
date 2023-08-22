@@ -223,6 +223,7 @@ async function mockReceipt() {
   const sellerId = "2";
   const agentId = "3";
   const twinReceipt = mockTwinReceipt(ZeroAddress);
+  const condition = mockCondition();
 
   return new Receipt(
     exchange.id,
@@ -236,7 +237,7 @@ async function mockReceipt() {
     agentId,
     offer.exchangeToken,
     exchange.finalizedDate,
-    undefined,
+    condition,
     voucher.committedDate,
     voucher.redeemedDate,
     voucher.expired,
