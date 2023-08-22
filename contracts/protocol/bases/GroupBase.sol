@@ -22,6 +22,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
      * - Offer exists in a different group
+     * - Condition fields are invalid
      *
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct
@@ -99,20 +100,17 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      *
      * An invalid condition is one that fits any of the following criteria:
      * - EvaluationMethod.None: any field different from zero
-     * - EvaluationMethod.Threshold: 
-          - Token address, maxCommits, or threshold is zero.
-     *    - TokenType is FungibleToken or NonFungibleToken and length and tokenId are not 0.
      * - EvaluationMethod.Threshold:
-     *    - token address, maxCommits or threshold is zero
-     *    - tokenType is FungibleToken or NonFungibleToken and length and tokenId is not zero
-     *    - tokenType is MultiToken and length is zero when tokenId is not zero or range overflow
+     *    - Token address, maxCommits, or threshold is zero.
+     *    - Min token id is greater than max token id.
+     *    - TokenType is FungibleToken or NonFungibleToken and
+     *       - Min token id is not 0
+     *       - Gating is not PerAddress
      * - EvaluationMethod.SpecificToken:
-     *    - tokenType is FungibleToken
-     *    - tokenType is NonFungibleToken and threshold is not zero
-     *    - tokenId is not zero and length is zero or range overflow
-     *    - tokenType is MultiToken and threshold is zero
-     *    - maxCommits is zero
-     *    - token address is zero
+     *    - TokenType is FungibleToken or MultiToken
+     *    - Token address, maxCommits is zero.
+     *    - Threshold is not zero.
+     *    - Min token id is greater than max token id.
      *
      * @param _condition - fully populated condition struct
      * @return valid - validity of condition
@@ -121,33 +119,39 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
     function validateCondition(Condition calldata _condition) internal pure returns (bool) {
         bool valid = true;
         if (_condition.method == EvaluationMethod.None) {
-            // ToDo: alternatively OR everything or calculate empty condition keccak
-            valid = (_condition.tokenAddress == address(0) &&
-                _condition.minTokenId == 0 &&
-                _condition.threshold == 0 &&
-                _condition.maxCommits == 0 &&
-                _condition.maxTokenId == 0);
-        } else {
-            valid =
-                _condition.maxCommits > 0 &&
-                _condition.tokenAddress != address(0) &&
-                _condition.minTokenId <= _condition.maxTokenId;
-
-            if (_condition.method == EvaluationMethod.Threshold) {
-                valid = valid && _condition.threshold > 0;
-
-                if (_condition.tokenType != TokenType.MultiToken) {
-                    // NonFungibleToken and FungibleToken should not the tokenId
-                    valid = _condition.minTokenId == 0; // don't need to explicitly check maxTokenId since checks above imply it
-                }
-            } else {
-                // SpecificToken
-                // Only NonFungible is allowed
-                valid = valid && (_condition.tokenType == TokenType.NonFungibleToken && _condition.threshold == 0);
-            }
+            // bitwise OR of all fields should be zero
+            return
+                (uint8(_condition.tokenType) |
+                    uint160(_condition.tokenAddress) |
+                    uint8(_condition.gating) |
+                    _condition.minTokenId |
+                    _condition.threshold |
+                    _condition.maxCommits |
+                    _condition.maxTokenId) == 0;
         }
 
-        return valid;
+        // SpecificToken or Threshold
+        if (
+            _condition.maxCommits == 0 ||
+            _condition.tokenAddress == address(0) ||
+            _condition.minTokenId > _condition.maxTokenId
+        ) return false;
+
+        if (_condition.method == EvaluationMethod.Threshold) {
+            if (_condition.threshold == 0) return false;
+
+            // Fungible token and NonFungible token cannot have token id range or per token id gating
+            if (
+                _condition.tokenType != TokenType.MultiToken &&
+                (_condition.minTokenId != 0 || _condition.gating != GatingType.PerTokenId)
+            ) return false;
+        } else {
+            // SpecificToken
+            // Only NonFungible is allowed
+            return (_condition.tokenType == TokenType.NonFungibleToken && _condition.threshold == 0);
+        }
+
+        return true;
     }
 
     /**

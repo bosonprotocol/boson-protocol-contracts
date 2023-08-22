@@ -177,7 +177,7 @@ contract BosonTypes {
         EvaluationMethod method;
         TokenType tokenType;
         address tokenAddress;
-        GatingType gating; // aded in v2.3.0. All conditions created before that have default value of perAddress
+        GatingType gating; // added in v2.3.0. All conditions created before that have a default value of "PerAddress"
         uint256 minTokenId;
         uint256 threshold;
         uint256 maxCommits;

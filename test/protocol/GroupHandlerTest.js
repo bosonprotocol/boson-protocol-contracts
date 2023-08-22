@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, getSigners, parseUnits, getContractFactory, MaxUint256 } = ethers;
+const { ZeroAddress, getSigners, parseUnits, getContractFactory } = ethers;
 const { assert, expect } = require("chai");
 
 const Group = require("../../scripts/domain/Group");
@@ -21,6 +21,7 @@ const {
   mockCondition,
   accountId,
 } = require("../util/mock");
+const GatingType = require("../../scripts/domain/GatingType");
 
 /**
  *  Test the Boson Group Handler interface
@@ -177,7 +178,6 @@ describe("IBosonGroupHandler", function () {
       condition = mockCondition({
         tokenType: TokenType.MultiToken,
         tokenAddress: accounts[0].address,
-        length: "0",
         method: EvaluationMethod.Threshold,
       });
       expect(condition.isValid()).to.be.true;
@@ -385,8 +385,8 @@ describe("IBosonGroupHandler", function () {
             );
           });
 
-          it("Token id is not zero", async function () {
-            condition.tokenId = "20";
+          it("Min token id is not zero", async function () {
+            condition.minTokenId = "20";
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
@@ -412,8 +412,26 @@ describe("IBosonGroupHandler", function () {
             );
           });
 
-          it("Length is not zero", async function () {
-            condition.length = "5";
+          it("Max token id is not zero", async function () {
+            condition.maxTokenId = "5";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Token type is not FungibleToken (default enum value)", async function () {
+            condition.tokenType = TokenType.NonFungibleToken;
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Gating type is not PerAddress (default enum value)", async function () {
+            condition.gating = GatingType.PerTokenId;
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
@@ -429,6 +447,9 @@ describe("IBosonGroupHandler", function () {
               tokenAddress: await rando.getAddress(),
               maxCommits: "10",
               threshold: "200",
+              minTokenId: "10",
+              maxTokenId: "20",
+              gating: GatingType.PerAddress,
             });
           });
 
@@ -459,10 +480,10 @@ describe("IBosonGroupHandler", function () {
             );
           });
 
-          it("Condition 'Threshold' with MultiToken has non-zero tokenId and zero length", async function () {
+          it("Condition 'Threshold' with MultiToken has maxTokenId < minTokenId", async function () {
             condition.tokenType = TokenType.MultiToken;
-            condition.tokenId = "1";
-            condition.length = "0";
+            condition.minTokenId = "100";
+            condition.maxTokenId = "90";
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
@@ -470,10 +491,41 @@ describe("IBosonGroupHandler", function () {
             );
           });
 
-          it("Condition 'Threshold' with MultiToken has tokenId + length - 1 > max uint256", async function () {
-            condition.tokenType = TokenType.MultiToken;
-            condition.tokenId = 1;
-            condition.length = MaxUint256;
+          it("Condition 'Threshold' with fungible token has non-zero tokenId", async function () {
+            condition.tokenType = TokenType.FungibleToken;
+            condition.minTokenId = "100";
+            condition.maxTokenId = "110";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'Threshold' with non-fungible token has non-zero tokenId", async function () {
+            condition.tokenType = TokenType.NonFungibleToken;
+            condition.minTokenId = "100";
+            condition.maxTokenId = "110";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'Threshold' with fungible token has per token id gating", async function () {
+            condition.tokenType = TokenType.FungibleToken;
+            condition.gating = GatingType.PerTokenId;
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'Threshold' with non-fungible token has per token id gating", async function () {
+            condition.tokenType = TokenType.FungibleToken;
+            condition.gating = GatingType.PerTokenId;
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
@@ -489,6 +541,7 @@ describe("IBosonGroupHandler", function () {
               tokenAddress: await rando.getAddress(),
               threshold: "0",
               maxCommits: "5",
+              tokenType: TokenType.NonFungibleToken,
             });
           });
 
@@ -501,7 +554,7 @@ describe("IBosonGroupHandler", function () {
             );
           });
 
-          it("Condition 'SpecificToken' has non zero threshold when tokenType is NonFungibleToken", async function () {
+          it("Condition 'SpecificToken' has non zero threshold", async function () {
             condition.threshold = "10";
 
             // Attempt to create the group, expecting revert
@@ -519,8 +572,8 @@ describe("IBosonGroupHandler", function () {
             );
           });
 
-          it("Length is zero when tokenId is not zero", async function () {
-            condition.length = "0";
+          it("Condition 'SpecificToken' with MultiToken token type", async function () {
+            condition.tokenType = TokenType.MultiToken;
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
@@ -528,9 +581,18 @@ describe("IBosonGroupHandler", function () {
             );
           });
 
-          it("Condition 'SpecificToken' with MultiToken has zero threshold", async function () {
-            condition.tokenType = TokenType.MultiToken;
-            condition.threshold = "0";
+          it("Condition 'SpecificToken' with FungibleToken token type", async function () {
+            condition.tokenType = TokenType.FungibleToken;
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'SpecificToken' has maxTokenId < minTokenId", async function () {
+            condition.minTokenId = "15";
+            condition.maxTokenId = "10";
 
             // Attempt to create the group, expecting revert
             await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
@@ -854,11 +916,11 @@ describe("IBosonGroupHandler", function () {
       beforeEach(async function () {
         condition = mockCondition({
           tokenAddress: accounts[1].address,
-          tokenId: "88775544",
+          minTokenId: "88775544",
           threshold: "1",
           tokenType: TokenType.MultiToken,
           method: EvaluationMethod.SpecificToken,
-          length: "1",
+          maxTokenId: "88775544",
         });
         expect(condition.isValid()).to.be.true;
 

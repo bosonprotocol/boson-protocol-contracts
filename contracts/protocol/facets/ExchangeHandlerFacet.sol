@@ -141,11 +141,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         require(exists, NO_SUCH_GROUP);
 
         // Get the condition
-        Condition storage condition = fetchCondition(groupId); // ToDO: caching
+        Condition storage condition = fetchCondition(groupId);
+        EvaluationMethod method = condition.method;
+        bool isMultitoken = condition.tokenType == TokenType.MultiToken;
 
-        require(condition.method != EvaluationMethod.None, GROUP_HAS_NO_CONDITION);
+        require(method != EvaluationMethod.None, GROUP_HAS_NO_CONDITION);
 
-        if (condition.method == EvaluationMethod.SpecificToken || condition.tokenType == TokenType.MultiToken) {
+        if (method == EvaluationMethod.SpecificToken || isMultitoken) {
             // In this cases, the token id is specified by the caller must be within the range of the condition
             uint256 minTokenId = condition.minTokenId;
             uint256 maxTokenId = condition.maxTokenId;
@@ -155,7 +157,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         }
 
         // ERC20 and ERC721 threshold does not require a token id
-        if (condition.method == EvaluationMethod.Threshold && condition.tokenType != TokenType.MultiToken) {
+        if (method == EvaluationMethod.Threshold && !isMultitoken) {
             require(_tokenId == 0, INVALID_TOKEN_ID);
         }
 
@@ -163,6 +165,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         uint256 exchangeId = commitToOfferInternal(_buyer, offer, 0, false);
 
+        // Store the condition to be returned afterward on getReceipt function
         protocolLookups().exchangeCondition[exchangeId] = condition;
     }
 
@@ -194,9 +197,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 _exchangeId
     ) external exchangesNotPaused buyersNotPaused nonReentrant {
         Offer storage offer = getValidOffer(_offerId);
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Make sure that the voucher was issued on the clone that is making a call
-        require(msg.sender == getCloneAddress(protocolLookups(), offer.sellerId, offer.collectionIndex), ACCESS_DENIED);
+        require(msg.sender == getCloneAddress(lookups, offer.sellerId, offer.collectionIndex), ACCESS_DENIED);
 
         // Exchange must not exist already
         (bool exists, ) = fetchExchange(_exchangeId);
@@ -208,21 +212,27 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         if (exists) {
             // Get the condition
             Condition storage condition = fetchCondition(groupId);
+            EvaluationMethod method = condition.method;
 
-            uint256 tokenId = 0;
+            if (method != EvaluationMethod.None) {
+                uint256 tokenId = 0;
 
-            // Allow commiting only to unambigous conditions, i.e. conditions with a single token id
-            if (condition.method == EvaluationMethod.SpecificToken || condition.tokenType == TokenType.MultiToken) {
-                uint256 minTokenId = condition.minTokenId;
-                uint256 maxTokenId = condition.maxTokenId;
+                // Allow commiting only to unambigous conditions, i.e. conditions with a single token id
+                if (condition.method == EvaluationMethod.SpecificToken || condition.tokenType == TokenType.MultiToken) {
+                    uint256 minTokenId = condition.minTokenId;
+                    uint256 maxTokenId = condition.maxTokenId;
 
-                require(minTokenId == maxTokenId || maxTokenId == 0, CANNOT_COMMIT); // legacy conditions have maxTokenId == 0
+                    require(minTokenId == maxTokenId || maxTokenId == 0, CANNOT_COMMIT); // legacy conditions have maxTokenId == 0
 
-                // Uses token id from the condition
-                tokenId = minTokenId;
+                    // Uses token id from the condition
+                    tokenId = minTokenId;
+                }
+
+                authorizeCommit(_buyer, condition, groupId, tokenId);
+
+                // Store the condition to be returned afterward on getReceipt function
+                lookups.exchangeCondition[_exchangeId] = condition;
             }
-
-            authorizeCommit(_buyer, condition, groupId, tokenId);
         }
 
         commitToOfferInternal(_buyer, offer, _exchangeId, true);
@@ -971,6 +981,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *     group, the buyer can't commit again to any of its offers.
      *
      * The buyer is allowed to commit if no group or condition is set for this offer.
+     *
+     * Reverts if:
+     * - Allowable commits to the group are exhausted
+     * - Buyer does not meet the condition
      *
      * @param _buyer buyer address
      * @param _condition - the condition to check
