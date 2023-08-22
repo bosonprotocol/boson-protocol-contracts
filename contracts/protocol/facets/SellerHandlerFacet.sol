@@ -5,6 +5,8 @@ import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { SellerBase } from "../bases/SellerBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
+import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title SellerHandlerFacet
@@ -37,6 +39,8 @@ contract SellerHandlerFacet is SellerBase {
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - AuthTokenType is Custom
+     * - Seller salt is not unique
+     * - Clone creation fails
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -350,9 +354,9 @@ contract SellerHandlerFacet is SellerBase {
      *
      * Emits a CollectionCreated event if successful.
      *
-     *  Reverts if:
-     *  - The offers region of protocol is paused
-     *  - Caller is not the seller assistant
+     * Reverts if:
+     * - The sellers region of protocol is paused
+     * - Caller is not the seller assistant
      *
      * @param _externalId - external collection id
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
@@ -360,7 +364,7 @@ contract SellerHandlerFacet is SellerBase {
     function createNewCollection(
         string calldata _externalId,
         VoucherInitValues calldata _voucherInitValues
-    ) external sellersNotPaused {
+    ) external sellersNotPaused nonReentrant {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
         address assistant = msgSender();
 
@@ -374,10 +378,9 @@ contract SellerHandlerFacet is SellerBase {
         address voucherCloneAddress = cloneBosonVoucher(
             sellerId,
             collectionIndex,
-            lookups.sellerCreator[sellerId],
+            lookups.sellerSalt[sellerId],
             assistant,
-            _voucherInitValues,
-            _externalId
+            _voucherInitValues
         );
 
         // Store collection details
@@ -386,6 +389,35 @@ contract SellerHandlerFacet is SellerBase {
         newCollection.externalId = _externalId;
 
         emit CollectionCreated(sellerId, collectionIndex, voucherCloneAddress, _externalId, assistant);
+    }
+
+    /**
+     * @notice Updates a salt.
+     * Use this if the admin address is updated and there exists a possibility that old admin will try to create the vouchers
+     * with matching addresses on other chains.
+     *
+     * Reverts if:
+     * - The sellers region of protocol is paused
+     * - Caller is not the admin of any seller
+     * - Seller salt is not unique
+     *
+     * @param _newSalt - new salt
+     */
+    function updateSellerSalt(bytes32 _newSalt) external sellersNotPaused nonReentrant {
+        address admin = msgSender();
+
+        (bool exists, uint256 sellerId) = getSellerIdByAdmin(admin);
+        require(exists, NO_SUCH_SELLER);
+
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        bytes32 sellerSalt = keccak256(abi.encodePacked(admin, _newSalt));
+
+        require(!lookups.isUsedSellerSalt[sellerSalt], SELLER_SALT_NOT_UNIQUE);
+        lookups.isUsedSellerSalt[lookups.sellerSalt[sellerId]] = false;
+        lookups.sellerSalt[sellerId] = sellerSalt;
+        lookups.isUsedSellerSalt[sellerSalt] = true;
     }
 
     /**

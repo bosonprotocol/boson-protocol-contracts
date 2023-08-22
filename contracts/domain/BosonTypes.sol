@@ -286,6 +286,7 @@ contract BosonTypes {
     struct VoucherInitValues {
         string contractURI;
         uint256 royaltyPercentage;
+        bytes32 collectionSalt;
     }
 
     struct Collection {
