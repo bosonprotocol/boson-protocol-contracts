@@ -95,6 +95,8 @@ exports.RevertReasons = {
   NO_PENDING_UPDATE_FOR_ACCOUNT: "No pending updates for the given account",
   UNAUTHORIZED_CALLER_UPDATE: "Caller has no permission to approve this update",
   NO_UPDATE_APPLIED: "No update applied or requested approval",
+  CLONE_CREATION_FAILED: "Clone creation failed",
+  SELLER_SALT_NOT_UNIQUE: "Seller salt not unique",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",

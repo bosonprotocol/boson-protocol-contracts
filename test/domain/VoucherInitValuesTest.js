@@ -1,5 +1,7 @@
 const { expect } = require("chai");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
+const { ethers } = require("hardhat");
+const { ZeroHash } = ethers;
 
 /**
  *  Test the VoucherInitValues domain entity
@@ -7,20 +9,22 @@ const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 describe("VoucherInitValues", function () {
   // Suite-wide scope
   let voucherInitValues, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let contractURI, royaltyPercentage;
+  let contractURI, royaltyPercentage, collectionSalt;
 
   beforeEach(async function () {
     // Required constructor params
     contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
     royaltyPercentage = "100"; // 1%
+    collectionSalt = "0x3e13355e5031ac1e6887045ee41a55185b0bcbf08df51c10f785cfe7ce40d6c4";
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated VoucherInitValues instance", async function () {
       // Create valid voucherInitValues
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage, collectionSalt);
       expect(voucherInitValues.contractURIIsValid()).is.true;
       expect(voucherInitValues.royaltyPercentageIsValid()).is.true;
+      expect(voucherInitValues.collectionSaltIsValid()).is.true;
       expect(voucherInitValues.isValid()).is.true;
     });
   });
@@ -28,7 +32,7 @@ describe("VoucherInitValues", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create valid voucherInitValues, then set fields in tests directly
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage, collectionSalt);
       expect(voucherInitValues.isValid()).is.true;
     });
 
@@ -80,12 +84,34 @@ describe("VoucherInitValues", function () {
       expect(voucherInitValues.royaltyPercentageIsValid()).is.true;
       expect(voucherInitValues.isValid()).is.true;
     });
+
+    it("Always present, collectionSalt must be bytes32 value", async function () {
+      // Invalid field value
+      voucherInitValues.collectionSalt = "zedzdeadbaby";
+      expect(voucherInitValues.collectionSaltIsValid()).is.false;
+      expect(voucherInitValues.isValid()).is.false;
+
+      // Invalid field value
+      voucherInitValues.collectionSalt = "0x3e13355e5031ac1e6887045ee41a55185b0bcbf08df51c10f785cfe7ce40d6c4ab34e3"; // more than 32 bytes
+      expect(voucherInitValues.collectionSaltIsValid()).is.false;
+      expect(voucherInitValues.isValid()).is.false;
+
+      // Valid field value
+      voucherInitValues.collectionSalt = ZeroHash;
+      expect(voucherInitValues.collectionSaltIsValid()).is.true;
+      expect(voucherInitValues.isValid()).is.true;
+
+      // Valid field value
+      voucherInitValues.collectionSalt = "0xb788cf2916c6a947f36e4ea5e064d62b132f7210e1b39125a5207922110b034b";
+      expect(voucherInitValues.collectionSaltIsValid()).is.true;
+      expect(voucherInitValues.isValid()).is.true;
+    });
   });
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create valid voucherInitValues, then set fields in tests directly
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage, collectionSalt);
 
       expect(voucherInitValues.isValid()).is.true;
 
@@ -93,10 +119,11 @@ describe("VoucherInitValues", function () {
       object = {
         contractURI,
         royaltyPercentage,
+        collectionSalt,
       };
 
       // Struct representation
-      struct = [contractURI, royaltyPercentage];
+      struct = [contractURI, royaltyPercentage, collectionSalt];
     });
 
     context("👉 Static", async function () {

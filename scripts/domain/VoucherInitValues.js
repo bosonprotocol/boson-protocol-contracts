@@ -1,4 +1,4 @@
-const { bigNumberIsValid, stringIsValid } = require("../util/validations.js");
+const { bigNumberIsValid, stringIsValid, bytes32IsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: VoucherInitValues
@@ -9,13 +9,15 @@ class VoucherInitValues {
   /*
       struct VoucherInitValues {
           string contractURI;
-          uint96 royaltyPercentage;
+          uint256 royaltyPercentage;
+          bytes32 collectionSalt
       }
   */
 
-  constructor(contractURI, royaltyPercentage) {
+  constructor(contractURI, royaltyPercentage, collectionSalt) {
     this.contractURI = contractURI;
     this.royaltyPercentage = royaltyPercentage;
+    this.collectionSalt = collectionSalt;
   }
 
   /**
@@ -24,8 +26,8 @@ class VoucherInitValues {
    * @returns {VoucherInitValues}
    */
   static fromObject(o) {
-    const { contractURI, royaltyPercentage } = o;
-    return new VoucherInitValues(contractURI, royaltyPercentage);
+    const { contractURI, royaltyPercentage, collectionSalt } = o;
+    return new VoucherInitValues(contractURI, royaltyPercentage, collectionSalt);
   }
 
   /**
@@ -34,14 +36,15 @@ class VoucherInitValues {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let contractURI, royaltyPercentage;
+    let contractURI, royaltyPercentage, collectionSalt;
 
     // destructure struct
-    [contractURI, royaltyPercentage] = struct;
+    [contractURI, royaltyPercentage, collectionSalt] = struct;
 
     return VoucherInitValues.fromObject({
       contractURI,
       royaltyPercentage: royaltyPercentage.toString(),
+      collectionSalt,
     });
   }
 
@@ -66,7 +69,7 @@ class VoucherInitValues {
    * @returns {string}
    */
   toStruct() {
-    return [this.contractURI, this.royaltyPercentage];
+    return [this.contractURI, this.royaltyPercentage, this.collectionSalt];
   }
 
   /**
@@ -96,11 +99,20 @@ class VoucherInitValues {
   }
 
   /**
+   * Is this VoucherInitValues instance's collectionSalt valid?
+   * Must be a bytes32 value
+   * @returns {boolean}
+   */
+  collectionSaltIsValid() {
+    return bytes32IsValid(this.collectionSalt);
+  }
+
+  /**
    * Is this VoucherInitValues instance valid?
    * @returns {boolean}
    */
   isValid() {
-    return this.contractURIIsValid() && this.royaltyPercentageIsValid();
+    return this.contractURIIsValid() && this.royaltyPercentageIsValid() && this.collectionSaltIsValid();
   }
 }
 

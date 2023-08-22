@@ -34,6 +34,7 @@ const {
   deriveTokenId,
 } = require("../../util/utils.js");
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
+const { ZeroHash } = require("ethers");
 
 describe("IBosonVoucher", function () {
   let interfaceIds;
@@ -170,8 +171,7 @@ describe("IBosonVoucher", function () {
       const bosonVoucherCloneAddress = calculateCloneAddress(
         await accountHandler.getAddress(),
         beaconProxyAddress,
-        admin.address,
-        ""
+        admin.address
       );
       bosonVoucher = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
 
@@ -1738,7 +1738,7 @@ describe("IBosonVoucher", function () {
             // Set royalty fee as 15% (protocol limit is 10%)
             royaltyPercentage = "1500"; //15%
 
-            // royalty percentage too high, expectig revert
+            // royalty percentage too high, expecting revert
             await expect(bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage)).to.be.revertedWith(
               RevertReasons.ROYALTY_FEE_INVALID
             );
@@ -1829,7 +1829,7 @@ describe("IBosonVoucher", function () {
         it("should revert during create seller if royaltyPercentage is greater than max royalty percentage defined in the protocol", async function () {
           // create invalid voucherInitValues
           royaltyPercentage = "2000"; // 20%
-          voucherInitValues = new VoucherInitValues("ContractURI", royaltyPercentage);
+          voucherInitValues = new VoucherInitValues("ContractURI", royaltyPercentage, ZeroHash);
 
           // create another seller
           seller = mockSeller(
@@ -1839,7 +1839,7 @@ describe("IBosonVoucher", function () {
             await rando.getAddress()
           );
 
-          // royalty percentage too high, expectig revert
+          // royalty percentage too high, expecting revert
           await expect(
             accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.be.revertedWith(RevertReasons.ROYALTY_FEE_INVALID);
