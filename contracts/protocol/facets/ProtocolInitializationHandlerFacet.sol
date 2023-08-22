@@ -144,12 +144,9 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      *  - Current version is not 2.2.1
      *  - There are already twins. This version adds a new mapping for twins which make it incompatible with previous versions.
      *  - minResolutionPeriod is not present in _initializationData parameter
-     *  - length of seller creators does not match the length of seller ids
-     *  - if some of seller creators is zero address
-     *  - if some of seller ids does not bellong to a seller
      *  - if minResolutionPeriod is greater than maxResolutionPeriod
      *
-     * @param _initializationData - data representing uint256 _minResolutionPeriod, uint256[] memory sellerIds, address[] memory sellerCreators
+     * @param _initializationData - data representing uint256 _minResolutionPeriod
      */
     function initV2_3_0(bytes calldata _initializationData) internal {
         // Current version must be 2.2.1
@@ -157,10 +154,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         require(protocolCounters().nextTwinId == 1, TWINS_ALREADY_EXIST);
 
         // Decode initialization data
-        (uint256 _minResolutionPeriod, uint256[] memory sellerIds, address[] memory sellerCreators) = abi.decode(
-            _initializationData,
-            (uint256, uint256[], address[])
-        );
+        uint256 _minResolutionPeriod = abi.decode(_initializationData, (uint256));
 
         // cache protocol limits
         ProtocolLib.ProtocolLimits storage limits = protocolLimits();
@@ -172,17 +166,6 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         require(_minResolutionPeriod != 0, VALUE_ZERO_NOT_ALLOWED);
         limits.minResolutionPeriod = _minResolutionPeriod;
         emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
-
-        // Initialize sellerCreators
-        require(sellerIds.length == sellerCreators.length, ARRAY_LENGTH_MISMATCH);
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-        for (uint256 i = 0; i < sellerIds.length; i++) {
-            (bool exists, , ) = fetchSeller(sellerIds[i]);
-            require(exists, NO_SUCH_SELLER);
-            require(sellerCreators[i] != address(0), INVALID_ADDRESS);
-
-            lookups.sellerCreator[sellerIds[i]] = sellerCreators[i];
-        }
 
         // Deploy a new voucher proxy
         protocolAddresses().beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());

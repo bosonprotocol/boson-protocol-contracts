@@ -68,6 +68,7 @@ const { FundsList } = require("../../scripts/domain/Funds");
 const { toHexString } = require("../../scripts/util/utils.js");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
+const { encodeBytes32String } = require("ethers");
 
 /**
  *  Test the Boson Exchange Handler interface
@@ -267,8 +268,7 @@ describe("IBosonExchangeHandler", function () {
       expectedCloneAddress = calculateCloneAddress(
         await accountHandler.getAddress(),
         beaconProxyAddress,
-        admin.address,
-        ""
+        admin.address
       );
 
       // Create a valid dispute resolver
@@ -393,8 +393,7 @@ describe("IBosonExchangeHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          rando.address,
-          ""
+          rando.address
         );
         const bosonVoucherClone2 = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
@@ -500,8 +499,7 @@ describe("IBosonExchangeHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          rando.address,
-          ""
+          rando.address
         );
         const bosonVoucherClone2 = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
@@ -739,6 +737,7 @@ describe("IBosonExchangeHandler", function () {
       it("should work on an additional collection", async function () {
         // Create a new collection
         const externalId = `Brand1`;
+        voucherInitValues.collectionSalt = encodeBytes32String(externalId);
         await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
         offer.collectionIndex = 1;
@@ -758,15 +757,14 @@ describe("IBosonExchangeHandler", function () {
         const defaultCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const defaultBosonVoucher = await getContractAt("BosonVoucher", defaultCloneAddress);
         const additionalCollectionAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
           admin.address,
-          externalId
+          voucherInitValues.collectionSalt
         );
         const additionalCollection = await getContractAt("BosonVoucher", additionalCollectionAddress);
 
@@ -910,8 +908,7 @@ describe("IBosonExchangeHandler", function () {
         const voucherCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
         await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
@@ -1199,6 +1196,7 @@ describe("IBosonExchangeHandler", function () {
       it("should work on an additional collection", async function () {
         // Create a new collection
         const externalId = `Brand1`;
+        voucherInitValues.collectionSalt = encodeBytes32String(externalId);
         await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
         offer.collectionIndex = 1;
@@ -1221,7 +1219,7 @@ describe("IBosonExchangeHandler", function () {
           await accountHandler.getAddress(),
           beaconProxyAddress,
           admin.address,
-          externalId
+          voucherInitValues.collectionSalt
         );
         bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
         await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
@@ -2592,6 +2590,7 @@ describe("IBosonExchangeHandler", function () {
       it("should work on an additional collection", async function () {
         // Create a new collection
         const externalId = `Brand1`;
+        voucherInitValues.collectionSalt = encodeBytes32String(externalId);
         await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
         offer.collectionIndex = 1;
@@ -2612,7 +2611,7 @@ describe("IBosonExchangeHandler", function () {
           await accountHandler.getAddress(),
           beaconProxyAddress,
           admin.address,
-          externalId
+          voucherInitValues.collectionSalt
         );
         const additionalCollection = await getContractAt("BosonVoucher", additionalCollectionAddress);
 
@@ -2681,8 +2680,7 @@ describe("IBosonExchangeHandler", function () {
         bosonVoucherCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
         await bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, tokenId);
@@ -2707,6 +2705,7 @@ describe("IBosonExchangeHandler", function () {
       it("should work on an additional collection", async function () {
         // Create a new collection
         const externalId = `Brand1`;
+        voucherInitValues.collectionSalt = encodeBytes32String(externalId);
         await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
         offer.collectionIndex = 1;
@@ -2727,7 +2726,7 @@ describe("IBosonExchangeHandler", function () {
           await accountHandler.getAddress(),
           beaconProxyAddress,
           admin.address,
-          externalId
+          voucherInitValues.collectionSalt
         );
         const additionalCollection = await getContractAt("BosonVoucher", additionalCollectionAddress);
 
@@ -2972,6 +2971,7 @@ describe("IBosonExchangeHandler", function () {
       it("should work on an additional collection", async function () {
         // Create a new collection
         const externalId = `Brand1`;
+        voucherInitValues.collectionSalt = encodeBytes32String(externalId);
         await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
         offer.collectionIndex = 1;
@@ -2992,7 +2992,7 @@ describe("IBosonExchangeHandler", function () {
           await accountHandler.getAddress(),
           beaconProxyAddress,
           admin.address,
-          externalId
+          voucherInitValues.collectionSalt
         );
         const additionalCollection = await getContractAt("BosonVoucher", additionalCollectionAddress);
 
@@ -4816,8 +4816,7 @@ describe("IBosonExchangeHandler", function () {
         bosonVoucherCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
 
@@ -4930,6 +4929,7 @@ describe("IBosonExchangeHandler", function () {
       it("should work with additional collections", async function () {
         // Create a new collection
         const externalId = `Brand1`;
+        voucherInitValues.collectionSalt = encodeBytes32String(externalId);
         await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
         offer.collectionIndex = 1;
@@ -4939,7 +4939,7 @@ describe("IBosonExchangeHandler", function () {
           await accountHandler.getAddress(),
           beaconProxyAddress,
           admin.address,
-          externalId
+          voucherInitValues.collectionSalt
         );
         bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
         const tokenId = deriveTokenId(offer.id, exchange.id);
@@ -4995,8 +4995,7 @@ describe("IBosonExchangeHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            rando.address,
-            ""
+            rando.address
           );
           const bosonVoucherClone2 = await getContractAt("IBosonVoucher", expectedCloneAddress);
 

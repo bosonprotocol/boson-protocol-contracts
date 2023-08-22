@@ -21,6 +21,7 @@ const Role = require("../../scripts/domain/Role");
 const { toHexString } = require("../../scripts/util/utils.js");
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
+const { ZeroHash } = require("ethers");
 
 function getEvent(receipt, factory, eventName) {
   let found = false;
@@ -270,13 +271,24 @@ function getCloneByteCodeHash(beaconProxyAddress) {
   );
 }
 
-function getCloneSalt(sellerAddress, externalId) {
-  return solidityPackedKeccak256(["address", "string"], [sellerAddress, externalId]);
+function getCollectionSalt(sellerSalt, collectionSalt) {
+  return solidityPackedKeccak256(["bytes32", "bytes32"], [sellerSalt, collectionSalt]);
 }
 
-function calculateCloneAddress(voucherCreator, beaconProxyAddress, sellerAddress, externalId) {
-  const salt = getCloneSalt(sellerAddress, externalId);
+function getSellerSalt(sellerAdmin, sellerSalt) {
+  return solidityPackedKeccak256(["address", "bytes32"], [sellerAdmin, sellerSalt]);
+}
+
+function calculateCloneAddress(
+  voucherCreator,
+  beaconProxyAddress,
+  sellerAddress,
+  collectionSalt = ZeroHash,
+  creationSalt = ZeroHash
+) {
   const cloneByteCodeHash = getCloneByteCodeHash(beaconProxyAddress);
+  const sellerSalt = getSellerSalt(sellerAddress, creationSalt);
+  const salt = getCollectionSalt(sellerSalt, collectionSalt);
   return calculateContractAddress2(voucherCreator, cloneByteCodeHash, salt);
 }
 
