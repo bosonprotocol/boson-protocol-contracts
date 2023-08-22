@@ -13,13 +13,14 @@ import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Co
 import { ERC2771ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
 import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
 import { IClientExternalAddresses } from "../../../interfaces/clients/IClientExternalAddresses.sol";
 import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
 import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchangeHandler.sol";
-import { IERC20 } from "../../../interfaces/IERC20.sol";
 import { DAIAliases as DAI } from "../../../interfaces/DAIAliases.sol";
 import { IBosonFundsHandler } from "../../../interfaces/handlers/IBosonFundsHandler.sol";
 
@@ -32,6 +33,7 @@ import { IBosonFundsHandler } from "../../../interfaces/handlers/IBosonFundsHand
  */
 contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
     using Address for address;
+    using SafeERC20 for IERC20;
 
     // Struct that is used to manipulate private variables from ERC721UpgradeableStorage
     struct ERC721UpgradeableStorage {
@@ -73,7 +75,12 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         address _newOwner,
         VoucherInitValues calldata voucherInitValues
     ) public initializer {
-        string memory sellerId = string.concat(Strings.toString(_sellerId), "_", Strings.toString(_collectionIndex));
+        string memory sellerId = string.concat(
+            "S",
+            Strings.toString(_sellerId),
+            "_C",
+            Strings.toString(_collectionIndex)
+        );
         string memory voucherName = string.concat(VOUCHER_NAME, " ", sellerId);
         string memory voucherSymbol = string.concat(VOUCHER_SYMBOL, "_", sellerId);
 
@@ -110,7 +117,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Revert if exchange id falls within a reserved range
         uint256 rangeStart = range.start;
-        require((_tokenId < rangeStart) || (_tokenId >= rangeStart + range.length), EXCHANGE_ID_IN_RESERVED_RANGE);
+        require(_tokenId < rangeStart || _tokenId >= rangeStart + range.length, EXCHANGE_ID_IN_RESERVED_RANGE);
 
         // Issue voucher is called only during commitToOffer (in protocol), so token can be set as committed
         _committed[_tokenId] = true;
@@ -220,7 +227,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Make sure that offer is not expired or voided
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
-        require(!offer.voided && (block.timestamp <= offerDates.validUntil), OFFER_EXPIRED_OR_VOIDED);
+        require(!offer.voided && block.timestamp <= offerDates.validUntil, OFFER_EXPIRED_OR_VOIDED);
 
         // Get the first token to mint
         uint256 start = range.start + range.minted;
@@ -276,10 +283,10 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Make sure that offer is either expired or voided
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
-        require(offer.voided || (block.timestamp > offerDates.validUntil), OFFER_STILL_VALID);
+        require(offer.voided || block.timestamp > offerDates.validUntil, OFFER_STILL_VALID);
 
         // Get the first token to burn
-        uint256 start = (range.lastBurnedTokenId == 0) ? range.start : (range.lastBurnedTokenId + 1);
+        uint256 start = range.lastBurnedTokenId == 0 ? range.start : range.lastBurnedTokenId + 1;
 
         // Get the last token to burn
         uint256 end = start + _amount;
@@ -314,7 +321,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     function getAvailablePreMints(uint256 _offerId) external view returns (uint256 count) {
         // If offer is expired or voided, return 0
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
-        if (offer.voided || (block.timestamp > offerDates.validUntil)) {
+        if (offer.voided || block.timestamp > offerDates.validUntil) {
             return 0;
         }
 
@@ -771,11 +778,20 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             address token = _tokenList[i];
             if (token == address(0)) {
                 uint256 balance = address(this).balance;
-                IBosonFundsHandler(protocolDiamond).depositFunds{ value: balance }(sellerId, token, balance);
+
+                if (balance > 0) {
+                    IBosonFundsHandler(protocolDiamond).depositFunds{ value: balance }(sellerId, token, balance);
+                }
             } else {
                 uint256 balance = IERC20(token).balanceOf(address(this));
-                IERC20(token).approve(protocolDiamond, balance);
-                IBosonFundsHandler(protocolDiamond).depositFunds(sellerId, token, balance);
+                if (balance > 0) {
+                    // get current allowance
+                    uint256 allowance = IERC20(token).allowance(address(this), protocolDiamond);
+                    if (allowance < balance) {
+                        IERC20(token).forceApprove(protocolDiamond, balance);
+                    }
+                    IBosonFundsHandler(protocolDiamond).depositFunds(sellerId, token, balance);
+                }
             }
         }
     }

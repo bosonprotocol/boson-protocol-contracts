@@ -258,9 +258,12 @@ describe("SellerHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
       });
@@ -275,9 +278,12 @@ describe("SellerHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -312,9 +318,12 @@ describe("SellerHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -376,9 +385,12 @@ describe("SellerHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
       });
@@ -604,7 +616,7 @@ describe("SellerHandler", function () {
       });
 
       it("should be possible to create multiple sellers with the same account if addresses change before", async function () {
-        // Create a seller, testing for the event
+        // Create a seller
         await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Update seller fields to release unique address constraint
@@ -872,7 +884,7 @@ describe("SellerHandler", function () {
         });
 
         it("seller salt is not unique [same as the original salt]", async function () {
-          // Create a seller, testing for the event
+          // Create a seller
           await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Update seller fields to release unique address constraint
@@ -890,9 +902,10 @@ describe("SellerHandler", function () {
         });
 
         it("seller salt is not unique [same as the updated salt]", async function () {
-          // Create a seller, testing for the event
+          // Create a seller
           await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
-          await accountHandler.connect(admin).updateSellerSalt(encodeBytes32String("newSalt"));
+          const newSalt = encodeBytes32String("newSalt");
+          await accountHandler.connect(admin).updateSellerSalt(newSalt);
 
           // Update seller fields to release unique address constraint
           const newSeller = mockSeller(other1.address, other1.address, ZeroAddress, other1.address);
@@ -903,14 +916,14 @@ describe("SellerHandler", function () {
             .optInToSellerUpdate(seller.id, [SellerUpdateFields.Admin, SellerUpdateFields.Assistant]);
 
           // Attempt to Create a seller with non unique salt, expecting revert
-          voucherInitValues.collectionSalt = encodeBytes32String("newSalt");
+          voucherInitValues.collectionSalt = newSalt;
           await expect(
             accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.SELLER_SALT_NOT_UNIQUE);
         });
 
         it("same wallet cannot use the same salt twice", async function () {
-          // Create a seller, testing for the event
+          // Create a seller
           await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
           await accountHandler.connect(admin).updateSellerSalt(encodeBytes32String("newSalt"));
 
@@ -2935,9 +2948,12 @@ describe("SellerHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCollectionAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_1", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C1",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_1",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C1",
           "Wrong voucher client symbol"
         );
       });
@@ -2994,11 +3010,11 @@ describe("SellerHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCollectionAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
           expect(await bosonVoucher.name()).to.equal(
-            VOUCHER_NAME + " " + seller.id + "_" + i,
+            VOUCHER_NAME + " S" + seller.id + "_C" + i,
             "Wrong voucher client name"
           );
           expect(await bosonVoucher.symbol()).to.equal(
-            VOUCHER_SYMBOL + "_" + seller.id + "_" + i,
+            VOUCHER_SYMBOL + "_S" + seller.id + "_C" + i,
             "Wrong voucher client symbol"
           );
         }

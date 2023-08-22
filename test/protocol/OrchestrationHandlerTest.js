@@ -774,9 +774,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
       });
@@ -816,9 +819,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -878,9 +884,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -1389,11 +1398,11 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
           expect(await bosonVoucher.name()).to.equal(
-            VOUCHER_NAME + " " + seller.id + "_0",
+            VOUCHER_NAME + " S" + seller.id + "_C0",
             "Wrong voucher client name"
           );
           expect(await bosonVoucher.symbol()).to.equal(
-            VOUCHER_SYMBOL + "_" + seller.id + "_0",
+            VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
             "Wrong voucher client symbol"
           );
           const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
@@ -5570,9 +5579,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
       });
@@ -5612,9 +5624,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -5674,9 +5689,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -6050,11 +6068,11 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
           expect(await bosonVoucher.name()).to.equal(
-            VOUCHER_NAME + " " + seller.id + "_0",
+            VOUCHER_NAME + " S" + seller.id + "_C0",
             "Wrong voucher client name"
           );
           expect(await bosonVoucher.symbol()).to.equal(
-            VOUCHER_SYMBOL + "_" + seller.id + "_0",
+            VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
             "Wrong voucher client symbol"
           );
           const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
@@ -6398,9 +6416,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
       });
@@ -6443,9 +6464,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -6508,9 +6532,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -6955,11 +6982,11 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
           expect(await bosonVoucher.name()).to.equal(
-            VOUCHER_NAME + " " + seller.id + "_0",
+            VOUCHER_NAME + " S" + seller.id + "_C0",
             "Wrong voucher client name"
           );
           expect(await bosonVoucher.symbol()).to.equal(
-            VOUCHER_SYMBOL + "_" + seller.id + "_0",
+            VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
             "Wrong voucher client symbol"
           );
           const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
@@ -7372,9 +7399,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
       });
@@ -7418,9 +7448,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -7484,9 +7517,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -7985,11 +8021,11 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
           expect(await bosonVoucher.name()).to.equal(
-            VOUCHER_NAME + " " + seller.id + "_0",
+            VOUCHER_NAME + " S" + seller.id + "_C0",
             "Wrong voucher client name"
           );
           expect(await bosonVoucher.symbol()).to.equal(
-            VOUCHER_SYMBOL + "_" + seller.id + "_0",
+            VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
             "Wrong voucher client symbol"
           );
           const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
