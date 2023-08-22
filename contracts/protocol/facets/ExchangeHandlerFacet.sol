@@ -11,10 +11,10 @@ import { DisputeBase } from "../bases/DisputeBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
-import { IERC1155 } from "../../interfaces/IERC1155.sol";
-import { IERC721 } from "../../interfaces/IERC721.sol";
-import { IERC20 } from "../../interfaces/IERC20.sol";
-import { Address } from "../../ext_libs/Address.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title ExchangeHandlerFacet
