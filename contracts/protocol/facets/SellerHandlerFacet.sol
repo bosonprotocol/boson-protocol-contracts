@@ -396,7 +396,7 @@ contract SellerHandlerFacet is SellerBase {
 
     /**
      * @notice Updates a salt.
-     * Use this if the admin address is updated and there exists a possibility that old admin will try to create the vouchers
+     * Use this if the admin address is updated and there exists a possibility that the old admin will try to create the vouchers
      * with matching addresses on other chains.
      *
      * Reverts if:
