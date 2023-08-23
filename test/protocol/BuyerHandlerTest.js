@@ -410,8 +410,7 @@ describe("BuyerHandler", function () {
           const bosonVoucherCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           bosonVoucher = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
           const balance = await bosonVoucher.connect(rando).balanceOf(await other1.getAddress());

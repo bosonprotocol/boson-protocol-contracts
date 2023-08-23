@@ -74,6 +74,8 @@ string constant INVALID_AGENT_FEE_PERCENTAGE = "Sum of agent fee percentage and 
 string constant NO_PENDING_UPDATE_FOR_ACCOUNT = "No pending updates for the given account";
 string constant UNAUTHORIZED_CALLER_UPDATE = "Caller has no permission to approve this update";
 string constant NO_UPDATE_APPLIED = "No update applied or requested approval";
+string constant CLONE_CREATION_FAILED = "Clone creation failed";
+string constant SELLER_SALT_NOT_UNIQUE = "Seller salt not unique";
 
 // Revert Reasons: Offer related
 string constant NO_SUCH_OFFER = "No such offer";
@@ -202,6 +204,7 @@ string constant NOT_COMMITTABLE = "Token not committable";
 string constant INVALID_TO_ADDRESS = "Tokens can only be pre-mined to the contract or contract owner address";
 string constant EXTERNAL_CALL_FAILED = "External call failed";
 string constant ERC721_INVALID_TOKEN_ID = "ERC721: invalid token ID";
+string constant INTERACTION_NOT_ALLOWED = "Interaction not allowed";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(

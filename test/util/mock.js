@@ -27,6 +27,7 @@ const { applyPercentage } = require("../../test/util/utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
 let DisputeResolver = require("../../scripts/domain/DisputeResolver.js");
 let Seller = require("../../scripts/domain/Seller");
+const { ZeroHash } = require("ethers");
 
 function* incrementer() {
   let i = 0;
@@ -171,7 +172,8 @@ function mockOfferFees(protocolFee, agentFee) {
 function mockVoucherInitValues() {
   const contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
   const royaltyPercentage = "0"; // 0%
-  return new VoucherInitValues(contractURI, royaltyPercentage);
+  const collectionSalt = ZeroHash;
+  return new VoucherInitValues(contractURI, royaltyPercentage, collectionSalt);
 }
 
 function mockAuthToken() {

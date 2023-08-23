@@ -94,6 +94,8 @@ exports.RevertReasons = {
   NO_PENDING_UPDATE_FOR_ACCOUNT: "No pending updates for the given account",
   UNAUTHORIZED_CALLER_UPDATE: "Caller has no permission to approve this update",
   NO_UPDATE_APPLIED: "No update applied or requested approval",
+  CLONE_CREATION_FAILED: "Clone creation failed",
+  SELLER_SALT_NOT_UNIQUE: "Seller salt not unique",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",
@@ -141,6 +143,7 @@ exports.RevertReasons = {
   NOT_COMMITTABLE: "Token not committable",
   INVALID_TO_ADDRESS: "Tokens can only be pre-mined to the contract or contract owner address",
   EXTERNAL_CALL_FAILED: "External call failed",
+  INTERACTION_NOT_ALLOWED: "Interaction not allowed",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",
