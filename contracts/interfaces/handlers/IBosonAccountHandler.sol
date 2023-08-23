@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x91f6281a
+ * The ERC-165 identifier for this interface is: 0xd2c91cf5
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -333,9 +333,10 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Caller is not the admin of any seller
      * - Seller salt is not unique
      *
+     * @param _sellerId - the id of the seller
      * @param _newSalt - new salt
      */
-    function updateSellerSalt(bytes32 _newSalt) external;
+    function updateSellerSalt(uint256 _sellerId, bytes32 _newSalt) external;
 
     /**
      * @notice Gets the details about a seller.
