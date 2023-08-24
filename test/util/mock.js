@@ -4,6 +4,7 @@ const { ZeroAddress, provider, parseUnits } = hre.ethers;
 const decache = require("decache");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
+const GatingType = require("../../scripts/domain/GatingType");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferFees = require("../../scripts/domain/OfferFees");
@@ -224,6 +225,7 @@ async function mockReceipt() {
   const sellerId = "2";
   const agentId = "3";
   const twinReceipt = mockTwinReceipt(ZeroAddress);
+  const condition = mockCondition();
 
   return new Receipt(
     exchange.id,
@@ -237,7 +239,7 @@ async function mockReceipt() {
     agentId,
     offer.exchangeToken,
     exchange.finalizedDate,
-    undefined,
+    condition,
     voucher.committedDate,
     voucher.redeemedDate,
     voucher.expired,
@@ -249,15 +251,25 @@ async function mockReceipt() {
   );
 }
 
-function mockCondition({ method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length } = {}) {
+function mockCondition({
+  method,
+  tokenType,
+  tokenAddress,
+  gating,
+  minTokenId,
+  threshold,
+  maxCommits,
+  maxTokenId,
+} = {}) {
   return new Condition(
     method ?? EvaluationMethod.Threshold,
     tokenType ?? TokenType.FungibleToken,
     tokenAddress ?? ZeroAddress,
-    tokenId ?? "0",
+    gating ?? GatingType.PerAddress,
+    minTokenId ?? "0",
     threshold ?? "1",
     maxCommits ?? "1",
-    length ?? "0"
+    maxTokenId ?? "0"
   );
 }
 
