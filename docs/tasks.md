@@ -48,6 +48,8 @@ Deploy suite deploys protocol diamond, all facets, client and beacon, and initia
 - **Ethereum Mainnet**. This deploys the built contracts to Ethereum Mainnet.  
   `npm run deploy-suite:ethereum:mainnet`
 
+To simulate the deployment on any of public networks, add `-- --dry-run` at the end of the command (for example `npm run deploy-suite:ethereum:mainnet -- --dry-run`). This forks the network and simulates the deployment locally and gives the current cost estimate. It is suggested to run before an actual deployment to detect any possible issues.
+
 ### Verify suite
 
 After the protocol contracts are deployed, they should be verified on a block explorer. Verification provides a checkmark in the block explorer and makes the contract source code viewable in the block explorer. We have provided different npm scripts to verify the deployed protocol contracts on different environments. The scripts read a .json file containing contract addresses, which is produced by the deployment scripts. The default mode is to verify all contracts from that file, however if only a subset of contracts needs to be verified (e.g. after the upgrade), list them in `scripts/config/contract-verification.js`.
@@ -100,7 +102,7 @@ npx hardhat migrate <version> --network <network> --env <environment> [--dry-run
 - **version**: tag to which you want to migrate (e.g. v2.3.0). If the remote tag exists, it will overwrite the local one.
 - **network**: network where migration takes place. Must be defined in hardhat config. Current options are `localhost`, `test`, `mumbai`, `polygon`, `mainnet`.
 - **environment**: custom name for environment, used to distinguish if multiple instances are deployed on the same network. Typically one of `test`, `staging` and `prod`.
-- `--dry-run` is an optional flag. If added, the script locally simulates the migration process as it would happen on the actual network and environment, but none of contracts is really deployed and upgraded. It's recommended to run it before the upgrade. This script forks the latest possible block, which can result in performance issues. If you experience them, modify `scripts/migrations/dry-run.js` to use hardhat's default value (~30 less than actual block).
+- `--dry-run` is an optional flag. If added, the script locally simulates the migration process as it would happen on the actual network and environment, but none of contracts is really deployed and upgraded. It's recommended to run it before the upgrade. This script forks the latest possible block, which can result in performance issues. If you experience them, modify `scripts/util/dry-run.js` to use hardhat's default value (~30 less than actual block).
 
 ### Upgrade clients
 
