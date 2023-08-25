@@ -44,7 +44,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         // Get the next group and increment the counter
         uint256 groupId = protocolCounters().nextGroupId++;
 
-        for (uint256 i = 0; i < _group.offerIds.length; i++) {
+        for (uint256 i = 0; i < _group.offerIds.length; ) {
             // make sure offer exists and belongs to the seller
             getValidOfferWithSellerCheck(_group.offerIds[i]);
 
@@ -57,6 +57,10 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
             // Set index mapping. Should be index in offerIds + 1
             lookups.offerIdIndexByGroup[groupId][_group.offerIds[i]] = i + 1;
+
+            unchecked {
+                i++;
+            }
         }
 
         // Get storage location for group
@@ -177,7 +181,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         // check if group can be updated
         (uint256 sellerId, Group storage group) = preUpdateChecks(_groupId, _offerIds);
 
-        for (uint256 i = 0; i < _offerIds.length; i++) {
+        for (uint256 i = 0; i < _offerIds.length; ) {
             uint256 offerId = _offerIds[i];
 
             getValidOfferWithSellerCheck(offerId);
@@ -194,6 +198,10 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
             // Set index mapping. Should be index in offerIds + 1
             lookups.offerIdIndexByGroup[_groupId][offerId] = group.offerIds.length;
+
+            unchecked {
+                i++;
+            }
         }
 
         // Get the condition

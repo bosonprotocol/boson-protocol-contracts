@@ -228,7 +228,7 @@ contract SellerHandlerFacet is SellerBase {
 
         address sender = msgSender();
 
-        for (uint256 i = 0; i < _fieldsToUpdate.length; i++) {
+        for (uint256 i = 0; i < _fieldsToUpdate.length; ) {
             SellerUpdateFields role = _fieldsToUpdate[i];
 
             // Approve admin update
@@ -272,9 +272,13 @@ contract SellerHandlerFacet is SellerBase {
                 IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender); // default voucher contract
                 Collection[] storage sellersAdditionalCollections = lookups.additionalCollections[_sellerId];
                 uint256 collectionCount = sellersAdditionalCollections.length;
-                for (uint256 j = 0; j < collectionCount; j++) {
+                for (uint256 j = 0; j < collectionCount; ) {
                     // Additional collections (if they exist)
                     IBosonVoucher(sellersAdditionalCollections[j].collectionAddress).transferOwnership(sender);
+
+                    unchecked {
+                        j++;
+                    }
                 }
 
                 // Store new seller id by assistant mapping
@@ -319,6 +323,10 @@ contract SellerHandlerFacet is SellerBase {
                 updateApplied = true;
             } else if (role == SellerUpdateFields.Clerk) {
                 revert(CLERK_DEPRECATED);
+            }
+
+            unchecked {
+                i++;
             }
         }
 
