@@ -350,9 +350,9 @@ describe("SnapshotGate", function () {
           threshold: "0",
           maxCommits: tokenSupply,
           tokenType: TokenType.NonFungibleToken,
-          tokenId: tokenId,
+          minTokenId: tokenId,
           method: EvaluationMethod.SpecificToken,
-          length: "3",
+          maxTokenId: tokenId,
         });
 
         expect(condition.isValid()).to.be.true;
