@@ -11,10 +11,10 @@ import { DisputeBase } from "../bases/DisputeBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
-import { IERC1155 } from "../../interfaces/IERC1155.sol";
-import { IERC721 } from "../../interfaces/IERC721.sol";
-import { IERC20 } from "../../interfaces/IERC20.sol";
-import { Address } from "../../ext_libs/Address.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title ExchangeHandlerFacet
@@ -142,26 +142,30 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         // Get the condition
         Condition storage condition = fetchCondition(groupId);
+        EvaluationMethod method = condition.method;
+        bool isMultitoken = condition.tokenType == TokenType.MultiToken;
 
-        require(condition.method != EvaluationMethod.None, GROUP_HAS_NO_CONDITION);
+        require(method != EvaluationMethod.None, GROUP_HAS_NO_CONDITION);
 
-        if (condition.length >= 1) {
-            // If condition has length >= 1, check that the token id is in range
-            require(
-                _tokenId >= condition.tokenId && _tokenId < condition.tokenId + condition.length,
-                TOKEN_ID_NOT_IN_CONDITION_RANGE
-            );
+        if (method == EvaluationMethod.SpecificToken || isMultitoken) {
+            // In this cases, the token id is specified by the caller must be within the range of the condition
+            uint256 minTokenId = condition.minTokenId;
+            uint256 maxTokenId = condition.maxTokenId;
+            if (maxTokenId == 0) maxTokenId = minTokenId; // legacy conditions have maxTokenId == 0
+
+            require(_tokenId >= minTokenId && _tokenId <= maxTokenId, TOKEN_ID_NOT_IN_CONDITION_RANGE);
         }
 
-        if (condition.method == EvaluationMethod.Threshold && condition.tokenType != TokenType.MultiToken) {
+        // ERC20 and ERC721 threshold does not require a token id
+        if (method == EvaluationMethod.Threshold && !isMultitoken) {
             require(_tokenId == 0, INVALID_TOKEN_ID);
         }
 
-        bool allow = authorizeCommit(_buyer, condition, groupId, _tokenId);
-        require(allow, CANNOT_COMMIT);
+        authorizeCommit(_buyer, condition, groupId, _tokenId);
 
         uint256 exchangeId = commitToOfferInternal(_buyer, offer, 0, false);
 
+        // Store the condition to be returned afterward on getReceipt function
         protocolLookups().exchangeCondition[exchangeId] = condition;
     }
 
@@ -193,9 +197,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 _exchangeId
     ) external exchangesNotPaused buyersNotPaused nonReentrant {
         Offer storage offer = getValidOffer(_offerId);
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Make sure that the voucher was issued on the clone that is making a call
-        require(msg.sender == getCloneAddress(protocolLookups(), offer.sellerId, offer.collectionIndex), ACCESS_DENIED);
+        require(msg.sender == getCloneAddress(lookups, offer.sellerId, offer.collectionIndex), ACCESS_DENIED);
 
         // Exchange must not exist already
         (bool exists, ) = fetchExchange(_exchangeId);
@@ -207,22 +212,27 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         if (exists) {
             // Get the condition
             Condition storage condition = fetchCondition(groupId);
+            EvaluationMethod method = condition.method;
 
-            uint256 tokenId = 0;
+            if (method != EvaluationMethod.None) {
+                uint256 tokenId = 0;
 
-            // If is a per-token condition or a per-address condition gated with a 1155 token, make sure the condition is not a range since caller (Boson Voucher) cannot specify the token id
-            if (
-                condition.method == EvaluationMethod.SpecificToken ||
-                (condition.method == EvaluationMethod.Threshold && condition.tokenType == TokenType.MultiToken)
-            ) {
-                require(condition.length == 1, CANNOT_COMMIT);
+                // Allow commiting only to unambigous conditions, i.e. conditions with a single token id
+                if (condition.method == EvaluationMethod.SpecificToken || condition.tokenType == TokenType.MultiToken) {
+                    uint256 minTokenId = condition.minTokenId;
+                    uint256 maxTokenId = condition.maxTokenId;
 
-                // Uses token id from the condition
-                tokenId = condition.tokenId;
+                    require(minTokenId == maxTokenId || maxTokenId == 0, CANNOT_COMMIT); // legacy conditions have maxTokenId == 0
+
+                    // Uses token id from the condition
+                    tokenId = minTokenId;
+                }
+
+                authorizeCommit(_buyer, condition, groupId, tokenId);
+
+                // Store the condition to be returned afterward on getReceipt function
+                lookups.exchangeCondition[_exchangeId] = condition;
             }
-
-            bool allow = authorizeCommit(_buyer, condition, groupId, tokenId);
-            require(allow, CANNOT_COMMIT);
         }
 
         commitToOfferInternal(_buyer, offer, _exchangeId, true);
@@ -972,49 +982,42 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * The buyer is allowed to commit if no group or condition is set for this offer.
      *
+     * Reverts if:
+     * - Allowable commits to the group are exhausted
+     * - Buyer does not meet the condition
+     *
      * @param _buyer buyer address
      * @param _condition - the condition to check
      * @param _groupId - the group id
      * @param _tokenId - the token id
      *
-     * @return allow - true if buyer is authorized to commit
      */
     function authorizeCommit(
         address _buyer,
         Condition storage _condition,
         uint256 _groupId,
         uint256 _tokenId
-    ) internal returns (bool allow) {
+    ) internal {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        if (_condition.method == EvaluationMethod.SpecificToken) {
-            // How many times has this token id been used to commit to offers in the group?
-            uint256 commitCount = lookups.conditionalCommitsByTokenId[_tokenId][_groupId];
+        mapping(uint256 => uint256) storage conditionalCommits = _condition.gating == GatingType.PerTokenId
+            ? lookups.conditionalCommitsByTokenId[_tokenId]
+            : lookups.conditionalCommitsByAddress[_buyer];
 
-            require(commitCount < _condition.maxCommits, MAX_COMMITS_TOKEN_REACHED);
+        // How many times has been committed to offers in the group?
+        uint256 commitCount = conditionalCommits[_groupId];
 
-            allow = holdsSpecificToken(_buyer, _condition, _tokenId);
+        require(commitCount < _condition.maxCommits, MAX_COMMITS_REACHED);
 
-            if (allow) {
-                // Increment number of commits to the group for this token id if they are allowed to commit
-                lookups.conditionalCommitsByTokenId[_tokenId][_groupId] = ++commitCount;
-            }
-        } else if (_condition.method == EvaluationMethod.Threshold) {
-            // How many times has this address committed to offers in the group?
-            uint256 commitCount = lookups.conditionalCommitsByAddress[_buyer][_groupId];
+        bool allow = _condition.method == EvaluationMethod.Threshold
+            ? holdsThreshold(_buyer, _condition, _tokenId)
+            : holdsSpecificToken(_buyer, _condition, _tokenId);
 
-            require(commitCount < _condition.maxCommits, MAX_COMMITS_ADDRESS_REACHED);
+        require(allow, CANNOT_COMMIT);
 
-            allow = holdsThreshold(_buyer, _condition, _tokenId);
-
-            if (allow) {
-                // Increment number of commits to the group for this address if they are allowed to commit
-                lookups.conditionalCommitsByAddress[_buyer][_groupId] = ++commitCount;
-            }
-        } else {
-            allow = true;
-        }
+        // Increment number of commits to the group
+        conditionalCommits[_groupId] = ++commitCount;
     }
 
     /**
@@ -1058,12 +1061,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         Condition storage _condition,
         uint256 _tokenId
     ) internal view returns (bool) {
-        if (_condition.tokenType == TokenType.MultiToken) {
-            return IERC1155(_condition.tokenAddress).balanceOf(_buyer, _tokenId) >= _condition.threshold;
-        } else {
-            // no need to check if is NonFungible token there is no way to create a SpecifiedToken condition with a Fungible token
-            return (IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer);
-        }
+        return (IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer);
     }
 
     /**

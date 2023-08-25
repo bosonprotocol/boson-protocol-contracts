@@ -18,7 +18,7 @@ const { mockTwin, mockSeller, mockAuthToken, mockVoucherInitValues } = require("
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployAndCutFacets, deployProtocolFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const { getInterfaceIds, interfaceImplementers } = require("../../scripts/config/supported-interfaces");
-const { maxPriorityFeePerGas, oneWeek } = require("../util/constants");
+const { maxPriorityFeePerGas, oneWeek, oneMonth } = require("../util/constants");
 
 const { getFees } = require("../../scripts/util/utils");
 const { getFacetAddCut, getFacetReplaceCut } = require("../../scripts/util/diamond-utils");
@@ -745,12 +745,7 @@ describe("ProtocolInitializationHandler", async function () {
 
       // initialization data for v2.3.0
       minResolutionPeriod = oneWeek;
-      const sellerIds = [1];
-      const sellerCreators = [await rando.getAddress()];
-      initializationData = abiCoder.encode(
-        ["uint256", "uint256[]", "address[]"],
-        [minResolutionPeriod, sellerIds, sellerCreators]
-      );
+      initializationData = abiCoder.encode(["uint256"], [minResolutionPeriod]);
 
       // Prepare calldata
       version = "2.3.0";
@@ -831,65 +826,25 @@ describe("ProtocolInitializationHandler", async function () {
         ).to.be.revertedWith(RevertReasons.VALUE_ZERO_NOT_ALLOWED);
       });
 
-      it("sellerIds and sellerCreators length mismatch", async function () {
+      it("Min resolution period is greater than max resolution period", async function () {
         version = "2.3.0";
-        initializationData = abiCoder.encode(["uint256", "uint256[]", "address[]"], [minResolutionPeriod, [1], []]);
-
+        console.log("oneMonth", oneMonth);
+        await configHandler.connect(deployer).setMaxResolutionPeriod(oneMonth);
+        minResolutionPeriod = oneMonth + 1n;
+        console.log("minResolutionPeriod", minResolutionPeriod);
+        initializationData = abiCoder.encode(["uint256", "uint256[]", "address[]"], [minResolutionPeriod, [], []]);
         calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
           "initialize",
           [encodeBytes32String(version), [], [], true, initializationData, [], []]
         );
 
-        // make diamond cut, expect revert
         await expect(
           diamondCutFacet.diamondCut(
             [facetCut],
             deployedProtocolInitializationHandlerFacetAddress,
             calldataProtocolInitialization
           )
-        ).to.be.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
-      });
-
-      it("invalid seller id ", async function () {
-        initializationData = abiCoder.encode(
-          ["uint256", "uint256[]", "address[]"],
-          [minResolutionPeriod, [66], [rando.address]]
-        );
-
-        calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
-          "initialize",
-          [encodeBytes32String(version), [], [], true, initializationData, [], []]
-        );
-
-        // make diamond cut, expect revert
-        await expect(
-          diamondCutFacet.diamondCut(
-            [facetCut],
-            deployedProtocolInitializationHandlerFacetAddress,
-            calldataProtocolInitialization
-          )
-        ).to.be.revertedWith(RevertReasons.NO_SUCH_SELLER);
-      });
-
-      it("invalid seller creator address ", async function () {
-        initializationData = abiCoder.encode(
-          ["uint256", "uint256[]", "address[]"],
-          [minResolutionPeriod, [1], [ZeroAddress]]
-        );
-
-        calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
-          "initialize",
-          [encodeBytes32String(version), [], [], true, initializationData, [], []]
-        );
-
-        // make diamond cut, expect revert
-        await expect(
-          diamondCutFacet.diamondCut(
-            [facetCut],
-            deployedProtocolInitializationHandlerFacetAddress,
-            calldataProtocolInitialization
-          )
-        ).to.be.revertedWith(RevertReasons.INVALID_ADDRESS);
+        ).to.be.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
       });
 
       it("Current version is not 2.2.1", async () => {

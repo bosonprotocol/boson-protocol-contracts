@@ -30,7 +30,6 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      *
      * Reverts if:
      * - Caller does not have PAUSER role
-     * - A region is specified more than once
      *
      * @param _regions - an array of regions to pause. See: {BosonTypes.PausableRegion}
      */
@@ -49,7 +48,6 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      * Reverts if:
      * - Caller does not have PAUSER role
      * - Protocol is not currently paused
-     * - A region is specified more than once
      */
     function unpause(BosonTypes.PausableRegion[] calldata _regions) external onlyRole(PAUSER) nonReentrant {
         // Cache protocol status for reference
@@ -86,7 +84,7 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
 
             for (uint256 i = 0; i < totalRegions; i++) {
                 // Check if the region is paused by bitwise AND operation with shifted 1
-                if ((status.pauseScenario & (1 << i)) != 0) {
+                if (status.pauseScenario & (1 << i) != 0) {
                     regions[count] = BosonTypes.PausableRegion(i);
 
                     count++;
@@ -104,9 +102,6 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      * @notice Toggles pause/unpause for some or all of the protocol.
      *
      * Toggle all regions if none are specified.
-     *
-     * Reverts if:
-     * - A region is specified more than once
      *
      * @param _regions - an array of regions to pause/unpause. See: {BosonTypes.PausableRegion}
      * @param _pause - a boolean indicating whether to pause (true) or unpause (false)
