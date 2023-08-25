@@ -502,3 +502,4 @@ exports.setupTestEnvironment = setupTestEnvironment;
 exports.getSnapshot = getSnapshot;
 exports.revertToSnapshot = revertToSnapshot;
 exports.deriveTokenId = deriveTokenId;
+exports.getSellerSalt = getSellerSalt;
