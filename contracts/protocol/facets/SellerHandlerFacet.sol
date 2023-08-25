@@ -510,7 +510,7 @@ contract SellerHandlerFacet is SellerBase {
      * @notice Returns the availability of salt for a seller.
      *
      * @param _adminAddres - the admin address to check
-     * @param _salt - the salt to check (corresponds to `collectionSalt` when `createSeler` or `createNewCollection` is called or `newSalt` when `updateSellerSalt` is called)
+     * @param _salt - the salt to check (corresponds to `collectionSalt` when `createSeller` or `createNewCollection` is called or `newSalt` when `updateSellerSalt` is called)
      * @return isAvailable - salt can be used
      */
     function isSellerSaltAvailable(address _adminAddres, bytes32 _salt) external view returns (bool isAvailable) {
@@ -519,7 +519,7 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
-     * @notice Calculates the expected collection address and tells if it's still avaialble.
+     * @notice Calculates the expected collection address and tells if it's still available.
      *
      * @param _sellerId - the seller id
      * @param _collectionSalt - the collection specific salt
@@ -607,7 +607,7 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
-     * @notice Performs a validation that the message sender is the either the admin address or owner of auth token
+     * @notice Performs a validation that the message sender is either the admin address or the owner of auth token
      */
     function authorizeAdmin(
         ProtocolLib.ProtocolLookups storage _lookups,
