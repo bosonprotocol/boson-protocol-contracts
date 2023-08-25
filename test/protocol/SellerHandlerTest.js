@@ -3071,10 +3071,10 @@ describe("SellerHandler", function () {
           await setStorageAt(protocolAddress, sellerSaltSlot, ZeroHash);
 
           const expectedSellerSalt = getSellerSalt(seller.admin, ZeroHash);
-          const isUSedSaltSlot = BigInt(
+          const isUsedSaltSlot = BigInt(
             getMappingStoragePosition(protocolLookupsSlotNumber + 36n, expectedSellerSalt, paddingType.END)
           );
-          await setStorageAt(protocolAddress, isUSedSaltSlot, ZeroHash);
+          await setStorageAt(protocolAddress, isUsedSaltSlot, ZeroHash);
 
           // New collection
           voucherInitValues.collectionSalt = encodeBytes32String("newCollection");
@@ -3145,10 +3145,10 @@ describe("SellerHandler", function () {
           await setStorageAt(protocolAddress, sellerSaltSlot, ZeroHash);
 
           const expectedSellerSalt = getSellerSalt(seller.admin, ZeroHash);
-          const isUSedSaltSlot = BigInt(
+          const isUsedSaltSlot = BigInt(
             getMappingStoragePosition(protocolLookupsSlotNumber + 36n, expectedSellerSalt, paddingType.END)
           );
-          await setStorageAt(protocolAddress, isUSedSaltSlot, ZeroHash);
+          await setStorageAt(protocolAddress, isUsedSaltSlot, ZeroHash);
 
           // Update seller fields to release unique address constraint
           const newSeller = mockSeller(other1.address, other1.address, ZeroAddress, other1.address);
@@ -3378,6 +3378,222 @@ describe("SellerHandler", function () {
             RevertReasons.SELLER_SALT_NOT_UNIQUE
           );
         });
+      });
+    });
+
+    context("👉 isSellerSaltAvailable()", async function () {
+      beforeEach(async function () {
+        // Create a seller
+        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+      });
+
+      it("salt is available", async function () {
+        const newSellerSalt = encodeBytes32String("newSellerSalt");
+        const isAvailable = await accountHandler.isSellerSaltAvailable(admin.address, newSellerSalt);
+
+        expect(isAvailable).to.be.true;
+      });
+
+      it("salt is not available", async function () {
+        const newSellerSalt = voucherInitValues.collectionSalt;
+        const isAvailable = await accountHandler.isSellerSaltAvailable(admin.address, newSellerSalt);
+
+        expect(isAvailable).to.be.false;
+      });
+
+      it("different addresses can use the same salt", async function () {
+        const newSellerSalt = voucherInitValues.collectionSalt;
+        const isAvailable = await accountHandler.isSellerSaltAvailable(rando.address, newSellerSalt);
+
+        expect(isAvailable).to.be.true;
+      });
+    });
+
+    context("👉 calculateCollectionAddress()", async function () {
+      let externalId, expectedDefaultAddress, expectedCollectionAddress;
+      let initialSalt = encodeBytes32String("sellerSalt");
+
+      beforeEach(async function () {
+        // Create a seller
+        voucherInitValues.collectionSalt = initialSalt;
+        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+      });
+
+      context("seller salt exists", async function () {
+        it("returns correct default collection address, collection is not available", async function () {
+          expectedDefaultAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            admin.address,
+            voucherInitValues.collectionSalt,
+            initialSalt
+          );
+
+          const [collectionAddress, isAvailable] = await accountHandler.calculateCollectionAddress(
+            seller.id,
+            voucherInitValues.collectionSalt
+          );
+
+          expect(collectionAddress).to.equal(expectedDefaultAddress, "Wrong collection address");
+          expect(isAvailable).to.be.false;
+        });
+
+        it("returns correct additional collection address, collection is not available", async function () {
+          // Create a new collection
+          externalId = "Brand1";
+          voucherInitValues.collectionSalt = encodeBytes32String(externalId);
+          await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+          expectedCollectionAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            admin.address,
+            voucherInitValues.collectionSalt,
+            initialSalt
+          );
+
+          const [collectionAddress, isAvailable] = await accountHandler.calculateCollectionAddress(
+            seller.id,
+            voucherInitValues.collectionSalt
+          );
+
+          expect(collectionAddress).to.equal(expectedCollectionAddress, "Wrong collection address");
+          expect(isAvailable).to.be.false;
+        });
+
+        it("returns correct additional collection address, collection is available", async function () {
+          // Create a new collection
+          externalId = "Brand1";
+          voucherInitValues.collectionSalt = encodeBytes32String(externalId);
+          await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+          // Check different salt
+          const collectionSalt = encodeBytes32String("Brand2");
+          expectedCollectionAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            admin.address,
+            collectionSalt,
+            initialSalt
+          );
+
+          const [collectionAddress, isAvailable] = await accountHandler.calculateCollectionAddress(
+            seller.id,
+            collectionSalt
+          );
+
+          expect(collectionAddress).to.equal(expectedCollectionAddress, "Wrong collection address");
+          expect(isAvailable).to.be.true;
+        });
+      });
+
+      context("seller salt does not exists", async function () {
+        beforeEach(async function () {
+          // Clean contract storage to simulate existing sellers without existing salts
+          const protocolAddress = await accountHandler.getAddress();
+          const protocolLookupsSlot = id("boson.protocol.lookups");
+          const protocolLookupsSlotNumber = BigInt(protocolLookupsSlot);
+          const sellerSaltSlot = BigInt(
+            getMappingStoragePosition(protocolLookupsSlotNumber + 35n, Number(seller.id), paddingType.START)
+          );
+          await setStorageAt(protocolAddress, sellerSaltSlot, ZeroHash);
+
+          const expectedSellerSalt = getSellerSalt(seller.admin, initialSalt);
+          const isUsedSaltSlot = BigInt(
+            getMappingStoragePosition(protocolLookupsSlotNumber + 36n, expectedSellerSalt, paddingType.END)
+          );
+          await setStorageAt(protocolAddress, isUsedSaltSlot, ZeroHash);
+        });
+
+        const usesAuthToken = [true, false];
+
+        usesAuthToken.forEach((useAuthToken) => {
+          context(`useAuthToken: ${useAuthToken}`, async function () {
+            beforeEach(async function () {
+              if (useAuthToken) {
+                // update the seller to use the auth token
+                seller.admin = ZeroAddress;
+                await accountHandler.connect(admin).updateSeller(seller, authToken);
+                await accountHandler.connect(admin).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken]);
+              }
+            });
+
+            it("returns correct additional collection address, collection is available", async function () {
+              externalId = "Brand1";
+              voucherInitValues.collectionSalt = encodeBytes32String(externalId);
+
+              expectedCollectionAddress = calculateCloneAddress(
+                await accountHandler.getAddress(),
+                beaconProxyAddress,
+                admin.address,
+                voucherInitValues.collectionSalt,
+                voucherInitValues.collectionSalt // collection salt acts as seller salt
+              );
+
+              const [collectionAddress, isAvailable] = await accountHandler.calculateCollectionAddress(
+                seller.id,
+                voucherInitValues.collectionSalt
+              );
+
+              expect(collectionAddress).to.equal(expectedCollectionAddress, "Wrong collection address");
+              expect(isAvailable).to.be.true;
+            });
+
+            it("returns correct additional collection address, collection is not available", async function () {
+              // special setup that can lead to a collision between seller 0 (without seller salt) and seller 1 (with seller salt)
+              const initialSalt = encodeBytes32String("sellerSalt2");
+              voucherInitValues.collectionSalt = initialSalt;
+              const newSeller = mockSeller(other1.address, other1.address, ZeroAddress, other1.address);
+              const newSeller2 = mockSeller(other2.address, other2.address, ZeroAddress, other2.address);
+              newSeller2.id = newSeller.id;
+              newSeller.id = seller.id;
+              await accountHandler.connect(admin).updateSeller(newSeller, emptyAuthToken);
+              await accountHandler
+                .connect(other1)
+                .optInToSellerUpdate(newSeller.id, [SellerUpdateFields.Admin, SellerUpdateFields.Assistant]);
+              await accountHandler
+                .connect(admin)
+                .createSeller(seller, useAuthToken ? authToken : emptyAuthToken, voucherInitValues);
+              await accountHandler.connect(admin).updateSeller(newSeller2, emptyAuthToken);
+              await accountHandler
+                .connect(other2)
+                .optInToSellerUpdate(newSeller2.id, [SellerUpdateFields.Admin, SellerUpdateFields.Assistant]);
+              await accountHandler.connect(other1).updateSeller(seller, useAuthToken ? authToken : emptyAuthToken);
+              await accountHandler
+                .connect(admin)
+                .optInToSellerUpdate(seller.id, [
+                  useAuthToken ? SellerUpdateFields.AuthToken : SellerUpdateFields.Admin,
+                  SellerUpdateFields.Assistant,
+                ]);
+
+              // Create a new collection
+              voucherInitValues.collectionSalt = initialSalt;
+              expectedCollectionAddress = calculateCloneAddress(
+                await accountHandler.getAddress(),
+                beaconProxyAddress,
+                admin.address,
+                initialSalt,
+                initialSalt
+              );
+
+              const [collectionAddress, isAvailable] = await accountHandler.calculateCollectionAddress(
+                seller.id,
+                voucherInitValues.collectionSalt
+              );
+
+              expect(collectionAddress).to.equal(expectedCollectionAddress, "Wrong collection address");
+              expect(isAvailable).to.be.false;
+            });
+          });
+        });
+      });
+
+      it("should return zero values if seller does not exist ", async function () {
+        const sellerId = 777;
+
+        const [collectionAddress, isAvailable] = await accountHandler.calculateCollectionAddress(sellerId, initialSalt);
+
+        expect(collectionAddress).to.equal(ZeroAddress, "Wrong collection address");
+        expect(isAvailable).to.be.false;
       });
     });
   });

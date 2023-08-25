@@ -507,6 +507,64 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
+     * @notice Returns the availability of salt for a seller.
+     *
+     * @param _adminAddres - the admin address to check
+     * @param _salt - the salt to check (corresponds to `collectionSalt` when `createSeler` or `createNewCollection` is called or `newSalt` when `updateSellerSalt` is called)
+     * @return isAvailable - salt can be used
+     */
+    function isSellerSaltAvailable(address _adminAddres, bytes32 _salt) external view returns (bool isAvailable) {
+        bytes32 sellerSalt = keccak256(abi.encodePacked(_adminAddres, _salt));
+        return !protocolLookups().isUsedSellerSalt[sellerSalt];
+    }
+
+    /**
+     * @notice Calculates the expected collection address and tells if it's still avaialble.
+     *
+     * @param _sellerId - the seller id
+     * @param _collectionSalt - the collection specific salt
+     * @return collectionAddress - the collection address
+     * @return isAvailable - whether the collection address is available
+     */
+    function calculateCollectionAddress(
+        uint256 _sellerId,
+        bytes32 _collectionSalt
+    ) external view returns (address collectionAddress, bool isAvailable) {
+        (bool exist, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
+        if (!exist) {
+            return (address(0), false);
+        }
+
+        // get seller salt
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        bytes32 sellerSalt = lookups.sellerSalt[_sellerId];
+
+        // If seller salt is not set, calculate it
+        if (sellerSalt == 0) {
+            address admin = seller.admin;
+            if (admin == address(0)) {
+                admin = IERC721(lookups.authTokenContracts[authToken.tokenType]).ownerOf(authToken.tokenId);
+            }
+            sellerSalt = keccak256(abi.encodePacked(admin, _collectionSalt));
+        }
+
+        // Calculate collection address
+        bytes32 collectionSalt = keccak256(abi.encodePacked(sellerSalt, _collectionSalt));
+        bytes32 bytecodeHash = keccak256(
+            abi.encodePacked(
+                bytes20(hex"3d602d80600a3d3981f3363d3d373d3d3d363d73"),
+                protocolAddresses().beaconProxy,
+                bytes15(0x5af43d82803e903d91602b57fd5bf3)
+            )
+        );
+
+        collectionAddress = Create2.computeAddress(collectionSalt, bytecodeHash, address(this));
+
+        // Check if collection address is available
+        isAvailable = !Address.isContract(collectionAddress);
+    }
+
+    /**
      * @notice Pre update Seller checks
      *
      * Reverts if:
