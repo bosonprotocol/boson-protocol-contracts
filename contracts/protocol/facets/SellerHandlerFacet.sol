@@ -108,13 +108,7 @@ contract SellerHandlerFacet is SellerBase {
         address sender = msgSender();
 
         // Check that caller is authorized to call this function
-        if (authToken.tokenType != AuthTokenType.None) {
-            address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
-            address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
-            require(tokenIdOwner == sender, NOT_ADMIN);
-        } else {
-            require(seller.admin == sender, NOT_ADMIN);
-        }
+        authorizeAdmin(lookups, authToken, seller.admin, sender);
 
         // Clean old seller pending update data if exists
         delete lookups.pendingAddressUpdatesBySeller[_seller.id];
@@ -366,11 +360,26 @@ contract SellerHandlerFacet is SellerBase {
         Collection[] storage sellersAdditionalCollections = lookups.additionalCollections[sellerId];
         uint256 collectionIndex = sellersAdditionalCollections.length + 1; // 0 is reserved for the original collection
 
+        bytes32 sellerSalt = lookups.sellerSalt[sellerId];
+
+        // Accounts created before v2.3.0 can be missing sellerSalt, so it's created here
+        if (sellerSalt == 0) {
+            (, Seller storage seller, AuthToken storage authToken) = fetchSeller(sellerId);
+            address admin = seller.admin;
+            if (admin == address(0)) {
+                admin = IERC721(lookups.authTokenContracts[authToken.tokenType]).ownerOf(authToken.tokenId);
+            }
+            sellerSalt = keccak256(abi.encodePacked(admin, _voucherInitValues.collectionSalt));
+            require(!lookups.isUsedSellerSalt[sellerSalt], SELLER_SALT_NOT_UNIQUE);
+            lookups.sellerSalt[sellerId] = sellerSalt;
+            lookups.isUsedSellerSalt[sellerSalt] = true;
+        }
+
         // Create clone and store its address to additionalCollections
         address voucherCloneAddress = cloneBosonVoucher(
             sellerId,
             collectionIndex,
-            lookups.sellerSalt[sellerId],
+            sellerSalt,
             assistant,
             _voucherInitValues
         );
@@ -385,7 +394,7 @@ contract SellerHandlerFacet is SellerBase {
 
     /**
      * @notice Updates a salt.
-     * Use this if the admin address is updated and there exists a possibility that old admin will try to create the vouchers
+     * Use this if the admin address is updated and there exists a possibility that the old admin will try to create the vouchers
      * with matching addresses on other chains.
      *
      * Reverts if:
@@ -393,22 +402,28 @@ contract SellerHandlerFacet is SellerBase {
      * - Caller is not the admin of any seller
      * - Seller salt is not unique
      *
+     * @param _sellerId - the id of the seller
      * @param _newSalt - new salt
      */
-    function updateSellerSalt(bytes32 _newSalt) external sellersNotPaused nonReentrant {
+    function updateSellerSalt(uint256 _sellerId, bytes32 _newSalt) external sellersNotPaused nonReentrant {
         address admin = msgSender();
-
-        (bool exists, uint256 sellerId) = getSellerIdByAdmin(admin);
-        require(exists, NO_SUCH_SELLER);
 
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
+        (bool exists, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
+
+        // Seller must already exist
+        require(exists, NO_SUCH_SELLER);
+
+        // Check that caller is authorized to call this function
+        authorizeAdmin(lookups, authToken, seller.admin, admin);
+
         bytes32 sellerSalt = keccak256(abi.encodePacked(admin, _newSalt));
 
         require(!lookups.isUsedSellerSalt[sellerSalt], SELLER_SALT_NOT_UNIQUE);
-        lookups.isUsedSellerSalt[lookups.sellerSalt[sellerId]] = false;
-        lookups.sellerSalt[sellerId] = sellerSalt;
+        lookups.isUsedSellerSalt[lookups.sellerSalt[_sellerId]] = false;
+        lookups.sellerSalt[_sellerId] = sellerSalt;
         lookups.isUsedSellerSalt[sellerSalt] = true;
     }
 
@@ -492,6 +507,64 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
+     * @notice Returns the availability of salt for a seller.
+     *
+     * @param _adminAddres - the admin address to check
+     * @param _salt - the salt to check (corresponds to `collectionSalt` when `createSeller` or `createNewCollection` is called or `newSalt` when `updateSellerSalt` is called)
+     * @return isAvailable - salt can be used
+     */
+    function isSellerSaltAvailable(address _adminAddres, bytes32 _salt) external view returns (bool isAvailable) {
+        bytes32 sellerSalt = keccak256(abi.encodePacked(_adminAddres, _salt));
+        return !protocolLookups().isUsedSellerSalt[sellerSalt];
+    }
+
+    /**
+     * @notice Calculates the expected collection address and tells if it's still available.
+     *
+     * @param _sellerId - the seller id
+     * @param _collectionSalt - the collection specific salt
+     * @return collectionAddress - the collection address
+     * @return isAvailable - whether the collection address is available
+     */
+    function calculateCollectionAddress(
+        uint256 _sellerId,
+        bytes32 _collectionSalt
+    ) external view returns (address collectionAddress, bool isAvailable) {
+        (bool exist, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
+        if (!exist) {
+            return (address(0), false);
+        }
+
+        // get seller salt
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        bytes32 sellerSalt = lookups.sellerSalt[_sellerId];
+
+        // If seller salt is not set, calculate it
+        if (sellerSalt == 0) {
+            address admin = seller.admin;
+            if (admin == address(0)) {
+                admin = IERC721(lookups.authTokenContracts[authToken.tokenType]).ownerOf(authToken.tokenId);
+            }
+            sellerSalt = keccak256(abi.encodePacked(admin, _collectionSalt));
+        }
+
+        // Calculate collection address
+        bytes32 collectionSalt = keccak256(abi.encodePacked(sellerSalt, _collectionSalt));
+        bytes32 bytecodeHash = keccak256(
+            abi.encodePacked(
+                bytes20(hex"3d602d80600a3d3981f3363d3d373d3d3d363d73"),
+                protocolAddresses().beaconProxy,
+                bytes15(0x5af43d82803e903d91602b57fd5bf3)
+            )
+        );
+
+        collectionAddress = Create2.computeAddress(collectionSalt, bytecodeHash, address(this));
+
+        // Check if collection address is available
+        isAvailable = !Address.isContract(collectionAddress);
+    }
+
+    /**
      * @notice Pre update Seller checks
      *
      * Reverts if:
@@ -531,5 +604,23 @@ contract SellerHandlerFacet is SellerBase {
     ) internal view returns (bool exists, Seller memory seller, AuthToken memory authToken) {
         (exists, seller, authToken) = fetchSeller(_sellerId);
         seller.clerk = address(0);
+    }
+
+    /**
+     * @notice Performs a validation that the message sender is either the admin address or the owner of auth token
+     */
+    function authorizeAdmin(
+        ProtocolLib.ProtocolLookups storage _lookups,
+        AuthToken storage _authToken,
+        address _admin,
+        address _sender
+    ) internal view {
+        if (_admin != address(0)) {
+            require(_admin == _sender, NOT_ADMIN);
+        } else {
+            address authTokenContract = _lookups.authTokenContracts[_authToken.tokenType];
+            address tokenIdOwner = IERC721(authTokenContract).ownerOf(_authToken.tokenId);
+            require(tokenIdOwner == _sender, NOT_ADMIN);
+        }
     }
 }
