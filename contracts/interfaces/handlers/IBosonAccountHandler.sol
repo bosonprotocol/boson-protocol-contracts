@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x91f6281a
+ * The ERC-165 identifier for this interface is: 0xbc1d7461
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -325,7 +325,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
 
     /**
      * @notice Updates a salt.
-     * Use this if the admin address is updated and there exists a possibility that old admin will try to create the vouchers
+     * Use this if the admin address is updated and there exists a possibility that the old admin will try to create the vouchers
      * with matching addresses on other chains.
      *
      * Reverts if:
@@ -333,9 +333,10 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Caller is not the admin of any seller
      * - Seller salt is not unique
      *
+     * @param _sellerId - the id of the seller
      * @param _newSalt - new salt
      */
-    function updateSellerSalt(bytes32 _newSalt) external;
+    function updateSellerSalt(uint256 _sellerId, bytes32 _newSalt) external;
 
     /**
      * @notice Gets the details about a seller.
@@ -391,6 +392,28 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function getSellersCollections(
         uint256 _sellerId
     ) external view returns (address defaultVoucherAddress, BosonTypes.Collection[] memory additionalCollections);
+
+    /**
+     * @notice Returns the availability of salt for a seller.
+     *
+     * @param _adminAddres - the admin address to check
+     * @param _salt - the salt to check (corresponds to `collectionSalt` when `createSeler` or `createNewCollection` is called or `newSalt` when `updateSellerSalt` is called)
+     * @return isAvailable - salt can be used
+     */
+    function isSellerSaltAvailable(address _adminAddres, bytes32 _salt) external view returns (bool isAvailable);
+
+    /**
+     * @notice Calculates the expected collection address and tells if it's still avaialble.
+     *
+     * @param _sellerId - the seller id
+     * @param _collectionSalt - the collection specific salt
+     * @return collectionAddress - the collection address
+     * @return isAvailable - whether the collection address is available
+     */
+    function calculateCollectionAddress(
+        uint256 _sellerId,
+        bytes32 _collectionSalt
+    ) external view returns (address collectionAddress, bool isAvailable);
 
     /**
      * @notice Gets the details about a buyer.
