@@ -31,6 +31,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
      * - Offer exists in a different group
+     * - Condition fields are invalid
      *
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct
