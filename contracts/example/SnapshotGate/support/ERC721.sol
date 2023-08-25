@@ -4,10 +4,10 @@
 pragma solidity 0.8.21;
 
 import "../../../interfaces/IERC721.sol";
-import "../../../ext_libs/Address.sol";
-import "../../../ext_libs/Strings.sol";
 import "./IERC721Receiver.sol";
 import "./IERC721Metadata.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @dev Modified version of ERC721 useful only for this example.

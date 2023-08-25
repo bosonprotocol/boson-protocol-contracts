@@ -375,8 +375,12 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
 
         // set new values
-        for (uint256 i = 0; i < _functionNameHashes.length; i++) {
+        for (uint256 i = 0; i < _functionNameHashes.length; ) {
             pmti.isAllowlisted[_functionNameHashes[i]] = _isAllowlisted;
+
+            unchecked {
+                i++;
+            }
         }
 
         // Notify external observers

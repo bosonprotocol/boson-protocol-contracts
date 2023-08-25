@@ -64,12 +64,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     clerk = clerkDR = { address: ZeroAddress };
 
     const beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
-    expectedCloneAddress = calculateCloneAddress(
-      await accountHandler.getAddress(),
-      beaconProxyAddress,
-      admin.address,
-      ""
-    );
+    expectedCloneAddress = calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address);
     emptyAuthToken = mockAuthToken();
     expect(emptyAuthToken.isValid()).is.true;
     voucherInitValues = mockVoucherInitValues();

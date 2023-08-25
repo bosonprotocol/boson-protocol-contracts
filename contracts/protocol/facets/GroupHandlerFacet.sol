@@ -31,6 +31,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
      * - Offer exists in a different group
+     * - Condition fields are invalid
      *
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct
@@ -91,7 +92,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         // Check if group can be updated
         (uint256 sellerId, Group storage group) = preUpdateChecks(_groupId, _offerIds);
 
-        for (uint256 i = 0; i < _offerIds.length; i++) {
+        for (uint256 i = 0; i < _offerIds.length; ) {
             uint256 offerId = _offerIds[i];
 
             // Offer should belong to the group
@@ -119,6 +120,10 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
             group.offerIds.pop();
             // Delete from index mapping
             delete offerIdIndexes[offerId];
+
+            unchecked {
+                i++;
+            }
         }
 
         // Get the condition

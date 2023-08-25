@@ -55,7 +55,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         // Sum of offers quantity available
         uint256 offersTotalQuantityAvailable;
 
-        for (uint256 i = 0; i < _bundle.offerIds.length; i++) {
+        for (uint256 i = 0; i < _bundle.offerIds.length; ) {
             uint256 offerId = _bundle.offerIds[i];
 
             // Calculate bundle offers total quantity available.
@@ -70,9 +70,13 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
 
             // Add to bundleIdByOffer mapping
             lookups.bundleIdByOffer[offerId] = bundleId;
+
+            unchecked {
+                i++;
+            }
         }
 
-        for (uint256 i = 0; i < _bundle.twinIds.length; i++) {
+        for (uint256 i = 0; i < _bundle.twinIds.length; ) {
             uint256 twinId = _bundle.twinIds[i];
 
             // A twin can't belong to multiple bundles
@@ -83,6 +87,10 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
 
             // Push to bundleIdsByTwin mapping
             lookups.bundleIdByTwin[_bundle.twinIds[i]] = bundleId;
+
+            unchecked {
+                i++;
+            }
         }
 
         // Get storage location for bundle
