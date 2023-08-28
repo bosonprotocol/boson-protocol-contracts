@@ -831,7 +831,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             uint256 reservedGas = (twinCount - 1) * SINGLE_TWIN_RESERVED_GAS + MINIMAL_RESIDUAL_GAS;
 
             // Visit the twins
-            for (uint256 i = 0; i < twinCount;) {
+            for (uint256 i = 0; i < twinCount; ) {
                 // Get the twin
                 (, Twin storage twinS) = fetchTwin(twinIds[i]);
 
