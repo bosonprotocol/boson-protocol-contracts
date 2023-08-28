@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
@@ -894,13 +894,40 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     // Make call only if there is enough gas and code at address exists.
                     // If not, skip the call and mark the transfer as failed
                     twinM.tokenAddress = twinS.tokenAddress;
-
                     uint256 gasLeft = gasleft();
                     if (gasLeft > reservedGas && twinM.tokenAddress.isContract()) {
-                        bytes memory result;
-                        (success, result) = twinM.tokenAddress.call{ gas: gasLeft - reservedGas }(data);
+                        address to = twinM.tokenAddress;
 
-                        success = success && (result.length == 0 || abi.decode(result, (bool)));
+                        // Handle the return value with assembly to avoid return bomb attack
+                        bytes memory result;
+                        assembly {
+                            success := call(
+                                sub(gasLeft, reservedGas), // gasleft()-reservedGas
+                                to, // twin contract
+                                0, // ether value
+                                add(data, 0x20), // invocation calldata
+                                mload(data), // calldata length
+                                add(result, 0x20), // store return data at result
+                                0x20 // store at most 32 bytes
+                            )
+
+                            let returndataSize := returndatasize()
+
+                            switch gt(returndataSize, 0x20)
+                            case 0 {
+                                // Adjust result length in case it's shorter than 32 bytes
+                                mstore(result, returndataSize)
+                            }
+                            case 1 {
+                                // If return data is longer than 32 bytes, consider transfer unsuccesful
+                                success := false
+                            }
+                        }
+
+                        // Check if result is empty or if result is a boolean and is true
+                        success =
+                            success &&
+                            (result.length == 0 || (result.length == 32 && abi.decode(result, (uint256)) == 1));
                     }
                 }
 
