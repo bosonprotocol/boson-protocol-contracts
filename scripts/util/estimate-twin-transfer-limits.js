@@ -1,7 +1,7 @@
-var log = console.log;
+const log = console.log;
 
 // Modify the console.log to capture the contract output
-var contractLogs = [];
+let contractLogs = [];
 console.log = function () {
   contractLogs.push(arguments[0]);
 };
@@ -130,7 +130,6 @@ async function estimateTwinTransferLimits() {
     ...hre.config.mocha,
     testFiles: ["./test/protocol/ExchangeHandlerTest.js"],
     grep: "redeemVoucher\\(\\) with bundle",
-    // grep: "uld not decrease twin supplyAvailable if supply is unlimited",
     reporter: "min",
   };
   hre.config.gasReporter.enabled = false;
@@ -138,7 +137,6 @@ async function estimateTwinTransferLimits() {
   log("Running tests...");
   await hre.run("test");
 
-  // log(contractLogs);
   // 3. Analyze the output
   log("Tests complete. Analyzing logs...");
   const [SINGLE_TWIN_RESERVED_GAS, MINIMAL_RESIDUAL_GAS] = analyzeLogs(contractLogs);
