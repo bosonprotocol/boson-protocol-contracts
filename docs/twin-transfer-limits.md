@@ -87,9 +87,9 @@ node ./scripts/util/estimate-twin-transfer-limits.js
 
 ## Results
 
-Estimation at commit f2a7993
+Estimation at commit 73e00ca0
 
 | | Estimate | Used value |
 |-|-|-|
-| `SINGLE_TWIN_RESERVED_GAS` | `147,001` | `160,000` |
-| `MINIMAL_RESIDUAL_GAS` | `207,084` | `230,000` |
+| `SINGLE_TWIN_RESERVED_GAS` | `146,991` | `160,000` |
+| `MINIMAL_RESIDUAL_GAS` | `207,000` | `230,000` |
