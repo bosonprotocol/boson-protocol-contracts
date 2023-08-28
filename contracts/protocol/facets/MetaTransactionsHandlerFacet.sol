@@ -339,7 +339,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     function setAllowlistedFunctions(
         bytes32[] calldata _functionNameHashes,
         bool _isAllowlisted
-    ) public override onlyRole(ADMIN) {
+    ) public override onlyRole(ADMIN) nonReentrant {
         setAllowlistedFunctionsInternal(_functionNameHashes, _isAllowlisted);
     }
 

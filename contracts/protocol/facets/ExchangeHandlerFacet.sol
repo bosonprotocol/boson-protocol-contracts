@@ -794,24 +794,33 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchange - the exchange for which twins should be transferred
      */
     function transferTwins(Exchange storage _exchange, Voucher storage _voucher) internal {
-        // See if there is an associated bundle
-        (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
+        uint256[] storage twinIds;
+        address assistant;
+        uint256 sellerId;
 
-        // Transfer the twins
-        if (exists) {
+        // See if there is an associated bundle
+        {
+            (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
+            if (!exists) return;
+
             // Get storage location for bundle
             (, Bundle storage bundle) = fetchBundle(bundleId);
 
             // Get the twin Ids in the bundle
-            uint256[] storage twinIds = bundle.twinIds;
+            twinIds = bundle.twinIds;
 
             // Get seller account
             (, Seller storage seller, ) = fetchSeller(bundle.sellerId);
+            sellerId = seller.id;
+            assistant = seller.assistant;
+        }
 
-            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        bool transferFailed; // Flag to indicate if some twin transfer failed and a dispute should be raised
 
+        // Transfer the twins
+        {
+            // Cache values
             address sender = msgSender();
-
             uint256 twinCount = twinIds.length;
 
             // Fetch twin: up to 20,000 gas
@@ -824,121 +833,120 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // Visit the twins
             for (uint256 i = 0; i < twinCount; ) {
                 // Get the twin
-                (, Twin storage twin) = fetchTwin(twinIds[i]);
+                (, Twin storage twinS) = fetchTwin(twinIds[i]);
+
+                // Use twin struct instead of individual variables to avoid stack too deep error
+                // Don't copy the whole twin to memory immediately, only the fields that are needed
+                Twin memory twinM;
+                twinM.tokenId = twinS.tokenId;
+                twinM.amount = twinS.amount;
 
                 bool success;
-
-                uint256 tokenId = twin.tokenId;
-
                 {
-                    TokenType tokenType = twin.tokenType;
+                    twinM.tokenType = twinS.tokenType;
 
                     // Shouldn't decrement supply if twin supply is unlimited
-                    if (twin.supplyAvailable != type(uint256).max) {
+                    twinM.supplyAvailable = twinS.supplyAvailable;
+                    if (twinM.supplyAvailable != type(uint256).max) {
                         // Decrement by 1 if token type is NonFungible otherwise decrement amount (i.e, tokenType is MultiToken or FungibleToken)
-                        twin.supplyAvailable = tokenType == TokenType.NonFungibleToken
-                            ? twin.supplyAvailable - 1
-                            : twin.supplyAvailable - twin.amount;
+                        twinM.supplyAvailable = twinM.tokenType == TokenType.NonFungibleToken
+                            ? twinM.supplyAvailable - 1
+                            : twinM.supplyAvailable - twinM.amount;
+
+                        twinS.supplyAvailable = twinM.supplyAvailable;
                     }
 
                     // Transfer the token from the seller's assistant to the buyer
                     bytes memory data; // Calldata to transfer the twin
 
-                    if (tokenType == TokenType.FungibleToken) {
+                    if (twinM.tokenType == TokenType.FungibleToken) {
                         // ERC-20 style transfer
-                        data = abi.encodeCall(IERC20.transferFrom, (seller.assistant, sender, twin.amount));
-                    } else if (tokenType == TokenType.NonFungibleToken) {
+                        data = abi.encodeCall(IERC20.transferFrom, (assistant, sender, twinM.amount));
+                    } else if (twinM.tokenType == TokenType.NonFungibleToken) {
                         // Token transfer order is ascending to avoid overflow when twin supply is unlimited
-                        if (twin.supplyAvailable == type(uint256).max) {
-                            twin.tokenId++;
+                        if (twinM.supplyAvailable == type(uint256).max) {
+                            twinS.tokenId++;
                         } else {
                             // Token transfer order is descending
-                            tokenId += twin.supplyAvailable;
+                            twinM.tokenId += twinM.supplyAvailable;
                         }
 
                         // ERC-721 style transfer
                         data = abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,bytes)",
-                            seller.assistant,
+                            assistant,
                             sender,
-                            tokenId,
+                            twinM.tokenId,
                             ""
                         );
-                    } else if (tokenType == TokenType.MultiToken) {
+                    } else if (twinM.tokenType == TokenType.MultiToken) {
                         // ERC-1155 style transfer
                         data = abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
-                            seller.assistant,
+                            assistant,
                             sender,
-                            tokenId,
-                            twin.amount,
+                            twinM.tokenId,
+                            twinM.amount,
                             ""
                         );
                     }
 
                     // Make call only if there is enough gas and code at address exists.
                     // If not, skip the call and mark the transfer as failed
-                    if (gasleft() > reservedGas && twin.tokenAddress.isContract()) {
+                    twinM.tokenAddress = twinS.tokenAddress;
+                    if (gasleft() > reservedGas && twinM.tokenAddress.isContract()) {
                         bytes memory result;
-                        (success, result) = twin.tokenAddress.call{ gas: gasleft() - reservedGas }(data);
+                        (success, result) = twinM.tokenAddress.call{ gas: gasleft() - reservedGas }(data);
 
                         success = success && (result.length == 0 || abi.decode(result, (bool)));
                     }
                 }
 
-                // Reduce minimum gas required for succesful execution
-                reservedGas -= SINGLE_TWIN_RESERVED_GAS;
+                twinM.id = twinS.id;
 
                 // If token transfer failed
                 if (!success) {
-                    raiseDisputeInternal(_exchange, _voucher, seller.id);
+                    transferFailed = true;
 
-                    emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, twin.amount, sender);
+                    emit TwinTransferFailed(
+                        twinM.id,
+                        twinM.tokenAddress,
+                        _exchange.id,
+                        twinM.tokenId,
+                        twinM.amount,
+                        sender
+                    );
                 } else {
+                    ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
                     uint256 exchangeId = _exchange.id;
-                    uint256 twinId = twin.id;
+
                     {
                         // Store twin receipt on twinReceiptsByExchange
                         TwinReceipt storage twinReceipt = lookups.twinReceiptsByExchange[exchangeId].push();
-                        twinReceipt.twinId = twinId;
-                        twinReceipt.tokenAddress = twin.tokenAddress;
-                        twinReceipt.tokenId = tokenId;
-                        twinReceipt.amount = twin.amount;
-                        twinReceipt.tokenType = twin.tokenType;
+                        twinReceipt.twinId = twinM.id;
+                        twinReceipt.tokenAddress = twinM.tokenAddress;
+                        twinReceipt.tokenId = twinM.tokenId;
+                        twinReceipt.amount = twinM.amount;
+                        twinReceipt.tokenType = twinM.tokenType;
                     }
-                    if (twin.tokenType == TokenType.NonFungibleToken) {
-                        // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
-                        TokenRange[] storage twinRanges = lookups.twinRangesBySeller[seller.id][twin.tokenAddress];
-
-                        bool unlimitedSupply = twin.supplyAvailable == type(uint256).max;
-
-                        uint256 rangeIndex = lookups.rangeIdByTwin[twinId] - 1;
-                        TokenRange storage range = twinRanges[rangeIndex];
-
-                        if (unlimitedSupply ? range.end == tokenId : range.start == tokenId) {
-                            uint256 lastIndex = twinRanges.length - 1;
-
-                            if (rangeIndex != lastIndex) {
-                                // Replace range with last range
-                                twinRanges[rangeIndex] = twinRanges[lastIndex];
-                            }
-
-                            // Remove from ranges mapping
-                            twinRanges.pop();
-
-                            // Delete rangeId from rangeIdByTwin mapping
-                            lookups.rangeIdByTwin[twinId] = 0;
-                        } else {
-                            unlimitedSupply ? range.start++ : range.end--;
-                        }
+                    if (twinM.tokenType == TokenType.NonFungibleToken) {
+                        updateNFTRanges(lookups, twinM, sellerId);
                     }
-                    emit TwinTransferred(twinId, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
+                    emit TwinTransferred(twinM.id, twinM.tokenAddress, exchangeId, twinM.tokenId, twinM.amount, sender);
                 }
+
+                // Reduce minimum gas required for succesful execution
+                reservedGas -= SINGLE_TWIN_RESERVED_GAS;
 
                 unchecked {
                     i++;
                 }
             }
+        }
+
+        // Some twin transfer was not successful, raise dispute
+        if (transferFailed) {
+            raiseDisputeInternal(_exchange, _voucher, sellerId);
         }
     }
 
@@ -1150,6 +1158,45 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Add condition to receipt if exists
         if (conditionExists) {
             receipt.condition = condition;
+        }
+    }
+
+    /**
+     * @notice Updates NFT ranges, so it's possible to reuse the tokens in other twins and to make
+     * creation of new ranges viable
+     *
+     * @param _lookups - storage pointer to the protocol lookups
+     * @param _sellerId - the seller id
+     * @param _twin - storage pointer to the twin
+     */
+    function updateNFTRanges(
+        ProtocolLib.ProtocolLookups storage _lookups,
+        Twin memory _twin,
+        uint256 _sellerId
+    ) internal {
+        // Get all ranges of twins that belong to the seller and to the same token address.
+        TokenRange[] storage twinRanges = _lookups.twinRangesBySeller[_sellerId][_twin.tokenAddress];
+
+        bool unlimitedSupply = _twin.supplyAvailable == type(uint256).max;
+
+        uint256 rangeIndex = _lookups.rangeIdByTwin[_twin.id] - 1;
+        TokenRange storage range = twinRanges[rangeIndex];
+
+        if (unlimitedSupply ? range.end == _twin.tokenId : range.start == _twin.tokenId) {
+            uint256 lastIndex = twinRanges.length - 1;
+
+            if (rangeIndex != lastIndex) {
+                // Replace range with last range
+                twinRanges[rangeIndex] = twinRanges[lastIndex];
+            }
+
+            // Remove from ranges mapping
+            twinRanges.pop();
+
+            // Delete rangeId from rangeIdByTwin mapping
+            _lookups.rangeIdByTwin[_twin.id] = 0;
+        } else {
+            unlimitedSupply ? range.start++ : range.end--;
         }
     }
 }
