@@ -43,7 +43,7 @@ Done or in progress are:
 
 We welcome contributions! Until now, Boson Protocol has been largely worked on by a small dedicated team. However, the ultimate goal is for all of the Boson Protocol repositories to be fully owned by the community and contributors. Issues, pull requests, suggestions, and any sort of involvement are more than welcome.
 
-If you have noticed a bug, please report it via our [Bug Bounty program](https://immunefi.com/bounty/bosonprotocol/).
+If you have noticed a bug, please report it via our [Bug Bounty program](https://github.com/bosonprotocol/community/blob/main/BugBountyProgram.md).
 
 Questions and feedback are always welcome, we will use them to improve our offering.
 

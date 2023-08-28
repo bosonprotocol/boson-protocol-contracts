@@ -34,6 +34,7 @@ const {
   deriveTokenId,
 } = require("../../util/utils.js");
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
+const { ZeroHash } = require("ethers");
 
 describe("IBosonVoucher", function () {
   let interfaceIds;
@@ -170,8 +171,7 @@ describe("IBosonVoucher", function () {
       const bosonVoucherCloneAddress = calculateCloneAddress(
         await accountHandler.getAddress(),
         beaconProxyAddress,
-        admin.address,
-        ""
+        admin.address
       );
       bosonVoucher = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
 
@@ -1738,7 +1738,7 @@ describe("IBosonVoucher", function () {
             // Set royalty fee as 15% (protocol limit is 10%)
             royaltyPercentage = "1500"; //15%
 
-            // royalty percentage too high, expectig revert
+            // royalty percentage too high, expecting revert
             await expect(bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage)).to.be.revertedWith(
               RevertReasons.ROYALTY_FEE_INVALID
             );
@@ -1829,7 +1829,7 @@ describe("IBosonVoucher", function () {
         it("should revert during create seller if royaltyPercentage is greater than max royalty percentage defined in the protocol", async function () {
           // create invalid voucherInitValues
           royaltyPercentage = "2000"; // 20%
-          voucherInitValues = new VoucherInitValues("ContractURI", royaltyPercentage);
+          voucherInitValues = new VoucherInitValues("ContractURI", royaltyPercentage, ZeroHash);
 
           // create another seller
           seller = mockSeller(
@@ -1839,7 +1839,7 @@ describe("IBosonVoucher", function () {
             await rando.getAddress()
           );
 
-          // royalty percentage too high, expectig revert
+          // royalty percentage too high, expecting revert
           await expect(
             accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.be.revertedWith(RevertReasons.ROYALTY_FEE_INVALID);
@@ -1895,10 +1895,10 @@ describe("IBosonVoucher", function () {
         );
 
         // Seller's available balance should increase
-        const expectedAvailableFunds = new Funds(await foreign20.getAddress(), "Foreign20", amount.toString());
+        const expectedAvailableFunds = new Funds(foreign20Address, "Foreign20", amount.toString());
 
         // first item is AddressZero
-        availableFundsAddresses.push(await foreign20.getAddress());
+        availableFundsAddresses.push(foreign20Address);
         const [, sellerFundsAfter] = FundsList.fromStruct(
           await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
         ).funds;
@@ -1935,6 +1935,39 @@ describe("IBosonVoucher", function () {
             return { ...f, availableAmount: (BigInt(f.availableAmount) + amount).toString() };
           })
         ).to.eql(sellerFundsAfter);
+      });
+
+      it("USDT withdraws correctly", async function () {
+        // deploy USDT
+        const usdtFactory = await getContractFactory("TetherToken");
+        // @param _balance Initial supply of the contract
+        // @param _name Token Name
+        // @param _symbol Token symbol
+        // @param _decimals Token decimals
+
+        const amount = parseUnits("1", "ether");
+        const usdtContract = await usdtFactory.connect(deployer).deploy(amount, "Tether USD", "USDT", 6);
+
+        // mint USDT
+        await usdtContract.connect(deployer).issue(amount);
+
+        // transfer USDT to bosonVoucher
+        await usdtContract.connect(deployer).transfer(await bosonVoucher.getAddress(), amount);
+
+        const usdtContractAddress = await usdtContract.getAddress();
+        await expect(() =>
+          bosonVoucher.connect(rando).withdrawToProtocol([usdtContractAddress])
+        ).to.changeTokenBalances(usdtContract, [bosonVoucher, fundsHandler], [amount * -1n, amount]);
+
+        // Seller's available balance should increase
+        const expectedAvailableFunds = new Funds(usdtContractAddress, "Tether USD", amount.toString());
+
+        // first item is AddressZero
+        availableFundsAddresses.push(usdtContractAddress);
+        const [, sellerFundsAfter] = FundsList.fromStruct(
+          await fundsHandler.getAvailableFunds(seller.id, availableFundsAddresses)
+        ).funds;
+        expect(sellerFundsAfter).to.eql(expectedAvailableFunds);
       });
     });
 
@@ -2141,14 +2174,15 @@ describe("IBosonVoucher", function () {
         ).to.be.reverted;
       });
 
-      it("Owner tries to invoke method to transfer funds", async function () {
-        const erc20 = await getContractFactory("Foreign20");
+      it("Owner tries to interact with contract with assets", async function () {
+        const [erc20, erc721] = await deployMockTokens(["Foreign20", "Foreign721"]);
+        const erc20Address = await erc20.getAddress();
 
         // transfer
         calldata = erc20.interface.encodeFunctionData("transfer", [await assistant.getAddress(), 20]);
-        await expect(
-          bosonVoucher.connect(assistant).callExternalContract(await rando.getAddress(), calldata)
-        ).to.be.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
 
         // transferFrom
         calldata = erc20.interface.encodeFunctionData("transferFrom", [
@@ -2156,24 +2190,24 @@ describe("IBosonVoucher", function () {
           await assistant.getAddress(),
           20,
         ]);
-        await expect(
-          bosonVoucher.connect(assistant).callExternalContract(await rando.getAddress(), calldata)
-        ).to.be.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
 
         // approve
         calldata = erc20.interface.encodeFunctionData("approve", [await assistant.getAddress(), 20]);
-        await expect(
-          bosonVoucher.connect(assistant).callExternalContract(await rando.getAddress(), calldata)
-        ).to.be.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
 
         // DAI
         const dai = await getContractAt("DAIAliases", ZeroAddress);
 
         // push
         calldata = dai.interface.encodeFunctionData("push", [await assistant.getAddress(), 20]);
-        await expect(
-          bosonVoucher.connect(assistant).callExternalContract(await rando.getAddress(), calldata)
-        ).to.be.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
 
         // move
         calldata = dai.interface.encodeFunctionData("move", [
@@ -2181,9 +2215,43 @@ describe("IBosonVoucher", function () {
           await assistant.getAddress(),
           20,
         ]);
-        await expect(
-          bosonVoucher.connect(assistant).callExternalContract(await rando.getAddress(), calldata)
-        ).to.be.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
+
+        // ERC721
+        const erc721Address = await erc721.getAddress();
+        // transferFrom
+        calldata = erc721.interface.encodeFunctionData("transferFrom", [
+          await bosonVoucher.getAddress(),
+          await assistant.getAddress(),
+          20,
+        ]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
+
+        // transferFrom
+        calldata = erc721.interface.encodeFunctionData("safeTransferFrom(address,address,uint256)", [
+          await bosonVoucher.getAddress(),
+          await assistant.getAddress(),
+          20,
+        ]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
+
+        // approve
+        calldata = erc721.interface.encodeFunctionData("approve", [await assistant.getAddress(), 20]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
+
+        // setApprovalForAll
+        calldata = erc721.interface.encodeFunctionData("setApprovalForAll", [await assistant.getAddress(), true]);
+        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
+          RevertReasons.INTERACTION_NOT_ALLOWED
+        );
       });
     });
   });

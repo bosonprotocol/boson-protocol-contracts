@@ -197,9 +197,13 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @param _exchangeIds - the array of ids of the associated exchanges
      */
     function expireDisputeBatch(uint256[] calldata _exchangeIds) external override {
-        for (uint256 i = 0; i < _exchangeIds.length; i++) {
+        for (uint256 i = 0; i < _exchangeIds.length; ) {
             // create offer and update structs values to represent true state
             expireDispute(_exchangeIds[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
