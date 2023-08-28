@@ -67,7 +67,7 @@ To communicate the values outside the chain, one could use hardhat's `console.lo
 
 Since different execution paths consume different amounts of gas it's advised to get the estimates in different scenarios (i.e. transfer of a single twin, multiple twins, failing twins, different types of twins etc.).
 
-Once we get the estimations for individual operations sets (`C(O2)`, `C(O3)` and `C(O4)`) in different scenarios, it's important to take the maximum values (and not their averages). Then we can calculate the values for `SINGLE_TWIN_RESERVED_GAS` and `MINIMAL_RESIDUAL_GAS` as defined in the previous section. To get a final value, we add a sensible buffer and round it to a nice-looking value.
+Once we get the estimations for individual operations sets (`C(O2)`, `C(O3)` and `C(O4)`) in different scenarios, it's important to take the maximum values (and not their averages). Then we can calculate the values for `SINGLE_TWIN_RESERVED_GAS` and `MINIMAL_RESIDUAL_GAS` as defined in the previous section. To get a final value, we add a sensible buffer (e.g. 10%) and round it to a nice-looking value.
 
 ### Estimation with script
 
@@ -91,5 +91,5 @@ Estimation at commit f2a7993
 
 | | Estimate | Used value |
 |-|-|-|
-| `SINGLE_TWIN_RESERVED_GAS` | `147,001` | `150,000` |
-| `MINIMAL_RESIDUAL_GAS` | `207,084` | `210,000` |
+| `SINGLE_TWIN_RESERVED_GAS` | `147,001` | `160,000` |
+| `MINIMAL_RESIDUAL_GAS` | `207,084` | `230,000` |
