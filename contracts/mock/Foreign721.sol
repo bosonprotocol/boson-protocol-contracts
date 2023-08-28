@@ -46,6 +46,21 @@ contract Foreign721GasTheft is Foreign721 {
 }
 
 /*
+ * @title Foreign721 that returns an absurdly long return data
+ *
+ * @notice Mock ERC-(721) for Unit Testing
+ */
+contract Foreign721ReturnBomb is Foreign721 {
+    function safeTransferFrom(address, address, uint256, bytes memory) public virtual override {
+        assembly {
+            revert(0, 3000000)
+            // This is carefully chosen. If it's too low, not enough gas is consumed and contract that call it does not run out of gas.
+            // If it's too high, then this contract runs out of gas before the return data is returned.
+        }
+    }
+}
+
+/*
  * @title Foreign721 that succeeds, but the data cannot be decoded into a boolean
  *
  * @notice Mock ERC-(721) for Unit Testing

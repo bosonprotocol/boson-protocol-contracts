@@ -894,9 +894,35 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     // Make call only if there is enough gas and code at address exists.
                     // If not, skip the call and mark the transfer as failed
                     twinM.tokenAddress = twinS.tokenAddress;
-                    if (gasleft() > reservedGas && twinM.tokenAddress.isContract()) {
+                    uint256 gasLeft = gasleft();
+                    if (gasLeft > reservedGas && twinM.tokenAddress.isContract()) {
+                        address to = twinM.tokenAddress;
+
+                        // Handle the return value with assembly to avoid return bomb attack
                         bytes memory result;
-                        (success, result) = twinM.tokenAddress.call{ gas: gasleft() - reservedGas }(data);
+                        assembly {
+                            success := call(
+                                sub(gasLeft, reservedGas), // gasleft()-reservedGas
+                                to, // twin contract
+                                0, // ether value
+                                add(data, 0x20), // invocation calldata
+                                mload(data), // calldata length
+                                add(result, 0x20), // store return data at result
+                                0x20 // store at most 32 bytes
+                            )
+
+                            let returndataSize := returndatasize()
+
+                            switch gt(returndataSize, 0x20)
+                            case 0 {
+                                // Adjust result length in case it's shorter than 32 bytes
+                                mstore(result, returndataSize)
+                            }
+                            case 1 {
+                                // If return data is longer than 32 bytes, consider transfer unsuccesful
+                                success := false
+                            }
+                        }
 
                         // Check if result is empty or if result is a boolean and is true
                         success =
