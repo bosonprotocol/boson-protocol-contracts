@@ -32,6 +32,7 @@ const {
   mockAuthToken,
   accountId,
 } = require("../util/mock");
+const { encodeBytes32String } = require("ethers");
 
 /**
  *  Test the Boson Offer Handler interface
@@ -545,11 +546,13 @@ describe("IBosonOfferHandler", function () {
 
         beforeEach(async function () {
           const externalId = "Brand1";
+          voucherInitValues.collectionSalt = encodeBytes32String(externalId);
+
           expectedCollectionAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
             admin.address,
-            externalId
+            voucherInitValues.collectionSalt
           );
 
           // Create a new collection
@@ -889,6 +892,7 @@ describe("IBosonOfferHandler", function () {
 
           // Create a new collection
           const externalId = "Brand1";
+          voucherInitValues.collectionSalt = encodeBytes32String(externalId);
           await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
           // Set non existent collection index
@@ -1356,8 +1360,7 @@ describe("IBosonOfferHandler", function () {
         const voucherCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
 
@@ -2666,6 +2669,7 @@ describe("IBosonOfferHandler", function () {
 
           // Create a new collection
           const externalId = "Brand1";
+          voucherInitValues.collectionSalt = encodeBytes32String(externalId);
           await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
           // Index "1" exists now, but "2" does not

@@ -603,8 +603,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
 
         await expect(tx)
@@ -660,8 +659,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
 
         await expect(tx)
@@ -761,8 +759,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -777,9 +774,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
       });
@@ -809,8 +809,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -820,9 +819,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -872,8 +874,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -883,9 +884,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -934,7 +938,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             sellerId,
             sellerStruct,
-            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address, ""),
+            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address),
             emptyAuthTokenStruct,
             await assistant.getAddress()
           );
@@ -1260,8 +1264,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
 
           await expect(tx)
@@ -1379,8 +1382,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           const [defaultVoucherAddress, additionalCollections] = await accountHandler
             .connect(rando)
@@ -1396,11 +1398,11 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
           expect(await bosonVoucher.name()).to.equal(
-            VOUCHER_NAME + " " + seller.id + "_0",
+            VOUCHER_NAME + " S" + seller.id + "_C0",
             "Wrong voucher client name"
           );
           expect(await bosonVoucher.symbol()).to.equal(
-            VOUCHER_SYMBOL + "_" + seller.id + "_0",
+            VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
             "Wrong voucher client symbol"
           );
           const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
@@ -2246,7 +2248,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               seller.id,
               sellerStruct,
-              calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address, ""),
+              calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address),
               emptyAuthTokenStruct,
               await assistant.getAddress()
             );
@@ -2738,8 +2740,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
@@ -3457,8 +3458,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         });
@@ -4148,8 +4148,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
@@ -5086,8 +5085,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         });
@@ -5435,8 +5433,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
 
         // SellerCreated and OfferCreated events
@@ -5567,8 +5564,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -5583,9 +5579,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
       });
@@ -5614,8 +5613,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -5626,9 +5624,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -5677,8 +5678,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -5689,9 +5689,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -5742,7 +5745,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             sellerId,
             sellerStruct,
-            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address, ""),
+            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address),
             emptyAuthTokenStruct,
             await assistant.getAddress()
           );
@@ -5821,7 +5824,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               seller.id,
               sellerStruct,
-              calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address, ""),
+              calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address),
               emptyAuthTokenStruct,
               await assistant.getAddress()
             );
@@ -5894,8 +5897,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
 
           // SellerCreated and OfferCreated RangeReserved events
@@ -6050,8 +6052,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           const [defaultVoucherAddress, additionalCollections] = await accountHandler
             .connect(rando)
@@ -6067,11 +6068,11 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
           expect(await bosonVoucher.name()).to.equal(
-            VOUCHER_NAME + " " + seller.id + "_0",
+            VOUCHER_NAME + " S" + seller.id + "_C0",
             "Wrong voucher client name"
           );
           expect(await bosonVoucher.symbol()).to.equal(
-            VOUCHER_SYMBOL + "_" + seller.id + "_0",
+            VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
             "Wrong voucher client symbol"
           );
           const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
@@ -6247,8 +6248,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
 
         // SellerCreated and OfferCreated events
@@ -6401,8 +6401,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -6417,9 +6416,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
       });
@@ -6451,8 +6453,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -6463,9 +6464,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -6517,8 +6521,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -6529,9 +6532,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -6586,7 +6592,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             sellerId,
             sellerStruct,
-            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address, ""),
+            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address),
             emptyAuthTokenStruct,
             await assistant.getAddress()
           );
@@ -6683,7 +6689,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               seller.id,
               sellerStruct,
-              calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address, ""),
+              calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address),
               emptyAuthTokenStruct,
               await assistant.getAddress()
             );
@@ -6779,8 +6785,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
 
           // SellerCreated, OfferCreated and RangeReserved events
@@ -6961,8 +6966,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           const [defaultVoucherAddress, additionalCollections] = await accountHandler
             .connect(rando)
@@ -6978,11 +6982,11 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
           expect(await bosonVoucher.name()).to.equal(
-            VOUCHER_NAME + " " + seller.id + "_0",
+            VOUCHER_NAME + " S" + seller.id + "_C0",
             "Wrong voucher client name"
           );
           expect(await bosonVoucher.symbol()).to.equal(
-            VOUCHER_SYMBOL + "_" + seller.id + "_0",
+            VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
             "Wrong voucher client symbol"
           );
           const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
@@ -7203,8 +7207,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
 
         // SellerCreated and OfferCreated events
@@ -7381,8 +7384,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -7397,9 +7399,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
       });
@@ -7432,8 +7437,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -7444,9 +7448,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -7499,8 +7506,7 @@ describe("IBosonOrchestrationHandler", function () {
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const [defaultVoucherAddress, additionalCollections] = await accountHandler
           .connect(rando)
@@ -7511,9 +7517,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Voucher clone contract
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
-        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id + "_0", "Wrong voucher client name");
+        expect(await bosonVoucher.name()).to.equal(
+          VOUCHER_NAME + " S" + seller.id + "_C0",
+          "Wrong voucher client name"
+        );
         expect(await bosonVoucher.symbol()).to.equal(
-          VOUCHER_SYMBOL + "_" + seller.id + "_0",
+          VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
           "Wrong voucher client symbol"
         );
 
@@ -7569,7 +7578,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             sellerId,
             sellerStruct,
-            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address, ""),
+            calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, admin.address),
             emptyAuthTokenStruct,
             await assistant.getAddress()
           );
@@ -7659,8 +7668,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
 
           // Create a seller, an offer with condition, twin and bundle
@@ -7796,8 +7804,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
 
           // SellerCreated, OfferCreated and RangeReserved events
@@ -7998,8 +8005,7 @@ describe("IBosonOrchestrationHandler", function () {
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           const [defaultVoucherAddress, additionalCollections] = await accountHandler
             .connect(rando)
@@ -8015,11 +8021,11 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
           expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
           expect(await bosonVoucher.name()).to.equal(
-            VOUCHER_NAME + " " + seller.id + "_0",
+            VOUCHER_NAME + " S" + seller.id + "_C0",
             "Wrong voucher client name"
           );
           expect(await bosonVoucher.symbol()).to.equal(
-            VOUCHER_SYMBOL + "_" + seller.id + "_0",
+            VOUCHER_SYMBOL + "_S" + seller.id + "_C0",
             "Wrong voucher client symbol"
           );
           const returnedRange = Range.fromStruct(await bosonVoucher.getRangeByOfferId(offer.id));
