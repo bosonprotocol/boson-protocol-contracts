@@ -3555,11 +3555,11 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
+            // It should match ExchangeState.Disputed
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is disputed", async function () {
             const [foreign20gt, foreign20gt_2] = await deployMockTokens(["Foreign20GasTheft", "Foreign20GasTheft"]);
 
             // Approve the protocol diamond to transfer seller's tokens
@@ -3595,7 +3595,7 @@ describe("IBosonExchangeHandler", function () {
             // Redeem the voucher
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
-            // Voucher should be revoked and both transfers should fail
+            // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
               .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
@@ -3619,6 +3619,67 @@ describe("IBosonExchangeHandler", function () {
 
             // It should match ExchangeState.Disputed
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
+
+          context("Malformed return", async function () {
+            const attackTypes = {
+              "too short": 0,
+              "too long": 1,
+              invalid: 2,
+            };
+            let foreign20mr;
+
+            beforeEach(async function () {
+              [foreign20mr] = await deployMockTokens(["Foreign20MalformedReturn"]);
+
+              // Approve the protocol diamond to transfer seller's tokens
+              await foreign20mr.connect(assistant).approve(protocolDiamondAddress, "100");
+
+              // Create two ERC20 twins that will consume all available gas
+              twin20 = mockTwin(await foreign20mr.getAddress());
+              twin20.amount = "1";
+              twin20.supplyAvailable = "100";
+              twin20.id = "4";
+
+              await twinHandler.connect(assistant).createTwin(twin20.toStruct());
+
+              // Create a new offer and bundle
+              await offerHandler
+                .connect(assistant)
+                .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin20.id]);
+              await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
+
+              // Commit to offer
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+              exchange.id = Number(exchange.id) + 1;
+            });
+
+            Object.entries(attackTypes).forEach((attackType) => {
+              const [type, enumType] = attackType;
+              it(`return value is ${type}, redeem still succeeds, but the exchange is disputed`, async function () {
+                await foreign20mr.setAttackType(enumType);
+
+                // Redeem the voucher
+                tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+                // Dispute should be raised and both transfers should fail
+                await expect(tx)
+                  .to.emit(disputeHandler, "DisputeRaised")
+                  .withArgs(exchange.id, exchange.buyerId, seller.id, buyer.address);
+
+                await expect(tx)
+                  .to.emit(exchangeHandler, "TwinTransferFailed")
+                  .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
+
+                // Get the exchange state
+                [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+                // It should match ExchangeState.Disputed
+                assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+              });
+            });
           });
 
           it("If multiple transfers fail, a dispute is raised only once", async function () {
@@ -4156,11 +4217,11 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
+            // It should match ExchangeState.Disputed
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is disputed", async function () {
             const [foreign721gt, foreign721gt_2] = await deployMockTokens(["Foreign721GasTheft", "Foreign721GasTheft"]);
 
             // Approve the protocol diamond to transfer seller's tokens
@@ -4196,7 +4257,7 @@ describe("IBosonExchangeHandler", function () {
             // Redeem the voucher
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
-            // Voucher should be revoked and both transfers should fail
+            // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
               .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
@@ -4215,6 +4276,68 @@ describe("IBosonExchangeHandler", function () {
 
             // It should match ExchangeState.Disputed
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
+
+          context("Malformed return", async function () {
+            const attackTypes = {
+              "too short": 0,
+              "too long": 1,
+              invalid: 2,
+            };
+            let foreign721mr;
+
+            beforeEach(async function () {
+              [foreign721mr] = await deployMockTokens(["Foreign721MalformedReturn"]);
+
+              // Approve the protocol diamond to transfer seller's tokens
+              await foreign721mr.connect(assistant).setApprovalForAll(protocolDiamondAddress, true);
+
+              // Create two ERC721 twins that will consume all available gas
+              twin721 = mockTwin(await foreign721mr.getAddress(), TokenType.NonFungibleToken);
+              twin721.amount = "0";
+              twin721.supplyAvailable = "10";
+              twin721.id = "4";
+
+              await twinHandler.connect(assistant).createTwin(twin721.toStruct());
+
+              // Create a new offer and bundle
+              await offerHandler
+                .connect(assistant)
+                .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin721.id]);
+              await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
+
+              // Commit to offer
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+              exchange.id = Number(exchange.id) + 1;
+            });
+
+            Object.entries(attackTypes).forEach((attackType) => {
+              const [type, enumType] = attackType;
+              it(`return value is ${type}, redeem still succeeds, but the exchange is disputed`, async function () {
+                await foreign721mr.setAttackType(enumType);
+
+                // Redeem the voucher
+                tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+                // Dispute should be raised and both transfers should fail
+                await expect(tx)
+                  .to.emit(disputeHandler, "DisputeRaised")
+                  .withArgs(exchange.id, exchange.buyerId, seller.id, buyer.address);
+
+                let tokenId = "9";
+                await expect(tx)
+                  .to.emit(exchangeHandler, "TwinTransferFailed")
+                  .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, twin721.amount, buyer.address);
+
+                // Get the exchange state
+                [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+                // It should match ExchangeState.Disputed
+                assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+              });
+            });
           });
 
           it("should raise a dispute if erc721 contract does not exist anymore", async function () {
@@ -4426,11 +4549,11 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
+            // It should match ExchangeState.Disputed
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is disputed", async function () {
             const [foreign1155gt, foreign1155gt_2] = await deployMockTokens([
               "Foreign1155GasTheft",
               "Foreign1155GasTheft",
@@ -4470,6 +4593,11 @@ describe("IBosonExchangeHandler", function () {
             // Redeem the voucher
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
+            // Dispute should be raised and both transfers should fail
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, buyer.address);
+
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(
@@ -4497,6 +4625,75 @@ describe("IBosonExchangeHandler", function () {
 
             // It should match ExchangeState.Disputed
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
+
+          context("Malformed return", async function () {
+            const attackTypes = {
+              "too short": 0,
+              "too long": 1,
+              invalid: 2,
+            };
+            let foreign1155mr;
+
+            beforeEach(async function () {
+              [foreign1155mr] = await deployMockTokens(["Foreign1155MalformedReturn"]);
+
+              // Approve the protocol diamond to transfer seller's tokens
+              await foreign1155mr.connect(assistant).setApprovalForAll(protocolDiamondAddress, true);
+
+              // Create two ERC1155 twins that will consume all available gas
+              twin1155 = mockTwin(await foreign1155mr.getAddress(), TokenType.MultiToken);
+              twin1155.amount = "1";
+              twin1155.tokenId = "1";
+              twin1155.supplyAvailable = "10";
+              twin1155.id = "4";
+
+              await twinHandler.connect(assistant).createTwin(twin1155.toStruct());
+
+              // Create a new offer and bundle
+              await offerHandler
+                .connect(assistant)
+                .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin1155.id]);
+              await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
+
+              // Commit to offer
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+              exchange.id = Number(exchange.id) + 1;
+            });
+
+            Object.entries(attackTypes).forEach((attackType) => {
+              const [type, enumType] = attackType;
+              it(`return value is ${type}, redeem still succeeds, but the exchange is disputed`, async function () {
+                await foreign1155mr.setAttackType(enumType);
+
+                // Redeem the voucher
+                tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+                // Dispute should be raised and both transfers should fail
+                await expect(tx)
+                  .to.emit(disputeHandler, "DisputeRaised")
+                  .withArgs(exchange.id, exchange.buyerId, seller.id, buyer.address);
+
+                await expect(tx)
+                  .to.emit(exchangeHandler, "TwinTransferFailed")
+                  .withArgs(
+                    twin1155.id,
+                    twin1155.tokenAddress,
+                    exchange.id,
+                    twin1155.tokenId,
+                    twin1155.amount,
+                    buyer.address
+                  );
+
+                // Get the exchange state
+                [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+                // It should match ExchangeState.Disputed
+                assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+              });
+            });
           });
 
           it("should raise a dispute if erc1155 contract does not exist anymore", async function () {
@@ -4915,11 +5112,11 @@ describe("IBosonExchangeHandler", function () {
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
-            // It should match ExchangeState.Revoked
+            // It should match ExchangeState.Disputed
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
-          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is revoked", async function () {
+          it("if twin transfers consume all available gas, redeem still succeeds, but exchange is disputed", async function () {
             const [foreign20gt, foreign721gt, foreign1155gt] = await deployMockTokens([
               "Foreign20GasTheft",
               "Foreign721GasTheft",
@@ -4968,7 +5165,7 @@ describe("IBosonExchangeHandler", function () {
             // Redeem the voucher
             tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
 
-            // Voucher should be revoked and both transfers should fail
+            // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
               .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
