@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
 
@@ -50,6 +50,41 @@ contract Foreign1155ReturnBomb is Foreign1155 {
             revert(0, 3000000)
             // This is carefully chosen. If it's too low, not enough gas is consumed and contract that call it does not run out of gas.
             // If it's too high, then this contract runs out of gas before the return data is returned.
+        }
+    }
+}
+
+/*
+ * @title Foreign1155 that succeeds, but the data cannot be decoded into a boolean
+ *
+ * @notice Mock ERC-(1155) for Unit Testing
+ */
+contract Foreign1155MalformedReturn is Foreign1155 {
+    enum AttackType {
+        ReturnTooShort,
+        ReturnTooLong,
+        ReturnInvalid
+    }
+
+    AttackType public attackType;
+
+    function setAttackType(AttackType _attackType) external {
+        attackType = _attackType;
+    }
+
+    function safeTransferFrom(address, address, uint256, uint256, bytes memory) public virtual override {
+        if (attackType == AttackType.ReturnTooShort) {
+            assembly {
+                return(0, 31) // return too short data
+            }
+        } else if (attackType == AttackType.ReturnTooLong) {
+            assembly {
+                return(0, 33) // return too long data
+            }
+        } else if (attackType == AttackType.ReturnInvalid) {
+            assembly {
+                return(0x40, 32) // return a value that is not 0 or 1
+            }
         }
     }
 }

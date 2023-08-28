@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
@@ -13,7 +13,7 @@ import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  *
- * The ERC-165 identifier for this interface is: 0xd66094dc
+ * The ERC-165 identifier for this interface is: 0x7e216084
  */
 interface IBosonOrchestrationHandler is
     IBosonAccountEvents,
@@ -71,6 +71,8 @@ interface IBosonOrchestrationHandler is
      * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -142,6 +144,8 @@ interface IBosonOrchestrationHandler is
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -692,6 +696,8 @@ interface IBosonOrchestrationHandler is
      * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -769,6 +775,8 @@ interface IBosonOrchestrationHandler is
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -850,6 +858,8 @@ interface IBosonOrchestrationHandler is
      * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -935,6 +945,8 @@ interface IBosonOrchestrationHandler is
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -1024,6 +1036,8 @@ interface IBosonOrchestrationHandler is
      * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -1114,6 +1128,8 @@ interface IBosonOrchestrationHandler is
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller

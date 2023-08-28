@@ -33,7 +33,7 @@ async function verifyOnTestEnv(contracts) {
   for (const contract of contracts) {
     console.log(`\n📋 Verifying on test env ${contract.name}`);
     try {
-      const code = await hre.provider.getCode(await contract.getAddress());
+      const code = await hre.ethers.provider.getCode(contract.address);
       if (code === "0x0" || code === "0x") {
         console.log(`❌ Failed to verify ${contract.name} on test env.`);
       }

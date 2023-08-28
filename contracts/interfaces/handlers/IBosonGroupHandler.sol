@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonGroupEvents } from "../events/IBosonGroupEvents.sol";
@@ -9,7 +9,7 @@ import { IBosonGroupEvents } from "../events/IBosonGroupEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of groups within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x1260850f
+ * The ERC-165 identifier for this interface is: 0x08ccdf47
  */
 interface IBosonGroupHandler is IBosonGroupEvents {
     /**
@@ -22,6 +22,7 @@ interface IBosonGroupHandler is IBosonGroupEvents {
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
      * - Offer exists in a different group
+     * - Condition fields are invalid
      *
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct

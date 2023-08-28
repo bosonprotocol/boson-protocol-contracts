@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -263,16 +263,36 @@ contract Foreign20ReturnBomb is Foreign20 {
 }
 
 /*
- * @title Foreign20 that returns true, but the data cannot be decoded into a boolean
+ * @title Foreign20 that succeeds, but the data cannot be decoded into a boolean
  *
  * @notice Mock ERC-(20) for Unit Testing
  */
 contract Foreign20MalformedReturn is Foreign20 {
+    enum AttackType {
+        ReturnTooShort,
+        ReturnTooLong,
+        ReturnInvalid
+    }
+
+    AttackType public attackType;
+
+    function setAttackType(AttackType _attackType) external {
+        attackType = _attackType;
+    }
+
     function transferFrom(address, address, uint256) public virtual override returns (bool) {
-        assembly {
-            return(0, 31) // return too short data
-            // return(0, 33) // return too long data
-            // return(0x40, 32) // return a value that is not 0 or 1
+        if (attackType == AttackType.ReturnTooShort) {
+            assembly {
+                return(0, 31) // return too short data
+            }
+        } else if (attackType == AttackType.ReturnTooLong) {
+            assembly {
+                return(0, 33) // return too long data
+            }
+        } else if (attackType == AttackType.ReturnInvalid) {
+            assembly {
+                return(0x40, 32) // return a value that is not 0 or 1
+            }
         }
     }
 }

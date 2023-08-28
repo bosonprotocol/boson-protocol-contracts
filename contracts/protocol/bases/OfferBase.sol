@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import { IBosonOfferEvents } from "../../interfaces/events/IBosonOfferEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
@@ -324,7 +324,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         require(offer.quantityAvailable >= _length, INVALID_RANGE_LENGTH);
 
         // Prevent reservation of too large range, since it affects exchangeId
-        require(_length < (1 << 64), INVALID_RANGE_LENGTH);
+        require(_length <= type(uint64).max, INVALID_RANGE_LENGTH);
 
         // Get starting token id
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();

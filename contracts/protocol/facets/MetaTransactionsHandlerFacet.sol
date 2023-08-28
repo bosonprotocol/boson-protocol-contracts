@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonMetaTransactionsHandler } from "../../interfaces/handlers/IBosonMetaTransactionsHandler.sol";
@@ -339,7 +339,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     function setAllowlistedFunctions(
         bytes32[] calldata _functionNameHashes,
         bool _isAllowlisted
-    ) public override onlyRole(ADMIN) {
+    ) public override onlyRole(ADMIN) nonReentrant {
         setAllowlistedFunctionsInternal(_functionNameHashes, _isAllowlisted);
     }
 
@@ -375,8 +375,12 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
 
         // set new values
-        for (uint256 i = 0; i < _functionNameHashes.length; i++) {
+        for (uint256 i = 0; i < _functionNameHashes.length; ) {
             pmti.isAllowlisted[_functionNameHashes[i]] = _isAllowlisted;
+
+            unchecked {
+                i++;
+            }
         }
 
         // Notify external observers
